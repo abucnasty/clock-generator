@@ -1,5 +1,6 @@
 import assert from "../common/assert";
 import { Config } from '../config';
+import { assertInserterCoverage } from '../config/inserter-coverage-validator';
 import { DebugPluginFactory } from './sequence/debug/debug-plugin-factory';
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from './sequence/debug/debug-settings-provider';
 import { cloneSimulationContextWithInterceptors, SimulationContext } from './sequence/simulation-context';
@@ -83,6 +84,10 @@ export function generateClockForConfig(
     const debug_steps = options.debug_steps ?? {};
     const logger = options.logger ?? defaultLogger;
     
+    // Validate inserter coverage before building the entity graph.
+    // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
+    assertInserterCoverage(config);
+
     // Initialize simulation context
     const simulation_context = SimulationContext.fromConfig(config);
     
