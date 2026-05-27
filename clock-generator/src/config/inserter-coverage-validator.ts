@@ -1,4 +1,4 @@
-import { Config, BeltConfig, ChestConfig, InserterConfig, MachineConfiguration } from './schema';
+import { Config, BeltConfig, ChestConfig, InserterConfig, MachineConfiguration, MiningDrillConfig } from './schema';
 import { FactorioDataService } from '../data/factorio-data-service';
 import { InserterCoverageError, InserterCoverageIssue, InserterFixOption } from './errors';
 
@@ -58,6 +58,15 @@ function inserterCoversInputItem(
     return false;
 }
 
+/** Returns true if this drill directly feeds `itemName` into machine `machineId`. */
+function drillCoversInputItem(
+    drill: MiningDrillConfig,
+    machineId: number,
+    itemName: string,
+): boolean {
+    return drill.target.id === machineId && drill.mined_item_name === itemName;
+}
+
 /** Returns true if this inserter carries `itemName` out of machine `machineId`. */
 function inserterCoversOutputItem(
     inserter: InserterConfig,
@@ -107,11 +116,14 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
         }
 
         // ── Input ingredients ────────────────────────────────────────────────
+        const drills = config.drills?.configs ?? [];
         for (const ingredient of recipe.ingredients) {
             const itemName = ingredient.name;
-            const covered = config.inserters.some((ins) =>
-                inserterCoversInputItem(ins, machine.id, itemName, belts, chests, machines),
-            );
+            const covered =
+                config.inserters.some((ins) =>
+                    inserterCoversInputItem(ins, machine.id, itemName, belts, chests, machines),
+                ) ||
+                drills.some((drill) => drillCoversInputItem(drill, machine.id, itemName));
 
             if (!covered) {
                 const fixOptions: InserterFixOption[] = [];
