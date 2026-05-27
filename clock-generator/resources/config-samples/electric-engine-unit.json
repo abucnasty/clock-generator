@@ -1,0 +1,111 @@
+{
+  "target_output": {
+    "recipe": "electric-engine-unit",
+    "items_per_second": 10,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "electric-engine-unit",
+      "productivity": 100,
+      "crafting_speed": 56.49999976158142,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "engine-unit"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "electric-engine-unit"
+      ]
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ]
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "engine-unit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "electric-engine-unit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electric-engine-unit",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

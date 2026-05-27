@@ -33,6 +33,51 @@ import { DrillStateTransitionTrackerPlugin } from "../control-logic/drill/plugin
 
 const MAX_SIMULATION_TICKS = 500_000;
 
+/**
+ * Maximum allowed deviation (in items) between actual and expected output transfers
+ * when determining whether a simulation is considered stable.
+ *
+ * A tolerance of 1 accounts for minor trimming edge cases (e.g., back-swing wake-list
+ * adjustments at period boundaries) while remaining strict enough to reliably detect
+ * real instability such as output running at 50% of the expected rate.
+ */
+const LCM_STABILITY_TOLERANCE = 1;
+
+export interface SimulationStabilityCheck {
+    /** Whether the actual output items are within tolerance of the expected amount */
+    is_stable: boolean;
+    /** Total items transferred by output inserters during the simulation period */
+    actual_output_items: number;
+    /** Expected items to be transferred by output inserters based on the crafting cycle plan */
+    expected_output_items: number;
+    /** The LCM value used in this simulation run */
+    used_lcm: number;
+}
+
+export interface SwingAttemptResult {
+    /** The terminal_swing_count value that was tried */
+    terminal_swing_count: number;
+    /** Whether this attempt produced stable output */
+    is_stable: boolean;
+    /** Actual items transferred by output inserters */
+    actual_output_items: number;
+    /** Expected items based on the crafting cycle plan */
+    expected_output_items: number;
+}
+
+export interface SwingBackoffReport {
+    /** Whether the backoff loop was triggered (false when first attempt was stable or backoff is disabled) */
+    triggered: boolean;
+    /** The terminal_swing_count used in the first attempt */
+    initial_terminal_swing_count: number;
+    /** The stability result of the very first simulation attempt */
+    initial_attempt: SwingAttemptResult;
+    /** The terminal_swing_count that produced stable output, or null if none was found */
+    stable_terminal_swing_count: number | null;
+    /** Results for each swing count tried after the initial attempt */
+    attempts: SwingAttemptResult[];
+}
+
 export interface BlueprintGenerationResult {
     blueprint: FactorioBlueprint;
     crafting_cycle_plan: CraftingCyclePlan;
@@ -42,6 +87,14 @@ export interface BlueprintGenerationResult {
     serializable_transfer_history: SerializableTransferHistory;
     /** Serializable state transition history for UI visualization */
     serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** The LCM value used in this simulation run */
+    used_lcm: number;
+    /** The effective terminal swing count (output swings per base cycle) used in this simulation run */
+    used_terminal_swing_count: number;
+    /** Result of post-simulation output stability check */
+    stability_check: SimulationStabilityCheck;
+    /** Report of output swing backoff attempts, present on all results returned by generateClockWithSwingBackoff */
+    swing_backoff_report?: SwingBackoffReport;
 }
 
 /**
@@ -306,6 +359,39 @@ export function generateClockForConfig(
     logger.log("\n--- Transfer History ---");
     InventoryTransferHistory.print(final_history, logger);
 
+    // Compute output stability: compare actual items transferred by output inserters
+    // against the expected amount derived from the crafting cycle plan.
+    const output_inserter_ids = new Set(output_inserters.map(os => os.inserter.entity_id.id));
+    let total_actual_output = 0;
+    for (const [entity_id, transfers] of final_history.entries()) {
+        if (output_inserter_ids.has(entity_id.id)) {
+            total_actual_output += transfers.reduce((s, t) => s + t.amount, 0);
+        }
+    }
+    let total_expected_output_float = 0;
+    for (const [entity_id, etc] of swing_counts.entries()) {
+        if (output_inserter_ids.has(entity_id.id)) {
+            total_expected_output_float += etc.total_transfer_count.toDecimal() * etc.stack_size * recipe_lcm;
+        }
+    }
+    const total_expected_output = Math.round(total_expected_output_float);
+    // Compute effective terminal swing count from the output inserter in the entity_transfer_map
+    let used_terminal_swing_count = 1;
+    for (const [entity_id, etc] of swing_counts.entries()) {
+        if (output_inserter_ids.has(entity_id.id)) {
+            used_terminal_swing_count = Math.round(etc.total_transfer_count.toDecimal());
+            break;
+        }
+    }
+
+    const stability_check: SimulationStabilityCheck = {
+        is_stable: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE,
+        actual_output_items: total_actual_output,
+        expected_output_items: total_expected_output,
+        used_lcm: recipe_lcm,
+    };
+    logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.is_stable} (tolerance=${LCM_STABILITY_TOLERANCE})`);
+
     // Create blueprint - use target output item name (same for all output machines)
     const target_output_item_name = target_production_rate.machine_production_rate.item;
     const blueprint = createSignalPerInserterBlueprint(
@@ -337,7 +423,126 @@ export function generateClockForConfig(
         transfer_history: final_history,
         serializable_transfer_history,
         serializable_state_transition_history,
+        used_lcm: recipe_lcm,
+        used_terminal_swing_count,
+        stability_check,
     };
+}
+
+/**
+ * Generates a blueprint from a configuration with automatic output swing stability backoff.
+ *
+ * If the first simulation attempt produces unstable output — i.e. the items transferred
+ * by output inserters deviate from the expected amount by more than SWING_STABILITY_TOLERANCE
+ * (e.g. half-frequency due to excessive output blocking) — this function retries with
+ * progressively lower terminal_swing_count values (initial → initial-1 → … → 1) until a
+ * stable result is found or all options are exhausted.
+ *
+ * Backoff can be suppressed by setting `config.overrides.disable_swing_backoff = true`.
+ *
+ * A `swing_backoff_report` is always attached to the returned result describing what
+ * happened (triggered / not triggered, which swing counts were tried, which was stable).
+ *
+ * @param config  The configuration for the simulation
+ * @param options Optional generation options (debug, logger, …)
+ * @returns The generated blueprint result from the first stable swing count, with an attached
+ *          backoff report. Falls back to the initial result if no stable swing count is found.
+ */
+export function generateClockWithSwingBackoff(
+    config: Config,
+    options: GenerateClockOptions = {}
+): BlueprintGenerationResult {
+    const logger = options.logger ?? defaultLogger;
+
+    const initial_result = generateClockForConfig(config, options);
+    const initial_swing_count = initial_result.used_terminal_swing_count;
+
+    const backoff_disabled = config.overrides?.disable_swing_backoff === true;
+
+    if (initial_result.stability_check.is_stable || backoff_disabled || initial_swing_count <= 1) {
+        return {
+            ...initial_result,
+            swing_backoff_report: {
+                triggered: false,
+                initial_terminal_swing_count: initial_swing_count,
+                initial_attempt: {
+                    terminal_swing_count: initial_swing_count,
+                    is_stable: initial_result.stability_check.is_stable,
+                    actual_output_items: initial_result.stability_check.actual_output_items,
+                    expected_output_items: initial_result.stability_check.expected_output_items,
+                },
+                stable_terminal_swing_count: initial_result.stability_check.is_stable ? initial_swing_count : null,
+                attempts: [],
+            },
+        };
+    }
+
+    logger.log(`\n--- Output Swing Stability Backoff ---`);
+    logger.log(
+        `Initial swing count ${initial_swing_count} produced unstable output ` +
+        `(actual=${initial_result.stability_check.actual_output_items}, ` +
+        `expected=${initial_result.stability_check.expected_output_items}). ` +
+        `Attempting backoff...`
+    );
+
+    const attempts: SwingAttemptResult[] = [];
+    let stable_result: BlueprintGenerationResult | null = null;
+    let stable_swing_count: number | null = null;
+
+    const initial_attempt: SwingAttemptResult = {
+        terminal_swing_count: initial_swing_count,
+        is_stable: false,
+        actual_output_items: initial_result.stability_check.actual_output_items,
+        expected_output_items: initial_result.stability_check.expected_output_items,
+    };
+
+    for (let swings = initial_swing_count - 1; swings >= 1; swings--) {
+        logger.log(`Attempting terminal_swing_count=${swings}...`);
+        const attempt_config: Config = {
+            ...config,
+            overrides: {
+                ...config.overrides,
+                terminal_swing_count: swings,
+            },
+        };
+
+        const attempt_result = generateClockForConfig(attempt_config, options);
+
+        attempts.push({
+            terminal_swing_count: swings,
+            is_stable: attempt_result.stability_check.is_stable,
+            actual_output_items: attempt_result.stability_check.actual_output_items,
+            expected_output_items: attempt_result.stability_check.expected_output_items,
+        });
+
+        logger.log(
+            `swings=${swings}: actual=${attempt_result.stability_check.actual_output_items}, ` +
+            `expected=${attempt_result.stability_check.expected_output_items}, ` +
+            `stable=${attempt_result.stability_check.is_stable}`
+        );
+
+        if (attempt_result.stability_check.is_stable) {
+            stable_result = attempt_result;
+            stable_swing_count = swings;
+            break;
+        }
+    }
+
+    const swing_backoff_report: SwingBackoffReport = {
+        triggered: true,
+        initial_terminal_swing_count: initial_swing_count,
+        initial_attempt,
+        stable_terminal_swing_count: stable_swing_count,
+        attempts,
+    };
+
+    if (stable_result !== null) {
+        logger.log(`Backoff successful: stable swing count=${stable_swing_count}`);
+        return { ...stable_result, swing_backoff_report };
+    }
+
+    logger.log(`Backoff exhausted: no stable swing count found. Returning initial result.`);
+    return { ...initial_result, swing_backoff_report };
 }
 
 /**
