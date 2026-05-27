@@ -850,7 +850,7 @@ export function useConfigForm(): UseConfigFormResult {
                 const newBelt: BeltFormData = {
                     id: newBeltId,
                     type: inferBeltType(),
-                    lanes: [{ ingredient: fix.item_name, stack_size: stackSize }] as [BeltLaneFormData],
+                    lanes: [{ ingredient: fix.item_name, stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] as [BeltLaneFormData],
                 };
                 const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
                     ? { source: { type: 'belt', id: newBeltId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
