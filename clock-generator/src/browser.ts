@@ -44,7 +44,16 @@ export {
 export {
     ConfigValidationError,
     ConfigValidationIssue,
+    InserterCoverageError,
+    InserterCoverageIssue,
+    InserterCoverageIssueKind,
+    InserterFixOption,
 } from './config/errors';
+
+export {
+    validateInserterCoverage,
+    assertInserterCoverage,
+} from './config/inserter-coverage-validator';
 
 // ============================================================================
 // Blueprint Generation

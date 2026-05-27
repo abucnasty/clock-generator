@@ -16,6 +16,7 @@ import {
 import type { Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
+import { useInserterValidation } from './hooks/useInserterValidation';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -28,6 +29,7 @@ import { BlueprintOutput } from './components/BlueprintOutput';
 import { DebugPanel } from './components/DebugPanel';
 import { TransferHistoryVisualization } from './components/TransferHistoryVisualization';
 import { StateTransitionTimeline } from './components/StateTransitionTimeline';
+import { MissingInserterAlert } from './components/MissingInserterAlert';
 
 const darkTheme = createTheme({
     palette: {
@@ -120,6 +122,7 @@ function App() {
         importConfig,
         exportConfig,
         resetConfig,
+        applyInserterFix,
     } = useConfigForm();
 
     const [debugSteps, setDebugSteps] = useState<DebugSteps>({
@@ -127,6 +130,8 @@ function App() {
         warm_up: false,
         simulate: false,
     });
+
+    const coverageIssues = useInserterValidation(exportConfig, isInitialized);
 
     // Initialize worker on mount
     useEffect(() => {
@@ -162,9 +167,10 @@ function App() {
             config.target_output.items_per_second > 0 &&
             config.target_output.copies > 0 &&
             config.machines.length > 0 &&
-            config.machines.every((m) => m.recipe)
+            config.machines.every((m) => m.recipe) &&
+            coverageIssues.length === 0
         );
-    }, [isInitialized, isRunning, config]);
+    }, [isInitialized, isRunning, config, coverageIssues]);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -237,6 +243,11 @@ function App() {
                                 onAdd={addInserter}
                                 onUpdate={updateInserter}
                                 onRemove={removeInserter}
+                            />
+
+                            <MissingInserterAlert
+                                issues={coverageIssues}
+                                onApplyFix={applyInserterFix}
                             />
 
                             <BeltsForm

@@ -39,4 +39,5 @@ export const ConfigPaths = {
     LITHIUM_PLATES: path.join(CONFIG_SAMPLES_DIR, 'lithium-plates-40-per-second.json'),
     UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: path.join(CONFIG_SAMPLES_DIR, 'utility-science-belted-combined-blue-and-lds.json'),
     PROCESSING_UNITS: path.join(CONFIG_SAMPLES_DIR, 'processing-units-15-per-second.json'),
+    BAD_ACCUMULATOR_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'bad-accumulator-config.json'),
 } as const;

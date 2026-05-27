@@ -30,11 +30,6 @@ export class ConfigValidationError extends Error {
         this.name = "ConfigValidationError";
         this.issues = issues;
         this.zodError = zodError;
-
-        // Maintain proper stack trace in V8 environments
-        if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, ConfigValidationError);
-        }
     }
 
     /**
@@ -136,5 +131,49 @@ export class ConfigValidationError extends Error {
             }
             return str;
         }).join("\n");
+    }
+}
+
+// ============================================================================
+// Inserter Coverage Validation Types
+// ============================================================================
+
+export type InserterCoverageIssueKind = 'missing_input_inserter' | 'missing_output_inserter';
+
+export type InserterFixOption =
+    | { type: 'machine_to_machine'; source_machine_id: number; item_name: string }
+    | { type: 'add_lane_to_existing_belt'; belt_id: number; item_name: string }
+    | { type: 'new_belt'; item_name: string }
+    | { type: 'infinity_chest'; item_name: string };
+
+export interface InserterCoverageIssue {
+    kind: InserterCoverageIssueKind;
+    machine_id: number;
+    recipe: string;
+    item_name: string;
+    fix_options: InserterFixOption[];
+}
+
+export class InserterCoverageError extends Error {
+    public readonly issues: InserterCoverageIssue[];
+
+    constructor(issues: InserterCoverageIssue[]) {
+        const message = InserterCoverageError.formatMessage(issues);
+        super(message);
+        this.name = 'InserterCoverageError';
+        this.issues = issues;
+    }
+
+    private static formatMessage(issues: InserterCoverageIssue[]): string {
+        const lines = [
+            `Missing inserter coverage (${issues.length} issue${issues.length === 1 ? '' : 's'}):`
+        ];
+        for (const issue of issues) {
+            const dir = issue.kind === 'missing_input_inserter' ? 'input' : 'output';
+            lines.push(
+                `  - Machine ${issue.machine_id} (${issue.recipe}): missing ${dir} inserter for '${issue.item_name}'`
+            );
+        }
+        return lines.join('\n');
     }
 }
