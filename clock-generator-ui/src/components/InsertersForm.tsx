@@ -238,6 +238,14 @@ export function InsertersForm({
                         flexWrap: 'wrap',
                     }}
                 >
+                    <NumberField
+                        label="ID"
+                        value={inserter.id}
+                        onValueChange={(val) => onUpdate(index, { id: val ?? 1 })}
+                        min={1}
+                        sx={{ width: 80 }}
+                        size="small"
+                    />
                     {/* Source */}
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Autocomplete

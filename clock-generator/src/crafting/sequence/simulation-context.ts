@@ -82,7 +82,7 @@ function createSimulationContextFromConfig(
     }
 
     config.inserters.forEach((inserterConfig, index) => {
-        entity_registry.add(inserter_factory.fromConfig(index + 1, inserterConfig))
+        entity_registry.add(inserter_factory.fromConfig(inserterConfig.id ?? (index + 1), inserterConfig))
     });
 
     const drills = config.drills

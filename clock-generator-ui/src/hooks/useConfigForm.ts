@@ -65,6 +65,7 @@ export interface InserterOverrides {
 }
 
 export interface InserterFormData {
+    id: number;
     source: { type: 'machine' | 'belt' | 'chest'; id: number };
     sink: { type: 'machine' | 'belt' | 'chest'; id: number };
     stack_size: number;
@@ -174,6 +175,15 @@ const createDefaultConfig = (): ConfigFormData => ({
     chests: [],
 });
 
+/** Migrate legacy inserter data to include id field */
+function migrateInserters(inserters: unknown[]): InserterFormData[] {
+    return inserters.map((ins: unknown, index: number) => {
+        const i = ins as InserterFormData & { id?: number };
+        if (typeof i.id === 'number') return i as InserterFormData;
+        return { ...i, id: index + 1 } as InserterFormData;
+    });
+}
+
 /** Migrate legacy chest data to include type field */
 function migrateChests(chests: unknown[]): ChestFormData[] {
     return chests.map((chest: unknown) => {
@@ -202,6 +212,10 @@ function loadConfigFromStorage(): ConfigFormData {
             if (parsed && parsed.target_output && parsed.machines && parsed.chests) {
                 // Migrate legacy chests
                 parsed.chests = migrateChests(parsed.chests);
+                // Migrate legacy inserters (assign id if missing)
+                if (Array.isArray(parsed.inserters)) {
+                    parsed.inserters = migrateInserters(parsed.inserters);
+                }
                 return parsed as ConfigFormData;
             }
         }
@@ -360,17 +374,21 @@ export function useConfigForm(): UseConfigFormResult {
 
     // Inserters
     const addInserter = useCallback(() => {
-        setConfig((prev) => ({
-            ...prev,
-            inserters: [
-                ...prev.inserters,
-                {
-                    source: { type: 'machine', id: 1 },
-                    sink: { type: 'belt', id: 1 },
-                    stack_size: 16,
-                },
-            ],
-        }));
+        setConfig((prev) => {
+            const maxId = Math.max(0, ...prev.inserters.map((ins) => ins.id));
+            return {
+                ...prev,
+                inserters: [
+                    ...prev.inserters,
+                    {
+                        id: maxId + 1,
+                        source: { type: 'machine', id: 1 },
+                        sink: { type: 'belt', id: 1 },
+                        stack_size: 16,
+                    },
+                ],
+            };
+        });
     }, []);
 
     const updateInserter = useCallback((index: number, updates: Partial<InserterFormData>) => {
@@ -706,7 +724,8 @@ export function useConfigForm(): UseConfigFormResult {
                 crafting_speed: m.crafting_speed,
                 type: m.type,
             })),
-            inserters: imported.inserters.map((ins) => ({
+            inserters: imported.inserters.map((ins, index) => ({
+                id: ins.id ?? (index + 1),
                 source: ins.source,
                 sink: ins.sink,
                 stack_size: ins.stack_size,
@@ -808,11 +827,13 @@ export function useConfigForm(): UseConfigFormResult {
 
             const nextBeltId = () => Math.max(0, ...prev.belts.map((b) => b.id)) + 1;
             const nextChestId = () => Math.max(0, ...prev.chests.map((c) => c.id)) + 1;
+            const nextInserterId = () => Math.max(0, ...prev.inserters.map((ins) => ins.id)) + 1;
 
             // ── machine → machine inserter (highest priority, no new belt/chest) ─
             if (fix.type === 'machine_to_machine') {
                 const stackSize = inferStackSize();
                 const newInserter: InserterFormData = {
+                    id: nextInserterId(),
                     source: { type: 'machine', id: fix.source_machine_id },
                     sink: { type: 'machine', id: issue.machine_id },
                     stack_size: stackSize,
@@ -853,8 +874,8 @@ export function useConfigForm(): UseConfigFormResult {
                     lanes: [{ ingredient: fix.item_name, stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] as [BeltLaneFormData],
                 };
                 const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
-                    ? { source: { type: 'belt', id: newBeltId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
-                    : { source: { type: 'machine', id: issue.machine_id }, sink: { type: 'belt', id: newBeltId }, stack_size: stackSize };
+                    ? { id: nextInserterId(), source: { type: 'belt', id: newBeltId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
+                    : { id: nextInserterId(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'belt', id: newBeltId }, stack_size: stackSize };
                 return {
                     ...prev,
                     belts: [...prev.belts, newBelt],
@@ -871,8 +892,8 @@ export function useConfigForm(): UseConfigFormResult {
                     item_filter: [{ item_name: fix.item_name, request_count: 100 }],
                 };
                 const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
-                    ? { source: { type: 'chest', id: newChestId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
-                    : { source: { type: 'machine', id: issue.machine_id }, sink: { type: 'chest', id: newChestId }, stack_size: stackSize };
+                    ? { id: nextInserterId(), source: { type: 'chest', id: newChestId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
+                    : { id: nextInserterId(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'chest', id: newChestId }, stack_size: stackSize };
                 return {
                     ...prev,
                     chests: [...prev.chests, newChest],
