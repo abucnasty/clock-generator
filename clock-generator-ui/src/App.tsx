@@ -30,6 +30,7 @@ import { DebugPanel } from './components/DebugPanel';
 import { TransferHistoryVisualization } from './components/TransferHistoryVisualization';
 import { StateTransitionTimeline } from './components/StateTransitionTimeline';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
+import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDisplay';
 
 const darkTheme = createTheme({
     palette: {
@@ -84,6 +85,7 @@ function App() {
         transferHistory,
         stateTransitionHistory,
         simulationDurationTicks,
+        swingBackoffReport,
         error,
         initialize,
         runSimulation,
@@ -288,6 +290,7 @@ function App() {
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
+                                    disableSwingBackoff={config.overrides?.disable_swing_backoff}
                                     onUpdate={updateOverrides}
                                 />
                             </Box>
@@ -302,6 +305,8 @@ function App() {
                                 onGenerate={handleGenerate}
                                 disabled={!canGenerate}
                             />
+
+                            <SwingBackoffReportDisplay report={swingBackoffReport} />
 
                             {transferHistory && (
                                 <Box sx={{ mt: 2 }}>

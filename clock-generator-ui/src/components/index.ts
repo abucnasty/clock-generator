@@ -12,3 +12,4 @@ export { StateTransitionTimeline } from './StateTransitionTimeline';
 export { ItemSelector } from './ItemSelector';
 export { FilterSlotSelector } from './FilterSlotSelector';
 export { MachineFactsAccordion } from './MachineFactsAccordion';
+export { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';

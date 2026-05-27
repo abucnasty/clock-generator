@@ -9,7 +9,7 @@ import type { WorkerRequest, WorkerResponse } from './types';
 
 // We'll dynamically import clock-generator in the worker context
 let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService;
-let generateClockForConfig: typeof import('clock-generator/browser').generateClockForConfig;
+let generateClockWithSwingBackoff: typeof import('clock-generator/browser').generateClockWithSwingBackoff;
 let encodeBlueprintFileBrowser: typeof import('clock-generator/browser').encodeBlueprintFileBrowser;
 let DebugSettingsProvider: typeof import('clock-generator/browser').DebugSettingsProvider;
 let StreamingLogger: typeof import('clock-generator/browser').StreamingLogger;
@@ -26,7 +26,7 @@ async function handleInitialize(factorioDataUrl: string): Promise<void> {
         const clockGenerator = await import('clock-generator/browser');
         
         FactorioDataService = clockGenerator.FactorioDataService;
-        generateClockForConfig = clockGenerator.generateClockForConfig;
+        generateClockWithSwingBackoff = clockGenerator.generateClockWithSwingBackoff;
         encodeBlueprintFileBrowser = clockGenerator.encodeBlueprintFileBrowser;
         DebugSettingsProvider = clockGenerator.DebugSettingsProvider;
         StreamingLogger = clockGenerator.StreamingLogger;
@@ -74,7 +74,7 @@ async function handleGenerate(
             message: 'Starting simulation...',
         });
 
-        const result = generateClockForConfig(config, {
+        const result = generateClockWithSwingBackoff(config, {
             debug,
             debug_steps: debugSteps,
             logger,
@@ -89,6 +89,7 @@ async function handleGenerate(
             type: 'completed',
             blueprintString,
             simulationDurationTicks: result.simulation_duration.ticks,
+            swingBackoffReport: result.swing_backoff_report,
         });
     } catch (error) {
         postResponse({
