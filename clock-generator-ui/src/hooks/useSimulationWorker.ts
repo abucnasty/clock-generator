@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory } from 'clock-generator/browser';
+import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 
 export interface RecipeInfo {
@@ -18,6 +18,7 @@ export interface UseSimulationWorkerResult {
     transferHistory: SerializableTransferHistory | null;
     stateTransitionHistory: SerializableStateTransitionHistory | null;
     simulationDurationTicks: number | null;
+    swingBackoffReport: SwingBackoffReport | null;
     error: string | null;
     initialize: () => void;
     runSimulation: (config: Config, debugSteps: DebugSteps) => void;
@@ -27,7 +28,7 @@ export interface UseSimulationWorkerResult {
 
 // Dynamic imports for the clock-generator library
 let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService | null = null;
-let generateClockForConfig: typeof import('clock-generator/browser').generateClockForConfig | null = null;
+let generateClockWithSwingBackoff: typeof import('clock-generator/browser').generateClockWithSwingBackoff | null = null;
 let encodeBlueprintFileBrowser: typeof import('clock-generator/browser').encodeBlueprintFileBrowser | null = null;
 let DebugSettingsProvider: typeof import('clock-generator/browser').DebugSettingsProvider | null = null;
 let StreamingLogger: typeof import('clock-generator/browser').StreamingLogger | null = null;
@@ -43,6 +44,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [transferHistory, setTransferHistory] = useState<SerializableTransferHistory | null>(null);
     const [stateTransitionHistory, setStateTransitionHistory] = useState<SerializableStateTransitionHistory | null>(null);
     const [simulationDurationTicks, setSimulationDurationTicks] = useState<number | null>(null);
+    const [swingBackoffReport, setSwingBackoffReport] = useState<SwingBackoffReport | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const initialize = useCallback(async () => {
@@ -51,7 +53,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             const clockGenerator = await import('clock-generator/browser');
             
             FactorioDataService = clockGenerator.FactorioDataService;
-            generateClockForConfig = clockGenerator.generateClockForConfig;
+            generateClockWithSwingBackoff = clockGenerator.generateClockWithSwingBackoff;
             encodeBlueprintFileBrowser = clockGenerator.encodeBlueprintFileBrowser;
             DebugSettingsProvider = clockGenerator.DebugSettingsProvider;
             StreamingLogger = clockGenerator.StreamingLogger;
@@ -76,7 +78,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, []);
 
     const runSimulation = useCallback(async (config: Config, debugSteps: DebugSteps) => {
-        if (!generateClockForConfig || !encodeBlueprintFileBrowser || !DebugSettingsProvider || !StreamingLogger) {
+        if (!generateClockWithSwingBackoff || !encodeBlueprintFileBrowser || !DebugSettingsProvider || !StreamingLogger) {
             setError('Not initialized');
             return;
         }
@@ -86,6 +88,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setTransferHistory(null);
         setStateTransitionHistory(null);
         setSimulationDurationTicks(null);
+        setSwingBackoffReport(null);
         setError(null);
         setLogs([]);
 
@@ -104,7 +107,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 const debug = DebugSettingsProvider!.mutable();
 
                 // Run the simulation
-                const result = generateClockForConfig!(config, {
+                const result = generateClockWithSwingBackoff!(config, {
                     debug,
                     debug_steps: debugSteps,
                     logger,
@@ -119,6 +122,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 setTransferHistory(result.serializable_transfer_history);
                 setStateTransitionHistory(result.serializable_state_transition_history);
                 setSimulationDurationTicks(result.simulation_duration.ticks);
+                setSwingBackoffReport(result.swing_backoff_report ?? null);
                 setIsRunning(false);
             } catch (err) {
                 console.error('Simulation error:', err);
@@ -156,6 +160,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         transferHistory,
         stateTransitionHistory,
         simulationDurationTicks,
+        swingBackoffReport,
         error,
         initialize,
         runSimulation,

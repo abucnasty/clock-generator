@@ -15,13 +15,15 @@ interface OverridesFormProps {
     lcm?: number;
     terminalSwingCount?: number;
     useFractionalSwings?: boolean;
-    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings', value: number | boolean | undefined) => void;
+    disableSwingBackoff?: boolean;
+    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'disable_swing_backoff', value: number | boolean | undefined) => void;
 }
 
 export function OverridesForm({
     lcm,
     terminalSwingCount,
     useFractionalSwings,
+    disableSwingBackoff,
     onUpdate,
 }: OverridesFormProps) {
     return (
@@ -89,6 +91,28 @@ export function OverridesForm({
                                 />
                             }
                             label="Enable Fractional Swings"
+                            sx={{ ml: 1 }}
+                        />
+                    </Tooltip>
+                    <Tooltip
+                        title="When enabled, if the simulation detects that output inserters transferred fewer items than expected (a sign of output-blocking instability), it will automatically retry with progressively fewer output swings per cycle (initial → initial−1 → … → 1) until a stable result is found. The first stable swing count is used for the final blueprint. Disable this to always accept the first simulation result as-is."
+                        arrow
+                        placement="top"
+                    >
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={!(disableSwingBackoff ?? false)}
+                                    color="primary"
+                                    onChange={(e) =>
+                                        onUpdate(
+                                            'disable_swing_backoff',
+                                            e.target.checked ? undefined : true
+                                        )
+                                    }
+                                />
+                            }
+                            label="Output Swing Backoff"
                             sx={{ ml: 1 }}
                         />
                     </Tooltip>

@@ -458,7 +458,19 @@ export const ConfigOverridesSchema = z.object({
      * 
      * @default false
      */
-    use_fractional_swings: z.boolean().optional()
+    use_fractional_swings: z.boolean().optional(),
+    /**
+     * Disable automatic output swing stability backoff.
+     * 
+     * When the simulation detects that actual output items transferred by output inserters
+     * deviate from the expected amount (e.g., half-frequency due to excessive output blocking),
+     * it will retry with progressively lower terminal_swing_count values by default.
+     * 
+     * Set this to true to suppress that retry behaviour and accept the first result as-is.
+     * 
+     * @default false
+     */
+    disable_swing_backoff: z.boolean().optional()
 });
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
