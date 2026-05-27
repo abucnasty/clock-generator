@@ -95,7 +95,7 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="When enabled, if the simulation detects that the output inserter is transferring fewer items than expected (e.g. due to excessive output blocking), it will automatically retry with a lower swing count until a stable result is found. Disable this to always accept the first simulation result."
+                        title="When enabled, if the simulation detects that output inserters transferred fewer items than expected (a sign of output-blocking instability), it will automatically retry with progressively fewer output swings per cycle (initial → initial−1 → … → 1) until a stable result is found. The first stable swing count is used for the final blueprint. Disable this to always accept the first simulation result as-is."
                         arrow
                         placement="top"
                     >
