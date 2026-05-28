@@ -20,6 +20,7 @@ import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigFor
 import { EnableControlModal } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
+import { SortableItem, SortableList } from './SortableList';
 
 const DRILL_TYPES = [
     { value: 'electric-mining-drill', label: 'Electric Mining Drill' },
@@ -41,6 +42,7 @@ interface DrillsFormProps {
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
     onRemove: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
 export function DrillsForm({
@@ -55,6 +57,7 @@ export function DrillsForm({
     onAdd,
     onUpdate,
     onRemove,
+    onReorder,
 }: DrillsFormProps) {
     const [enableControlModalDrillIndex, setEnableControlModalDrillIndex] = useState<number | null>(null);
     const [infoAnchorEl, setInfoAnchorEl] = useState<HTMLButtonElement | null>(null);
@@ -161,9 +164,11 @@ export function DrillsForm({
                         />
                     </Box>
 
+                    <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
                     {drills.map((drill, index) => (
+                        <SortableItem key={drill._uuid} stableKey={drill._uuid} displayId={index + 1}>
+                            {(dragHandle) => (
                         <Box
-                            key={`drill-${index}`}
                             sx={{
                                 display: 'flex',
                                 gap: 2,
@@ -175,17 +180,7 @@ export function DrillsForm({
                                 flexWrap: 'wrap',
                             }}
                         >
-                            <TextField
-                                label="ID"
-                                type="number"
-                                value={drill.id}
-                                onChange={(e) =>
-                                    onUpdate(index, { id: parseInt(e.target.value) || 1 })
-                                }
-                                inputProps={{ min: 1 }}
-                                sx={{ width: 80 }}
-                                size="small"
-                            />
+                            {dragHandle}
                             <FormControl size="small" sx={{ minWidth: 180 }}>
                                 <InputLabel>Drill Type</InputLabel>
                                 <Select
@@ -267,7 +262,10 @@ export function DrillsForm({
                                 <Delete />
                             </IconButton>
                         </Box>
+                            )}
+                        </SortableItem>
                     ))}
+                    </SortableList>
 
                     {drills.length === 0 && (
                         <Typography

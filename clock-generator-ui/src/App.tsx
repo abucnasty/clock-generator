@@ -16,6 +16,7 @@ import {
 import type { Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
+import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
@@ -125,6 +126,11 @@ function App() {
         exportConfig,
         resetConfig,
         applyInserterFix,
+        reorderMachines,
+        reorderInserters,
+        reorderBelts,
+        reorderChests,
+        reorderDrills,
     } = useConfigForm();
 
     const [debugSteps, setDebugSteps] = useState<DebugSteps>({
@@ -189,11 +195,11 @@ function App() {
                         <ConfigImportExport
                             config={exportConfig()}
                             onImport={handleImportConfig}
-                            onReplaceMachines={replaceMachines}
-                            onReplaceDrills={replaceDrills}
-                            onReplaceInserters={replaceInserters}
-                            onReplaceBelts={replaceBelts}
-                            onReplaceChests={replaceChests}
+                            onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
+                            onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
+                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
+                            onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
+                            onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
                             parseConfig={parseConfig}
@@ -233,6 +239,7 @@ function App() {
                                 onAdd={addMachine}
                                 onUpdate={updateMachine}
                                 onRemove={removeMachine}
+                                onReorder={reorderMachines}
                             />
 
                             <InsertersForm
@@ -245,6 +252,7 @@ function App() {
                                 onAdd={addInserter}
                                 onUpdate={updateInserter}
                                 onRemove={removeInserter}
+                                onReorder={reorderInserters}
                             />
 
                             <MissingInserterAlert
@@ -258,6 +266,7 @@ function App() {
                                 onAdd={addBelt}
                                 onUpdate={updateBelt}
                                 onRemove={removeBelt}
+                                onReorder={reorderBelts}
                             />
 
                             <ChestsForm
@@ -267,6 +276,7 @@ function App() {
                                 onUpdate={updateChest}
                                 onSwitchType={switchChestType}
                                 onRemove={removeChest}
+                                onReorder={reorderChests}
                             />
 
                             <Box sx={{ mb: 2 }}>
@@ -282,6 +292,7 @@ function App() {
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={removeDrill}
+                                    onReorder={reorderDrills}
                                 />
                             </Box>
 

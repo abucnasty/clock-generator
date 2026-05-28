@@ -18,6 +18,7 @@ import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NumberField } from './NumberField';
+import { SortableItem, SortableList } from './SortableList';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
@@ -40,6 +41,7 @@ interface InsertersFormProps {
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<InserterFormData>) => void;
     onRemove: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
 export function InsertersForm({
@@ -52,6 +54,7 @@ export function InsertersForm({
     onAdd,
     onUpdate,
     onRemove,
+    onReorder,
 }: InsertersFormProps) {
     const [enableControlModalInserterIndex, setEnableControlModalInserterIndex] = useState<number | null>(null);
 
@@ -224,9 +227,11 @@ export function InsertersForm({
                 </Button>
             </Box>
 
+            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
+                <SortableItem key={inserter._uuid} stableKey={inserter._uuid} displayId={index + 1}>
+                    {(dragHandle) => (
                 <Box
-                    key={`inserter-${index}`}
                     sx={{
                         display: 'flex',
                         gap: 2,
@@ -238,6 +243,7 @@ export function InsertersForm({
                         flexWrap: 'wrap',
                     }}
                 >
+                    {dragHandle}
                     {/* Source */}
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Autocomplete
@@ -449,7 +455,10 @@ export function InsertersForm({
                         <Delete />
                     </IconButton>
                 </Box>
+                    )}
+                </SortableItem>
             ))}
+            </SortableList>
 
             {inserters.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>

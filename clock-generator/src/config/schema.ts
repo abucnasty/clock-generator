@@ -336,6 +336,7 @@ export const InserterOverridesConfigSchema = z.object({
 export type InserterOverridesConfig = z.infer<typeof InserterOverridesConfigSchema>;
 
 export const InserterConfigSchema = z.object({
+    id: z.number().int().positive().optional(),
     source: z.discriminatedUnion("type", [
         InserterBeltConfigSchema,
         InserterMachineConfigSchema,

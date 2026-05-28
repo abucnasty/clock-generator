@@ -8,13 +8,13 @@ import {
     MenuItem,
     Paper,
     Select,
-    TextField,
     Typography,
 } from '@mui/material';
 import { BELT_FORM_DEFAULT_STACK_SIZE, type BeltFormData, type BeltLaneFormData } from '../hooks/useConfigForm';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
+import { SortableItem, SortableList } from './SortableList';
 
 const BELT_TYPES = [
     { value: 'transport-belt', label: 'Transport Belt' },
@@ -29,6 +29,7 @@ interface BeltsFormProps {
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
     onRemove: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
 export function BeltsForm({
@@ -37,6 +38,7 @@ export function BeltsForm({
     onAdd,
     onUpdate,
     onRemove,
+    onReorder,
 }: BeltsFormProps) {
     const handleLaneUpdate = (
         beltIndex: number,
@@ -80,9 +82,11 @@ export function BeltsForm({
                 </Button>
             </Box>
 
+            <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
+                <SortableItem key={belt._uuid} stableKey={belt._uuid} displayId={beltIndex + 1}>
+                    {(dragHandle) => (
                 <Box
-                    key={`belt-${beltIndex}`}
                     sx={{
                         mb: 2,
                         p: 2,
@@ -91,15 +95,7 @@ export function BeltsForm({
                     }}
                 >
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
-                        <TextField
-                            label="ID"
-                            type="number"
-                            value={belt.id}
-                            onChange={(e) => onUpdate(beltIndex, { id: parseInt(e.target.value) || 1 })}
-                            inputProps={{ min: 1 }}
-                            sx={{ width: 80 }}
-                            size="small"
-                        />
+                        {dragHandle}
                         <FormControl size="small" sx={{ minWidth: 180 }}>
                             <InputLabel>Belt Type</InputLabel>
                             <Select
@@ -191,7 +187,10 @@ export function BeltsForm({
                         ))}
                     </Box>
                 </Box>
+                    )}
+                </SortableItem>
             ))}
+            </SortableList>
 
             {belts.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
