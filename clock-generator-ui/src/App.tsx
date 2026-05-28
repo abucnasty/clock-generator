@@ -6,6 +6,8 @@ import {
     CircularProgress,
     Container,
     CssBaseline,
+    Dialog,
+    IconButton,
     ThemeProvider,
     Toolbar,
     Typography,
@@ -16,7 +18,7 @@ import {
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
-import { AccountTree, List } from '@mui/icons-material';
+import { AccountTree, FullscreenExit, List } from '@mui/icons-material';
 import type { Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
@@ -149,6 +151,7 @@ function App() {
     });
 
     const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
+    const [diagramFullscreen, setDiagramFullscreen] = useState(false);
 
     const coverageIssues = useInserterValidation(exportConfig, isInitialized);
 
@@ -339,6 +342,7 @@ function App() {
                                         onAddBelt={addBelt}
                                         onAddChest={addChest}
                                         onAddDrill={addDrill}
+                                        onRequestFullscreen={() => setDiagramFullscreen(true)}
                                     />
                                     <MissingInserterAlert
                                         issues={coverageIssues}
@@ -437,6 +441,68 @@ function App() {
                     </Typography>
                 </Box>
             </Box>
+
+            {/* Fullscreen diagram dialog */}
+            <Dialog
+                fullScreen
+                open={diagramFullscreen}
+                onClose={() => setDiagramFullscreen(false)}
+                PaperProps={{ sx: { bgcolor: 'background.default' } }}
+            >
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            px: 2,
+                            py: 1,
+                            flexShrink: 0,
+                            bgcolor: 'background.paper',
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                        }}
+                    >
+                        <Typography variant="h6" sx={{ flex: 1 }}>Flow Diagram</Typography>
+                        <IconButton onClick={() => setDiagramFullscreen(false)} size="small" aria-label="Exit fullscreen">
+                            <FullscreenExit />
+                        </IconButton>
+                    </Box>
+                    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                        <ConfigFlowDiagram
+                            machines={config.machines}
+                            inserters={config.inserters}
+                            belts={config.belts}
+                            chests={config.chests}
+                            drills={config.drills?.configs ?? []}
+                            recipeNames={recipeNames}
+                            itemNames={itemNamesComposite}
+                            getRecipeInfo={getRecipeInfo}
+                            onUpdateMachine={updateMachine}
+                            onUpdateInserter={updateInserter}
+                            onUpdateBelt={updateBelt}
+                            onUpdateChest={updateChest}
+                            onSwitchChestType={switchChestType}
+                            onUpdateDrill={updateDrill}
+                            onDeleteMachine={removeMachine}
+                            onDeleteInserter={removeInserter}
+                            onDeleteBelt={removeBelt}
+                            onDeleteChest={removeChest}
+                            onDeleteDrill={removeDrill}
+                            onAddMachine={addMachine}
+                            onAddInserter={addInserter}
+                            onAddBelt={addBelt}
+                            onAddChest={addChest}
+                            onAddDrill={addDrill}
+                            height="100%"
+                        />
+                    </Box>
+                    {coverageIssues.length > 0 && (
+                        <Box sx={{ flexShrink: 0, px: 2, pb: 1 }}>
+                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} />
+                        </Box>
+                    )}
+                </Box>
+            </Dialog>
         </ThemeProvider>
     );
 }

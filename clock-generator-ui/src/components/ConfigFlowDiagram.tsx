@@ -9,8 +9,8 @@ import {
     type NodeTypes,
     type NodeMouseHandler,
 } from '@xyflow/react';
-import { Box, Button, Menu, MenuItem, Typography } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Add, Fullscreen } from '@mui/icons-material';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph } from '../utils/buildFlowGraph';
 import { EntityFlowNode } from './EntityFlowNode';
@@ -35,6 +35,8 @@ export type ConfigFlowDiagramProps = Omit<EntityEditDialogProps, 'open' | 'onClo
     onAddBelt?: () => void;
     onAddChest?: () => void;
     onAddDrill?: () => void;
+    onRequestFullscreen?: () => void;
+    height?: number | string;
 };
 
 interface FlowContentProps {
@@ -49,6 +51,7 @@ interface FlowContentProps {
     onAddBelt?: () => void;
     onAddChest?: () => void;
     onAddDrill?: () => void;
+    onRequestFullscreen?: () => void;
 }
 
 function FlowContent({
@@ -63,6 +66,7 @@ function FlowContent({
     onAddBelt,
     onAddChest,
     onAddDrill,
+    onRequestFullscreen,
 }: FlowContentProps) {
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
 
@@ -133,6 +137,24 @@ function FlowContent({
         >
             <Background color="#333" variant={BackgroundVariant.Dots} gap={20} size={1} />
             <Controls showInteractive={false} />
+            {onRequestFullscreen && (
+                <Panel position="top-left">
+                    <IconButton
+                        size="small"
+                        onClick={onRequestFullscreen}
+                        aria-label="Fullscreen"
+                        sx={{
+                            bgcolor: '#232323',
+                            border: '1px solid #555',
+                            borderRadius: 0,
+                            color: '#ccc',
+                            '&:hover': { bgcolor: '#2d2d2d', borderColor: '#888' },
+                        }}
+                    >
+                        <Fullscreen fontSize="small" />
+                    </IconButton>
+                </Panel>
+            )}
             {hasAddCallbacks && (
                 <Panel position="top-right">
                     <Button
@@ -193,6 +215,8 @@ export function ConfigFlowDiagram({
     onAddBelt,
     onAddChest,
     onAddDrill,
+    onRequestFullscreen,
+    height = 520,
     ...dialogProps
 }: ConfigFlowDiagramProps) {
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -209,7 +233,7 @@ export function ConfigFlowDiagram({
         <>
             <Box
                 sx={{
-                    height: 520,
+                    height,
                     bgcolor: '#1a1a1a',
                     borderRadius: 1,
                     overflow: 'hidden',
@@ -246,6 +270,7 @@ export function ConfigFlowDiagram({
                         onAddBelt={onAddBelt}
                         onAddChest={onAddChest}
                         onAddDrill={onAddDrill}
+                        onRequestFullscreen={onRequestFullscreen}
                     />
                 </ReactFlowProvider>
             </Box>
