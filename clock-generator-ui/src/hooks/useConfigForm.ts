@@ -274,9 +274,15 @@ function loadConfigFromStorage(): ConfigFormData {
 }
 
 /** Save config to localStorage */
+/** Converts a single form-data entity to its config equivalent, stripping UI-only fields. */
+function toConfig<T extends { _uuid: string }>({ _uuid: _, ...rest }: T) { void _; return rest; }
+
 function saveConfigToStorage(config: ConfigFormData): void {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        // Strip internal _uuid fields — they are UI-only and shouldn't be in the exported config.
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(config, (key, value) =>
+            key === '_uuid' ? undefined : value
+        ));
     } catch (e) {
         console.warn('Failed to save config to localStorage:', e);
     }
@@ -917,7 +923,17 @@ export function useConfigForm(): UseConfigFormResult {
     }, []);
 
     const exportConfig = useCallback((): Config => {
-        return config as Config;
+        // Strip internal _uuid fields before handing the config to any external consumer.
+        return {
+            ...config,
+            machines: config.machines.map(toConfig),
+            inserters: config.inserters.map(toConfig),
+            belts: config.belts.map(toConfig),
+            chests: config.chests.map(toConfig),
+            ...(config.drills && {
+                drills: { ...config.drills, configs: config.drills.configs.map(toConfig) },
+            }),
+        } as Config;
     }, [config]);
 
     const resetConfig = useCallback(() => {
