@@ -82,9 +82,9 @@ export function BeltsForm({
                 </Button>
             </Box>
 
-            <SortableList itemIds={belts.map((b) => b.id)} onReorder={onReorder}>
+            <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
-                <SortableItem key={belt.id} id={belt.id}>
+                <SortableItem key={belt._uuid} stableKey={belt._uuid} displayId={beltIndex + 1}>
                     {(dragHandle) => (
                 <Box
                     sx={{

@@ -117,9 +117,9 @@ export function ChestsForm({
                 </Typography>
             )}
 
-            <SortableList itemIds={chests.map((c) => c.id)} onReorder={onReorder}>
+            <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
             {chests.map((chest, index) => (
-                <SortableItem key={chest.id} id={chest.id}>
+                <SortableItem key={chest._uuid} stableKey={chest._uuid} displayId={index + 1}>
                     {(dragHandle) => (
                 <Box
                     sx={{

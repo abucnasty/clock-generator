@@ -227,9 +227,9 @@ export function InsertersForm({
                 </Button>
             </Box>
 
-            <SortableList itemIds={inserters.map((ins) => ins.id)} onReorder={onReorder}>
+            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <SortableItem key={inserter.id} id={inserter.id}>
+                <SortableItem key={inserter._uuid} stableKey={inserter._uuid} displayId={index + 1}>
                     {(dragHandle) => (
                 <Box
                     sx={{

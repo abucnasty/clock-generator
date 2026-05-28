@@ -6,6 +6,9 @@ const STORAGE_KEY = 'clock-generator-config';
 
 export interface MachineFormData {
     id: number;
+    /** Internal UUID used to track this entity in the UI (e.g. for drag-and-drop).
+     *  Not related to the numeric `id` that ends up in exported configs. */
+    _uuid: string;
     recipe: string;
     productivity: number;
     crafting_speed: number;
@@ -66,6 +69,8 @@ export interface InserterOverrides {
 
 export interface InserterFormData {
     id: number;
+    /** Internal UUID — see MachineFormData._uuid. */
+    _uuid: string;
     source: { type: 'machine' | 'belt' | 'chest'; id: number };
     sink: { type: 'machine' | 'belt' | 'chest'; id: number };
     stack_size: number;
@@ -80,6 +85,8 @@ export interface BeltLaneFormData {
 
 export interface BeltFormData {
     id: number;
+    /** Internal UUID — see MachineFormData._uuid. */
+    _uuid: string;
     type: 'transport-belt' | 'fast-transport-belt' | 'express-transport-belt' | 'turbo-transport-belt';
     lanes: [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
 }
@@ -93,6 +100,8 @@ export interface DrillOverrides {
 
 export interface DrillFormData {
     id: number;
+    /** Internal UUID — see MachineFormData._uuid. */
+    _uuid: string;
     type: 'electric-mining-drill' | 'burner-mining-drill' | 'big-mining-drill';
     mined_item_name: string;
     speed_bonus: number;
@@ -110,6 +119,8 @@ export interface InfinityFilterFormData {
 export interface BufferChestFormData {
     type: typeof ChestType.BUFFER_CHEST;
     id: number;
+    /** Internal UUID — see MachineFormData._uuid. */
+    _uuid: string;
     storage_size: number;
     item_filter: string;
 }
@@ -118,6 +129,8 @@ export interface BufferChestFormData {
 export interface InfinityChestFormData {
     type: typeof ChestType.INFINITY_CHEST;
     id: number;
+    /** Internal UUID — see MachineFormData._uuid. */
+    _uuid: string;
     item_filter: InfinityFilterFormData[];
 }
 
@@ -183,6 +196,7 @@ const createDefaultConfig = (): ConfigFormData => ({
     machines: [
         {
             id: 1,
+            _uuid: crypto.randomUUID(),
             recipe: '',
             productivity: 0,
             crafting_speed: 1,
@@ -196,24 +210,26 @@ const createDefaultConfig = (): ConfigFormData => ({
 /** Migrate legacy inserter data to include id field */
 function migrateInserters(inserters: unknown[]): InserterFormData[] {
     return inserters.map((ins: unknown, index: number) => {
-        const i = ins as InserterFormData & { id?: number };
-        if (typeof i.id === 'number') return i as InserterFormData;
-        return { ...i, id: index + 1 } as InserterFormData;
+        const i = ins as InserterFormData & { id?: number; _uuid?: string };
+        const withId = typeof i.id === 'number' ? i : { ...i, id: index + 1 };
+        return withId._uuid ? withId as InserterFormData : { ...withId, _uuid: crypto.randomUUID() } as InserterFormData;
     });
 }
 
 /** Migrate legacy chest data to include type field */
 function migrateChests(chests: unknown[]): ChestFormData[] {
     return chests.map((chest: unknown) => {
-        const c = chest as { type?: string; id: number; storage_size?: number; item_filter?: string | InfinityFilterFormData[] };
-        // If already has a valid type, return as-is
+        const c = chest as { type?: string; id: number; _uuid?: string; storage_size?: number; item_filter?: string | InfinityFilterFormData[] };
+        const uuid = c._uuid ?? crypto.randomUUID();
+        // If already has a valid type, return as-is (with uuid)
         if (c.type === ChestType.INFINITY_CHEST) {
-            return c as InfinityChestFormData;
+            return { ...(c as InfinityChestFormData), _uuid: uuid };
         }
         // Default to buffer chest (handles legacy data without type)
         return {
             type: ChestType.BUFFER_CHEST,
             id: c.id,
+            _uuid: uuid,
             storage_size: c.storage_size ?? 1,
             item_filter: (typeof c.item_filter === 'string' ? c.item_filter : '') as string,
         };
@@ -230,9 +246,22 @@ function loadConfigFromStorage(): ConfigFormData {
             if (parsed && parsed.target_output && parsed.machines && parsed.chests) {
                 // Migrate legacy chests
                 parsed.chests = migrateChests(parsed.chests);
-                // Migrate legacy inserters (assign id if missing)
+                // Migrate legacy inserters (assign id / _uuid if missing)
                 if (Array.isArray(parsed.inserters)) {
                     parsed.inserters = migrateInserters(parsed.inserters);
+                }
+                // Migrate machines, belts, drills: add _uuid if missing
+                if (Array.isArray(parsed.machines)) {
+                    parsed.machines = parsed.machines.map((m: MachineFormData & { _uuid?: string }) =>
+                        m._uuid ? m : { ...m, _uuid: crypto.randomUUID() });
+                }
+                if (Array.isArray(parsed.belts)) {
+                    parsed.belts = parsed.belts.map((b: BeltFormData & { _uuid?: string }) =>
+                        b._uuid ? b : { ...b, _uuid: crypto.randomUUID() });
+                }
+                if (parsed.drills && Array.isArray(parsed.drills.configs)) {
+                    parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
+                        d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
                 }
                 return parsed as ConfigFormData;
             }
@@ -344,10 +373,11 @@ export function useConfigForm(): UseConfigFormResult {
                     ...prev.machines,
                     {
                         id: maxId + 1,
+                        _uuid: crypto.randomUUID(),
                         recipe: '',
                         productivity: 0,
                         crafting_speed: 1,
-                    },
+                    }
                 ],
             };
         });
@@ -380,6 +410,7 @@ export function useConfigForm(): UseConfigFormResult {
             const machinesWithNewIds = newMachines.map((m, i) => ({
                 ...m,
                 id: maxId + i + 1,
+                _uuid: crypto.randomUUID(),
             }));
             return {
                 ...prev,
@@ -405,10 +436,11 @@ export function useConfigForm(): UseConfigFormResult {
                     ...prev.inserters,
                     {
                         id: maxId + 1,
+                        _uuid: crypto.randomUUID(),
                         source: { type: 'machine', id: 1 },
                         sink: { type: 'belt', id: 1 },
                         stack_size: 16,
-                    },
+                    }
                 ],
             };
         });
@@ -447,6 +479,7 @@ export function useConfigForm(): UseConfigFormResult {
                     ...prev.belts,
                     {
                         id: maxId + 1,
+                        _uuid: crypto.randomUUID(),
                         type: BELT_FORM_DEFAULT_TYPE,
                         lanes: [{ ingredient: '', stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] as [BeltLaneFormData],
                     },
@@ -486,12 +519,14 @@ export function useConfigForm(): UseConfigFormResult {
                 ? {
                     type: ChestType.BUFFER_CHEST,
                     id: maxId + 1,
+                    _uuid: crypto.randomUUID(),
                     storage_size: 1,
                     item_filter: '',
                 }
                 : {
                     type: ChestType.INFINITY_CHEST,
                     id: maxId + 1,
+                    _uuid: crypto.randomUUID(),
                     item_filter: [{ item_name: '', request_count: 1 }],
                 };
             return {
@@ -520,6 +555,7 @@ export function useConfigForm(): UseConfigFormResult {
                     return {
                         type: ChestType.BUFFER_CHEST,
                         id: c.id,
+                        _uuid: c._uuid,
                         storage_size: 1,
                         item_filter: '',
                     } as BufferChestFormData;
@@ -527,6 +563,7 @@ export function useConfigForm(): UseConfigFormResult {
                     return {
                         type: ChestType.INFINITY_CHEST,
                         id: c.id,
+                        _uuid: c._uuid,
                         item_filter: [{ item_name: '', request_count: 1 }],
                     } as InfinityChestFormData;
                 }
@@ -592,6 +629,7 @@ export function useConfigForm(): UseConfigFormResult {
                         ...prev.drills.configs,
                         {
                             id: maxId + 1,
+                            _uuid: crypto.randomUUID(),
                             type: 'electric-mining-drill' as const,
                             mined_item_name: '',
                             speed_bonus: 0,
@@ -644,6 +682,7 @@ export function useConfigForm(): UseConfigFormResult {
             const drillsWithNewIds = newDrills.map((d, i) => ({
                 ...d,
                 id: maxId + i + 1,
+                _uuid: crypto.randomUUID(),
             }));
             
             return {
@@ -742,6 +781,7 @@ export function useConfigForm(): UseConfigFormResult {
             target_output: imported.target_output,
             machines: imported.machines.map((m) => ({
                 id: m.id,
+                _uuid: crypto.randomUUID(),
                 recipe: m.recipe,
                 productivity: m.productivity,
                 crafting_speed: m.crafting_speed,
@@ -749,6 +789,7 @@ export function useConfigForm(): UseConfigFormResult {
             })),
             inserters: imported.inserters.map((ins, index) => ({
                 id: ins.id ?? (index + 1),
+                _uuid: crypto.randomUUID(),
                 source: ins.source,
                 sink: ins.sink,
                 stack_size: ins.stack_size,
@@ -762,6 +803,7 @@ export function useConfigForm(): UseConfigFormResult {
             })),
             belts: imported.belts.map((b) => ({
                 id: b.id,
+                _uuid: crypto.randomUUID(),
                 type: b.type,
                 lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
             })),
@@ -771,6 +813,7 @@ export function useConfigForm(): UseConfigFormResult {
                     return {
                         type: ChestType.INFINITY_CHEST,
                         id: c.id,
+                        _uuid: crypto.randomUUID(),
                         item_filter: (c.item_filter as { item_name: string; request_count: number }[]).map(f => ({
                             item_name: f.item_name,
                             request_count: f.request_count,
@@ -781,6 +824,7 @@ export function useConfigForm(): UseConfigFormResult {
                 return {
                     type: ChestType.BUFFER_CHEST,
                     id: c.id,
+                    _uuid: crypto.randomUUID(),
                     storage_size: c.storage_size ?? 1,
                     item_filter: c.item_filter as string,
                 };
@@ -790,6 +834,7 @@ export function useConfigForm(): UseConfigFormResult {
                     mining_productivity_level: imported.drills.mining_productivity_level,
                     configs: imported.drills.configs.map((d) => ({
                         id: d.id,
+                        _uuid: crypto.randomUUID(),
                         type: d.type,
                         mined_item_name: d.mined_item_name,
                         speed_bonus: d.speed_bonus,
@@ -857,6 +902,7 @@ export function useConfigForm(): UseConfigFormResult {
                 const stackSize = inferStackSize();
                 const newInserter: InserterFormData = {
                     id: nextInserterId(),
+                    _uuid: crypto.randomUUID(),
                     source: { type: 'machine', id: fix.source_machine_id },
                     sink: { type: 'machine', id: issue.machine_id },
                     stack_size: stackSize,
@@ -893,12 +939,13 @@ export function useConfigForm(): UseConfigFormResult {
                 const newBeltId = nextBeltId();
                 const newBelt: BeltFormData = {
                     id: newBeltId,
+                    _uuid: crypto.randomUUID(),
                     type: inferBeltType(),
                     lanes: [{ ingredient: fix.item_name, stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] as [BeltLaneFormData],
                 };
                 const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
-                    ? { id: nextInserterId(), source: { type: 'belt', id: newBeltId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
-                    : { id: nextInserterId(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'belt', id: newBeltId }, stack_size: stackSize };
+                    ? { id: nextInserterId(), _uuid: crypto.randomUUID(), source: { type: 'belt', id: newBeltId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
+                    : { id: nextInserterId(), _uuid: crypto.randomUUID(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'belt', id: newBeltId }, stack_size: stackSize };
                 return {
                     ...prev,
                     belts: [...prev.belts, newBelt],
@@ -912,11 +959,12 @@ export function useConfigForm(): UseConfigFormResult {
                 const newChest: InfinityChestFormData = {
                     type: ChestType.INFINITY_CHEST,
                     id: newChestId,
+                    _uuid: crypto.randomUUID(),
                     item_filter: [{ item_name: fix.item_name, request_count: 100 }],
                 };
                 const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
-                    ? { id: nextInserterId(), source: { type: 'chest', id: newChestId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
-                    : { id: nextInserterId(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'chest', id: newChestId }, stack_size: stackSize };
+                    ? { id: nextInserterId(), _uuid: crypto.randomUUID(), source: { type: 'chest', id: newChestId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
+                    : { id: nextInserterId(), _uuid: crypto.randomUUID(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'chest', id: newChestId }, stack_size: stackSize };
                 return {
                     ...prev,
                     chests: [...prev.chests, newChest],

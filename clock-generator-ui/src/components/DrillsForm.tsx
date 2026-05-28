@@ -164,9 +164,9 @@ export function DrillsForm({
                         />
                     </Box>
 
-                    <SortableList itemIds={drills.map((d) => d.id)} onReorder={onReorder}>
+                    <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
                     {drills.map((drill, index) => (
-                        <SortableItem key={drill.id} id={drill.id}>
+                        <SortableItem key={drill._uuid} stableKey={drill._uuid} displayId={index + 1}>
                             {(dragHandle) => (
                         <Box
                             sx={{

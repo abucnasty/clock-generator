@@ -110,9 +110,9 @@ export function MachinesForm({
                 </Button>
             </Box>
 
-            <SortableList itemIds={machines.map((m) => m.id)} onReorder={onReorder}>
+            <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
-                    <SortableItem key={machine.id} id={machine.id}>
+                    <SortableItem key={machine._uuid} stableKey={machine._uuid} displayId={index + 1}>
                         {(dragHandle) => (
                             <MachineRow
                                 machine={machine}

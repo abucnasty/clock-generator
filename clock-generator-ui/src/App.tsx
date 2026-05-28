@@ -16,6 +16,7 @@ import {
 import type { Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
+import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
@@ -194,11 +195,11 @@ function App() {
                         <ConfigImportExport
                             config={exportConfig()}
                             onImport={handleImportConfig}
-                            onReplaceMachines={replaceMachines}
-                            onReplaceDrills={replaceDrills}
-                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1) })))}
-                            onReplaceBelts={replaceBelts}
-                            onReplaceChests={replaceChests}
+                            onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
+                            onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
+                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
+                            onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
+                            onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
                             parseConfig={parseConfig}
