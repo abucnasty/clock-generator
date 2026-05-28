@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AppBar,
     Box,
+    Chip,
     CircularProgress,
     Container,
     CssBaseline,
@@ -258,6 +259,7 @@ function App() {
                                     <ToggleButton value="diagram" aria-label="Diagram view">
                                         <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
                                         Diagram
+                                        <Chip label="beta" size="small" sx={{ ml: 0.75, height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.5 } }} />
                                     </ToggleButton>
                                 </ToggleButtonGroup>
                             </Box>

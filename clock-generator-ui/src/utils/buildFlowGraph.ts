@@ -40,7 +40,7 @@ export function buildFlowGraph(
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: 'LR', nodesep: 50, ranksep: 100 });
+    g.setGraph({ rankdir: 'LR', nodesep: 50, ranksep: 100, ranker: 'longest-path' });
 
     const nodes: Node[] = [];
     const edges: Edge[] = [];
