@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport } from 'clock-generator/browser';
+import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 
 export interface RecipeInfo {
@@ -19,6 +19,8 @@ export interface UseSimulationWorkerResult {
     stateTransitionHistory: SerializableStateTransitionHistory | null;
     simulationDurationTicks: number | null;
     swingBackoffReport: SwingBackoffReport | null;
+    transferPlan: SerializableTransferPlan | null;
+    usedLcm: number | null;
     error: string | null;
     initialize: () => void;
     runSimulation: (config: Config, debugSteps: DebugSteps) => void;
@@ -45,6 +47,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [stateTransitionHistory, setStateTransitionHistory] = useState<SerializableStateTransitionHistory | null>(null);
     const [simulationDurationTicks, setSimulationDurationTicks] = useState<number | null>(null);
     const [swingBackoffReport, setSwingBackoffReport] = useState<SwingBackoffReport | null>(null);
+    const [transferPlan, setTransferPlan] = useState<SerializableTransferPlan | null>(null);
+    const [usedLcm, setUsedLcm] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const initialize = useCallback(async () => {
@@ -89,6 +93,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setStateTransitionHistory(null);
         setSimulationDurationTicks(null);
         setSwingBackoffReport(null);
+        setTransferPlan(null);
+        setUsedLcm(null);
         setError(null);
         setLogs([]);
 
@@ -123,6 +129,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 setStateTransitionHistory(result.serializable_state_transition_history);
                 setSimulationDurationTicks(result.simulation_duration.ticks);
                 setSwingBackoffReport(result.swing_backoff_report ?? null);
+                setTransferPlan(result.serializable_transfer_plan);
+                setUsedLcm(result.used_lcm);
                 setIsRunning(false);
             } catch (err) {
                 console.error('Simulation error:', err);
@@ -161,6 +169,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         stateTransitionHistory,
         simulationDurationTicks,
         swingBackoffReport,
+        transferPlan,
+        usedLcm,
         error,
         initialize,
         runSimulation,

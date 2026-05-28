@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Config, InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
+import type { Config, InserterCoverageIssue, InserterFixOption, SerializableTransferPlan } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/browser';
 
 const STORAGE_KEY = 'clock-generator-config';
@@ -166,6 +166,7 @@ export interface ConfigFormData {
         terminal_swing_count?: number;
         use_fractional_swings?: boolean;
         disable_swing_backoff?: boolean;
+        ignored_lcm_ingredients?: string[];
     };
 }
 
@@ -330,7 +331,8 @@ export interface UseConfigFormResult {
     replaceDrills: (drills: DrillFormData[]) => void;
     
     // Overrides
-    updateOverrides: (field: keyof NonNullable<ConfigFormData['overrides']>, value: number | boolean | undefined) => void;
+    updateOverrides: (field: keyof NonNullable<ConfigFormData['overrides']>, value: number | boolean | string[] | undefined) => void;
+    updateIgnoredIngredients: (items: string[], transferPlan: SerializableTransferPlan) => void;
     
     // Import/Export
     importConfig: (config: Config) => void;
@@ -716,7 +718,7 @@ export function useConfigForm(): UseConfigFormResult {
     // Overrides
     const updateOverrides = useCallback((
         field: keyof NonNullable<ConfigFormData['overrides']>,
-        value: number | boolean | undefined
+        value: number | boolean | string[] | undefined
     ) => {
         setConfig((prev) => {
             const newOverrides = {
@@ -738,6 +740,70 @@ export function useConfigForm(): UseConfigFormResult {
             }
             return {
                 ...prev,
+                overrides: newOverrides,
+            };
+        });
+    }, []);
+
+    const updateIgnoredIngredients = useCallback((
+        items: string[],
+        transferPlan: SerializableTransferPlan,
+    ) => {
+        setConfig((prev) => {
+            const prevIgnored = prev.overrides?.ignored_lcm_ingredients ?? [];
+
+            const updatedInserters = prev.inserters.map((ins) => {
+                const entityKey = `inserter:${ins.id}`;
+                const planEntry = transferPlan.entities.find(
+                    (e) => e.entity_id === entityKey && e.entity_type === 'inserter'
+                );
+                if (!planEntry || planEntry.item_transfers.length === 0) return ins;
+
+                const allNowIgnored = planEntry.item_transfers.every((t) => items.includes(t.item_name));
+                const allPrevIgnored = planEntry.item_transfers.every((t) => prevIgnored.includes(t.item_name));
+
+                if (allNowIgnored) {
+                    // Auto-force to ALWAYS
+                    return {
+                        ...ins,
+                        overrides: {
+                            ...ins.overrides,
+                            enable_control: { mode: 'ALWAYS' as const },
+                        },
+                    };
+                } else if (allPrevIgnored && ins.overrides?.enable_control?.mode === 'ALWAYS') {
+                    // Was auto-forced to ALWAYS because all its items were previously ignored;
+                    // revert by removing the enable_control override
+                    const { enable_control: _ec, ...restOverrides } = ins.overrides ?? {};
+                    void _ec;
+                    const hasRemainingOverrides = Object.keys(restOverrides).length > 0;
+                    return {
+                        ...ins,
+                        overrides: hasRemainingOverrides ? restOverrides : undefined,
+                    };
+                }
+
+                return ins;
+            });
+
+            const newOverrides = {
+                ...prev.overrides,
+                ignored_lcm_ingredients: items.length > 0 ? items : undefined,
+            };
+            if (newOverrides.ignored_lcm_ingredients === undefined) {
+                delete newOverrides.ignored_lcm_ingredients;
+            }
+
+            // Use the same pattern as updateOverrides: remove the overrides key entirely when empty
+            if (Object.keys(newOverrides).length === 0) {
+                const { overrides: _o, ...rest } = prev;
+                void _o;
+                return { ...rest, inserters: updatedInserters } as ConfigFormData;
+            }
+
+            return {
+                ...prev,
+                inserters: updatedInserters,
                 overrides: newOverrides,
             };
         });
@@ -1076,6 +1142,7 @@ export function useConfigForm(): UseConfigFormResult {
         mergeDrills,
         replaceDrills,
         updateOverrides,
+        updateIgnoredIngredients,
         importConfig,
         exportConfig,
         resetConfig,

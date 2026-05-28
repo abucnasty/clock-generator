@@ -20,7 +20,7 @@
     "start": "tsc && node dist/multi-machine-poc.js",
     "dev": "nodemon",
     "build": "tsc",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "keywords": [
     "factorio",
