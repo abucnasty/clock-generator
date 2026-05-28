@@ -328,8 +328,8 @@ function App() {
                                     <TransferPlanPanel
                                         transferPlan={transferPlan}
                                         usedLcm={usedLcm!}
-                                        ignoredIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
-                                        onIgnoreChange={(items) => updateIgnoredIngredients(items, transferPlan)}
+                                        excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
+                                        onExcludeChange={(items) => updateIgnoredIngredients(items, transferPlan)}
                                     />
                                 </Box>
                             )}

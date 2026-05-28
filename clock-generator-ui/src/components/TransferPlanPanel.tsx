@@ -21,9 +21,8 @@ interface TransferPlanPanelProps {
     transferPlan: SerializableTransferPlan;
     /** The LCM value that was actually used in the last simulation run */
     usedLcm: number;
-    /** Currently ignored ingredient names */
-    ignoredIngredients: string[];
-    onIgnoreChange: (items: string[]) => void;
+    excludedIngredients: string[];
+    onExcludeChange: (items: string[]) => void;
 }
 
 function formatFraction(numerator: number, denominator: number): string {
@@ -43,21 +42,18 @@ function formatEntityLabel(entityId: string): string {
 export function TransferPlanPanel({
     transferPlan,
     usedLcm,
-    ignoredIngredients,
-    onIgnoreChange,
+    excludedIngredients,
+    onExcludeChange,
 }: TransferPlanPanelProps) {
     const { entities, computed_lcm } = transferPlan;
 
-    const toggleIgnore = (itemName: string) => {
-        if (ignoredIngredients.includes(itemName)) {
-            onIgnoreChange(ignoredIngredients.filter((i) => i !== itemName));
+    const toggleExclude = (itemName: string) => {
+        if (excludedIngredients.includes(itemName)) {
+            onExcludeChange(excludedIngredients.filter((i) => i !== itemName));
         } else {
-            onIgnoreChange([...ignoredIngredients, itemName]);
+            onExcludeChange([...excludedIngredients, itemName]);
         }
     };
-
-    // Collect all unique ignored-able items (exclude items that appear on inserters
-    // that also have non-ignored items, to keep the UI focused)
     const isLcmOverridden = usedLcm !== computed_lcm;
 
     return (
@@ -67,12 +63,15 @@ export function TransferPlanPanel({
                     Transfer Plan
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-                    <Chip
-                        label={`LCM: ${computed_lcm}`}
-                        size="small"
-                        color="default"
-                        variant="outlined"
-                    />
+                    <Tooltip title={`The least common multiple (LCM) that is computed based on the transfer fractions of all inserters. The clock will repeat every LCM cycles.`}>
+                        <Chip
+                            label={`LCM: ${computed_lcm}`}
+                            size="small"
+                            color="default"
+                            variant="outlined"
+                        />
+                    </Tooltip>
+
                     {isLcmOverridden && (
                         <Tooltip title={`Manual LCM override active: ${usedLcm} (computed: ${computed_lcm})`}>
                             <Chip
@@ -83,10 +82,10 @@ export function TransferPlanPanel({
                             />
                         </Tooltip>
                     )}
-                    {ignoredIngredients.length > 0 && (
+                    {excludedIngredients.length > 0 && (
                         <Chip
                             icon={<BlockIcon />}
-                            label={`${ignoredIngredients.length} ignored`}
+                            label={`${excludedIngredients.length} excluded`}
                             size="small"
                             color="secondary"
                             variant="outlined"
@@ -101,20 +100,20 @@ export function TransferPlanPanel({
                             <TableCell sx={{ width: '30%' }}>Entity</TableCell>
                             <TableCell>Item</TableCell>
                             <TableCell align="right" sx={{ width: '120px' }}>Transfers / cycle</TableCell>
-                            <TableCell align="center" sx={{ width: '110px' }}>Ignore from LCM</TableCell>
+                            <TableCell align="center" sx={{ width: '110px' }}>Exclude from LCM</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {entities.map((entity) =>
                             entity.item_transfers.map((transfer, transferIdx) => {
-                                const isIgnored = ignoredIngredients.includes(transfer.item_name);
+                                const isExcluded = excludedIngredients.includes(transfer.item_name);
                                 const isFirstRow = transferIdx === 0;
 
                                 return (
                                     <TableRow
                                         key={`${entity.entity_id}-${transfer.item_name}`}
                                         sx={{
-                                            opacity: isIgnored ? 0.5 : 1,
+                                            opacity: isExcluded ? 0.5 : 1,
                                             '& td': { borderBottom: isFirstRow || transferIdx > 0 ? undefined : 'none' },
                                         }}
                                     >
@@ -139,8 +138,8 @@ export function TransferPlanPanel({
                                                 <Typography
                                                     variant="body2"
                                                     sx={{
-                                                        textDecoration: isIgnored ? 'line-through' : 'none',
-                                                        color: isIgnored ? 'text.disabled' : 'text.primary',
+                                                        textDecoration: isExcluded ? 'line-through' : 'none',
+                                                        color: isExcluded ? 'text.disabled' : 'text.primary',
                                                     }}
                                                 >
                                                     {transfer.item_name}
@@ -152,7 +151,7 @@ export function TransferPlanPanel({
                                                 variant="body2"
                                                 sx={{
                                                     fontFamily: 'monospace',
-                                                    color: isIgnored ? 'text.disabled' : 'text.primary',
+                                                    color: isExcluded ? 'text.disabled' : 'text.primary',
                                                 }}
                                             >
                                                 {formatFraction(transfer.numerator, transfer.denominator)}
@@ -161,18 +160,18 @@ export function TransferPlanPanel({
                                         <TableCell align="center">
                                             <Tooltip
                                                 title={
-                                                    isIgnored
+                                                    isExcluded
                                                         ? 'Click to include in LCM'
                                                         : 'Click to exclude from LCM (inserter will be set to ALWAYS)'
                                                 }
                                             >
                                                 <Chip
-                                                    icon={isIgnored ? <BlockIcon /> : undefined}
-                                                    label={isIgnored ? 'Ignored' : 'Include'}
+                                                    icon={isExcluded ? <BlockIcon /> : undefined}
+                                                    label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"
-                                                    color={isIgnored ? 'secondary' : 'default'}
-                                                    variant={isIgnored ? 'filled' : 'outlined'}
-                                                    onClick={() => toggleIgnore(transfer.item_name)}
+                                                    color={isExcluded ? 'secondary' : 'default'}
+                                                    variant={isExcluded ? 'filled' : 'outlined'}
+                                                    onClick={() => toggleExclude(transfer.item_name)}
                                                     sx={{ cursor: 'pointer' }}
                                                 />
                                             </Tooltip>
@@ -185,7 +184,7 @@ export function TransferPlanPanel({
                 </Table>
                 <Box sx={{ px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="caption" color="text.secondary">
-                        Transfers per cycle are fractions of the LCM period. Ignored ingredients are excluded from the
+                        Transfers per cycle are fractions of the LCM period. Excluded ingredients are omitted from the
                         LCM calculation — their inserters will be forced to{' '}
                         <strong>ALWAYS</strong> enabled. Re-run the simulation after making changes.
                     </Typography>
