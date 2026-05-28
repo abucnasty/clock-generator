@@ -12,7 +12,10 @@ import {
     Alert,
     Divider,
     Icon,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
+import { AccountTree, List } from '@mui/icons-material';
 import type { Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
@@ -33,6 +36,7 @@ import { StateTransitionTimeline } from './components/StateTransitionTimeline';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDisplay';
 import { TransferPlanPanel } from './components/TransferPlanPanel';
+import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 
 const darkTheme = createTheme({
     palette: {
@@ -143,6 +147,8 @@ function App() {
         simulate: false,
     });
 
+    const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
+
     const coverageIssues = useInserterValidation(exportConfig, isInitialized);
 
     // Initialize worker on mount
@@ -237,51 +243,107 @@ function App() {
                                 onCopiesChange={(value) => updateTargetOutput('copies', value)}
                             />
 
-                            <MachinesForm
-                                machines={config.machines}
-                                recipeNames={recipeNames}
-                                onAdd={addMachine}
-                                onUpdate={updateMachine}
-                                onRemove={removeMachine}
-                                onReorder={reorderMachines}
-                            />
+                            {/* View toggle */}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <ToggleButtonGroup
+                                    value={configView}
+                                    exclusive
+                                    onChange={(_, value) => { if (value) setConfigView(value); }}
+                                    size="small"
+                                >
+                                    <ToggleButton value="list" aria-label="List view">
+                                        <List fontSize="small" sx={{ mr: 0.5 }} />
+                                        List
+                                    </ToggleButton>
+                                    <ToggleButton value="diagram" aria-label="Diagram view">
+                                        <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
+                                        Diagram
+                                    </ToggleButton>
+                                </ToggleButtonGroup>
+                            </Box>
 
-                            <InsertersForm
-                                inserters={config.inserters}
-                                machines={config.machines}
-                                belts={config.belts}
-                                chests={config.chests}
-                                itemNames={itemNamesComposite}
-                                getRecipeInfo={getRecipeInfo}
-                                onAdd={addInserter}
-                                onUpdate={updateInserter}
-                                onRemove={removeInserter}
-                                onReorder={reorderInserters}
-                            />
+                            {configView === 'list' ? (
+                                <>
+                                    <MachinesForm
+                                        machines={config.machines}
+                                        recipeNames={recipeNames}
+                                        onAdd={addMachine}
+                                        onUpdate={updateMachine}
+                                        onRemove={removeMachine}
+                                        onReorder={reorderMachines}
+                                    />
 
-                            <MissingInserterAlert
-                                issues={coverageIssues}
-                                onApplyFix={applyInserterFix}
-                            />
+                                    <InsertersForm
+                                        inserters={config.inserters}
+                                        machines={config.machines}
+                                        belts={config.belts}
+                                        chests={config.chests}
+                                        itemNames={itemNamesComposite}
+                                        getRecipeInfo={getRecipeInfo}
+                                        onAdd={addInserter}
+                                        onUpdate={updateInserter}
+                                        onRemove={removeInserter}
+                                        onReorder={reorderInserters}
+                                    />
 
-                            <BeltsForm
-                                belts={config.belts}
-                                itemNames={itemNamesComposite}
-                                onAdd={addBelt}
-                                onUpdate={updateBelt}
-                                onRemove={removeBelt}
-                                onReorder={reorderBelts}
-                            />
+                                    <MissingInserterAlert
+                                        issues={coverageIssues}
+                                        onApplyFix={applyInserterFix}
+                                    />
 
-                            <ChestsForm
-                                chests={config.chests}
-                                itemNames={itemNamesComposite}
-                                onAdd={addChest}
-                                onUpdate={updateChest}
-                                onSwitchType={switchChestType}
-                                onRemove={removeChest}
-                                onReorder={reorderChests}
-                            />
+                                    <BeltsForm
+                                        belts={config.belts}
+                                        itemNames={itemNamesComposite}
+                                        onAdd={addBelt}
+                                        onUpdate={updateBelt}
+                                        onRemove={removeBelt}
+                                        onReorder={reorderBelts}
+                                    />
+
+                                    <ChestsForm
+                                        chests={config.chests}
+                                        itemNames={itemNamesComposite}
+                                        onAdd={addChest}
+                                        onUpdate={updateChest}
+                                        onSwitchType={switchChestType}
+                                        onRemove={removeChest}
+                                        onReorder={reorderChests}
+                                    />
+                                </>
+                            ) : (
+                                <Box sx={{ mb: 2 }}>
+                                    <ConfigFlowDiagram
+                                        machines={config.machines}
+                                        inserters={config.inserters}
+                                        belts={config.belts}
+                                        chests={config.chests}
+                                        drills={config.drills?.configs ?? []}
+                                        recipeNames={recipeNames}
+                                        itemNames={itemNamesComposite}
+                                        getRecipeInfo={getRecipeInfo}
+                                        onUpdateMachine={updateMachine}
+                                        onUpdateInserter={updateInserter}
+                                        onUpdateBelt={updateBelt}
+                                        onUpdateChest={updateChest}
+                                        onSwitchChestType={switchChestType}
+                                        onUpdateDrill={updateDrill}
+                                        onDeleteMachine={removeMachine}
+                                        onDeleteInserter={removeInserter}
+                                        onDeleteBelt={removeBelt}
+                                        onDeleteChest={removeChest}
+                                        onDeleteDrill={removeDrill}
+                                        onAddMachine={addMachine}
+                                        onAddInserter={addInserter}
+                                        onAddBelt={addBelt}
+                                        onAddChest={addChest}
+                                        onAddDrill={addDrill}
+                                    />
+                                    <MissingInserterAlert
+                                        issues={coverageIssues}
+                                        onApplyFix={applyInserterFix}
+                                    />
+                                </Box>
+                            )}
 
                             <Box sx={{ mb: 2 }}>
                                 <DrillsForm

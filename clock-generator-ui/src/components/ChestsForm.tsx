@@ -122,6 +122,7 @@ export function ChestsForm({
                 <SortableItem key={chest._uuid} stableKey={chest._uuid} displayId={index + 1}>
                     {(dragHandle) => (
                 <Box
+                    id={`entity-chest-${chest.id}`}
                     sx={{
                         mb: 2,
                         p: 2,

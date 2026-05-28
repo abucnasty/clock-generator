@@ -151,6 +151,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
 
     return (
         <Box
+            id={`entity-machine-${machine.id}`}
             sx={{
                 mb: 2,
                 p: 2,

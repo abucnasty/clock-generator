@@ -3,7 +3,6 @@ import {
     Box,
     Button,
     Dialog,
-    DialogActions,
     DialogContent,
     DialogTitle,
     FormControl,
@@ -27,7 +26,7 @@ import { FullscreenProvider } from './FullscreenContext';
 import { LatchConfigEditor } from './LatchConfigEditor';
 import { QuickTemplateSelect } from './QuickTemplateSelect';
 
-interface CopyFromOption {
+export interface CopyFromOption {
     label: string;
     override: EnableControlOverride;
 }
@@ -56,18 +55,31 @@ const MODE_DESCRIPTIONS: Record<EnableControlMode, string> = {
     [EnableControlMode.CONDITIONAL]: 'Entity is enabled based on custom conditions',
 };
 
-// Inner component that resets when key changes
-function EnableControlModalContent({
-    onClose,
+// ---- Exported standalone form (no Dialog wrapper) ----
+
+export interface EnableControlFormContentProps {
+    entityType: 'inserter' | 'drill';
+    currentOverride?: EnableControlOverride;
+    onSave: (override: EnableControlOverride | undefined) => void;
+    onCancel?: () => void;
+    isFullscreen?: boolean;
+    sourceType?: SourceSinkType;
+    sinkType?: SourceSinkType;
+    availableItems?: string[];
+    copyFromOptions?: CopyFromOption[];
+}
+
+export function EnableControlFormContent({
     entityType,
-    entityLabel,
     currentOverride,
     onSave,
+    onCancel,
+    isFullscreen = false,
     sourceType = TargetType.MACHINE,
     sinkType = TargetType.MACHINE,
     availableItems = [],
     copyFromOptions = [],
-}: Omit<EnableControlModalProps, 'open'>) {
+}: EnableControlFormContentProps) {
     // Initialize state from currentOverride
     const initialMode = currentOverride?.mode ?? EnableControlMode.AUTO;
     const initialRanges = (currentOverride?.mode === EnableControlMode.CLOCKED && currentOverride?.ranges) 
@@ -134,7 +146,6 @@ function EnableControlModalContent({
         } else if (mode === EnableControlMode.NEVER) {
             onSave({ mode: EnableControlMode.NEVER });
         }
-        onClose();
     };
 
     const handleApplyTemplate = (templateRuleSet: RuleSet, templateRelease?: RuleSet) => {
@@ -164,40 +175,13 @@ function EnableControlModalContent({
 
     const handleClear = () => {
         onSave(undefined);
-        onClose();
     };
 
     const hasOverride = currentOverride && currentOverride.mode !== EnableControlMode.AUTO;
-    const [isFullscreen, setIsFullscreen] = useState(false);
 
     return (
-        <Dialog 
-            open 
-            onClose={onClose} 
-            maxWidth={isFullscreen ? false : "md"} 
-            fullWidth 
-            fullScreen={isFullscreen}
-        >
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                    <Typography variant="h6">Enable Control Override</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        {entityLabel}
-                    </Typography>
-                </Box>
-                <Box>
-                    <Tooltip title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
-                        <IconButton onClick={() => setIsFullscreen(!isFullscreen)}>
-                            {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-                        </IconButton>
-                    </Tooltip>
-                    <IconButton onClick={onClose} edge="end">
-                        <Close />
-                    </IconButton>
-                </Box>
-            </DialogTitle>
-            <FullscreenProvider value={isFullscreen}>
-            <DialogContent dividers>
+        <FullscreenProvider value={isFullscreen}>
+            <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     Configure when this {entityType} should be enabled during the crafting cycle.
                 </Typography>
@@ -269,17 +253,9 @@ function EnableControlModalContent({
                         <Typography variant="subtitle2" sx={{ mb: 2 }}>
                             Enable Ranges
                         </Typography>
-                        
+
                         {ranges.map((range, index) => (
-                            <Box
-                                key={index}
-                                sx={{
-                                    display: 'flex',
-                                    gap: 2,
-                                    alignItems: 'center',
-                                    mb: 1,
-                                }}
-                            >
+                            <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}>
                                 <TextField
                                     label="Start Tick"
                                     type="number"
@@ -289,9 +265,7 @@ function EnableControlModalContent({
                                     sx={{ width: 120 }}
                                     inputProps={{ min: 0 }}
                                 />
-                                <Typography variant="body2" color="text.secondary">
-                                    to
-                                </Typography>
+                                <Typography variant="body2" color="text.secondary">to</Typography>
                                 <TextField
                                     label="End Tick"
                                     type="number"
@@ -311,13 +285,8 @@ function EnableControlModalContent({
                                 </IconButton>
                             </Box>
                         ))}
-                        
-                        <Button
-                            startIcon={<Add />}
-                            onClick={handleAddRange}
-                            size="small"
-                            sx={{ mt: 1 }}
-                        >
+
+                        <Button startIcon={<Add />} onClick={handleAddRange} size="small" sx={{ mt: 1 }}>
                             Add Range
                         </Button>
 
@@ -343,11 +312,11 @@ function EnableControlModalContent({
                             onApply={handleApplyTemplate}
                             defaultItemName={availableItems[0] || ''}
                         />
-                        
+
                         <Typography variant="subtitle2" sx={{ mb: 2 }}>
                             Conditions
                         </Typography>
-                        
+
                         <RuleSetEditor
                             ruleSet={ruleSet}
                             onChange={setRuleSet}
@@ -367,34 +336,85 @@ function EnableControlModalContent({
                         />
                     </Box>
                 )}
-            </DialogContent>
-            </FullscreenProvider>
-            <DialogActions sx={{ justifyContent: 'space-between' }}>
-                <Box>
-                    {hasOverride && (
-                        <Button onClick={handleClear} color="error">
-                            Clear Override
+
+                {/* Action buttons */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 3, mt: 1 }}>
+                    <Box>
+                        {hasOverride && (
+                            <Button onClick={handleClear} color="error">
+                                Clear Override
+                            </Button>
+                        )}
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        {onCancel && <Button onClick={onCancel}>Cancel</Button>}
+                        <Button onClick={handleSave} variant="contained" color="primary">
+                            Save
                         </Button>
-                    )}
+                    </Box>
+                </Box>
+            </Box>
+        </FullscreenProvider>
+    );
+}
+
+// ---- Modal wrapper (used by InsertersForm, DrillsForm etc.) ----
+
+function EnableControlModalContent({
+    onClose,
+    entityType,
+    entityLabel,
+    currentOverride,
+    onSave,
+    sourceType,
+    sinkType,
+    availableItems,
+    copyFromOptions,
+}: Omit<EnableControlModalProps, 'open'>) {
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    return (
+        <Dialog
+            open
+            onClose={onClose}
+            maxWidth={isFullscreen ? false : 'md'}
+            fullWidth
+            fullScreen={isFullscreen}
+        >
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                    <Typography variant="h6">Enable Control Override</Typography>
+                    <Typography variant="body2" color="text.secondary">{entityLabel}</Typography>
                 </Box>
                 <Box>
-                    <Button onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleSave} variant="contained" color="primary">
-                        Save
-                    </Button>
+                    <Tooltip title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+                        <IconButton onClick={() => setIsFullscreen(!isFullscreen)}>
+                            {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                        </IconButton>
+                    </Tooltip>
+                    <IconButton onClick={onClose} edge="end">
+                        <Close />
+                    </IconButton>
                 </Box>
-            </DialogActions>
+            </DialogTitle>
+            <DialogContent dividers>
+                <EnableControlFormContent
+                    entityType={entityType}
+                    currentOverride={currentOverride}
+                    onSave={(override) => { onSave(override); onClose(); }}
+                    onCancel={onClose}
+                    isFullscreen={isFullscreen}
+                    sourceType={sourceType}
+                    sinkType={sinkType}
+                    availableItems={availableItems}
+                    copyFromOptions={copyFromOptions}
+                />
+            </DialogContent>
         </Dialog>
     );
 }
 
-export function EnableControlModal({
-    open,
-    ...props
-}: EnableControlModalProps) {
-    // When the dialog is closed (open=false), the content unmounts
-    // When it opens again, a fresh EnableControlModalContent is created with initial state
+export function EnableControlModal({ open, ...props }: EnableControlModalProps) {
     if (!open) return null;
-
     return <EnableControlModalContent {...props} />;
 }

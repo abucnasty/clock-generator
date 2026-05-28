@@ -627,14 +627,14 @@ export function useConfigForm(): UseConfigFormResult {
 
     const addDrill = useCallback(() => {
         setConfig((prev) => {
-            if (!prev.drills) return prev;
-            const maxId = Math.max(0, ...prev.drills.configs.map((d) => d.id));
+            const currentDrills = prev.drills ?? { mining_productivity_level: 0, configs: [] };
+            const maxId = Math.max(0, ...currentDrills.configs.map((d) => d.id));
             return {
                 ...prev,
                 drills: {
-                    ...prev.drills,
+                    ...currentDrills,
                     configs: [
-                        ...prev.drills.configs,
+                        ...currentDrills.configs,
                         {
                             id: maxId + 1,
                             _uuid: crypto.randomUUID(),
