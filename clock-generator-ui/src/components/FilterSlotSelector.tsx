@@ -55,8 +55,8 @@ export function FilterSlotSelector({
     };
 
     return (
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+        <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                 Filters:
             </Typography>
 
@@ -73,7 +73,7 @@ export function FilterSlotSelector({
                         key={slotIndex}
                         tabIndex={0}
                         role="button"
-                        margin={0.6}
+                        margin={0.3}
                         aria-label={
                             displayFilter
                                 ? `Filter ${slotIndex + 1}: ${displayFilter}${isAutoAssigned ? ' (auto)' : ''}`
@@ -87,8 +87,8 @@ export function FilterSlotSelector({
                             }
                         }}
                         sx={{
-                            width: 36,
-                            height: 36,
+                            width: 30,
+                            height: 30,
                             border: '2px solid',
                             borderStyle: isAutoAssigned ? 'hidden' : 'solid',
                             borderColor: displayFilter
@@ -124,7 +124,7 @@ export function FilterSlotSelector({
                     >
                         {displayFilter ? (
                             <>
-                                <FactorioIcon name={displayFilter} size={28} />
+                                <FactorioIcon name={displayFilter} size={22} />
                                 {/* Show auto badge for inferred filters */}
                                 {isAutoAssigned && (
                                     <Box

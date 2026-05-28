@@ -125,6 +125,11 @@ function App() {
         exportConfig,
         resetConfig,
         applyInserterFix,
+        reorderMachines,
+        reorderInserters,
+        reorderBelts,
+        reorderChests,
+        reorderDrills,
     } = useConfigForm();
 
     const [debugSteps, setDebugSteps] = useState<DebugSteps>({
@@ -191,7 +196,7 @@ function App() {
                             onImport={handleImportConfig}
                             onReplaceMachines={replaceMachines}
                             onReplaceDrills={replaceDrills}
-                            onReplaceInserters={replaceInserters}
+                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1) })))}
                             onReplaceBelts={replaceBelts}
                             onReplaceChests={replaceChests}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
@@ -233,6 +238,7 @@ function App() {
                                 onAdd={addMachine}
                                 onUpdate={updateMachine}
                                 onRemove={removeMachine}
+                                onReorder={reorderMachines}
                             />
 
                             <InsertersForm
@@ -245,6 +251,7 @@ function App() {
                                 onAdd={addInserter}
                                 onUpdate={updateInserter}
                                 onRemove={removeInserter}
+                                onReorder={reorderInserters}
                             />
 
                             <MissingInserterAlert
@@ -258,6 +265,7 @@ function App() {
                                 onAdd={addBelt}
                                 onUpdate={updateBelt}
                                 onRemove={removeBelt}
+                                onReorder={reorderBelts}
                             />
 
                             <ChestsForm
@@ -267,6 +275,7 @@ function App() {
                                 onUpdate={updateChest}
                                 onSwitchType={switchChestType}
                                 onRemove={removeChest}
+                                onReorder={reorderChests}
                             />
 
                             <Box sx={{ mb: 2 }}>
@@ -282,6 +291,7 @@ function App() {
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={removeDrill}
+                                    onReorder={reorderDrills}
                                 />
                             </Box>
 

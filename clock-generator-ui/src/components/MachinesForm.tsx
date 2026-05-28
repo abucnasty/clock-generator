@@ -19,6 +19,7 @@ import { useMachineFacts } from '../hooks/useMachineFacts';
 import { FactorioIcon } from './FactorioIcon';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
+import { SortableItem, SortableList } from './SortableList';
 
 interface MachinesFormProps {
     machines: MachineFormData[];
@@ -26,6 +27,7 @@ interface MachinesFormProps {
     onAdd: () => void;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
     onRemove: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
 const CRAFTING_SPEED_COMMAND = '/c game.print(game.player.selected.crafting_speed)';
@@ -36,6 +38,7 @@ export function MachinesForm({
     onAdd,
     onUpdate,
     onRemove,
+    onReorder,
 }: MachinesFormProps) {
     const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
     const [copied, setCopied] = useState(false);
@@ -107,17 +110,23 @@ export function MachinesForm({
                 </Button>
             </Box>
 
-            {machines.map((machine, index) => (
-                <MachineRow
-                    key={`machine-${index}`}
-                    machine={machine}
-                    index={index}
-                    recipeNames={recipeNames}
-                    canDelete={machines.length > 1}
-                    onUpdate={onUpdate}
-                    onRemove={onRemove}
-                />
-            ))}
+            <SortableList itemIds={machines.map((m) => m.id)} onReorder={onReorder}>
+                {machines.map((machine, index) => (
+                    <SortableItem key={machine.id} id={machine.id}>
+                        {(dragHandle) => (
+                            <MachineRow
+                                machine={machine}
+                                index={index}
+                                recipeNames={recipeNames}
+                                canDelete={machines.length > 1}
+                                dragHandle={dragHandle}
+                                onUpdate={onUpdate}
+                                onRemove={onRemove}
+                            />
+                        )}
+                    </SortableItem>
+                ))}
+            </SortableList>
         </Paper>
     );
 }
@@ -127,11 +136,12 @@ interface MachineRowProps {
     index: number;
     recipeNames: string[];
     canDelete: boolean;
+    dragHandle: React.ReactNode;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, canDelete, onUpdate, onRemove }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpdate, onRemove }: MachineRowProps) {
     const { facts, error } = useMachineFacts({
         recipe: machine.recipe,
         productivity: machine.productivity,
@@ -156,14 +166,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, onUpdate, onRemove
                     flexWrap: 'wrap',
                 }}
             >
-                <NumberField
-                    label="ID"
-                    value={machine.id}
-                    onValueChange={(val) => onUpdate(index, 'id', val ?? 1)}
-                    min={1}
-                    sx={{ width: 80 }}
-                    size="small"
-                />
+                {dragHandle}
                 <Autocomplete
                     sx={{ minWidth: 250, flex: 1 }}
                     options={recipeNames}

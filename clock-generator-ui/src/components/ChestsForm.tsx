@@ -21,6 +21,7 @@ import type { ChestFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { ItemSelector } from './ItemSelector';
+import { SortableItem, SortableList } from './SortableList';
 
 interface ChestsFormProps {
     chests: ChestFormData[];
@@ -29,6 +30,7 @@ interface ChestsFormProps {
     onUpdate: (index: number, updates: Partial<ChestFormData>) => void;
     onSwitchType: (index: number, newType: ChestType) => void;
     onRemove: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
 export function ChestsForm({
@@ -38,6 +40,7 @@ export function ChestsForm({
     onUpdate,
     onSwitchType,
     onRemove,
+    onReorder,
 }: ChestsFormProps) {
     const [storageSizeInfoOpen, setStorageSizeInfoOpen] = useState(false);
 
@@ -114,9 +117,11 @@ export function ChestsForm({
                 </Typography>
             )}
 
+            <SortableList itemIds={chests.map((c) => c.id)} onReorder={onReorder}>
             {chests.map((chest, index) => (
+                <SortableItem key={chest.id} id={chest.id}>
+                    {(dragHandle) => (
                 <Box
-                    key={`chest-${index}`}
                     sx={{
                         mb: 2,
                         p: 2,
@@ -126,15 +131,7 @@ export function ChestsForm({
                 >
                     {/* Header row with ID, Type, Filters, and Delete */}
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <TextField
-                            label="ID"
-                            type="number"
-                            value={chest.id}
-                            onChange={(e) => onUpdate(index, { id: parseInt(e.target.value) || 1 })}
-                            inputProps={{ min: 1 }}
-                            sx={{ width: 80 }}
-                            size="small"
-                        />
+                        {dragHandle}
                         
                         <FormControl size="small" sx={{ minWidth: 150 }}>
                             <InputLabel>Type</InputLabel>
@@ -212,9 +209,10 @@ export function ChestsForm({
                         </IconButton>
                     </Box>
                 </Box>
+                    )}
+                </SortableItem>
             ))}
-
-            {/* Storage Size Info Dialog */}
+            </SortableList>
             <Dialog
                 open={storageSizeInfoOpen}
                 onClose={() => setStorageSizeInfoOpen(false)}

@@ -156,6 +156,24 @@ export interface ConfigFormData {
     };
 }
 
+/** Rearrange an id-bearing array and reassign sequential ids (1-based). Returns the new array and an old→new id map. */
+function reorderWithIdReassignment<T extends { id: number }>(
+    items: T[],
+    fromIndex: number,
+    toIndex: number,
+): { items: T[]; idMap: Map<number, number> } {
+    const reordered = [...items];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    const idMap = new Map<number, number>();
+    reordered.forEach((item, i) => {
+        const newId = i + 1;
+        if (item.id !== newId) idMap.set(item.id, newId);
+    });
+    const reassigned = reordered.map((item, i) => ({ ...item, id: i + 1 }));
+    return { items: reassigned, idMap };
+}
+
 const createDefaultConfig = (): ConfigFormData => ({
     target_output: {
         recipe: '',
@@ -245,6 +263,7 @@ export interface UseConfigFormResult {
     addMachine: () => void;
     updateMachine: (index: number, field: keyof MachineFormData, value: string | number) => void;
     removeMachine: (index: number) => void;
+    reorderMachines: (fromIndex: number, toIndex: number) => void;
     mergeMachines: (machines: MachineFormData[]) => void;
     replaceMachines: (machines: MachineFormData[]) => void;
     
@@ -252,12 +271,14 @@ export interface UseConfigFormResult {
     addInserter: () => void;
     updateInserter: (index: number, updates: Partial<InserterFormData>) => void;
     removeInserter: (index: number) => void;
+    reorderInserters: (fromIndex: number, toIndex: number) => void;
     replaceInserters: (inserters: InserterFormData[]) => void;
     
     // Belts
     addBelt: () => void;
     updateBelt: (index: number, updates: Partial<BeltFormData>) => void;
     removeBelt: (index: number) => void;
+    reorderBelts: (fromIndex: number, toIndex: number) => void;
     replaceBelts: (belts: BeltFormData[]) => void;
     
     // Chests
@@ -265,6 +286,7 @@ export interface UseConfigFormResult {
     updateChest: (index: number, updates: Partial<ChestFormData>) => void;
     switchChestType: (index: number, newType: ChestType) => void;
     removeChest: (index: number) => void;
+    reorderChests: (fromIndex: number, toIndex: number) => void;
     replaceChests: (chests: ChestFormData[]) => void;
     
     // Drills
@@ -274,6 +296,7 @@ export interface UseConfigFormResult {
     addDrill: () => void;
     updateDrill: (index: number, updates: Partial<DrillFormData>) => void;
     removeDrill: (index: number) => void;
+    reorderDrills: (fromIndex: number, toIndex: number) => void;
     mergeDrills: (drills: DrillFormData[]) => void;
     replaceDrills: (drills: DrillFormData[]) => void;
     
@@ -905,6 +928,70 @@ export function useConfigForm(): UseConfigFormResult {
         });
     }, []);
 
+    // ── Reorder callbacks ─────────────────────────────────────────────────
+    // Each rearranges the array, reassigns sequential IDs, then fixes up any
+    // cross-references in other entity arrays so nothing points to a stale ID.
+
+    const reorderMachines = useCallback((fromIndex: number, toIndex: number) => {
+        setConfig((prev) => {
+            const { items: newMachines, idMap } = reorderWithIdReassignment(prev.machines, fromIndex, toIndex);
+            if (idMap.size === 0) return { ...prev, machines: newMachines };
+            const remap = (id: number) => idMap.get(id) ?? id;
+            const newInserters = prev.inserters.map((ins) => ({
+                ...ins,
+                source: ins.source.type === 'machine' ? { ...ins.source, id: remap(ins.source.id) } : ins.source,
+                sink: ins.sink.type === 'machine' ? { ...ins.sink, id: remap(ins.sink.id) } : ins.sink,
+            }));
+            const newDrills = prev.drills
+                ? { ...prev.drills, configs: prev.drills.configs.map((d) => ({ ...d, target: { ...d.target, id: remap(d.target.id) } })) }
+                : undefined;
+            return { ...prev, machines: newMachines, inserters: newInserters, ...(newDrills ? { drills: newDrills } : {}) };
+        });
+    }, []);
+
+    const reorderInserters = useCallback((fromIndex: number, toIndex: number) => {
+        setConfig((prev) => {
+            const { items } = reorderWithIdReassignment(prev.inserters, fromIndex, toIndex);
+            return { ...prev, inserters: items };
+        });
+    }, []);
+
+    const reorderBelts = useCallback((fromIndex: number, toIndex: number) => {
+        setConfig((prev) => {
+            const { items: newBelts, idMap } = reorderWithIdReassignment(prev.belts, fromIndex, toIndex);
+            if (idMap.size === 0) return { ...prev, belts: newBelts };
+            const remap = (id: number) => idMap.get(id) ?? id;
+            const newInserters = prev.inserters.map((ins) => ({
+                ...ins,
+                source: ins.source.type === 'belt' ? { ...ins.source, id: remap(ins.source.id) } : ins.source,
+                sink: ins.sink.type === 'belt' ? { ...ins.sink, id: remap(ins.sink.id) } : ins.sink,
+            }));
+            return { ...prev, belts: newBelts, inserters: newInserters };
+        });
+    }, []);
+
+    const reorderChests = useCallback((fromIndex: number, toIndex: number) => {
+        setConfig((prev) => {
+            const { items: newChests, idMap } = reorderWithIdReassignment(prev.chests, fromIndex, toIndex);
+            if (idMap.size === 0) return { ...prev, chests: newChests };
+            const remap = (id: number) => idMap.get(id) ?? id;
+            const newInserters = prev.inserters.map((ins) => ({
+                ...ins,
+                source: ins.source.type === 'chest' ? { ...ins.source, id: remap(ins.source.id) } : ins.source,
+                sink: ins.sink.type === 'chest' ? { ...ins.sink, id: remap(ins.sink.id) } : ins.sink,
+            }));
+            return { ...prev, chests: newChests, inserters: newInserters };
+        });
+    }, []);
+
+    const reorderDrills = useCallback((fromIndex: number, toIndex: number) => {
+        setConfig((prev) => {
+            if (!prev.drills) return prev;
+            const { items } = reorderWithIdReassignment(prev.drills.configs, fromIndex, toIndex);
+            return { ...prev, drills: { ...prev.drills, configs: items } };
+        });
+    }, []);
+
     return {
         config,
         setConfig,
@@ -912,20 +999,24 @@ export function useConfigForm(): UseConfigFormResult {
         addMachine,
         updateMachine,
         removeMachine,
+        reorderMachines,
         mergeMachines,
         replaceMachines,
         addInserter,
         updateInserter,
         removeInserter,
+        reorderInserters,
         replaceInserters,
         addBelt,
         updateBelt,
         removeBelt,
+        reorderBelts,
         replaceBelts,
         addChest,
         updateChest,
         switchChestType,
         removeChest,
+        reorderChests,
         replaceChests,
         enableDrills,
         disableDrills,
@@ -933,6 +1024,7 @@ export function useConfigForm(): UseConfigFormResult {
         addDrill,
         updateDrill,
         removeDrill,
+        reorderDrills,
         mergeDrills,
         replaceDrills,
         updateOverrides,
