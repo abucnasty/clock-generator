@@ -471,7 +471,16 @@ export const ConfigOverridesSchema = z.object({
      * 
      * @default false
      */
-    disable_swing_backoff: z.boolean().optional()
+    disable_swing_backoff: z.boolean().optional(),
+    /**
+     * Item names to exclude from the LCM calculation.
+     * 
+     * Inserters that exclusively transfer items in this list will not contribute
+     * their transfer fractions to the LCM computation, reducing the overall LCM.
+     * Any such inserter should be set to ALWAYS enabled so it runs every cycle
+     * regardless of the clock period.
+     */
+    ignored_lcm_ingredients: z.array(z.string()).optional()
 });
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;

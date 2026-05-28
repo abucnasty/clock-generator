@@ -71,6 +71,12 @@ export {
 } from './crafting/generate-blueprint';
 
 export {
+    SerializableTransferPlan,
+    SerializableEntityTransferCount,
+    SerializableItemTransfer,
+} from './crafting/sequence/cycle/swing-counts';
+
+export {
     encodeBlueprintFileBrowser,
     decodeBlueprintFileBrowser,
 } from './blueprints/serde';

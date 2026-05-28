@@ -12,7 +12,7 @@ import Fraction, { fraction } from "fractionability";
 import { createSignalPerInserterBlueprint } from "./blueprint";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../control-logic";
-import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
+import { EntityTransferCountMap, SerializableTransferPlan } from "./sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
 import { InserterInventoryHistoryPlugin } from "../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
 import { DrillInventoryTransferPlugin } from "../control-logic/drill/plugins/drill-inventory-transfer-plugin";
@@ -95,6 +95,10 @@ export interface BlueprintGenerationResult {
     stability_check: SimulationStabilityCheck;
     /** Report of output swing backoff attempts, present on all results returned by generateClockWithSwingBackoff */
     swing_backoff_report?: SwingBackoffReport;
+    /** Serializable representation of planned transfer counts per inserter/drill, for UI display */
+    serializable_transfer_plan: SerializableTransferPlan;
+    /** The computed LCM before any manual override from config.overrides.lcm */
+    computed_lcm: number;
 }
 
 /**
@@ -245,8 +249,11 @@ export function generateClockForConfig(
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     EntityTransferCountMap.print(swing_counts, logger);
 
-    const recipe_lcm = config.overrides?.lcm ?? EntityTransferCountMap.lcm(swing_counts);
+    const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
+    const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
+    const recipe_lcm = config.overrides?.lcm ?? computed_lcm;
     logger.log(`Simulation context ingredient LCM: ${recipe_lcm}`);
+    const serializable_transfer_plan = EntityTransferCountMap.serialize(swing_counts, ignored_ingredients);
 
     logger.log("\n--- Swing Distributions ---");
     if (crafting_cycle_plan.swing_distribution) {
@@ -426,6 +433,8 @@ export function generateClockForConfig(
         used_lcm: recipe_lcm,
         used_terminal_swing_count,
         stability_check,
+        serializable_transfer_plan,
+        computed_lcm,
     };
 }
 

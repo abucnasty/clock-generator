@@ -32,6 +32,7 @@ import { TransferHistoryVisualization } from './components/TransferHistoryVisual
 import { StateTransitionTimeline } from './components/StateTransitionTimeline';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDisplay';
+import { TransferPlanPanel } from './components/TransferPlanPanel';
 
 const darkTheme = createTheme({
     palette: {
@@ -87,6 +88,8 @@ function App() {
         stateTransitionHistory,
         simulationDurationTicks,
         swingBackoffReport,
+        transferPlan,
+        usedLcm,
         error,
         initialize,
         runSimulation,
@@ -122,6 +125,7 @@ function App() {
         replaceDrills,
         replaceInserters,
         updateOverrides,
+        updateIgnoredIngredients,
         importConfig,
         exportConfig,
         resetConfig,
@@ -318,6 +322,17 @@ function App() {
                             />
 
                             <SwingBackoffReportDisplay report={swingBackoffReport} />
+
+                            {transferPlan && (
+                                <Box sx={{ mt: 2 }}>
+                                    <TransferPlanPanel
+                                        transferPlan={transferPlan}
+                                        usedLcm={usedLcm!}
+                                        ignoredIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
+                                        onIgnoreChange={(items) => updateIgnoredIngredients(items, transferPlan)}
+                                    />
+                                </Box>
+                            )}
 
                             {transferHistory && (
                                 <Box sx={{ mt: 2 }}>

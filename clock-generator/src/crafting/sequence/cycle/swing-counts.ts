@@ -18,6 +18,31 @@ export interface EntityTransferCount {
     stack_size: number;
 }
 
+// ============================================================================
+// Serializable transfer plan types (for UI)
+// ============================================================================
+
+export interface SerializableItemTransfer {
+    item_name: string;
+    /** Numerator of the transfer count fraction */
+    numerator: number;
+    /** Denominator of the transfer count fraction */
+    denominator: number;
+}
+
+export interface SerializableEntityTransferCount {
+    entity_id: string;
+    entity_type: 'inserter' | 'drill';
+    item_transfers: SerializableItemTransfer[];
+    stack_size: number;
+}
+
+export interface SerializableTransferPlan {
+    entities: SerializableEntityTransferCount[];
+    /** The computed LCM before any manual override from config.overrides.lcm */
+    computed_lcm: number;
+}
+
 export class EntityTransferCountMap extends MapExtended<EntityId, EntityTransferCount> {
 
     public static create = computeInserterSwingCountsForMultipleMachines
@@ -25,6 +50,7 @@ export class EntityTransferCountMap extends MapExtended<EntityId, EntityTransfer
     public static lcm = computeLCM
     public static print = printInserterSwingCounts
     public static divide = divideTransfers
+    public static serialize = serializeTransferPlan
 
     public static fromEntries(entries: [EntityId, EntityTransferCount][]): EntityTransferCountMap {
         return new EntityTransferCountMap(entries);
@@ -456,12 +482,39 @@ function divideTransfers(
     );
 }
 
-function computeLCM(swing_counts: EntityTransferCountMap): number {
-    const ratios = swing_counts.mapValues(it => it.item_transfers).flat().map(it => it.transfer_count)
+function computeLCM(swing_counts: EntityTransferCountMap, ignored_items?: string[]): number {
+    const allTransfers = swing_counts.mapValues(it => it.item_transfers).flat();
+    const filtered = ignored_items && ignored_items.length > 0
+        ? allTransfers.filter(it => !ignored_items.includes(it.item_name))
+        : allTransfers;
+    const ratios = filtered.map(it => it.transfer_count);
 
-    const denominators = ratios.map(it => it.getDenominator)
+    const denominators = ratios.map(it => it.getDenominator);
 
     return denominators.reduce((lcm, denominator) => math.lcm(lcm, denominator), 1);
+}
+
+function serializeTransferPlan(
+    swing_counts: EntityTransferCountMap,
+    ignored_items?: string[]
+): SerializableTransferPlan {
+    const entities: SerializableEntityTransferCount[] = [];
+    swing_counts.forEach((count, entityId) => {
+        entities.push({
+            entity_id: entityId.id,
+            entity_type: Entity.isInserter(count.entity) ? 'inserter' : 'drill',
+            item_transfers: count.item_transfers.map(it => ({
+                item_name: it.item_name,
+                numerator: it.transfer_count.getNumerator,
+                denominator: it.transfer_count.getDenominator,
+            })),
+            stack_size: count.stack_size,
+        });
+    });
+    return {
+        entities,
+        computed_lcm: computeLCM(swing_counts, ignored_items),
+    };
 }
 
 function printInserterSwingCounts(transfers: EntityTransferCountMap, logger: Logger = defaultLogger) {
