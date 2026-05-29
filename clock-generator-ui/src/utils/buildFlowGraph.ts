@@ -35,6 +35,7 @@ export type InserterNodeData = {
     inserterId: number;
     stackSize: number;
     filterIcons?: string[];
+    overrideMode?: 'ALWAYS' | 'NEVER' | 'CLOCKED' | 'CONDITIONAL';
 };
 
 export type DrillNodeData = {
@@ -141,6 +142,8 @@ export function buildFlowGraph(
             ? inserter.filters
             : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
+        const ecMode = inserter.overrides?.enable_control?.mode;
+        const overrideMode = ecMode && ecMode !== 'AUTO' ? ecMode as 'ALWAYS' | 'NEVER' | 'CLOCKED' | 'CONDITIONAL' : undefined;
         nodes.push({
             id: inserterNodeId,
             type: 'inserterNode',
@@ -149,6 +152,7 @@ export function buildFlowGraph(
                 inserterId: inserter.id,
                 stackSize: inserter.stack_size,
                 filterIcons,
+                overrideMode,
             } satisfies InserterNodeData,
         });
 

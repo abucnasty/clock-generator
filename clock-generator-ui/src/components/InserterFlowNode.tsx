@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { Box, Typography } from '@mui/material';
+import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import type { InserterNodeData } from '../utils/buildFlowGraph';
 
@@ -48,6 +48,22 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                         {data.filterIcons.map(icon => (
                             <FactorioIcon key={icon} name={icon} size={14} />
                         ))}
+                    </Box>
+                )}
+                {data.overrideMode && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25 }}>
+                        <Chip
+                            label={data.overrideMode}
+                            size="small"
+                            sx={{
+                                height: 14,
+                                fontSize: '0.55rem',
+                                fontWeight: 700,
+                                bgcolor: '#fca300',
+                                color: '#000',
+                                '& .MuiChip-label': { px: 0.75 },
+                            }}
+                        />
                     </Box>
                 )}
             </Box>
