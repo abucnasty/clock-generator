@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useMemo } from 'react';
+import { useMachineFacts } from '../hooks/useMachineFacts';
 import { ChestType } from 'clock-generator/browser';
 import type {
     BeltFormData,
@@ -37,6 +38,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
+import { MachineFactsAccordion } from './MachineFactsAccordion';
 
 // ---- Constants ----
 
@@ -537,6 +539,14 @@ export function EntityEditDialog({
         (entityType === 'drill' && !!onDeleteDrill)
     );
 
+    const machineEntity = entity && entityType === 'machine' ? entity as MachineFormData : null;
+    const { facts: machineFacts, error: machineFactsError } = useMachineFacts({
+        recipe: machineEntity?.recipe ?? '',
+        productivity: machineEntity?.productivity ?? 0,
+        crafting_speed: machineEntity?.crafting_speed ?? 1,
+        type: machineEntity?.type,
+    });
+
     return (
         <Dialog
             open={open}
@@ -561,12 +571,17 @@ export function EntityEditDialog({
 
             <DialogContent sx={entityType === 'inserter' ? { p: 0 } : { pt: '16px !important' }}>
                 {entity && entityType === 'machine' && (
-                    <MachineEditSection
-                        machine={entity as MachineFormData}
-                        entityIndex={entityIndex}
-                        recipeNames={recipeNames}
-                        onUpdate={onUpdateMachine}
-                    />
+                    <>
+                        <MachineEditSection
+                            machine={entity as MachineFormData}
+                            entityIndex={entityIndex}
+                            recipeNames={recipeNames}
+                            onUpdate={onUpdateMachine}
+                        />
+                        {machineEntity?.recipe && (
+                            <MachineFactsAccordion facts={machineFacts} error={machineFactsError} />
+                        )}
+                    </>
                 )}
                 {entity && entityType === 'belt' && (
                     <BeltEditSection

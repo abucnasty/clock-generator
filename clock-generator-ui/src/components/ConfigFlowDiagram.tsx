@@ -10,7 +10,7 @@ import {
     type NodeMouseHandler,
 } from '@xyflow/react';
 import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
-import { Add, Fullscreen } from '@mui/icons-material';
+import { Add, Fullscreen, InfoOutlined } from '@mui/icons-material';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph } from '../utils/buildFlowGraph';
 import { EntityFlowNode } from './EntityFlowNode';
@@ -71,10 +71,11 @@ function FlowContent({
     onRequestFullscreen,
 }: FlowContentProps) {
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
+    const [detailedMode, setDetailedMode] = useState(false);
 
     const { nodes, edges } = useMemo(
-        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo),
-        [machines, inserters, belts, chests, drills, getRecipeInfo],
+        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode),
+        [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode],
     );
 
     const hasEntities = machines.length > 0 || belts.length > 0 || chests.length > 0 || drills.length > 0;
@@ -139,24 +140,40 @@ function FlowContent({
         >
             <Background color="#333" variant={BackgroundVariant.Dots} gap={20} size={1} />
             <Controls showInteractive={false} />
-            {onRequestFullscreen && (
-                <Panel position="top-left">
+            <Panel position="top-left">
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton
                         size="small"
-                        onClick={onRequestFullscreen}
-                        aria-label="Fullscreen"
+                        onClick={() => setDetailedMode(d => !d)}
+                        title={detailedMode ? 'Hide machine facts' : 'Show machine facts'}
                         sx={{
-                            bgcolor: '#232323',
-                            border: '1px solid #555',
+                            bgcolor: detailedMode ? '#fca30033' : '#232323',
+                            border: `1px solid ${detailedMode ? '#fca300' : '#555'}`,
                             borderRadius: 0,
-                            color: '#ccc',
-                            '&:hover': { bgcolor: '#2d2d2d', borderColor: '#888' },
+                            color: detailedMode ? '#fca300' : '#ccc',
+                            '&:hover': { bgcolor: detailedMode ? '#fca30055' : '#2d2d2d', borderColor: '#888' },
                         }}
                     >
-                        <Fullscreen fontSize="small" />
+                        <InfoOutlined fontSize="small" />
                     </IconButton>
-                </Panel>
-            )}
+                    {onRequestFullscreen && (
+                        <IconButton
+                            size="small"
+                            onClick={onRequestFullscreen}
+                            aria-label="Fullscreen"
+                            sx={{
+                                bgcolor: '#232323',
+                                border: '1px solid #555',
+                                borderRadius: 0,
+                                color: '#ccc',
+                                '&:hover': { bgcolor: '#2d2d2d', borderColor: '#888' },
+                            }}
+                        >
+                            <Fullscreen fontSize="small" />
+                        </IconButton>
+                    )}
+                </Box>
+            </Panel>
             {hasAddCallbacks && (
                 <Panel position="top-right">
                     <Button

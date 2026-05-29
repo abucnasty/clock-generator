@@ -7,10 +7,18 @@ import { inferInserterItems } from './inferInserterItems';
 
 export const ENTITY_NODE_WIDTH = 180;
 export const ENTITY_NODE_HEIGHT = 80;
+export const ENTITY_NODE_DETAIL_HEIGHT = 200;
 export const INSERTER_NODE_WIDTH = 140;
 export const INSERTER_NODE_HEIGHT = 70;
 export const DRILL_NODE_WIDTH = 140;
 export const DRILL_NODE_HEIGHT = 70;
+
+export type MachineNodeParams = {
+    recipe: string;
+    productivity: number;
+    crafting_speed: number;
+    type?: 'machine' | 'furnace';
+};
 
 export type EntityNodeData = {
     entityType: 'machine' | 'belt' | 'chest';
@@ -19,6 +27,8 @@ export type EntityNodeData = {
     iconName: string;
     sublabel?: string;
     filterIcons?: string[];
+    machineParams?: MachineNodeParams;
+    detailed?: boolean;
 };
 
 export type InserterNodeData = {
@@ -40,6 +50,7 @@ export function buildFlowGraph(
     chests: ChestFormData[],
     drills?: DrillFormData[],
     getRecipeInfo?: (name: string) => RecipeInfo | null,
+    detailMode?: boolean,
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
@@ -51,7 +62,8 @@ export function buildFlowGraph(
     // --- Entity nodes ---
     machines.forEach(machine => {
         const id = `machine-${machine.id}`;
-        g.setNode(id, { width: ENTITY_NODE_WIDTH, height: ENTITY_NODE_HEIGHT });
+        const nodeHeight = detailMode ? ENTITY_NODE_DETAIL_HEIGHT : ENTITY_NODE_HEIGHT;
+        g.setNode(id, { width: ENTITY_NODE_WIDTH, height: nodeHeight });
         nodes.push({
             id,
             type: 'entityNode',
@@ -62,6 +74,13 @@ export function buildFlowGraph(
                 label: `Machine ${machine.id}`,
                 iconName: machine.recipe || 'assembling-machine-3',
                 sublabel: machine.recipe || undefined,
+                machineParams: {
+                    recipe: machine.recipe || '',
+                    productivity: machine.productivity,
+                    crafting_speed: machine.crafting_speed,
+                    type: machine.type,
+                },
+                detailed: detailMode,
             } satisfies EntityNodeData,
         });
     });
