@@ -87,6 +87,7 @@ export function BeltsForm({
                 <SortableItem key={belt._uuid} stableKey={belt._uuid} displayId={beltIndex + 1}>
                     {(dragHandle) => (
                 <Box
+                    id={`entity-belt-${belt.id}`}
                     sx={{
                         mb: 2,
                         p: 2,

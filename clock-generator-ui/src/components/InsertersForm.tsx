@@ -232,6 +232,7 @@ export function InsertersForm({
                 <SortableItem key={inserter._uuid} stableKey={inserter._uuid} displayId={index + 1}>
                     {(dragHandle) => (
                 <Box
+                    id={`entity-inserter-${inserter.id}`}
                     sx={{
                         display: 'flex',
                         gap: 2,

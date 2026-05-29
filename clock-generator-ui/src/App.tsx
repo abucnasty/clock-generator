@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AppBar,
     Box,
+    Chip,
     CircularProgress,
     Container,
     CssBaseline,
+    Dialog,
+    IconButton,
     ThemeProvider,
     Toolbar,
     Typography,
@@ -12,7 +15,10 @@ import {
     Alert,
     Divider,
     Icon,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
+import { AccountTree, FullscreenExit, List } from '@mui/icons-material';
 import type { Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
@@ -33,6 +39,7 @@ import { StateTransitionTimeline } from './components/StateTransitionTimeline';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDisplay';
 import { TransferPlanPanel } from './components/TransferPlanPanel';
+import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 
 const darkTheme = createTheme({
     palette: {
@@ -143,6 +150,9 @@ function App() {
         simulate: false,
     });
 
+    const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
+    const [diagramFullscreen, setDiagramFullscreen] = useState(false);
+
     const coverageIssues = useInserterValidation(exportConfig, isInitialized);
 
     // Initialize worker on mount
@@ -237,51 +247,109 @@ function App() {
                                 onCopiesChange={(value) => updateTargetOutput('copies', value)}
                             />
 
-                            <MachinesForm
-                                machines={config.machines}
-                                recipeNames={recipeNames}
-                                onAdd={addMachine}
-                                onUpdate={updateMachine}
-                                onRemove={removeMachine}
-                                onReorder={reorderMachines}
-                            />
+                            {/* View toggle */}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <ToggleButtonGroup
+                                    value={configView}
+                                    exclusive
+                                    onChange={(_, value) => { if (value) setConfigView(value); }}
+                                    size="small"
+                                >
+                                    <ToggleButton value="list" aria-label="List view">
+                                        <List fontSize="small" sx={{ mr: 0.5 }} />
+                                        List
+                                    </ToggleButton>
+                                    <ToggleButton value="diagram" aria-label="Diagram view">
+                                        <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
+                                        Diagram
+                                        <Chip label="beta" size="small" sx={{ ml: 0.75, height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.5 } }} />
+                                    </ToggleButton>
+                                </ToggleButtonGroup>
+                            </Box>
 
-                            <InsertersForm
-                                inserters={config.inserters}
-                                machines={config.machines}
-                                belts={config.belts}
-                                chests={config.chests}
-                                itemNames={itemNamesComposite}
-                                getRecipeInfo={getRecipeInfo}
-                                onAdd={addInserter}
-                                onUpdate={updateInserter}
-                                onRemove={removeInserter}
-                                onReorder={reorderInserters}
-                            />
+                            {configView === 'list' ? (
+                                <>
+                                    <MachinesForm
+                                        machines={config.machines}
+                                        recipeNames={recipeNames}
+                                        onAdd={addMachine}
+                                        onUpdate={updateMachine}
+                                        onRemove={removeMachine}
+                                        onReorder={reorderMachines}
+                                    />
 
-                            <MissingInserterAlert
-                                issues={coverageIssues}
-                                onApplyFix={applyInserterFix}
-                            />
+                                    <InsertersForm
+                                        inserters={config.inserters}
+                                        machines={config.machines}
+                                        belts={config.belts}
+                                        chests={config.chests}
+                                        itemNames={itemNamesComposite}
+                                        getRecipeInfo={getRecipeInfo}
+                                        onAdd={addInserter}
+                                        onUpdate={updateInserter}
+                                        onRemove={removeInserter}
+                                        onReorder={reorderInserters}
+                                    />
 
-                            <BeltsForm
-                                belts={config.belts}
-                                itemNames={itemNamesComposite}
-                                onAdd={addBelt}
-                                onUpdate={updateBelt}
-                                onRemove={removeBelt}
-                                onReorder={reorderBelts}
-                            />
+                                    <MissingInserterAlert
+                                        issues={coverageIssues}
+                                        onApplyFix={applyInserterFix}
+                                    />
 
-                            <ChestsForm
-                                chests={config.chests}
-                                itemNames={itemNamesComposite}
-                                onAdd={addChest}
-                                onUpdate={updateChest}
-                                onSwitchType={switchChestType}
-                                onRemove={removeChest}
-                                onReorder={reorderChests}
-                            />
+                                    <BeltsForm
+                                        belts={config.belts}
+                                        itemNames={itemNamesComposite}
+                                        onAdd={addBelt}
+                                        onUpdate={updateBelt}
+                                        onRemove={removeBelt}
+                                        onReorder={reorderBelts}
+                                    />
+
+                                    <ChestsForm
+                                        chests={config.chests}
+                                        itemNames={itemNamesComposite}
+                                        onAdd={addChest}
+                                        onUpdate={updateChest}
+                                        onSwitchType={switchChestType}
+                                        onRemove={removeChest}
+                                        onReorder={reorderChests}
+                                    />
+                                </>
+                            ) : (
+                                <Box sx={{ mb: 2 }}>
+                                    <ConfigFlowDiagram
+                                        machines={config.machines}
+                                        inserters={config.inserters}
+                                        belts={config.belts}
+                                        chests={config.chests}
+                                        drills={config.drills?.configs ?? []}
+                                        recipeNames={recipeNames}
+                                        itemNames={itemNamesComposite}
+                                        getRecipeInfo={getRecipeInfo}
+                                        onUpdateMachine={updateMachine}
+                                        onUpdateInserter={updateInserter}
+                                        onUpdateBelt={updateBelt}
+                                        onUpdateChest={updateChest}
+                                        onSwitchChestType={switchChestType}
+                                        onUpdateDrill={updateDrill}
+                                        onDeleteMachine={removeMachine}
+                                        onDeleteInserter={removeInserter}
+                                        onDeleteBelt={removeBelt}
+                                        onDeleteChest={removeChest}
+                                        onDeleteDrill={removeDrill}
+                                        onAddMachine={addMachine}
+                                        onAddInserter={addInserter}
+                                        onAddBelt={addBelt}
+                                        onAddChest={addChest}
+                                        onAddDrill={addDrill}
+                                        onRequestFullscreen={() => setDiagramFullscreen(true)}
+                                    />
+                                    <MissingInserterAlert
+                                        issues={coverageIssues}
+                                        onApplyFix={applyInserterFix}
+                                    />
+                                </Box>
+                            )}
 
                             <Box sx={{ mb: 2 }}>
                                 <DrillsForm
@@ -373,6 +441,68 @@ function App() {
                     </Typography>
                 </Box>
             </Box>
+
+            {/* Fullscreen diagram dialog */}
+            <Dialog
+                fullScreen
+                open={diagramFullscreen}
+                onClose={() => setDiagramFullscreen(false)}
+                PaperProps={{ sx: { bgcolor: 'background.default' } }}
+            >
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            px: 2,
+                            py: 1,
+                            flexShrink: 0,
+                            bgcolor: 'background.paper',
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                        }}
+                    >
+                        <Typography variant="h6" sx={{ flex: 1 }}>Flow Diagram</Typography>
+                        <IconButton onClick={() => setDiagramFullscreen(false)} size="small" aria-label="Exit fullscreen">
+                            <FullscreenExit />
+                        </IconButton>
+                    </Box>
+                    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                        <ConfigFlowDiagram
+                            machines={config.machines}
+                            inserters={config.inserters}
+                            belts={config.belts}
+                            chests={config.chests}
+                            drills={config.drills?.configs ?? []}
+                            recipeNames={recipeNames}
+                            itemNames={itemNamesComposite}
+                            getRecipeInfo={getRecipeInfo}
+                            onUpdateMachine={updateMachine}
+                            onUpdateInserter={updateInserter}
+                            onUpdateBelt={updateBelt}
+                            onUpdateChest={updateChest}
+                            onSwitchChestType={switchChestType}
+                            onUpdateDrill={updateDrill}
+                            onDeleteMachine={removeMachine}
+                            onDeleteInserter={removeInserter}
+                            onDeleteBelt={removeBelt}
+                            onDeleteChest={removeChest}
+                            onDeleteDrill={removeDrill}
+                            onAddMachine={addMachine}
+                            onAddInserter={addInserter}
+                            onAddBelt={addBelt}
+                            onAddChest={addChest}
+                            onAddDrill={addDrill}
+                            height="100%"
+                        />
+                    </Box>
+                    {coverageIssues.length > 0 && (
+                        <Box sx={{ flexShrink: 0, px: 2, pb: 1 }}>
+                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} />
+                        </Box>
+                    )}
+                </Box>
+            </Dialog>
         </ThemeProvider>
     );
 }
