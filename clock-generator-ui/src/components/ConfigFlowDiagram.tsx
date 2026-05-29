@@ -71,7 +71,7 @@ function FlowContent({
     onRequestFullscreen,
 }: FlowContentProps) {
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
-    const [detailedMode, setDetailedMode] = useState(false);
+    const [detailedMode, setDetailedMode] = useState(true);
 
     const { nodes, edges } = useMemo(
         () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode),
