@@ -108,18 +108,47 @@ function FlowContent({
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
     const [detailedMode, setDetailedMode] = useState(true);
     const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
+    const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
     const { nodes, edges } = useMemo(
         () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode),
         [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode],
     );
 
-    const edgesWithSelection = useMemo(
-        () => selectedEdgeIds.size > 0
-            ? edges.map(e => selectedEdgeIds.has(e.id) ? { ...e, selected: true } : e)
-            : edges,
-        [edges, selectedEdgeIds],
-    );
+    const edgesWithSelection = useMemo(() => {
+        const anyHovered = hoveredNodeId !== null;
+        if (!anyHovered && selectedEdgeIds.size === 0) return edges;
+
+        // Compute highlighted set: direct edges + one hop through connected inserters
+        let highlightedEdgeIds: Set<string> | null = null;
+        if (anyHovered) {
+            const connectedInserterIds = new Set<string>();
+            highlightedEdgeIds = new Set<string>();
+            for (const edge of edges) {
+                if (edge.source === hoveredNodeId || edge.target === hoveredNodeId) {
+                    highlightedEdgeIds.add(edge.id);
+                    if (edge.source.startsWith('inserter-')) connectedInserterIds.add(edge.source);
+                    if (edge.target.startsWith('inserter-')) connectedInserterIds.add(edge.target);
+                }
+            }
+            for (const edge of edges) {
+                if (connectedInserterIds.has(edge.source) || connectedInserterIds.has(edge.target)) {
+                    highlightedEdgeIds.add(edge.id);
+                }
+            }
+        }
+
+        return edges.map(e => {
+            const isConnected = highlightedEdgeIds?.has(e.id) ?? false;
+            const isSelected = selectedEdgeIds.has(e.id);
+            if (anyHovered) {
+                return isConnected
+                    ? { ...e, selected: isSelected, style: { stroke: '#fca300', strokeWidth: 2.5 } }
+                    : { ...e, selected: isSelected, style: { stroke: '#555', strokeWidth: 1, opacity: 0.2 } };
+            }
+            return isSelected ? { ...e, selected: true } : e;
+        });
+    }, [edges, selectedEdgeIds, hoveredNodeId]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
         setSelectedEdgeIds(prev => {
@@ -245,6 +274,8 @@ function FlowContent({
             edges={edgesWithSelection}
             nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
+            onNodeMouseEnter={(_e, node) => setHoveredNodeId(node.id)}
+            onNodeMouseLeave={() => setHoveredNodeId(null)}
             onEdgesChange={handleEdgesChange}
             nodesDraggable={false}
             nodesConnectable={true}
