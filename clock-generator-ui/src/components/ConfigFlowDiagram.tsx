@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -8,6 +8,9 @@ import {
     Panel,
     type NodeTypes,
     type NodeMouseHandler,
+    type Connection,
+    type Edge,
+    type EdgeChange,
 } from '@xyflow/react';
 import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { Add, Fullscreen, InfoOutlined } from '@mui/icons-material';
@@ -25,6 +28,34 @@ const nodeTypes: NodeTypes = {
     inserterNode: InserterFlowNode,
     drillNode: DrillFlowNode,
 };
+
+function parseFlowNodeId(id: string | null | undefined): { type: string; numId: number } | null {
+    if (!id) return null;
+    const match = id.match(/^(machine|belt|chest|inserter)-(\d+)$/);
+    if (!match) return null;
+    return { type: match[1], numId: parseInt(match[2]) };
+}
+
+const ENTITY_TYPES = new Set(['machine', 'belt', 'chest']);
+
+function isInserterEntityConnection(source: string | null, target: string | null): boolean {
+    const src = parseFlowNodeId(source);
+    const tgt = parseFlowNodeId(target);
+    if (!src || !tgt) return false;
+    return (
+        (src.type === 'inserter' && ENTITY_TYPES.has(tgt.type)) ||
+        (ENTITY_TYPES.has(src.type) && tgt.type === 'inserter')
+    );
+}
+
+function isValidFlowConnection(source: string | null, target: string | null): boolean {
+    const src = parseFlowNodeId(source);
+    const tgt = parseFlowNodeId(target);
+    if (!src || !tgt) return false;
+    if (isInserterEntityConnection(source, target)) return true;
+    // entity → entity: will auto-create an inserter
+    return ENTITY_TYPES.has(src.type) && ENTITY_TYPES.has(tgt.type);
+}
 
 export type EntityClickType = 'machine' | 'belt' | 'chest' | 'inserter' | 'drill';
 
@@ -47,6 +78,8 @@ interface FlowContentProps {
     drills: DrillFormData[];
     getRecipeInfo?: (name: string) => import('../hooks/useSimulationWorker').RecipeInfo | null;
     onNodeSelect: (type: EntityClickType, id: number) => void;
+    onUpdateInserter?: (index: number, updates: Partial<InserterFormData>) => void;
+    onDeleteInserter?: (index: number) => void;
     onAddMachine?: () => void;
     onAddInserter?: () => void;
     onAddBelt?: () => void;
@@ -63,6 +96,8 @@ function FlowContent({
     drills,
     getRecipeInfo,
     onNodeSelect,
+    onUpdateInserter,
+    onDeleteInserter,
     onAddMachine,
     onAddInserter,
     onAddBelt,
@@ -72,11 +107,90 @@ function FlowContent({
 }: FlowContentProps) {
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
     const [detailedMode, setDetailedMode] = useState(true);
+    const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
 
     const { nodes, edges } = useMemo(
         () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode),
         [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode],
     );
+
+    const edgesWithSelection = useMemo(
+        () => selectedEdgeIds.size > 0
+            ? edges.map(e => selectedEdgeIds.has(e.id) ? { ...e, selected: true } : e)
+            : edges,
+        [edges, selectedEdgeIds],
+    );
+
+    const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
+        setSelectedEdgeIds(prev => {
+            const next = new Set(prev);
+            let changed = false;
+            for (const change of changes) {
+                if (change.type === 'select') {
+                    if (change.selected) { next.add(change.id); changed = true; }
+                    else if (next.delete(change.id)) { changed = true; }
+                }
+            }
+            return changed ? next : prev;
+        });
+    }, []);
+
+    const applyInserterConnection = useCallback((source: string | null, target: string | null) => {
+        const src = parseFlowNodeId(source);
+        const tgt = parseFlowNodeId(target);
+        if (!src || !tgt) return;
+        if (tgt.type === 'inserter' && ENTITY_TYPES.has(src.type)) {
+            if (!onUpdateInserter) return;
+            const idx = inserters.findIndex(i => i.id === tgt.numId);
+            if (idx !== -1) onUpdateInserter(idx, { source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.numId } });
+        } else if (src.type === 'inserter' && ENTITY_TYPES.has(tgt.type)) {
+            if (!onUpdateInserter) return;
+            const idx = inserters.findIndex(i => i.id === src.numId);
+            if (idx !== -1) onUpdateInserter(idx, { sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.numId } });
+        } else if (ENTITY_TYPES.has(src.type) && ENTITY_TYPES.has(tgt.type)) {
+            if (!onAddInserter || !onUpdateInserter) return;
+            const newIndex = inserters.length;
+            onAddInserter();
+            onUpdateInserter(newIndex, {
+                source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.numId },
+                sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.numId },
+            });
+        }
+    }, [inserters, onUpdateInserter, onAddInserter]);
+
+    const handleConnect = useCallback(
+        (connection: Connection) => applyInserterConnection(connection.source, connection.target),
+        [applyInserterConnection],
+    );
+
+    const handleReconnect = useCallback(
+        (_oldEdge: Edge, newConnection: Connection) => applyInserterConnection(newConnection.source, newConnection.target),
+        [applyInserterConnection],
+    );
+
+    const isValidConnection = useCallback(
+        (connection: Connection | Edge) => isValidFlowConnection(connection.source, connection.target),
+        [],
+    );
+
+    const handleEdgesDelete = useCallback((deletedEdges: Edge[]) => {
+        if (!onDeleteInserter) return;
+        const inserterIds = new Set<number>();
+        for (const edge of deletedEdges) {
+            const src = parseFlowNodeId(edge.source);
+            const tgt = parseFlowNodeId(edge.target);
+            if (src?.type === 'inserter') inserterIds.add(src.numId);
+            if (tgt?.type === 'inserter') inserterIds.add(tgt.numId);
+        }
+        // Delete highest indices first so earlier indices stay valid
+        const indices = [...inserterIds]
+            .map(id => inserters.findIndex(i => i.id === id))
+            .filter(idx => idx !== -1)
+            .sort((a, b) => b - a);
+        for (const idx of indices) {
+            onDeleteInserter(idx);
+        }
+    }, [inserters, onDeleteInserter]);
 
     const hasEntities = machines.length > 0 || belts.length > 0 || chests.length > 0 || drills.length > 0;
 
@@ -128,12 +242,18 @@ function FlowContent({
     return (
         <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={edgesWithSelection}
             nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
+            onEdgesChange={handleEdgesChange}
             nodesDraggable={false}
-            nodesConnectable={false}
+            nodesConnectable={true}
             elementsSelectable={true}
+            edgesReconnectable={true}
+            onConnect={handleConnect}
+            onReconnect={handleReconnect}
+            onEdgesDelete={handleEdgesDelete}
+            isValidConnection={isValidConnection}
             fitView
             fitViewOptions={{ padding: 0.2 }}
             proOptions={{ hideAttribution: true }}
@@ -285,6 +405,8 @@ export function ConfigFlowDiagram({
                         drills={dialogProps.drills ?? []}
                         getRecipeInfo={dialogProps.getRecipeInfo}
                         onNodeSelect={handleNodeSelect}
+                        onUpdateInserter={dialogProps.onUpdateInserter}
+                        onDeleteInserter={dialogProps.onDeleteInserter}
                         onAddMachine={onAddMachine}
                         onAddInserter={onAddInserter}
                         onAddBelt={onAddBelt}
