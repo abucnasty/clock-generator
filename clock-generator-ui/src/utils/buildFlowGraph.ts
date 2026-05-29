@@ -2,6 +2,8 @@ import dagre from '@dagrejs/dagre';
 import type { Node, Edge } from '@xyflow/react';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { isBufferChest } from '../hooks/useConfigForm';
+import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { inferInserterItems } from './inferInserterItems';
 
 export const ENTITY_NODE_WIDTH = 180;
 export const ENTITY_NODE_HEIGHT = 80;
@@ -37,6 +39,7 @@ export function buildFlowGraph(
     belts: BeltFormData[],
     chests: ChestFormData[],
     drills?: DrillFormData[],
+    getRecipeInfo?: (name: string) => RecipeInfo | null,
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
@@ -114,6 +117,11 @@ export function buildFlowGraph(
         const sourceNodeId = `${inserter.source.type}-${inserter.source.id}`;
         const sinkNodeId = `${inserter.sink.type}-${inserter.sink.id}`;
         g.setNode(inserterNodeId, { width: INSERTER_NODE_WIDTH, height: INSERTER_NODE_HEIGHT });
+        // Derive displayed items: explicit filters first, then auto-infer from source/sink
+        const inferred = inserter.filters && inserter.filters.length > 0
+            ? inserter.filters
+            : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
+        const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         nodes.push({
             id: inserterNodeId,
             type: 'inserterNode',
@@ -121,7 +129,7 @@ export function buildFlowGraph(
             data: {
                 inserterId: inserter.id,
                 stackSize: inserter.stack_size,
-                filterIcons: inserter.filters && inserter.filters.length > 0 ? inserter.filters.slice(0, 3) : undefined,
+                filterIcons,
             } satisfies InserterNodeData,
         });
 

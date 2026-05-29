@@ -45,6 +45,7 @@ interface FlowContentProps {
     belts: BeltFormData[];
     chests: ChestFormData[];
     drills: DrillFormData[];
+    getRecipeInfo?: (name: string) => import('../hooks/useSimulationWorker').RecipeInfo | null;
     onNodeSelect: (type: EntityClickType, id: number) => void;
     onAddMachine?: () => void;
     onAddInserter?: () => void;
@@ -60,6 +61,7 @@ function FlowContent({
     belts,
     chests,
     drills,
+    getRecipeInfo,
     onNodeSelect,
     onAddMachine,
     onAddInserter,
@@ -71,8 +73,8 @@ function FlowContent({
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
 
     const { nodes, edges } = useMemo(
-        () => buildFlowGraph(machines, inserters, belts, chests, drills),
-        [machines, inserters, belts, chests, drills],
+        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo),
+        [machines, inserters, belts, chests, drills, getRecipeInfo],
     );
 
     const hasEntities = machines.length > 0 || belts.length > 0 || chests.length > 0 || drills.length > 0;
@@ -264,6 +266,7 @@ export function ConfigFlowDiagram({
                         belts={dialogProps.belts}
                         chests={dialogProps.chests}
                         drills={dialogProps.drills ?? []}
+                        getRecipeInfo={dialogProps.getRecipeInfo}
                         onNodeSelect={handleNodeSelect}
                         onAddMachine={onAddMachine}
                         onAddInserter={onAddInserter}

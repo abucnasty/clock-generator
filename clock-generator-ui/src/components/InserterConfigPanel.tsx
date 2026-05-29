@@ -17,6 +17,7 @@ import type {
 } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { inferInserterItems } from '../utils/inferInserterItems';
 import type { EnableControlFormContentProps } from './EnableControlModal';
 import { EnableControlFormContent, type CopyFromOption } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
@@ -85,38 +86,10 @@ function InserterEditSection({
     const findOption = (type: SourceSinkType, id: number) =>
         entityOptions.find(o => o.type === type && o.id === id);
 
-    const inferredFilters = useMemo<string[]>(() => {
-        let sourceItems: string[] = [];
-        if (inserter.source.type === TargetType.MACHINE) {
-            const m = machines.find(m => m.id === inserter.source.id);
-            if (m?.recipe) sourceItems = getRecipeInfo(m.recipe)?.results ?? [];
-        } else if (inserter.source.type === TargetType.BELT) {
-            const b = belts.find(b => b.id === inserter.source.id);
-            if (b) sourceItems = b.lanes.map(l => l.ingredient).filter(Boolean);
-        } else if (inserter.source.type === TargetType.CHEST) {
-            const c = chests.find(c => c.id === inserter.source.id);
-            if (c) {
-                if (isBufferChest(c) && c.item_filter) sourceItems = [c.item_filter];
-                else if (isInfinityChest(c)) sourceItems = c.item_filter.map(f => f.item_name).filter(Boolean);
-            }
-        }
-        let sinkNeeds: string[] = [];
-        if (inserter.sink.type === TargetType.MACHINE) {
-            const m = machines.find(m => m.id === inserter.sink.id);
-            if (m?.recipe) sinkNeeds = getRecipeInfo(m.recipe)?.ingredients ?? [];
-        } else if (inserter.sink.type === TargetType.BELT) {
-            sinkNeeds = sourceItems;
-        } else if (inserter.sink.type === TargetType.CHEST) {
-            const c = chests.find(c => c.id === inserter.sink.id);
-            if (c) {
-                if (isBufferChest(c) && c.item_filter) sinkNeeds = [c.item_filter];
-                else if (isInfinityChest(c)) sinkNeeds = c.item_filter.map(f => f.item_name).filter(Boolean);
-                else sinkNeeds = sourceItems;
-            } else sinkNeeds = sourceItems;
-        }
-        if (sinkNeeds.length === 0) return sourceItems;
-        return sourceItems.filter(item => sinkNeeds.includes(item));
-    }, [inserter, machines, belts, chests, getRecipeInfo]);
+    const inferredFilters = useMemo<string[]>(
+        () => inferInserterItems(inserter, machines, belts, chests, getRecipeInfo),
+        [inserter, machines, belts, chests, getRecipeInfo],
+    );
 
     const handleFilterChange = (slotIndex: number, item: string) => {
         const filters = [...(inserter.filters || [])];
