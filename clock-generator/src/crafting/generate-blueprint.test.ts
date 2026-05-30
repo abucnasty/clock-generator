@@ -340,21 +340,34 @@ describe("generateClockForConfig", () => {
             const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS);
             const result = generateClockForConfig(config);
 
+            // there are two valid tick ranges for this specific configuration.
+            // both have been tested to be functional in the game using the following blueprint:
+            // 0eNrtXc1u5LgRfhWjTwmgzor/lIHNZXPJOQFy2DWMdlueEbatdtTqmRgTP0DeI3mxPElIqW1zbcliVc0sloyBxXZLmmapyPo+llms4pfV1e5Y33VN26/Ov6ya7b49rM5//LI6NB/azc7faze39ep8dVVv3MNVsfr7cbNr+nt3a1d/qNvrTXe/eihWTXtd/2N1zh4uilXd9k3f1GNLw8X9ZXu8vao79w+KVy3e7Q/un7uvTppvwvxBFSsnYM2k+/owLdJJ7OvbUURzHbzo4a6ur9e3++vjrl6LN154/Ln7dXvZtJ/ca+7dg6G55yv3tod+s/15dV4+FDNPnMoP7r/ilap8UVVeZqKqWFZVZKKqXFZVZ6KqWla1ykRVvaiq4JmoapZVVZmoapdVtZmoWi2qKlkmqrJyWVeZi67L/pLMxV9iyw6TysVhYssek8rFY2LLLpPKxWViyz6TysVnYstOk87FaWLLXpPOxWtiy26TzsVtYst+k8nFb+LLfpPJxW/iy36TyWadadlvsrn4TfzZb6rrddPeNK17vN7tN9fu8Su9g6lWDWpfN129Hf+B80r6+zvf0v7Y3x179+ubZtfX3akDTguaT/JudvdN+2Hd7a/2/fqm8zfDjmj33e1m525t97d3m27jVHJ3v1+NOg5tcXJbF4/veOkGwzf0+aPr811z6FdTnfXsePXH7mq/7rtNe7jbd/36qt71E0uv7K3+mpKgoBJKqAQNlSCgEgxUAodKsC8kHJ09dB+6vfuck6GiLLdpveFOiXye167rbePErZ0tXTXtYEsT4h6FyQlhjlL6br+7vKo/bj413ha/PLZ66Z5dDy0NuA+vHIZumu7QXz7HEk5v/anp+uNg34/8MvyL9Xa3d+B/GAQ6IvAxCSGUN/oRoS9DE3HN+d7BvMLdvVPu2PaXN93+9nLs6fObze5Qe3JyXbjb3LsOuK4P2665Gztr9YP//dnNvjv70ZPh98e+8ZheH7ZN3W7r9Z2jt4vzn9r12Q/321199qejQ7f76fkZ0/asb7Y/H54f/uDFn5/xs62/HB78dd9vdsGvhNDjr6aMQJRQy5ZAyxawcI5MOsbBgb3JoWwqnie34WXc/Haou35qYgvbHnt1CqTbptsem/6ybjdXu9p1a98d6+Lp9hNa/b8FYnXT3vcf3Rz2S7iWL6asP3r4zQzZa/UlmCZ5CZngp2QquExOo2ahQRGktDFj4N1bUYcUPtsKRhzSKhq4oswPuBI6zwioFygZKGiVNGYkdJ4RFbQ34+eZsO1szBU+z4RhQhQpSfg8I0saKUkNCpOljRn4PBOGzXBDCp9nZEUc0gpIDdICqUGV0dQQtp0LNSgGCssljRkFnWeUgRpT/DyjTIbGBJ9nwjgoipQUfJ5RlkZKChYGTBsz8HlGK+qQwucZbYhDCp1ntAZSg46fZ7TOjxo0A4Udk8aMhs4zRkGNKX6eMSpDY4LPM0YSSUkrUMwxbQPWyFgK/23FUtgLI/vvv/4zDC29ZVW+avrfT9HL+vLU4Ka9/krymK6+mS6cxSszG5k6SZmK/hCCS38+0doZX4ow/dT+5bMjmTGCdBjiTXfud0Mc6fxM+OveR5LOz/Qkug3S4sVvy+J5qb+hnZivZicT2wG+gpWwwEpeS1iwEfYdD6yETVrJs2O6ORzq26udF3G72br5baTsN4JWfHby7erNtTeM3ok7PE69w83P++5nP3We7p0u40fxb7Ozqhewbe5mMfv4/HJij8bM/HXXuanLoeCTb+wrTWNydhqTwTQ294TPPhGzUx/0D4EwzevV9GenslHi/xAI235FNH7zePqunGHQ/pZv9Mlkf3OCBP6616dECCAvhOGgd15IgRcMdGeZEGArUgQRcVCAbi0LUwDjyM3EB9p4/uQG9RfC4OM7LyTBC/EbIcJ0xEwN3kL3RUgGJBgL9RckB5Kk5QQJcUxvof5CGHl854UUeMFC/QXFoHaqCBIi7VTHhzPL/MkNum1elVByg/oLYRD5nReS4IV4fyFMm80UUhXUX1AVEFIV1F/QJZCHK06QEMfDFdRfCCPI77yQAi9UUH9BV1A7VQQJkXYa7y+E+dS5khvUX9AWSm5QfyHcDPDOC0nwQry/EKZ3ZwopVkIdBmOAmGIl1GMwFsjErOQEEXFUzEqBjGiz39geDvHNAto+Fe5X3cRhv92GFF6KX1cZLuS3U0aqr7bTYLf/vL6u28Mwozhy2zrELW82KCZacvPJtj4c/BR7bJv+a2xYEMOGhd+NOxYm3/Tin+PDF8Ivfv/2Zgb1i80MappLJSiVmaVdQU+hMo3LV3yexzSqCbscWNwcZwgiyphNsKy0pFTmErMNlJUVXKiMEjq7OZ1F1H8ME6jTRipjpGxm3KgGlRgh+cyZ0kNQqzF6CATVxiVhb0IcXzBFEBHHehEVAsO07cSRalBZ1bmCxhJi35HWVRFExGGEl6S0bRz7cjjlS07km4gacmGyeNpI5YKUuY0cVYnKrM6UHjgiT5VRbVwTItZxlMQpQfFISrKgFPXEkVqhMsgzBY2gxIfjDFgwgog4A35VRw2Woo5jXwGnfF0S+UZIUGJ82khFFFLThjyqGpVFnis9IIoTVFQbt4SobiQlVQQRcZQkS1A6ftpIDWqpQbLlMwUNuNqaMVADloIgItKAESUANJV9ETXNjCXyTURRM1tmg1ToXxP2rWXHaduEBw0sOWgQlDGDFXH362a0Iu7T8U90HfeXQdBvUMSdqRJfxX2iwyZFMHwZ91gRHF/HPVaEwBdyjxUhKZXc3zLfecpTCl/FO1YtDYl9+2KYKZ/QZPB1vGP701IqWUew3KTQZ1Z9dI7e3OMURJhPI7q8y+kwPj/88ntAtL7XJ4+KKinBaRxwIopsBXHixK1ac0qlbaTJaUEJTiNHVeKLTUfCN6K4VRC2TN1wNL7cdGx/GkrBZaxtWkroDmmbFSSKlrjhmJJScxk5qoZRQne4UQWXTJEWihADOg40dcOR+MLDsf2pKKV3sbapKYENpG0aSIwhdcOxlOq72FGtKIEN3KiCC0doDUWIBVWgTdxwLKEEbWx/CkoRVqRtWglZDU19EBV+NfR1/06uhlpNEGHj7AS8psvBIqAxOavAIqAxOSuhIl4lw88tD/senV/FWOTaICX+aSV6+7E+TClhXyrx+IvLQ933TfvhMCaM3u4/1ZfHdlzlra8vT+jwkbDJ1ZEgaR64IG7+DxfEK0FYEDdxxicJC+KRIhRhQTxShCYsiEeKMKQFcYNCrCUsiEeqVRHWiKNE8LIkrREbjMPAS4bJ+xI6k0r5vOSkZWiMufJS4FO/Tj2/aEuSpJbG2ZKipH69JfSNvtSkVW4kaAxplRtnNJawyh1JQBVJLZzRsBKTWZYPAWHS+QQRNIzjE70iCYgJQhAhzlwZ6dRGJPSZwuR0ZWSumhREQVEfM/i0rlhzpcWGkNRXUdK6cNDntBgNDjScFqNBGQ2nxGjiCIiWNYY0GlzWWD4ERMsTQ4KGkCcWSUDwPDEDNldLCoEhoY/K18rHXEVJCgGiqI+SshVprrSULST10VK2cNAXkhRhxIGGljqFNBpNiDDGERAmHcmQjcZiMsIyIqCKkgOGA40s8QlakQQkGSGAG2eukpMCuDjoS9TJpfmYq5T41KhY01GU1CgkDUlNSY1CwpCQLTSY72SjltConmu0oiQdIYdElaAcB5XyXgkeJPSAj2YU8r0UcgKlkDk4oyqMK6kZaCpKsErONSrxZw6erHGpwC9XCpTskTi8Nf6ExXd4JwJvQ4jazMLb4g9VjEZiRXjxOQrRJSglJ214a4Y/KPEd3mnAW3NClGsO3loQGp2FnsSfABjLGREZd2HiVOLw1vjzDt/hnQi8CYUA5+Ft8WccRiOxIrz4HIWYEpTelja8DcMfW/gO7zTgDU4JDWNuc/A2gtDoLPQk/jy+WM4wCpSEmDi8Nf70wXd4JwJvwll18/C2+BMHo5FIqJU4SyEWVB0xcXhbhj9E8B3eacDbEmo+zsLbEqo8zkNP4o/Gi+UMq0BJxInDG1bpjKetrEFle/EsK71yG781KAxqZXp2KAencIdBOTHDVxXoaK7E4VUxVC5TpvACH/wuRIQ9xe+PCqNIuWK2kqAoWOLwwuVe5Qqv+KMOwqBOtkgwhKDULNtYUBQqcXhVqMyiPOElwCepK7ZoTwJQbSGMomSKWVFyUBQoaXiJUqAyoXKFV3waYxjUyBYJihCUmWUbDYrCJA4vg8rzyRVelNDCrD3FOwhhFCFXzDJYFCRteDHUGVG5wgtwHHq4qJ8tEgQhKDHHNgxWyjRxeClsvUdGrfd4s7v3Ac1uf7Xv1zedv4ku9ohtC1bvUTBNqPfIYpIEBbjmTFjvMVKEJdR7jBRREeo9xolAFJQJ6z0yRGKj4IxQ7zFSLU6o9xgpQpDqPTJM0qPgtMKAuOFSpBp9SEU1qZgdTlFDqNEXaTSWUFctUkRFqquGGy5EnRRZEodLMFItLKSinFQ0CqeoINTCijMaQTnCI1IE7QgP5HDRjvDADZch1ZxBKmpJxVlwilaEmjNxRgMuRWIUWAQj1QnBDZfkkG1LvEr6ryO5fBhS4Bmlruzy373BbqTUlQUl6aeu7PJ6fOD3pq7s8jlUwQad1JW1kG04qSu7fKZh8PdA4spGFAkKdtekriyDbHdJXdllD0pm40GpiOMks/GglIRsK0ld2WUPSmXjQUUcS6+y8aAU6CTP1JVd9qB0Nh6UWvagdDYelAZtk0hd2YhDVLPxoPSyB2Wy8aC0gGxHSEnZi2L1uelq/0Y/8qrghfufvCj8d1loU3D3XQh3X1TP3919+fidqdMD/2Mphu/+o3B/PPnv/qNQ4301/Hi87z8KPd7Xemz06Tsrnx6IwpQFc9/9R2HM83cvebgw/sHpu/sorB6++4/Cjvf9R1GN9/1HUY33vSDpxKlB3PBZMMaDK39I3nDl77pn5nRl/BWX45X/dFfV6cp3BRN6vBKDQvLUin/nwicfstOVa9WObQ6SCn8m1nDlPwt/5NB4NbzLSd7wWfCTPD6Om7Djlf8s+GkkhrYLn5s2XlkvvRKD9OFu4RNrhmf+bsFPfTTcLXxWwPjMd5nfwD4+8/LEaYiGu4Xf0suGq8FWypPh+LuF3zo4PvPv4jeTjc98T/jNVOziYrRrj67dsb7rmtYvm3+qu8OAL6V5JatKWVnyUtqHh/8BE8wFGQ==
+            const valid_range_set_1 = [
+                OpenRange.from(38, 49),
+                OpenRange.from(49, 60),
+                OpenRange.from(206, 217),
+                OpenRange.from(217, 228),
+                OpenRange.from(245, 256),
+            ]
+
+            const valid_range_set_2 = [
+                OpenRange.from(13, 24),
+                OpenRange.from(24, 35),
+                OpenRange.from(181, 192),
+                OpenRange.from(192, 203),
+                OpenRange.from(234, 245),
+            ]
+
             it("has correct tick ranges for input inserter transfers", () => {
                 // Get the actual EntityId instances from the map keys
                 const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
                 // inserter id 3 is the LDS + blue chip inserter in this configuration
                 const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(3).id)!;
-                
+
                 const inserter_transfers = result.transfer_history.getOrThrow(input_inserter_id)
                 const sorted_transfers = [...inserter_transfers].sort((a, b) => a.tick_range.start_inclusive - b.tick_range.start_inclusive);
-                const expected_ranges = [
-                    OpenRange.from(38, 49),
-                    OpenRange.from(49, 60),
-                    OpenRange.from(206, 217),
-                    OpenRange.from(217, 228),
-                    OpenRange.from(245, 256),
-                ]
+                const expected_ranges = valid_range_set_2
 
                 expect(sorted_transfers.length).toBe(5);
                 sorted_transfers.forEach((transfer, index) => {
@@ -363,6 +376,67 @@ describe("generateClockForConfig", () => {
                     expect(transfer.tick_range.end_inclusive).toBe(expected_range.end_inclusive);
                 })
             });
+        });
+    });
+
+    // Regression test for issue #47:
+    // A multi-filter belt→machine inserter (copper-plate + iron-gear-wheel) with terminal_swing_count=1
+    // causes per-item fractional swing counts (copper=0.5, gear=0.5, total=1.0).
+    // The total is an integer so fractional_swings_enabled stays false, but the clocked timing
+    // constraint locks the inserter to 1 swing/cycle. Since stack_size(16) < automated_insertion_limit(18),
+    // one item is always picked first and never blocked, starving the other item indefinitely.
+    describe("AUTOMATION_SCIENCE_PACK issue #47 regression (multi-filter fractional per-item transfers)", async () => {
+
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_PACK_FAILING);
+        const result: BlueprintGenerationResult = generateClockForConfig(config);
+
+        const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+        // inserter:1 = belt→machine (copper-plate + iron-gear-wheel), no explicit id in config → index+1
+        const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(1).id)!;
+        // inserter:2 = machine→belt (automation-science-pack)
+        const output_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+
+        it("generates a blueprint without throwing", () => {
+            expect(result.blueprint).toBeDefined();
+        });
+
+        it("records transfers for the output inserter", () => {
+            const transfers = result.transfer_history.getOrThrow(output_inserter_id);
+            expect(transfers.length).toBeGreaterThan(0);
+        });
+
+        it("records transfers for the input inserter", () => {
+            const transfers = result.transfer_history.getOrThrow(input_inserter_id);
+            expect(transfers.length).toBeGreaterThan(0);
+        });
+
+        it("input inserter transfers both copper-plate and iron-gear-wheel (not just one)", () => {
+            const transfers = result.transfer_history.getOrThrow(input_inserter_id);
+            const transferred_items = new Set(transfers.map(t => t.item_name));
+            expect(transferred_items.has("copper-plate")).toBe(true);
+            expect(transferred_items.has("iron-gear-wheel")).toBe(true);
+        });
+    });
+
+    describe("AUTOMATION_SCIENCE_01_TERMINAL_SWINGS (explicit ALWAYS mode workaround)", async () => {
+
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_01_TERMINAL_SWINGS);
+        const result: BlueprintGenerationResult = generateClockForConfig(config);
+
+        const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+        const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(1).id)!;
+        const output_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+
+        it("records transfers for both inserters", () => {
+            expect(result.transfer_history.getOrThrow(output_inserter_id).length).toBeGreaterThan(0);
+            expect(result.transfer_history.getOrThrow(input_inserter_id).length).toBeGreaterThan(0);
+        });
+
+        it("input inserter transfers both copper-plate and iron-gear-wheel", () => {
+            const transfers = result.transfer_history.getOrThrow(input_inserter_id);
+            const transferred_items = new Set(transfers.map(t => t.item_name));
+            expect(transferred_items.has("copper-plate")).toBe(true);
+            expect(transferred_items.has("iron-gear-wheel")).toBe(true);
         });
     });
 });
