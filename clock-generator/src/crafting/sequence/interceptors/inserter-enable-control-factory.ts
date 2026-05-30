@@ -56,16 +56,19 @@ export class EnableControlFactory {
 
         const additional_enable_controls: EnableControl[] = [];
 
-        // Check if this inserter feeds into any terminal machine
-        // Skip for fractional swings
+        // Check if this inserter feeds into any terminal machine.
+        // Skip for fractional swings, or when individual item transfers are fractional.
+        // (Fractional per-item transfers are handled separately below in the belt→machine branch.)
         if (!this.crafting_cycle_plan.fractional_swings_enabled) {
             if (EntityState.isMachine(sink_state) && this.terminal_machine_states.has(sink_state)) {
-                additional_enable_controls.push(
-                    this.transferCountToMachine(
-                        entity_state,
-                        sink_state,
-                    )
-                );
+                if (!this.hasFractionalPerItemTransfers(entity_state.inserter)) {
+                    additional_enable_controls.push(
+                        this.transferCountToMachine(
+                            entity_state,
+                            sink_state,
+                        )
+                    );
+                }
             }
         }
 
@@ -78,6 +81,18 @@ export class EnableControlFactory {
         }
 
         if (EntityState.isBelt(source_state) && EntityState.isMachine(sink_state)) {
+            // When the user sets terminal_swing_count below the natural maximum, individual
+            // item transfer counts become fractional even though the total is an integer
+            // (e.g. copper=0.5 + gear=0.5 = 1.0). The latched fromBeltToMachine control
+            // cannot reliably handle this because the machine never blocks the first-filter
+            // item before running out of cycle budget. Using AlwaysEnabledControl lets the
+            // machine's own automated_insertion_limit blocking naturally rotate through all
+            // items without any clocked or latched intervention.
+            if (this.crafting_cycle_plan.terminal_swing_count_overridden &&
+                this.terminal_machine_states.has(sink_state) &&
+                this.hasFractionalPerItemTransfers(entity_state.inserter)) {
+                return AlwaysEnabledControl;
+            }
             return EnableControl.all([
                 ...additional_enable_controls,
                 this.fromBeltToMachine(entity_state.inserter, source_state, sink_state)
@@ -1070,6 +1085,19 @@ export class EnableControlFactory {
                 return sink_quantity >= automated_insertion_limit
             })
         })
+    }
+    /**
+     * Returns true when a multi-filter inserter has at least one individual item transfer
+     * count that is fractional (denominator > 1), even if the total transfer count is an
+     * integer. This detects cases like copper=1/2 + gear=1/2 = 1 total that arise when
+     * the user sets terminal_swing_count below the natural maximum value.
+     */
+    private hasFractionalPerItemTransfers(inserter: Inserter): boolean {
+        const transfer_count = this.entity_transfer_map.get(inserter.entity_id);
+        if (!transfer_count || transfer_count.item_transfers.length <= 1) {
+            return false;
+        }
+        return transfer_count.item_transfers.some(it => it.transfer_count.getDenominator > 1);
     }
 
     /**

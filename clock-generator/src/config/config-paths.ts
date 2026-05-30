@@ -40,4 +40,6 @@ export const ConfigPaths = {
     UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS: path.join(CONFIG_SAMPLES_DIR, 'utility-science-belted-combined-blue-and-lds.json'),
     PROCESSING_UNITS: path.join(CONFIG_SAMPLES_DIR, 'processing-units-15-per-second.json'),
     BAD_ACCUMULATOR_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'bad-accumulator-config.json'),
+    AUTOMATION_SCIENCE_PACK_FAILING: path.join(CONFIG_SAMPLES_DIR, 'clock-config-automation-science-pack-1774501984294.json'),
+    AUTOMATION_SCIENCE_01_TERMINAL_SWINGS: path.join(CONFIG_SAMPLES_DIR, 'automation-science-01-terminal-swings.json'),
 } as const;

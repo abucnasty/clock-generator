@@ -15,6 +15,7 @@
   ],
   "inserters": [
     {
+      "id": 1,
       "source": {
         "type": "belt",
         "id": 1
@@ -30,13 +31,14 @@
       ]
     },
     {
+      "id": 2,
       "source": {
         "type": "machine",
         "id": 1
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 2
       },
       "stack_size": 16,
       "filters": [
@@ -44,6 +46,7 @@
       ]
     },
     {
+      "id": 3,
       "source": {
         "type": "belt",
         "id": 3

@@ -31,6 +31,12 @@ export interface CraftingCyclePlan {
      * Only set when fractional_swings_enabled is true.
      */
     readonly cycle_multiplier?: number;
+    /**
+     * Whether the user explicitly set terminal_swing_count in the config overrides.
+     * When true and a multi-filter belt→machine inserter has fractional per-item transfers,
+     * AlwaysEnabledControl is used instead of the normal latched control.
+     */
+    readonly terminal_swing_count_overridden: boolean;
 }
 
 export const CraftingCyclePlan = {
@@ -155,7 +161,8 @@ function createPlan(
                 production_rate: target_production_rate,
                 fractional_swings_enabled: true,
                 swing_distribution,
-                cycle_multiplier
+                cycle_multiplier,
+                terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined
             }
         }
     }
@@ -164,7 +171,8 @@ function createPlan(
         total_duration: final_period_duration,
         entity_transfer_map: swing_counts.clone(),
         production_rate: target_production_rate,
-        fractional_swings_enabled: false
+        fractional_swings_enabled: false,
+        terminal_swing_count_overridden: config_overrides.terminal_swing_count !== undefined
     }
 }
 
