@@ -42,4 +42,5 @@ export const ConfigPaths = {
     BAD_ACCUMULATOR_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'bad-accumulator-config.json'),
     AUTOMATION_SCIENCE_PACK_FAILING: path.join(CONFIG_SAMPLES_DIR, 'clock-config-automation-science-pack-1774501984294.json'),
     AUTOMATION_SCIENCE_01_TERMINAL_SWINGS: path.join(CONFIG_SAMPLES_DIR, 'automation-science-01-terminal-swings.json'),
+    AUTOMATION_SCIENCE_BELTED_INTERNAL_BUFFER: path.join(CONFIG_SAMPLES_DIR, 'automation-science-belted-internal-buffer.json'),
 } as const;
