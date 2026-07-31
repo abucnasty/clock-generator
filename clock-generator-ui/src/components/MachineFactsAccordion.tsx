@@ -54,13 +54,15 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                 <Typography variant="body2" color="text.secondary">
                     Machine Facts
                 </Typography>
-                <Chip
-                    size="small"
-                    label={`${facts.output_rate_per_second.toFixed(2)}/s`}
-                    color="primary"
-                    variant="outlined"
-                    sx={{ height: 20, fontSize: '0.7rem' }}
-                />
+                <Tooltip title={`${facts.output_rate_per_second}/s`} arrow>
+                    <Chip
+                        size="small"
+                        label={`${facts.output_rate_per_second.toFixed(4)}/s`}
+                        color="primary"
+                        variant="outlined"
+                        sx={{ height: 20, fontSize: '0.7rem' }}
+                    />
+                </Tooltip>
             </AccordionSummary>
             <AccordionDetails sx={{ pt: 0 }}>
                 {/* Output Section */}
@@ -83,7 +85,8 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                         />
                         <FactItem
                             label="Rate"
-                            value={`${facts.output_rate_per_second.toFixed(2)}/s`}
+                            value={`${facts.output_rate_per_second.toFixed(4)}/s`}
+                            tooltip={`${facts.output_rate_per_second}/s`}
                         />
                         <FactItem
                             label="Output Block"
@@ -105,15 +108,18 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                         <FactItem
                             label="Craft"
-                            value={`${facts.ticks_per_craft.toFixed(1)} ticks`}
+                            value={`${facts.ticks_per_craft.toFixed(4)} ticks`}
+                            tooltip={`${facts.ticks_per_craft} ticks`}
                         />
                         <FactItem
                             label="Bonus"
-                            value={`${facts.ticks_per_bonus_craft.toFixed(1)} ticks`}
+                            value={`${facts.ticks_per_bonus_craft.toFixed(4)} ticks`}
+                            tooltip={`${facts.ticks_per_bonus_craft} ticks`}
                         />
                         <FactItem
                             label="Insertion Duration"
-                            value={`${facts.insertion_duration_ticks.toFixed(1)} ticks`}
+                            value={`${facts.insertion_duration_ticks.toFixed(4)} ticks`}
+                            tooltip={`${facts.insertion_duration_ticks} ticks`}
                         />
                         <FactItem
                             label="Overload Multiplier"
@@ -151,11 +157,11 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                         <Typography variant="body2" sx={{ minWidth: 120 }}>
                                             {input.item_name}
                                         </Typography>
-                                        <Tooltip title="Consumption rate in items per second" arrow>
+                                        <Tooltip title={`${input.consumption_rate_per_second}/s`} arrow>
                                             <span>
                                                 <Chip
                                                     size="small"
-                                                    label={`${input.consumption_rate_per_second.toFixed(2)}/s`}
+                                                    label={`${input.consumption_rate_per_second.toFixed(4)}/s`}
                                                     variant="outlined"
                                                     sx={{ height: 20, fontSize: '0.7rem' }}
                                                 />
@@ -197,6 +203,7 @@ interface FactItemProps {
     icon?: string;
     label: string;
     value: string;
+    tooltip?: string;
 }
 
 const FACT_DESCRIPTIONS: Record<string, string> = {
@@ -218,8 +225,11 @@ const FACT_DESCRIPTIONS: Record<string, string> = {
     'Recipe': 'Recipe name',
 };
 
-function FactItem({ icon, label, value }: FactItemProps) {
-    const description = FACT_DESCRIPTIONS[label];
+function FactItem({ icon, label, value, tooltip }: FactItemProps) {
+    const baseDescription = FACT_DESCRIPTIONS[label];
+    const description = tooltip && baseDescription
+        ? <>{baseDescription}<br />{tooltip}</>
+        : tooltip ?? baseDescription;
     const content = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             {icon && <FactorioIcon name={icon} size={18} />}
