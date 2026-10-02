@@ -122,6 +122,13 @@ export interface SubtickClock {
 /** Ticks added between the clock and the deciders by the multiply and modulo combinators */
 const SUBTICK_CLOCK_EXTRA_LATENCY_TICKS = 2;
 
+/** Decider constants are whole numbers; fractional bounds (from a fractional period's wrap) are rounded inward */
+function wholeRanges(ranges: OpenRange[]): OpenRange[] {
+    return ranges
+        .map(range => OpenRange.from(Math.ceil(range.start_inclusive - 1e-9), Math.floor(range.end_inclusive + 1e-9)))
+        .filter(range => range.start_inclusive <= range.end_inclusive);
+}
+
 /** Windows in ticks of the p/q period, as subtick-clock values shifted back by the extra combinator latency */
 function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
     const { period_ticks: p, scale: q } = clock;
@@ -138,7 +145,7 @@ function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
             scaled.push(OpenRange.from(wrapped_start, wrapped_end));
         }
     }
-    return OpenRange.reduceRanges(scaled);
+    return OpenRange.reduceRanges(wholeRanges(scaled));
 }
 
 export function createSignalPerInserterBlueprint(
@@ -207,7 +214,7 @@ export function createSignalPerInserterBlueprint(
                 cycle,
                 total_duration.ticks / cycle.total_duration.ticks,
                 Position.fromXY(x, 0),
-                subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : undefined,
+                subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRanges,
             )
         )
     })
