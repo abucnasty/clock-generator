@@ -175,4 +175,26 @@ describe("Machine State Machine", () => {
 
         expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
     });
+
+    test("machine is output full when the next craft does not fit under max stack size", () => {
+        const machine_state = MachineState.forMachine(
+            createMachine("plastic-bar", {
+                crafting_speed: 99.194,
+                productivity: 300,
+                type: MachineType.MACHINE
+            })
+        )
+        const state_machine = MachineStateMachine.create({
+            machine_state: machine_state,
+            initial_mode_status: MachineStatus.WORKING,
+        })
+
+        // e.g. a stack size 15 inserter leaves an odd count; 1 free slot cannot fit a 2-item craft
+        machine_state.inventoryState.addQuantity("coal", 1_000);
+        machine_state.inventoryState.addQuantity("plastic-bar", 99);
+        executeControlLogicForTicks(state_machine, 10);
+
+        expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(99);
+        expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
+    });
 });
