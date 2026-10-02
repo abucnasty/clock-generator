@@ -1,9 +1,40 @@
-import type { Config, DebugSteps, LogMessage, SwingBackoffReport } from 'clock-generator/browser';
+import type {
+    AsBuiltStabilityCheck,
+    Config,
+    DebugSteps,
+    GenerationProgress,
+    LogMessage,
+    SerializableStateTransitionHistory,
+    SerializableTransferHistory,
+    SerializableTransferPlan,
+    SwingBackoffReport,
+} from 'clock-generator/browser';
+
+/**
+ * A generated clock alternative, flattened to plain data so it can be posted from the worker.
+ */
+export interface ClockAlternativeView {
+    id: string;
+    label: string;
+    description: string;
+    inserterWindowCount: number;
+    isStable: boolean;
+    asBuilt: AsBuiltStabilityCheck | null;
+    expectedOutputItems: number;
+    terminalSwingCount: number;
+    blueprintString: string;
+    transferHistory: SerializableTransferHistory;
+    stateTransitionHistory: SerializableStateTransitionHistory;
+    simulationDurationTicks: number;
+    swingBackoffReport: SwingBackoffReport | null;
+    transferPlan: SerializableTransferPlan;
+    usedLcm: number;
+}
 
 /**
  * Messages sent from the main thread to the worker.
  */
-export type WorkerRequest = 
+export type WorkerRequest =
     | InitializeRequest
     | GenerateBlueprintRequest;
 
@@ -30,26 +61,22 @@ export type WorkerResponse =
 
 export interface InitializedResponse {
     type: 'initialized';
-    recipeNames: string[];
-    resourceNames: string[];
 }
 
 export interface LogResponse {
     type: 'log';
-    message: LogMessage;
+    messages: LogMessage[];
 }
 
 export interface ProgressResponse {
     type: 'progress';
-    step: string;
-    message: string;
+    progress: GenerationProgress;
 }
 
 export interface CompletedResponse {
     type: 'completed';
-    blueprintString: string;
-    simulationDurationTicks: number;
-    swingBackoffReport?: SwingBackoffReport;
+    alternatives: ClockAlternativeView[];
+    selectedIndex: number;
 }
 
 export interface ErrorResponse {

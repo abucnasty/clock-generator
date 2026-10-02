@@ -14,4 +14,8 @@ export default defineConfig({
       transformMixedEsModules: true,
     },
   },
+  worker: {
+    // the simulation worker dynamically imports clock-generator, which needs code splitting
+    format: 'es',
+  },
 })

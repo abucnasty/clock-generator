@@ -87,6 +87,7 @@ function App() {
     const {
         isInitialized,
         isRunning,
+        progress,
         recipeNames,
         resourceNames,
         itemNames,
@@ -387,6 +388,7 @@ function App() {
                             <BlueprintOutput
                                 blueprintString={blueprintString}
                                 isLoading={isRunning}
+                                progress={progress}
                                 error={error}
                                 simulationDurationTicks={simulationDurationTicks ?? undefined}
                                 onGenerate={handleGenerate}

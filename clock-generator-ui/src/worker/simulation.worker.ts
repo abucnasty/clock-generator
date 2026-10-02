@@ -5,14 +5,17 @@
  * log messages back to the main thread.
  */
 
-import type { WorkerRequest, WorkerResponse } from './types';
+import type { LogMessage } from 'clock-generator/browser';
+import type { ClockAlternativeView, WorkerRequest, WorkerResponse } from './types';
 
 // We'll dynamically import clock-generator in the worker context
 let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService;
-let generateClockWithSwingBackoff: typeof import('clock-generator/browser').generateClockWithSwingBackoff;
+let generateClockAlternatives: typeof import('clock-generator/browser').generateClockAlternatives;
 let encodeBlueprintFileBrowser: typeof import('clock-generator/browser').encodeBlueprintFileBrowser;
 let DebugSettingsProvider: typeof import('clock-generator/browser').DebugSettingsProvider;
 let StreamingLogger: typeof import('clock-generator/browser').StreamingLogger;
+
+const LOG_FLUSH_INTERVAL_MS = 100;
 
 const ctx: Worker = self as unknown as Worker;
 
@@ -26,7 +29,7 @@ async function handleInitialize(factorioDataUrl: string): Promise<void> {
         const clockGenerator = await import('clock-generator/browser');
         
         FactorioDataService = clockGenerator.FactorioDataService;
-        generateClockWithSwingBackoff = clockGenerator.generateClockWithSwingBackoff;
+        generateClockAlternatives = clockGenerator.generateClockAlternatives;
         encodeBlueprintFileBrowser = clockGenerator.encodeBlueprintFileBrowser;
         DebugSettingsProvider = clockGenerator.DebugSettingsProvider;
         StreamingLogger = clockGenerator.StreamingLogger;
@@ -36,12 +39,7 @@ async function handleInitialize(factorioDataUrl: string): Promise<void> {
         const data = await response.json();
         FactorioDataService.initialize(data);
 
-        // Send back available recipes and resources
-        postResponse({
-            type: 'initialized',
-            recipeNames: FactorioDataService.getAllRecipeNames(),
-            resourceNames: FactorioDataService.getAllResourceNames(),
-        });
+        postResponse({ type: 'initialized' });
     } catch (error) {
         postResponse({
             type: 'error',
@@ -56,40 +54,58 @@ async function handleGenerate(
     debugSteps: import('clock-generator/browser').DebugSteps
 ): Promise<void> {
     try {
-        // Create a streaming logger to send logs to main thread
+        // Logs arrive far faster than the UI needs them, so post them in batches
+        let pending_logs: LogMessage[] = [];
+        let last_flush = 0;
+        const flushLogs = () => {
+            if (pending_logs.length > 0) {
+                postResponse({ type: 'log', messages: pending_logs });
+                pending_logs = [];
+            }
+            last_flush = Date.now();
+        };
         const logger = new StreamingLogger((message) => {
-            postResponse({
-                type: 'log',
-                message,
-            });
+            pending_logs.push(message);
+            if (Date.now() - last_flush >= LOG_FLUSH_INTERVAL_MS) {
+                flushLogs();
+            }
         });
 
-        // Create mutable debug settings
         const debug = DebugSettingsProvider.mutable();
 
-        // Run the simulation
-        postResponse({
-            type: 'progress',
-            step: 'starting',
-            message: 'Starting simulation...',
-        });
-
-        const result = generateClockWithSwingBackoff(config, {
+        const generated = generateClockAlternatives(config, {
             debug,
             debug_steps: debugSteps,
             logger,
+            on_progress: (progress) => {
+                flushLogs();
+                postResponse({ type: 'progress', progress });
+            },
         });
+        flushLogs();
 
-        // Encode the blueprint
-        const blueprintString = encodeBlueprintFileBrowser({
-            blueprint: result.blueprint,
-        });
+        const alternatives: ClockAlternativeView[] = generated.alternatives.map(({ result, ...alternative }) => ({
+            id: alternative.id,
+            label: alternative.label,
+            description: alternative.description,
+            inserterWindowCount: alternative.inserter_window_count,
+            isStable: alternative.is_stable,
+            asBuilt: result.stability_check.as_built ?? null,
+            expectedOutputItems: result.stability_check.expected_output_items,
+            terminalSwingCount: result.used_terminal_swing_count,
+            blueprintString: encodeBlueprintFileBrowser({ blueprint: result.blueprint }),
+            transferHistory: result.serializable_transfer_history,
+            stateTransitionHistory: result.serializable_state_transition_history,
+            simulationDurationTicks: result.simulation_duration.ticks,
+            swingBackoffReport: result.swing_backoff_report ?? null,
+            transferPlan: result.serializable_transfer_plan,
+            usedLcm: result.used_lcm,
+        }));
 
         postResponse({
             type: 'completed',
-            blueprintString,
-            simulationDurationTicks: result.simulation_duration.ticks,
-            swingBackoffReport: result.swing_backoff_report,
+            alternatives,
+            selectedIndex: generated.selected_index,
         });
     } catch (error) {
         postResponse({

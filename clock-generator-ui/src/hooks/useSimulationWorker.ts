@@ -1,33 +1,19 @@
-import { useCallback, useState } from 'react';
-import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, AsBuiltStabilityCheck } from 'clock-generator/browser';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
+import type { ClockAlternativeView, WorkerRequest, WorkerResponse } from '../worker/types';
+
+export type { ClockAlternativeView } from '../worker/types';
 
 export interface RecipeInfo {
     ingredients: string[];
     results: string[];
 }
 
-export interface ClockAlternativeView {
-    id: string;
-    label: string;
-    description: string;
-    inserterWindowCount: number;
-    isStable: boolean;
-    asBuilt: AsBuiltStabilityCheck | null;
-    expectedOutputItems: number;
-    terminalSwingCount: number;
-    blueprintString: string;
-    transferHistory: SerializableTransferHistory;
-    stateTransitionHistory: SerializableStateTransitionHistory;
-    simulationDurationTicks: number;
-    swingBackoffReport: SwingBackoffReport | null;
-    transferPlan: SerializableTransferPlan;
-    usedLcm: number;
-}
-
 export interface UseSimulationWorkerResult {
     isInitialized: boolean;
     isRunning: boolean;
+    progress: GenerationProgress | null;
     recipeNames: string[];
     itemNames: string[];
     resourceNames: string[];
@@ -51,14 +37,13 @@ export interface UseSimulationWorkerResult {
 
 // Dynamic imports for the clock-generator library
 let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService | null = null;
-let generateClockAlternatives: typeof import('clock-generator/browser').generateClockAlternatives | null = null;
-let encodeBlueprintFileBrowser: typeof import('clock-generator/browser').encodeBlueprintFileBrowser | null = null;
-let DebugSettingsProvider: typeof import('clock-generator/browser').DebugSettingsProvider | null = null;
-let StreamingLogger: typeof import('clock-generator/browser').StreamingLogger | null = null;
+
+const FACTORIO_DATA_URL = '/data-filtered.json';
 
 export function useSimulationWorker(): UseSimulationWorkerResult {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
+    const [progress, setProgress] = useState<GenerationProgress | null>(null);
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
@@ -66,20 +51,59 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
     const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    const workerRef = useRef<Worker | null>(null);
+
+    useEffect(() => () => workerRef.current?.terminate(), []);
 
     const initialize = useCallback(async () => {
         try {
+            // Generation runs in the worker; the main thread only needs the data for forms and machine facts
+            const workerReady = new Promise<void>((resolve, reject) => {
+                const worker = new Worker(new URL('../worker/simulation.worker.ts', import.meta.url), { type: 'module' });
+                workerRef.current = worker;
+                worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+                    const response = event.data;
+                    switch (response.type) {
+                        case 'initialized':
+                            resolve();
+                            break;
+                        case 'log':
+                            setLogs(previous => [...previous, ...response.messages]);
+                            break;
+                        case 'progress':
+                            setProgress(response.progress);
+                            break;
+                        case 'completed':
+                            setAlternatives(response.alternatives);
+                            setSelectedAlternativeIndex(response.selectedIndex);
+                            setProgress(null);
+                            setIsRunning(false);
+                            break;
+                        case 'error':
+                            console.error('Simulation error:', response.message, response.stack);
+                            setError(response.message);
+                            setProgress(null);
+                            setIsRunning(false);
+                            reject(new Error(response.message));
+                            break;
+                    }
+                };
+                worker.onerror = (event) => {
+                    setError(event.message || 'Simulation worker failed');
+                    setProgress(null);
+                    setIsRunning(false);
+                    reject(new Error(event.message));
+                };
+                worker.postMessage({ type: 'initialize', factorioDataUrl: FACTORIO_DATA_URL } satisfies WorkerRequest);
+            });
+
             // Dynamically import the clock-generator browser module
             const clockGenerator = await import('clock-generator/browser');
             
             FactorioDataService = clockGenerator.FactorioDataService;
-            generateClockAlternatives = clockGenerator.generateClockAlternatives;
-            encodeBlueprintFileBrowser = clockGenerator.encodeBlueprintFileBrowser;
-            DebugSettingsProvider = clockGenerator.DebugSettingsProvider;
-            StreamingLogger = clockGenerator.StreamingLogger;
 
             // Fetch and initialize Factorio data
-            const response = await fetch('/data-filtered.json');
+            const response = await fetch(FACTORIO_DATA_URL);
             const data: FactorioData = await response.json();
             FactorioDataService.initialize(data);
 
@@ -89,6 +113,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             
             // Initialize machine facts module
             await initializeMachineFacts();
+            await workerReady;
             
             setIsInitialized(true);
         } catch (err) {
@@ -97,64 +122,20 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
     }, []);
 
-    const runSimulation = useCallback(async (config: Config, debugSteps: DebugSteps) => {
-        if (!generateClockAlternatives || !encodeBlueprintFileBrowser || !DebugSettingsProvider || !StreamingLogger) {
+    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps) => {
+        const worker = workerRef.current;
+        if (!worker) {
             setError('Not initialized');
             return;
         }
 
         setIsRunning(true);
+        setProgress(null);
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
         setError(null);
         setLogs([]);
-
-        // Use setTimeout to allow UI to update before running simulation
-        setTimeout(() => {
-            try {
-                // Create a streaming logger to capture logs
-                const capturedLogs: LogMessage[] = [];
-                const logger = new StreamingLogger!((message) => {
-                    capturedLogs.push(message);
-                    // Update logs in batches to avoid too many re-renders
-                    setLogs([...capturedLogs]);
-                });
-
-                // Create mutable debug settings
-                const debug = DebugSettingsProvider!.mutable();
-
-                // Run the simulation
-                const generated = generateClockAlternatives!(config, {
-                    debug,
-                    debug_steps: debugSteps,
-                    logger,
-                });
-
-                setAlternatives(generated.alternatives.map(({ result, ...alternative }) => ({
-                    id: alternative.id,
-                    label: alternative.label,
-                    description: alternative.description,
-                    inserterWindowCount: alternative.inserter_window_count,
-                    isStable: alternative.is_stable,
-                    asBuilt: result.stability_check.as_built ?? null,
-                    expectedOutputItems: result.stability_check.expected_output_items,
-                    terminalSwingCount: result.used_terminal_swing_count,
-                    blueprintString: encodeBlueprintFileBrowser!({ blueprint: result.blueprint }),
-                    transferHistory: result.serializable_transfer_history,
-                    stateTransitionHistory: result.serializable_state_transition_history,
-                    simulationDurationTicks: result.simulation_duration.ticks,
-                    swingBackoffReport: result.swing_backoff_report ?? null,
-                    transferPlan: result.serializable_transfer_plan,
-                    usedLcm: result.used_lcm,
-                })));
-                setSelectedAlternativeIndex(generated.selected_index);
-                setIsRunning(false);
-            } catch (err) {
-                console.error('Simulation error:', err);
-                setError(err instanceof Error ? err.message : 'Simulation failed');
-                setIsRunning(false);
-            }
-        }, 100);
+        worker.postMessage({ type: 'generate', config, debugSteps } satisfies WorkerRequest);
     }, []);
 
     const clearLogs = useCallback(() => {
@@ -179,6 +160,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     return {
         isInitialized,
         isRunning,
+        progress,
         recipeNames,
         resourceNames,
         itemNames,
