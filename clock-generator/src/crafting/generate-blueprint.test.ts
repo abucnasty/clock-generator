@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
@@ -158,8 +158,8 @@ describe("generateClockForConfig", () => {
                 const expected_ranges = [
                     OpenRange.from(52, 63),
                     OpenRange.from(63, 74),
-                    OpenRange.from(81, 92),
-                    OpenRange.from(92, 103)
+                    OpenRange.from(76, 87),
+                    OpenRange.from(87, 98)
                 ]
 
                 expect(sorted_transfers.length).toBe(4);
@@ -170,6 +170,37 @@ describe("generateClockForConfig", () => {
                 })
             });
 
+        });
+
+        // these three alternatives were confirmed to hold full output in game
+        describe("clock alternatives", () => {
+            const { alternatives } = generateClockAlternatives(config);
+            const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+
+            it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
+                expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
+            });
+
+            it("planned + belt pickup slack adds 4 ticks to the belt input inserter", () => {
+                expect(windowsOf("planned-belt-slack")).toEqual({
+                    "inserter:2": [{ start: 1, end: 49 }],
+                    "inserter:1": [{ start: 52, end: 102 }],
+                });
+            });
+
+            it("planned keeps the simulated windows", () => {
+                expect(windowsOf("planned")).toEqual({
+                    "inserter:2": [{ start: 1, end: 49 }],
+                    "inserter:1": [{ start: 52, end: 74 }, { start: 76, end: 98 }],
+                });
+            });
+
+            it("derived per-craft windows follow the input inserter's activity", () => {
+                expect(windowsOf("derived")).toEqual({
+                    "inserter:2": [{ start: 1, end: 49 }],
+                    "inserter:1": [{ start: 25, end: 76 }],
+                });
+            });
         });
 
     });
