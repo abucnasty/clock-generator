@@ -5,7 +5,7 @@
  * then every worker takes tasks (one alternative each) until all are done. Logs and progress stream back.
  */
 
-import type { ClockAlternativeRun, Config, DebugSteps, LogMessage } from 'clock-generator/browser';
+import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
@@ -70,6 +70,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
 function runStreaming(
     runId: number,
     debugSteps: DebugSteps,
+    streamLogs: boolean,
     work: (options: import('clock-generator/browser').GenerateClockOptions) => WorkerResponse,
 ): void {
     try {
@@ -83,12 +84,14 @@ function runStreaming(
             }
             last_flush = Date.now();
         };
-        const logger = new clockGenerator.StreamingLogger((message) => {
-            pending_logs.push(message);
-            if (Date.now() - last_flush >= LOG_FLUSH_INTERVAL_MS) {
-                flushLogs();
-            }
-        });
+        const logger: Logger = streamLogs
+            ? new clockGenerator.StreamingLogger((message) => {
+                pending_logs.push(message);
+                if (Date.now() - last_flush >= LOG_FLUSH_INTERVAL_MS) {
+                    flushLogs();
+                }
+            })
+            : { log() { }, warn() { }, debug() { }, error: (message) => console.error(message) };
         const response = work({
             debug: clockGenerator.DebugSettingsProvider.mutable(),
             debug_steps: debugSteps,
@@ -110,8 +113,8 @@ function runStreaming(
     }
 }
 
-function handlePlan(runId: number, config: Config, debugSteps: DebugSteps): void {
-    runStreaming(runId, debugSteps, (options) => {
+function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
+    runStreaming(runId, debugSteps, streamLogs, (options) => {
         const plan = clockGenerator.planClockAlternatives(config, options);
         return { type: 'planned', runId, primary: toRunView(plan.primary), context: plan.context, tasks: plan.tasks };
     });
@@ -121,10 +124,11 @@ function handleTask(
     runId: number,
     config: Config,
     debugSteps: DebugSteps,
+    streamLogs: boolean,
     context: import('clock-generator/browser').ClockAlternativeContext,
     taskId: string,
 ): void {
-    runStreaming(runId, debugSteps, (options) => {
+    runStreaming(runId, debugSteps, streamLogs, (options) => {
         const run = clockGenerator.runClockAlternativeTask(config, context, taskId, options);
         return { type: 'task-completed', runId, taskId, run: toRunView(run) };
     });
@@ -138,10 +142,10 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             await handleInitialize(request.factorioDataUrl);
             break;
         case 'plan':
-            handlePlan(request.runId, request.config, request.debugSteps);
+            handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);
             break;
         case 'task':
-            handleTask(request.runId, request.config, request.debugSteps, request.context, request.taskId);
+            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId);
             break;
     }
 };

@@ -55,6 +55,8 @@ export interface PlanRequest {
     runId: number;
     config: Config;
     debugSteps: DebugSteps;
+    /** Post generator log messages back; off unless the user turns on the log */
+    streamLogs: boolean;
 }
 
 export interface TaskRequest {
@@ -62,6 +64,7 @@ export interface TaskRequest {
     runId: number;
     config: Config;
     debugSteps: DebugSteps;
+    streamLogs: boolean;
     context: ClockAlternativeContext;
     taskId: string;
 }

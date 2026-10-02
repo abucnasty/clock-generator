@@ -31,7 +31,7 @@ export interface UseSimulationWorkerResult {
     selectAlternative: (index: number) => void;
     error: string | null;
     initialize: () => void;
-    runSimulation: (config: Config, debugSteps: DebugSteps) => void;
+    runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean) => void;
     clearLogs: () => void;
     getRecipeInfo: (recipeName: string) => RecipeInfo | null;
 }
@@ -54,6 +54,7 @@ interface Generation {
     runId: number;
     config: Config;
     debugSteps: DebugSteps;
+    streamLogs: boolean;
     context: ClockAlternativeContext | null;
     tasks: ClockAlternativeTask[];
     queue: ClockAlternativeTask[];
@@ -107,6 +108,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 runId: generation.runId,
                 config: generation.config,
                 debugSteps: generation.debugSteps,
+                streamLogs: generation.streamLogs,
                 context: generation.context!,
                 taskId: task.id,
             } satisfies WorkerRequest);
@@ -221,7 +223,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
     }, [handleResponse, terminateWorkers]);
 
-    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps) => {
+    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean) => {
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
@@ -236,10 +238,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config, debugSteps, context: null, tasks: [], queue: [], runs: [],
+            runId, config, debugSteps, streamLogs, context: null, tasks: [], queue: [], runs: [],
             running: new Map(), idle: [], completed: 0,
         };
-        worker.postMessage({ type: 'plan', runId, config, debugSteps } satisfies WorkerRequest);
+        worker.postMessage({ type: 'plan', runId, config, debugSteps, streamLogs } satisfies WorkerRequest);
     }, []);
 
     const clearLogs = useCallback(() => {

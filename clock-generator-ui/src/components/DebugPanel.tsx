@@ -17,6 +17,8 @@ interface DebugPanelProps {
     logs: LogMessage[];
     debugSteps: DebugSteps;
     onDebugStepsChange: (steps: DebugSteps) => void;
+    streamLogs: boolean;
+    onStreamLogsChange: (enabled: boolean) => void;
     onClearLogs: () => void;
 }
 
@@ -30,6 +32,8 @@ export function DebugPanel({
     logs,
     debugSteps,
     onDebugStepsChange,
+    streamLogs,
+    onStreamLogsChange,
     onClearLogs,
 }: DebugPanelProps) {
     const logsEndRef = useRef<HTMLDivElement>(null);
@@ -68,6 +72,15 @@ export function DebugPanel({
             </AccordionSummary>
             <AccordionDetails>
                 <Box sx={{ mb: 2 }}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={streamLogs}
+                                onChange={(e) => onStreamLogsChange(e.target.checked)}
+                            />
+                        }
+                        label="Show generator log below"
+                    />
                     <Typography variant="subtitle2" gutterBottom>
                         Enable debug logging for:
                     </Typography>
@@ -127,7 +140,7 @@ export function DebugPanel({
                             variant="body2"
                             sx={{ color: '#9e9e9e', fontStyle: 'italic', py: 2, textAlign: 'center' }}
                         >
-                            No logs yet. Enable debug steps above and run a simulation.
+                            No logs yet. Turn on the generator log above and run a simulation.
                         </Typography>
                     ) : (
                         <Box

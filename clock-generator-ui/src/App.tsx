@@ -154,6 +154,7 @@ function App() {
         warm_up: false,
         simulate: false,
     });
+    const [streamLogs, setStreamLogs] = useState(false);
 
     const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
@@ -178,8 +179,8 @@ function App() {
 
     const handleGenerate = useCallback(() => {
         const configToRun = exportConfig();
-        runSimulation(configToRun, debugSteps);
-    }, [exportConfig, runSimulation, debugSteps]);
+        runSimulation(configToRun, debugSteps, streamLogs);
+    }, [exportConfig, runSimulation, debugSteps, streamLogs]);
 
     const handleImportConfig = useCallback((imported: Config) => {
         importConfig(imported);
@@ -431,6 +432,8 @@ function App() {
                                     logs={logs}
                                     debugSteps={debugSteps}
                                     onDebugStepsChange={setDebugSteps}
+                                    streamLogs={streamLogs}
+                                    onStreamLogsChange={setStreamLogs}
                                     onClearLogs={clearLogs}
                                 />
                             </Box>
