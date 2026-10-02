@@ -40,6 +40,7 @@ import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDisplay';
 import { TransferPlanPanel } from './components/TransferPlanPanel';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
+import { ClockAlternativesPanel } from './components/ClockAlternativesPanel';
 
 const darkTheme = createTheme({
     palette: {
@@ -97,6 +98,9 @@ function App() {
         swingBackoffReport,
         transferPlan,
         usedLcm,
+        alternatives,
+        selectedAlternativeIndex,
+        selectAlternative,
         error,
         initialize,
         runSimulation,
@@ -387,6 +391,12 @@ function App() {
                                 simulationDurationTicks={simulationDurationTicks ?? undefined}
                                 onGenerate={handleGenerate}
                                 disabled={!canGenerate}
+                            />
+
+                            <ClockAlternativesPanel
+                                alternatives={alternatives}
+                                selectedIndex={selectedAlternativeIndex}
+                                onSelect={selectAlternative}
                             />
 
                             <SwingBackoffReportDisplay report={swingBackoffReport} />

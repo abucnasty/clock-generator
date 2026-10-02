@@ -1,10 +1,28 @@
 import { useCallback, useState } from 'react';
-import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan } from 'clock-generator/browser';
+import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, AsBuiltStabilityCheck } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 
 export interface RecipeInfo {
     ingredients: string[];
     results: string[];
+}
+
+export interface ClockAlternativeView {
+    id: string;
+    label: string;
+    description: string;
+    inserterWindowCount: number;
+    isStable: boolean;
+    asBuilt: AsBuiltStabilityCheck | null;
+    expectedOutputItems: number;
+    terminalSwingCount: number;
+    blueprintString: string;
+    transferHistory: SerializableTransferHistory;
+    stateTransitionHistory: SerializableStateTransitionHistory;
+    simulationDurationTicks: number;
+    swingBackoffReport: SwingBackoffReport | null;
+    transferPlan: SerializableTransferPlan;
+    usedLcm: number;
 }
 
 export interface UseSimulationWorkerResult {
@@ -21,6 +39,9 @@ export interface UseSimulationWorkerResult {
     swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan | null;
     usedLcm: number | null;
+    alternatives: ClockAlternativeView[];
+    selectedAlternativeIndex: number;
+    selectAlternative: (index: number) => void;
     error: string | null;
     initialize: () => void;
     runSimulation: (config: Config, debugSteps: DebugSteps) => void;
@@ -30,7 +51,7 @@ export interface UseSimulationWorkerResult {
 
 // Dynamic imports for the clock-generator library
 let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService | null = null;
-let generateClockWithSwingBackoff: typeof import('clock-generator/browser').generateClockWithSwingBackoff | null = null;
+let generateClockAlternatives: typeof import('clock-generator/browser').generateClockAlternatives | null = null;
 let encodeBlueprintFileBrowser: typeof import('clock-generator/browser').encodeBlueprintFileBrowser | null = null;
 let DebugSettingsProvider: typeof import('clock-generator/browser').DebugSettingsProvider | null = null;
 let StreamingLogger: typeof import('clock-generator/browser').StreamingLogger | null = null;
@@ -42,13 +63,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
     const [logs, setLogs] = useState<LogMessage[]>([]);
-    const [blueprintString, setBlueprintString] = useState<string | null>(null);
-    const [transferHistory, setTransferHistory] = useState<SerializableTransferHistory | null>(null);
-    const [stateTransitionHistory, setStateTransitionHistory] = useState<SerializableStateTransitionHistory | null>(null);
-    const [simulationDurationTicks, setSimulationDurationTicks] = useState<number | null>(null);
-    const [swingBackoffReport, setSwingBackoffReport] = useState<SwingBackoffReport | null>(null);
-    const [transferPlan, setTransferPlan] = useState<SerializableTransferPlan | null>(null);
-    const [usedLcm, setUsedLcm] = useState<number | null>(null);
+    const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
+    const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
     const initialize = useCallback(async () => {
@@ -57,7 +73,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             const clockGenerator = await import('clock-generator/browser');
             
             FactorioDataService = clockGenerator.FactorioDataService;
-            generateClockWithSwingBackoff = clockGenerator.generateClockWithSwingBackoff;
+            generateClockAlternatives = clockGenerator.generateClockAlternatives;
             encodeBlueprintFileBrowser = clockGenerator.encodeBlueprintFileBrowser;
             DebugSettingsProvider = clockGenerator.DebugSettingsProvider;
             StreamingLogger = clockGenerator.StreamingLogger;
@@ -82,19 +98,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, []);
 
     const runSimulation = useCallback(async (config: Config, debugSteps: DebugSteps) => {
-        if (!generateClockWithSwingBackoff || !encodeBlueprintFileBrowser || !DebugSettingsProvider || !StreamingLogger) {
+        if (!generateClockAlternatives || !encodeBlueprintFileBrowser || !DebugSettingsProvider || !StreamingLogger) {
             setError('Not initialized');
             return;
         }
 
         setIsRunning(true);
-        setBlueprintString(null);
-        setTransferHistory(null);
-        setStateTransitionHistory(null);
-        setSimulationDurationTicks(null);
-        setSwingBackoffReport(null);
-        setTransferPlan(null);
-        setUsedLcm(null);
+        setAlternatives([]);
+        setSelectedAlternativeIndex(0);
         setError(null);
         setLogs([]);
 
@@ -113,24 +124,30 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 const debug = DebugSettingsProvider!.mutable();
 
                 // Run the simulation
-                const result = generateClockWithSwingBackoff!(config, {
+                const generated = generateClockAlternatives!(config, {
                     debug,
                     debug_steps: debugSteps,
                     logger,
                 });
 
-                // Encode the blueprint
-                const blueprint = encodeBlueprintFileBrowser!({
-                    blueprint: result.blueprint,
-                });
-
-                setBlueprintString(blueprint);
-                setTransferHistory(result.serializable_transfer_history);
-                setStateTransitionHistory(result.serializable_state_transition_history);
-                setSimulationDurationTicks(result.simulation_duration.ticks);
-                setSwingBackoffReport(result.swing_backoff_report ?? null);
-                setTransferPlan(result.serializable_transfer_plan);
-                setUsedLcm(result.used_lcm);
+                setAlternatives(generated.alternatives.map(({ result, ...alternative }) => ({
+                    id: alternative.id,
+                    label: alternative.label,
+                    description: alternative.description,
+                    inserterWindowCount: alternative.inserter_window_count,
+                    isStable: alternative.is_stable,
+                    asBuilt: result.stability_check.as_built ?? null,
+                    expectedOutputItems: result.stability_check.expected_output_items,
+                    terminalSwingCount: result.used_terminal_swing_count,
+                    blueprintString: encodeBlueprintFileBrowser!({ blueprint: result.blueprint }),
+                    transferHistory: result.serializable_transfer_history,
+                    stateTransitionHistory: result.serializable_state_transition_history,
+                    simulationDurationTicks: result.simulation_duration.ticks,
+                    swingBackoffReport: result.swing_backoff_report ?? null,
+                    transferPlan: result.serializable_transfer_plan,
+                    usedLcm: result.used_lcm,
+                })));
+                setSelectedAlternativeIndex(generated.selected_index);
                 setIsRunning(false);
             } catch (err) {
                 console.error('Simulation error:', err);
@@ -157,6 +174,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
     }, []);
 
+    const selected: ClockAlternativeView | undefined = alternatives[selectedAlternativeIndex];
+
     return {
         isInitialized,
         isRunning,
@@ -164,13 +183,16 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         resourceNames,
         itemNames,
         logs,
-        blueprintString,
-        transferHistory,
-        stateTransitionHistory,
-        simulationDurationTicks,
-        swingBackoffReport,
-        transferPlan,
-        usedLcm,
+        blueprintString: selected?.blueprintString ?? null,
+        transferHistory: selected?.transferHistory ?? null,
+        stateTransitionHistory: selected?.stateTransitionHistory ?? null,
+        simulationDurationTicks: selected?.simulationDurationTicks ?? null,
+        swingBackoffReport: selected?.swingBackoffReport ?? null,
+        transferPlan: selected?.transferPlan ?? null,
+        usedLcm: selected?.usedLcm ?? null,
+        alternatives,
+        selectedAlternativeIndex,
+        selectAlternative: setSelectedAlternativeIndex,
         error,
         initialize,
         runSimulation,
