@@ -1,0 +1,11 @@
+{
+    "name": "clock-generator-recorder",
+    "version": "0.1.0",
+    "title": "Clock Generator Recorder",
+    "author": "abucnasty",
+    "contact": "https://github.com/abucnasty/factorio-scripts",
+    "homepage": "https://github.com/abucnasty/factorio-scripts",
+    "description": "Debugging tool, not published to the mod portal. Records inserter and machine activity of a running clock build every tick to script-output, for comparison against the Clock Generator simulation.",
+    "factorio_version": "2.1",
+    "dependencies": []
+}
