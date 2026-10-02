@@ -390,6 +390,15 @@ describe("generateClockForConfig", () => {
                 OpenRange.from(234, 245),
             ]
 
+            // confirmed in game, along with the stable clock alternatives below
+            const valid_range_set_3 = [
+                OpenRange.from(13, 24),
+                OpenRange.from(24, 35),
+                OpenRange.from(181, 192),
+                OpenRange.from(192, 203),
+                OpenRange.from(214, 225),
+            ]
+
             it("has correct tick ranges for input inserter transfers", () => {
                 // Get the actual EntityId instances from the map keys
                 const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
@@ -398,7 +407,7 @@ describe("generateClockForConfig", () => {
 
                 const inserter_transfers = result.transfer_history.getOrThrow(input_inserter_id)
                 const sorted_transfers = [...inserter_transfers].sort((a, b) => a.tick_range.start_inclusive - b.tick_range.start_inclusive);
-                const expected_ranges = valid_range_set_2
+                const expected_ranges = valid_range_set_3
 
                 expect(sorted_transfers.length).toBe(5);
                 sorted_transfers.forEach((transfer, index) => {
@@ -406,6 +415,40 @@ describe("generateClockForConfig", () => {
                     expect(transfer.tick_range.start_inclusive).toBe(expected_range.start_inclusive);
                     expect(transfer.tick_range.end_inclusive).toBe(expected_range.end_inclusive);
                 })
+            });
+
+            // these three alternatives were confirmed to hold full output in game
+            describe("clock alternatives", () => {
+                const { alternatives } = generateClockAlternatives(config);
+                const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+
+                it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
+                    expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
+                });
+
+                it("planned + belt pickup slack adds 4 ticks to the belt input inserters", () => {
+                    expect(windowsOf("planned-belt-slack")).toEqual({
+                        "inserter:2": [{ start: 1, end: 50 }, { start: 169, end: 210 }],
+                        "inserter:3": [{ start: 13, end: 39 }, { start: 181, end: 207 }, { start: 214, end: 229 }],
+                        "inserter:1": [{ start: 206, end: 221 }],
+                    });
+                });
+
+                it("planned keeps the simulated windows", () => {
+                    expect(windowsOf("planned")).toEqual({
+                        "inserter:2": [{ start: 1, end: 50 }, { start: 169, end: 210 }],
+                        "inserter:3": [{ start: 13, end: 35 }, { start: 181, end: 203 }, { start: 214, end: 225 }],
+                        "inserter:1": [{ start: 206, end: 217 }],
+                    });
+                });
+
+                it("derived per-craft windows follow each inserter's activity", () => {
+                    expect(windowsOf("derived")).toEqual({
+                        "inserter:2": [{ start: 1, end: 50 }, { start: 169, end: 210 }],
+                        "inserter:1": [{ start: 53, end: 68 }],
+                        "inserter:3": [{ start: 25, end: 40 }, { start: 53, end: 79 }, { start: 193, end: 208 }, { start: 213, end: 228 }],
+                    });
+                });
             });
         });
     });
