@@ -9,42 +9,31 @@
       "id": 1,
       "recipe": "production-science-pack",
       "productivity": 100,
-      "crafting_speed": 63
+      "crafting_speed": 63.00781250000001,
+      "type": "machine"
     },
     {
       "id": 2,
       "recipe": "rail",
       "productivity": 0,
-      "crafting_speed": 46.375
+      "crafting_speed": 46.37125,
+      "type": "machine"
     },
     {
       "id": 3,
       "recipe": "casting-steel",
       "productivity": 300,
-      "crafting_speed": 122.5
+      "crafting_speed": 122.5,
+      "type": "machine"
     },
     {
       "id": 4,
       "recipe": "casting-iron-stick",
       "productivity": 150,
-      "crafting_speed": 66.5
+      "crafting_speed": 66.5,
+      "type": "machine"
     }
   ],
-  "drills": {
-    "mining_productivity_level": 8000,
-    "configs": [
-      {
-        "id": 1,
-        "type": "electric-mining-drill",
-        "mined_item_name": "stone",
-        "speed_bonus": 8.84,
-        "target": {
-          "type": "machine",
-          "id": 2
-        }
-      }
-    ]
-  },
   "inserters": [
     {
       "source": {
@@ -58,57 +47,8 @@
       "stack_size": 16,
       "filters": [
         "production-science-pack"
-      ]
-    },
-    {
-      "source": {
-        "type": "belt",
-        "id": 1
-      },
-      "sink": {
-        "type": "machine",
-        "id": 1
-      },
-      "stack_size": 16,
-      "filters": [
-        "productivity-module"
-      ]
-    },
-    {
-      "source": {
-        "type": "belt",
-        "id": 1
-      },
-      "sink": {
-        "type": "machine",
-        "id": 1
-      },
-      "stack_size": 16,
-      "filters": [
-        "electric-furnace"
-      ]
-    },
-    {
-      "source": {
-        "type": "machine",
-        "id": 2
-      },
-      "sink": {
-        "type": "machine",
-        "id": 1
-      },
-      "stack_size": 16
-    },
-    {
-      "source": {
-        "type": "machine",
-        "id": 3
-      },
-      "sink": {
-        "type": "machine",
-        "id": 2
-      },
-      "stack_size": 16
+      ],
+      "id": 1
     },
     {
       "source": {
@@ -119,7 +59,71 @@
         "type": "machine",
         "id": 2
       },
-      "stack_size": 16
+      "stack_size": 16,
+      "filters": [
+        "iron-stick"
+      ],
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "rail"
+      ],
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "steel-plate"
+      ],
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "productivity-module"
+      ],
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "electric-furnace"
+      ],
+      "id": 6
     }
   ],
   "belts": [
@@ -128,14 +132,44 @@
       "type": "turbo-transport-belt",
       "lanes": [
         {
-          "ingredient": "productivity-module",
+          "ingredient": "production-science-pack",
           "stack_size": 4
         },
         {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
           "ingredient": "electric-furnace",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "productivity-module",
           "stack_size": 4
         }
       ]
     }
-  ]
+  ],
+  "chests": [],
+  "drills": {
+    "mining_productivity_level": 26999,
+    "configs": [
+      {
+        "id": 1,
+        "type": "electric-mining-drill",
+        "mined_item_name": "stone",
+        "speed_bonus": 8.8388,
+        "target": {
+          "type": "machine",
+          "id": 2
+        }
+      }
+    ]
+  }
 }

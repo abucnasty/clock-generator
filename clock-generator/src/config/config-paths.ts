@@ -43,4 +43,5 @@ export const ConfigPaths = {
     AUTOMATION_SCIENCE_PACK_FAILING: path.join(CONFIG_SAMPLES_DIR, 'clock-config-automation-science-pack-1774501984294.json'),
     AUTOMATION_SCIENCE_01_TERMINAL_SWINGS: path.join(CONFIG_SAMPLES_DIR, 'automation-science-01-terminal-swings.json'),
     UTILITY_SCIENCE_DIRECT_INSERT_LDS: path.join(CONFIG_SAMPLES_DIR, 'clock-config-utility-science-pack-direct-insert-lds.json'),
+    PRODUCTION_SCIENCE_JSON: path.join(CONFIG_SAMPLES_DIR, 'production-science.json'),
 } as const;

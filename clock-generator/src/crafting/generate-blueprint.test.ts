@@ -406,6 +406,27 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    // Recorded in game: the planned windows ran at 48/96 because the furnace/module window
+    // landed before the output inserter cleared the machine; the derived windows ran stable.
+    describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
+
+        it("planned windows fail the clock-only check", () => {
+            const result = generateClockForConfig(config, { verify_as_built: true });
+            expect(result.stability_check.as_built?.is_stable).toBe(false);
+        });
+
+        it("derived windows pass the clock-only check", () => {
+            const result = generateClockForConfig({
+                ...config,
+                overrides: { ...config.overrides, derive_clock_windows: true },
+            });
+            expect(result.derived_clock_windows?.succeeded).toBe(true);
+            expect(result.stability_check.as_built?.actual_output_items).toBe(result.stability_check.expected_output_items);
+            expect(result.stability_check.is_stable).toBe(true);
+        }, 60_000);
+    });
+
     // Regression test for issue #47:
     // A multi-filter belt→machine inserter (copper-plate + iron-gear-wheel) with terminal_swing_count=1
     // causes per-item fractional swing counts (copper=0.5, gear=0.5, total=1.0).
