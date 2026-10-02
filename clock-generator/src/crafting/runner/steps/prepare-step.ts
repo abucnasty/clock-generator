@@ -128,9 +128,9 @@ export class PrepareStep implements RunnerStep {
         return new CompositeControlLogic(
             [
                 tick_control_logic,
-                ...cloned_context.machines,
                 ...cloned_context.drills,
                 ...cloned_context.inserters,
+                ...cloned_context.machines,
             ]
         )
     }
