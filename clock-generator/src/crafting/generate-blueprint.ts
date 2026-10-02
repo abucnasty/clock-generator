@@ -1185,7 +1185,7 @@ export function generateClockAlternatives(
         ));
     add("derived", "Observed windows",
         "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
-        + "the output inserters on the clock and every other inserter running freely; each inserter's windows are the ticks "
+        + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
         + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
         + "one per craft, so there are usually more windows than Planned.",
         () => generateClockWithSwingBackoff(
