@@ -6,7 +6,7 @@ import { DebugPluginFactory } from './sequence/debug/debug-plugin-factory';
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from './sequence/debug/debug-settings-provider';
 import { cloneSimulationContextWithInterceptors, SimulationContext } from './sequence/simulation-context';
 import { Duration, OpenRange } from '../data-types';
-import { assertIsMachine, Belt, Entity, Inserter, Machine, ReadableEntityRegistry } from '../entities';
+import { assertIsMachine, Entity, Inserter, Machine, ReadableEntityRegistry } from '../entities';
 import { TargetProductionRate } from "./target-production-rate";
 import { EntityState, InserterStatus, MachineState } from "../state";
 import Fraction, { fraction } from "fractionability";
@@ -120,6 +120,8 @@ export interface BlueprintGenerationResult {
     blueprint: FactorioBlueprint;
     /** Decider windows exported in the blueprint, per entity id (before circuit latency) */
     clock_windows: SerializableClockWindows;
+    /** Ticks of belt pickup slack added to each belt-fed inserter's windows; empty when none was applied */
+    belt_pickup_slack_ticks: Record<string, number>;
     crafting_cycle_plan: CraftingCyclePlan;
     simulation_duration: Duration;
     transfer_history: InventoryTransferHistory;
@@ -507,6 +509,7 @@ export function generateClockForConfig(
                 ...derived.verification,
                 blueprint: blueprintForWindows(derived.windows),
                 clock_windows: serializeClockWindows(derived.windows),
+                belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
                 crafting_cycle_plan,
                 used_lcm: recipe_lcm,
                 used_terminal_swing_count,
@@ -553,6 +556,7 @@ export function generateClockForConfig(
         return {
             blueprint,
             clock_windows: serializeClockWindows(planned_windows),
+            belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
             crafting_cycle_plan,
             simulation_duration: duration,
             transfer_history: final_history,
@@ -845,7 +849,7 @@ function windowsFromHistory(history: InventoryTransferHistory): Map<string, Open
 /**
  * Ticks added to the end of each belt-fed inserter's window. In game, a grab from a full belt can stall while a
  * gap left by an upstream inserter passes the pickup point, so the window must outlast a late pickup or the
- * inserter is disabled holding a partial hand. Sized as the time one full hand of items takes to pass on the lane.
+ * inserter is disabled holding a partial hand. Sized as one more full-hand pickup (one lane stack per tick).
  */
 const MAX_BELT_PICKUP_SLACK_TICKS = 16;
 
@@ -861,8 +865,7 @@ function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): Map<stri
         }
         const lanes = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
         const lane_stack_size = Math.min(...(lanes.length > 0 ? lanes : source.lanes).map(lane => lane.stack_size));
-        const ticks_per_lane_position = Belt.ticksPerTile(source.belt_speed).toDecimal() / 4;
-        const ticks = Math.ceil(ticks_per_lane_position * entity.metadata.stack_size / lane_stack_size);
+        const ticks = Math.ceil(entity.metadata.stack_size / lane_stack_size);
         slack.set(entity.entity_id.id, Math.min(ticks, MAX_BELT_PICKUP_SLACK_TICKS));
     }
     return slack;
@@ -1158,8 +1161,11 @@ export function generateClockAlternatives(
 
     const primary = generateClockWithSwingBackoff(base_config, { ...options, verify_as_built: true, belt_pickup_slack: "always" });
     const swings = primary.used_terminal_swing_count;
-    add("planned-belt-slack", "Planned + belt pickup slack",
-        "Planned windows; belt-fed inserters stay enabled a little longer so a late belt pickup can finish.",
+    const slack_ticks = Array.from(new Set(Object.values(primary.belt_pickup_slack_ticks))).sort((a, b) => a - b);
+    const slack_label = slack_ticks.length === 0 ? ""
+        : ` (+${slack_ticks.length === 1 ? slack_ticks[0] : `${slack_ticks[0]}–${slack_ticks[slack_ticks.length - 1]}`} ticks)`;
+    add("planned-belt-slack", `Planned + belt pickup slack${slack_label}`,
+        "Planned windows; belt-fed inserters stay enabled long enough for one more full-hand pickup (one lane stack per tick), so a pickup slowed by belt gaps can finish.",
         () => primary);
     add("planned", "Planned",
         "Planned windows exactly as simulated.",
