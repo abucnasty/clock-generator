@@ -169,6 +169,21 @@ export interface GenerateClockOptions {
     belt_pickup_slack?: "auto" | "always" | "never";
     /** With derive_clock_windows: "prefer_planned" keeps planned windows that pass the as-built check (default), "always" derives anyway */
     derive_mode?: "prefer_planned" | "always";
+    /** Called as generateClockAlternatives moves through its alternatives and their sub-steps */
+    on_progress?: (progress: GenerationProgress) => void;
+    /** Called with a short description of the current sub-step (clock-only checks, observed window derivation) */
+    on_progress_detail?: (detail: string) => void;
+}
+
+export interface GenerationProgress {
+    /** Label of the alternative being generated */
+    step: string;
+    /** What that alternative is currently doing, when it reports sub-steps */
+    detail?: string;
+    /** Alternatives finished so far */
+    completed: number;
+    /** Total alternatives, once known */
+    total: number | null;
 }
 
 /**
@@ -481,9 +496,11 @@ export function generateClockForConfig(
     if (config.overrides?.derive_clock_windows) {
         const planned_stable = stability_check.is_stable;
         const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-        let planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger).check;
+        let planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+            (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`)).check;
         if (planned_stable && planned_check.is_stable) {
-            planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES).check;
+            planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
+                (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`)).check;
         }
         logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.is_stable} (${planned_check.start_phases_checked} start phases)`);
         if (planned_stable && planned_check.is_stable && (options.derive_mode ?? "prefer_planned") === "prefer_planned") {
@@ -495,7 +512,7 @@ export function generateClockForConfig(
             };
         }
 
-        const derived = deriveClockWindows(config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks, logger);
+        const derived = deriveClockWindows(config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
         const report: DerivedClockWindowsReport = {
             succeeded: derived.windows !== null,
             kept_planned_windows: false,
@@ -529,7 +546,8 @@ export function generateClockForConfig(
     }
 
     if (options.verify_as_built ?? false) {
-        stability_check.as_built = runAsBuiltCheck(config, planned_windows, duration.ticks, logger).check;
+        stability_check.as_built = runAsBuiltCheck(config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+            (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`)).check;
         stability_check.is_stable = stability_check.is_stable && stability_check.as_built.is_stable;
         logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.is_stable}`);
     }
@@ -600,6 +618,7 @@ function deriveClockWindows(
     belt_pickup_slack: Map<string, number>,
     period: number,
     logger: Logger,
+    report?: (detail: string) => void,
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
@@ -612,12 +631,12 @@ function deriveClockWindows(
     // drills only report WORKING/DISABLED, so their activity gives no useful window to derive
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
 
-    const planned = deriveWithOutputWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "planned output", logger);
+    const planned = deriveWithOutputWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "planned output", logger, report);
     if (planned.windows !== null || planned.even_output_windows === null) {
         return planned;
     }
     // Bunched output swings (e.g. a double swing then a long gap) can leave a partial stack in hand when the window closes
-    const even = deriveWithOutputWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "evenly spaced output", logger);
+    const even = deriveWithOutputWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "evenly spaced output", logger, report);
     if (even.windows !== null) {
         return even;
     }
@@ -633,6 +652,7 @@ function deriveWithOutputWindows(
     period: number,
     label: string,
     logger: Logger,
+    report?: (detail: string) => void,
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
@@ -641,6 +661,7 @@ function deriveWithOutputWindows(
     even_output_windows: Map<string, OpenRange[]> | null;
 } {
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
+    report?.(`Simulating with only the output inserters clocked (${label} windows)`);
     const derivation = generateClockForConfig(
         buildAsBuiltConfig(base_config, fixed_windows, period),
         NESTED_RUN_OPTIONS(logger)
@@ -671,14 +692,16 @@ function deriveWithOutputWindows(
             )));
         }
         const windows = withBeltPickupSlack(padded, belt_pickup_slack, period);
-        const { result, check } = runAsBuiltCheck(base_config, windows, period, logger);
+        const { result, check } = runAsBuiltCheck(base_config, windows, period, logger, AS_BUILT_START_PHASES,
+            (n, total) => report?.(`Trying ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`));
         logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${check.actual_output_items} stable=${check.is_stable} (${check.start_phases_checked} start phases)`);
         attempts.push({ padding, result, check, windows });
 
         const previous = attempts[attempts.length - 2];
         if (previous?.check.is_stable && check.is_stable) {
             // failing start phases can be a narrow band the quick check skips over
-            const full = runAsBuiltCheck(base_config, windows, period, logger, FULL_CHECK_START_PHASES).check;
+            const full = runAsBuiltCheck(base_config, windows, period, logger, FULL_CHECK_START_PHASES,
+                (n, total) => report?.(`Confirming ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`)).check;
             logger.log(`Derived clock windows (${label}): end padding ${padding} full check -> actual=${full.actual_output_items} stable=${full.is_stable} (${full.start_phases_checked} start phases)`);
             if (full.is_stable) {
                 return { windows, end_padding_ticks: padding, verification: result, as_built: full, even_output_windows };
@@ -793,13 +816,17 @@ function runAsBuiltCheck(
     period: number,
     logger: Logger,
     start_phases: number = AS_BUILT_START_PHASES,
+    report?: (checked: number, total: number) => void,
 ): { result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } {
+    const step = Math.max(1, Math.floor(period / start_phases));
+    const total = Number.isInteger(period) ? Math.min(start_phases, Math.floor((period - 1) / step) + 1) : 1;
     const result = generateClockForConfig(buildAsBuiltConfig(config, decider_windows, period), NESTED_RUN_OPTIONS(logger));
     const check: AsBuiltStabilityCheck = {
         is_stable: result.stability_check.is_stable,
         actual_output_items: result.stability_check.actual_output_items,
         start_phases_checked: 1,
     };
+    report?.(1, total);
     if (!check.is_stable) {
         check.failed_start_offset = 0;
         return { result, check };
@@ -808,11 +835,11 @@ function runAsBuiltCheck(
         return { result, check };
     }
 
-    const step = Math.max(1, Math.floor(period / start_phases));
     for (let offset = step; offset < period && check.start_phases_checked < start_phases; offset += step) {
         const rotated = new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const));
         const shifted = generateClockForConfig(buildAsBuiltConfig(config, rotated, period), NESTED_RUN_OPTIONS(logger));
         check.start_phases_checked++;
+        report?.(check.start_phases_checked, total);
         if (!shifted.stability_check.is_stable) {
             check.is_stable = false;
             check.actual_output_items = shifted.stability_check.actual_output_items;
@@ -1128,10 +1155,15 @@ export function generateClockAlternatives(
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
     const logger = options.logger ?? defaultLogger;
+    let current_step = "Planned + belt pickup slack";
+    let completed = 0;
+    let total: number | null = null;
+    const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
     const quiet: GenerateClockOptions = {
         ...options,
         logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
         verify_as_built: true,
+        on_progress_detail: report,
     };
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const fractional = config.overrides?.use_fractional_swings === true;
@@ -1139,12 +1171,16 @@ export function generateClockAlternatives(
     const alternatives: ClockAlternative[] = [];
     const seen = new Set<string>();
     const add = (id: string, label: string, description: string, run: () => BlueprintGenerationResult) => {
+        current_step = label;
+        report();
         let result: BlueprintGenerationResult;
         try {
             result = run();
         } catch (error) {
             logger.log(`Clock alternative "${label}" could not be generated: ${error instanceof Error ? error.message : error}`);
             return;
+        } finally {
+            completed++;
         }
         const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
         if (seen.has(signature)) {
@@ -1159,8 +1195,11 @@ export function generateClockAlternatives(
         alternatives.push({ id, label, description, inserter_window_count, is_stable, result });
     };
 
-    const primary = generateClockWithSwingBackoff(base_config, { ...options, verify_as_built: true, belt_pickup_slack: "always" });
+    report();
+    const primary = generateClockWithSwingBackoff(base_config, { ...options, verify_as_built: true, belt_pickup_slack: "always", on_progress_detail: report });
     const swings = primary.used_terminal_swing_count;
+    // planned + slack, planned, fractional toggled, observed, then each lower swing count
+    total = 4 + Math.max(0, swings - 1);
     const slack_ticks = Array.from(new Set(Object.values(primary.belt_pickup_slack_ticks))).sort((a, b) => a - b);
     const slack_label = slack_ticks.length === 0 ? ""
         : ` (+${slack_ticks.length === 1 ? slack_ticks[0] : `${slack_ticks[0]}–${slack_ticks[slack_ticks.length - 1]}`} ticks)`;
@@ -1210,6 +1249,8 @@ export function generateClockAlternatives(
             selected_index = index;
         }
     });
+    current_step = "Done";
+    report();
     return { alternatives, selected_index };
 }
 

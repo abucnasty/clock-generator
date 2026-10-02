@@ -66,6 +66,7 @@ export {
     BlueprintGenerationResult,
     ClockAlternative,
     ClockAlternativesResult,
+    GenerationProgress,
     AsBuiltStabilityCheck,
     SerializableClockWindows,
     GenerateClockOptions,
