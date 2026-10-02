@@ -71,7 +71,7 @@ export function BlueprintOutput({
                     />
                     <Typography variant="body2" sx={{ mt: 1 }}>
                         {progress
-                            ? `${progress.total ? `Alternative ${Math.min(progress.completed + 1, progress.total)} of ${progress.total}: ` : ''}${progress.step}`
+                            ? `${progress.total ? `${progress.completed} of ${progress.total} alternatives done, running: ` : ''}${progress.step}`
                             : 'Starting simulation...'}
                     </Typography>
                     {progress?.detail && (

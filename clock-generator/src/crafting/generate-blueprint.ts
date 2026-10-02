@@ -1394,67 +1394,184 @@ export interface ClockAlternativesResult {
     selected_index: number;
 }
 
-/**
- * Generates the same config several ways (planned windows with and without belt pickup slack, derived
- * per-craft windows, fractional swings toggled, lower output swing counts) and checks each with the
- * clock-only simulation from several start phases. Alternatives with identical windows are listed once.
- */
-export function generateClockAlternatives(
-    config: Config,
-    options: GenerateClockOptions = {}
-): ClockAlternativesResult {
-    const logger = options.logger ?? defaultLogger;
-    let current_step = "Planned + belt pickup slack";
-    let completed = 0;
-    let total: number | null = null;
-    const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
-    const quiet: GenerateClockOptions = {
+/** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
+export interface ClockAlternativeRun<T = ClockAlternative> {
+    /** Runs with the same period and windows are duplicates; only the first is listed */
+    signature: string;
+    alternatives: T[];
+}
+
+/** What the remaining alternatives need from the first (planned + belt pickup slack) run */
+export interface ClockAlternativeContext {
+    swings: number;
+    primary_stable: boolean;
+}
+
+export interface ClockAlternativeTask {
+    id: string;
+    label: string;
+}
+
+export interface ClockAlternativesPlan {
+    primary: ClockAlternativeRun | null;
+    context: ClockAlternativeContext;
+    /** Independent of each other, so they can run in parallel; listed in display order */
+    tasks: ClockAlternativeTask[];
+}
+
+interface AlternativeDefinition {
+    id: string;
+    label: string;
+    description: string;
+    run: () => BlueprintGenerationResult;
+}
+
+function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (detail: string) => void): GenerateClockOptions {
+    return {
         ...options,
         logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
         verify_as_built: true,
         on_progress_detail: report,
     };
+}
+
+function alternativeIsStable(result: BlueprintGenerationResult): boolean {
+    return result.stability_check.as_built?.is_stable ?? result.stability_check.is_stable;
+}
+
+function primaryDefinition(config: Config, options: GenerateClockOptions, report?: (detail: string) => void): AlternativeDefinition {
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const result = generateClockWithSwingBackoff(base_config, { ...options, verify_as_built: true, belt_pickup_slack: "always", on_progress_detail: report });
+    const slack_ticks = Array.from(new Set(Object.values(result.belt_pickup_slack_ticks))).sort((a, b) => a - b);
+    const slack_label = slack_ticks.length === 0 ? ""
+        : ` (+${slack_ticks.length === 1 ? slack_ticks[0] : `${slack_ticks[0]}–${slack_ticks[slack_ticks.length - 1]}`} ticks)`;
+    return {
+        id: "planned-belt-slack",
+        label: `Planned + belt pickup slack${slack_label}`,
+        description: "Same as Planned, but every inserter that picks up from a belt stays enabled a few extra ticks after each window: "
+            + "long enough for one more full-hand pickup (one belt stack per tick). In game, gaps left on a shared belt by other "
+            + "inserters can slow a pickup down; the extra ticks let it finish instead of the inserter being switched off "
+            + "while holding a partial hand.",
+        run: () => result,
+    };
+}
+
+/**
+ * Every alternative after the primary one. `known_stable` answers from runs that already finished, so the full-hand
+ * alternative only re-simulates a planned run when it was not generated yet (e.g. in another worker).
+ */
+function alternativeDefinitions(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+    known_stable: (id: string) => boolean | undefined = () => undefined,
+): AlternativeDefinition[] {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const fractional = config.overrides?.use_fractional_swings === true;
-    const copies = config.target_output.copies ?? 1;
+    const { swings } = context;
+    const lowerSwings = (lower: number, extra: GenerateClockOptions) => generateClockForConfig(
+        { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: lower } }, extra);
+    const lower_counts = Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
 
-    const alternatives: ClockAlternative[] = [];
-    const seen = new Set<string>();
-    const add = (id: string, label: string, base_description: string, run: () => BlueprintGenerationResult) => {
-        current_step = label;
-        report();
-        let result: BlueprintGenerationResult;
-        try {
-            result = run();
-        } catch (error) {
-            logger.log(`Clock alternative "${label}" could not be generated: ${error instanceof Error ? error.message : error}`);
-            return;
-        } finally {
-            completed++;
-        }
-        const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
-        if (seen.has(signature)) {
-            return;
-        }
-        seen.add(signature);
-        const inserter_window_count = Object.entries(result.clock_windows)
-            .filter(([key]) => key.startsWith("inserter:"))
-            .reduce((sum, [, ranges]) => sum + ranges.length, 0);
-        // the planning simulation drives inserters from inventory levels and can over- or undershoot
-        // where the exported clock does not; in game, recordings matched the clock-only check
-        const { as_built, actual_output_items, expected_output_items } = result.stability_check;
-        const is_stable = as_built?.is_stable ?? result.stability_check.is_stable;
-        const planning_note = actual_output_items === expected_output_items ? ""
-            : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
-            + "stability is judged by the clock-only check, which runs the exported clock windows.";
-        const description = base_description + planning_note;
-        logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
-        const period = result.simulation_duration.ticks;
-        const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;
-        if (result.subtick) {
-            const { period_ticks, scale } = result.subtick.clock;
+    return [
+        {
+            id: "planned",
+            label: "Planned",
+            description: "The swing schedule the generator plans for the target rate. The build is simulated with each inserter waiting on "
+                + "its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are grouped into "
+                + "batches that match the crafting cycle.",
+            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }),
+        },
+        {
+            id: "fractional",
+            label: fractional ? "Without fractional swings" : "Fractional swings",
+            description: fractional ? "Planned windows with fractional swings turned off: every cycle uses the same whole number of swings."
+                : "Planned windows with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates "
+                + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows.",
+            run: () => generateClockWithSwingBackoff(
+                { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
+                quiet
+            ),
+        },
+        {
+            id: "derived",
+            label: "Observed windows",
+            description: "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
+                + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
+                + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
+                + "one per craft, so there are usually more windows than Planned.",
+            run: () => generateClockWithSwingBackoff(
+                { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
+                { ...quiet, derive_mode: "always" }
+            ),
+        },
+        ...lower_counts.map(lower => ({
+            id: `swings-${lower}`,
+            label: `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
+            description: `Planned windows with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} per crafting cycle `
+                + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
+                + "is unstable.",
+            run: () => lowerSwings(lower, quiet),
+        })),
+        {
+            id: "full-hand",
+            label: "Full-hand output swings",
+            description: "Output inserters swing once per window, evenly spaced and timed so the machine already holds a full hand when "
+                + "the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the "
+                + "planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is "
+                + "searched with clock-only simulations, preferring the fewest pickups that wait for items. The timing must "
+                + "recover from full output machines; if it does not, some windows are lengthened so a second grab can drain the "
+                + "surplus. Other inserters keep the planned windows (with belt pickup slack).",
+            run: () => {
+                // input windows come from the first planned run whose clock passes, most batched first
+                const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always", full_hand_output: true };
+                if (context.primary_stable) {
+                    return generateClockWithSwingBackoff(base_config, full_hand);
+                }
+                const stable_lower = lower_counts.find(lower =>
+                    known_stable(`swings-${lower}`) ?? alternativeIsStable(lowerSwings(lower, { ...quiet, on_progress_detail: undefined })));
+                return stable_lower === undefined
+                    ? generateClockWithSwingBackoff(base_config, full_hand)
+                    : lowerSwings(stable_lower, full_hand);
+            },
+        },
+    ];
+}
+
+function runAlternative(definition: AlternativeDefinition, copies: number, logger: Logger): ClockAlternativeRun | null {
+    let result: BlueprintGenerationResult;
+    try {
+        result = definition.run();
+    } catch (error) {
+        logger.log(`Clock alternative "${definition.label}" could not be generated: ${error instanceof Error ? error.message : error}`);
+        return null;
+    }
+    const { id, label } = definition;
+    const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
+    const inserter_window_count = Object.entries(result.clock_windows)
+        .filter(([key]) => key.startsWith("inserter:"))
+        .reduce((sum, [, ranges]) => sum + ranges.length, 0);
+    // the planning simulation drives inserters from inventory levels and can over- or undershoot
+    // where the exported clock does not; in game, recordings matched the clock-only check
+    const { as_built, actual_output_items, expected_output_items } = result.stability_check;
+    const is_stable = alternativeIsStable(result);
+    const planning_note = actual_output_items === expected_output_items ? ""
+        : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
+        + "stability is judged by the clock-only check, which runs the exported clock windows.";
+    const description = definition.description + planning_note;
+    logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
+    const period = result.simulation_duration.ticks;
+    const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;
+    if (!result.subtick) {
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), result }] };
+    }
+    const { period_ticks, scale } = result.subtick.clock;
+    const rounded = Math.floor(period);
+    return {
+        signature,
+        alternatives: [
             // listed first so it wins ties with the rounded clock for the default selection
-            alternatives.push({
+            {
                 id: `${id}-subtick`,
                 label: `${label}, subtick clock`,
                 description: `${description} Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
@@ -1465,9 +1582,8 @@ export function generateClockAlternatives(
                 is_stable,
                 items_per_second: rateAt(period),
                 result: { ...result, blueprint: result.subtick.blueprint },
-            });
-            const rounded = Math.floor(period);
-            alternatives.push({
+            },
+            {
                 id,
                 label: `${label} (clock rounded to ${rounded} ticks)`,
                 description: `${description} The period is not a whole number of ticks (${period.toFixed(3)}), so this clock `
@@ -1477,88 +1593,100 @@ export function generateClockAlternatives(
                 is_stable,
                 items_per_second: rateAt(rounded),
                 result,
-            });
-            return;
-        }
-        alternatives.push({ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), result });
+            },
+        ],
     };
+}
 
-    report();
-    const primary = generateClockWithSwingBackoff(base_config, { ...options, verify_as_built: true, belt_pickup_slack: "always", on_progress_detail: report });
-    const swings = primary.used_terminal_swing_count;
-    // planned + slack, planned, fractional toggled, observed, each lower swing count, then full-hand output
-    total = 5 + Math.max(0, swings - 1);
-    const slack_ticks = Array.from(new Set(Object.values(primary.belt_pickup_slack_ticks))).sort((a, b) => a - b);
-    const slack_label = slack_ticks.length === 0 ? ""
-        : ` (+${slack_ticks.length === 1 ? slack_ticks[0] : `${slack_ticks[0]}–${slack_ticks[slack_ticks.length - 1]}`} ticks)`;
-    add("planned-belt-slack", `Planned + belt pickup slack${slack_label}`,
-        "Same as Planned, but every inserter that picks up from a belt stays enabled a few extra ticks after each window: "
-        + "long enough for one more full-hand pickup (one belt stack per tick). In game, gaps left on a shared belt by other "
-        + "inserters can slow a pickup down; the extra ticks let it finish instead of the inserter being switched off "
-        + "while holding a partial hand.",
-        () => primary);
-    add("planned", "Planned",
-        "The swing schedule the generator plans for the target rate. The build is simulated with each inserter waiting on "
-        + "its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are grouped into "
-        + "batches that match the crafting cycle.",
-        () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }));
-    add("fractional", fractional ? "Without fractional swings" : "Fractional swings",
-        (fractional ? "Planned windows with fractional swings turned off: every cycle uses the same whole number of swings."
-            : "Planned windows with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates "
-            + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows."),
-        () => generateClockWithSwingBackoff(
-            { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
-            quiet
-        ));
-    add("derived", "Observed windows",
-        "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
-        + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
-        + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
-        + "one per craft, so there are usually more windows than Planned.",
-        () => generateClockWithSwingBackoff(
-            { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
-            { ...quiet, derive_mode: "always" }
-        ));
-    for (let lower = swings - 1; lower >= 1; lower--) {
-        add(`swings-${lower}`, `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
-            `Planned windows with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} per crafting cycle `
-            + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
-            + "is unstable.",
-            () => generateClockForConfig(
-                { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: lower } },
-                quiet
-            ));
+/** Runs the primary (planned + belt pickup slack) alternative and lists the rest as independent tasks */
+export function planClockAlternatives(config: Config, options: GenerateClockOptions = {}): ClockAlternativesPlan {
+    const logger = options.logger ?? defaultLogger;
+    const definition = primaryDefinition(config, options, options.on_progress_detail);
+    const primary = runAlternative(definition, config.target_output.copies ?? 1, logger);
+    const result = definition.run();
+    const context: ClockAlternativeContext = { swings: result.used_terminal_swing_count, primary_stable: alternativeIsStable(result) };
+    const tasks = alternativeDefinitions(config, context, {}).map(({ id, label }) => ({ id, label }));
+    return { primary, context, tasks };
+}
+
+/** Generates one alternative listed by planClockAlternatives; progress goes to options.on_progress_detail */
+export function runClockAlternativeTask(
+    config: Config,
+    context: ClockAlternativeContext,
+    task_id: string,
+    options: GenerateClockOptions = {},
+): ClockAlternativeRun | null {
+    const logger = options.logger ?? defaultLogger;
+    const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
+        .find(it => it.id === task_id);
+    assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
+    return runAlternative(definition, config.target_output.copies ?? 1, logger);
+}
+
+/** Lists runs in order, skipping duplicates, and selects the stable alternative with the fewest windows */
+export function combineClockAlternativeRuns<T>(
+    runs: (ClockAlternativeRun<T> | null)[],
+    is_stable: (alternative: T) => boolean,
+    window_count: (alternative: T) => number,
+): { alternatives: T[]; selected_index: number } {
+    const seen = new Set<string>();
+    const alternatives: T[] = [];
+    for (const run of runs) {
+        if (run && !seen.has(run.signature)) {
+            seen.add(run.signature);
+            alternatives.push(...run.alternatives);
+        }
     }
-
-    // input windows come from the first planned alternative whose clock passes, most batched first
-    const plan_runs: [string, (extra: GenerateClockOptions) => BlueprintGenerationResult][] = [
-        ["planned-belt-slack", extra => generateClockWithSwingBackoff(base_config, extra)],
-        ...Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i).map(lower => [
-            `swings-${lower}`,
-            (extra: GenerateClockOptions) => generateClockForConfig(
-                { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: lower } }, extra),
-        ] as [string, (extra: GenerateClockOptions) => BlueprintGenerationResult]),
-    ];
-    const stable_plan = plan_runs.find(([id]) => alternatives.some(a => a.id === id && a.is_stable)) ?? plan_runs[0];
-    add("full-hand", "Full-hand output swings",
-        "Output inserters swing once per window, evenly spaced and timed so the machine already holds a full hand when "
-        + "the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the "
-        + "planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is "
-        + "searched with clock-only simulations, preferring the fewest pickups that wait for items. The timing must "
-        + "recover from full output machines; if it does not, some windows are lengthened so a second grab can drain the "
-        + "surplus. Other inserters keep the planned windows (with belt pickup slack).",
-        () => stable_plan[1]({ ...quiet, belt_pickup_slack: "always", full_hand_output: true }));
-
     let selected_index = 0;
     alternatives.forEach((alternative, index) => {
         const best = alternatives[selected_index];
-        if (alternative.is_stable && (!best.is_stable || alternative.inserter_window_count < best.inserter_window_count)) {
+        if (is_stable(alternative) && (!is_stable(best) || window_count(alternative) < window_count(best))) {
             selected_index = index;
         }
     });
+    return { alternatives, selected_index };
+}
+
+/**
+ * Generates the same config several ways (planned windows with and without belt pickup slack, derived
+ * per-craft windows, fractional swings toggled, lower output swing counts, full-hand output) and checks each
+ * with the clock-only simulation from several start phases. Alternatives with identical windows are listed once.
+ * Runs everything in sequence; the UI runs the tasks from planClockAlternatives in parallel workers instead.
+ */
+export function generateClockAlternatives(
+    config: Config,
+    options: GenerateClockOptions = {}
+): ClockAlternativesResult {
+    const logger = options.logger ?? defaultLogger;
+    let current_step = "Planned + belt pickup slack";
+    let completed = 0;
+    let total: number | null = null;
+    const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
+    const copies = config.target_output.copies ?? 1;
+
+    report();
+    const plan = planClockAlternatives(config, { ...options, on_progress_detail: report });
+    completed++;
+    total = 1 + plan.tasks.length;
+
+    const runs: (ClockAlternativeRun | null)[] = [plan.primary];
+    const stable_by_id = new Map<string, boolean>();
+    const known_stable = (id: string) => stable_by_id.get(id);
+    const definitions = alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable);
+    for (const definition of definitions) {
+        current_step = definition.label;
+        report();
+        const run = runAlternative(definition, copies, logger);
+        completed++;
+        runs.push(run);
+        if (run) {
+            stable_by_id.set(definition.id, run.alternatives[0].is_stable);
+        }
+    }
+
     current_step = "Done";
     report();
-    return { alternatives, selected_index };
+    return combineClockAlternativeRuns(runs, it => it.is_stable, it => it.inserter_window_count);
 }
 
 function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableClockWindows {
