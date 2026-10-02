@@ -195,7 +195,7 @@ describe("generateClockForConfig", () => {
                 });
             });
 
-            it("derived per-craft windows follow the input inserter's activity", () => {
+            it("observed windows follow the input inserter's activity", () => {
                 expect(windowsOf("derived")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
                     "inserter:1": [{ start: 25, end: 76 }],
@@ -442,7 +442,7 @@ describe("generateClockForConfig", () => {
                     });
                 });
 
-                it("derived per-craft windows follow each inserter's activity", () => {
+                it("observed windows follow each inserter's activity", () => {
                     expect(windowsOf("derived")).toEqual({
                         "inserter:2": [{ start: 1, end: 50 }, { start: 169, end: 210 }],
                         "inserter:1": [{ start: 53, end: 68 }],

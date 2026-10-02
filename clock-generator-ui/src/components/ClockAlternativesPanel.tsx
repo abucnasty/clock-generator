@@ -1,3 +1,4 @@
+import { InfoOutlined } from '@mui/icons-material';
 import {
     Box,
     Chip,
@@ -58,9 +59,21 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect }
                                     <Radio checked={index === selectedIndex} size="small" />
                                 </TableCell>
                                 <TableCell>
-                                    <Tooltip title={alternative.description} placement="top-start" arrow>
-                                        <Box component="span">{alternative.label}</Box>
-                                    </Tooltip>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        {alternative.label}
+                                        <Tooltip
+                                            title={<Typography variant="body2">{alternative.description}</Typography>}
+                                            placement="right"
+                                            arrow
+                                        >
+                                            <InfoOutlined
+                                                fontSize="small"
+                                                color="action"
+                                                aria-label={`How ${alternative.label} is made`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </Tooltip>
+                                    </Box>
                                 </TableCell>
                                 <TableCell align="right">{alternative.terminalSwingCount}</TableCell>
                                 <TableCell align="right">{alternative.inserterWindowCount}</TableCell>

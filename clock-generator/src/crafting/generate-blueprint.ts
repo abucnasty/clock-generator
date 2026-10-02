@@ -1165,26 +1165,38 @@ export function generateClockAlternatives(
     const slack_label = slack_ticks.length === 0 ? ""
         : ` (+${slack_ticks.length === 1 ? slack_ticks[0] : `${slack_ticks[0]}–${slack_ticks[slack_ticks.length - 1]}`} ticks)`;
     add("planned-belt-slack", `Planned + belt pickup slack${slack_label}`,
-        "Planned windows; belt-fed inserters stay enabled long enough for one more full-hand pickup (one lane stack per tick), so a pickup slowed by belt gaps can finish.",
+        "Same as Planned, but every inserter that picks up from a belt stays enabled a few extra ticks after each window: "
+        + "long enough for one more full-hand pickup (one belt stack per tick). In game, gaps left on a shared belt by other "
+        + "inserters can slow a pickup down; the extra ticks let it finish instead of the inserter being switched off "
+        + "while holding a partial hand.",
         () => primary);
     add("planned", "Planned",
-        "Planned windows exactly as simulated.",
+        "The swing schedule the generator plans for the target rate. The build is simulated with each inserter waiting on "
+        + "its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are grouped into "
+        + "batches that match the crafting cycle.",
         () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }));
     add("fractional", fractional ? "Without fractional swings" : "Fractional swings",
-        fractional ? "Planned windows with fractional swings turned off." : "Planned windows with fractional swings turned on.",
+        (fractional ? "Planned windows with fractional swings turned off: every cycle uses the same whole number of swings."
+            : "Planned windows with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates "
+            + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows."),
         () => generateClockWithSwingBackoff(
             { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
             quiet
         ));
-    add("derived", "Derived per-craft windows",
-        "Each inserter's window follows its activity when only the output inserters are clocked; swings are spread out per craft.",
+    add("derived", "Observed windows",
+        "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
+        + "the output inserters on the clock and every other inserter running freely; each inserter's windows are the ticks "
+        + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
+        + "one per craft, so there are usually more windows than Planned.",
         () => generateClockWithSwingBackoff(
             { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
             { ...quiet, derive_mode: "always" }
         ));
     for (let lower = swings - 1; lower >= 1; lower--) {
         add(`swings-${lower}`, `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
-            `Planned windows with the output swing count lowered from ${swings} to ${lower}.`,
+            `Planned windows with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} per crafting cycle `
+            + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
+            + "is unstable.",
             () => generateClockForConfig(
                 { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: lower } },
                 quiet
