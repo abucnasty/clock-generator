@@ -62,7 +62,13 @@ export {
 export {
     generateClockForConfig,
     generateClockWithSwingBackoff,
+    generateClockAlternatives,
     BlueprintGenerationResult,
+    ClockAlternative,
+    ClockAlternativesResult,
+    GenerationProgress,
+    AsBuiltStabilityCheck,
+    SerializableClockWindows,
     GenerateClockOptions,
     DebugSteps,
     SimulationStabilityCheck,

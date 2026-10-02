@@ -1,6 +1,9 @@
-import { useCallback, useState } from 'react';
-import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan } from 'clock-generator/browser';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
+import type { ClockAlternativeView, WorkerRequest, WorkerResponse } from '../worker/types';
+
+export type { ClockAlternativeView } from '../worker/types';
 
 export interface RecipeInfo {
     ingredients: string[];
@@ -10,6 +13,7 @@ export interface RecipeInfo {
 export interface UseSimulationWorkerResult {
     isInitialized: boolean;
     isRunning: boolean;
+    progress: GenerationProgress | null;
     recipeNames: string[];
     itemNames: string[];
     resourceNames: string[];
@@ -21,6 +25,9 @@ export interface UseSimulationWorkerResult {
     swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan | null;
     usedLcm: number | null;
+    alternatives: ClockAlternativeView[];
+    selectedAlternativeIndex: number;
+    selectAlternative: (index: number) => void;
     error: string | null;
     initialize: () => void;
     runSimulation: (config: Config, debugSteps: DebugSteps) => void;
@@ -30,40 +37,73 @@ export interface UseSimulationWorkerResult {
 
 // Dynamic imports for the clock-generator library
 let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService | null = null;
-let generateClockWithSwingBackoff: typeof import('clock-generator/browser').generateClockWithSwingBackoff | null = null;
-let encodeBlueprintFileBrowser: typeof import('clock-generator/browser').encodeBlueprintFileBrowser | null = null;
-let DebugSettingsProvider: typeof import('clock-generator/browser').DebugSettingsProvider | null = null;
-let StreamingLogger: typeof import('clock-generator/browser').StreamingLogger | null = null;
+
+const FACTORIO_DATA_URL = '/data-filtered.json';
 
 export function useSimulationWorker(): UseSimulationWorkerResult {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
+    const [progress, setProgress] = useState<GenerationProgress | null>(null);
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
     const [logs, setLogs] = useState<LogMessage[]>([]);
-    const [blueprintString, setBlueprintString] = useState<string | null>(null);
-    const [transferHistory, setTransferHistory] = useState<SerializableTransferHistory | null>(null);
-    const [stateTransitionHistory, setStateTransitionHistory] = useState<SerializableStateTransitionHistory | null>(null);
-    const [simulationDurationTicks, setSimulationDurationTicks] = useState<number | null>(null);
-    const [swingBackoffReport, setSwingBackoffReport] = useState<SwingBackoffReport | null>(null);
-    const [transferPlan, setTransferPlan] = useState<SerializableTransferPlan | null>(null);
-    const [usedLcm, setUsedLcm] = useState<number | null>(null);
+    const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
+    const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    const workerRef = useRef<Worker | null>(null);
+
+    useEffect(() => () => workerRef.current?.terminate(), []);
 
     const initialize = useCallback(async () => {
         try {
+            // Generation runs in the worker; the main thread only needs the data for forms and machine facts
+            const workerReady = new Promise<void>((resolve, reject) => {
+                const worker = new Worker(new URL('../worker/simulation.worker.ts', import.meta.url), { type: 'module' });
+                workerRef.current = worker;
+                worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+                    const response = event.data;
+                    switch (response.type) {
+                        case 'initialized':
+                            resolve();
+                            break;
+                        case 'log':
+                            setLogs(previous => [...previous, ...response.messages]);
+                            break;
+                        case 'progress':
+                            setProgress(response.progress);
+                            break;
+                        case 'completed':
+                            setAlternatives(response.alternatives);
+                            setSelectedAlternativeIndex(response.selectedIndex);
+                            setProgress(null);
+                            setIsRunning(false);
+                            break;
+                        case 'error':
+                            console.error('Simulation error:', response.message, response.stack);
+                            setError(response.message);
+                            setProgress(null);
+                            setIsRunning(false);
+                            reject(new Error(response.message));
+                            break;
+                    }
+                };
+                worker.onerror = (event) => {
+                    setError(event.message || 'Simulation worker failed');
+                    setProgress(null);
+                    setIsRunning(false);
+                    reject(new Error(event.message));
+                };
+                worker.postMessage({ type: 'initialize', factorioDataUrl: FACTORIO_DATA_URL } satisfies WorkerRequest);
+            });
+
             // Dynamically import the clock-generator browser module
             const clockGenerator = await import('clock-generator/browser');
             
             FactorioDataService = clockGenerator.FactorioDataService;
-            generateClockWithSwingBackoff = clockGenerator.generateClockWithSwingBackoff;
-            encodeBlueprintFileBrowser = clockGenerator.encodeBlueprintFileBrowser;
-            DebugSettingsProvider = clockGenerator.DebugSettingsProvider;
-            StreamingLogger = clockGenerator.StreamingLogger;
 
             // Fetch and initialize Factorio data
-            const response = await fetch('/data-filtered.json');
+            const response = await fetch(FACTORIO_DATA_URL);
             const data: FactorioData = await response.json();
             FactorioDataService.initialize(data);
 
@@ -73,6 +113,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             
             // Initialize machine facts module
             await initializeMachineFacts();
+            await workerReady;
             
             setIsInitialized(true);
         } catch (err) {
@@ -81,63 +122,20 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
     }, []);
 
-    const runSimulation = useCallback(async (config: Config, debugSteps: DebugSteps) => {
-        if (!generateClockWithSwingBackoff || !encodeBlueprintFileBrowser || !DebugSettingsProvider || !StreamingLogger) {
+    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps) => {
+        const worker = workerRef.current;
+        if (!worker) {
             setError('Not initialized');
             return;
         }
 
         setIsRunning(true);
-        setBlueprintString(null);
-        setTransferHistory(null);
-        setStateTransitionHistory(null);
-        setSimulationDurationTicks(null);
-        setSwingBackoffReport(null);
-        setTransferPlan(null);
-        setUsedLcm(null);
+        setProgress(null);
+        setAlternatives([]);
+        setSelectedAlternativeIndex(0);
         setError(null);
         setLogs([]);
-
-        // Use setTimeout to allow UI to update before running simulation
-        setTimeout(() => {
-            try {
-                // Create a streaming logger to capture logs
-                const capturedLogs: LogMessage[] = [];
-                const logger = new StreamingLogger!((message) => {
-                    capturedLogs.push(message);
-                    // Update logs in batches to avoid too many re-renders
-                    setLogs([...capturedLogs]);
-                });
-
-                // Create mutable debug settings
-                const debug = DebugSettingsProvider!.mutable();
-
-                // Run the simulation
-                const result = generateClockWithSwingBackoff!(config, {
-                    debug,
-                    debug_steps: debugSteps,
-                    logger,
-                });
-
-                // Encode the blueprint
-                const blueprint = encodeBlueprintFileBrowser!({
-                    blueprint: result.blueprint,
-                });
-
-                setBlueprintString(blueprint);
-                setTransferHistory(result.serializable_transfer_history);
-                setStateTransitionHistory(result.serializable_state_transition_history);
-                setSimulationDurationTicks(result.simulation_duration.ticks);
-                setSwingBackoffReport(result.swing_backoff_report ?? null);
-                setTransferPlan(result.serializable_transfer_plan);
-                setUsedLcm(result.used_lcm);
-                setIsRunning(false);
-            } catch (err) {
-                console.error('Simulation error:', err);
-                setError(err instanceof Error ? err.message : 'Simulation failed');
-                setIsRunning(false);
-            }
-        }, 100);
+        worker.postMessage({ type: 'generate', config, debugSteps } satisfies WorkerRequest);
     }, []);
 
     const clearLogs = useCallback(() => {
@@ -157,20 +155,26 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
     }, []);
 
+    const selected: ClockAlternativeView | undefined = alternatives[selectedAlternativeIndex];
+
     return {
         isInitialized,
         isRunning,
+        progress,
         recipeNames,
         resourceNames,
         itemNames,
         logs,
-        blueprintString,
-        transferHistory,
-        stateTransitionHistory,
-        simulationDurationTicks,
-        swingBackoffReport,
-        transferPlan,
-        usedLcm,
+        blueprintString: selected?.blueprintString ?? null,
+        transferHistory: selected?.transferHistory ?? null,
+        stateTransitionHistory: selected?.stateTransitionHistory ?? null,
+        simulationDurationTicks: selected?.simulationDurationTicks ?? null,
+        swingBackoffReport: selected?.swingBackoffReport ?? null,
+        transferPlan: selected?.transferPlan ?? null,
+        usedLcm: selected?.usedLcm ?? null,
+        alternatives,
+        selectedAlternativeIndex,
+        selectAlternative: setSelectedAlternativeIndex,
         error,
         initialize,
         runSimulation,

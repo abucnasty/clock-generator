@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
@@ -158,8 +158,8 @@ describe("generateClockForConfig", () => {
                 const expected_ranges = [
                     OpenRange.from(52, 63),
                     OpenRange.from(63, 74),
-                    OpenRange.from(81, 92),
-                    OpenRange.from(92, 103)
+                    OpenRange.from(76, 87),
+                    OpenRange.from(87, 98)
                 ]
 
                 expect(sorted_transfers.length).toBe(4);
@@ -170,6 +170,37 @@ describe("generateClockForConfig", () => {
                 })
             });
 
+        });
+
+        // these three alternatives were confirmed to hold full output in game
+        describe("clock alternatives", () => {
+            const { alternatives } = generateClockAlternatives(config);
+            const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+
+            it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
+                expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
+            });
+
+            it("planned + belt pickup slack adds 4 ticks to the belt input inserter", () => {
+                expect(windowsOf("planned-belt-slack")).toEqual({
+                    "inserter:2": [{ start: 1, end: 49 }],
+                    "inserter:1": [{ start: 52, end: 102 }],
+                });
+            });
+
+            it("planned keeps the simulated windows", () => {
+                expect(windowsOf("planned")).toEqual({
+                    "inserter:2": [{ start: 1, end: 49 }],
+                    "inserter:1": [{ start: 52, end: 74 }, { start: 76, end: 98 }],
+                });
+            });
+
+            it("observed windows follow the input inserter's activity", () => {
+                expect(windowsOf("derived")).toEqual({
+                    "inserter:2": [{ start: 1, end: 49 }],
+                    "inserter:1": [{ start: 25, end: 76 }],
+                });
+            });
         });
 
     });
@@ -359,6 +390,15 @@ describe("generateClockForConfig", () => {
                 OpenRange.from(234, 245),
             ]
 
+            // confirmed in game, along with the stable clock alternatives below
+            const valid_range_set_3 = [
+                OpenRange.from(13, 24),
+                OpenRange.from(24, 35),
+                OpenRange.from(181, 192),
+                OpenRange.from(192, 203),
+                OpenRange.from(214, 225),
+            ]
+
             it("has correct tick ranges for input inserter transfers", () => {
                 // Get the actual EntityId instances from the map keys
                 const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
@@ -367,7 +407,7 @@ describe("generateClockForConfig", () => {
 
                 const inserter_transfers = result.transfer_history.getOrThrow(input_inserter_id)
                 const sorted_transfers = [...inserter_transfers].sort((a, b) => a.tick_range.start_inclusive - b.tick_range.start_inclusive);
-                const expected_ranges = valid_range_set_2
+                const expected_ranges = valid_range_set_3
 
                 expect(sorted_transfers.length).toBe(5);
                 sorted_transfers.forEach((transfer, index) => {
@@ -376,7 +416,89 @@ describe("generateClockForConfig", () => {
                     expect(transfer.tick_range.end_inclusive).toBe(expected_range.end_inclusive);
                 })
             });
+
+            // these three alternatives were confirmed to hold full output in game
+            describe("clock alternatives", () => {
+                const { alternatives } = generateClockAlternatives(config);
+                const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+
+                it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
+                    expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
+                });
+
+                it("planned + belt pickup slack adds 4 ticks to the belt input inserters", () => {
+                    expect(windowsOf("planned-belt-slack")).toEqual({
+                        "inserter:2": [{ start: 1, end: 50 }, { start: 169, end: 210 }],
+                        "inserter:3": [{ start: 13, end: 39 }, { start: 181, end: 207 }, { start: 214, end: 229 }],
+                        "inserter:1": [{ start: 206, end: 221 }],
+                    });
+                });
+
+                it("planned keeps the simulated windows", () => {
+                    expect(windowsOf("planned")).toEqual({
+                        "inserter:2": [{ start: 1, end: 50 }, { start: 169, end: 210 }],
+                        "inserter:3": [{ start: 13, end: 35 }, { start: 181, end: 203 }, { start: 214, end: 225 }],
+                        "inserter:1": [{ start: 206, end: 217 }],
+                    });
+                });
+
+                it("observed windows follow each inserter's activity", () => {
+                    expect(windowsOf("derived")).toEqual({
+                        "inserter:2": [{ start: 1, end: 50 }, { start: 169, end: 210 }],
+                        "inserter:1": [{ start: 53, end: 68 }],
+                        "inserter:3": [{ start: 25, end: 40 }, { start: 53, end: 79 }, { start: 193, end: 208 }, { start: 213, end: 228 }],
+                    });
+                });
+            });
         });
+    });
+
+    // Inserters 1/4 feed the two identical pack machines and 2/3 empty them. Config order puts input 1
+    // before output 2 but input 4 after output 3, which used to offset the machines by one tick and
+    // desync the shared-clock LDS inserters 6/7.
+    describe("UTILITY_SCIENCE_DIRECT_INSERT_LDS (identical machines stay in sync regardless of config order)", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_DIRECT_INSERT_LDS);
+        const result = generateClockForConfig({
+            ...config,
+            overrides: { ...config.overrides, terminal_swing_count: 2 },
+        });
+
+        const rangesFor = (id: number) => result.transfer_history
+            .getOrThrow(Array.from(result.transfer_history.keys()).find(k => k.id === EntityId.forInserter(id).id)!)
+            .map(t => [t.tick_range.start_inclusive, t.tick_range.end_inclusive]);
+
+        it("is stable", () => {
+            expect(result.stability_check.is_stable).toBe(true);
+        });
+
+        it("LDS inserters 6 and 7 swing on the same ticks", () => {
+            expect(rangesFor(7)).toEqual(rangesFor(6));
+        });
+
+        it("belt input inserters 1 and 4 swing on the same ticks", () => {
+            expect(rangesFor(4)).toEqual(rangesFor(1));
+        });
+    });
+
+    // Recorded in game: the planned windows ran at 48/96 because the furnace/module window
+    // landed before the output inserter cleared the machine; the derived windows ran stable.
+    describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
+
+        it("planned windows fail the clock-only check", () => {
+            const result = generateClockForConfig(config, { verify_as_built: true });
+            expect(result.stability_check.as_built?.is_stable).toBe(false);
+        });
+
+        it("derived windows pass the clock-only check", () => {
+            const result = generateClockForConfig({
+                ...config,
+                overrides: { ...config.overrides, derive_clock_windows: true },
+            });
+            expect(result.derived_clock_windows?.succeeded).toBe(true);
+            expect(result.stability_check.as_built?.actual_output_items).toBe(result.stability_check.expected_output_items);
+            expect(result.stability_check.is_stable).toBe(true);
+        }, 60_000);
     });
 
     // Regression test for issue #47:

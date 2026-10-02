@@ -12,9 +12,9 @@ export function simulateFromContext(context: SimulationContext, duration: Durati
     const control_logic = new CompositeControlLogic(
         [
             tick_control_logic,
-            ...context.machines,
             ...context.drills,
-            ...context.inserters
+            ...context.inserters,
+            ...context.machines,
         ]
     )
 
@@ -36,9 +36,9 @@ export function warmupSimulation(context: SimulationContext, duration: Duration)
     const control_logic = new CompositeControlLogic(
         [
             tick_control_logic,
-            ...context.machines,
             ...context.drills,
-            ...context.inserters
+            ...context.inserters,
+            ...context.machines,
         ]
     )
 
@@ -80,9 +80,9 @@ export function simulateUntilAllMachinesAreOutputBlocked(
     const control_logic = new CompositeControlLogic(
         [
             tick_control_logic,
-            ...cloned_context.machines,
             ...cloned_context.drills,
             ...cloned_context.inserters,
+            ...cloned_context.machines,
         ]
     )
 

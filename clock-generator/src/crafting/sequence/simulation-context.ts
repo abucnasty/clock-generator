@@ -3,7 +3,7 @@ import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../
 import { DrillStateMachine } from "../../control-logic/drill/drill-state-machine";
 import { InserterStateMachine } from "../../control-logic/inserter/inserter-state-machine";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
-import { Belt, Chest, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
+import { Belt, Chest, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { MiningProductivity } from "../../entities/drill/mining-productivity";
 import { assertIsMachineState, DrillState, DrillStatus, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, MachineState, WritableEntityStateRegistry } from "../../state";
@@ -115,9 +115,9 @@ function createSimulationContextFromConfig(
             });
         })
 
-    const inserter_state_machines: InserterStateMachine[] = entity_state_registry
-        .getAllStates()
-        .filter(EntityState.isInserter)
+    const inserter_state_machines: InserterStateMachine[] = orderInsertersDownstreamFirst(
+        entity_state_registry.getAllStates().filter(EntityState.isInserter)
+    )
         .map(inserter_state => {
             const possible_state_machine = interceptors.inserter_interceptor && interceptors.inserter_interceptor(inserter_state);
             if (possible_state_machine) {
@@ -156,6 +156,39 @@ function createSimulationContextFromConfig(
         drill_state_machines,
         target_production_rate
     )
+}
+
+/**
+ * Orders inserters so that every inserter pulling from a machine is updated before any inserter
+ * feeding that machine. Otherwise an input inserter evaluated earlier in the same tick still sees
+ * the machine as output blocked, which skews identical machines by a tick depending on config order.
+ */
+function orderInsertersDownstreamFirst(inserters: InserterState[]): InserterState[] {
+    const pickers_by_machine = new Map<string, InserterState[]>();
+    for (const inserter of inserters) {
+        const source_id = inserter.inserter.source.entity_id;
+        if (!EntityId.isMachine(source_id)) continue;
+        const pickers = pickers_by_machine.get(source_id.id) ?? [];
+        pickers.push(inserter);
+        pickers_by_machine.set(source_id.id, pickers);
+    }
+
+    const depths = new Map<InserterState, number>();
+    const visiting = new Set<InserterState>();
+    const depthOf = (inserter: InserterState): number => {
+        const known = depths.get(inserter);
+        if (known !== undefined) return known;
+        // guards against machine loops
+        if (visiting.has(inserter)) return 0;
+        visiting.add(inserter);
+        const pickers = pickers_by_machine.get(inserter.inserter.sink.entity_id.id) ?? [];
+        const depth = pickers.length === 0 ? 0 : 1 + Math.max(...pickers.map(depthOf));
+        visiting.delete(inserter);
+        depths.set(inserter, depth);
+        return depth;
+    };
+
+    return [...inserters].sort((a, b) => depthOf(a) - depthOf(b));
 }
 
 export function cloneSimulationContextWithInterceptors(

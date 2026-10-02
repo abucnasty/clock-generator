@@ -23,8 +23,10 @@ export class WorkingModeTransitionEvaluator implements ModeTransitionEvaluator<M
 
         const number_of_inputs = this.machine_state.machine.inputs.size;
 
-        if (output_item.quantity >= output_block.max_stack_size) {
-            return ModeTransition.transition(this.output_full_mode, `machine has reached max stack size of ${output_block.max_stack_size} ${output_item.item_name}`);
+        // e.g. 99/100 plastic bars with 2 per craft: no room for another craft
+        const amount_per_craft = this.machine_state.machine.output.ingredient.amount;
+        if (output_item.quantity + amount_per_craft > output_block.max_stack_size) {
+            return ModeTransition.transition(this.output_full_mode, `machine cannot fit another craft of ${amount_per_craft} ${output_item.item_name} under max stack size of ${output_block.max_stack_size}`);
         }
 
         if (output_item.quantity >= output_block.quantity) {

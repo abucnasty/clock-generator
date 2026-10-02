@@ -1,0 +1,232 @@
+{
+  "target_output": {
+    "recipe": "utility-science-pack",
+    "items_per_second": 240,
+    "copies": 8
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 52.9159375,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 52.9159375,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "casting-low-density-structure",
+      "productivity": 300,
+      "crafting_speed": 225.33100000000002,
+      "type": "machine"
+    },
+    {
+      "id": 4,
+      "recipe": "plastic-bar",
+      "productivity": 300,
+      "crafting_speed": 99.19399999999999,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "processing-unit",
+        "flying-robot-frame"
+      ]
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "utility-science-pack"
+      ]
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "utility-science-pack"
+      ]
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "processing-unit",
+        "flying-robot-frame"
+      ]
+    },
+    {
+      "id": 5,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 15,
+      "filters": [
+        "plastic-bar"
+      ],
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "low-density-structure"
+      ],
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "low-density-structure"
+      ],
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "processing-unit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "flying-robot-frame",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "item_filter": [
+        {
+          "item_name": "utility-science-pack",
+          "request_count": 1
+        }
+      ]
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "item_filter": [
+        {
+          "item_name": "utility-science-pack",
+          "request_count": 1
+        }
+      ]
+    }
+  ],
+  "overrides": {
+    "ignored_lcm_ingredients": [
+      "coal"
+    ],
+    "terminal_swing_count": 3
+  }
+}

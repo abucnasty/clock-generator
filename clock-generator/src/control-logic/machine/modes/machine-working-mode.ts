@@ -1,6 +1,13 @@
 import { InventoryItem, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
 import { MachineMode } from "./machine-mode";
 
+// absorbs floating point drift when summing fractional per-tick progress
+const PROGRESS_EPSILON = 1e-9;
+
+/**
+ * Crafting follows Factorio: ingredients are removed when a craft starts, products are added when it
+ * finishes, and a craft only starts if its products fit in the output slot.
+ */
 export class MachineWorkingMode implements MachineMode {
     public readonly status = MachineStatus.WORKING;
 
@@ -13,13 +20,29 @@ export class MachineWorkingMode implements MachineMode {
     public onExit(toMode: MachineMode): void { }
 
     public executeForTick(): void {
-        if (!this.hasEnoughInputsForCraft()) {
-            return;
-        }
-        this.craftingLogic();
+        let budget = this.state.machine.crafting_rate.crafts_per_tick;
 
-        if (this.state.craftingProgress.progress >= 1) {
-            console.warn("Crafting progress exceeded 1 in working mode");
+        while (budget > PROGRESS_EPSILON) {
+            let progress = this.state.craftingProgress.progress;
+            if (progress <= 0) {
+                if (!this.canStartCraft()) {
+                    break;
+                }
+                this.consumeInputsForCraft();
+                progress = 0;
+            }
+
+            const step = Math.min(budget, 1 - progress);
+            progress += step;
+            budget -= step;
+            this.advanceBonusProgress(step);
+
+            if (progress >= 1 - PROGRESS_EPSILON) {
+                this.addOutput(this.state.machine.output.ingredient.amount);
+                this.state.craftCount += 1;
+                progress = 0;
+            }
+            this.state.craftingProgress.progress = progress;
         }
     }
 
@@ -31,144 +54,57 @@ export class MachineWorkingMode implements MachineMode {
         return this.inventory_state.getItemOrThrow(this.state.machine.output.ingredient.name);
     }
 
+    /** True while a craft is underway or another one can start */
     public hasEnoughInputsForCraft(): boolean {
-        return this.remaining_crafts > 0;
+        return this.isCraftInProgress() || this.canStartCraft();
     }
 
-
-    private get remaining_crafts(): number {
-        return this.computeRemainingCrafts()
+    private isCraftInProgress(): boolean {
+        return this.state.craftingProgress.progress > 0;
     }
 
-    // this should honor max stack size of the output item
-    private computeRemainingCrafts(): number {
-        const machine = this.state.machine;
-
-        const max_item_stack_size = machine.output.ingredient.item.stack_size
-
-        const recipe = machine.metadata.recipe;
-
-        let remaining_crafts_from_inputs = Infinity;
-
+    private canStartCraft(): boolean {
+        const recipe = this.state.machine.metadata.recipe;
         for (const ingredient of recipe.raw.ingredients) {
-            const availableQuantity = this.inventory_state.getQuantity(ingredient.name);
-            const requiredQuantity = recipe.inputsPerCraft.get(ingredient.name)!.amount;
-            const possible_crafts_for_ingredient = availableQuantity / requiredQuantity;
-
-            if (possible_crafts_for_ingredient < 1) {
-                remaining_crafts_from_inputs = 0;
-                break;
+            const available = this.inventory_state.getQuantity(ingredient.name);
+            const required = recipe.inputsPerCraft.get(ingredient.name)!.amount;
+            if (available < required) {
+                return false;
             }
-
-            remaining_crafts_from_inputs = Math.min(remaining_crafts_from_inputs, possible_crafts_for_ingredient)
         }
-
-
-        const current_output_quantity = this.inventory_state.getQuantity(machine.output.ingredient.name);
-        const output_amount_per_craft = machine.output.ingredient.amount;
-        const available_output_space = max_item_stack_size - current_output_quantity;
-        const possible_crafts_from_output_space = Math.floor(available_output_space / output_amount_per_craft);
-
-        return Math.floor(
-            Math.min(remaining_crafts_from_inputs, possible_crafts_from_output_space)
-        );
+        return this.hasOutputSpaceFor(this.state.machine.output.ingredient.amount);
     }
 
-    private craftsPossibleThisTick(): number {
-        const current_craft_progress = this.state.craftingProgress.progress
-        const crafts_per_tick = this.state.machine.crafting_rate.crafts_per_tick
-        const remaining_crafts = this.remaining_crafts
-
-        const crafts_possible = crafts_per_tick + current_craft_progress
-
-        if (crafts_possible > remaining_crafts) {
-            // more crafts are possible than inputs allow
-            return remaining_crafts - current_craft_progress;
-        }
-        return crafts_possible - current_craft_progress;
+    private hasOutputSpaceFor(amount: number): boolean {
+        const output = this.state.machine.output.ingredient;
+        return this.inventory_state.getQuantity(output.name) + amount <= output.item.stack_size;
     }
 
-    private craftingLogic() {
-        const crafts_possible = this.craftsPossibleThisTick()
-        const progress = this.state.craftingProgress.progress + crafts_possible
-        const crafts_whole = Math.floor(progress);
-        const crafts_remainder = progress - crafts_whole;
-
-        const amount_per_craft = this.state.machine.output.ingredient.amount;
-        const output_name = this.state.machine.output.ingredient.name;
-        const max_stack_size = this.state.machine.output.ingredient.item.stack_size;
-        const current_output = this.inventory_state.getQuantity(output_name);
-
-        // Calculate potential craft output
-        const craft_output = Math.floor(amount_per_craft * crafts_whole);
-
-        // Calculate potential bonus output
-        const bonus_per_craft = this.state.machine.bonus_productivity_rate.bonus_per_craft
-        const bonus_crafts_possible = crafts_possible * bonus_per_craft
-        const bonus_progress = this.state.bonusProgress.progress + bonus_crafts_possible
-        const bonus_crafts_whole = Math.floor(bonus_progress);
-        const bonus_crafts_remainder = bonus_progress - bonus_crafts_whole;
-        const bonus_craft_output = Math.floor(amount_per_craft * bonus_crafts_whole);
-
-        // Total output that would be produced
-        const total_output = craft_output + bonus_craft_output;
-        const available_space = max_stack_size - current_output;
-
-        // If total output exceeds available space, we need to adjust
-        if (total_output > available_space) {
-            // Calculate how much we can actually produce
-            const actual_craft_output = Math.min(craft_output, available_space);
-            const remaining_space = available_space - actual_craft_output;
-            const actual_bonus_output = Math.min(bonus_craft_output, remaining_space);
-
-            // Calculate the actual crafts that can complete based on output space
-            const actual_crafts_whole = Math.floor(actual_craft_output / amount_per_craft);
-            const actual_bonus_crafts_whole = Math.floor(actual_bonus_output / amount_per_craft);
-
-            // Calculate how much progress was blocked
-            const blocked_craft_progress = crafts_whole - actual_crafts_whole;
-            const blocked_bonus_progress = bonus_crafts_whole - actual_bonus_crafts_whole;
-
-            // Update progress: remainder + blocked progress
-            this.state.craftingProgress.progress = crafts_remainder + blocked_craft_progress;
-            this.state.bonusProgress.progress = bonus_crafts_remainder + blocked_bonus_progress;
-
-            // Add the clamped outputs
-            this.inventory_state.addQuantity(output_name, actual_craft_output);
-            this.state.totalCrafted += actual_craft_output;
-
-            this.inventory_state.addQuantity(output_name, actual_bonus_output);
-            this.state.totalCrafted += actual_bonus_output;
-
-            // Consume inputs only for completed crafts
-            if (actual_crafts_whole >= 1) {
-                this.state.craftCount += actual_crafts_whole;
-                this.consumeInputsForCraftCount(actual_crafts_whole);
-            }
-        } else {
-            // Normal flow - everything fits
-            this.state.craftingProgress.progress = crafts_remainder;
-            this.state.bonusProgress.progress = bonus_crafts_remainder;
-
-            this.inventory_state.addQuantity(output_name, craft_output);
-            this.state.totalCrafted += craft_output;
-
-            this.inventory_state.addQuantity(output_name, bonus_craft_output);
-            this.state.totalCrafted += bonus_craft_output;
-
-            // consume inputs
-            if (crafts_whole >= 1) {
-                this.state.craftCount += crafts_whole;
-                this.consumeInputsForCraftCount(crafts_whole);
-            }
+    /** Bonus products fill alongside crafting progress; a full bonus that doesn't fit waits for space */
+    private advanceBonusProgress(craft_progress: number): void {
+        const bonus_per_craft = this.state.machine.bonus_productivity_rate.bonus_per_craft;
+        if (bonus_per_craft <= 0) {
+            return;
+        }
+        const amount = this.state.machine.output.ingredient.amount;
+        this.state.bonusProgress.progress += craft_progress * bonus_per_craft;
+        // the craft in progress has already reserved room for its own products
+        while (this.state.bonusProgress.progress >= 1 - PROGRESS_EPSILON && this.hasOutputSpaceFor(2 * amount)) {
+            this.addOutput(amount);
+            this.state.bonusProgress.progress = Math.max(0, this.state.bonusProgress.progress - 1);
         }
     }
 
-    private consumeInputsForCraftCount(crafts: number): void {
+    private addOutput(amount: number): void {
+        this.inventory_state.addQuantity(this.state.machine.output.ingredient.name, amount);
+        this.state.totalCrafted += amount;
+    }
+
+    private consumeInputsForCraft(): void {
         this.state.machine.inputs.forEach(input => {
             this.inventory_state.removeQuantity(
                 input.ingredient.name,
-                input.consumption_rate.amount_per_craft * crafts
+                input.consumption_rate.amount_per_craft
             );
         })
     }

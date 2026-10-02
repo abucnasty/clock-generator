@@ -41,9 +41,9 @@ export class SimulateStep implements RunnerStep {
         const control_logic = new CompositeControlLogic(
             [
                 tick_control_logic,
-                ...context.machines,
                 ...context.drills,
-                ...context.inserters
+                ...context.inserters,
+                ...context.machines,
             ]
         )
 

@@ -473,6 +473,14 @@ export const ConfigOverridesSchema = z.object({
      */
     disable_swing_backoff: z.boolean().optional(),
     /**
+     * Derive every non-output inserter's clock window from how it behaves when only the output
+     * inserters are clocked, then verify the result with a clock-only (as-built) simulation.
+     * Replaces the heuristic window trimming; the result is marked unstable when no padding passes.
+     * 
+     * @default false
+     */
+    derive_clock_windows: z.boolean().optional(),
+    /**
      * Item names to exclude from the LCM calculation.
      * 
      * Inserters that exclusively transfer items in this list will not contribute
