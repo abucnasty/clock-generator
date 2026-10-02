@@ -1098,6 +1098,103 @@ export function generateClockWithSwingBackoff(
     return { ...initial_result, swing_backoff_report };
 }
 
+export interface ClockAlternative {
+    id: string;
+    label: string;
+    description: string;
+    /** Total decider windows across inserters; fewer means more batched swings */
+    inserter_window_count: number;
+    /** The planned simulation and the clock-only check both reach the expected output */
+    is_stable: boolean;
+    result: BlueprintGenerationResult;
+}
+
+export interface ClockAlternativesResult {
+    alternatives: ClockAlternative[];
+    /** The stable alternative with the fewest inserter windows, or 0 when none is stable */
+    selected_index: number;
+}
+
+/**
+ * Generates the same config several ways (planned windows with and without belt pickup slack, derived
+ * per-craft windows, fractional swings toggled, lower output swing counts) and checks each with the
+ * clock-only simulation from several start phases. Alternatives with identical windows are listed once.
+ */
+export function generateClockAlternatives(
+    config: Config,
+    options: GenerateClockOptions = {}
+): ClockAlternativesResult {
+    const logger = options.logger ?? defaultLogger;
+    const quiet: GenerateClockOptions = {
+        ...options,
+        logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
+        verify_as_built: true,
+    };
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const fractional = config.overrides?.use_fractional_swings === true;
+
+    const alternatives: ClockAlternative[] = [];
+    const seen = new Set<string>();
+    const add = (id: string, label: string, description: string, run: () => BlueprintGenerationResult) => {
+        let result: BlueprintGenerationResult;
+        try {
+            result = run();
+        } catch (error) {
+            logger.log(`Clock alternative "${label}" could not be generated: ${error instanceof Error ? error.message : error}`);
+            return;
+        }
+        const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
+        if (seen.has(signature)) {
+            return;
+        }
+        seen.add(signature);
+        const inserter_window_count = Object.entries(result.clock_windows)
+            .filter(([key]) => key.startsWith("inserter:"))
+            .reduce((sum, [, ranges]) => sum + ranges.length, 0);
+        const is_stable = result.stability_check.is_stable && (result.stability_check.as_built?.is_stable ?? false);
+        logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${result.stability_check.as_built?.actual_output_items}/${result.stability_check.expected_output_items}`);
+        alternatives.push({ id, label, description, inserter_window_count, is_stable, result });
+    };
+
+    const primary = generateClockWithSwingBackoff(base_config, { ...options, verify_as_built: true, belt_pickup_slack: "always" });
+    const swings = primary.used_terminal_swing_count;
+    add("planned-belt-slack", "Planned + belt pickup slack",
+        "Planned windows; belt-fed inserters stay enabled a little longer so a late belt pickup can finish.",
+        () => primary);
+    add("planned", "Planned",
+        "Planned windows exactly as simulated.",
+        () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }));
+    add("fractional", fractional ? "Without fractional swings" : "Fractional swings",
+        fractional ? "Planned windows with fractional swings turned off." : "Planned windows with fractional swings turned on.",
+        () => generateClockWithSwingBackoff(
+            { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
+            quiet
+        ));
+    add("derived", "Derived per-craft windows",
+        "Each inserter's window follows its activity when only the output inserters are clocked; swings are spread out per craft.",
+        () => generateClockWithSwingBackoff(
+            { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
+            { ...quiet, derive_mode: "always" }
+        ));
+    for (let lower = swings - 1; lower >= 1; lower--) {
+        add(`swings-${lower}`, `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
+            `Planned windows with the output swing count lowered from ${swings} to ${lower}.`,
+            () => generateClockForConfig(
+                { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: lower } },
+                quiet
+            ));
+    }
+
+    let selected_index = 0;
+    alternatives.forEach((alternative, index) => {
+        const best = alternatives[selected_index];
+        if (alternative.is_stable && (!best.is_stable || alternative.inserter_window_count < best.inserter_window_count)) {
+            selected_index = index;
+        }
+    });
+    return { alternatives, selected_index };
+}
+
 function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableClockWindows {
     return Object.fromEntries(Array.from(windows, ([key, ranges]) =>
         [key, ranges.map(r => ({ start: r.start_inclusive, end: r.end_inclusive }))]
