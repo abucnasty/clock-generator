@@ -20,6 +20,7 @@
     "start": "tsc && node dist/multi-machine-poc.js",
     "dev": "nodemon",
     "build": "tsc",
+    "verify": "tsc && node dist/verify-recording.js",
     "test": "vitest run"
   },
   "keywords": [
