@@ -2,6 +2,7 @@ import Fraction from "fractionability";
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
 import { Position, SignalId } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
+import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
 import { Duration, OpenRange } from "../data-types";
 import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities";
 import { InventoryTransfer } from "./sequence/inventory-transfer";
@@ -14,7 +15,8 @@ function createDeciderCombinatorForTransfers(
     entity_registry: ReadableEntityRegistry,
     cycle: CraftingCyclePlan,
     number_of_cycles: number,
-    position: Position
+    position: Position,
+    mapRanges: (ranges: OpenRange[]) => OpenRange[] = ranges => ranges,
 ): DeciderCombinatorEntity {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
     const entity_number = entity_id.id.split(":")[1]
@@ -47,7 +49,7 @@ function createDeciderCombinatorForTransfers(
         outputSignalId = SignalId.item(Array.from(items)[0])
     }
 
-    const ranges = OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range));
+    const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
 
     const deciderCombinator = DeciderCombinatorEntity
         .fromRanges(
@@ -105,12 +107,47 @@ function generateClockDescriptionLines(
 }
 
 
+/**
+ * A clock for a fractional period p/q ticks: a normal clock counts 0..p-1 ticks, and two arithmetic
+ * combinators turn that into (clock * q) % p, the position in the period in 1/q-tick units.
+ * The pattern wraps seamlessly because the clock period p times q is a multiple of p.
+ */
+export interface SubtickClock {
+    /** p: clock period in ticks, and the modulo applied to the subtick clock */
+    period_ticks: number;
+    /** q: how many scaled units make one tick */
+    scale: number;
+}
+
+/** Ticks added between the clock and the deciders by the multiply and modulo combinators */
+const SUBTICK_CLOCK_EXTRA_LATENCY_TICKS = 2;
+
+/** Windows in ticks of the p/q period, as subtick-clock values shifted back by the extra combinator latency */
+function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
+    const { period_ticks: p, scale: q } = clock;
+    const scaled: OpenRange[] = [];
+    for (const range of ranges) {
+        const start = range.start_inclusive * q - SUBTICK_CLOCK_EXTRA_LATENCY_TICKS * q;
+        const end = range.end_inclusive * q - SUBTICK_CLOCK_EXTRA_LATENCY_TICKS * q;
+        const wrapped_start = ((start % p) + p) % p;
+        const wrapped_end = wrapped_start + (end - start);
+        if (wrapped_end >= p) {
+            scaled.push(OpenRange.from(wrapped_start, p - 1));
+            scaled.push(OpenRange.from(0, wrapped_end - p));
+        } else {
+            scaled.push(OpenRange.from(wrapped_start, wrapped_end));
+        }
+    }
+    return OpenRange.reduceRanges(scaled);
+}
+
 export function createSignalPerInserterBlueprint(
     final_output_item_name: string,
     cycle: CraftingCyclePlan,
     total_duration: Duration,
     history: InventoryTransferHistory,
-    entityRegistry: ReadableEntityRegistry
+    entityRegistry: ReadableEntityRegistry,
+    subtick_clock?: SubtickClock,
 ): FactorioBlueprint {
 
     const inventory_transfers = history.getAllTransfers()
@@ -120,16 +157,40 @@ export function createSignalPerInserterBlueprint(
 
 
     const clock = DeciderCombinatorEntity
-        .clock(total_duration.ticks, 1)
+        .clock(subtick_clock ? subtick_clock.period_ticks : total_duration.ticks, 1)
         .setPosition(Position.fromXY(x, 0))
         .setMultiLinePlayerDescription(
             generateClockDescriptionLines(
                 final_output_item_name,
                 cycle,
                 total_duration
-            )
+            ).concat(subtick_clock
+                ? [`- Subtick clock: counts ${subtick_clock.period_ticks} ticks; the next two combinators give the position in 1/${subtick_clock.scale} ticks`]
+                : [])
         )
         .build();
+
+    const subtick_combinators = subtick_clock ? [
+        ArithmeticCombinatorEntity.withConstant({
+            input: SignalId.clock,
+            operation: "*",
+            constant: subtick_clock.scale,
+            output: SignalId.clock,
+            position: Position.fromXY(x += 1, 0),
+            description: [`Subtick clock: clock × ${subtick_clock.scale}`],
+        }),
+        ArithmeticCombinatorEntity.withConstant({
+            input: SignalId.clock,
+            operation: "%",
+            constant: subtick_clock.period_ticks,
+            output: SignalId.clock,
+            position: Position.fromXY(x += 1, 0),
+            description: [
+                `Subtick clock: position in the ${total_duration.ticks.toFixed(3)} tick period, in 1/${subtick_clock.scale} ticks`,
+                "Already wired (green) to every inserter decider's input",
+            ],
+        }),
+    ] : [];
 
     const deciderCombinatorEntities: DeciderCombinatorEntity[] = []
 
@@ -145,17 +206,31 @@ export function createSignalPerInserterBlueprint(
                 entityRegistry,
                 cycle,
                 total_duration.ticks / cycle.total_duration.ticks,
-                Position.fromXY(x, 0)
+                Position.fromXY(x, 0),
+                subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : undefined,
             )
         )
     })
+
+    // all green: clock self loop; with a subtick clock: clock -> multiply, multiply -> modulo,
+    // and modulo output chained through every decider input, since deciders must not read the raw clock
+    const wires = [[1, 2, 1, 4]];
+    if (subtick_clock) {
+        wires.push([1, 4, 2, 2], [2, 4, 3, 2]);
+        const first_decider = 1 + 1 + subtick_combinators.length;
+        deciderCombinatorEntities.forEach((_, index) => {
+            const decider = first_decider + index;
+            wires.push(index === 0 ? [3, 4, decider, 2] : [decider - 1, 2, decider, 2]);
+        });
+    }
 
     return new BlueprintBuilder()
         .setLabel(blueprint_label)
         .setEntities([
             clock,
+            ...subtick_combinators,
             ...deciderCombinatorEntities
         ])
-        .setWires([[1, 2, 1, 4]])
+        .setWires(wires)
         .build();
 }

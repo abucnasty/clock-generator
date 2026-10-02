@@ -10,7 +10,7 @@ import { assertIsMachine, Entity, Inserter, Machine, ReadableEntityRegistry } fr
 import { TargetProductionRate } from "./target-production-rate";
 import { EntityState, InserterStatus, MachineState } from "../state";
 import Fraction, { fraction } from "fractionability";
-import { createSignalPerInserterBlueprint } from "./blueprint";
+import { createSignalPerInserterBlueprint, SubtickClock } from "./blueprint";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../control-logic";
 import { EntityTransferCountMap, SerializableTransferPlan } from "./sequence/cycle/swing-counts";
@@ -122,6 +122,8 @@ export interface BlueprintGenerationResult {
     clock_windows: SerializableClockWindows;
     /** Ticks of belt pickup slack added to each belt-fed inserter's windows; empty when none was applied */
     belt_pickup_slack_ticks: Record<string, number>;
+    /** For a fractional period: the same windows on a subtick clock that runs the exact period instead of rounding it */
+    subtick?: { clock: SubtickClock; blueprint: FactorioBlueprint };
     crafting_cycle_plan: CraftingCyclePlan;
     simulation_duration: Duration;
     transfer_history: InventoryTransferHistory;
@@ -480,7 +482,7 @@ export function generateClockForConfig(
     const item_names = new Map(Array.from(final_history.entries(), ([entity_id, transfers]) =>
         [entity_id.id, Array.from(new Set(transfers.map(t => t.item_name))).sort().join(",")] as const
     ));
-    const blueprintForWindows = (windows: Map<string, OpenRange[]>): FactorioBlueprint => createSignalPerInserterBlueprint(
+    const blueprintForWindows = (windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock): FactorioBlueprint => createSignalPerInserterBlueprint(
         target_production_rate.machine_production_rate.item,
         crafting_cycle_plan,
         duration,
@@ -490,8 +492,13 @@ export function generateClockForConfig(
                 ranges.map(tick_range => ({ item_name: item_names.get(key) ?? key, tick_range, amount: 0 })),
             ])
         ))),
-        simulation_context.entity_registry
+        simulation_context.entity_registry,
+        subtick_clock
     );
+    const subtick_clock = subtickClockForPeriod(duration.ticks);
+    const subtickClockFor = (windows: Map<string, OpenRange[]>) => subtick_clock
+        ? { clock: subtick_clock, blueprint: blueprintForWindows(windows, subtick_clock) }
+        : undefined;
 
     if (config.overrides?.derive_clock_windows) {
         const planned_stable = stability_check.is_stable;
@@ -525,6 +532,7 @@ export function generateClockForConfig(
             return {
                 ...derived.verification,
                 blueprint: blueprintForWindows(derived.windows),
+                subtick: subtickClockFor(derived.windows),
                 clock_windows: serializeClockWindows(derived.windows),
                 belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
                 crafting_cycle_plan,
@@ -573,6 +581,7 @@ export function generateClockForConfig(
 
         return {
             blueprint,
+            subtick: subtickClockFor(planned_windows),
             clock_windows: serializeClockWindows(planned_windows),
             belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
             crafting_cycle_plan,
@@ -819,7 +828,7 @@ function runAsBuiltCheck(
     report?: (checked: number, total: number) => void,
 ): { result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } {
     const step = Math.max(1, Math.floor(period / start_phases));
-    const total = Number.isInteger(period) ? Math.min(start_phases, Math.floor((period - 1) / step) + 1) : 1;
+    const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
     const result = generateClockForConfig(buildAsBuiltConfig(config, decider_windows, period), NESTED_RUN_OPTIONS(logger));
     const check: AsBuiltStabilityCheck = {
         is_stable: result.stability_check.is_stable,
@@ -829,9 +838,6 @@ function runAsBuiltCheck(
     report?.(1, total);
     if (!check.is_stable) {
         check.failed_start_offset = 0;
-        return { result, check };
-    }
-    if (!Number.isInteger(period)) {
         return { result, check };
     }
 
@@ -851,18 +857,37 @@ function runAsBuiltCheck(
 }
 
 function rotateRanges(ranges: OpenRange[], offset: number, period: number): OpenRange[] {
+    // the simulated clock position (tick % period) is fractional for a fractional period
+    const last_position = Number.isInteger(period) ? period - 1 : period;
     const rotated: OpenRange[] = [];
     for (const range of ranges) {
         const start = (range.start_inclusive + offset) % period;
         const end = start + (range.end_inclusive - range.start_inclusive);
         if (end >= period) {
-            rotated.push(OpenRange.from(start, period - 1));
+            rotated.push(OpenRange.from(start, last_position));
             rotated.push(OpenRange.from(0, end - period));
         } else {
             rotated.push(OpenRange.from(start, end));
         }
     }
     return rotated;
+}
+
+const MAX_SUBTICK_SCALE = 1000;
+
+/** A fractional period as p/q ticks with small integers (e.g. 550.9565... = 12672/23), or null */
+function subtickClockForPeriod(period: number): SubtickClock | null {
+    if (Number.isInteger(period)) {
+        return null;
+    }
+    for (let q = 2; q <= MAX_SUBTICK_SCALE; q++) {
+        const p = Math.round(period * q);
+        // the multiply combinator outputs up to p * q, which must fit a 32-bit signal
+        if (Math.abs(p / q - period) < 1e-6 && p * q < 2 ** 31) {
+            return { period_ticks: p, scale: q };
+        }
+    }
+    return null;
 }
 
 function windowsFromHistory(history: InventoryTransferHistory): Map<string, OpenRange[]> {
@@ -1003,7 +1028,7 @@ function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number): Enab
             end -= period;
         }
         if (end >= period) {
-            shifted.push({ start, end: period - 1 });
+            shifted.push({ start, end: Number.isInteger(period) ? period - 1 : period });
             shifted.push({ start: 0, end: end - period });
         } else {
             shifted.push({ start, end });
@@ -1136,6 +1161,8 @@ export interface ClockAlternative {
     inserter_window_count: number;
     /** The planned simulation and the clock-only check both reach the expected output */
     is_stable: boolean;
+    /** Output of all copies at the period the exported clock actually runs (whole ticks unless it is a subtick clock) */
+    items_per_second: number;
     result: BlueprintGenerationResult;
 }
 
@@ -1167,6 +1194,7 @@ export function generateClockAlternatives(
     };
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const fractional = config.overrides?.use_fractional_swings === true;
+    const copies = config.target_output.copies ?? 1;
 
     const alternatives: ClockAlternative[] = [];
     const seen = new Set<string>();
@@ -1192,7 +1220,38 @@ export function generateClockAlternatives(
             .reduce((sum, [, ranges]) => sum + ranges.length, 0);
         const is_stable = result.stability_check.is_stable && (result.stability_check.as_built?.is_stable ?? false);
         logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${result.stability_check.as_built?.actual_output_items}/${result.stability_check.expected_output_items}`);
-        alternatives.push({ id, label, description, inserter_window_count, is_stable, result });
+        const period = result.simulation_duration.ticks;
+        const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;
+        if (result.subtick) {
+            const { period_ticks, scale } = result.subtick.clock;
+            // listed first so it wins ties with the rounded clock for the default selection
+            alternatives.push({
+                id: `${id}-subtick`,
+                label: `${label}, subtick clock`,
+                description: `${description} Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
+                    + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
+                    + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
+                    + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
+                inserter_window_count,
+                is_stable,
+                items_per_second: rateAt(period),
+                result: { ...result, blueprint: result.subtick.blueprint },
+            });
+            const rounded = Math.floor(period);
+            alternatives.push({
+                id,
+                label: `${label} (clock rounded to ${rounded} ticks)`,
+                description: `${description} The period is not a whole number of ticks (${period.toFixed(3)}), so this clock `
+                    + `runs it rounded down to ${rounded} ticks, slightly faster than the target; the clock-only check models `
+                    + "the exact period, so the machines need a little headroom.",
+                inserter_window_count,
+                is_stable,
+                items_per_second: rateAt(rounded),
+                result,
+            });
+            return;
+        }
+        alternatives.push({ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), result });
     };
 
     report();
