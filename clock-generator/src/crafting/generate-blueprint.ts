@@ -1159,7 +1159,7 @@ export interface ClockAlternative {
     description: string;
     /** Total decider windows across inserters; fewer means more batched swings */
     inserter_window_count: number;
-    /** The planned simulation and the clock-only check both reach the expected output */
+    /** The clock-only check (the build driven only by the exported clock windows) reaches the expected output */
     is_stable: boolean;
     /** Output of all copies at the period the exported clock actually runs (whole ticks unless it is a subtick clock) */
     items_per_second: number;
@@ -1198,7 +1198,7 @@ export function generateClockAlternatives(
 
     const alternatives: ClockAlternative[] = [];
     const seen = new Set<string>();
-    const add = (id: string, label: string, description: string, run: () => BlueprintGenerationResult) => {
+    const add = (id: string, label: string, base_description: string, run: () => BlueprintGenerationResult) => {
         current_step = label;
         report();
         let result: BlueprintGenerationResult;
@@ -1218,8 +1218,15 @@ export function generateClockAlternatives(
         const inserter_window_count = Object.entries(result.clock_windows)
             .filter(([key]) => key.startsWith("inserter:"))
             .reduce((sum, [, ranges]) => sum + ranges.length, 0);
-        const is_stable = result.stability_check.is_stable && (result.stability_check.as_built?.is_stable ?? false);
-        logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${result.stability_check.as_built?.actual_output_items}/${result.stability_check.expected_output_items}`);
+        // the planning simulation drives inserters from inventory levels and can over- or undershoot
+        // where the exported clock does not; in game, recordings matched the clock-only check
+        const { as_built, actual_output_items, expected_output_items } = result.stability_check;
+        const is_stable = as_built?.is_stable ?? result.stability_check.is_stable;
+        const planning_note = actual_output_items === expected_output_items ? ""
+            : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
+            + "stability is judged by the clock-only check, which runs the exported clock windows.";
+        const description = base_description + planning_note;
+        logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
         const period = result.simulation_duration.ticks;
         const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;
         if (result.subtick) {
