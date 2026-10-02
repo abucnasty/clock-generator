@@ -170,12 +170,17 @@ export function compareRecording(
     const issues: string[] = [];
     const sim_period = result.simulation_duration.ticks;
     const game_period = recordedClockPeriod(recording);
+    // a combinator clock can only count whole ticks, so a fractional simulated period runs rounded down in game
+    const clock_period = Math.floor(sim_period);
+    if (!Number.isInteger(sim_period)) {
+        issues.push(`Simulation period is fractional (${sim_period.toFixed(3)} ticks); the in-game clock runs it as ${clock_period} ticks.`);
+    }
     if (game_period === null) {
         issues.push("Recording has no clock values; swings are compared by sample index, which is only meaningful if the recording started at clock 0.");
-    } else if (game_period !== sim_period) {
+    } else if (game_period !== clock_period) {
         issues.push(`In-game clock period is ${game_period} ticks but the simulation period is ${sim_period} ticks; the blueprint may not match this config.`);
     }
-    const period = sim_period;
+    const period = game_period ?? clock_period;
     const clock = clockValues(recording);
     const periods_of_sample = periodIndices(clock);
     const recorded_periods = (periods_of_sample[periods_of_sample.length - 1] ?? 0) + 1;
