@@ -16,7 +16,6 @@ export class SimulateStep implements RunnerStep {
     }
 
     public execute(): void {
-        console.log("Executing Simulate Step");
         const context = this.simulation_context
         const control_logic = this.control_logic;
 
@@ -30,8 +29,6 @@ export class SimulateStep implements RunnerStep {
             }
             control_logic.executeForTick();
         }
-        
-        console.log(`Simulation complete: ${this.duration.ticks} ticks`);
     }
 
     private build(): ControlLogic {

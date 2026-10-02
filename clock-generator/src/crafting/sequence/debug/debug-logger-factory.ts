@@ -14,6 +14,9 @@ export class DebugLoggerFactory {
     public forEntity(entity: Entity): Logger {
         return (message: string) => {
             const settings = this.settings_provider.settings();
+            if (!settings.enabled) {
+                return;
+            }
             const builder = new DebugMessageBuilder()
             const current_tick = this.tick_provider.getCurrentTick();
             

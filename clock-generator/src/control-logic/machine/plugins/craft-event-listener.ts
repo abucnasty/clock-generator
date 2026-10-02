@@ -35,9 +35,14 @@ export class CraftEventListenerPlugin implements ModePlugin<MachineMode> {
     executeForTick(): void {
         if (this.machine_state.craftCount > this.craft_index) {
             const current_tick = this.tick_provider.getCurrentTick();
+            const machine_state = this.machine_state;
+            let snapshot: MachineState | undefined;
             this.onCraftEvent({
                 craft_index: this.craft_index,
-                state: MachineState.clone(this.machine_state),
+                // cloned only when a listener reads it
+                get state() {
+                    return snapshot ??= MachineState.clone(machine_state);
+                },
                 craft_ticks: OpenRange.from(
                     this.last_craft_tick,
                     current_tick

@@ -223,7 +223,7 @@ export function generateClockForConfig(
     
     simulation_context.machines
         .map(it => it.machine_state.machine)
-        .forEach(Machine.printMachineFacts);
+        .forEach(machine => Machine.printMachineFacts(machine, logger));
 
     let relative_tick = 0;
 

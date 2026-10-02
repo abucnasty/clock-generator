@@ -21,7 +21,6 @@ export class PrepareStep implements RunnerStep {
     }
 
     public execute(): void {
-        console.log("Executing Prepare Step");
         const control_logic = this.control_logic;
         const context = this.simulation_context;
         
