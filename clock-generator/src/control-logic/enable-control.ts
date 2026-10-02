@@ -24,6 +24,14 @@ const NeverEnabledControl: EnableControl = {
     toString: () => "NeverEnabledControl"
 };
 
+/** Position of a tick in a (possibly fractional) clock period; float error is snapped as the game's integer clock would be */
+function clockPosition(tick: number, period: number): number {
+    const position = tick % period;
+    const nearest = Math.round(position);
+    const snapped = Math.abs(position - nearest) < 1e-6 ? nearest : position;
+    return snapped >= period ? 0 : snapped;
+}
+
 export class EnableControlLambda implements EnableControl {
     constructor(
         private readonly enabledFn: () => boolean
@@ -63,7 +71,7 @@ export class ClockedEnableControl implements EnableControl, Resettable {
 
     public isEnabled(): boolean {
         const currentTick = this.offset_tick_provider.getCurrentTick()
-        const adjustedTick = currentTick % this.periodDuration.ticks;
+        const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
         return this.enabledRanges.some(range => range.contains(adjustedTick));
     }
 
@@ -85,7 +93,7 @@ class PeriodicEnableControl implements EnableControl {
 
     public isEnabled(): boolean {
         const currentTick = this.tickProvider.getCurrentTick()
-        const adjustedTick = currentTick % this.periodDuration.ticks;
+        const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
         return this.enabledRanges.some(range => range.contains(adjustedTick));
     }
 }
