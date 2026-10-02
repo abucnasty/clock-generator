@@ -19,6 +19,7 @@ export interface ClockAlternativeView {
     description: string;
     inserterWindowCount: number;
     isStable: boolean;
+    itemsPerSecond: number;
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
     terminalSwingCount: number;

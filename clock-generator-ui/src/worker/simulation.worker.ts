@@ -90,6 +90,7 @@ async function handleGenerate(
             description: alternative.description,
             inserterWindowCount: alternative.inserter_window_count,
             isStable: alternative.is_stable,
+            itemsPerSecond: alternative.items_per_second,
             asBuilt: result.stability_check.as_built ?? null,
             expectedOutputItems: result.stability_check.expected_output_items,
             terminalSwingCount: result.used_terminal_swing_count,

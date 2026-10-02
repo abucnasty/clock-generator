@@ -42,6 +42,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect }
                             <TableCell>Alternative</TableCell>
                             <TableCell align="right">Output swings / cycle</TableCell>
                             <TableCell align="right">Inserter windows</TableCell>
+                            <TableCell align="right">Rate (items/s)</TableCell>
                             <TableCell align="right">Clock-only output</TableCell>
                             <TableCell>Status</TableCell>
                         </TableRow>
@@ -77,6 +78,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect }
                                 </TableCell>
                                 <TableCell align="right">{alternative.terminalSwingCount}</TableCell>
                                 <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
+                                <TableCell align="right">{alternative.itemsPerSecond.toFixed(2)}</TableCell>
                                 <TableCell align="right">
                                     {alternative.asBuilt
                                         ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
