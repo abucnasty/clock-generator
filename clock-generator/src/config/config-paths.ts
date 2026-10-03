@@ -44,4 +44,7 @@ export const ConfigPaths = {
     AUTOMATION_SCIENCE_01_TERMINAL_SWINGS: path.join(CONFIG_SAMPLES_DIR, 'automation-science-01-terminal-swings.json'),
     UTILITY_SCIENCE_DIRECT_INSERT_LDS: path.join(CONFIG_SAMPLES_DIR, 'clock-config-utility-science-pack-direct-insert-lds.json'),
     PRODUCTION_SCIENCE_JSON: path.join(CONFIG_SAMPLES_DIR, 'production-science.json'),
+    AUTOMATION_SCIENCE_BELTED_INTERNAL_BUFFER: path.join(CONFIG_SAMPLES_DIR, 'automation-science-belted-internal-buffer.json'),
+    PROCESSING_UNITS_BELT_EXPORT: path.join(CONFIG_SAMPLES_DIR, 'processing-units-example-belt-export.json'),
+    LOW_DENSITY_TWO_FOUNDRY: path.join(CONFIG_SAMPLES_DIR, 'low-density-two-foundry-120-per-second.json'),
 } as const;

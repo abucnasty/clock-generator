@@ -160,6 +160,7 @@ export {
 // Belt, Chest, and Mining Drill Types
 export {
     BeltType,
+    BeltStrategy,
     ChestType,
     MiningDrillType,
 } from './common/entity-types';

@@ -1,0 +1,273 @@
+{
+  "target_output": {
+    "recipe": "processing-unit",
+    "items_per_second": 40,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 157.075,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "processing-unit",
+      "productivity": 300,
+      "crafting_speed": 112.78750000000001,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "advanced-circuit",
+      "productivity": 175,
+      "crafting_speed": 45.444,
+      "type": "machine"
+    },
+    {
+      "id": 4,
+      "recipe": "electronic-circuit",
+      "productivity": 150,
+      "crafting_speed": 52.443999999999996,
+      "type": "machine"
+    },
+    {
+      "id": 5,
+      "recipe": "copper-cable",
+      "productivity": 175,
+      "crafting_speed": 45.444,
+      "type": "machine"
+    },
+    {
+      "id": 6,
+      "recipe": "casting-copper",
+      "productivity": 150,
+      "crafting_speed": 129,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "processing-unit"
+      ]
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "advanced-circuit"
+      ]
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ]
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ]
+    },
+    {
+      "id": 5,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ]
+    },
+    {
+      "id": 6,
+      "source": {
+        "type": "belt",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit",
+        "plastic-bar"
+      ]
+    },
+    {
+      "id": 7,
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 8,
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 9,
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 10,
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 11,
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "filters": [
+        "copper-plate"
+      ]
+    },
+    {
+      "id": 12,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "belt",
+        "id": 5
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ]
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "processing-unit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "plastic-bar",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4,
+          "consumption_per_second": 55
+        }
+      ],
+      "strategy": "export"
+    }
+  ],
+  "chests": []
+}

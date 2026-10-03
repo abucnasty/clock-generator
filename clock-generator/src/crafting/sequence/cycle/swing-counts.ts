@@ -1,5 +1,5 @@
-import Fraction from "fractionability";
-import { Chest, Entity, EntityId, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
+import Fraction, { fraction } from "fractionability";
+import { Belt, Chest, Entity, EntityId, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
 import { MachineIngredientRatios } from "./machine-ratios";
 import * as math from "mathjs"
@@ -74,6 +74,45 @@ export class EntityTransferCountMap extends MapExtended<EntityId, EntityTransfer
  * @throws Error if any output machine lacks a dedicated output inserter
  */
 function computeInserterSwingCountsForMultipleMachines(
+    output_machines: Machine[],
+    entity_registry: ReadableEntityRegistry,
+    output_swing_count_per_machine: Fraction,
+    output_stack_size: number,
+    cycle_ticks?: number
+): EntityTransferCountMap {
+    const result = computeOutputSwingCounts(output_machines, entity_registry, output_swing_count_per_machine, output_stack_size);
+    if (cycle_ticks !== undefined) {
+        addBeltLaneConsumption(entity_registry, cycle_ticks, new Set(output_machines.map(it => it.entity_id.id)), result);
+    }
+    return result;
+}
+
+/**
+ * Belt lanes with a consumption rate are emptied by consumers outside the config, so the inserters
+ * filling them must supply that rate on top of everything the target output needs.
+ */
+function addBeltLaneConsumption(
+    entity_registry: ReadableEntityRegistry,
+    cycle_ticks: number,
+    output_machine_ids: Set<string>,
+    result: EntityTransferCountMap
+): void {
+    for (const belt of entity_registry.getAll().filter(Entity.isBelt)) {
+        const consumed: ItemTransfer[] = belt.lanes
+            .filter(lane => (lane.consumption_per_second ?? 0) > 0)
+            .map(lane => ({
+                item_name: lane.ingredient_name,
+                transfer_count: fraction(lane.consumption_per_second!).multiply(cycle_ticks).divide(60),
+            }));
+        if (consumed.length > 0) {
+            // the target output inserters are already planned
+            computeSwingCountsThroughBelt(belt, entity_registry, 1, consumed, result,
+                filler => !output_machine_ids.has(filler.source.entity_id.id));
+        }
+    }
+}
+
+function computeOutputSwingCounts(
     output_machines: Machine[],
     entity_registry: ReadableEntityRegistry,
     output_swing_count_per_machine: Fraction,
@@ -303,38 +342,7 @@ function computeInserterSwingCounts(
                 total_transfer_count,
                 stack_size: inserter.metadata.stack_size
             });
-
-            // Check if the source is a machine or chest - if so, recursively compute its swing counts
-            const source_entity = entity_registry.getAll()
-                .find(e => e.entity_id.id === inserter.source.entity_id.id);
-
-            if (source_entity && Entity.isMachine(source_entity)) {
-                // Recursively compute swing counts for the source machine
-                // Use total transfer count for upstream calculation
-                // Pass the current inserter as the known output inserter for the source machine
-                // This prevents the recursive call from finding the wrong output inserter
-                // when a machine has multiple output inserters going to different downstream machines
-                computeInserterSwingCounts(
-                    source_entity,
-                    entity_registry,
-                    total_transfer_count,
-                    inserter.metadata.stack_size,
-                    result,
-                    inserter  // Pass the inserter that triggered this recursion
-                );
-            } else if (source_entity && Entity.isChest(source_entity)) {
-                // The source is a chest - find inserters that fill this chest and continue recursion
-                // A chest acts as a passthrough buffer, so the upstream inserter(s) filling it
-                // need the same transfer count as the downstream inserter pulling from it
-                computeSwingCountsThroughChest(
-                    source_entity,
-                    entity_registry,
-                    total_transfer_count,
-                    inserter.metadata.stack_size,
-                    item_transfers,
-                    result
-                );
-            }
+            computeUpstreamOfFiller(inserter, total_transfer_count, item_transfers, entity_registry, result);
         }
     }
 
@@ -441,31 +449,94 @@ function computeSwingCountsThroughChest(
                 total_transfer_count: filler_total_transfer_count,
                 stack_size: filler_inserter.metadata.stack_size
             });
+            computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result);
+        }
+    }
+}
 
-            // Continue recursion: check if the filler inserter's source is a machine
-            const filler_source = entity_registry.getAll()
-                .find(e => e.entity_id.id === filler_inserter.source.entity_id.id);
+/** Continues the recursion from an inserter filling a buffer (chest or belt) to whatever it takes from */
+function computeUpstreamOfFiller(
+    filler_inserter: Inserter,
+    filler_total_transfer_count: Fraction,
+    filler_item_transfers: ItemTransfer[],
+    entity_registry: ReadableEntityRegistry,
+    result: EntityTransferCountMap
+): void {
+    const filler_source = entity_registry.getAll()
+        .find(e => e.entity_id.id === filler_inserter.source.entity_id.id);
 
-            if (filler_source && Entity.isMachine(filler_source)) {
-                computeInserterSwingCounts(
-                    filler_source,
-                    entity_registry,
-                    filler_total_transfer_count,
-                    filler_inserter.metadata.stack_size,
-                    result,
-                    filler_inserter  // Pass the filler inserter as the known output inserter
-                );
-            } else if (filler_source && Entity.isChest(filler_source)) {
-                // Handle chained chests (chest → chest → machine)
-                computeSwingCountsThroughChest(
-                    filler_source,
-                    entity_registry,
-                    filler_total_transfer_count,
-                    filler_inserter.metadata.stack_size,
-                    filler_item_transfers,
-                    result
-                );
+    if (filler_source && Entity.isMachine(filler_source)) {
+        computeInserterSwingCounts(
+            filler_source,
+            entity_registry,
+            filler_total_transfer_count,
+            filler_inserter.metadata.stack_size,
+            result,
+            filler_inserter  // Pass the filler inserter as the known output inserter
+        );
+    } else if (filler_source && Entity.isChest(filler_source)) {
+        computeSwingCountsThroughChest(
+            filler_source,
+            entity_registry,
+            filler_total_transfer_count,
+            filler_inserter.metadata.stack_size,
+            filler_item_transfers,
+            result
+        );
+    } else if (filler_source && Entity.isBelt(filler_source)) {
+        computeSwingCountsThroughBelt(
+            filler_source,
+            entity_registry,
+            filler_inserter.metadata.stack_size,
+            filler_item_transfers,
+            result
+        );
+    }
+}
+
+/**
+ * Computes swing counts for inserters filling a belt used as a buffer between machines. Like a chest,
+ * the fillers supply what is taken off the belt, but lanes are item specific, so an item's count is
+ * split only among the fillers carrying it. A belt nothing fills is an external input.
+ */
+function computeSwingCountsThroughBelt(
+    belt: Belt,
+    entity_registry: ReadableEntityRegistry,
+    downstream_stack_size: number,
+    downstream_item_transfers: ItemTransfer[],
+    result: EntityTransferCountMap,
+    include_filler: (filler: Inserter) => boolean = () => true
+): void {
+    const fillers = entity_registry.getAll()
+        .filter(Entity.isInserter)
+        .filter(inserter => inserter.sink.entity_id.id === belt.entity_id.id)
+        .filter(include_filler);
+
+    for (const filler_inserter of fillers) {
+        const filler_item_transfers: ItemTransfer[] = [];
+        let filler_total_transfer_count = new Fraction(0);
+
+        for (const downstream_transfer of downstream_item_transfers) {
+            if (!filler_inserter.filtered_items.has(downstream_transfer.item_name)) {
+                continue;
             }
+            const fillers_for_item = fillers.filter(it => it.filtered_items.has(downstream_transfer.item_name)).length;
+            const transfer_count = downstream_transfer.transfer_count
+                .divide(fillers_for_item)
+                .multiply(downstream_stack_size)
+                .divide(filler_inserter.metadata.stack_size);
+            filler_item_transfers.push({ item_name: downstream_transfer.item_name, transfer_count });
+            filler_total_transfer_count = filler_total_transfer_count.add(transfer_count);
+        }
+
+        if (filler_item_transfers.length > 0) {
+            addTransfers(result, {
+                entity: filler_inserter,
+                item_transfers: filler_item_transfers,
+                total_transfer_count: filler_total_transfer_count,
+                stack_size: filler_inserter.metadata.stack_size
+            });
+            computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result);
         }
     }
 }

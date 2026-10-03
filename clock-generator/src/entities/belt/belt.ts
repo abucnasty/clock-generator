@@ -6,15 +6,19 @@ import { EntityId } from "../entity-id";
 import { Entity } from "../entity";
 import { Duration } from "../../data-types";
 import Fraction, { fraction } from "fractionability";
+import { BeltStrategy } from "../../common/entity-types";
 
 export interface Lane {
     ingredient_name: ItemName;
     stack_size: BeltStackSize;
+    /** Export belts only: items per second taken off this lane by consumers outside the config */
+    consumption_per_second?: number;
 }
 
 export interface Belt extends Entity{
     readonly lanes: readonly Lane[]
     readonly belt_speed: BeltSpeed
+    readonly strategy: BeltStrategy
 }
 
 export const BeltSpeed = {
@@ -144,6 +148,7 @@ function durationToDropItemAmount(belt_speed: BeltSpeed, belt_stack_size: BeltSt
 export class BeltBuilder {
     private lanes: Lane[] = [];
     private belt_speed?: BeltSpeed;
+    private strategy: BeltStrategy = BeltStrategy.NORMAL;
     private id?: EntityId;
 
     constructor() { }
@@ -153,13 +158,20 @@ export class BeltBuilder {
         return this;
     }
 
-    addLane(ingredient_name: ItemName, stack_size: BeltStackSize): BeltBuilder {
-        this.lanes.push({ ingredient_name, stack_size });
+    addLane(ingredient_name: ItemName, stack_size: BeltStackSize, consumption_per_second?: number): BeltBuilder {
+        this.lanes.push(consumption_per_second === undefined
+            ? { ingredient_name, stack_size }
+            : { ingredient_name, stack_size, consumption_per_second });
         return this;
     }
 
     setBeltSpeed(belt_speed: BeltSpeed): BeltBuilder {
         this.belt_speed = belt_speed;
+        return this;
+    }
+
+    setStrategy(strategy: BeltStrategy): BeltBuilder {
+        this.strategy = strategy;
         return this;
     }
 
@@ -170,13 +182,14 @@ export class BeltBuilder {
         return {
             entity_id: this.id!,
             lanes: this.lanes,
-            belt_speed: this.belt_speed!
+            belt_speed: this.belt_speed!,
+            strategy: this.strategy,
         };
     }
 }
 
 function fromConfig(config: BeltConfig): Belt {
-    const builder = new BeltBuilder().setId(config.id)
+    const builder = new BeltBuilder().setId(config.id).setStrategy(config.strategy ?? BeltStrategy.NORMAL)
 
     switch(config.type) {
         case "express-transport-belt":
@@ -195,7 +208,7 @@ function fromConfig(config: BeltConfig): Belt {
 
     for (const lane of config.lanes) {
         assert(isValidBeltStackSize(lane.stack_size), `Invalid stack size: ${lane.stack_size}`);
-        builder.addLane(lane.ingredient, lane.stack_size as BeltStackSize);
+        builder.addLane(lane.ingredient, lane.stack_size as BeltStackSize, "consumption_per_second" in lane ? lane.consumption_per_second : undefined);
     }
     return builder.build();
 }

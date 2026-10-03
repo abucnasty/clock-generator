@@ -1,0 +1,193 @@
+{
+  "target_output": {
+    "recipe": "low-density-structure",
+    "items_per_second": 120,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "casting-low-density-structure",
+      "productivity": 300,
+      "crafting_speed": 225.33100000000002,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "casting-low-density-structure",
+      "productivity": 300,
+      "crafting_speed": 225.33100000000002,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "plastic-bar",
+      "productivity": 300,
+      "crafting_speed": 27.5,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "low-density-structure"
+      ],
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "low-density-structure"
+      ],
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 15,
+      "filters": [
+        "plastic-bar"
+      ],
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "plastic-bar"
+      ],
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 15,
+      "filters": [
+        "plastic-bar"
+      ],
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "belt",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "plastic-bar"
+      ],
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "coal",
+        "coal"
+      ],
+      "id": 7
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "low-density-structure",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "coal",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "plastic-bar",
+          "stack_size": 4,
+          "consumption_per_second": 15
+        }
+      ],
+      "strategy": "export"
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "plastic-bar",
+          "stack_size": 4,
+          "consumption_per_second": 15
+        }
+      ],
+      "strategy": "export"
+    }
+  ],
+  "chests": []
+}

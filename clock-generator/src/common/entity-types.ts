@@ -20,6 +20,17 @@ export const BeltType = {
 
 export type BeltType = typeof BeltType[keyof typeof BeltType];
 
+/**
+ * normal: an endless source and sink.
+ * export: normal, plus a consumption rate per lane for consumers outside the config.
+ */
+export const BeltStrategy = {
+    NORMAL: "normal",
+    EXPORT: "export"
+} as const;
+
+export type BeltStrategy = typeof BeltStrategy[keyof typeof BeltStrategy];
+
 
 export const ChestType = {
     BUFFER_CHEST: "buffer-chest",

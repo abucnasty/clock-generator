@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MiningDrillType, BeltType, ChestType } from "../common/entity-types";
+import { MiningDrillType, BeltType, BeltStrategy, ChestType } from "../common/entity-types";
 import {
     EnableControlMode,
     EntityReference,
@@ -371,19 +371,39 @@ const BeltTypeSchema = z.enum([
 
 export const BeltLaneConfigSchema = z.object({
     ingredient: z.string(),
-    stack_size: z.number().int().positive()
+    stack_size: z.number().int().positive(),
 });
 
 export type BeltLaneConfig = z.infer<typeof BeltLaneConfigSchema>;
 
-export const BeltConfigSchema = z.object({
+export const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
+    /** Items per second taken off this lane by consumers outside the config */
+    consumption_per_second: z.number().positive().optional(),
+});
+
+export type ExportBeltLaneConfig = z.infer<typeof ExportBeltLaneConfigSchema>;
+
+const NormalBeltConfigSchema = z.object({
     id: z.number().int().positive(),
     type: BeltTypeSchema,
+    strategy: z.literal(BeltStrategy.NORMAL).optional(),
     lanes: z.union([
         z.tuple([BeltLaneConfigSchema]),
         z.tuple([BeltLaneConfigSchema, BeltLaneConfigSchema])
     ])
 });
+
+const ExportBeltConfigSchema = z.object({
+    id: z.number().int().positive(),
+    type: BeltTypeSchema,
+    strategy: z.literal(BeltStrategy.EXPORT),
+    lanes: z.union([
+        z.tuple([ExportBeltLaneConfigSchema]),
+        z.tuple([ExportBeltLaneConfigSchema, ExportBeltLaneConfigSchema])
+    ])
+});
+
+export const BeltConfigSchema = z.union([NormalBeltConfigSchema, ExportBeltConfigSchema]);
 
 export type BeltConfig = z.infer<typeof BeltConfigSchema>;
 

@@ -281,6 +281,59 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    describe("belt used as a buffer between machines", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_BELTED_INTERNAL_BUFFER);
+        const result = generateClockForConfig(config);
+        const moved = (inserter_id: number) => Array.from(result.transfer_history.entries())
+            .find(([id]) => id.id === EntityId.forInserter(inserter_id).id)![1]
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        it("is stable", () => {
+            expect(result.stability_check.is_stable).toBe(true);
+        });
+
+        it("clocks the inserters filling the belt for what is taken off it", () => {
+            expect(moved(1) + moved(2)).toBe(moved(3));
+        });
+    });
+
+    describe("belt lane consumed outside the config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
+        const result = generateClockForConfig(config);
+
+        it("fills the lane at its consumption rate", () => {
+            const lane = config.belts.find(belt => belt.id === 5)!.lanes[0];
+            const consumption_per_second = "consumption_per_second" in lane ? lane.consumption_per_second! : 0;
+            const [, transfers] = Array.from(result.transfer_history.entries())
+                .find(([id]) => id.id === EntityId.forInserter(12).id)!;
+            const exported = transfers.reduce((sum, t) => sum + t.amount, 0);
+            expect(exported).toBe(consumption_per_second * result.simulation_duration.ticks / 60);
+        });
+    });
+
+    // 4 output swings per 64 tick cycle is the optimal clock; the planner alone only reaches 2 swings
+    describe("two foundry low density structures with plastic exports", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_TWO_FOUNDRY);
+        const { alternatives } = generateClockAlternatives(config);
+        const four_swings = alternatives.find(a => a.id === "swings-4");
+
+        it("offers 4 output swings per cycle", () => {
+            expect(four_swings?.result.used_terminal_swing_count).toBe(4);
+            expect(four_swings?.result.crafting_cycle_plan.total_duration.ticks).toBe(64);
+        });
+
+        it("is stable at the target rate", () => {
+            expect(four_swings?.is_stable).toBe(true);
+            expect(four_swings?.items_per_second).toBe(120);
+        });
+
+        it("enables the output inserters for one batch of swings per cycle", () => {
+            const batch = Array.from({ length: 6 }, (_, cycle) => ({ start: 2 + cycle * 64, end: 50 + cycle * 64 }));
+            expect(four_swings?.result.clock_windows["inserter:1"]).toEqual(batch);
+            expect(four_swings?.result.clock_windows["inserter:2"]).toEqual(batch);
+        });
+    });
+
     describe("config validation", () => {
         it("throw error if the current configuration cannot meet the target production rate", async () => {
             const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);

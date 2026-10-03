@@ -104,6 +104,12 @@ export class EnableControlFactory {
             return this.fromMachineToChest(entity_state.inserter, source_state, sink_state);
         }
 
+        // Machine → belt another machine or an export takes from: clocked for exactly its planned swings
+        if (EntityState.isMachine(source_state) && EntityState.isBelt(sink_state)
+            && this.entity_transfer_map.has(entity_state.inserter.entity_id)) {
+            return this.plannedSwingsOntoBelt(entity_state.inserter);
+        }
+
         // Chest → Machine: Enable when chest has items and machine needs them
         if (EntityState.isChest(source_state) && EntityState.isMachine(sink_state)) {
             return EnableControl.all([
@@ -1026,6 +1032,36 @@ export class EnableControlFactory {
             );
         }
         return this.crafting_cycle_plan.total_duration;
+    }
+
+    /**
+     * Enables the planned swings spread evenly over each cycle, so the belt is filled at a steady rate and the
+     * source machine's other output inserters are not starved at the start of the cycle. A fractional count
+     * spreads over as many cycles as its denominator, e.g. 5/2 swings is 2 then 3.
+     */
+    private plannedSwingsOntoBelt(inserter: Inserter): EnableControl {
+        const swings_per_cycle = this.entity_transfer_map.getOrThrow(inserter.entity_id).total_transfer_count;
+        const numerator = swings_per_cycle.getNumerator;
+        const cycles = swings_per_cycle.getDenominator;
+        const cycle_ticks = this.crafting_cycle_plan.total_duration.ticks;
+
+        const enabled_ranges: OpenRange[] = [];
+        for (let cycle = 0; cycle < cycles; cycle++) {
+            const swings = Math.floor((cycle + 1) * numerator / cycles) - Math.floor(cycle * numerator / cycles);
+            for (let swing = 0; swing < swings; swing++) {
+                const start = Math.floor(cycle * cycle_ticks + swing * cycle_ticks / swings);
+                // long enough for an idle inserter to notice it is enabled and start one pickup
+                enabled_ranges.push(OpenRange.fromStartAndDuration(start, 3));
+            }
+        }
+
+        const clocked_control = EnableControl.clocked({
+            periodDuration: Duration.ofTicks(cycle_ticks * cycles),
+            enabledRanges: enabled_ranges,
+            tickProvider: this.tick_provider,
+        });
+        this.resettable_registry.register(clocked_control);
+        return clocked_control;
     }
 
     private clockedForCycle(enable_ranges: OpenRange[]): EnableControl {
