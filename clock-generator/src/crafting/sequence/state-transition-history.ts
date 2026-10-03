@@ -41,6 +41,9 @@ export class StateTransitionHistory extends MapExtended<EntityId, EntityStateTra
         super(entries);
     }
 
+    /** Off during prepare and warmup, whose transitions are cleared before the measured run anyway */
+    public recording = true;
+
     /**
      * Record a state transition for an entity
      */
@@ -49,6 +52,9 @@ export class StateTransitionHistory extends MapExtended<EntityId, EntityStateTra
         entity_type: StateTransitionEntityType,
         transition: StateTransition
     ): void {
+        if (!this.recording) {
+            return;
+        }
         let entity_transitions = this.get(entity_id);
         if (!entity_transitions) {
             entity_transitions = {

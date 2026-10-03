@@ -237,6 +237,8 @@ export function generateClockForConfig(
     const inventory_transfer_history = configureInventoryTransferPlugins(simulation_context, relative_tick_provider);
     const state_transition_history = configureStateTransitionPlugins(simulation_context, relative_tick_provider);
 
+    inventory_transfer_history.recording = false;
+    state_transition_history.recording = false;
     logger.log(`Created simulation context with ${simulation_context.machines.length} machines and ${simulation_context.inserters.length} inserters.`);
 
     // Step 1: Prepare - wait until all machines are output blocked
@@ -419,6 +421,8 @@ export function generateClockForConfig(
     if (debug_steps[RunnerStepType.SIMULATE]) {
         debug.enable();
     } else {
+    inventory_transfer_history.recording = true;
+    state_transition_history.recording = true;
         debug.disable();
     }
     simulate_step.execute();
