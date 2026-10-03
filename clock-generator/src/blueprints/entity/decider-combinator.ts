@@ -8,6 +8,7 @@ import {
     ControlBehaviorBuilder,
     DeciderCombinatorConditionBuilder,
     DeciderCombinatorOutputBuilder,
+    Direction,
     Entity,
     EntityType,
     Position,
@@ -25,11 +26,17 @@ export interface DeciderCombinatorEntity extends Entity {
 
 export class DeciderCombinatorEntityBuilder {
     private position: Position = Position.zero;
+    private direction: Direction | undefined = undefined;
     private control_behavior: ControlBehavior = {};
     private player_description: string | undefined = undefined;
 
     public setPosition(position: Position): DeciderCombinatorEntityBuilder {
         this.position = position;
+        return this;
+    }
+
+    public setDirection(direction: Direction): DeciderCombinatorEntityBuilder {
+        this.direction = direction;
         return this;
     }
 
@@ -53,6 +60,7 @@ export class DeciderCombinatorEntityBuilder {
             name: EntityType.DECIDER_COMBINATOR,
             player_description: this.player_description,
             position: this.position,
+            ...(this.direction !== undefined ? { direction: this.direction } : {}),
             control_behavior: this.control_behavior
         };
     }

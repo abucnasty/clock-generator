@@ -1,6 +1,6 @@
 import Fraction from "fractionability";
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
-import { Position, SignalId } from "../blueprints/components";
+import { Direction, Position, SignalId } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
 import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
 import { Duration, OpenRange } from "../data-types";
@@ -254,6 +254,7 @@ export function createSignalPerInserterBlueprint(
     const clock = DeciderCombinatorEntity
         .clock(subtick_clock ? subtick_clock.period_ticks : total_duration.ticks, 1)
         .setPosition(Position.fromXY(x, 0))
+        .setDirection(Direction.SOUTH)
         .setMultiLinePlayerDescription(
             generateClockDescriptionLines(
                 final_output_item_name,
