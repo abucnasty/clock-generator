@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check versions are in sync
+        id: version
+        run: |
+          GENERATOR=$(node -p "require('./clock-generator/package.json').version")
+          UI=$(node -p "require('./clock-generator-ui/package.json').version")
+          if [ "$GENERATOR" != "$UI" ]; then
+            echo "::error::clock-generator ($GENERATOR) and clock-generator-ui ($UI) versions differ"
+            exit 1
+          fi
+          echo "version=$GENERATOR" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "v$VERSION is already released, skipping."
+            exit 0
+          fi
+          NOTES=$(awk -v version="$VERSION" 'index($0, "## [" version "]") == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
+          gh release create "v$VERSION" --title "v$VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
