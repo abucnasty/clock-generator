@@ -1544,6 +1544,8 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
 /** What the remaining alternatives need from the first (planned + belt pickup slack) run */
 /** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
 const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
+/** Output swing counts above the planned one offered as alternatives */
+const EXTENDED_SWING_COUNTS = 3;
 
 export interface ClockAlternativeContext {
     swings: number;
@@ -1614,9 +1616,13 @@ function alternativeDefinitions(
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const fractional = config.overrides?.use_fractional_swings === true;
     const { swings } = context;
-    const lowerSwings = (lower: number, extra: GenerateClockOptions) => generateClockForConfig(
-        { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: lower } }, extra);
+    const withSwings = (count: number, extra: GenerateClockOptions) => generateClockForConfig(
+        { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
     const lower_counts = Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
+    // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
+    // output inserter takes hands, so longer cycles can work too
+    const higher_counts = context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
+        : Array.from({ length: EXTENDED_SWING_COUNTS }, (_, i) => swings + 1 + i);
 
     return [
         {
@@ -1650,13 +1656,20 @@ function alternativeDefinitions(
                 { ...quiet, derive_mode: "always" }
             ),
         }]),
+        ...higher_counts.map(higher => ({
+            id: `swings-${higher}`,
+            label: `${higher} output swings per cycle`,
+            description: `Planned windows with a longer crafting cycle: the output inserter takes ${higher} hands per cycle instead of `
+                + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer windows.`,
+            run: () => withSwings(higher, quiet),
+        })),
         ...lower_counts.map(lower => ({
             id: `swings-${lower}`,
             label: `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
             description: `Planned windows with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} per crafting cycle `
                 + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
                 + "is unstable.",
-            run: () => lowerSwings(lower, quiet),
+            run: () => withSwings(lower, quiet),
         })),
         {
             id: "full-hand",
@@ -1674,10 +1687,10 @@ function alternativeDefinitions(
                     return generateClockWithSwingBackoff(base_config, full_hand);
                 }
                 const stable_lower = lower_counts.find(lower =>
-                    known_stable(`swings-${lower}`) ?? alternativeIsStable(lowerSwings(lower, { ...quiet, on_progress_detail: undefined })));
+                    known_stable(`swings-${lower}`) ?? alternativeIsStable(withSwings(lower, { ...quiet, on_progress_detail: undefined })));
                 return stable_lower === undefined
                     ? generateClockWithSwingBackoff(base_config, full_hand)
-                    : lowerSwings(stable_lower, full_hand);
+                    : withSwings(stable_lower, full_hand);
             },
         },
     ];
