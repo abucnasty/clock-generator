@@ -17,7 +17,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react';
 import type {
     SerializableStateTransitionHistory,
     SerializableEntityStateTransitions,
@@ -67,68 +67,121 @@ interface StatusFilters {
     categories: Set<StatusCategory>;
 }
 
-interface StatusBarProps {
-    transition: SerializableStateTransition;
+interface TimelineBarProps {
+    transitions: SerializableStateTransition[];
     totalDuration: number;
-    rowHeight: number;
+    height: number;
     entityType: 'inserter' | 'machine' | 'drill';
     viewMode: ViewMode;
-    isFiltered?: boolean;
+    isFiltered: (transition: SerializableStateTransition) => boolean;
 }
 
-function StatusBar({ transition, totalDuration, rowHeight, entityType, viewMode, isFiltered = false }: StatusBarProps) {
-    const startPercent = (transition.tick / totalDuration) * 100;
-    const widthPercent = (transition.duration_ticks / totalDuration) * 100;
-    
-    const color = viewMode === 'detailed'
-        ? getStatusColor(entityType, transition.to_status)
-        : getCategoryColor(statusToCategory(entityType, transition.to_status));
+/** Drawn on a canvas: an element per transition does not scale to tens of thousands of transitions */
+function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered }: TimelineBarProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [width, setWidth] = useState(0);
+    const [hovered, setHovered] = useState<SerializableStateTransition | null>(null);
+    const sorted = useMemo(() => [...transitions].sort((a, b) => a.tick - b.tick), [transitions]);
 
-    const statusLabel = viewMode === 'detailed'
+    const colorOf = useCallback((transition: SerializableStateTransition) => viewMode === 'detailed'
+        ? getStatusColor(entityType, transition.to_status)
+        : getCategoryColor(statusToCategory(entityType, transition.to_status)), [entityType, viewMode]);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) {
+            return;
+        }
+        const observer = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
+        observer.observe(canvas);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext('2d');
+        if (!canvas || !context || width === 0) {
+            return;
+        }
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        context.clearRect(0, 0, width, height);
+        for (const transition of sorted) {
+            const x = (transition.tick / totalDuration) * width;
+            const w = Math.max((transition.duration_ticks / totalDuration) * width, 1);
+            context.globalAlpha = isFiltered(transition) ? 0.15 : 1;
+            context.fillStyle = colorOf(transition);
+            context.fillRect(x, 0, w, height);
+        }
+        if (hovered) {
+            context.globalAlpha = 1;
+            context.strokeStyle = '#ffffff';
+            context.strokeRect(
+                (hovered.tick / totalDuration) * width + 0.5,
+                0.5,
+                Math.max((hovered.duration_ticks / totalDuration) * width, 1) - 1,
+                height - 1,
+            );
+        }
+    }, [sorted, totalDuration, width, height, colorOf, isFiltered, hovered]);
+
+    const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const tick = ((event.clientX - rect.left) / rect.width) * totalDuration;
+        let low = 0;
+        let high = sorted.length - 1;
+        let found: SerializableStateTransition | null = null;
+        while (low <= high) {
+            const mid = (low + high) >> 1;
+            if (sorted[mid].tick <= tick) {
+                found = sorted[mid];
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        // narrow transitions are drawn at least a pixel wide
+        const min_ticks = totalDuration / Math.max(rect.width, 1);
+        const hit = found && tick <= found.tick + Math.max(found.duration_ticks, min_ticks) ? found : null;
+        if (hit !== hovered) {
+            setHovered(hit);
+        }
+    };
+
+    const statusLabel = (transition: SerializableStateTransition) => viewMode === 'detailed'
         ? getStatusLabel(transition.to_status)
         : getCategoryLabel(statusToCategory(entityType, transition.to_status));
 
-    const { icon, text } = formatTransitionReason(transition.reason);
-
     return (
         <Tooltip
-            title={
-                <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                        {statusLabel}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                        From: {getStatusLabel(transition.from_status)}
-                    </Typography>
-                    <Typography variant="caption" display="block">
-                        Tick {transition.tick} ({transition.duration_ticks} ticks)
-                    </Typography>
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                        {icon} {text}
-                    </Typography>
-                </Box>
-            }
+            open={hovered !== null}
+            followCursor
             arrow
             placement="top"
+            title={hovered ? (
+                <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                        {statusLabel(hovered)}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                        From: {getStatusLabel(hovered.from_status)}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                        Tick {hovered.tick} ({hovered.duration_ticks} ticks)
+                    </Typography>
+                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                        {formatTransitionReason(hovered.reason).icon} {formatTransitionReason(hovered.reason).text}
+                    </Typography>
+                </Box>
+            ) : ''}
         >
-            <Box
-                sx={{
-                    position: 'absolute',
-                    left: `${startPercent}%`,
-                    width: `${Math.max(widthPercent, 0.3)}%`,
-                    height: rowHeight - 4,
-                    top: 2,
-                    bgcolor: color,
-                    borderRadius: 0.5,
-                    cursor: 'pointer',
-                    opacity: isFiltered ? 0.15 : 1,
-                    transition: 'opacity 0.2s, transform 0.1s',
-                    '&:hover': {
-                        opacity: isFiltered ? 0.25 : 0.8,
-                        transform: 'scaleY(1.1)',
-                        zIndex: 1,
-                    },
-                }}
+            <canvas
+                ref={canvasRef}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => setHovered(null)}
+                style={{ position: 'absolute', left: 0, top: 2, width: '100%', height, cursor: 'pointer' }}
             />
         </Tooltip>
     );
@@ -254,17 +307,14 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters }
                     borderRadius: 0.5,
                 }}
             >
-                {entity.transitions.map((transition, idx) => (
-                    <StatusBar
-                        key={`${entity.entity_id}-${idx}`}
-                        transition={transition}
-                        totalDuration={totalDuration}
-                        rowHeight={rowHeight}
-                        entityType={entity.entity_type}
-                        viewMode={viewMode}
-                        isFiltered={isTransitionFiltered(transition)}
-                    />
-                ))}
+                <TimelineBar
+                    transitions={entity.transitions}
+                    totalDuration={totalDuration}
+                    height={rowHeight - 4}
+                    entityType={entity.entity_type}
+                    viewMode={viewMode}
+                    isFiltered={isTransitionFiltered}
+                />
             </Box>
         </Box>
     );
@@ -350,7 +400,7 @@ function Legend({ viewMode, filters, statusFilters }: LegendProps) {
     );
 }
 
-export function StateTransitionTimeline({ stateTransitionHistory }: StateTransitionTimelineProps) {
+function StateTransitionTimelineComponent({ stateTransitionHistory }: StateTransitionTimelineProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>('simplified');
     const [sortMode, setSortMode] = useState<SortMode>('byType');
@@ -855,3 +905,5 @@ export function StateTransitionTimeline({ stateTransitionHistory }: StateTransit
         </>
     );
 }
+
+export const StateTransitionTimeline = memo(StateTransitionTimelineComponent);
