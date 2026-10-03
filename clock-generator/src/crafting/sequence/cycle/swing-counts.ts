@@ -143,33 +143,38 @@ function computeInserterSwingCountsForMultipleMachines(
             );
 
             // Merge into combined result
-            for (const [entity_id, transfer_count] of machine_swing_counts.entries()) {
-                const existing = combined_result.get(entity_id);
-                if (existing) {
-                    // If entity already exists (shared upstream entity), add the transfer counts
-                    const merged_item_transfers: ItemTransfer[] = [...existing.item_transfers];
-                    for (const new_transfer of transfer_count.item_transfers) {
-                        const existing_item = merged_item_transfers.find(it => it.item_name === new_transfer.item_name);
-                        if (existing_item) {
-                            existing_item.transfer_count = existing_item.transfer_count.add(new_transfer.transfer_count);
-                        } else {
-                            merged_item_transfers.push({ ...new_transfer });
-                        }
-                    }
-                    combined_result.set(entity_id, {
-                        entity: existing.entity,
-                        item_transfers: merged_item_transfers,
-                        total_transfer_count: existing.total_transfer_count.add(transfer_count.total_transfer_count),
-                        stack_size: existing.stack_size
-                    });
-                } else {
-                    combined_result.set(entity_id, transfer_count);
-                }
+            for (const transfer_count of machine_swing_counts.values()) {
+                addTransfers(combined_result, transfer_count);
             }
         }
     }
 
     return combined_result;
+}
+
+/** Adds to an entity's transfers, since a machine reached through several inserter paths must supply all of them */
+function addTransfers(result: EntityTransferCountMap, transfer_count: EntityTransferCount): void {
+    const entity_id = transfer_count.entity.entity_id;
+    const existing = result.get(entity_id);
+    if (!existing) {
+        result.set(entity_id, transfer_count);
+        return;
+    }
+    const item_transfers = existing.item_transfers.map(it => ({ ...it }));
+    for (const new_transfer of transfer_count.item_transfers) {
+        const existing_item = item_transfers.find(it => it.item_name === new_transfer.item_name);
+        if (existing_item) {
+            existing_item.transfer_count = existing_item.transfer_count.add(new_transfer.transfer_count);
+        } else {
+            item_transfers.push({ ...new_transfer });
+        }
+    }
+    result.set(entity_id, {
+        entity: existing.entity,
+        item_transfers,
+        total_transfer_count: existing.total_transfer_count.add(transfer_count.total_transfer_count),
+        stack_size: existing.stack_size
+    });
 }
 
 /**
@@ -213,15 +218,18 @@ function computeInserterSwingCounts(
 
     assert(output_inserter !== undefined, `No inserter found that takes output from machine ${machine.entity_id}`);
 
-    result.set(output_inserter.entity_id, {
-        entity: output_inserter,
-        item_transfers: [{
-            item_name: machine.output.item_name,
-            transfer_count: output_swing_count
-        }],
-        total_transfer_count: output_swing_count,
-        stack_size: output_inserter.metadata.stack_size
-    })
+    // in recursive calls the caller has already recorded (and accumulated) the output inserter
+    if (!result.has(output_inserter.entity_id)) {
+        result.set(output_inserter.entity_id, {
+            entity: output_inserter,
+            item_transfers: [{
+                item_name: machine.output.item_name,
+                transfer_count: output_swing_count
+            }],
+            total_transfer_count: output_swing_count,
+            stack_size: output_inserter.metadata.stack_size
+        })
+    }
 
     // Get the recursive ratios for this machine
     const ratios = MachineIngredientRatios.forMachine(machine, entity_registry);
@@ -289,7 +297,7 @@ function computeInserterSwingCounts(
 
         // Only add to result if this inserter has item transfers
         if (item_transfers.length > 0) {
-            result.set(inserter.entity_id, {
+            addTransfers(result, {
                 entity: inserter,
                 item_transfers,
                 total_transfer_count,
@@ -427,7 +435,7 @@ function computeSwingCountsThroughChest(
         }
 
         if (filler_item_transfers.length > 0) {
-            result.set(filler_inserter.entity_id, {
+            addTransfers(result, {
                 entity: filler_inserter,
                 item_transfers: filler_item_transfers,
                 total_transfer_count: filler_total_transfer_count,
