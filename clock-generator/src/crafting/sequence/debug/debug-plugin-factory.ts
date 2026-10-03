@@ -72,10 +72,11 @@ export class DebugPluginFactory {
 
     public machineCraftEventPlugin(machine_state: MachineState) {
         const debugLog = this.log_factory.forEntity(machine_state.machine);
-        return new CraftEventListenerPlugin(machine_state, this.tick_provider, ({ state }) => {
+        return new CraftEventListenerPlugin(machine_state, this.tick_provider, (event) => {
             if (!this.enabled()) {
                 return;
             }
+            const { state } = event;
             let message = `craft event #${machine_state.craftCount}:`;
 
             const options: Partial<CraftEventPluginSettings> = this.settings_provider.settings().plugin_settings?.craft_event ?? {};

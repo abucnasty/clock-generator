@@ -32,6 +32,36 @@ function clockPosition(tick: number, period: number): number {
     return snapped >= period ? 0 : snapped;
 }
 
+/** Same answer as ranges.some(r => r.contains(position)), by binary search over the merged ranges */
+function rangeLookup(ranges: ReadonlyArray<OpenRange>): (position: number) => boolean {
+    const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
+    const starts: number[] = [];
+    const ends: number[] = [];
+    for (const range of sorted) {
+        if (ends.length > 0 && range.start_inclusive <= ends[ends.length - 1]) {
+            ends[ends.length - 1] = Math.max(ends[ends.length - 1], range.end_inclusive);
+        } else {
+            starts.push(range.start_inclusive);
+            ends.push(range.end_inclusive);
+        }
+    }
+    return (position) => {
+        let low = 0;
+        let high = starts.length - 1;
+        while (low <= high) {
+            const mid = (low + high) >> 1;
+            if (position < starts[mid]) {
+                high = mid - 1;
+            } else if (position > ends[mid]) {
+                low = mid + 1;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    };
+}
+
 export class EnableControlLambda implements EnableControl {
     constructor(
         private readonly enabledFn: () => boolean
@@ -57,6 +87,7 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     }
     private offset = 0;
     private readonly offset_tick_provider: OffsetTickProvider;
+    private readonly inRange: (position: number) => boolean;
 
     constructor(
         public readonly periodDuration: Duration,
@@ -67,12 +98,13 @@ export class ClockedEnableControl implements EnableControl, Resettable {
             base: tickProvider,
             offset: this.getOffset.bind(this),
         })
+        this.inRange = rangeLookup(enabledRanges);
     }
 
     public isEnabled(): boolean {
         const currentTick = this.offset_tick_provider.getCurrentTick()
         const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
-        return this.enabledRanges.some(range => range.contains(adjustedTick));
+        return this.inRange(adjustedTick);
     }
 
     public getOffset(): number {
@@ -85,16 +117,20 @@ export class ClockedEnableControl implements EnableControl, Resettable {
 }
 
 class PeriodicEnableControl implements EnableControl {
+    private readonly inRange: (position: number) => boolean;
+
     constructor(
         public readonly periodDuration: Duration,
         public readonly enabledRanges: ReadonlyArray<OpenRange>,
         public readonly tickProvider: TickProvider
-    ) { }
+    ) {
+        this.inRange = rangeLookup(enabledRanges);
+    }
 
     public isEnabled(): boolean {
         const currentTick = this.tickProvider.getCurrentTick()
         const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
-        return this.enabledRanges.some(range => range.contains(adjustedTick));
+        return this.inRange(adjustedTick);
     }
 }
 
