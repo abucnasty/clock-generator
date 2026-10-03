@@ -63,6 +63,7 @@ export {
     generateClockForConfig,
     generateClockWithSwingBackoff,
     generateClockAlternatives,
+    blueprintFileFor,
     planClockAlternatives,
     runClockAlternativeTask,
     combineClockAlternativeRuns,

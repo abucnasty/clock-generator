@@ -55,7 +55,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         asBuilt: result.stability_check.as_built ?? null,
         expectedOutputItems: result.stability_check.expected_output_items,
         terminalSwingCount: result.used_terminal_swing_count,
-        blueprintString: clockGenerator.encodeBlueprintFileBrowser({ blueprint: result.blueprint }),
+        blueprintString: clockGenerator.encodeBlueprintFileBrowser(clockGenerator.blueprintFileFor(result)),
         transferHistory: result.serializable_transfer_history,
         stateTransitionHistory: result.serializable_state_transition_history,
         simulationDurationTicks: result.simulation_duration.ticks,

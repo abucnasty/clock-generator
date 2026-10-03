@@ -115,6 +115,23 @@ function fromRanges(
         .setControlBehavior(controlBehavior)
 }
 
+function fromSignalRanges(
+    inputs: { signal: SignalId; ranges: OpenRange[] }[],
+    outputSignals: SignalId[]
+): DeciderCombinatorEntityBuilder {
+    const conditions = inputs.flatMap(({ signal, ranges }) =>
+        ranges.flatMap(range => DeciderCombinatorCondition.fromOpenRange(range, signal)));
+
+    const controlBehavior = new ControlBehaviorBuilder()
+        .setDeciderConditions(conditions)
+        .setOutputs(outputSignals.map(signalId => DeciderCombinatorOutput.constant(signalId, 1)))
+        .build();
+
+    return new DeciderCombinatorEntityBuilder()
+        .setPosition(Position.zero)
+        .setControlBehavior(controlBehavior)
+}
+
 function fromInventoryTransfers(
     clock_signal_id: SignalId,
     inventory_transfers: InventoryTransfer[]
@@ -141,5 +158,6 @@ function fromInventoryTransfers(
 export const DeciderCombinatorEntity = {
     clock: clock,
     fromRanges: fromRanges,
+    fromSignalRanges: fromSignalRanges,
     fromInventoryTransfers: fromInventoryTransfers,
 }

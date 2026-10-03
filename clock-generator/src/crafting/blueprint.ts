@@ -17,6 +17,7 @@ function createDeciderCombinatorForTransfers(
     number_of_cycles: number,
     position: Position,
     mapRanges: (ranges: OpenRange[]) => OpenRange[] = ranges => ranges,
+    modulo?: { split: ModuloRanges; signal: SignalId },
 ): DeciderCombinatorEntity {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
     const entity_number = entity_id.id.split(":")[1]
@@ -50,15 +51,18 @@ function createDeciderCombinatorForTransfers(
     }
 
     const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));
+    const outputs = Array.from(items).map(item_name => SignalId.item(item_name));
 
-    const deciderCombinator = DeciderCombinatorEntity
-        .fromRanges(
-            SignalId.clock,
-            ranges,
-            Array.from(items).map(item_name => SignalId.item(item_name))
-        )
+    const deciderCombinator = (modulo
+        ? DeciderCombinatorEntity.fromSignalRanges([
+            { signal: modulo.signal, ranges: moduloSignalRanges(modulo.split.repeating, modulo.split.modulus) },
+            { signal: SignalId.clock, ranges: modulo.split.remaining },
+        ], outputs)
+        : DeciderCombinatorEntity.fromRanges(SignalId.clock, ranges, outputs))
         .setPosition(position)
-        .setMultiLinePlayerDescription(description_lines)
+        .setMultiLinePlayerDescription(modulo
+            ? description_lines.concat(`Repeats every ${modulo.split.modulus} ticks: ${SignalId.toDescriptionString(modulo.signal)} is the clock modulo ${modulo.split.modulus}`)
+            : description_lines)
         .build();
 
     return deciderCombinator
@@ -129,6 +133,89 @@ function wholeRanges(ranges: OpenRange[]): OpenRange[] {
         .filter(range => range.start_inclusive <= range.end_inclusive);
 }
 
+/** A decider's clock windows as the part repeating every `modulus` ticks plus the remaining windows */
+export interface ModuloRanges {
+    modulus: number;
+    /** Positions in [0, modulus) enabled in every repeat */
+    repeating: OpenRange[];
+    /** Clock windows not covered by the repeating part */
+    remaining: OpenRange[];
+}
+
+function maskRuns(mask: Uint8Array, length: number): OpenRange[] {
+    const runs: OpenRange[] = [];
+    let start = -1;
+    for (let i = 0; i <= length; i++) {
+        if (i < length && mask[i]) {
+            if (start < 0) {
+                start = i;
+            }
+        } else if (start >= 0) {
+            runs.push(OpenRange.from(start, i - 1));
+            start = -1;
+        }
+    }
+    return runs;
+}
+
+/**
+ * The split of whole-tick windows in a whole-tick period that needs the fewest decider conditions, or null when
+ * no divisor of the period beats listing every window. Long periods (a high LCM) mostly repeat every crafting cycle.
+ */
+export function splitRepeatingRanges(ranges: OpenRange[], period: number): ModuloRanges | null {
+    if (!Number.isInteger(period) || ranges.length < 2) {
+        return null;
+    }
+    const mask = new Uint8Array(period);
+    for (const range of ranges) {
+        for (let tick = Math.max(0, range.start_inclusive); tick <= Math.min(period - 1, range.end_inclusive); tick++) {
+            mask[tick] = 1;
+        }
+    }
+    let best: ModuloRanges | null = null;
+    let best_count = maskRuns(mask, period).length;
+    for (let modulus = 1; modulus < period; modulus++) {
+        if (period % modulus !== 0) {
+            continue;
+        }
+        const repeating_mask = new Uint8Array(modulus);
+        for (let position = 0; position < modulus; position++) {
+            let every = 1;
+            for (let tick = position; tick < period && every; tick += modulus) {
+                every = mask[tick];
+            }
+            repeating_mask[position] = every;
+        }
+        const repeating = maskRuns(repeating_mask, modulus);
+        if (repeating.length === 0 || repeating.length >= best_count) {
+            continue;
+        }
+        const remaining_mask = mask.map((enabled, tick) => enabled && !repeating_mask[tick % modulus] ? 1 : 0);
+        const remaining = maskRuns(remaining_mask, period);
+        if (repeating.length + remaining.length < best_count) {
+            best = { modulus, repeating, remaining };
+            best_count = repeating.length + remaining.length;
+        }
+    }
+    return best;
+}
+
+/** The modulo combinator adds a tick, so its output is (clock - 1) % modulus when the deciders read it */
+export function moduloSignalRanges(repeating: OpenRange[], modulus: number): OpenRange[] {
+    const shifted: OpenRange[] = [];
+    for (const range of repeating) {
+        if (range.start_inclusive === 0) {
+            shifted.push(OpenRange.from(modulus - 1, modulus - 1));
+            if (range.end_inclusive > 0) {
+                shifted.push(OpenRange.from(0, range.end_inclusive - 1));
+            }
+        } else {
+            shifted.push(OpenRange.from(range.start_inclusive - 1, range.end_inclusive - 1));
+        }
+    }
+    return OpenRange.reduceRanges(shifted);
+}
+
 /** Windows in ticks of the p/q period, as subtick-clock values shifted back by the extra combinator latency */
 function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
     const { period_ticks: p, scale: q } = clock;
@@ -155,11 +242,12 @@ export function createSignalPerInserterBlueprint(
     history: InventoryTransferHistory,
     entityRegistry: ReadableEntityRegistry,
     subtick_clock?: SubtickClock,
+    use_modulo: boolean = false,
 ): FactorioBlueprint {
 
     const inventory_transfers = history.getAllTransfers()
 
-    const blueprint_label: string = final_output_item_name + " Inserter Clock Schedule"
+    let blueprint_label: string = final_output_item_name + " Inserter Clock Schedule"
     let x = 0.5;
 
 
@@ -194,7 +282,6 @@ export function createSignalPerInserterBlueprint(
             position: Position.fromXY(x += 1, 0),
             description: [
                 `Subtick clock: position in the ${total_duration.ticks.toFixed(3)} tick period, in 1/${subtick_clock.scale} ticks`,
-                "Already wired (green) to every inserter decider's input",
             ],
         }),
     ] : [];
@@ -203,8 +290,26 @@ export function createSignalPerInserterBlueprint(
 
     const sortedEntityIds = Array.from(inventory_transfers.keys()).sort((a, b) => a.id.localeCompare(b.id));
 
+    const splits = new Map(sortedEntityIds.map(entityId => [entityId, subtick_clock || !use_modulo ? null : splitRepeatingRanges(
+        wholeRanges(OpenRange.reduceRanges(inventory_transfers.get(entityId)!.map(transfer => transfer.tick_range))),
+        total_duration.ticks,
+    )] as const));
+    const moduli = Array.from(new Set(Array.from(splits.values()).flatMap(split => split ? [split.modulus] : []))).sort((a, b) => a - b);
+    const modulo_signals = new Map(moduli.map((modulus, index) => [modulus, SignalId.virtual(`signal-${String.fromCharCode(65 + index)}`)] as const));
+    const modulo_combinators = moduli.map(modulus => ArithmeticCombinatorEntity.withConstant({
+        input: SignalId.clock,
+        operation: "%",
+        constant: modulus,
+        output: modulo_signals.get(modulus)!,
+        position: Position.fromXY(x += 1, 0),
+        description: [
+            `Clock modulo ${modulus}: for windows that repeat every ${modulus} ticks`,
+        ],
+    }));
+
     sortedEntityIds.forEach(entityId => {
         const transfers = inventory_transfers.get(entityId)!;
+        const split = splits.get(entityId);
         x += 1;
         deciderCombinatorEntities.push(
             createDeciderCombinatorForTransfers(
@@ -215,20 +320,32 @@ export function createSignalPerInserterBlueprint(
                 total_duration.ticks / cycle.total_duration.ticks,
                 Position.fromXY(x, 0),
                 subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRanges,
+                split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
             )
         )
     })
 
     // all green: clock self loop; with a subtick clock: clock -> multiply, multiply -> modulo,
-    // and modulo output chained through every decider input, since deciders must not read the raw clock
+    // and modulo output chained through every decider input, since deciders must not read the raw clock;
+    // with modulo combinators: clock and every modulo output on one network chained through the decider inputs
     const wires = [[1, 2, 1, 4]];
+    const first_decider = 1 + 1 + subtick_combinators.length + modulo_combinators.length;
+    const chainDeciders = () => deciderCombinatorEntities.forEach((_, index) => {
+        if (index > 0) {
+            wires.push([first_decider + index - 1, 2, first_decider + index, 2]);
+        }
+    });
     if (subtick_clock) {
-        wires.push([1, 4, 2, 2], [2, 4, 3, 2]);
-        const first_decider = 1 + 1 + subtick_combinators.length;
-        deciderCombinatorEntities.forEach((_, index) => {
-            const decider = first_decider + index;
-            wires.push(index === 0 ? [3, 4, decider, 2] : [decider - 1, 2, decider, 2]);
-        });
+        wires.push([1, 4, 2, 2], [2, 4, 3, 2], [3, 4, first_decider, 2]);
+        chainDeciders();
+    } else if (modulo_combinators.length > 0 && deciderCombinatorEntities.length > 0) {
+        wires.push([1, 4, first_decider, 2]);
+        modulo_combinators.forEach((_, index) => wires.push([1, 4, 2 + index, 2], [2 + index, 4, first_decider, 2]));
+        chainDeciders();
+    }
+
+    if (modulo_combinators.length > 0) {
+        blueprint_label += " (modulo clock)";
     }
 
     return new BlueprintBuilder()
@@ -236,6 +353,7 @@ export function createSignalPerInserterBlueprint(
         .setEntities([
             clock,
             ...subtick_combinators,
+            ...modulo_combinators,
             ...deciderCombinatorEntities
         ])
         .setWires(wires)

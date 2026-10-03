@@ -11,7 +11,7 @@ import { TargetProductionRate } from "./target-production-rate";
 import { EntityState, InserterStatus, MachineState, MachineStatus } from "../state";
 import Fraction, { fraction } from "fractionability";
 import { createSignalPerInserterBlueprint, SubtickClock } from "./blueprint";
-import { FactorioBlueprint } from "../blueprints/blueprint";
+import { FactorioBlueprint, FactorioBlueprintFile, BlueprintBookBuilder } from "../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../control-logic";
 import { EntityTransferCountMap, SerializableTransferPlan } from "./sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
@@ -125,6 +125,8 @@ export interface BlueprintGenerationResult {
     belt_pickup_slack_ticks: Record<string, number>;
     /** For a fractional period: the same windows on a subtick clock that runs the exact period instead of rounding it */
     subtick?: { clock: SubtickClock; blueprint: FactorioBlueprint };
+    /** The same windows with repeating parts checked against the clock modulo a divisor of the period; absent when that saves nothing */
+    modulo_blueprint?: FactorioBlueprint;
     crafting_cycle_plan: CraftingCyclePlan;
     simulation_duration: Duration;
     transfer_history: InventoryTransferHistory;
@@ -178,6 +180,8 @@ export interface GenerateClockOptions {
     keep_output_buffers?: boolean;
     /** Warmup length in simulation periods (default 10) */
     warmup_periods?: number;
+    /** Also build the modulo-clock blueprint (default true; internal check runs never export it) */
+    modulo_blueprint?: boolean;
     /** Called as generateClockAlternatives moves through its alternatives and their sub-steps */
     on_progress?: (progress: GenerationProgress) => void;
     /** Called with a short description of the current sub-step (clock-only checks, observed window derivation) */
@@ -519,7 +523,7 @@ export function generateClockForConfig(
     const item_names = new Map(Array.from(final_history.entries(), ([entity_id, transfers]) =>
         [entity_id.id, Array.from(new Set(transfers.map(t => t.item_name))).sort().join(",")] as const
     ));
-    const blueprintForWindows = (windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock): FactorioBlueprint => createSignalPerInserterBlueprint(
+    const blueprintForWindows = (windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): FactorioBlueprint => createSignalPerInserterBlueprint(
         target_production_rate.machine_production_rate.item,
         crafting_cycle_plan,
         duration,
@@ -530,8 +534,16 @@ export function generateClockForConfig(
             ])
         ))),
         simulation_context.entity_registry,
-        subtick_clock
+        subtick_clock,
+        use_modulo,
     );
+    const moduloBlueprintFor = (windows: Map<string, OpenRange[]>) => {
+        if (options.modulo_blueprint === false) {
+            return undefined;
+        }
+        const blueprint = blueprintForWindows(windows, undefined, true);
+        return blueprint.entities.some(entity => entity.name === "arithmetic-combinator") ? blueprint : undefined;
+    };
     const subtick_clock = subtickClockForPeriod(duration.ticks);
     const subtickClockFor = (windows: Map<string, OpenRange[]>) => subtick_clock
         ? { clock: subtick_clock, blueprint: blueprintForWindows(windows, subtick_clock) }
@@ -569,6 +581,7 @@ export function generateClockForConfig(
             return {
                 ...derived.verification,
                 blueprint: blueprintForWindows(derived.windows),
+                modulo_blueprint: moduloBlueprintFor(derived.windows),
                 subtick: subtickClockFor(derived.windows),
                 clock_windows: serializeClockWindows(derived.windows),
                 belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
@@ -618,6 +631,7 @@ export function generateClockForConfig(
 
         return {
             blueprint,
+            modulo_blueprint: moduloBlueprintFor(planned_windows),
             subtick: subtickClockFor(planned_windows),
             clock_windows: serializeClockWindows(planned_windows),
             belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
@@ -653,6 +667,7 @@ function isPurelyClocked(config: Config, period: number): boolean {
 
 const NESTED_RUN_OPTIONS = (logger: Logger): GenerateClockOptions => ({
     belt_pickup_slack: "never",
+    modulo_blueprint: false,
     logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
     verify_as_built: false,
 });
@@ -1723,6 +1738,26 @@ export function generateClockAlternatives(
     current_step = "Done";
     report();
     return combineClockAlternativeRuns(runs, it => it.is_stable, it => it.inserter_window_count);
+}
+
+/** A book with the modulo-clock and the full-window blueprint when both exist, otherwise the single blueprint */
+export function blueprintFileFor(result: BlueprintGenerationResult): FactorioBlueprintFile {
+    if (!result.modulo_blueprint) {
+        return { blueprint: result.blueprint };
+    }
+    const book = new BlueprintBookBuilder()
+        .setLabel(result.blueprint.label)
+        .addBlueprint(result.modulo_blueprint)
+        .addBlueprint(result.blueprint)
+        .setActiveIndex(0)
+        .build();
+    return {
+        blueprint_book: {
+            ...book,
+            description: "Same clock windows, two ways: the modulo clock checks windows that repeat every few cycles "
+                + "against the clock modulo that length (far fewer decider conditions); the other lists every window on the raw clock.",
+        },
+    };
 }
 
 function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableClockWindows {
