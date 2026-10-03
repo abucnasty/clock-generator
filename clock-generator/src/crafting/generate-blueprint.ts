@@ -22,6 +22,7 @@ import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
 import { PrepareStep } from "./runner/steps/prepare-step";
 import { WarmupStep } from "./runner/steps/warmup-step";
+import { simulationStateKey } from "./runner/steady-state";
 import { SimulateStep } from "./runner/steps/simulate-step";
 import { RunnerStepType } from "./runner/steps/runner-step";
 import { Logger, defaultLogger } from "../common/logger";
@@ -404,7 +405,10 @@ export function generateClockForConfig(
         debug.disable();
     }
     
-    const warmup_step = new WarmupStep(new_simulation_context, warmup_period);
+    const warmup_step = new WarmupStep(new_simulation_context, warmup_period,
+        isPurelyClocked(config, duration.ticks)
+            ? { period_ticks: duration.ticks, key: () => simulationStateKey(new_simulation_context) }
+            : undefined);
     warmup_step.execute();
     
     debug.disable();
@@ -631,6 +635,22 @@ export function generateClockForConfig(
 const NESTED_RUN_OPTIONS = (logger: Logger): GenerateClockOptions => ({
     belt_pickup_slack: "never",
     logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
+/**
+ * Every inserter and drill runs on a fixed clock of a whole-tick period (or always/never), as in a clock-only
+ * check, so the simulation is deterministic with that period and a repeated state repeats forever.
+ */
+function isPurelyClocked(config: Config, period: number): boolean {
+    if (!Number.isInteger(period)) {
+        return false;
+    }
+    const fixed = (control: EnableControlOverrideConfig | undefined) => control !== undefined && (
+        control.mode === "ALWAYS" || control.mode === "NEVER"
+        || (control.mode === "CLOCKED" && control.period_duration_ticks === period)
+    );
+    return config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))
+        && (config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control));
+}
+
     verify_as_built: false,
 });
 
