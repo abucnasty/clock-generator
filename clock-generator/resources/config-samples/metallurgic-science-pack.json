@@ -190,7 +190,6 @@
     }
   ],
   "overrides": {
-    "terminal_swing_count": 3,
     "lcm": 5
   }
 }

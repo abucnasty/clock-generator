@@ -1408,7 +1408,7 @@ function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number): Enab
  * progressively lower terminal_swing_count values (initial → initial-1 → … → 1) until a
  * stable result is found or all options are exhausted.
  *
- * Backoff can be suppressed by setting `config.overrides.disable_swing_backoff = true`.
+ * Backoff is skipped when `config.overrides.terminal_swing_count` is set: that count is forced as-is.
  *
  * A `swing_backoff_report` is always attached to the returned result describing what
  * happened (triggered / not triggered, which swing counts were tried, which was stable).
@@ -1427,9 +1427,9 @@ export function generateClockWithSwingBackoff(
     const initial_result = generateClockForConfig(config, options);
     const initial_swing_count = initial_result.used_terminal_swing_count;
 
-    const backoff_disabled = config.overrides?.disable_swing_backoff === true;
+    const swing_count_forced = config.overrides?.terminal_swing_count !== undefined;
 
-    if (initial_result.stability_check.is_stable || backoff_disabled || initial_swing_count <= 1) {
+    if (initial_result.stability_check.is_stable || swing_count_forced || initial_swing_count <= 1) {
         return {
             ...initial_result,
             swing_backoff_report: {
@@ -1618,10 +1618,12 @@ function alternativeDefinitions(
     const { swings } = context;
     const withSwings = (count: number, extra: GenerateClockOptions) => generateClockForConfig(
         { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
-    const lower_counts = Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
+    // a forced count applies to every alternative
+    const swings_forced = config.overrides?.terminal_swing_count !== undefined;
+    const lower_counts = swings_forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
     // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
     // output inserter takes hands, so longer cycles can work too
-    const higher_counts = context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
+    const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
         : Array.from({ length: EXTENDED_SWING_COUNTS }, (_, i) => swings + 1 + i);
 
     return [

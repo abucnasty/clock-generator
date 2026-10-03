@@ -1,0 +1,140 @@
+{
+  "target_output": {
+    "recipe": "chemical-science-pack",
+    "items_per_second": 120,
+    "copies": 11
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "chemical-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "engine-unit",
+      "productivity": 100,
+      "crafting_speed": 49.0859375,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "casting-pipe",
+      "productivity": 50,
+      "crafting_speed": 236.75,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "chemical-science-pack"
+      ],
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "advanced-circuit",
+        "sulfur"
+      ],
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "engine-unit"
+      ],
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-gear-wheel",
+        "steel-plate"
+      ],
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "pipe"
+      ],
+      "id": 5
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "advanced-circuit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "sulfur",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-gear-wheel",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

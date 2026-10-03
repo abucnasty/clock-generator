@@ -1,0 +1,229 @@
+{
+  "target_output": {
+    "recipe": "advanced-circuit",
+    "items_per_second": 230,
+    "copies": 3
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "casting-copper-cable",
+      "productivity": 150,
+      "crafting_speed": 143.75,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "casting-copper-cable",
+      "productivity": 150,
+      "crafting_speed": 143.75,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "advanced-circuit",
+      "productivity": 175,
+      "crafting_speed": 100.0625,
+      "type": "machine"
+    },
+    {
+      "id": 4,
+      "recipe": "advanced-circuit",
+      "productivity": 175,
+      "crafting_speed": 100.0625,
+      "type": "machine"
+    },
+    {
+      "id": 5,
+      "recipe": "plastic-bar",
+      "productivity": 300,
+      "crafting_speed": 61.5,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "copper-cable"
+      ]
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ]
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "plastic-bar"
+      ]
+    },
+    {
+      "id": 5,
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "plastic-bar"
+      ]
+    },
+    {
+      "id": 6,
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ]
+    },
+    {
+      "id": 7,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "advanced-circuit"
+      ]
+    },
+    {
+      "id": 8,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "advanced-circuit"
+      ]
+    },
+    {
+      "id": 9,
+      "source": {
+        "type": "belt",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "filters": [
+        "coal",
+        "coal"
+      ],
+      "overrides": {
+        "enable_control": {
+          "mode": "ALWAYS"
+        }
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "advanced-circuit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "coal",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [],
+  "overrides": {
+    "ignored_lcm_ingredients": [
+      "coal"
+    ]
+  }
+}

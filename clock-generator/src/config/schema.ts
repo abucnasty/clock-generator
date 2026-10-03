@@ -466,6 +466,10 @@ export type ChestConfig = z.infer<typeof ChestConfigSchema>;
 
 export const ConfigOverridesSchema = z.object({
     lcm: z.number().int().positive().optional(),
+    /**
+     * Forces the number of output swings per crafting cycle. Without it the generator picks the count and lowers it
+     * until the output is stable.
+     */
     terminal_swing_count: z.number().int().positive().optional(),
     /**
      * Enable fractional swing support for inserters.
@@ -481,15 +485,8 @@ export const ConfigOverridesSchema = z.object({
      */
     use_fractional_swings: z.boolean().optional(),
     /**
-     * Disable automatic output swing stability backoff.
-     * 
-     * When the simulation detects that actual output items transferred by output inserters
-     * deviate from the expected amount (e.g., half-frequency due to excessive output blocking),
-     * it will retry with progressively lower terminal_swing_count values by default.
-     * 
-     * Set this to true to suppress that retry behaviour and accept the first result as-is.
-     * 
-     * @default false
+     * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
+     * offered as potential clocks.
      */
     disable_swing_backoff: z.boolean().optional(),
     /**

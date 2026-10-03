@@ -187,7 +187,6 @@ export interface ConfigFormData {
         lcm?: number;
         terminal_swing_count?: number;
         use_fractional_swings?: boolean;
-        disable_swing_backoff?: boolean;
         ignored_lcm_ingredients?: string[];
     };
 }
