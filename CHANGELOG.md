@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version.
 
+## [0.3.0] - 2026-10-03
+
+### Added
+- The potential clocks table shows each clock's crafting cycle length next to its output swings (e.g. "4 per 64 ticks") and its clock period.
+
+### Changed
+- "Clock Alternatives" is now called "Potential Clocks".
+- "Terminal Swing Count" is now "Force Output Swings": every potential clock uses exactly that many output swings per crafting cycle, even if unstable, and no other swing counts are offered. Leave it empty to let the generator pick the count, lower it until the output is stable, and offer other counts as potential clocks.
+
+### Removed
+- The "Output Swing Backoff" toggle. `disable_swing_backoff` in a config is still accepted but ignored.
+
 ## [0.2.0] - 2026-10-03
 
 ### Added
