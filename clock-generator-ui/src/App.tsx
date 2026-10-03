@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AppBar,
     Box,
+    Button,
     Chip,
     CircularProgress,
     Container,
@@ -18,7 +19,7 @@ import {
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
-import { AccountTree, FullscreenExit, List } from '@mui/icons-material';
+import { AccountTree, FullscreenExit, List, LocalCafe } from '@mui/icons-material';
 import type { Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
@@ -483,6 +484,18 @@ function App() {
                         onClick={() => setChangelogOpen(true)}
                         title="View changelog"
                     />
+                    <Button
+                        href="https://ko-fi.com/J6D4284EZ5"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="contained"
+                        size="small"
+                        startIcon={<LocalCafe />}
+                        title="Support me on ko-fi.com"
+                        sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 1 }}
+                    >
+                        Support me on Ko-fi
+                    </Button>
                 </Box>
             </Box>
 
