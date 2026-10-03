@@ -666,8 +666,8 @@ export function generateClockForConfig(
 }
 
 /**
- * An inserter clocked onto a belt only has to be enabled as it starts a pickup; it finishes the swing on its own.
- * A window covering the whole swing would still be on when it gets back and let it swing again onto the endless belt.
+ * An inserter clocked onto a belt has to stay enabled until its hand is full and dropped, but not until it is back:
+ * a window still on when it returns lets it swing again onto the endless belt.
  */
 function clipBeltFillerWindows(
     history: InventoryTransferHistory,
@@ -680,12 +680,16 @@ function clipBeltFillerWindows(
             || !EntityId.isMachine(entity.source.entity_id) || !EntityId.isBelt(entity.sink.entity_id)) {
             return [entity_id, transfers] as const;
         }
-        const window_ticks = entity.animation.pickup.ticks + 2;
+        const return_swing_ticks = entity.animation.rotation.ticks + 1;
+        const min_window_ticks = entity.animation.pickup.ticks + 2;
         return [entity_id, transfers.map(transfer => ({
             ...transfer,
             tick_range: OpenRange.fromStartAndDuration(
                 transfer.tick_range.start_inclusive,
-                Math.min(window_ticks, transfer.tick_range.duration().ticks),
+                Math.min(
+                    transfer.tick_range.duration().ticks,
+                    Math.max(min_window_ticks, transfer.tick_range.duration().ticks - return_swing_ticks),
+                ),
             ),
         }))] as const;
     })));
