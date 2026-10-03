@@ -61,8 +61,10 @@ function item(name: string): SignalId {
 }
 
 function toDescriptionString(signalId: SignalId): string {
+    // rich text names virtual signals "virtual-signal", unlike the signal id type "virtual"
+    const tag = signalId.type === SignalIdType.VIRTUAL ? "virtual-signal" : signalId.type;
     const entries = [
-        `${signalId.type}=${signalId.name}`
+        `${tag}=${signalId.name}`
     ]
     if (signalId.quality) {
         entries.push(`quality=${signalId.quality}`);
