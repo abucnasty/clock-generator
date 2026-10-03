@@ -1,6 +1,6 @@
 import Fraction from "fractionability";
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
-import { Direction, Position, SignalId } from "../blueprints/components";
+import { Direction, Position, SignalId, Wire } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
 import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
 import { Duration, OpenRange } from "../data-types";
@@ -328,21 +328,28 @@ export function createSignalPerInserterBlueprint(
 
     // all green: clock self loop; with a subtick clock: clock -> multiply, multiply -> modulo,
     // and modulo output chained through every decider input, since deciders must not read the raw clock;
-    // with modulo combinators: clock and every modulo output on one network chained through the decider inputs
-    const wires = [[1, 2, 1, 4]];
-    const first_decider = 1 + 1 + subtick_combinators.length + modulo_combinators.length;
-    const chainDeciders = () => deciderCombinatorEntities.forEach((_, index) => {
-        if (index > 0) {
-            wires.push([first_decider + index - 1, 2, first_decider + index, 2]);
-        }
-    });
+    // with modulo combinators: clock and every modulo input and output on one network chained through the decider inputs;
+    // otherwise: clock output chained through the decider inputs
+    const { input, output } = Wire;
+    const wires = [Wire.green(input(clock), output(clock))];
+    const decider_inputs = deciderCombinatorEntities.map(input);
     if (subtick_clock) {
-        wires.push([1, 4, 2, 2], [2, 4, 3, 2], [3, 4, first_decider, 2]);
-        chainDeciders();
-    } else if (modulo_combinators.length > 0 && deciderCombinatorEntities.length > 0) {
-        wires.push([1, 4, first_decider, 2]);
-        modulo_combinators.forEach((_, index) => wires.push([1, 4, 2 + index, 2], [2 + index, 4, first_decider, 2]));
-        chainDeciders();
+        const [multiply, modulo] = subtick_combinators;
+        wires.push(
+            Wire.green(output(clock), input(multiply)),
+            Wire.green(output(multiply), input(modulo)),
+            ...Wire.greenChain([output(modulo), ...decider_inputs]),
+        );
+    } else if (modulo_combinators.length > 0 && decider_inputs.length > 0) {
+        wires.push(
+            Wire.green(input(clock), output(modulo_combinators[0])),
+            Wire.green(output(clock), input(modulo_combinators[0])),
+            ...Wire.greenChain(modulo_combinators.map(input)),
+            ...Wire.greenChain(modulo_combinators.map(output)),
+            ...Wire.greenChain([output(modulo_combinators[modulo_combinators.length - 1]), ...decider_inputs]),
+        );
+    } else if (decider_inputs.length > 0) {
+        wires.push(...Wire.greenChain([output(clock), ...decider_inputs]));
     }
 
     if (modulo_combinators.length > 0) {

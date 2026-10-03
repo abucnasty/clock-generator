@@ -1,4 +1,4 @@
-import { Entity, EntityWithId, Icon } from "./components";
+import { BlueprintWire, Entity, EntityWithId, Icon, Wire, WireConnection } from "./components";
 import { entityWithId } from "./entity/entity-with-id";
 
 const FACTORIO_VERSION: number = 562949958139904;
@@ -8,7 +8,7 @@ export type FactorioBlueprint = {
     label: string;
     entities: EntityWithId[];
     icons: Icon[];
-    wires: number[][];
+    wires: BlueprintWire[];
     /**
      * factorio version
      */
@@ -52,6 +52,8 @@ export class BlueprintFileBuilder {
     
 export class BlueprintBuilder {
     private blueprint: Partial<FactorioBlueprint> = {};
+    private entityNumbers = new Map<Entity, number>();
+    private wires: WireConnection[] = [];
 
     public setLabel(label: string): BlueprintBuilder {
         this.blueprint.label = label;
@@ -59,6 +61,7 @@ export class BlueprintBuilder {
     }
 
     public setEntities(entities: Entity[]): BlueprintBuilder {
+        this.entityNumbers = new Map(entities.map((it, index) => [it, index + 1]));
         this.blueprint.entities = entities.map((it, index) => entityWithId(it, index + 1));
         return this;
     }
@@ -68,18 +71,26 @@ export class BlueprintBuilder {
         return this;
     }
 
-    public setWires(wires: number[][]): BlueprintBuilder {
-        this.blueprint.wires = wires;
+    /** Wire endpoints must be entities passed to setEntities */
+    public setWires(wires: WireConnection[]): BlueprintBuilder {
+        this.wires = wires;
         return this;
     }
 
     public build(): FactorioBlueprint {
+        const entityNumber = (entity: Entity): number => {
+            const number = this.entityNumbers.get(entity);
+            if (number === undefined) {
+                throw new Error(`Wired entity ${entity.name} at (${entity.position.x}, ${entity.position.y}) is not in the blueprint`);
+            }
+            return number;
+        };
         return {
             item: "blueprint",
             label: this.blueprint.label || "Blueprint",
             entities: this.blueprint.entities || [],
             icons: this.blueprint.icons || [],
-            wires: this.blueprint.wires || [],
+            wires: this.wires.map(wire => Wire.toBlueprintWire(wire, entityNumber)),
             version: FACTORIO_VERSION,
         }
     }
