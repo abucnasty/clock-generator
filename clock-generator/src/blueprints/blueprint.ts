@@ -94,8 +94,9 @@ export class BlueprintBookBuilder {
     }
 
     public addBlueprint(blueprint: FactorioBlueprint): BlueprintBookBuilder {
-        const index = this.blueprintBook.blueprints?.length || 0;
-        this.blueprintBook.blueprints?.push({ index, blueprint });
+        this.blueprintBook.blueprints ??= [];
+        const index = this.blueprintBook.blueprints.length;
+        this.blueprintBook.blueprints.push({ index, blueprint });
         return this;
     }
 
