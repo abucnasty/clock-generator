@@ -391,10 +391,16 @@ export function generateClockForConfig(
         }
     });
 
-    const warmup_period: Duration = Duration.ofTicks(crafting_cycle_plan.total_duration.ticks * recipe_lcm * (options.warmup_periods ?? 10));
     const duration: Duration = Duration.ofTicks(crafting_cycle_plan.total_duration.ticks * recipe_lcm);
+    assert(duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
+    const requested_warmup_periods = options.warmup_periods ?? 10;
+    // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
+    const warmup_periods = Math.min(requested_warmup_periods, Math.floor((MAX_SIMULATION_TICKS - 1) / duration.ticks));
+    if (warmup_periods < requested_warmup_periods) {
+        logger.log(`Warm up shortened to ${warmup_periods} periods to stay under ${MAX_SIMULATION_TICKS} ticks`);
+    }
+    const warmup_period: Duration = Duration.ofTicks(duration.ticks * warmup_periods);
 
-    assert(warmup_period.ticks < MAX_SIMULATION_TICKS, `Warmup period of ${warmup_period.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     logger.log(`Base Cycle Ticks: ${crafting_cycle_plan.total_duration.ticks}`);
     logger.log(`Warm up period: ${warmup_period.ticks} ticks`);
     logger.log(`Simulation period: ${duration.ticks} ticks`);
