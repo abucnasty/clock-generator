@@ -12,6 +12,7 @@ import {
     MenuItem,
     Select,
     TextField,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import { useMemo } from 'react';
@@ -20,6 +21,7 @@ import { ChestType } from 'clock-generator/browser';
 import type {
     BeltFormData,
     BeltLaneFormData,
+    BeltStrategyFormValue,
     BufferChestFormData,
     ChestFormData,
     DrillFormData,
@@ -28,6 +30,9 @@ import type {
 } from '../hooks/useConfigForm';
 import {
     BELT_FORM_DEFAULT_STACK_SIZE,
+    BELT_STRATEGIES,
+    LANE_CONSUMPTION_TOOLTIP,
+    beltStrategyUpdate,
     isBufferChest,
     isInfinityChest,
 } from '../hooks/useConfigForm';
@@ -182,7 +187,7 @@ function BeltEditSection({
     itemNames: string[];
     onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
 }) {
-    const updateLane = (laneIndex: number, field: keyof BeltLaneFormData, value: string | number) => {
+    const updateLane = (laneIndex: number, field: keyof BeltLaneFormData, value: string | number | undefined) => {
         const newLanes = [...belt.lanes] as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
         newLanes[laneIndex] = { ...newLanes[laneIndex], [field]: value };
         onUpdate(entityIndex, { lanes: newLanes });
@@ -229,6 +234,24 @@ function BeltEditSection({
                 </Select>
             </FormControl>
 
+            <FormControl size="small" fullWidth>
+                <InputLabel>Strategy</InputLabel>
+                <Select
+                    value={belt.strategy ?? 'normal'}
+                    label="Strategy"
+                    onChange={(e) => onUpdate(entityIndex, beltStrategyUpdate(belt, e.target.value as BeltStrategyFormValue))}
+                >
+                    {BELT_STRATEGIES.map((strategy) => (
+                        <MenuItem key={strategy.value} value={strategy.value}>
+                            <Box>
+                                <Typography variant="body2">{strategy.label}</Typography>
+                                <Typography variant="caption" color="text.secondary">{strategy.description}</Typography>
+                            </Box>
+                        </MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
+
             {belt.lanes.map((lane, laneIndex) => (
                 <Box key={laneIndex} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     <Typography variant="body2" sx={{ width: 56, flexShrink: 0 }}>
@@ -250,6 +273,20 @@ function BeltEditSection({
                         sx={{ width: 110 }}
                         size="small"
                     />
+                    {belt.strategy === 'export' && (
+                    <Tooltip title={LANE_CONSUMPTION_TOOLTIP}>
+                        <Box>
+                            <NumberField
+                                label="Consumed /s"
+                                value={lane.consumption_per_second ?? null}
+                                onValueChange={(val) => updateLane(laneIndex, 'consumption_per_second', val && val > 0 ? val : undefined)}
+                                min={0}
+                                sx={{ width: 120 }}
+                                size="small"
+                            />
+                        </Box>
+                    </Tooltip>
+                    )}
                     {belt.lanes.length > 1 && laneIndex === 1 ? (
                         <IconButton size="small" onClick={removeLane} color="error" aria-label="Remove lane">
                             <Close fontSize="small" />

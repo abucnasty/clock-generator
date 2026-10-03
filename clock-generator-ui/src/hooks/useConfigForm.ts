@@ -81,18 +81,40 @@ export interface InserterFormData {
 export interface BeltLaneFormData {
     ingredient: string;
     stack_size: number;
+    /** Export belts only: items per second taken off this lane by consumers outside the config */
+    consumption_per_second?: number;
 }
+
+export type BeltStrategyFormValue = 'normal' | 'export';
 
 export interface BeltFormData {
     id: number;
     /** Internal UUID — see MachineFormData._uuid. */
     _uuid: string;
     type: 'transport-belt' | 'fast-transport-belt' | 'express-transport-belt' | 'turbo-transport-belt';
+    strategy?: BeltStrategyFormValue;
     lanes: [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
 }
 
 export const BELT_FORM_DEFAULT_TYPE = 'turbo-transport-belt';
 export const BELT_FORM_DEFAULT_STACK_SIZE = 4;
+
+export const BELT_STRATEGIES: { value: BeltStrategyFormValue; label: string; description: string }[] = [
+    { value: 'normal', label: 'Normal', description: 'Endless: always has items to pick up and room to drop onto.' },
+    { value: 'export', label: 'Export', description: 'Normal, plus a consumption rate per lane for machines outside this config. Inserters filling the lane are clocked for that rate.' },
+];
+
+export const LANE_CONSUMPTION_TOOLTIP =
+    'Items per second taken off this lane by machines outside this config. Inserters filling the lane are planned for this rate.';
+
+/** Switching a belt to normal drops the lane consumption rates only export belts have */
+export function beltStrategyUpdate(belt: BeltFormData, strategy: BeltStrategyFormValue): Partial<BeltFormData> {
+    if (strategy === 'export') {
+        return { strategy };
+    }
+    const lanes = belt.lanes.map((lane) => ({ ingredient: lane.ingredient, stack_size: lane.stack_size })) as BeltFormData['lanes'];
+    return { strategy: undefined, lanes };
+}
 
 export interface DrillOverrides {
     enable_control?: EnableControlOverride;
@@ -877,6 +899,7 @@ export function useConfigForm(): UseConfigFormResult {
                 id: b.id,
                 _uuid: crypto.randomUUID(),
                 type: b.type,
+                ...(b.strategy === 'export' && { strategy: b.strategy }),
                 lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
             })),
             chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {

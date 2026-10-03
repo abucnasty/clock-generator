@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Add, Delete } from '@mui/icons-material';
+import { memo, useState } from 'react';
+import { Add, Delete, Info } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -8,10 +8,12 @@ import {
     InputLabel,
     MenuItem,
     Paper,
+    Popover,
     Select,
+    Tooltip,
     Typography,
 } from '@mui/material';
-import { BELT_FORM_DEFAULT_STACK_SIZE, type BeltFormData, type BeltLaneFormData } from '../hooks/useConfigForm';
+import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
@@ -41,11 +43,13 @@ function BeltsFormComponent({
     onRemove,
     onReorder,
 }: BeltsFormProps) {
+    const [infoAnchor, setInfoAnchor] = useState<HTMLButtonElement | null>(null);
+
     const handleLaneUpdate = (
         beltIndex: number,
         laneIndex: number,
         field: keyof BeltLaneFormData,
-        value: string | number
+        value: string | number | undefined
     ) => {
         const belt = belts[beltIndex];
         const newLanes = [...belt.lanes] as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
@@ -75,9 +79,32 @@ function BeltsFormComponent({
     return (
         <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
-                    Belts ({belts.length})
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h6">
+                        Belts ({belts.length})
+                    </Typography>
+                    <IconButton size="small" onClick={(e) => setInfoAnchor(e.currentTarget)} color="info" aria-label="About belt strategies">
+                        <Info fontSize="small" />
+                    </IconButton>
+                    <Popover
+                        open={Boolean(infoAnchor)}
+                        anchorEl={infoAnchor}
+                        onClose={() => setInfoAnchor(null)}
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    >
+                        <Box sx={{ p: 2, maxWidth: 380 }}>
+                            {BELT_STRATEGIES.map((strategy) => (
+                                <Typography key={strategy.value} variant="body2" sx={{ mb: 1 }}>
+                                    <strong>{strategy.label}:</strong> {strategy.description}
+                                </Typography>
+                            ))}
+                            <Typography variant="body2" color="text.secondary">
+                                Inserters putting items onto a belt are clocked for what the inserters in this config take off
+                                it. Use an export belt when machines outside this config take items off it too.
+                            </Typography>
+                        </Box>
+                    </Popover>
+                </Box>
                 <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
                     Add Belt
                 </Button>
@@ -121,6 +148,24 @@ function BeltsFormComponent({
                                             <FactorioIcon name={bt.value} size={20} />
                                             {bt.label}
                                         </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl size="small" sx={{ minWidth: 130 }}>
+                            <InputLabel>Strategy</InputLabel>
+                            <Select
+                                value={belt.strategy ?? 'normal'}
+                                label="Strategy"
+                                onChange={(e) =>
+                                    onUpdate(beltIndex, beltStrategyUpdate(belt, e.target.value as BeltStrategyFormValue))
+                                }
+                            >
+                                {BELT_STRATEGIES.map((strategy) => (
+                                    <MenuItem key={strategy.value} value={strategy.value}>
+                                        <Tooltip title={strategy.description} placement="right">
+                                            <span>{strategy.label}</span>
+                                        </Tooltip>
                                     </MenuItem>
                                 ))}
                             </Select>
@@ -172,6 +217,22 @@ function BeltsFormComponent({
                                     sx={{ width: 100 }}
                                     size="small"
                                 />
+                                {belt.strategy === 'export' && (
+                                <Tooltip title={LANE_CONSUMPTION_TOOLTIP}>
+                                    <Box>
+                                        <NumberField
+                                            label="Consumed /s"
+                                            value={lane.consumption_per_second ?? null}
+                                            onValueChange={(val) =>
+                                                handleLaneUpdate(beltIndex, laneIndex, 'consumption_per_second', val && val > 0 ? val : undefined)
+                                            }
+                                            min={0}
+                                            sx={{ width: 120 }}
+                                            size="small"
+                                        />
+                                    </Box>
+                                </Tooltip>
+                                )}
                                 {belt.lanes.length > 1 ? (
                                     laneIndex === 1 ? (
                                         <IconButton
