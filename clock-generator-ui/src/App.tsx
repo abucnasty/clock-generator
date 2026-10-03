@@ -394,7 +394,6 @@ function App() {
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
-                                    disableSwingBackoff={config.overrides?.disable_swing_backoff}
                                     onUpdate={updateOverrides}
                                 />
                             </Box>

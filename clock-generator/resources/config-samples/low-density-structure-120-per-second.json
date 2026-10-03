@@ -253,7 +253,6 @@
     }
   ],
   "overrides": {
-    "lcm": 3,
-    "terminal_swing_count": 4
+    "lcm": 3
   }
 }

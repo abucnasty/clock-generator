@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, generateClockAlternatives, BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
@@ -331,6 +331,22 @@ describe("generateClockForConfig", () => {
             const batch = Array.from({ length: 6 }, (_, cycle) => ({ start: 2 + cycle * 64, end: 50 + cycle * 64 }));
             expect(four_swings?.result.clock_windows["inserter:1"]).toEqual(batch);
             expect(four_swings?.result.clock_windows["inserter:2"]).toEqual(batch);
+        });
+    });
+
+    describe("forced output swing count", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
+        const result = generateClockWithSwingBackoff(config);
+        const { alternatives } = generateClockAlternatives(config);
+
+        it("uses the terminal_swing_count override as-is instead of backing off", () => {
+            expect(config.overrides?.terminal_swing_count).toBe(2);
+            expect(result.used_terminal_swing_count).toBe(2);
+            expect(result.swing_backoff_report?.triggered).toBe(false);
+        });
+
+        it("uses it for every clock alternative", () => {
+            expect(alternatives.map(a => a.result.used_terminal_swing_count).every(count => count === 2)).toBe(true);
         });
     });
 

@@ -15,15 +15,13 @@ interface OverridesFormProps {
     lcm?: number;
     terminalSwingCount?: number;
     useFractionalSwings?: boolean;
-    disableSwingBackoff?: boolean;
-    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'disable_swing_backoff', value: number | boolean | undefined) => void;
+    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings', value: number | boolean | undefined) => void;
 }
 
 export function OverridesForm({
     lcm,
     terminalSwingCount,
     useFractionalSwings,
-    disableSwingBackoff,
     onUpdate,
 }: OverridesFormProps) {
     return (
@@ -57,21 +55,27 @@ export function OverridesForm({
                         size="small"
                         helperText="Override the calculated LCM"
                     />
-                    <TextField
-                        label="Terminal Swing Count"
-                        type="number"
-                        value={terminalSwingCount ?? undefined}
-                        onChange={(e) =>
-                            onUpdate(
-                                'terminal_swing_count',
-                                e.target.value ? parseFloat(e.target.value) : undefined
-                            )
-                        }
-                        slotProps={{ htmlInput: { min: 1 } }}
-                        sx={{ width: 240 }}
-                        size="small"
-                        helperText="Override max swings per cycle"
-                    />
+                    <Tooltip
+                        title="Uses exactly this many output swings per crafting cycle for every potential clock, even if the result is unstable. Leave empty to let the generator pick the count, lower it until the output is stable, and offer other counts as potential clocks."
+                        arrow
+                        placement="top"
+                    >
+                        <TextField
+                            label="Force Output Swings"
+                            type="number"
+                            value={terminalSwingCount ?? ''}
+                            onChange={(e) =>
+                                onUpdate(
+                                    'terminal_swing_count',
+                                    e.target.value ? parseInt(e.target.value) : undefined
+                                )
+                            }
+                            slotProps={{ htmlInput: { min: 1 } }}
+                            sx={{ width: 240 }}
+                            size="small"
+                            helperText="Per output inserter, per crafting cycle"
+                        />
+                    </Tooltip>
                     <Tooltip 
                         title="When enabled, inserters with fractional swing counts (e.g., 1.5 swings per cycle) will distribute swings across multiple sub-cycles. For example, 3/2 swings becomes 1 swing in the first sub-cycle and 2 swings in the second."
                         arrow
@@ -91,28 +95,6 @@ export function OverridesForm({
                                 />
                             }
                             label="Enable Fractional Swings"
-                            sx={{ ml: 1 }}
-                        />
-                    </Tooltip>
-                    <Tooltip
-                        title="When enabled, if the simulation detects that output inserters transferred fewer items than expected (a sign of output-blocking instability), it will automatically retry with progressively fewer output swings per cycle (initial → initial−1 → … → 1) until a stable result is found. The first stable swing count is used for the final blueprint. Disable this to always accept the first simulation result as-is."
-                        arrow
-                        placement="top"
-                    >
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={!(disableSwingBackoff ?? false)}
-                                    color="primary"
-                                    onChange={(e) =>
-                                        onUpdate(
-                                            'disable_swing_backoff',
-                                            e.target.checked ? undefined : true
-                                        )
-                                    }
-                                />
-                            }
-                            label="Output Swing Backoff"
                             sx={{ ml: 1 }}
                         />
                     </Tooltip>

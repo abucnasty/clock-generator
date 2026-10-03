@@ -25,6 +25,8 @@ export interface ClockAlternativeView {
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
     terminalSwingCount: number;
+    /** Length of one crafting cycle; the clock period is a whole number of them */
+    cycleTicks: number;
     blueprintString: string;
     transferHistory: SerializableTransferHistory;
     stateTransitionHistory: SerializableStateTransitionHistory;

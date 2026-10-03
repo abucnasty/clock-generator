@@ -128,7 +128,7 @@ function GenerationProgressStatus({ store }: { store: GenerationProgressStore })
             />
             <Typography variant="body2" sx={{ mt: 1 }}>
                 {progress
-                    ? `${progress.total ? `${progress.completed} of ${progress.total} alternatives done, running: ` : ''}${progress.step}`
+                    ? `${progress.total ? `${progress.completed} of ${progress.total} potential clocks done, running: ` : ''}${progress.step}`
                     : 'Starting simulation...'}
             </Typography>
             {progress?.detail && (
