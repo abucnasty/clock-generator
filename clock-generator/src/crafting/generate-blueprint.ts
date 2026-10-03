@@ -237,9 +237,9 @@ export function generateClockForConfig(
     configureDebugPlugins(simulation_context, relative_tick_provider, debug);
     const inventory_transfer_history = configureInventoryTransferPlugins(simulation_context, relative_tick_provider);
     const state_transition_history = configureStateTransitionPlugins(simulation_context, relative_tick_provider);
-
     inventory_transfer_history.recording = false;
     state_transition_history.recording = false;
+
     logger.log(`Created simulation context with ${simulation_context.machines.length} machines and ${simulation_context.inserters.length} inserters.`);
 
     // Step 1: Prepare - wait until all machines are output blocked
@@ -410,6 +410,9 @@ export function generateClockForConfig(
             ? { period_ticks: duration.ticks, key: () => simulationStateKey(new_simulation_context) }
             : undefined);
     warmup_step.execute();
+    if (warmup_step.ticks_run < warmup_period.ticks) {
+        logger.log(`Warm up reached a repeating state after ${warmup_step.ticks_run} ticks`);
+    }
     
     debug.disable();
 
@@ -418,6 +421,8 @@ export function generateClockForConfig(
     logger.log("Executing Simulate Step");
     inventory_transfer_history.clear();
     state_transition_history.clear();
+    inventory_transfer_history.recording = true;
+    state_transition_history.recording = true;
     relative_tick = simulation_context.tick_provider.getCurrentTick();
     resettable_registry.resetAll();
     
@@ -425,8 +430,6 @@ export function generateClockForConfig(
     if (debug_steps[RunnerStepType.SIMULATE]) {
         debug.enable();
     } else {
-    inventory_transfer_history.recording = true;
-    state_transition_history.recording = true;
         debug.disable();
     }
     simulate_step.execute();
@@ -632,9 +635,6 @@ export function generateClockForConfig(
     }
 }
 
-const NESTED_RUN_OPTIONS = (logger: Logger): GenerateClockOptions => ({
-    belt_pickup_slack: "never",
-    logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
 /**
  * Every inserter and drill runs on a fixed clock of a whole-tick period (or always/never), as in a clock-only
  * check, so the simulation is deterministic with that period and a repeated state repeats forever.
@@ -651,6 +651,9 @@ function isPurelyClocked(config: Config, period: number): boolean {
         && (config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control));
 }
 
+const NESTED_RUN_OPTIONS = (logger: Logger): GenerateClockOptions => ({
+    belt_pickup_slack: "never",
+    logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
     verify_as_built: false,
 });
 
@@ -1426,9 +1429,14 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
 }
 
 /** What the remaining alternatives need from the first (planned + belt pickup slack) run */
+/** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
+const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
+
 export interface ClockAlternativeContext {
     swings: number;
     primary_stable: boolean;
+    /** Clock period of the primary alternative */
+    period_ticks: number;
 }
 
 export interface ClockAlternativeTask {
@@ -1517,7 +1525,7 @@ function alternativeDefinitions(
                 quiet
             ),
         },
-        {
+        ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "derived",
             label: "Observed windows",
             description: "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
@@ -1528,7 +1536,7 @@ function alternativeDefinitions(
                 { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
                 { ...quiet, derive_mode: "always" }
             ),
-        },
+        }]),
         ...lower_counts.map(lower => ({
             id: `swings-${lower}`,
             label: `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
@@ -1628,7 +1636,11 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
     const definition = primaryDefinition(config, options, options.on_progress_detail);
     const primary = runAlternative(definition, config.target_output.copies ?? 1, logger);
     const result = definition.run();
-    const context: ClockAlternativeContext = { swings: result.used_terminal_swing_count, primary_stable: alternativeIsStable(result) };
+    const context: ClockAlternativeContext = {
+        swings: result.used_terminal_swing_count,
+        primary_stable: alternativeIsStable(result),
+        period_ticks: result.simulation_duration.ticks,
+    };
     const tasks = alternativeDefinitions(config, context, {}).map(({ id, label }) => ({ id, label }));
     return { primary, context, tasks };
 }
