@@ -87,7 +87,7 @@ function App() {
     const {
         isInitialized,
         isRunning,
-        progress,
+        progressStore,
         recipeNames,
         resourceNames,
         itemNames,
@@ -102,6 +102,7 @@ function App() {
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
+        pendingAlternatives,
         error,
         initialize,
         runSimulation,
@@ -181,6 +182,17 @@ function App() {
         const configToRun = exportConfig();
         runSimulation(configToRun, debugSteps, streamLogs);
     }, [exportConfig, runSimulation, debugSteps, streamLogs]);
+
+    const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
+    const openDiagramFullscreen = useCallback(() => setDiagramFullscreen(true), []);
+    const updateMiningProductivityLevel = useCallback(
+        (value: number) => updateDrillsConfig('mining_productivity_level', value),
+        [updateDrillsConfig]
+    );
+    const handleExcludeChange = useCallback(
+        (items: string[]) => transferPlan && updateIgnoredIngredients(items, transferPlan),
+        [transferPlan, updateIgnoredIngredients]
+    );
 
     const handleImportConfig = useCallback((imported: Config) => {
         importConfig(imported);
@@ -328,7 +340,7 @@ function App() {
                                         inserters={config.inserters}
                                         belts={config.belts}
                                         chests={config.chests}
-                                        drills={config.drills?.configs ?? []}
+                                        drills={drillConfigs}
                                         recipeNames={recipeNames}
                                         itemNames={itemNamesComposite}
                                         getRecipeInfo={getRecipeInfo}
@@ -348,7 +360,7 @@ function App() {
                                         onAddBelt={addBelt}
                                         onAddChest={addChest}
                                         onAddDrill={addDrill}
-                                        onRequestFullscreen={() => setDiagramFullscreen(true)}
+                                        onRequestFullscreen={openDiagramFullscreen}
                                     />
                                     <MissingInserterAlert
                                         issues={coverageIssues}
@@ -361,12 +373,12 @@ function App() {
                                 <DrillsForm
                                     enabled={!!config.drills}
                                     miningProductivityLevel={config.drills?.mining_productivity_level ?? 0}
-                                    drills={config.drills?.configs ?? []}
+                                    drills={drillConfigs}
                                     resourceNames={resourceNames}
                                     machineIds={machineIds}
                                     onEnable={enableDrills}
                                     onDisable={disableDrills}
-                                    onUpdateProductivityLevel={(value) => updateDrillsConfig('mining_productivity_level', value)}
+                                    onUpdateProductivityLevel={updateMiningProductivityLevel}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={removeDrill}
@@ -389,7 +401,7 @@ function App() {
                             <BlueprintOutput
                                 blueprintString={blueprintString}
                                 isLoading={isRunning}
-                                progress={progress}
+                                progressStore={progressStore}
                                 error={error}
                                 simulationDurationTicks={simulationDurationTicks ?? undefined}
                                 onGenerate={handleGenerate}
@@ -400,6 +412,7 @@ function App() {
                                 alternatives={alternatives}
                                 selectedIndex={selectedAlternativeIndex}
                                 onSelect={selectAlternative}
+                                pending={pendingAlternatives}
                             />
 
                             <SwingBackoffReportDisplay report={swingBackoffReport} />
@@ -410,7 +423,7 @@ function App() {
                                         transferPlan={transferPlan}
                                         usedLcm={usedLcm!}
                                         excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
-                                        onExcludeChange={(items) => updateIgnoredIngredients(items, transferPlan)}
+                                        onExcludeChange={handleExcludeChange}
                                     />
                                 </Box>
                             )}
@@ -488,7 +501,7 @@ function App() {
                             inserters={config.inserters}
                             belts={config.belts}
                             chests={config.chests}
-                            drills={config.drills?.configs ?? []}
+                            drills={drillConfigs}
                             recipeNames={recipeNames}
                             itemNames={itemNamesComposite}
                             getRecipeInfo={getRecipeInfo}

@@ -15,7 +15,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
 import { EnableControlModal } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
@@ -45,7 +45,7 @@ interface DrillsFormProps {
     onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
-export function DrillsForm({
+function DrillsFormComponent({
     enabled,
     miningProductivityLevel,
     drills,
@@ -315,3 +315,5 @@ export function DrillsForm({
         </Paper>
     );
 }
+
+export const DrillsForm = memo(DrillsFormComponent);

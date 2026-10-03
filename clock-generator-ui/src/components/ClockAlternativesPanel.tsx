@@ -2,6 +2,7 @@ import { InfoOutlined } from '@mui/icons-material';
 import {
     Box,
     Chip,
+    CircularProgress,
     Paper,
     Radio,
     Table,
@@ -19,10 +20,12 @@ interface ClockAlternativesPanelProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
+    /** Labels of alternatives still being generated */
+    pending?: string[];
 }
 
-export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect }: ClockAlternativesPanelProps) {
-    if (alternatives.length === 0) {
+export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, pending = [] }: ClockAlternativesPanelProps) {
+    if (alternatives.length === 0 && pending.length === 0) {
         return null;
     }
 
@@ -98,6 +101,16 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect }
                                             variant="outlined"
                                         />
                                     </Tooltip>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {pending.map(label => (
+                            <TableRow key={`pending-${label}`}>
+                                <TableCell padding="checkbox">
+                                    <CircularProgress size={16} sx={{ ml: 1.5 }} />
+                                </TableCell>
+                                <TableCell colSpan={6} sx={{ color: 'text.secondary' }}>
+                                    {label}: computing…
                                 </TableCell>
                             </TableRow>
                         ))}

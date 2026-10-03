@@ -1,6 +1,6 @@
 import { Close, Fullscreen } from '@mui/icons-material';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Paper, Tooltip, Typography } from '@mui/material';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { FactorioIcon } from './FactorioIcon';
 import { COLOR_BLIND_PALETTE_ALL } from './colors';
@@ -185,7 +185,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
     );
 }
 
-export function TransferHistoryVisualization({ transferHistory }: TransferHistoryVisualizationProps) {
+function TransferHistoryVisualizationComponent({ transferHistory }: TransferHistoryVisualizationProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const rowHeight = 24;
     const totalDuration = transferHistory.total_duration_ticks;
@@ -350,3 +350,5 @@ export function TransferHistoryVisualization({ transferHistory }: TransferHistor
         </>
     );
 }
+
+export const TransferHistoryVisualization = memo(TransferHistoryVisualizationComponent);

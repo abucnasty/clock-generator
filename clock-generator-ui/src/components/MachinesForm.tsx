@@ -13,7 +13,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { MachineFormData } from '../hooks/useConfigForm';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { FactorioIcon } from './FactorioIcon';
@@ -32,7 +32,7 @@ interface MachinesFormProps {
 
 const CRAFTING_SPEED_COMMAND = '/c game.print(game.player.selected.crafting_speed)';
 
-export function MachinesForm({
+function MachinesFormComponent({
     machines,
     recipeNames,
     onAdd,
@@ -264,3 +264,5 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
         </Box>
     );
 }
+
+export const MachinesForm = memo(MachinesFormComponent);

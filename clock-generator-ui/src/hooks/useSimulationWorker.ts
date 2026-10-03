@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
@@ -14,7 +14,8 @@ export interface RecipeInfo {
 export interface UseSimulationWorkerResult {
     isInitialized: boolean;
     isRunning: boolean;
-    progress: GenerationProgress | null;
+    /** Progress lives outside React state so its frequent updates only re-render what reads it */
+    progressStore: GenerationProgressStore;
     recipeNames: string[];
     itemNames: string[];
     resourceNames: string[];
@@ -29,6 +30,8 @@ export interface UseSimulationWorkerResult {
     alternatives: ClockAlternativeView[];
     selectedAlternativeIndex: number;
     selectAlternative: (index: number) => void;
+    /** Labels of alternatives still being generated; the finished ones are already in `alternatives` */
+    pendingAlternatives: string[];
     error: string | null;
     initialize: () => void;
     runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean) => void;
@@ -44,6 +47,32 @@ const FACTORIO_DATA_URL = '/data-filtered.json';
 const PRIMARY_STEP = 'Planned + belt pickup slack';
 // the slowest alternatives start first so they overlap the most
 const SLOW_TASKS = ['full-hand', 'derived', 'fractional'];
+
+export interface GenerationProgressStore {
+    get: () => GenerationProgress | null;
+    set: (progress: GenerationProgress | null) => void;
+    subscribe: (listener: () => void) => () => void;
+}
+
+function createProgressStore(): GenerationProgressStore {
+    let value: GenerationProgress | null = null;
+    const listeners = new Set<() => void>();
+    return {
+        get: () => value,
+        set: (progress) => {
+            value = progress;
+            listeners.forEach(listener => listener());
+        },
+        subscribe: (listener) => {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+        },
+    };
+}
+
+export function useGenerationProgress(store: GenerationProgressStore): GenerationProgress | null {
+    return useSyncExternalStore(store.subscribe, store.get);
+}
 
 function workerPoolSize(): number {
     return Math.max(1, Math.min((navigator.hardwareConcurrency || 2) - 1, 6));
@@ -61,6 +90,7 @@ interface Generation {
     /** Primary run first, then one per task in display order */
     runs: (ClockAlternativeRunView | null)[];
     running: Map<Worker, ClockAlternativeTask>;
+    done: Set<string>;
     idle: Worker[];
     completed: number;
     detail?: string;
@@ -69,13 +99,16 @@ interface Generation {
 export function useSimulationWorker(): UseSimulationWorkerResult {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
-    const [progress, setProgress] = useState<GenerationProgress | null>(null);
+    const [progressStore] = useState(createProgressStore);
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
     const [logs, setLogs] = useState<LogMessage[]>([]);
     const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
     const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
+    const [pendingAlternatives, setPendingAlternatives] = useState<string[]>([]);
+    // set once the user picks an alternative, so results arriving later do not move the selection
+    const userSelectionRef = useRef<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const workersRef = useRef<Worker[]>([]);
     const generationRef = useRef<Generation | null>(null);
@@ -90,12 +123,20 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     const reportProgress = useCallback((generation: Generation) => {
         const running = Array.from(generation.running.values(), task => task.label);
-        setProgress({
+        progressStore.set({
             step: generation.context ? running.join(', ') : PRIMARY_STEP,
             detail: generation.detail,
             completed: generation.completed,
             total: generation.context ? 1 + generation.tasks.length : null,
         });
+    }, [progressStore]);
+
+    const publishAlternatives = useCallback((generation: Generation) => {
+        const combined = combineClockAlternativeRuns!(generation.runs, it => it.isStable, it => it.inserterWindowCount);
+        const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
+        setAlternatives(combined.alternatives);
+        setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
+        setPendingAlternatives(generation.tasks.filter(task => !generation.done.has(task.id)).map(task => task.label));
     }, []);
 
     const dispatchTasks = useCallback((generation: Generation) => {
@@ -117,13 +158,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             reportProgress(generation);
             return;
         }
-        const combined = combineClockAlternativeRuns!(generation.runs, it => it.isStable, it => it.inserterWindowCount);
         generationRef.current = null;
-        setAlternatives(combined.alternatives);
-        setSelectedAlternativeIndex(combined.selected_index);
-        setProgress(null);
+        progressStore.set(null);
         setIsRunning(false);
-    }, [reportProgress]);
+    }, [progressStore, reportProgress]);
 
     const handleResponse = useCallback((worker: Worker, response: WorkerResponse) => {
         const generation = generationRef.current;
@@ -151,6 +189,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                     Number(SLOW_TASKS.includes(b.id)) - Number(SLOW_TASKS.includes(a.id)));
                 generation.completed = 1;
                 generation.idle = [...workersRef.current];
+                publishAlternatives(generation);
                 dispatchTasks(generation);
                 break;
             case 'task-completed': {
@@ -158,6 +197,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.running.delete(worker);
                 generation.idle.push(worker);
                 generation.completed++;
+                generation.done.add(response.taskId);
+                publishAlternatives(generation);
                 dispatchTasks(generation);
                 break;
             }
@@ -165,11 +206,12 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 console.error('Simulation error:', response.message, response.stack);
                 generationRef.current = null;
                 setError(response.message);
-                setProgress(null);
+                progressStore.set(null);
+                setPendingAlternatives([]);
                 setIsRunning(false);
                 break;
         }
-    }, [dispatchTasks, reportProgress]);
+    }, [dispatchTasks, progressStore, publishAlternatives, reportProgress]);
 
     const initialize = useCallback(async () => {
         try {
@@ -190,7 +232,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 worker.onerror = (event) => {
                     generationRef.current = null;
                     setError(event.message || 'Simulation worker failed');
-                    setProgress(null);
+                    progressStore.set(null);
                     setIsRunning(false);
                     reject(new Error(event.message));
                 };
@@ -221,7 +263,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             console.error('Failed to initialize:', err);
             setError(err instanceof Error ? err.message : 'Failed to initialize');
         }
-    }, [handleResponse, terminateWorkers]);
+    }, [handleResponse, progressStore, terminateWorkers]);
 
     const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean) => {
         const worker = workersRef.current[0];
@@ -231,18 +273,25 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
 
         setIsRunning(true);
-        setProgress(null);
+        progressStore.set(null);
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
+        setPendingAlternatives([]);
+        userSelectionRef.current = null;
         setError(null);
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
             runId, config, debugSteps, streamLogs, context: null, tasks: [], queue: [], runs: [],
-            running: new Map(), idle: [], completed: 0,
+            running: new Map(), done: new Set(), idle: [], completed: 0,
         };
         worker.postMessage({ type: 'plan', runId, config, debugSteps, streamLogs } satisfies WorkerRequest);
-    }, []);
+    }, [progressStore]);
+
+    const selectAlternative = useCallback((index: number) => {
+        userSelectionRef.current = alternatives[index]?.id ?? null;
+        setSelectedAlternativeIndex(index);
+    }, [alternatives]);
 
     const clearLogs = useCallback(() => {
         setLogs([]);
@@ -266,7 +315,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     return {
         isInitialized,
         isRunning,
-        progress,
+        progressStore,
         recipeNames,
         resourceNames,
         itemNames,
@@ -280,7 +329,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         usedLcm: selected?.usedLcm ?? null,
         alternatives,
         selectedAlternativeIndex,
-        selectAlternative: setSelectedAlternativeIndex,
+        selectAlternative,
+        pendingAlternatives,
         error,
         initialize,
         runSimulation,

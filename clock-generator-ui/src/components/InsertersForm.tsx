@@ -10,7 +10,7 @@ import {
     Typography,
 } from '@mui/material';
 import { TargetType } from 'clock-generator/browser';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import { EnableControlModal } from './EnableControlModal';
@@ -44,7 +44,7 @@ interface InsertersFormProps {
     onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
-export function InsertersForm({
+function InsertersFormComponent({
     inserters,
     machines,
     belts,
@@ -571,3 +571,5 @@ export function InsertersForm({
         </Paper>
     );
 }
+
+export const InsertersForm = memo(InsertersFormComponent);

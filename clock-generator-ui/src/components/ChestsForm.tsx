@@ -15,7 +15,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { ChestType } from 'clock-generator/browser';
 import type { ChestFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
@@ -33,7 +33,7 @@ interface ChestsFormProps {
     onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
-export function ChestsForm({
+function ChestsFormComponent({
     chests,
     itemNames,
     onAdd,
@@ -255,3 +255,5 @@ export function ChestsForm({
         </Paper>
     );
 }
+
+export const ChestsForm = memo(ChestsFormComponent);

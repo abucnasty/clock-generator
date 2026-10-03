@@ -11,12 +11,12 @@ import {
     Alert,
 } from '@mui/material';
 import { useCallback, useState } from 'react';
-import type { GenerationProgress } from 'clock-generator/browser';
+import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
 
 interface BlueprintOutputProps {
     blueprintString: string | null;
     isLoading: boolean;
-    progress?: GenerationProgress | null;
+    progressStore: GenerationProgressStore;
     error: string | null;
     simulationDurationTicks?: number;
     onGenerate: () => void;
@@ -26,7 +26,7 @@ interface BlueprintOutputProps {
 export function BlueprintOutput({
     blueprintString,
     isLoading,
-    progress,
+    progressStore,
     error,
     simulationDurationTicks,
     onGenerate,
@@ -63,24 +63,7 @@ export function BlueprintOutput({
                 </Button>
             </Box>
 
-            {isLoading && (
-                <Box sx={{ mb: 2 }}>
-                    <LinearProgress
-                        variant={progress?.total ? 'determinate' : 'indeterminate'}
-                        value={progress?.total ? (progress.completed / progress.total) * 100 : undefined}
-                    />
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                        {progress
-                            ? `${progress.total ? `${progress.completed} of ${progress.total} alternatives done, running: ` : ''}${progress.step}`
-                            : 'Starting simulation...'}
-                    </Typography>
-                    {progress?.detail && (
-                        <Typography variant="caption" color="text.secondary">
-                            {progress.detail}
-                        </Typography>
-                    )}
-                </Box>
-            )}
+            {isLoading && <GenerationProgressStatus store={progressStore} />}
 
             {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -132,5 +115,27 @@ export function BlueprintOutput({
                 </Typography>
             )}
         </Paper>
+    );
+}
+
+function GenerationProgressStatus({ store }: { store: GenerationProgressStore }) {
+    const progress = useGenerationProgress(store);
+    return (
+        <Box sx={{ mb: 2 }}>
+            <LinearProgress
+                variant={progress?.total ? 'determinate' : 'indeterminate'}
+                value={progress?.total ? (progress.completed / progress.total) * 100 : undefined}
+            />
+            <Typography variant="body2" sx={{ mt: 1 }}>
+                {progress
+                    ? `${progress.total ? `${progress.completed} of ${progress.total} alternatives done, running: ` : ''}${progress.step}`
+                    : 'Starting simulation...'}
+            </Typography>
+            {progress?.detail && (
+                <Typography variant="caption" color="text.secondary">
+                    {progress.detail}
+                </Typography>
+            )}
+        </Box>
     );
 }
