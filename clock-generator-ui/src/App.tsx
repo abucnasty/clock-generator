@@ -41,6 +41,7 @@ import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDispla
 import { TransferPlanPanel } from './components/TransferPlanPanel';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ClockAlternativesPanel } from './components/ClockAlternativesPanel';
+import { ChangelogDialog } from './components/ChangelogDialog';
 
 const darkTheme = createTheme({
     palette: {
@@ -159,6 +160,7 @@ function App() {
 
     const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
+    const [changelogOpen, setChangelogOpen] = useState(false);
 
     const coverageIssues = useInserterValidation(exportConfig, isInitialized);
 
@@ -457,18 +459,34 @@ function App() {
                 <Box
                     component="footer"
                     sx={{
-                        py: 2,
-                        textAlign: 'center',
+                        position: 'sticky',
+                        bottom: 0,
+                        zIndex: (theme) => theme.zIndex.appBar,
+                        py: 1,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 1.5,
                         bgcolor: 'background.paper',
                         borderTop: 1,
                         borderColor: 'divider',
                     }}
                 >
                     <Typography variant="body2" color="text.secondary">
-                        Factorio Clock Generator UI - Generate clock circuits for your factory setups
+                        Created by abucnasty
                     </Typography>
+                    <Chip
+                        label={`v${__APP_VERSION__}`}
+                        size="small"
+                        variant="outlined"
+                        clickable
+                        onClick={() => setChangelogOpen(true)}
+                        title="View changelog"
+                    />
                 </Box>
             </Box>
+
+            <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />
 
             {/* Fullscreen diagram dialog */}
             <Dialog
