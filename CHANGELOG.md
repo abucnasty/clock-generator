@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version.
 
+## [0.2.0] - 2026-10-03
+
+### Added
+- Export belts: a belt strategy with a consumption rate (items/s) per lane for machines outside the config. The inserters filling the lane are planned and clocked for that rate, and a clock is only stable if the lane is filled at it. Normal belts stay the default and need no extra config. ([#62](https://github.com/abucnasty/factorio-scripts/issues/62))
+- Belt strategy selector, per-lane consumption rate and an info popover explaining the belt strategies in the UI.
+- Longer crafting cycles as clock alternatives: up to 3 output swing counts above the planned one, for machines that keep crafting while the output inserter takes hands (e.g. 4 swings per 64 ticks for two low density structure foundries).
+- Ko-fi support link in the footer. ([#71](https://github.com/abucnasty/factorio-scripts/pull/71))
+
+### Fixed
+- Configs with a belt between two machines no longer fail with "No value found for key inserter:N": the inserters filling the belt are planned for what is taken off it and clocked for their swings. ([#62](https://github.com/abucnasty/factorio-scripts/issues/62))
+- An inserter filling a belt nothing takes items off gives a clear error asking for an export belt.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added
