@@ -16,6 +16,9 @@ import {
 } from '@mui/material';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 
+// fractional (subtick) periods are shown to 3 decimals
+const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
+
 interface ClockAlternativesPanelProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
@@ -31,9 +34,9 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
-            <Typography variant="h6">Clock Alternatives</Typography>
+            <Typography variant="h6">Potential Clocks</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Each alternative clock was checked by simulating the build driven only by the clock windows,
+                Each potential clock was checked by simulating the build driven only by the clock windows,
                 starting the clock at several points. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
             </Typography>
@@ -42,8 +45,16 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                     <TableHead>
                         <TableRow>
                             <TableCell padding="checkbox" />
-                            <TableCell>Alternative</TableCell>
-                            <TableCell align="right">Output swings / cycle</TableCell>
+                            <TableCell>Clock</TableCell>
+                            <TableCell align="right">
+                                <Tooltip
+                                    title="Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of cycles (the clock period)."
+                                    arrow
+                                >
+                                    <span>Output swings</span>
+                                </Tooltip>
+                            </TableCell>
+                            <TableCell align="right">Clock period</TableCell>
                             <TableCell align="right">Inserter windows</TableCell>
                             <TableCell align="right">Rate (items/s)</TableCell>
                             <TableCell align="right">Clock-only output</TableCell>
@@ -79,7 +90,10 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                         </Tooltip>
                                     </Box>
                                 </TableCell>
-                                <TableCell align="right">{alternative.terminalSwingCount}</TableCell>
+                                <TableCell align="right">
+                                    {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
+                                </TableCell>
+                                <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
                                 <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
                                 <TableCell align="right">{alternative.itemsPerSecond.toFixed(2)}</TableCell>
                                 <TableCell align="right">
