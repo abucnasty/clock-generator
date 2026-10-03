@@ -281,6 +281,36 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    describe("belt used as a buffer between machines", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_BELTED_INTERNAL_BUFFER);
+        const result = generateClockForConfig(config);
+        const moved = (inserter_id: number) => Array.from(result.transfer_history.entries())
+            .find(([id]) => id.id === EntityId.forInserter(inserter_id).id)![1]
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        it("is stable", () => {
+            expect(result.stability_check.is_stable).toBe(true);
+        });
+
+        it("clocks the inserters filling the belt for what is taken off it", () => {
+            expect(moved(1) + moved(2)).toBe(moved(3));
+        });
+    });
+
+    describe("belt lane consumed outside the config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
+        const result = generateClockForConfig(config);
+
+        it("fills the lane at its consumption rate", () => {
+            const lane = config.belts.find(belt => belt.id === 5)!.lanes[0];
+            const consumption_per_second = "consumption_per_second" in lane ? lane.consumption_per_second! : 0;
+            const [, transfers] = Array.from(result.transfer_history.entries())
+                .find(([id]) => id.id === EntityId.forInserter(12).id)!;
+            const exported = transfers.reduce((sum, t) => sum + t.amount, 0);
+            expect(exported).toBe(consumption_per_second * result.simulation_duration.ticks / 60);
+        });
+    });
+
     describe("config validation", () => {
         it("throw error if the current configuration cannot meet the target production rate", async () => {
             const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);

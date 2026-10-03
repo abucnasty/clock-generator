@@ -140,7 +140,8 @@ function createPlan(
         output_machines,
         entity_registry,
         swings_per_cycle,
-        output_stack_size
+        output_stack_size,
+        final_period_duration.ticks
     )
 
     // Compute swing distributions if fractional swings are enabled

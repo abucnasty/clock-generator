@@ -6,7 +6,7 @@ import { DebugPluginFactory } from './sequence/debug/debug-plugin-factory';
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from './sequence/debug/debug-settings-provider';
 import { cloneSimulationContextWithInterceptors, SimulationContext } from './sequence/simulation-context';
 import { Duration, OpenRange } from '../data-types';
-import { assertIsMachine, Entity, Inserter, Machine, ReadableEntityRegistry } from '../entities';
+import { assertIsMachine, Entity, EntityId, Inserter, Machine, ReadableEntityRegistry } from '../entities';
 import { TargetProductionRate } from "./target-production-rate";
 import { EntityState, InserterStatus, MachineState, MachineStatus } from "../state";
 import Fraction, { fraction } from "fractionability";
@@ -328,6 +328,7 @@ export function generateClockForConfig(
 
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     EntityTransferCountMap.print(swing_counts, logger);
+    assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
 
     const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
     const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
@@ -455,7 +456,11 @@ export function generateClockForConfig(
         simulation_context.entity_registry,
         crafting_cycle_plan.entity_transfer_map,
     );
-    const final_history = trimmed_history;
+    const final_history = clipBeltFillerWindows(
+        trimmed_history,
+        simulation_context.entity_registry,
+        new Set(output_inserters.map(os => os.inserter.entity_id.id)),
+    );
 
     logger.log("\n--- Transfer History ---");
     InventoryTransferHistory.print(final_history, logger);
@@ -485,8 +490,13 @@ export function generateClockForConfig(
         }
     }
 
+    const exported_short = exportedLanesShortOfConsumption(simulation_context.entity_registry, final_history, output_inserter_ids, duration.ticks);
+    for (const lane of exported_short) {
+        logger.log(`Stability check: belt ${lane.belt_id} ${lane.item_name} exported ${lane.actual}, consumers take ${lane.expected}`);
+    }
+
     const stability_check: SimulationStabilityCheck = {
-        is_stable: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE,
+        is_stable: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0,
         actual_output_items: total_actual_output,
         expected_output_items: total_expected_output,
         used_lcm: recipe_lcm,
@@ -653,6 +663,84 @@ export function generateClockForConfig(
             computed_lcm,
         };
     }
+}
+
+/**
+ * An inserter clocked onto a belt only has to be enabled as it starts a pickup; it finishes the swing on its own.
+ * A window covering the whole swing would still be on when it gets back and let it swing again onto the endless belt.
+ */
+function clipBeltFillerWindows(
+    history: InventoryTransferHistory,
+    entity_registry: ReadableEntityRegistry,
+    output_inserter_ids: Set<string>,
+): InventoryTransferHistory {
+    return new InventoryTransferHistory(new Map(Array.from(history.entries(), ([entity_id, transfers]) => {
+        const entity = entity_registry.getEntityByIdOrThrow(entity_id);
+        if (!Entity.isInserter(entity) || output_inserter_ids.has(entity_id.id)
+            || !EntityId.isMachine(entity.source.entity_id) || !EntityId.isBelt(entity.sink.entity_id)) {
+            return [entity_id, transfers] as const;
+        }
+        const window_ticks = entity.animation.pickup.ticks + 2;
+        return [entity_id, transfers.map(transfer => ({
+            ...transfer,
+            tick_range: OpenRange.fromStartAndDuration(
+                transfer.tick_range.start_inclusive,
+                Math.min(window_ticks, transfer.tick_range.duration().ticks),
+            ),
+        }))] as const;
+    })));
+}
+
+/** An inserter filling a belt nothing in the config empties has no rate to plan for */
+function assertBeltFillersPlanned(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap): void {
+    for (const inserter of entity_registry.getAll().filter(Entity.isInserter)) {
+        if (!EntityId.isBelt(inserter.sink.entity_id) || swing_counts.has(inserter.entity_id)) {
+            continue;
+        }
+        const items = Array.from(inserter.filtered_items).join(", ");
+        throw new Error(
+            `Inserter ${inserter.entity_id.id.replace("inserter:", "")} puts ${items} onto belt ${inserter.sink.entity_id.id.replace("belt:", "")}, `
+            + `but nothing in the config takes it off. Make it an export belt with a consumption rate (items/s) on that lane.`
+        );
+    }
+}
+
+/**
+ * Belt lanes with a consumption rate must be filled at that rate (outside consumers would run dry otherwise).
+ * Returns the lanes that fell short over the period.
+ */
+function exportedLanesShortOfConsumption(
+    entity_registry: ReadableEntityRegistry,
+    history: InventoryTransferHistory,
+    output_inserter_ids: Set<string>,
+    period_ticks: number,
+): { belt_id: string, item_name: string, actual: number, expected: number }[] {
+    const inserters = entity_registry.getAll().filter(Entity.isInserter);
+    const moved = new Map<string, number>();
+    for (const [entity_id, transfers] of history.entries()) {
+        for (const transfer of transfers) {
+            const key = `${entity_id.id}|${transfer.item_name}`;
+            moved.set(key, (moved.get(key) ?? 0) + transfer.amount);
+        }
+    }
+    const short = [];
+    for (const belt of entity_registry.getAll().filter(Entity.isBelt)) {
+        for (const lane of belt.lanes) {
+            if (!lane.consumption_per_second) {
+                continue;
+            }
+            const fillers = inserters.filter(it => it.sink.entity_id.id === belt.entity_id.id && it.filtered_items.has(lane.ingredient_name));
+            if (fillers.length === 0 || fillers.some(it => output_inserter_ids.has(it.entity_id.id))) {
+                continue;
+            }
+            const actual = fillers.reduce((sum, it) => sum + (moved.get(`${it.entity_id.id}|${lane.ingredient_name}`) ?? 0), 0);
+            const expected = Math.round(lane.consumption_per_second * period_ticks / 60);
+            if (expected - actual > LCM_STABILITY_TOLERANCE) {
+                short.push({ belt_id: belt.entity_id.id, item_name: lane.ingredient_name, actual, expected });
+            }
+        }
+    }
+    return short;
 }
 
 /**
