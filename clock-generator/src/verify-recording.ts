@@ -13,7 +13,7 @@ async function main() {
     const config_path = argValue("config");
     const recording_path = argValue("recording");
     if (!config_path || !recording_path) {
-        console.error("Usage: npm run verify -- --config=<config.json> --recording=<recording.json> [--tolerance=2] [--window=32]");
+        console.error("Usage: npm run verify -- --config=<config.json> --recording=<recording.json> [--overrides='{\"terminal_swing_count\":2}'] [--tolerance=2] [--window=32]");
         process.exit(2);
     }
     const options = {
@@ -21,7 +21,10 @@ async function main() {
         match_window_ticks: Number(argValue("window") ?? DEFAULT_COMPARE_OPTIONS.match_window_ticks),
     };
 
-    const config = await loadConfigFromFile(config_path);
+    const loaded = await loadConfigFromFile(config_path);
+    // e.g. the swing count of the clock alternative that was built in game
+    const overrides = argValue("overrides");
+    const config = overrides ? { ...loaded, overrides: { ...loaded.overrides, ...JSON.parse(overrides) } } : loaded;
     const recording = parseRecording(JSON.parse(await fs.readFile(recording_path, "utf-8")));
 
     // the simulator logs heavily through console.log

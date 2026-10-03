@@ -21,11 +21,15 @@ export class DebugPluginFactory {
 
     private readonly log_factory: DebugLoggerFactory = new DebugLoggerFactory(this.tick_provider, this.settings_provider)
 
+    private enabled(): boolean {
+        return this.settings_provider.settings().enabled === true;
+    }
+
 
     public inserterHandContentsChangePlugin(inserter_state_machine: InserterStateMachine): InserterHandContentsChangePlugin {
         const debugLog = this.log_factory.forEntity(inserter_state_machine.inserter_state.inserter);
         return new InserterHandContentsChangePlugin(inserter_state_machine.inserter_state, (oldContents, newContents) => {
-            if (!newContents) {
+            if (!newContents || !this.enabled()) {
                 return;
             }
 
@@ -37,8 +41,12 @@ export class DebugPluginFactory {
 
     public inserterModeChangePlugin(inserter_state_machine: InserterStateMachine): ModePlugin<InserterMode> {
         const debugLog = this.log_factory.forEntity(inserter_state_machine.inserter_state.inserter);
+        const enabled = () => this.enabled();
         return {
             onTransition(fromMode, transition) {
+                if (!enabled()) {
+                    return;
+                }
                 const new_status = transition.toMode.status;
                 let message = `status=${new_status} \t reason="${transition.reason}"`;
 
@@ -50,8 +58,12 @@ export class DebugPluginFactory {
 
     public machineModeChangePlugin(machine_state: MachineState): ModePlugin<MachineMode> {
         const debugLog = this.log_factory.forEntity(machine_state.machine);
+        const enabled = () => this.enabled();
         return {
             onTransition(fromMode, transition) {
+                if (!enabled()) {
+                    return;
+                }
                 const new_status = transition.toMode.status;
                 debugLog(chalk.yellow(`${fromMode.status} -> ${new_status} reason=${transition.reason}`));
             }
@@ -60,7 +72,11 @@ export class DebugPluginFactory {
 
     public machineCraftEventPlugin(machine_state: MachineState) {
         const debugLog = this.log_factory.forEntity(machine_state.machine);
-        return new CraftEventListenerPlugin(machine_state, this.tick_provider, ({ state }) => {
+        return new CraftEventListenerPlugin(machine_state, this.tick_provider, (event) => {
+            if (!this.enabled()) {
+                return;
+            }
+            const { state } = event;
             let message = `craft event #${machine_state.craftCount}:`;
 
             const options: Partial<CraftEventPluginSettings> = this.settings_provider.settings().plugin_settings?.craft_event ?? {};
@@ -90,8 +106,12 @@ export class DebugPluginFactory {
 
     public drillModeChangePlugin(drill_state: DrillState): ModePlugin<DrillMode> {
         const debugLog = this.log_factory.forEntity(drill_state.drill);
+        const enabled = () => this.enabled();
         return {
             onTransition(fromMode, transition) {
+                if (!enabled()) {
+                    return;
+                }
                 const new_status = transition.toMode.status;
                 debugLog(chalk.yellow(`${fromMode.status} -> ${new_status} reason=${transition.reason}`));
             }

@@ -55,7 +55,19 @@ function initialBurstLength(belt_speed: BeltSpeed): number {
     return drop_interval.toDecimal() < 4 ? 3 : 2;
 }
 
+const drop_amount_cache = new Map<string, number>();
+
 function amountToDropAtTick(belt_speed: BeltSpeed, stackSize: BeltStackSize, tick_index: number): number {
+    const key = `${belt_speed}:${stackSize}:${tick_index}`;
+    let amount = drop_amount_cache.get(key);
+    if (amount === undefined) {
+        amount = computeAmountToDropAtTick(belt_speed, stackSize, tick_index);
+        drop_amount_cache.set(key, amount);
+    }
+    return amount;
+}
+
+function computeAmountToDropAtTick(belt_speed: BeltSpeed, stackSize: BeltStackSize, tick_index: number): number {
     const drop_interval = ticksPerDrop(belt_speed);
     const burst_length = initialBurstLength(belt_speed);
     

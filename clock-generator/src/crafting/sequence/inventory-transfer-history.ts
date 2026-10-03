@@ -91,7 +91,13 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
         super(Array.from(transfers.entries()));
     }
 
+    /** Off during prepare and warmup, whose transfers are cleared before the measured run anyway */
+    public recording = true;
+
     public recordTransfer(entity_id: EntityId, transfer: InventoryTransfer): void {
+        if (!this.recording) {
+            return;
+        }
         const transfer_list = this.get(entity_id) ?? [];
         transfer_list.push(transfer);
         this.set(entity_id, transfer_list);

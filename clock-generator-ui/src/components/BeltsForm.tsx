@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
@@ -32,7 +33,7 @@ interface BeltsFormProps {
     onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
-export function BeltsForm({
+function BeltsFormComponent({
     belts,
     itemNames,
     onAdd,
@@ -201,3 +202,5 @@ export function BeltsForm({
         </Paper>
     );
 }
+
+export const BeltsForm = memo(BeltsFormComponent);

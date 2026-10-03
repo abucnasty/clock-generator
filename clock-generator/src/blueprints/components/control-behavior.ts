@@ -3,6 +3,7 @@ import {
     DeciderCombinatorCondition,
     DeciderCombinatorOutput
 } from "./decider-combinator";
+import { SignalId } from "./signal";
 
 
 export interface DeciderConditions {
@@ -10,8 +11,16 @@ export interface DeciderConditions {
     readonly outputs?: DeciderCombinatorOutput[],
 }
 
+export interface ArithmeticConditions {
+    readonly first_signal: SignalId,
+    readonly second_constant: number,
+    readonly operation: "*" | "%",
+    readonly output_signal: SignalId,
+}
+
 export interface ControlBehavior {
     readonly decider_conditions?: DeciderConditions
+    readonly arithmetic_conditions?: ArithmeticConditions
     readonly sections?: ConstantCombinatorSection[]
 }
 

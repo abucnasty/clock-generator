@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -379,7 +379,7 @@ function FlowContent({
     );
 }
 
-export function ConfigFlowDiagram({
+function ConfigFlowDiagramComponent({
     onAddMachine,
     onAddInserter,
     onAddBelt,
@@ -458,3 +458,5 @@ export function ConfigFlowDiagram({
         </>
     );
 }
+
+export const ConfigFlowDiagram = memo(ConfigFlowDiagramComponent);

@@ -48,7 +48,10 @@ export class InserterSwingModeTransitionEvaluator implements ModeTransitionEvalu
 
     public evaluateTransition(): ModeTransition<InserterMode> {
 
-        if (this.elapsedDuration().ticks < this.inserter_animation.rotation.ticks) {
+        if (this.entered_tick === null) {
+            throw new Error("Cannot get elapsed duration, evaluator has not entered a mode yet");
+        }
+        if (this.tick_provider.getCurrentTick() - this.entered_tick < this.inserter_animation.rotation.ticks) {
             return ModeTransition.NONE;
         }
 

@@ -9,6 +9,7 @@ import { Entity } from "../entity";
 import { EntityId } from "../entity-id";
 import { Percentage, SerializableMachineFacts, SerializableMachineInput } from "../../data-types";
 import { MachineInputs } from "./input/machine-inputs";
+import { defaultLogger, Logger } from "../../common/logger";
 
 
 export class Machine implements Entity {
@@ -102,28 +103,28 @@ function createMachine(
     );
 }
 
-function printMachineFacts(machine: Machine): void {
-    console.log(`--------------------------------------------------`)
-    console.log(`Machine Facts:`);
-    console.log(`  Recipe: ${machine.metadata.recipe.name}`);
-    console.log(`  Crafting Speed: ${machine.metadata.crafting_speed}`);
-    console.log(`  Productivity: ${machine.metadata.productivity}%`);
-    console.log(`  Output Per Craft: ${machine.output.amount_per_craft.toDecimal().toFixed(2)}`);
-    console.log(`  Output Rate: ${machine.output.production_rate.amount_per_second.toDecimal().toFixed(2)} per second`);
-    console.log(`  Output Block: ${machine.output.outputBlock.quantity} ${machine.output.outputBlock.item_name}`);
-    console.log(`  Overload Multiplier: ${machine.overload_multiplier.overload_multiplier.toString()}`);
-    console.log(`  Ticks per craft: ${machine.crafting_rate.ticks_per_craft.toFixed(2)} ticks`);
-    console.log(`  Ticks per Bonus Craft: ${machine.bonus_productivity_rate.ticks_per_bonus.toFixed(2)} ticks`);
-    console.log(`  Insertion Duration before overload lockout: ${machine.insertion_duration.tick_duration.toDecimal().toFixed(2)} ticks`);
+function printMachineFacts(machine: Machine, logger: Logger = defaultLogger): void {
+    logger.log(`--------------------------------------------------`)
+    logger.log(`Machine Facts:`);
+    logger.log(`  Recipe: ${machine.metadata.recipe.name}`);
+    logger.log(`  Crafting Speed: ${machine.metadata.crafting_speed}`);
+    logger.log(`  Productivity: ${machine.metadata.productivity}%`);
+    logger.log(`  Output Per Craft: ${machine.output.amount_per_craft.toDecimal().toFixed(2)}`);
+    logger.log(`  Output Rate: ${machine.output.production_rate.amount_per_second.toDecimal().toFixed(2)} per second`);
+    logger.log(`  Output Block: ${machine.output.outputBlock.quantity} ${machine.output.outputBlock.item_name}`);
+    logger.log(`  Overload Multiplier: ${machine.overload_multiplier.overload_multiplier.toString()}`);
+    logger.log(`  Ticks per craft: ${machine.crafting_rate.ticks_per_craft.toFixed(2)} ticks`);
+    logger.log(`  Ticks per Bonus Craft: ${machine.bonus_productivity_rate.ticks_per_bonus.toFixed(2)} ticks`);
+    logger.log(`  Insertion Duration before overload lockout: ${machine.insertion_duration.tick_duration.toDecimal().toFixed(2)} ticks`);
 
-    console.log(`ingredient consumption rate facts:`)
+    logger.log(`ingredient consumption rate facts:`)
     for (const input of machine.inputs.values()) {
-        console.log(`  - ${input.item_name}: ${input.consumption_rate.rate_per_second.toFixed(2)} per second`);
+        logger.log(`  - ${input.item_name}: ${input.consumption_rate.rate_per_second.toFixed(2)} per second`);
     }
 
-    console.log(`automated insertion limits:`)
+    logger.log(`automated insertion limits:`)
     for (const input of machine.inputs.values()) {
-        console.log(`  - ${input.item_name}: ${input.automated_insertion_limit.quantity}`);
+        logger.log(`  - ${input.item_name}: ${input.automated_insertion_limit.quantity}`);
     }
 }
 

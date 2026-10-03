@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
     Accordion,
     AccordionDetails,
@@ -39,7 +40,7 @@ function formatEntityLabel(entityId: string): string {
     return `${capitalised} #${num}`;
 }
 
-export function TransferPlanPanel({
+function TransferPlanPanelComponent({
     transferPlan,
     usedLcm,
     excludedIngredients,
@@ -193,3 +194,5 @@ export function TransferPlanPanel({
         </Accordion>
     );
 }
+
+export const TransferPlanPanel = memo(TransferPlanPanelComponent);
