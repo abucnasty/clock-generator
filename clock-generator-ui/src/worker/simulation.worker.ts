@@ -6,7 +6,7 @@
  */
 
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, WorkerRequest, WorkerResponse } from './types';
+import type { ClockAlternativeRunView, ClockAlternativeView, ShiftOptionsView, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
@@ -41,6 +41,36 @@ async function handleInitialize(factorioDataUrl: string): Promise<void> {
     }
 }
 
+function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['result']): ShiftOptionsView | null {
+    const cycle = result.shifted_cycle;
+    if (cycle) {
+        return {
+            moved: 'swings',
+            chosenIndex: cycle.cycle,
+            chosenShiftTicks: cycle.shift_ticks,
+            movedDescription: cycle.moved.map(it => `${it.entity_id.replace(':', ' ')}: ${it.item_names.join(', ')}`).join('; '),
+            plannedTicks: cycle.planned_ticks,
+            rows: cycle.shifts_checked,
+            earliest: cycle.earliest,
+            latest: cycle.latest,
+        };
+    }
+    const swing = result.derived_clock_windows?.moved_output_swing;
+    if (swing) {
+        return {
+            moved: 'output-swing',
+            chosenIndex: swing.swing,
+            chosenShiftTicks: swing.shift_ticks,
+            movedDescription: `output swing ${swing.swing}`,
+            plannedTicks: null,
+            rows: swing.shifts_checked,
+            earliest: null,
+            latest: null,
+        };
+    }
+    return null;
+}
+
 function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | null {
     if (!run) {
         return null;
@@ -62,6 +92,8 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
         clockWindows: result.clock_windows,
+        insights: alternative.insights,
+        shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
         transferPlan: result.serializable_transfer_plan,
@@ -117,6 +149,18 @@ function runStreaming(
     }
 }
 
+function handleValidate(requestId: number, config: Config): void {
+    try {
+        postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
+    } catch (error) {
+        postResponse({
+            type: 'validation-failed',
+            requestId,
+            message: error instanceof Error ? error.message : 'Validation failed',
+        });
+    }
+}
+
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
         const plan = clockGenerator.planClockAlternatives(config, options);
@@ -144,6 +188,9 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     switch (request.type) {
         case 'initialize':
             await handleInitialize(request.factorioDataUrl);
+            break;
+        case 'validate':
+            handleValidate(request.requestId, request.config);
             break;
         case 'plan':
             handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);

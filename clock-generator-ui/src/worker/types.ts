@@ -1,5 +1,9 @@
 import type {
     AsBuiltStabilityCheck,
+    CheckedShiftRow,
+    ClockInsight,
+    ConfigValidation,
+    ShiftRangeEdge,
     ClockAlternativeContext,
     ClockAlternativeRun,
     ClockAlternativeTask,
@@ -12,6 +16,22 @@ import type {
     SerializableTransferPlan,
     SwingBackoffReport,
 } from 'clock-generator/browser';
+
+/** Every place tried for the swings a potential clock moved off their planned start */
+export interface ShiftOptionsView {
+    moved: 'swings' | 'output-swing';
+    /** Row (see `rows`) this clock moved, and by how many ticks (negative is earlier) */
+    chosenIndex: number;
+    chosenShiftTicks: number;
+    /** What was moved, e.g. "inserter 1: flying-robot-frame; inserter 3: battery, electronic-circuit" */
+    movedDescription: string;
+    /** Clock ticks the moved swings were planned in; null for a single output swing */
+    plannedTicks: { start: number; end: number } | null;
+    rows: CheckedShiftRow[];
+    /** Ends of the range that works around the chosen shift, with what limits them; null when not worked out */
+    earliest: ShiftRangeEdge | null;
+    latest: ShiftRangeEdge | null;
+}
 
 /**
  * A generated clock alternative, flattened to plain data so it can be posted from the worker.
@@ -39,6 +59,10 @@ export interface ClockAlternativeView {
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
+    /** What the simulation found that is worth explaining about the build and this clock */
+    insights: ClockInsight[];
+    /** Null unless this clock moved a crafting cycle or an output swing */
+    shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan;
@@ -53,8 +77,16 @@ export type ClockAlternativeRunView = ClockAlternativeRun<ClockAlternativeView>;
  */
 export type WorkerRequest =
     | InitializeRequest
+    | ValidateRequest
     | PlanRequest
     | TaskRequest;
+
+/** Checks a config and plans its transfers without generating a clock; answered by 'validated' or 'validation-failed' */
+export interface ValidateRequest {
+    type: 'validate';
+    requestId: number;
+    config: Config;
+}
 
 export interface InitializeRequest {
     type: 'initialize';
@@ -85,6 +117,8 @@ export interface TaskRequest {
  */
 export type WorkerResponse =
     | InitializedResponse
+    | ValidatedResponse
+    | ValidationFailedResponse
     | LogResponse
     | ProgressResponse
     | PlannedResponse
@@ -93,6 +127,18 @@ export type WorkerResponse =
 
 export interface InitializedResponse {
     type: 'initialized';
+}
+
+export interface ValidatedResponse {
+    type: 'validated';
+    requestId: number;
+    validation: ConfigValidation;
+}
+
+export interface ValidationFailedResponse {
+    type: 'validation-failed';
+    requestId: number;
+    message: string;
 }
 
 export interface LogResponse {

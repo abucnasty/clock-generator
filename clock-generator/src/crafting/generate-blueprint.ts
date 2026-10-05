@@ -28,6 +28,7 @@ import { RunnerStepType } from "./runner/steps/runner-step";
 import { Logger, defaultLogger } from "../common/logger";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
+import { ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
 import { SerializableStateTransitionHistory, serializeStateTransitionHistory } from "./sequence/state-transition-serializer";
 import { InserterStateTransitionTrackerPlugin } from "../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
@@ -59,6 +60,44 @@ const AS_BUILT_START_PHASES = 12;
 const FULL_CHECK_START_PHASES = 112;
 
 export type SerializableClockWindows = Record<string, { start: number; end: number }[]>;
+
+/** One place tried for a moved crafting cycle or output swing, in ticks from its planned start (negative is earlier) */
+export interface CheckedShift {
+    shift_ticks: number;
+    /** Passed the quick clock-only check (a dozen clock start phases); only the shift that is used is confirmed from more */
+    is_stable: boolean;
+}
+
+/** Every place tried for one crafting cycle or output swing (1-based `index`), in shift order */
+export interface CheckedShiftRow {
+    index: number;
+    shifts: CheckedShift[];
+}
+
+/** One end of the unbroken range of shifts that work around the shift in use */
+export interface ShiftRangeEdge {
+    shift_ticks: number;
+    /** No place further out was tried: the moved windows would meet the same inserters' other windows or the end of the period */
+    is_search_limit: boolean;
+    /** What the inserters and machines are waiting on at this shift, the limits that stop the swings from going further */
+    notes: string[];
+}
+
+/** The planned swings moved together by the shifted_cycle option */
+export interface ShiftedSwings {
+    /** 1-based crafting cycle within the clock period whose windows were moved */
+    cycle: number;
+    /** Ticks the windows were moved by (negative is earlier) */
+    shift_ticks: number;
+    /** Clock ticks the moved windows were planned in */
+    planned_ticks: { start: number; end: number };
+    /** Inserters and drills with a moved window, and the items they move */
+    moved: { entity_id: string; item_names: string[] }[];
+    shifts_checked: CheckedShiftRow[];
+    /** Ends of the range that works around shift_ticks, for the moved cycle */
+    earliest: ShiftRangeEdge;
+    latest: ShiftRangeEdge;
+}
 
 /** What the build does when only the exported clock windows drive it, from the unshifted clock start */
 export interface ClockOnlyRun {
@@ -110,6 +149,8 @@ export interface DerivedClockWindowsReport {
     end_padding_ticks: number | null;
     /** Machine-to-machine inserters whose observed windows were replaced by brief full-hand windows */
     full_hand_inserters?: string[];
+    /** With derive_mode "uneven_output": the output swing moved off its planned start and by how many ticks (negative is earlier) */
+    moved_output_swing?: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 }
 
 export interface SwingAttemptResult {
@@ -153,6 +194,10 @@ export interface BlueprintGenerationResult {
     serializable_transfer_history: SerializableTransferHistory;
     /** Serializable state transition history for UI visualization */
     serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** Insertion limits, crafting time and output per craft of every machine */
+    machine_facts: MachineFactsEntry[];
+    /** With the shifted_cycle option: the swings that were moved, where else they could go and what limits that */
+    shifted_cycle?: ShiftedSwings;
     /**
      * The clock-only check's unshifted run, when it is a different simulation than the histories above
      * (planned windows come from a run where inserters also wait on inventory). Absent when no clock-only
@@ -197,10 +242,15 @@ export interface GenerateClockOptions {
     verify_as_built?: boolean;
     /** Belt pickup slack on belt-fed windows: "auto" keeps it unless a clock-only check gets worse (default "auto") */
     belt_pickup_slack?: "auto" | "always" | "never";
-    /** With derive_clock_windows: "prefer_planned" keeps planned windows that pass the as-built check (default), "always" derives anyway */
-    derive_mode?: "prefer_planned" | "always";
+    /**
+     * With derive_clock_windows: "prefer_planned" keeps planned windows that pass the as-built check (default), "always"
+     * derives anyway, "uneven_output" derives with one output swing moved off its planned start
+     */
+    derive_mode?: "prefer_planned" | "always" | "uneven_output";
     /** Replace the output inserters' windows with evenly spaced single swings timed to find a full hand ready */
     full_hand_output?: boolean;
+    /** Move one crafting cycle's windows together to another place in the clock period, when the period spans several cycles */
+    shifted_cycle?: boolean;
     /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
     keep_output_buffers?: boolean;
     /** Warmup length in simulation periods (default 10) */
@@ -287,18 +337,9 @@ export function generateClockForConfig(
     relative_tick = simulation_context.tick_provider.getCurrentTick();
     debug.disable();
 
-    // Compute crafting cycle plan
-    const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
+    const { target_production_rate, output_machine_state_machines, output_inserters, crafting_cycle_plan } =
+        planCraftingCycle(config, simulation_context, logger);
 
-    // Find all output machines (machines that produce the target output item)
-    const output_machine_state_machines = simulation_context.machines.filter(
-        it => it.machine_state.machine.output.item_name === target_production_rate.machine_production_rate.item
-    );
-    assert(
-        output_machine_state_machines.length > 0,
-        `No machine with output item ${target_production_rate.machine_production_rate.item} found`
-    );
-    
     // Clear final output machine buffers to prevent OUTPUT_FULL during simulation start
     // This is especially important for fractional swing scenarios where the machine
     // produces slightly more than what gets cleared per sub-cycle
@@ -313,39 +354,6 @@ export function generateClockForConfig(
         }
     });
 
-    // validate target production rate can be met
-    const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => it.machine_state.machine.output.production_rate.amount_per_second)
-        .reduce((a, b) => a.add(b), fraction(0))
-        .multiply(fraction(config.target_output.copies));
-    assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
-       "The current configuration cannot meet the target production rate. " +
-       `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +
-       `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
-    )
-
-    // Find output inserters for each output machine
-    const output_inserters = output_machine_state_machines.map(machine_state_machine => {
-        const inserter = simulation_context.state_registry
-            .getAllStates()
-            .filter(EntityState.isInserter)
-            .find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
-        assert(
-            inserter !== undefined,
-            `No inserter with source machine ${machine_state_machine.machine_state.entity_id} found`
-        );
-        return inserter;
-    });
-
-    const crafting_cycle_plan = computeCraftingCyclePlan(
-        target_production_rate,
-        output_machine_state_machines.map(it => it.machine_state),
-        simulation_context.entity_registry,
-        output_inserters.map(it => it.inserter),
-        config,
-        logger
-    );
-
     logger.log("All machines are output blocked.");
     simulation_context.machines.forEach(it => {
         MachineState.print(it.machine_state, logger);
@@ -353,13 +361,8 @@ export function generateClockForConfig(
 
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     EntityTransferCountMap.print(swing_counts, logger);
-    assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
-
-    const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
-    const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
-    const recipe_lcm = config.overrides?.lcm ?? computed_lcm;
+    const { computed_lcm, recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
     logger.log(`Simulation context ingredient LCM: ${recipe_lcm}`);
-    const serializable_transfer_plan = EntityTransferCountMap.serialize(swing_counts, ignored_ingredients);
 
     logger.log("\n--- Swing Distributions ---");
     if (crafting_cycle_plan.swing_distribution) {
@@ -584,6 +587,20 @@ export function generateClockForConfig(
     const item_names = new Map(Array.from(final_history.entries(), ([entity_id, transfers]) =>
         [entity_id.id, Array.from(new Set(transfers.map(t => t.item_name))).sort().join(",")] as const
     ));
+    let shifted_cycle: ShiftedSwings | undefined;
+    if (options.shifted_cycle) {
+        const shifted = shiftedCycleWindows(
+            { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
+            planned_windows, crafting_cycle_plan.total_duration.ticks, duration.ticks, logger, options.on_progress_detail
+        );
+        if (shifted) {
+            planned_windows = shifted.windows;
+            shifted_cycle = {
+                ...shifted.swings,
+                moved: shifted.swings.moved.map(it => ({ ...it, item_names: (item_names.get(it.entity_id) ?? "").split(",").filter(Boolean) })),
+            };
+        }
+    }
     const blueprintForWindows = (windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): FactorioBlueprint => createSignalPerInserterBlueprint(
         target_production_rate.machine_production_rate.item,
         crafting_cycle_plan,
@@ -637,11 +654,19 @@ export function generateClockForConfig(
             };
         }
 
-        const derived = deriveClockWindows(config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
+        const uneven = options.derive_mode !== "uneven_output" ? null : deriveUnevenOutputClockWindows(
+            config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks,
+            Math.min(...output_machine_state_machines.map(it => it.machine_state.machine.crafting_rate.ticks_per_craft)),
+            logger, options.on_progress_detail);
+        // without a moved swing that works there is nothing to export; plain observed windows are their own alternative
+        const derived = options.derive_mode === "uneven_output"
+            ? uneven ?? { windows: null, end_padding_ticks: null, verification: null, as_built: null }
+            : deriveClockWindows(config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
         const report: DerivedClockWindowsReport = {
             succeeded: derived.windows !== null,
             kept_planned_windows: false,
             end_padding_ticks: derived.end_padding_ticks,
+            moved_output_swing: uneven?.moved_output_swing ?? undefined,
         };
         stability_check.as_built = derived.as_built ?? undefined;
         stability_check.is_stable = stability_check.is_stable && derived.windows !== null;
@@ -718,6 +743,11 @@ export function generateClockForConfig(
             transfer_history: final_history,
             serializable_transfer_history,
             serializable_state_transition_history,
+            machine_facts: simulation_context.machines.map(it => ({
+                entity_id: it.machine_state.machine.entity_id.id,
+                facts: Machine.getMachineFacts(it.machine_state.machine),
+            })),
+            shifted_cycle,
             clock_only_run,
             used_lcm: recipe_lcm,
             used_terminal_swing_count,
@@ -726,6 +756,116 @@ export function generateClockForConfig(
             computed_lcm,
         };
     }
+}
+
+/**
+ * The crafting cycle the clock is planned around, for a build whose machines have been run until output blocked
+ * (the prepare step): what was crafted by then sets how many hands the output inserters take per cycle.
+ * Throws when the build cannot reach the target rate or an output machine has no inserter taking from it.
+ */
+function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger) {
+    const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
+
+    // Find all output machines (machines that produce the target output item)
+    const output_machine_state_machines = simulation_context.machines.filter(
+        it => it.machine_state.machine.output.item_name === target_production_rate.machine_production_rate.item
+    );
+    assert(
+        output_machine_state_machines.length > 0,
+        `No machine with output item ${target_production_rate.machine_production_rate.item} found`
+    );
+
+    // validate target production rate can be met
+    const total_output_capacity_per_second = output_machine_state_machines
+        .map(it => it.machine_state.machine.output.production_rate.amount_per_second)
+        .reduce((a, b) => a.add(b), fraction(0))
+        .multiply(fraction(config.target_output.copies));
+    assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
+       "The current configuration cannot meet the target production rate. " +
+       `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +
+       `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
+    )
+
+    // Find output inserters for each output machine
+    const output_inserters = output_machine_state_machines.map(machine_state_machine => {
+        const inserter = simulation_context.state_registry
+            .getAllStates()
+            .filter(EntityState.isInserter)
+            .find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
+        assert(
+            inserter !== undefined,
+            `No inserter with source machine ${machine_state_machine.machine_state.entity_id} found`
+        );
+        return inserter;
+    });
+
+    const crafting_cycle_plan = computeCraftingCyclePlan(
+        target_production_rate,
+        output_machine_state_machines.map(it => it.machine_state),
+        simulation_context.entity_registry,
+        output_inserters.map(it => it.inserter),
+        config,
+        logger
+    );
+
+    return { target_production_rate, output_machine_state_machines, output_inserters, crafting_cycle_plan };
+}
+
+/** The hands every inserter and drill moves per crafting cycle, and the cycles the clock needs to make them whole */
+function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCyclePlan, simulation_context: SimulationContext) {
+    const swing_counts = crafting_cycle_plan.entity_transfer_map;
+    assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
+
+    const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
+    const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
+    return {
+        computed_lcm,
+        recipe_lcm: config.overrides?.lcm ?? computed_lcm,
+        serializable_transfer_plan: EntityTransferCountMap.serialize(swing_counts, ignored_ingredients),
+    };
+}
+
+/** What validating a config finds out before any clock is generated */
+export interface ConfigValidation {
+    /** Hands each inserter and drill moves per crafting cycle */
+    transfer_plan: SerializableTransferPlan;
+    /** Crafting cycles in one clock period: the computed LCM, or the config's override */
+    used_lcm: number;
+    /** Hands each output inserter takes per crafting cycle, before any backoff a generation may apply */
+    output_swings_per_cycle: number;
+    cycle_ticks: number;
+    period_ticks: number;
+}
+
+/**
+ * Checks that a clock can be planned for the config and returns that plan, without generating any clock: every
+ * ingredient and output has an inserter, the machines can reach the target rate, and every belt that is filled is
+ * planned for. Costs one prepare run (the machines crafting until output blocked) instead of the hundreds of
+ * simulations a generation does. Throws with the reason when the config is not valid.
+ *
+ * A generation can still end up with another plan than this one: it lowers the output swings when the planned
+ * count is unstable, and offers other counts as potential clocks.
+ */
+export function validateConfig(config: Config, options: { logger?: Logger } = {}): ConfigValidation {
+    const logger = options.logger ?? { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
+    assertInserterCoverage(config);
+
+    const simulation_context = SimulationContext.fromConfig(config);
+    new PrepareStep(simulation_context).execute();
+
+    const { crafting_cycle_plan, output_inserters } = planCraftingCycle(config, simulation_context, logger);
+    const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
+    const cycle_ticks = crafting_cycle_plan.total_duration.ticks;
+    const output_ids = new Set(output_inserters.map(it => it.inserter.entity_id.id));
+    const output_plan = crafting_cycle_plan.entity_transfer_map.entries_array().find(([entity_id]) => output_ids.has(entity_id.id));
+    const output_swings_per_cycle = output_plan?.[1].total_transfer_count.toDecimal() ?? 1;
+    return {
+        transfer_plan: serializable_transfer_plan,
+        used_lcm: recipe_lcm,
+        output_swings_per_cycle,
+        cycle_ticks,
+        period_ticks: cycle_ticks * recipe_lcm,
+    };
 }
 
 /**
@@ -891,6 +1031,8 @@ function deriveWithOutputWindows(
     label: string,
     logger: Logger,
     report?: (detail: string) => void,
+    /** Confirm the accepted padding from many more start phases; a caller comparing several results confirms its pick itself */
+    confirm: boolean = true,
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
@@ -937,6 +1079,9 @@ function deriveWithOutputWindows(
 
         const previous = attempts[attempts.length - 2];
         if (previous?.check.is_stable && check.is_stable) {
+            if (!confirm) {
+                return { windows, end_padding_ticks: padding, verification: result, as_built: check, even_output_windows };
+            }
             // failing start phases can be a narrow band the quick check skips over
             const full = runAsBuiltCheck(base_config, windows, period, logger, FULL_CHECK_START_PHASES,
                 (n, total) => report?.(`Confirming ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`)).check;
@@ -954,6 +1099,423 @@ function deriveWithOutputWindows(
 
     const best = attempts.reduce((a, b) => b.check.actual_output_items > a.check.actual_output_items ? b : a);
     return { windows: null, end_padding_ticks: null, verification: best.result, as_built: best.check, even_output_windows };
+}
+
+/** Groups checked shifts by the cycle or swing they moved, keeping their order */
+function checkedShiftRows(checked: { index: number; shift_ticks: number; is_stable: boolean }[]): CheckedShiftRow[] {
+    const rows = new Map<number, CheckedShift[]>();
+    for (const { index, shift_ticks, is_stable } of checked) {
+        rows.set(index, [...(rows.get(index) ?? []), { shift_ticks, is_stable }]);
+    }
+    return Array.from(rows, ([index, shifts]) => ({ index, shifts }));
+}
+
+/** Positions tried for a shifted crafting cycle; each costs up to a dozen clock-only simulations */
+const MAX_SHIFTED_CYCLE_CANDIDATES = 48;
+/** Best-ranked shifts confirmed from many start phases before giving up */
+const MAX_SHIFTED_CYCLE_CONFIRMATIONS = 3;
+/** Smallest shift tried, as a fraction of the crafting cycle; anything closer to the plan is barely a different clock */
+const MIN_SHIFTED_CYCLE_FRACTION = 1 / 8;
+
+interface ShiftedCycleCandidate {
+    /** 0-based crafting cycle within the clock period */
+    cycle_index: number;
+    shift_ticks: number;
+    /** False for the planned position and shifts next to it: checked to show the whole range, never used */
+    selectable: boolean;
+    windows: Map<string, OpenRange[]>;
+}
+
+/**
+ * The planned windows with one crafting cycle's windows (every inserter's and drill's) moved together, keeping their
+ * lengths and spacing. A window belongs to the cycle it starts in. The first cycle stays put as the reference, and a
+ * moved window never touches the same entity's windows of another cycle or wraps the end of the period.
+ * Only shifts at least an eighth of a cycle away from the planned position can be used; a cycle with none is left out.
+ */
+function shiftedCycleCandidates(
+    planned_windows: Map<string, OpenRange[]>,
+    cycle_ticks: number,
+    period: number,
+): ShiftedCycleCandidate[] {
+    const cycles = Math.round(period / cycle_ticks);
+    if (!Number.isInteger(period) || cycles < 2) {
+        return [];
+    }
+    const cycleOf = (range: OpenRange) => Math.min(cycles - 1, Math.floor(range.start_inclusive / cycle_ticks));
+
+    const room: { cycle_index: number; min: number; max: number }[] = [];
+    for (let cycle_index = 1; cycle_index < cycles; cycle_index++) {
+        let min = -Infinity;
+        let max = Infinity;
+        for (const ranges of planned_windows.values()) {
+            const moved = ranges.filter(range => cycleOf(range) === cycle_index);
+            if (moved.length === 0) {
+                continue;
+            }
+            const fixed = ranges.filter(range => cycleOf(range) !== cycle_index);
+            const first = Math.min(...moved.map(range => range.start_inclusive));
+            const last = Math.max(...moved.map(range => range.end_inclusive));
+            const before = Math.max(-2, ...fixed.filter(range => range.end_inclusive < first).map(range => range.end_inclusive));
+            const after = Math.min(period + 1, ...fixed.filter(range => range.start_inclusive > last).map(range => range.start_inclusive));
+            min = Math.max(min, before + 2 - first);
+            max = Math.min(max, after - 2 - last);
+        }
+        if (Number.isFinite(min) && Number.isFinite(max) && max > min) {
+            room.push({ cycle_index, min, max });
+        }
+    }
+    const span = room.reduce((sum, it) => sum + it.max - it.min, 0);
+    const step = Math.max(1, Math.ceil(span / MAX_SHIFTED_CYCLE_CANDIDATES));
+
+    const candidates: ShiftedCycleCandidate[] = [];
+    for (const { cycle_index, min, max } of room) {
+        const of_cycle: ShiftedCycleCandidate[] = [];
+        for (let shift_ticks = Math.ceil(min / step) * step; shift_ticks <= max; shift_ticks += step) {
+            of_cycle.push({
+                cycle_index,
+                shift_ticks,
+                selectable: Math.abs(shift_ticks) >= cycle_ticks * MIN_SHIFTED_CYCLE_FRACTION,
+                windows: new Map(Array.from(planned_windows, ([key, ranges]) => [key, ranges
+                    .map(range => cycleOf(range) !== cycle_index ? range
+                        : OpenRange.from(range.start_inclusive + shift_ticks, range.end_inclusive + shift_ticks))
+                    .sort((a, b) => a.start_inclusive - b.start_inclusive)])),
+            });
+        }
+        if (of_cycle.some(it => it.selectable)) {
+            candidates.push(...of_cycle);
+        }
+    }
+    return candidates;
+}
+
+/** The windows a candidate moves, at the candidate's shift */
+function movedWindows(
+    planned_windows: Map<string, OpenRange[]>,
+    candidate: { cycle_index: number; shift_ticks: number },
+    cycle_ticks: number,
+    period: number,
+): { entity_id: string; start: number; end: number }[] {
+    const cycles = Math.round(period / cycle_ticks);
+    const moved: { entity_id: string; start: number; end: number }[] = [];
+    for (const [entity_id, ranges] of planned_windows) {
+        for (const range of ranges) {
+            if (Math.min(cycles - 1, Math.floor(range.start_inclusive / cycle_ticks)) === candidate.cycle_index) {
+                moved.push({ entity_id, start: range.start_inclusive + candidate.shift_ticks, end: range.end_inclusive + candidate.shift_ticks });
+            }
+        }
+    }
+    return moved;
+}
+
+/** Waits shorter than this are the normal tick or two between an inserter being enabled and moving */
+const MIN_SHIFT_EDGE_WAIT_TICKS = 3;
+
+/**
+ * What limits a clock-only run at the edge of the range of shifts that work, read from what the moved inserters and
+ * the machines they feed were waiting on: an inserter enabled but idle at a belt is waiting for its machine to drop
+ * below an insertion limit, one waiting at a machine is waiting for a full hand, and a machine that stops until
+ * the moved swings arrive has run out of ingredients.
+ */
+function shiftEdgeNotes(
+    run: BlueprintGenerationResult,
+    moved: { entity_id: string; start: number; end: number }[],
+): string[] {
+    const entities = new Map(run.serializable_state_transition_history.entities.map(entity => [entity.entity_id, entity]));
+    const segmentsOf = (entity_id: string) => {
+        const entity = entities.get(entity_id);
+        if (entity === undefined) {
+            return [];
+        }
+        const sorted = [...entity.transitions].sort((a, b) => a.tick - b.tick);
+        const first_tick = sorted[0]?.tick ?? run.serializable_state_transition_history.total_duration_ticks;
+        return [
+            { status: entity.initial_status, start: 0, end: first_tick },
+            ...sorted.map(it => ({ status: it.to_status, start: it.tick, end: it.tick + it.duration_ticks })),
+        ];
+    };
+    // ticks an inserter is enabled for a decider window
+    const enabledSpan = (window: { start: number; end: number }) => ({
+        start: window.start + CIRCUIT_LATENCY_TICKS - SIMULATED_WAKE_DELAY_TICKS,
+        end: window.end + CIRCUIT_LATENCY_TICKS + 1,
+    });
+
+    const notes = new Set<string>();
+    for (const window of moved) {
+        const entity = entities.get(window.entity_id);
+        if (entity === undefined || entity.entity_type !== "inserter") {
+            continue;
+        }
+        const span = enabledSpan(window);
+        const segments = segmentsOf(window.entity_id);
+        segments.forEach((segment, index) => {
+            const waited = Math.min(segment.end, span.end) - Math.max(segment.start, span.start);
+            const next = segments[index + 1];
+            if (waited < MIN_SHIFT_EDGE_WAIT_TICKS || next === undefined || next.start >= span.end) {
+                return;
+            }
+            if (segment.status === InserterStatus.IDLE && next.status === InserterStatus.PICKUP) {
+                if (entity.source?.entity_id.startsWith("belt:") && entity.sink?.entity_id.startsWith("machine:")) {
+                    const item = run.serializable_transfer_history.entities.find(it => it.entity_id === window.entity_id)
+                        ?.transfers.filter(it => it.end_tick > next.start).sort((a, b) => a.start_tick - b.start_tick)[0]?.item_name;
+                    notes.add(`${entity.label} waits ${waited} ticks for ${entity.sink.label} to drop below its insertion limit`
+                        + (item ? ` for ${item}` : ""));
+                } else if (entity.source?.entity_id.startsWith("machine:")) {
+                    notes.add(`${entity.label} waits ${waited} ticks for ${entity.source.label} to have items`);
+                }
+            }
+            if (segment.status === InserterStatus.PICKUP && next.status === InserterStatus.SWING && entity.source?.entity_id.startsWith("machine:")) {
+                notes.add(`${entity.label} waits ${waited} ticks at ${entity.source.label} for a full hand`);
+            }
+        });
+
+        // a machine that only starts again while these swings are under way was waiting for them
+        const fed = entity.sink?.entity_id.startsWith("machine:") ? entity.sink.entity_id : entity.source?.entity_id;
+        if (fed === undefined || !fed.startsWith("machine:")) {
+            continue;
+        }
+        for (const segment of segmentsOf(fed)) {
+            const stopped = segment.status === MachineStatus.INGREDIENT_SHORTAGE || segment.status === MachineStatus.OUTPUT_FULL;
+            if (stopped && segment.end > span.start && segment.end <= span.end + MIN_SHIFT_EDGE_WAIT_TICKS && segment.end - segment.start >= MIN_SHIFT_EDGE_WAIT_TICKS) {
+                const label = entities.get(fed)?.label ?? fed;
+                notes.add(segment.status === MachineStatus.INGREDIENT_SHORTAGE
+                    ? `${label} is out of ingredients for ${segment.end - segment.start} ticks until these swings arrive`
+                    : `${label} stops for ${segment.end - segment.start} ticks until these swings arrive, out of ingredients with its output waiting to be removed`);
+            }
+        }
+    }
+    return Array.from(notes);
+}
+
+/**
+ * Finds a place for one crafting cycle's planned windows other than where the plan put them. The plan repeats the
+ * same cycle evenly over the clock period, but the build only has to balance over the whole period, so a cycle can
+ * run earlier or later while the machines' buffers carry the difference. Every shift is checked with the clock-only
+ * simulation; of those that pass, the one with the most passing shifts on either side (in the same direction from
+ * the planned position) is confirmed from many start phases and used. Null when no shift passes.
+ */
+function shiftedCycleWindows(
+    config: Config,
+    planned_windows: Map<string, OpenRange[]>,
+    cycle_ticks: number,
+    period: number,
+    logger: Logger,
+    report?: (detail: string) => void,
+): { windows: Map<string, OpenRange[]>; swings: ShiftedSwings } | null {
+    const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, period);
+    const describe = (candidate: ShiftedCycleCandidate) =>
+        `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
+
+    const passes = new Set<number>();
+    const runs = new Map<number, BlueprintGenerationResult>();
+    candidates.forEach((candidate, index) => {
+        const { result, check } = runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
+            (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`));
+        if (check.is_stable) {
+            passes.add(index);
+            runs.set(index, result);
+        }
+    });
+    logger.log(`Shifted crafting cycle: ${passes.size} of ${candidates.length} shifts pass the quick clock-only check: `
+        + Array.from(passes, index => `${candidates[index].cycle_index + 1}:${candidates[index].shift_ticks}`).join(" "));
+
+    // candidates are listed per cycle in shift order; the shifts around the planned position are not used and end a run
+    const sameRun = (a: ShiftedCycleCandidate, b: ShiftedCycleCandidate) =>
+        a.selectable && b.selectable && a.cycle_index === b.cycle_index && Math.sign(a.shift_ticks) === Math.sign(b.shift_ticks);
+    const neighboursPassing = (index: number, direction: 1 | -1) => {
+        let run = 0;
+        for (let next = index + direction; passes.has(next) && sameRun(candidates[next], candidates[index]); next += direction) {
+            run++;
+        }
+        return run;
+    };
+    const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
+    const ranked = Array.from(passes).filter(index => candidates[index].selectable).sort((a, b) => margin(b) - margin(a)
+        || Math.abs(candidates[a].shift_ticks) - Math.abs(candidates[b].shift_ticks));
+    const shifts_checked = checkedShiftRows(candidates.map((candidate, index) =>
+        ({ index: candidate.cycle_index + 1, shift_ticks: candidate.shift_ticks, is_stable: passes.has(index) })));
+
+    for (const index of ranked.slice(0, MAX_SHIFTED_CYCLE_CONFIRMATIONS)) {
+        const candidate = candidates[index];
+        const full = runAsBuiltCheck(config, candidate.windows, period, logger, FULL_CHECK_START_PHASES,
+            (n, total) => report?.(`Confirming ${describe(candidate)}, clock start ${n}/${total}`)).check;
+        logger.log(`Shifted crafting cycle: ${describe(candidate)} full check -> stable=${full.is_stable}`);
+        if (full.is_stable) {
+            // the range that works runs through the planned position, so its ends ignore the direction split used for ranking
+            const edgeOf = (direction: 1 | -1): ShiftRangeEdge => {
+                let edge = index;
+                while (passes.has(edge + direction) && candidates[edge + direction].cycle_index === candidate.cycle_index) {
+                    edge += direction;
+                }
+                const beyond = candidates[edge + direction];
+                return {
+                    shift_ticks: candidates[edge].shift_ticks,
+                    is_search_limit: beyond === undefined || beyond.cycle_index !== candidate.cycle_index,
+                    notes: shiftEdgeNotes(runs.get(edge)!, movedWindows(planned_windows, candidates[edge], cycle_ticks, period)),
+                };
+            };
+            const planned = movedWindows(planned_windows, { ...candidate, shift_ticks: 0 }, cycle_ticks, period);
+            return {
+                windows: candidate.windows,
+                swings: {
+                    cycle: candidate.cycle_index + 1,
+                    shift_ticks: candidate.shift_ticks,
+                    planned_ticks: {
+                        start: Math.min(...planned.map(it => it.start)),
+                        end: Math.max(...planned.map(it => it.end)),
+                    },
+                    moved: Array.from(new Set(planned.map(it => it.entity_id)), entity_id => ({ entity_id, item_names: [] })),
+                    shifts_checked,
+                    earliest: edgeOf(-1),
+                    latest: edgeOf(1),
+                },
+            };
+        }
+    }
+    return null;
+}
+
+/** Positions tried for moved output swings; each costs dozens of clock-only simulations */
+const MAX_UNEVEN_OUTPUT_CANDIDATES = 24;
+
+interface UnevenOutputCandidate {
+    /** Index of the moved window among each output inserter's windows, in clock order */
+    window_index: number;
+    shift_ticks: number;
+    output_windows: Map<string, OpenRange[]>;
+}
+
+/**
+ * The planned output windows with one window moved earlier or later in steps of a craft, the first window staying
+ * put as the reference. A moved window keeps at least its own length clear of its neighbours. Every output inserter
+ * moves the same window by the same amount. Empty when there is a single window per period or the period is fractional.
+ */
+function unevenOutputCandidates(
+    output_windows: Map<string, OpenRange[]>,
+    period: number,
+    step_ticks: number,
+): UnevenOutputCandidate[] {
+    const sorted = new Map(Array.from(output_windows, ([key, ranges]) =>
+        [key, [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive)] as const));
+    const count = Math.min(...Array.from(sorted.values(), ranges => ranges.length));
+    if (!Number.isInteger(period) || sorted.size === 0 || count < 2
+        || Array.from(sorted.values()).some(ranges => ranges.length !== count)) {
+        return [];
+    }
+
+    // shifts every output inserter has room for, per moved window
+    const room: { window_index: number; min: number; max: number }[] = [];
+    for (let window_index = 1; window_index < count; window_index++) {
+        let min = -Infinity;
+        let max = Infinity;
+        for (const ranges of sorted.values()) {
+            const window = ranges[window_index];
+            const length = window.end_inclusive - window.start_inclusive + 1;
+            const next_start = window_index + 1 < count ? ranges[window_index + 1].start_inclusive : ranges[0].start_inclusive + period;
+            min = Math.max(min, ranges[window_index - 1].end_inclusive + length + 1 - window.start_inclusive);
+            max = Math.min(max, next_start - length - 1 - window.end_inclusive, period - 1 - window.end_inclusive);
+        }
+        room.push({ window_index, min, max });
+    }
+    const span = room.reduce((sum, it) => sum + Math.max(0, it.max - it.min), 0);
+    const step = Math.max(step_ticks, span / MAX_UNEVEN_OUTPUT_CANDIDATES, 1);
+
+    const candidates: UnevenOutputCandidate[] = [];
+    for (const { window_index, min, max } of room) {
+        const shifts = new Set<number>();
+        for (let n = 1; n * step <= Math.max(max, -min); n++) {
+            shifts.add(Math.round(n * step));
+            shifts.add(-Math.round(n * step));
+        }
+        for (const shift_ticks of Array.from(shifts).filter(it => it >= min && it <= max).sort((a, b) => a - b)) {
+            candidates.push({
+                window_index,
+                shift_ticks,
+                output_windows: new Map(Array.from(sorted, ([key, ranges]) => [key, ranges.map((range, index) => index !== window_index ? range
+                    : OpenRange.from(range.start_inclusive + shift_ticks, range.end_inclusive + shift_ticks))])),
+            });
+        }
+    }
+    return candidates;
+}
+
+/**
+ * Like deriveClockWindows, but with one output swing moved off its planned start: a machine only has to make up for
+ * its output over the whole period, so it can craft more between one pair of swings than the next. Every candidate
+ * position gets its own observed windows; of those that pass the clock-only check, the one with the most passing
+ * positions on either side is confirmed and used, since its neighbours show how far the timing can slip.
+ * Null when there is nothing to move or no position passes.
+ */
+function deriveUnevenOutputClockWindows(
+    config: Config,
+    planned_history: InventoryTransferHistory,
+    output_inserter_ids: Set<string>,
+    belt_pickup_slack: Map<string, number>,
+    period: number,
+    step_ticks: number,
+    logger: Logger,
+    report?: (detail: string) => void,
+): {
+    windows: Map<string, OpenRange[]> | null;
+    end_padding_ticks: number | null;
+    verification: BlueprintGenerationResult | null;
+    as_built: AsBuiltStabilityCheck | null;
+    moved_output_swing: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
+} | null {
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const planned_windows = windowsFromHistory(planned_history);
+    const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
+    const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
+
+    const candidates = unevenOutputCandidates(output_windows, period, step_ticks);
+    const passing: { index: number; candidate: UnevenOutputCandidate; derived: ReturnType<typeof deriveWithOutputWindows> }[] = [];
+    candidates.forEach((candidate, index) => {
+        const label = `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
+        const derived = deriveWithOutputWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
+            belt_pickup_slack, period, label, logger,
+            report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
+        if (derived.windows !== null) {
+            passing.push({ index, candidate, derived });
+        }
+    });
+
+    // candidates are listed per moved window in shift order, so neighbours in the list are neighbours in time
+    const passes = new Set(passing.map(it => it.index));
+    const neighboursPassing = (index: number, direction: 1 | -1) => {
+        let run = 0;
+        for (let next = index + direction; passes.has(next) && candidates[next].window_index === candidates[index].window_index; next += direction) {
+            run++;
+        }
+        return run;
+    };
+    const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
+    const ranked = [...passing].sort((a, b) => margin(b.index) - margin(a.index)
+        || Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks));
+    logger.log(`Uneven output swings: ${passing.length} of ${candidates.length} positions pass the quick clock-only check`);
+    for (const { index, candidate, derived } of passing) {
+        const windows = Array.from(derived.windows!, ([key, ranges]) => `${key} ${ranges.map(r => `${r.start_inclusive}-${r.end_inclusive}`).join(",")}`).join("; ");
+        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, ${margin(index)} passing positions on each side: ${windows}`);
+    }
+
+    for (const { candidate, derived } of ranked) {
+        const full = runAsBuiltCheck(base_config, derived.windows!, period, logger, FULL_CHECK_START_PHASES,
+            (n, total) => report?.(`Confirming output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, clock start ${n}/${total}`));
+        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks full check -> stable=${full.check.is_stable}`);
+        if (full.check.is_stable) {
+            return {
+                windows: derived.windows,
+                end_padding_ticks: derived.end_padding_ticks,
+                verification: full.result,
+                as_built: full.check,
+                moved_output_swing: {
+                    swing: candidate.window_index + 1,
+                    shift_ticks: candidate.shift_ticks,
+                    shifts_checked: checkedShiftRows(candidates.map((it, index) =>
+                        ({ index: it.window_index + 1, shift_ticks: it.shift_ticks, is_stable: passes.has(index) }))),
+                },
+            };
+        }
+    }
+    return null;
 }
 
 /**
@@ -1638,6 +2200,8 @@ export interface ClockAlternative {
     is_stable: boolean;
     /** Output of all copies at the period the exported clock actually runs (whole ticks unless it is a subtick clock) */
     items_per_second: number;
+    /** What the simulation found that is worth explaining about the build and this clock */
+    insights: ClockInsight[];
     result: BlueprintGenerationResult;
 }
 
@@ -1773,6 +2337,43 @@ function alternativeDefinitions(
                 { ...quiet, derive_mode: "always" }
             ),
         }]),
+        ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
+            id: "uneven-output",
+            label: "Uneven output swings",
+            description: "Observed windows with one output swing moved off its planned start, so the output swings are not evenly "
+                + "spaced. A machine only has to make up for what the output inserter takes over the whole clock period, so it can "
+                + "craft more between one pair of swings than the next and carry the difference in its output slot. The swing is "
+                + "tried at positions a craft apart and every other inserter's windows are observed again for each; the position "
+                + "with the most working positions on either side is used. Only offered when the period has more than one output "
+                + "swing and a moved swing passes the clock-only check.",
+            run: () => {
+                // one search at the planned swing count; backing off would repeat it for every lower count
+                const result = generateClockForConfig(
+                    { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
+                    { ...quiet, derive_mode: "uneven_output" }
+                );
+                assert(result.derived_clock_windows?.moved_output_swing !== undefined, "no moved output swing passes the clock-only check");
+                return result;
+            },
+        }]),
+        {
+            id: "shifted-swings",
+            label: "Shifted swings",
+            description: "Planned windows (with belt pickup slack) with one round of swings moved together to another place in the "
+                + "clock period: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a "
+                + "machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before "
+                + "it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within "
+                + "those limits a round can run earlier or later. Window lengths and their spacing within the round are kept, so "
+                + "swings stay as batched as planned. Every shift is checked with the clock-only simulation and the one with the "
+                + "most working shifts on either side is used. Only offered when the clock period has more than one round and a "
+                + "shift passes.",
+            run: () => {
+                // one search at the planned swing count, like uneven output swings
+                const result = generateClockForConfig(base_config, { ...quiet, belt_pickup_slack: "always", shifted_cycle: true });
+                assert(result.shifted_cycle !== undefined, "no shifted round of swings passes the clock-only check");
+                return result;
+            },
+        },
         ...higher_counts.map(higher => ({
             id: `swings-${higher}`,
             label: `${higher} output swings per cycle`,
@@ -1847,12 +2448,21 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
-    const description = definition.description + planning_note + asBuiltNotes(as_built, expected_output_items);
+    const moved = result.derived_clock_windows?.moved_output_swing;
+    const moved_note = moved === undefined ? ""
+        : ` Output swing ${moved.swing} starts ${Math.abs(moved.shift_ticks)} ticks ${moved.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const shifted = result.shifted_cycle;
+    const shifted_note = shifted === undefined ? ""
+        : ` The swings planned in clock ticks ${shifted.planned_ticks.start}–${shifted.planned_ticks.end} (`
+        + shifted.moved.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
+        + `) start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const description = definition.description + moved_note + shifted_note + planning_note + asBuiltNotes(as_built, expected_output_items);
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
+    const insights = clockInsights(result, is_stable);
     const period = result.simulation_duration.ticks;
     const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), insights, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -1870,6 +2480,7 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
                 inserter_window_count,
                 is_stable,
                 items_per_second: rateAt(period),
+                insights,
                 result: { ...result, blueprint: result.subtick.blueprint },
             },
             {
@@ -1881,6 +2492,7 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
                 inserter_window_count,
                 is_stable,
                 items_per_second: rateAt(rounded),
+                insights,
                 result,
             },
         ],

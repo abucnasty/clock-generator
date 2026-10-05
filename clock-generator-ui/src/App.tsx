@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     AppBar,
     Box,
@@ -11,11 +11,9 @@ import {
     IconButton,
     ThemeProvider,
     Toolbar,
-    Paper,
     Typography,
     createTheme,
     Alert,
-    Divider,
     Icon,
     ToggleButton,
     ToggleButtonGroup,
@@ -34,16 +32,12 @@ import { ChestsForm } from './components/ChestsForm';
 import { DrillsForm } from './components/DrillsForm';
 import { OverridesForm } from './components/OverridesForm';
 import { ConfigImportExport } from './components/ConfigImportExport';
-import { BlueprintOutput } from './components/BlueprintOutput';
-import { DebugPanel } from './components/DebugPanel';
-import { TransferHistoryVisualization } from './components/TransferHistoryVisualization';
-import { StateTransitionTimeline } from './components/StateTransitionTimeline';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
-import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDisplay';
-import { TransferPlanPanel } from './components/TransferPlanPanel';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
-import { ClockAlternativesPanel } from './components/ClockAlternativesPanel';
 import { ChangelogDialog } from './components/ChangelogDialog';
+import { ResultsWorkspace } from './components/ResultsWorkspace';
+import { ValidationPanel } from './components/ValidationPanel';
+import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 
 const darkTheme = createTheme({
     palette: {
@@ -66,6 +60,10 @@ const darkTheme = createTheme({
         error: {
             main: '#ff5958'
         }
+    },
+    typography: {
+        fontFamily: '"Titillium Web", "Helvetica", "Arial", sans-serif',
+        fontWeightMedium: 600,
     },
     shape: {
         borderRadius: 0,
@@ -101,14 +99,15 @@ function App() {
         clockOnlyTransferHistory,
         clockOnlyStateTransitionHistory,
         clockWindows,
+        shiftOptions,
         simulationDurationTicks,
         swingBackoffReport,
-        transferPlan,
-        usedLcm,
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
         pendingAlternatives,
+        validation,
+        validate,
         error,
         initialize,
         runSimulation,
@@ -166,11 +165,7 @@ function App() {
     const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
-    const [timelineRun, setTimelineRun] = useState<'clock' | 'plan'>('clock');
-    const hasClockOnlyRun = clockOnlyTransferHistory !== null && clockOnlyStateTransitionHistory !== null;
-    const showClockOnlyRun = hasClockOnlyRun && timelineRun === 'clock';
-    const shownTransferHistory = showClockOnlyRun ? clockOnlyTransferHistory : transferHistory;
-    const shownStateTransitionHistory = showClockOnlyRun ? clockOnlyStateTransitionHistory : stateTransitionHistory;
+    const [view, setView] = useState<WorkflowView>('configure');
 
     const coverageIssues = useInserterValidation(exportConfig, isInitialized);
 
@@ -190,9 +185,34 @@ function App() {
         return Array.from(names).sort();
     }, [itemNames, resourceNames]);
 
+    // the Validate step is for the config as it stands; any edit since makes its result out of date
+    const configKey = useMemo(() => JSON.stringify(exportConfig()), [exportConfig]);
+    const isValidationOutOfDate = validation.status !== 'none' && JSON.stringify(validation.config) !== configKey;
+    const validationStatus = validation.status === 'none' || validation.status === 'running' ? validation.status
+        : isValidationOutOfDate ? 'out-of-date' : validation.status;
+
+    const validationPanelRef = useRef<HTMLDivElement>(null);
+    const handleValidate = useCallback(() => {
+        validate(exportConfig());
+        setView('configure');
+        // the panel sits below the forms; wait for the Configure view to be shown again before scrolling to it
+        setTimeout(() => validationPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    }, [exportConfig, validate]);
+
+    // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
+    const revalidateOnChangeRef = useRef(false);
+    useEffect(() => {
+        if (revalidateOnChangeRef.current) {
+            revalidateOnChangeRef.current = false;
+            validate(exportConfig());
+        }
+    }, [exportConfig, validate]);
+
     const handleGenerate = useCallback(() => {
         const configToRun = exportConfig();
         runSimulation(configToRun, debugSteps, streamLogs);
+        // progress and the potential clocks arrive there
+        setView('results');
     }, [exportConfig, runSimulation, debugSteps, streamLogs]);
 
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
@@ -201,10 +221,12 @@ function App() {
         (value: number) => updateDrillsConfig('mining_productivity_level', value),
         [updateDrillsConfig]
     );
-    const handleExcludeChange = useCallback(
-        (items: string[]) => transferPlan && updateIgnoredIngredients(items, transferPlan),
-        [transferPlan, updateIgnoredIngredients]
-    );
+    const handleExcludeChange = useCallback((items: string[]) => {
+        if (validation.status === 'valid') {
+            revalidateOnChangeRef.current = true;
+            updateIgnoredIngredients(items, validation.validation.transfer_plan);
+        }
+    }, [validation, updateIgnoredIngredients]);
 
     const handleImportConfig = useCallback((imported: Config) => {
         importConfig(imported);
@@ -253,7 +275,23 @@ function App() {
                 {/* Spacer to account for fixed AppBar */}
                 <Toolbar />
 
-                <Container maxWidth="lg" sx={{ py: 3, flexGrow: 1 }}>
+                {isInitialized && (
+                    <WorkflowBar
+                        view={view}
+                        onViewChange={setView}
+                        isLoading={isRunning}
+                        progressStore={progressStore}
+                        onGenerate={handleGenerate}
+                        generateDisabled={!canGenerate}
+                        onValidate={handleValidate}
+                        validateDisabled={!canGenerate}
+                        validationStatus={validationStatus}
+                        blueprintString={blueprintString}
+                        selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
+                    />
+                )}
+
+                <Container maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
                     {!isInitialized ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                             <CircularProgress />
@@ -261,6 +299,8 @@ function App() {
                         </Box>
                     ) : (
                         <>
+                        {/* both views stay mounted so switching keeps what was expanded, filtered or scrolled */}
+                        <Box sx={{ display: view === 'configure' ? 'block' : 'none' }}>
                             {error && (
                                 <Alert severity="error" sx={{ mb: 2 }}>
                                     {error}
@@ -407,85 +447,44 @@ function App() {
                                 />
                             </Box>
 
-                            <Divider sx={{ my: 3 }} />
 
-                            <BlueprintOutput
-                                blueprintString={blueprintString}
-                                isLoading={isRunning}
-                                progressStore={progressStore}
-                                error={error}
-                                simulationDurationTicks={simulationDurationTicks ?? undefined}
-                                onGenerate={handleGenerate}
-                                disabled={!canGenerate}
+                            <ValidationPanel
+                                ref={validationPanelRef}
+                                validation={validation}
+                                isOutOfDate={isValidationOutOfDate}
+                                onValidate={handleValidate}
+                                canValidate={Boolean(canGenerate)}
+                                isGenerating={isRunning}
+                                excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
+                                onExcludeChange={handleExcludeChange}
                             />
+                        </Box>
 
-                            <ClockAlternativesPanel
+                        <Box sx={{ display: view === 'results' ? 'block' : 'none' }}>
+                            <ResultsWorkspace
+                                isRunning={isRunning}
+                                error={error}
                                 alternatives={alternatives}
                                 selectedIndex={selectedAlternativeIndex}
                                 onSelect={selectAlternative}
                                 pending={pendingAlternatives}
+                                blueprintString={blueprintString}
+                                simulationDurationTicks={simulationDurationTicks}
+                                transferHistory={transferHistory}
+                                stateTransitionHistory={stateTransitionHistory}
+                                clockOnlyTransferHistory={clockOnlyTransferHistory}
+                                clockOnlyStateTransitionHistory={clockOnlyStateTransitionHistory}
+                                clockWindows={clockWindows}
+                                shiftOptions={shiftOptions}
+                                swingBackoffReport={swingBackoffReport}
+                                logs={logs}
+                                debugSteps={debugSteps}
+                                onDebugStepsChange={setDebugSteps}
+                                streamLogs={streamLogs}
+                                onStreamLogsChange={setStreamLogs}
+                                onClearLogs={clearLogs}
                             />
-
-                            <SwingBackoffReportDisplay report={swingBackoffReport} />
-
-                            {transferPlan && (
-                                <Box sx={{ mt: 2 }}>
-                                    <TransferPlanPanel
-                                        transferPlan={transferPlan}
-                                        usedLcm={usedLcm!}
-                                        excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
-                                        onExcludeChange={handleExcludeChange}
-                                    />
-                                </Box>
-                            )}
-
-                            {hasClockOnlyRun && (
-                                <Paper variant="outlined" sx={{ mt: 2, p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                                    <ToggleButtonGroup
-                                        value={timelineRun}
-                                        exclusive
-                                        onChange={(_, value) => { if (value) setTimelineRun(value); }}
-                                        size="small"
-                                        aria-label="Simulation shown in the timelines"
-                                    >
-                                        <ToggleButton value="clock">Exported clock</ToggleButton>
-                                        <ToggleButton value="plan">Plan</ToggleButton>
-                                    </ToggleButtonGroup>
-                                    <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
-                                        {timelineRun === 'clock'
-                                            ? 'The timelines show the build driven only by the clock windows in the blueprint. '
-                                                + 'This is the run the Status and Clock-only output columns are judged on.'
-                                            : 'The timelines show the planning simulation the clock windows were taken from. '
-                                                + 'Inserters also wait on their machine\'s inventory there, so swings can land differently than with the clock alone.'}
-                                    </Typography>
-                                </Paper>
-                            )}
-
-                            {shownTransferHistory && (
-                                <Box sx={{ mt: 2 }}>
-                                    <TransferHistoryVisualization transferHistory={shownTransferHistory} />
-                                </Box>
-                            )}
-
-                            {shownStateTransitionHistory && (
-                                <Box sx={{ mt: 2 }}>
-                                    <StateTransitionTimeline
-                                        stateTransitionHistory={shownStateTransitionHistory}
-                                        clockWindows={clockWindows ?? undefined}
-                                    />
-                                </Box>
-                            )}
-
-                            <Box sx={{ mt: 2 }}>
-                                <DebugPanel
-                                    logs={logs}
-                                    debugSteps={debugSteps}
-                                    onDebugStepsChange={setDebugSteps}
-                                    streamLogs={streamLogs}
-                                    onStreamLogsChange={setStreamLogs}
-                                    onClearLogs={clearLogs}
-                                />
-                            </Box>
+                        </Box>
                         </>
                     )}
                 </Container>

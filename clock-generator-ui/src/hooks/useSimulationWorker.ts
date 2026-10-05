@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Config, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
+import type { Config, ConfigValidation, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, WorkerRequest, WorkerResponse } from '../worker/types';
+import type { ClockAlternativeRunView, ClockAlternativeView, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 
 export type { ClockAlternativeView } from '../worker/types';
 
@@ -10,6 +10,16 @@ export interface RecipeInfo {
     ingredients: string[];
     results: string[];
 }
+
+/**
+ * Where the Validate step stands. `config` is the config the result or error is for, so the page can tell when
+ * the user has changed something since.
+ */
+export type ValidationState =
+    | { status: 'none' }
+    | { status: 'running'; config: Config }
+    | { status: 'valid'; config: Config; validation: ConfigValidation }
+    | { status: 'invalid'; config: Config; message: string };
 
 export interface UseSimulationWorkerResult {
     isInitialized: boolean;
@@ -27,6 +37,8 @@ export interface UseSimulationWorkerResult {
     clockOnlyTransferHistory: SerializableTransferHistory | null;
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
     clockWindows: SerializableClockWindows | null;
+    /** Places tried for the cycle or output swing the selected clock moved; null for other clocks */
+    shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number | null;
     swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan | null;
@@ -36,6 +48,9 @@ export interface UseSimulationWorkerResult {
     selectAlternative: (index: number) => void;
     /** Labels of alternatives still being generated; the finished ones are already in `alternatives` */
     pendingAlternatives: string[];
+    validation: ValidationState;
+    /** Checks the config and plans its transfers in a worker, without generating a clock */
+    validate: (config: Config) => void;
     error: string | null;
     initialize: () => void;
     runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean) => void;
@@ -50,7 +65,7 @@ let combineClockAlternativeRuns: typeof import('clock-generator/browser').combin
 const FACTORIO_DATA_URL = '/data-filtered.json';
 const PRIMARY_STEP = 'Planned + belt pickup slack';
 // the slowest alternatives start first so they overlap the most
-const SLOW_TASKS = ['full-hand', 'derived', 'fractional'];
+const SLOW_TASKS = ['full-hand', 'uneven-output', 'derived', 'fractional'];
 
 export interface GenerationProgressStore {
     get: () => GenerationProgress | null;
@@ -117,6 +132,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const workersRef = useRef<Worker[]>([]);
     const generationRef = useRef<Generation | null>(null);
     const runIdRef = useRef(0);
+    const [validation, setValidation] = useState<ValidationState>({ status: 'none' });
+    // the latest validate request; answers to earlier ones are dropped
+    const validationRef = useRef<{ requestId: number; config: Config } | null>(null);
 
     const terminateWorkers = useCallback(() => {
         workersRef.current.forEach(worker => worker.terminate());
@@ -168,6 +186,15 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore, reportProgress]);
 
     const handleResponse = useCallback((worker: Worker, response: WorkerResponse) => {
+        if (response.type === 'validated' || response.type === 'validation-failed') {
+            const requested = validationRef.current;
+            if (requested && requested.requestId === response.requestId) {
+                setValidation(response.type === 'validated'
+                    ? { status: 'valid', config: requested.config, validation: response.validation }
+                    : { status: 'invalid', config: requested.config, message: response.message });
+            }
+            return;
+        }
         const generation = generationRef.current;
         if (response.type === 'initialized' || !generation || response.runId !== generation.runId) {
             if (response.type === 'error' && response.runId === undefined) {
@@ -292,6 +319,18 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         worker.postMessage({ type: 'plan', runId, config, debugSteps, streamLogs } satisfies WorkerRequest);
     }, [progressStore]);
 
+    const validate = useCallback((config: Config) => {
+        const worker = workersRef.current[0];
+        if (!worker) {
+            setError('Not initialized');
+            return;
+        }
+        const requestId = (validationRef.current?.requestId ?? 0) + 1;
+        validationRef.current = { requestId, config };
+        setValidation({ status: 'running', config });
+        worker.postMessage({ type: 'validate', requestId, config } satisfies WorkerRequest);
+    }, []);
+
     const selectAlternative = useCallback((index: number) => {
         userSelectionRef.current = alternatives[index]?.id ?? null;
         setSelectedAlternativeIndex(index);
@@ -330,6 +369,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         clockOnlyTransferHistory: selected?.clockOnlyTransferHistory ?? null,
         clockOnlyStateTransitionHistory: selected?.clockOnlyStateTransitionHistory ?? null,
         clockWindows: selected?.clockWindows ?? null,
+        shiftOptions: selected?.shiftOptions ?? null,
         simulationDurationTicks: selected?.simulationDurationTicks ?? null,
         swingBackoffReport: selected?.swingBackoffReport ?? null,
         transferPlan: selected?.transferPlan ?? null,
@@ -338,6 +378,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         selectedAlternativeIndex,
         selectAlternative,
         pendingAlternatives,
+        validation,
+        validate,
         error,
         initialize,
         runSimulation,

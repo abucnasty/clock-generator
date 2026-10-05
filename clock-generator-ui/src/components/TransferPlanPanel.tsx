@@ -58,7 +58,7 @@ function TransferPlanPanelComponent({
     const isLcmOverridden = usedLcm !== computed_lcm;
 
     return (
-        <Accordion defaultExpanded={false} sx={{ mt: 1 }}>
+        <Accordion defaultExpanded sx={{ mt: 1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                     Transfer Plan

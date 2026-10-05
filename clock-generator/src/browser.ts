@@ -61,6 +61,7 @@ export {
 
 export {
     generateClockForConfig,
+    validateConfig,
     generateClockWithSwingBackoff,
     generateClockAlternatives,
     blueprintFileFor,
@@ -77,6 +78,11 @@ export {
     GenerationProgress,
     AsBuiltStabilityCheck,
     ClockOnlyRun,
+    CheckedShift,
+    CheckedShiftRow,
+    ShiftRangeEdge,
+    ShiftedSwings,
+    ConfigValidation,
     SerializableClockWindows,
     GenerateClockOptions,
     DebugSteps,
@@ -236,3 +242,4 @@ export {
     Machine,
     ComputeMachineFactsParams,
 } from './entities/machine';
+export type { ClockInsight, MachineFactsEntry } from './crafting/insights';
