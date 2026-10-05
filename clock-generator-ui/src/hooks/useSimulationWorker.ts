@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Config, DebugSteps, LogMessage, FactorioData, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
+import type { Config, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, WorkerRequest, WorkerResponse } from '../worker/types';
@@ -23,6 +23,10 @@ export interface UseSimulationWorkerResult {
     blueprintString: string | null;
     transferHistory: SerializableTransferHistory | null;
     stateTransitionHistory: SerializableStateTransitionHistory | null;
+    /** The selected clock driven only by its exported windows; null when the histories above already are that run */
+    clockOnlyTransferHistory: SerializableTransferHistory | null;
+    clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    clockWindows: SerializableClockWindows | null;
     simulationDurationTicks: number | null;
     swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan | null;
@@ -323,6 +327,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         blueprintString: selected?.blueprintString ?? null,
         transferHistory: selected?.transferHistory ?? null,
         stateTransitionHistory: selected?.stateTransitionHistory ?? null,
+        clockOnlyTransferHistory: selected?.clockOnlyTransferHistory ?? null,
+        clockOnlyStateTransitionHistory: selected?.clockOnlyStateTransitionHistory ?? null,
+        clockWindows: selected?.clockWindows ?? null,
         simulationDurationTicks: selected?.simulationDurationTicks ?? null,
         swingBackoffReport: selected?.swingBackoffReport ?? null,
         transferPlan: selected?.transferPlan ?? null,

@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react';
 import type {
+    SerializableClockWindows,
     SerializableStateTransitionHistory,
     SerializableEntityStateTransitions,
     SerializableStateTransition,
@@ -41,7 +42,12 @@ import { sortByRelationship, sortByType } from './topological-sort';
 
 interface StateTransitionTimelineProps {
     stateTransitionHistory: SerializableStateTransitionHistory;
+    /** Decider windows in the blueprint per entity id, drawn as a band along the top of each row */
+    clockWindows?: SerializableClockWindows;
 }
+
+const CLOCK_WINDOW_COLOR = '#ffffff';
+const CLOCK_WINDOW_LABEL = 'Clock window (decider on; the inserter reacts 2 ticks later)';
 
 type ViewMode = 'detailed' | 'simplified';
 type SortMode = 'byType' | 'byRelationship';
@@ -193,9 +199,10 @@ interface EntityRowProps {
     rowHeight: number;
     viewMode: ViewMode;
     statusFilters: StatusFilters;
+    clockWindows?: { start: number; end: number }[];
 }
 
-function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters }: EntityRowProps) {
+function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, clockWindows = [] }: EntityRowProps) {
     // Determine if a transition is filtered out
     const isTransitionFiltered = (transition: SerializableStateTransition): boolean => {
         if (viewMode === 'simplified') {
@@ -315,6 +322,20 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters }
                     viewMode={viewMode}
                     isFiltered={isTransitionFiltered}
                 />
+                {clockWindows.map(window => (
+                    <Box
+                        key={`${window.start}-${window.end}`}
+                        sx={{
+                            position: 'absolute',
+                            top: 0,
+                            height: 3,
+                            left: `${(window.start / totalDuration) * 100}%`,
+                            width: `${((window.end - window.start + 1) / totalDuration) * 100}%`,
+                            bgcolor: CLOCK_WINDOW_COLOR,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                ))}
             </Box>
         </Box>
     );
@@ -324,9 +345,10 @@ interface LegendProps {
     viewMode: ViewMode;
     filters: EntityFilters;
     statusFilters: StatusFilters;
+    showClockWindows: boolean;
 }
 
-function Legend({ viewMode, filters, statusFilters }: LegendProps) {
+function Legend({ viewMode, filters, statusFilters, showClockWindows }: LegendProps) {
     const items: { label: string; color: string; active: boolean }[] = [];
 
     if (viewMode === 'simplified') {
@@ -396,11 +418,17 @@ function Legend({ viewMode, filters, statusFilters }: LegendProps) {
                     <Typography variant="caption">{label}</Typography>
                 </Box>
             ))}
+            {showClockWindows && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, bgcolor: 'action.hover', borderRadius: 1 }}>
+                    <Box sx={{ width: 12, height: 3, bgcolor: CLOCK_WINDOW_COLOR }} />
+                    <Typography variant="caption">{CLOCK_WINDOW_LABEL}</Typography>
+                </Box>
+            )}
         </Box>
     );
 }
 
-function StateTransitionTimelineComponent({ stateTransitionHistory }: StateTransitionTimelineProps) {
+function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows }: StateTransitionTimelineProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>('simplified');
     const [sortMode, setSortMode] = useState<SortMode>('byType');
@@ -743,7 +771,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory }: StateTrans
             </Box>
 
             {/* Legend */}
-            <Legend viewMode={viewMode} filters={filters} statusFilters={statusFilters} />
+            <Legend viewMode={viewMode} filters={filters} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} />
 
             {/* Tick markers */}
             <Box sx={{ display: 'flex', mb: 0.5 }}>
@@ -786,6 +814,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory }: StateTrans
                                     rowHeight={isFullscreen ? 32 : rowHeight}
                                     viewMode={viewMode}
                                     statusFilters={statusFilters}
+                                    clockWindows={clockWindows?.[entity.entity_id]}
                                 />
                             ))}
                         </Box>
@@ -807,6 +836,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory }: StateTrans
                                     rowHeight={isFullscreen ? 32 : rowHeight}
                                     viewMode={viewMode}
                                     statusFilters={statusFilters}
+                                    clockWindows={clockWindows?.[entity.entity_id]}
                                 />
                             ))}
                         </Box>
@@ -828,6 +858,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory }: StateTrans
                                     rowHeight={isFullscreen ? 32 : rowHeight}
                                     viewMode={viewMode}
                                     statusFilters={statusFilters}
+                                    clockWindows={clockWindows?.[entity.entity_id]}
                                 />
                             ))}
                         </Box>
@@ -844,6 +875,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory }: StateTrans
                             rowHeight={isFullscreen ? 32 : rowHeight}
                             viewMode={viewMode}
                             statusFilters={statusFilters}
+                            clockWindows={clockWindows?.[entity.entity_id]}
                         />
                     ))}
                 </Box>

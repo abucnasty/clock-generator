@@ -76,6 +76,7 @@ export {
     ClockAlternativesPlan,
     GenerationProgress,
     AsBuiltStabilityCheck,
+    ClockOnlyRun,
     SerializableClockWindows,
     GenerateClockOptions,
     DebugSteps,

@@ -46,6 +46,7 @@ export const ConfigPaths = {
     PRODUCTION_SCIENCE_JSON: path.join(CONFIG_SAMPLES_DIR, 'production-science.json'),
     AUTOMATION_SCIENCE_BELTED_INTERNAL_BUFFER: path.join(CONFIG_SAMPLES_DIR, 'automation-science-belted-internal-buffer.json'),
     PROCESSING_UNITS_BELT_EXPORT: path.join(CONFIG_SAMPLES_DIR, 'processing-units-example-belt-export.json'),
+    FLYING_ROBOT_FRAME: path.join(CONFIG_SAMPLES_DIR, 'flying-robot-frame-combinations', 'clock-config-flying-robot-frame-1791173406259.json'),
     LOW_DENSITY_TWO_FOUNDRY: path.join(CONFIG_SAMPLES_DIR, 'low-density-two-foundry-120-per-second.json'),
     LOGISTIC_SCIENCE_DI: path.join(CONFIG_SAMPLES_DIR, 'logistic-science-di.json'),
 } as const;
