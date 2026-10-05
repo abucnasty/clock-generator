@@ -5,6 +5,13 @@ export interface SerializableMachineInput {
     amount_per_craft: number;
 }
 
+export interface SerializableFuelConsumption {
+    item_name: string;
+    energy_consumption_bonus: number;
+    consumption_rate_per_second: number;
+    amount_per_craft: number;
+}
+
 export interface SerializableMachineFacts {
     recipe: string;
     crafting_speed: number;
@@ -19,4 +26,5 @@ export interface SerializableMachineFacts {
     ticks_per_bonus_craft: number;
     insertion_duration_ticks: number;
     inputs: SerializableMachineInput[];
+    fuel?: SerializableFuelConsumption;
 }

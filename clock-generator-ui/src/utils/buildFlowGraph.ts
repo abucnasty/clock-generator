@@ -17,7 +17,7 @@ export type MachineNodeParams = {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace';
+    type?: 'machine' | 'furnace' | 'biochamber';
 };
 
 export type EntityNodeData = {

@@ -15,7 +15,7 @@ function fromRecipe(machine_type: MachineType, recipe: RecipeMetadata, overloadM
         return forFurnace(recipe);
     }
 
-    if (machine_type === MachineType.MACHINE) {
+    if (machine_type === MachineType.MACHINE || machine_type === MachineType.BIOCHAMBER) {
         return forMachine(recipe, overloadMultiplier);
     }
 
