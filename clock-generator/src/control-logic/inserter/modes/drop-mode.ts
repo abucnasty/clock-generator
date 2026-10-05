@@ -84,7 +84,7 @@ export class InserterDropMode implements InserterMode {
             held_item !== null,
             `${inserter_state.entity_id} Held item should not be null when dropping off to machine`
         );
-        sink.inventoryState.addQuantity(held_item.item_name, held_item.quantity);
+        MachineState.insertItem(sink, held_item.item_name, held_item.quantity);
         inserter_state.inventoryState.removeQuantity(held_item.item_name, held_item.quantity);
         inserter_state.held_item = null;
     }

@@ -25,14 +25,18 @@ export class MachineWorkingMode implements MachineMode {
         while (budget > PROGRESS_EPSILON) {
             let progress = this.state.craftingProgress.progress;
             if (progress <= 0) {
-                if (!this.canStartCraft()) {
+                if (!this.canStartCraft() || !this.hasFuel()) {
                     break;
                 }
                 this.consumeInputsForCraft();
                 progress = 0;
             }
 
-            const step = Math.min(budget, 1 - progress);
+            const step = this.affordableStep(Math.min(budget, 1 - progress));
+            if (step <= PROGRESS_EPSILON) {
+                break;
+            }
+            this.burnFuelFor(step);
             progress += step;
             budget -= step;
             this.advanceBonusProgress(step);
@@ -54,9 +58,51 @@ export class MachineWorkingMode implements MachineMode {
         return this.inventory_state.getItemOrThrow(this.state.machine.output.ingredient.name);
     }
 
-    /** True while a craft is underway or another one can start */
+    /** True while a craft is underway or another one can start, and a burner has fuel to progress it */
     public hasEnoughInputsForCraft(): boolean {
-        return this.isCraftInProgress() || this.canStartCraft();
+        return (this.isCraftInProgress() || this.canStartCraft()) && this.hasFuel();
+    }
+
+    private hasFuel(): boolean {
+        return this.availableFuelEnergy() > PROGRESS_EPSILON || this.state.machine.fuel_slot === undefined;
+    }
+
+    /** Energy in the burning item plus the items waiting in the fuel slot, in MJ */
+    private availableFuelEnergy(): number {
+        const slot = this.state.machine.fuel_slot;
+        if (!slot) {
+            return Infinity;
+        }
+        return this.state.fuelProgress.energy_remaining_mj
+            + this.state.fuelInventory.getQuantity(slot.fuel.item_name) * slot.fuel.fuel_value_mj;
+    }
+
+    /** The part of a crafting step that the available fuel can pay for */
+    private affordableStep(step: number): number {
+        const slot = this.state.machine.fuel_slot;
+        if (!slot) {
+            return step;
+        }
+        return Math.min(step, this.availableFuelEnergy() / slot.energy_per_craft_mj);
+    }
+
+    /** Spend energy for a step of crafting progress, lighting the next fuel item when the burning one runs out */
+    private burnFuelFor(step: number): void {
+        const slot = this.state.machine.fuel_slot;
+        if (!slot) {
+            return;
+        }
+        const fuel_progress = this.state.fuelProgress;
+        let required = step * slot.energy_per_craft_mj;
+        while (required > PROGRESS_EPSILON) {
+            if (fuel_progress.energy_remaining_mj <= PROGRESS_EPSILON) {
+                this.state.fuelInventory.removeQuantity(slot.fuel.item_name, 1);
+                fuel_progress.energy_remaining_mj = slot.fuel.fuel_value_mj;
+            }
+            const spent = Math.min(required, fuel_progress.energy_remaining_mj);
+            fuel_progress.energy_remaining_mj -= spent;
+            required -= spent;
+        }
     }
 
     private isCraftInProgress(): boolean {
