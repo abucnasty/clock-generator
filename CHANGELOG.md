@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - "Uneven output swings" potential clock: observed windows with one output swing moved off its planned start, so the output swings are not evenly spaced. A machine only has to make up for its output over the whole clock period, so it can craft more between one pair of swings than the next. The swing is tried a craft at a time in both directions and the position with the most working positions on either side is used. Offered when the period has more than one output swing and a moved swing passes the clock-only check from every start phase.
+- "Shifted crafting cycle" potential clock: the planned windows (with belt pickup slack) with one crafting cycle's windows moved together to another place in the clock period, keeping their lengths and spacing so swings stay as batched as planned. Every shift is checked with the clock-only simulation and the one with the most working shifts on either side is used. Offered when the clock period spans more than one crafting cycle and a shift of at least an eighth of a cycle passes.
 
 ## [0.4.0] - 2026-10-05
 

@@ -155,6 +155,8 @@ export interface BlueprintGenerationResult {
     serializable_transfer_history: SerializableTransferHistory;
     /** Serializable state transition history for UI visualization */
     serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** With the shifted_cycle option: the crafting cycle (1-based) whose windows were moved and by how many ticks (negative is earlier) */
+    shifted_cycle?: { cycle: number; shift_ticks: number };
     /**
      * The clock-only check's unshifted run, when it is a different simulation than the histories above
      * (planned windows come from a run where inserters also wait on inventory). Absent when no clock-only
@@ -206,6 +208,8 @@ export interface GenerateClockOptions {
     derive_mode?: "prefer_planned" | "always" | "uneven_output";
     /** Replace the output inserters' windows with evenly spaced single swings timed to find a full hand ready */
     full_hand_output?: boolean;
+    /** Move one crafting cycle's windows together to another place in the clock period, when the period spans several cycles */
+    shifted_cycle?: boolean;
     /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
     keep_output_buffers?: boolean;
     /** Warmup length in simulation periods (default 10) */
@@ -580,6 +584,17 @@ export function generateClockForConfig(
             planned_windows = full_hand.windows;
         }
     }
+    let shifted_cycle: { cycle: number; shift_ticks: number } | undefined;
+    if (options.shifted_cycle) {
+        const shifted = shiftedCycleWindows(
+            { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
+            planned_windows, crafting_cycle_plan.total_duration.ticks, duration.ticks, logger, options.on_progress_detail
+        );
+        if (shifted) {
+            planned_windows = shifted.windows;
+            shifted_cycle = { cycle: shifted.cycle, shift_ticks: shifted.shift_ticks };
+        }
+    }
     const entity_ids = new Map(simulation_context.entity_registry.getAll().map(entity => [entity.entity_id.id, entity.entity_id]));
     for (const entity_id of final_history.getAllTransfers().keys()) {
         // the blueprint looks up swing counts by EntityId identity, so prefer the history's own keys
@@ -731,6 +746,7 @@ export function generateClockForConfig(
             transfer_history: final_history,
             serializable_transfer_history,
             serializable_state_transition_history,
+            shifted_cycle,
             clock_only_run,
             used_lcm: recipe_lcm,
             used_terminal_swing_count,
@@ -972,6 +988,136 @@ function deriveWithOutputWindows(
 
     const best = attempts.reduce((a, b) => b.check.actual_output_items > a.check.actual_output_items ? b : a);
     return { windows: null, end_padding_ticks: null, verification: best.result, as_built: best.check, even_output_windows };
+}
+
+/** Positions tried for a shifted crafting cycle; each costs up to a dozen clock-only simulations */
+const MAX_SHIFTED_CYCLE_CANDIDATES = 48;
+/** Best-ranked shifts confirmed from many start phases before giving up */
+const MAX_SHIFTED_CYCLE_CONFIRMATIONS = 3;
+/** Smallest shift tried, as a fraction of the crafting cycle; anything closer to the plan is barely a different clock */
+const MIN_SHIFTED_CYCLE_FRACTION = 1 / 8;
+
+interface ShiftedCycleCandidate {
+    /** 0-based crafting cycle within the clock period */
+    cycle_index: number;
+    shift_ticks: number;
+    windows: Map<string, OpenRange[]>;
+}
+
+/**
+ * The planned windows with one crafting cycle's windows (every inserter's and drill's) moved together, keeping their
+ * lengths and spacing. A window belongs to the cycle it starts in. The first cycle stays put as the reference, and a
+ * moved window never touches the same entity's windows of another cycle or wraps the end of the period.
+ * Shifts start an eighth of a cycle away from the planned position.
+ */
+function shiftedCycleCandidates(
+    planned_windows: Map<string, OpenRange[]>,
+    cycle_ticks: number,
+    period: number,
+): ShiftedCycleCandidate[] {
+    const cycles = Math.round(period / cycle_ticks);
+    if (!Number.isInteger(period) || cycles < 2) {
+        return [];
+    }
+    const cycleOf = (range: OpenRange) => Math.min(cycles - 1, Math.floor(range.start_inclusive / cycle_ticks));
+
+    const room: { cycle_index: number; min: number; max: number }[] = [];
+    for (let cycle_index = 1; cycle_index < cycles; cycle_index++) {
+        let min = -Infinity;
+        let max = Infinity;
+        for (const ranges of planned_windows.values()) {
+            const moved = ranges.filter(range => cycleOf(range) === cycle_index);
+            if (moved.length === 0) {
+                continue;
+            }
+            const fixed = ranges.filter(range => cycleOf(range) !== cycle_index);
+            const first = Math.min(...moved.map(range => range.start_inclusive));
+            const last = Math.max(...moved.map(range => range.end_inclusive));
+            const before = Math.max(-2, ...fixed.filter(range => range.end_inclusive < first).map(range => range.end_inclusive));
+            const after = Math.min(period + 1, ...fixed.filter(range => range.start_inclusive > last).map(range => range.start_inclusive));
+            min = Math.max(min, before + 2 - first);
+            max = Math.min(max, after - 2 - last);
+        }
+        if (Number.isFinite(min) && Number.isFinite(max) && max > min) {
+            room.push({ cycle_index, min, max });
+        }
+    }
+    const span = room.reduce((sum, it) => sum + it.max - it.min, 0);
+    const step = Math.max(1, Math.ceil(span / MAX_SHIFTED_CYCLE_CANDIDATES));
+
+    const candidates: ShiftedCycleCandidate[] = [];
+    for (const { cycle_index, min, max } of room) {
+        for (let shift_ticks = Math.ceil(min / step) * step; shift_ticks <= max; shift_ticks += step) {
+            if (Math.abs(shift_ticks) < cycle_ticks * MIN_SHIFTED_CYCLE_FRACTION) {
+                continue;
+            }
+            candidates.push({
+                cycle_index,
+                shift_ticks,
+                windows: new Map(Array.from(planned_windows, ([key, ranges]) => [key, ranges
+                    .map(range => cycleOf(range) !== cycle_index ? range
+                        : OpenRange.from(range.start_inclusive + shift_ticks, range.end_inclusive + shift_ticks))
+                    .sort((a, b) => a.start_inclusive - b.start_inclusive)])),
+            });
+        }
+    }
+    return candidates;
+}
+
+/**
+ * Finds a place for one crafting cycle's planned windows other than where the plan put them. The plan repeats the
+ * same cycle evenly over the clock period, but the build only has to balance over the whole period, so a cycle can
+ * run earlier or later while the machines' buffers carry the difference. Every shift is checked with the clock-only
+ * simulation; of those that pass, the one with the most passing shifts on either side (in the same direction from
+ * the planned position) is confirmed from many start phases and used. Null when no shift passes.
+ */
+function shiftedCycleWindows(
+    config: Config,
+    planned_windows: Map<string, OpenRange[]>,
+    cycle_ticks: number,
+    period: number,
+    logger: Logger,
+    report?: (detail: string) => void,
+): { windows: Map<string, OpenRange[]>; cycle: number; shift_ticks: number } | null {
+    const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, period);
+    const describe = (candidate: ShiftedCycleCandidate) =>
+        `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
+
+    const passes = new Set<number>();
+    candidates.forEach((candidate, index) => {
+        const check = runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
+            (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`)).check;
+        if (check.is_stable) {
+            passes.add(index);
+        }
+    });
+    logger.log(`Shifted crafting cycle: ${passes.size} of ${candidates.length} shifts pass the quick clock-only check: `
+        + Array.from(passes, index => `${candidates[index].cycle_index + 1}:${candidates[index].shift_ticks}`).join(" "));
+
+    // candidates are listed per cycle in shift order; the planned position lies between the two directions and ends a run
+    const sameRun = (a: ShiftedCycleCandidate, b: ShiftedCycleCandidate) =>
+        a.cycle_index === b.cycle_index && Math.sign(a.shift_ticks) === Math.sign(b.shift_ticks);
+    const neighboursPassing = (index: number, direction: 1 | -1) => {
+        let run = 0;
+        for (let next = index + direction; passes.has(next) && sameRun(candidates[next], candidates[index]); next += direction) {
+            run++;
+        }
+        return run;
+    };
+    const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
+    const ranked = Array.from(passes).sort((a, b) => margin(b) - margin(a)
+        || Math.abs(candidates[a].shift_ticks) - Math.abs(candidates[b].shift_ticks));
+
+    for (const index of ranked.slice(0, MAX_SHIFTED_CYCLE_CONFIRMATIONS)) {
+        const candidate = candidates[index];
+        const full = runAsBuiltCheck(config, candidate.windows, period, logger, FULL_CHECK_START_PHASES,
+            (n, total) => report?.(`Confirming ${describe(candidate)}, clock start ${n}/${total}`)).check;
+        logger.log(`Shifted crafting cycle: ${describe(candidate)} full check -> stable=${full.is_stable}`);
+        if (full.is_stable) {
+            return { windows: candidate.windows, cycle: candidate.cycle_index + 1, shift_ticks: candidate.shift_ticks };
+        }
+    }
+    return null;
 }
 
 /** Positions tried for moved output swings; each costs dozens of clock-only simulations */
@@ -1949,6 +2095,22 @@ function alternativeDefinitions(
                 return result;
             },
         }]),
+        {
+            id: "shifted-cycle",
+            label: "Shifted crafting cycle",
+            description: "Planned windows (with belt pickup slack) with one crafting cycle's windows moved together to another place "
+                + "in the clock period. The plan repeats the same crafting cycle evenly over the period, but the build only has to "
+                + "balance over the whole period, so one cycle can run earlier or later while the machines' buffers carry the "
+                + "difference. Window lengths and their spacing within the cycle are kept, so swings stay as batched as planned. "
+                + "Every shift is checked with the clock-only simulation and the one with the most working shifts on either side "
+                + "is used. Only offered when the clock period spans more than one crafting cycle and a shift passes.",
+            run: () => {
+                // one search at the planned swing count, like uneven output swings
+                const result = generateClockForConfig(base_config, { ...quiet, belt_pickup_slack: "always", shifted_cycle: true });
+                assert(result.shifted_cycle !== undefined, "no shifted crafting cycle passes the clock-only check");
+                return result;
+            },
+        },
         ...higher_counts.map(higher => ({
             id: `swings-${higher}`,
             label: `${higher} output swings per cycle`,
@@ -2026,7 +2188,10 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
     const moved = result.derived_clock_windows?.moved_output_swing;
     const moved_note = moved === undefined ? ""
         : ` Output swing ${moved.swing} starts ${Math.abs(moved.shift_ticks)} ticks ${moved.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
-    const description = definition.description + moved_note + planning_note + asBuiltNotes(as_built, expected_output_items);
+    const shifted = result.shifted_cycle;
+    const shifted_note = shifted === undefined ? ""
+        : ` Crafting cycle ${shifted.cycle}'s windows start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const description = definition.description + moved_note + shifted_note + planning_note + asBuiltNotes(as_built, expected_output_items);
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
     const period = result.simulation_duration.ticks;
     const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;

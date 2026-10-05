@@ -205,6 +205,10 @@ describe("generateClockForConfig", () => {
             it("has no uneven output swings to offer with one output window per period", () => {
                 expect(alternatives.find(a => a.id === "uneven-output")).toBeUndefined();
             });
+
+            it("has no crafting cycle to shift with one cycle per period", () => {
+                expect(alternatives.find(a => a.id === "shifted-cycle")).toBeUndefined();
+            });
         });
 
     });
@@ -697,6 +701,34 @@ describe("generateClockForConfig", () => {
                 expect(uneven.result.clock_windows["inserter:3"]).toEqual([
                     { start: 13, end: 50 }, { start: 128, end: 143 }, { start: 160, end: 175 },
                 ]);
+            });
+        });
+
+        describe("shifted crafting cycle", () => {
+            const { alternatives } = generateClockAlternatives(config);
+            const shifted = alternatives.find(a => a.id === "shifted-cycle")!;
+            const primary = alternatives.find(a => a.id === "planned-belt-slack")!;
+
+            it("is offered and stable", () => {
+                expect(shifted.is_stable).toBe(true);
+                expect(shifted.result.stability_check.as_built?.repeat_periods).toBe(1);
+            });
+
+            it("moves the second cycle's windows 40 ticks earlier as a block", () => {
+                expect(shifted.result.shifted_cycle).toEqual({ cycle: 2, shift_ticks: -40 });
+                expect(shifted.description).toContain("Crafting cycle 2's windows start 40 ticks earlier than planned.");
+                expect(shifted.result.clock_windows).toEqual({
+                    "inserter:1": [{ start: 1, end: 13 }, { start: 105, end: 117 }],
+                    "inserter:2": [{ start: 13, end: 39 }],
+                    "inserter:3": [{ start: 13, end: 50 }, { start: 117, end: 143 }],
+                });
+            });
+
+            it("keeps the planned windows of the first cycle and the planned window lengths", () => {
+                const lengths = (windows: typeof shifted.result.clock_windows) => Object.fromEntries(
+                    Object.entries(windows).map(([key, ranges]) => [key, ranges.map(range => range.end - range.start)]));
+                expect(lengths(shifted.result.clock_windows)).toEqual(lengths(primary.result.clock_windows));
+                expect(shifted.inserter_window_count).toBe(primary.inserter_window_count);
             });
         });
 
