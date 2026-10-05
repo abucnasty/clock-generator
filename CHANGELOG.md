@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version.
 
+## [Unreleased]
+
+### Added
+- Biochamber machine type. A biochamber crafts like an assembler and burns nutrients as fuel while crafting. Machine facts show how many nutrients it consumes per second and per craft. A biochamber uses 500 kW and a nutrients item is worth 2 MJ, so it burns 0.25 nutrients per second at the base energy consumption; the rate scales with an optional energy consumption bonus (speed modules raise it, efficiency modules lower it, to a minimum of -80%), and a craft burns more or fewer nutrients with the machine's crafting speed and recipe time. Productivity does not change the rate.
+- Machine config gains an optional `energy_consumption_bonus` (percent, default 0). The UI offers a Biochamber machine type and an Energy Consumption field for it.
+
 ## [0.5.0] - 2026-10-05
 
 ### Added
