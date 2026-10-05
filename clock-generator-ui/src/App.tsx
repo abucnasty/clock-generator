@@ -43,6 +43,7 @@ import { SwingBackoffReportDisplay } from './components/SwingBackoffReportDispla
 import { TransferPlanPanel } from './components/TransferPlanPanel';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ClockAlternativesPanel } from './components/ClockAlternativesPanel';
+import { ShiftRangePanel } from './components/ShiftRangePanel';
 import { ChangelogDialog } from './components/ChangelogDialog';
 
 const darkTheme = createTheme({
@@ -101,6 +102,7 @@ function App() {
         clockOnlyTransferHistory,
         clockOnlyStateTransitionHistory,
         clockWindows,
+        shiftOptions,
         simulationDurationTicks,
         swingBackoffReport,
         transferPlan,
@@ -425,6 +427,8 @@ function App() {
                                 onSelect={selectAlternative}
                                 pending={pendingAlternatives}
                             />
+
+                            {shiftOptions && <ShiftRangePanel options={shiftOptions} />}
 
                             <SwingBackoffReportDisplay report={swingBackoffReport} />
 

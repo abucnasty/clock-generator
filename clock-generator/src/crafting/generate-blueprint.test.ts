@@ -206,8 +206,8 @@ describe("generateClockForConfig", () => {
                 expect(alternatives.find(a => a.id === "uneven-output")).toBeUndefined();
             });
 
-            it("has no crafting cycle to shift with one cycle per period", () => {
-                expect(alternatives.find(a => a.id === "shifted-cycle")).toBeUndefined();
+            it("has no swings to shift with one round of swings per period", () => {
+                expect(alternatives.find(a => a.id === "shifted-swings")).toBeUndefined();
             });
         });
 
@@ -692,9 +692,18 @@ describe("generateClockForConfig", () => {
             });
 
             it("moves the second output swing one craft earlier and keeps the first", () => {
-                expect(uneven.result.derived_clock_windows?.moved_output_swing).toEqual({ swing: 2, shift_ticks: -17 });
+                expect(uneven.result.derived_clock_windows?.moved_output_swing).toMatchObject({ swing: 2, shift_ticks: -17 });
                 expect(uneven.result.clock_windows["inserter:1"]).toEqual([{ start: 1, end: 13 }, { start: 128, end: 140 }]);
                 expect(uneven.description).toContain("Output swing 2 starts 17 ticks earlier than planned.");
+            });
+
+            it("lists every position tried with whether it passed", () => {
+                const rows = uneven.result.derived_clock_windows!.moved_output_swing!.shifts_checked;
+                expect(rows.map(row => row.index)).toEqual([2]);
+                expect(rows[0].shifts.filter(shift => shift.is_stable).map(shift => shift.shift_ticks))
+                    .toEqual([-70, -52, -35, -17, 17, 35, 70]);
+                expect(rows[0].shifts.filter(shift => !shift.is_stable).map(shift => shift.shift_ticks))
+                    .toEqual([-105, -87, 52, 87, 105]);
             });
 
             it("observes the input windows again for the moved swing", () => {
@@ -704,9 +713,9 @@ describe("generateClockForConfig", () => {
             });
         });
 
-        describe("shifted crafting cycle", () => {
+        describe("shifted swings", () => {
             const { alternatives } = generateClockAlternatives(config);
-            const shifted = alternatives.find(a => a.id === "shifted-cycle")!;
+            const shifted = alternatives.find(a => a.id === "shifted-swings")!;
             const primary = alternatives.find(a => a.id === "planned-belt-slack")!;
 
             it("is offered and stable", () => {
@@ -714,13 +723,44 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.stability_check.as_built?.repeat_periods).toBe(1);
             });
 
-            it("moves the second cycle's windows 40 ticks earlier as a block", () => {
-                expect(shifted.result.shifted_cycle).toEqual({ cycle: 2, shift_ticks: -40 });
-                expect(shifted.description).toContain("Crafting cycle 2's windows start 40 ticks earlier than planned.");
+            it("moves the second output swing and the top-up after it 40 ticks earlier as a block", () => {
+                expect(shifted.result.shifted_cycle).toMatchObject({
+                    cycle: 2,
+                    shift_ticks: -40,
+                    planned_ticks: { start: 145, end: 183 },
+                    moved: [
+                        { entity_id: "inserter:1", item_names: ["flying-robot-frame"] },
+                        { entity_id: "inserter:3", item_names: ["battery", "electronic-circuit"] },
+                    ],
+                });
+                expect(shifted.description).toContain("The swings planned in clock ticks 145–183 (inserter 1: flying-robot-frame; "
+                    + "inserter 3: battery, electronic-circuit) start 40 ticks earlier than planned.");
                 expect(shifted.result.clock_windows).toEqual({
                     "inserter:1": [{ start: 1, end: 13 }, { start: 105, end: 117 }],
                     "inserter:2": [{ start: 13, end: 39 }],
                     "inserter:3": [{ start: 13, end: 50 }, { start: 117, end: 143 }],
+                });
+            });
+
+            it("lists the range of shifts that work, the planned position included", () => {
+                const rows = shifted.result.shifted_cycle!.shifts_checked;
+                expect(rows.map(row => row.index)).toEqual([2]);
+                const stable = rows[0].shifts.filter(shift => shift.is_stable).map(shift => shift.shift_ticks);
+                // one unbroken range, checked every 5 ticks
+                expect(stable).toEqual(Array.from({ length: 23 }, (_, n) => -65 + 5 * n));
+                expect(rows[0].shifts.some(shift => !shift.is_stable)).toBe(true);
+            });
+
+            it("says which machine limit ends the range on each side", () => {
+                expect(shifted.result.shifted_cycle!.earliest).toEqual({
+                    shift_ticks: -65,
+                    is_search_limit: false,
+                    notes: ["Inserter 3 waits 9 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
+                });
+                expect(shifted.result.shifted_cycle!.latest).toEqual({
+                    shift_ticks: 45,
+                    is_search_limit: false,
+                    notes: ["Machine 1 (flying-robot-frame) stops for 9 ticks until these swings arrive, out of ingredients with its output waiting to be removed"],
                 });
             });
 

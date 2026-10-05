@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import type { Config, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, WorkerRequest, WorkerResponse } from '../worker/types';
+import type { ClockAlternativeRunView, ClockAlternativeView, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 
 export type { ClockAlternativeView } from '../worker/types';
 
@@ -27,6 +27,8 @@ export interface UseSimulationWorkerResult {
     clockOnlyTransferHistory: SerializableTransferHistory | null;
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
     clockWindows: SerializableClockWindows | null;
+    /** Places tried for the cycle or output swing the selected clock moved; null for other clocks */
+    shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number | null;
     swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan | null;
@@ -330,6 +332,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         clockOnlyTransferHistory: selected?.clockOnlyTransferHistory ?? null,
         clockOnlyStateTransitionHistory: selected?.clockOnlyStateTransitionHistory ?? null,
         clockWindows: selected?.clockWindows ?? null,
+        shiftOptions: selected?.shiftOptions ?? null,
         simulationDurationTicks: selected?.simulationDurationTicks ?? null,
         swingBackoffReport: selected?.swingBackoffReport ?? null,
         transferPlan: selected?.transferPlan ?? null,
