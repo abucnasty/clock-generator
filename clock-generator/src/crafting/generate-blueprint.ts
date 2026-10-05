@@ -91,6 +91,8 @@ export interface DerivedClockWindowsReport {
     kept_planned_windows: boolean;
     /** Ticks added to the end of every derived window; null when nothing was derived or derivation failed */
     end_padding_ticks: number | null;
+    /** Machine-to-machine inserters whose observed windows were replaced by brief full-hand windows */
+    full_hand_inserters?: string[];
 }
 
 export interface SwingAttemptResult {
@@ -527,7 +529,7 @@ export function generateClockForConfig(
             duration.ticks, logger, options.on_progress_detail
         );
         if (full_hand) {
-            planned_windows = full_hand;
+            planned_windows = full_hand.windows;
         }
     }
     const entity_ids = new Map(simulation_context.entity_registry.getAll().map(entity => [entity.entity_id.id, entity.entity_id]));
@@ -594,12 +596,19 @@ export function generateClockForConfig(
         stability_check.is_stable = stability_check.is_stable && derived.windows !== null;
 
         if (derived.windows !== null && derived.verification !== null) {
+            const full_hand = fullHandTransferWindows(non_deriving_config, derived.windows, derived.verification,
+                output_inserter_ids, simulation_context.entity_registry, duration.ticks, logger, options.on_progress_detail);
+            const windows = full_hand?.windows ?? derived.windows;
+            if (full_hand) {
+                stability_check.as_built = full_hand.check;
+                report.full_hand_inserters = full_hand.inserters;
+            }
             return {
-                ...derived.verification,
-                blueprint: blueprintForWindows(derived.windows),
-                modulo_blueprint: moduloBlueprintFor(derived.windows),
-                subtick: subtickClockFor(derived.windows),
-                clock_windows: serializeClockWindows(derived.windows),
+                ...(full_hand?.result ?? derived.verification),
+                blueprint: blueprintForWindows(windows),
+                modulo_blueprint: moduloBlueprintFor(windows),
+                subtick: subtickClockFor(windows),
+                clock_windows: serializeClockWindows(windows),
                 belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
                 crafting_cycle_plan,
                 used_lcm: recipe_lcm,
@@ -1066,7 +1075,7 @@ type SpareWindows = { every: number; ticks: number };
  * belt) never drains and keeps the input drops blocked. The timing must recover from full output machines; if it
  * does not, every n-th window is lengthened for a second grab, preferring the fewest pickups that wait for items.
  * The result is confirmed from several clock start phases. Skipped when the planned windows already fill most hands
- * in one grab.
+ * in one grab (and, with count_waits, when most pickups do not wait at the machine either).
  */
 function fullHandOutputWindows(
     config: Config,
@@ -1076,7 +1085,8 @@ function fullHandOutputWindows(
     period: number,
     logger: Logger,
     report?: (detail: string) => void,
-): Map<string, OpenRange[]> | null {
+    count_waits = false,
+): { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } | null {
     const swing_counts = Array.from(new Set(Array.from(output_swings.values(), s => Math.round(s * 1e6) / 1e6)));
     if (swing_counts.length !== 1 || !Number.isInteger(swing_counts[0]) || swing_counts[0] < 1) {
         return null;
@@ -1147,8 +1157,9 @@ function fullHandOutputWindows(
 
     const planned = pickupStats(generateClockForConfig(buildAsBuiltConfig(config, windows, period), NESTED_RUN_OPTIONS(logger)));
     const extra_grabs = (planned.pickups - planned.swings) / Math.max(1, planned.swings);
-    logger.log(`Full-hand output: planned output windows take ${planned.pickups} grabs for ${planned.swings} hands`);
-    if (extra_grabs < FULL_HAND_MIN_EXTRA_GRABS_PER_HAND) {
+    const waits = planned.slow / Math.max(1, planned.swings);
+    logger.log(`Full-hand output: current windows take ${planned.pickups} grabs for ${planned.swings} hands, ${planned.slow} waited for items`);
+    if (extra_grabs < FULL_HAND_MIN_EXTRA_GRABS_PER_HAND && !(count_waits && waits >= FULL_HAND_MIN_EXTRA_GRABS_PER_HAND)) {
         return null;
     }
 
@@ -1174,7 +1185,7 @@ function fullHandOutputWindows(
         }
         return null;
     };
-    const confirm = (candidate: Candidate): Map<string, OpenRange[]> | null => {
+    const confirm = (candidate: Candidate) => {
         let label = `offset ${candidate.offset}, ${candidate.length}-tick windows`;
         report?.(`Checking full-hand output recovery (${label})`);
         const timing = recoveringTiming(candidate, label);
@@ -1192,9 +1203,9 @@ function fullHandOutputWindows(
             return null;
         }
         const full = runAsBuiltCheck(config, candidate_windows, period, logger, FULL_CHECK_START_PHASES,
-            (n, of) => report?.(`Confirming full-hand output (${label}), clock start ${n}/${of}`)).check;
-        logger.log(`Full-hand output: ${label}, ${timing.output_full} output-full ticks, ${timing.slow} slow pickups, stable=${full.is_stable}`);
-        return full.is_stable ? candidate_windows : null;
+            (n, of) => report?.(`Confirming full-hand output (${label}), clock start ${n}/${of}`));
+        logger.log(`Full-hand output: ${label}, ${timing.output_full} output-full ticks, ${timing.slow} slow pickups, stable=${full.check.is_stable}`);
+        return full.check.is_stable ? { windows: candidate_windows, ...full } : null;
     };
 
     // shortest windows first; a timing with no output-full ticks and no slow pickups cannot be beaten, so try it at once
@@ -1206,6 +1217,8 @@ function fullHandOutputWindows(
         if (length >= spacing) {
             continue;
         }
+        // per length, so failing short windows still leave longer ones a chance
+        let length_attempts = 0;
         for (let offset = 0; offset < spacing; offset += FULL_HAND_OFFSET_STEP) {
             report?.(`Searching full-hand output timing (${++searched}/${total})`);
             const result = generateClockForConfig(buildAsBuiltConfig(config, build(offset, length), period), NESTED_RUN_OPTIONS(logger));
@@ -1217,7 +1230,8 @@ function fullHandOutputWindows(
                 candidates.push(candidate);
                 continue;
             }
-            if (attempts < FULL_HAND_MAX_CONFIRM_ATTEMPTS) {
+            if (length_attempts < FULL_HAND_MAX_CONFIRM_ATTEMPTS) {
+                length_attempts++;
                 attempts++;
                 const confirmed = confirm(candidate);
                 if (confirmed) {
@@ -1235,6 +1249,45 @@ function fullHandOutputWindows(
     }
     logger.log("Full-hand output: no timing kept the expected output; keeping the planned output windows.");
     return null;
+}
+
+/**
+ * Machine-to-machine inserters that move a full hand every swing but wait at the source machine for it get brief,
+ * evenly spaced windows instead (one inserter at a time), kept only when the clock-only check passes from every
+ * start phase. In game, a long window keeps the inserter rescanning both machines while it waits.
+ */
+function fullHandTransferWindows(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    verification: BlueprintGenerationResult,
+    output_inserter_ids: Set<string>,
+    entity_registry: ReadableEntityRegistry,
+    period: number,
+    logger: Logger,
+    report?: (detail: string) => void,
+): { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; inserters: string[] } | null {
+    let current: { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } | null = null;
+    const inserters: string[] = [];
+    for (const [entity_id, transfers] of verification.transfer_history.entries()) {
+        const entity = entity_registry.getEntityByIdOrThrow(entity_id);
+        if (!Entity.isInserter(entity) || output_inserter_ids.has(entity_id.id)
+            || !EntityId.isMachine(entity.source.entity_id) || !EntityId.isMachine(entity.sink.entity_id)) {
+            continue;
+        }
+        const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
+        const stack_size = entity.metadata.stack_size;
+        if (!Entity.isMachine(source) || stack_size >= source.output.outputBlock.quantity
+            || transfers.length === 0 || transfers.some(t => t.amount !== stack_size)) {
+            continue;
+        }
+        const found = fullHandOutputWindows(config, current?.windows ?? windows, new Map([[entity_id.id, transfers.length]]),
+            new Set([source.entity_id.id]), period, logger, report, true);
+        if (found) {
+            current = found;
+            inserters.push(entity_id.id);
+        }
+    }
+    return current && { ...current, inserters };
 }
 
 /** A fractional period as p/q ticks with small integers (e.g. 550.9565... = 12672/23), or null */
@@ -1652,7 +1705,9 @@ function alternativeDefinitions(
             description: "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
                 + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
                 + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
-                + "one per craft, so there are usually more windows than Planned.",
+                + "one per craft, so there are usually more windows than Planned. An inserter between two machines that waits at "
+                + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
+                + "that is already there rather than staying enabled while the machine crafts.",
             run: () => generateClockWithSwingBackoff(
                 { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
                 { ...quiet, derive_mode: "always" }

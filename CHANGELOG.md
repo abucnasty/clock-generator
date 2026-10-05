@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version.
 
+## [0.3.1] - 2026-10-05
+
+### Changed
+- Observed-windows clocks give an inserter between two machines that waits at its source machine for a full hand short, evenly spaced windows instead of a long one, when the clock stays stable from every start phase. In game, a long window keeps the inserter rescanning both machines while it waits.
+- The search for full-hand output windows now limits its confirmation attempts per window length, so failing short windows no longer rule out longer ones.
+
 ## [0.3.0] - 2026-10-03
 
 ### Added
