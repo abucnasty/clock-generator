@@ -110,6 +110,8 @@ export interface DerivedClockWindowsReport {
     end_padding_ticks: number | null;
     /** Machine-to-machine inserters whose observed windows were replaced by brief full-hand windows */
     full_hand_inserters?: string[];
+    /** With derive_mode "uneven_output": the output swing moved off its planned start and by how many ticks (negative is earlier) */
+    moved_output_swing?: { swing: number; shift_ticks: number };
 }
 
 export interface SwingAttemptResult {
@@ -197,8 +199,11 @@ export interface GenerateClockOptions {
     verify_as_built?: boolean;
     /** Belt pickup slack on belt-fed windows: "auto" keeps it unless a clock-only check gets worse (default "auto") */
     belt_pickup_slack?: "auto" | "always" | "never";
-    /** With derive_clock_windows: "prefer_planned" keeps planned windows that pass the as-built check (default), "always" derives anyway */
-    derive_mode?: "prefer_planned" | "always";
+    /**
+     * With derive_clock_windows: "prefer_planned" keeps planned windows that pass the as-built check (default), "always"
+     * derives anyway, "uneven_output" derives with one output swing moved off its planned start
+     */
+    derive_mode?: "prefer_planned" | "always" | "uneven_output";
     /** Replace the output inserters' windows with evenly spaced single swings timed to find a full hand ready */
     full_hand_output?: boolean;
     /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
@@ -637,11 +642,19 @@ export function generateClockForConfig(
             };
         }
 
-        const derived = deriveClockWindows(config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
+        const uneven = options.derive_mode !== "uneven_output" ? null : deriveUnevenOutputClockWindows(
+            config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks,
+            Math.min(...output_machine_state_machines.map(it => it.machine_state.machine.crafting_rate.ticks_per_craft)),
+            logger, options.on_progress_detail);
+        // without a moved swing that works there is nothing to export; plain observed windows are their own alternative
+        const derived = options.derive_mode === "uneven_output"
+            ? uneven ?? { windows: null, end_padding_ticks: null, verification: null, as_built: null }
+            : deriveClockWindows(config, final_history, output_inserter_ids, belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
         const report: DerivedClockWindowsReport = {
             succeeded: derived.windows !== null,
             kept_planned_windows: false,
             end_padding_ticks: derived.end_padding_ticks,
+            moved_output_swing: uneven?.moved_output_swing ?? undefined,
         };
         stability_check.as_built = derived.as_built ?? undefined;
         stability_check.is_stable = stability_check.is_stable && derived.windows !== null;
@@ -891,6 +904,8 @@ function deriveWithOutputWindows(
     label: string,
     logger: Logger,
     report?: (detail: string) => void,
+    /** Confirm the accepted padding from many more start phases; a caller comparing several results confirms its pick itself */
+    confirm: boolean = true,
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
@@ -937,6 +952,9 @@ function deriveWithOutputWindows(
 
         const previous = attempts[attempts.length - 2];
         if (previous?.check.is_stable && check.is_stable) {
+            if (!confirm) {
+                return { windows, end_padding_ticks: padding, verification: result, as_built: check, even_output_windows };
+            }
             // failing start phases can be a narrow band the quick check skips over
             const full = runAsBuiltCheck(base_config, windows, period, logger, FULL_CHECK_START_PHASES,
                 (n, total) => report?.(`Confirming ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`)).check;
@@ -954,6 +972,145 @@ function deriveWithOutputWindows(
 
     const best = attempts.reduce((a, b) => b.check.actual_output_items > a.check.actual_output_items ? b : a);
     return { windows: null, end_padding_ticks: null, verification: best.result, as_built: best.check, even_output_windows };
+}
+
+/** Positions tried for moved output swings; each costs dozens of clock-only simulations */
+const MAX_UNEVEN_OUTPUT_CANDIDATES = 24;
+
+interface UnevenOutputCandidate {
+    /** Index of the moved window among each output inserter's windows, in clock order */
+    window_index: number;
+    shift_ticks: number;
+    output_windows: Map<string, OpenRange[]>;
+}
+
+/**
+ * The planned output windows with one window moved earlier or later in steps of a craft, the first window staying
+ * put as the reference. A moved window keeps at least its own length clear of its neighbours. Every output inserter
+ * moves the same window by the same amount. Empty when there is a single window per period or the period is fractional.
+ */
+function unevenOutputCandidates(
+    output_windows: Map<string, OpenRange[]>,
+    period: number,
+    step_ticks: number,
+): UnevenOutputCandidate[] {
+    const sorted = new Map(Array.from(output_windows, ([key, ranges]) =>
+        [key, [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive)] as const));
+    const count = Math.min(...Array.from(sorted.values(), ranges => ranges.length));
+    if (!Number.isInteger(period) || sorted.size === 0 || count < 2
+        || Array.from(sorted.values()).some(ranges => ranges.length !== count)) {
+        return [];
+    }
+
+    // shifts every output inserter has room for, per moved window
+    const room: { window_index: number; min: number; max: number }[] = [];
+    for (let window_index = 1; window_index < count; window_index++) {
+        let min = -Infinity;
+        let max = Infinity;
+        for (const ranges of sorted.values()) {
+            const window = ranges[window_index];
+            const length = window.end_inclusive - window.start_inclusive + 1;
+            const next_start = window_index + 1 < count ? ranges[window_index + 1].start_inclusive : ranges[0].start_inclusive + period;
+            min = Math.max(min, ranges[window_index - 1].end_inclusive + length + 1 - window.start_inclusive);
+            max = Math.min(max, next_start - length - 1 - window.end_inclusive, period - 1 - window.end_inclusive);
+        }
+        room.push({ window_index, min, max });
+    }
+    const span = room.reduce((sum, it) => sum + Math.max(0, it.max - it.min), 0);
+    const step = Math.max(step_ticks, span / MAX_UNEVEN_OUTPUT_CANDIDATES, 1);
+
+    const candidates: UnevenOutputCandidate[] = [];
+    for (const { window_index, min, max } of room) {
+        const shifts = new Set<number>();
+        for (let n = 1; n * step <= Math.max(max, -min); n++) {
+            shifts.add(Math.round(n * step));
+            shifts.add(-Math.round(n * step));
+        }
+        for (const shift_ticks of Array.from(shifts).filter(it => it >= min && it <= max).sort((a, b) => a - b)) {
+            candidates.push({
+                window_index,
+                shift_ticks,
+                output_windows: new Map(Array.from(sorted, ([key, ranges]) => [key, ranges.map((range, index) => index !== window_index ? range
+                    : OpenRange.from(range.start_inclusive + shift_ticks, range.end_inclusive + shift_ticks))])),
+            });
+        }
+    }
+    return candidates;
+}
+
+/**
+ * Like deriveClockWindows, but with one output swing moved off its planned start: a machine only has to make up for
+ * its output over the whole period, so it can craft more between one pair of swings than the next. Every candidate
+ * position gets its own observed windows; of those that pass the clock-only check, the one with the most passing
+ * positions on either side is confirmed and used, since its neighbours show how far the timing can slip.
+ * Null when there is nothing to move or no position passes.
+ */
+function deriveUnevenOutputClockWindows(
+    config: Config,
+    planned_history: InventoryTransferHistory,
+    output_inserter_ids: Set<string>,
+    belt_pickup_slack: Map<string, number>,
+    period: number,
+    step_ticks: number,
+    logger: Logger,
+    report?: (detail: string) => void,
+): {
+    windows: Map<string, OpenRange[]> | null;
+    end_padding_ticks: number | null;
+    verification: BlueprintGenerationResult | null;
+    as_built: AsBuiltStabilityCheck | null;
+    moved_output_swing: { swing: number; shift_ticks: number };
+} | null {
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const planned_windows = windowsFromHistory(planned_history);
+    const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
+    const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
+
+    const candidates = unevenOutputCandidates(output_windows, period, step_ticks);
+    const passing: { index: number; candidate: UnevenOutputCandidate; derived: ReturnType<typeof deriveWithOutputWindows> }[] = [];
+    candidates.forEach((candidate, index) => {
+        const label = `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
+        const derived = deriveWithOutputWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
+            belt_pickup_slack, period, label, logger,
+            report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
+        if (derived.windows !== null) {
+            passing.push({ index, candidate, derived });
+        }
+    });
+
+    // candidates are listed per moved window in shift order, so neighbours in the list are neighbours in time
+    const passes = new Set(passing.map(it => it.index));
+    const neighboursPassing = (index: number, direction: 1 | -1) => {
+        let run = 0;
+        for (let next = index + direction; passes.has(next) && candidates[next].window_index === candidates[index].window_index; next += direction) {
+            run++;
+        }
+        return run;
+    };
+    const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
+    const ranked = [...passing].sort((a, b) => margin(b.index) - margin(a.index)
+        || Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks));
+    logger.log(`Uneven output swings: ${passing.length} of ${candidates.length} positions pass the quick clock-only check`);
+    for (const { index, candidate, derived } of passing) {
+        const windows = Array.from(derived.windows!, ([key, ranges]) => `${key} ${ranges.map(r => `${r.start_inclusive}-${r.end_inclusive}`).join(",")}`).join("; ");
+        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, ${margin(index)} passing positions on each side: ${windows}`);
+    }
+
+    for (const { candidate, derived } of ranked) {
+        const full = runAsBuiltCheck(base_config, derived.windows!, period, logger, FULL_CHECK_START_PHASES,
+            (n, total) => report?.(`Confirming output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, clock start ${n}/${total}`));
+        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks full check -> stable=${full.check.is_stable}`);
+        if (full.check.is_stable) {
+            return {
+                windows: derived.windows,
+                end_padding_ticks: derived.end_padding_ticks,
+                verification: full.result,
+                as_built: full.check,
+                moved_output_swing: { swing: candidate.window_index + 1, shift_ticks: candidate.shift_ticks },
+            };
+        }
+    }
+    return null;
 }
 
 /**
@@ -1773,6 +1930,25 @@ function alternativeDefinitions(
                 { ...quiet, derive_mode: "always" }
             ),
         }]),
+        ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
+            id: "uneven-output",
+            label: "Uneven output swings",
+            description: "Observed windows with one output swing moved off its planned start, so the output swings are not evenly "
+                + "spaced. A machine only has to make up for what the output inserter takes over the whole clock period, so it can "
+                + "craft more between one pair of swings than the next and carry the difference in its output slot. The swing is "
+                + "tried at positions a craft apart and every other inserter's windows are observed again for each; the position "
+                + "with the most working positions on either side is used. Only offered when the period has more than one output "
+                + "swing and a moved swing passes the clock-only check.",
+            run: () => {
+                // one search at the planned swing count; backing off would repeat it for every lower count
+                const result = generateClockForConfig(
+                    { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
+                    { ...quiet, derive_mode: "uneven_output" }
+                );
+                assert(result.derived_clock_windows?.moved_output_swing !== undefined, "no moved output swing passes the clock-only check");
+                return result;
+            },
+        }]),
         ...higher_counts.map(higher => ({
             id: `swings-${higher}`,
             label: `${higher} output swings per cycle`,
@@ -1847,7 +2023,10 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
-    const description = definition.description + planning_note + asBuiltNotes(as_built, expected_output_items);
+    const moved = result.derived_clock_windows?.moved_output_swing;
+    const moved_note = moved === undefined ? ""
+        : ` Output swing ${moved.swing} starts ${Math.abs(moved.shift_ticks)} ticks ${moved.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const description = definition.description + moved_note + planning_note + asBuiltNotes(as_built, expected_output_items);
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
     const period = result.simulation_duration.ticks;
     const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;

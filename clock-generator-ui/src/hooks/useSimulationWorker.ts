@@ -50,7 +50,7 @@ let combineClockAlternativeRuns: typeof import('clock-generator/browser').combin
 const FACTORIO_DATA_URL = '/data-filtered.json';
 const PRIMARY_STEP = 'Planned + belt pickup slack';
 // the slowest alternatives start first so they overlap the most
-const SLOW_TASKS = ['full-hand', 'derived', 'fractional'];
+const SLOW_TASKS = ['full-hand', 'uneven-output', 'derived', 'fractional'];
 
 export interface GenerationProgressStore {
     get: () => GenerationProgress | null;

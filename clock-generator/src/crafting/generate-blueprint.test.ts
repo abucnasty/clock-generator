@@ -201,6 +201,10 @@ describe("generateClockForConfig", () => {
                     "inserter:1": [{ start: 25, end: 76 }],
                 });
             });
+
+            it("has no uneven output swings to offer with one output window per period", () => {
+                expect(alternatives.find(a => a.id === "uneven-output")).toBeUndefined();
+            });
         });
 
     });
@@ -670,6 +674,29 @@ describe("generateClockForConfig", () => {
                 expect(dropsOf(planned.result.serializable_state_transition_history)).toEqual([5, 149]);
                 expect(dropsOf(planned.result.clock_only_run!.state_transition_history)).toEqual([7, 19]);
                 expect(planned.result.clock_only_run!.transfer_history.total_duration_ticks).toBe(288);
+            });
+        });
+
+        describe("uneven output swings", () => {
+            const { alternatives } = generateClockAlternatives(config);
+            const uneven = alternatives.find(a => a.id === "uneven-output")!;
+
+            it("is offered and stable from every start phase checked", () => {
+                expect(uneven.is_stable).toBe(true);
+                expect(uneven.result.stability_check.as_built?.start_phases_checked).toBe(112);
+                expect(uneven.result.stability_check.as_built?.repeat_periods).toBe(1);
+            });
+
+            it("moves the second output swing one craft earlier and keeps the first", () => {
+                expect(uneven.result.derived_clock_windows?.moved_output_swing).toEqual({ swing: 2, shift_ticks: -17 });
+                expect(uneven.result.clock_windows["inserter:1"]).toEqual([{ start: 1, end: 13 }, { start: 128, end: 140 }]);
+                expect(uneven.description).toContain("Output swing 2 starts 17 ticks earlier than planned.");
+            });
+
+            it("observes the input windows again for the moved swing", () => {
+                expect(uneven.result.clock_windows["inserter:3"]).toEqual([
+                    { start: 13, end: 50 }, { start: 128, end: 143 }, { start: 160, end: 175 },
+                ]);
             });
         });
 
