@@ -2,6 +2,7 @@ import type {
     AsBuiltStabilityCheck,
     CheckedShiftRow,
     ClockInsight,
+    ConfigValidation,
     ShiftRangeEdge,
     ClockAlternativeContext,
     ClockAlternativeRun,
@@ -76,8 +77,16 @@ export type ClockAlternativeRunView = ClockAlternativeRun<ClockAlternativeView>;
  */
 export type WorkerRequest =
     | InitializeRequest
+    | ValidateRequest
     | PlanRequest
     | TaskRequest;
+
+/** Checks a config and plans its transfers without generating a clock; answered by 'validated' or 'validation-failed' */
+export interface ValidateRequest {
+    type: 'validate';
+    requestId: number;
+    config: Config;
+}
 
 export interface InitializeRequest {
     type: 'initialize';
@@ -108,6 +117,8 @@ export interface TaskRequest {
  */
 export type WorkerResponse =
     | InitializedResponse
+    | ValidatedResponse
+    | ValidationFailedResponse
     | LogResponse
     | ProgressResponse
     | PlannedResponse
@@ -116,6 +127,18 @@ export type WorkerResponse =
 
 export interface InitializedResponse {
     type: 'initialized';
+}
+
+export interface ValidatedResponse {
+    type: 'validated';
+    requestId: number;
+    validation: ConfigValidation;
+}
+
+export interface ValidationFailedResponse {
+    type: 'validation-failed';
+    requestId: number;
+    message: string;
 }
 
 export interface LogResponse {

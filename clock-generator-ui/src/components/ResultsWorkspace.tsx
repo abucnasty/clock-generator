@@ -6,7 +6,6 @@ import type {
     SerializableClockWindows,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
-    SerializableTransferPlan,
     SwingBackoffReport,
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
@@ -19,9 +18,8 @@ import { ShiftRangePanel } from './ShiftRangePanel';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
-import { TransferPlanPanel } from './TransferPlanPanel';
 
-type ResultsTab = 'insights' | 'timelines' | 'transfer-plan' | 'blueprint' | 'log';
+type ResultsTab = 'insights' | 'timelines' | 'blueprint' | 'log';
 
 interface ResultsWorkspaceProps {
     isRunning: boolean;
@@ -40,10 +38,6 @@ interface ResultsWorkspaceProps {
     clockWindows: SerializableClockWindows | null;
     shiftOptions: ShiftOptionsView | null;
     swingBackoffReport: SwingBackoffReport | null;
-    transferPlan: SerializableTransferPlan | null;
-    usedLcm: number | null;
-    excludedIngredients: string[];
-    onExcludeChange: (items: string[]) => void;
     logs: LogMessage[];
     debugSteps: DebugSteps;
     onDebugStepsChange: (steps: DebugSteps) => void;
@@ -104,7 +98,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 >
                     <Tab value="timelines" label="Timelines" />
                     <Tab value="insights" label="Insights" />
-                    <Tab value="transfer-plan" label="Transfer plan" />
                     <Tab value="blueprint" label="Blueprint" />
                     <Tab value="log" label="Log" />
                 </Tabs>
@@ -153,17 +146,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                                 clockWindows={props.clockWindows ?? undefined}
                             />
                         </Box>
-                    )}
-                </TabBody>
-
-                <TabBody shown={tab === 'transfer-plan'}>
-                    {props.transferPlan && (
-                        <TransferPlanPanel
-                            transferPlan={props.transferPlan}
-                            usedLcm={props.usedLcm!}
-                            excludedIngredients={props.excludedIngredients}
-                            onExcludeChange={props.onExcludeChange}
-                        />
                     )}
                 </TabBody>
 

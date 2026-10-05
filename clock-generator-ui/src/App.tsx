@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     AppBar,
     Box,
@@ -36,6 +36,7 @@ import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
+import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 
 const darkTheme = createTheme({
@@ -101,12 +102,12 @@ function App() {
         shiftOptions,
         simulationDurationTicks,
         swingBackoffReport,
-        transferPlan,
-        usedLcm,
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
         pendingAlternatives,
+        validation,
+        validate,
         error,
         initialize,
         runSimulation,
@@ -184,6 +185,29 @@ function App() {
         return Array.from(names).sort();
     }, [itemNames, resourceNames]);
 
+    // the Validate step is for the config as it stands; any edit since makes its result out of date
+    const configKey = useMemo(() => JSON.stringify(exportConfig()), [exportConfig]);
+    const isValidationOutOfDate = validation.status !== 'none' && JSON.stringify(validation.config) !== configKey;
+    const validationStatus = validation.status === 'none' || validation.status === 'running' ? validation.status
+        : isValidationOutOfDate ? 'out-of-date' : validation.status;
+
+    const validationPanelRef = useRef<HTMLDivElement>(null);
+    const handleValidate = useCallback(() => {
+        validate(exportConfig());
+        setView('configure');
+        // the panel sits below the forms; wait for the Configure view to be shown again before scrolling to it
+        setTimeout(() => validationPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    }, [exportConfig, validate]);
+
+    // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
+    const revalidateOnChangeRef = useRef(false);
+    useEffect(() => {
+        if (revalidateOnChangeRef.current) {
+            revalidateOnChangeRef.current = false;
+            validate(exportConfig());
+        }
+    }, [exportConfig, validate]);
+
     const handleGenerate = useCallback(() => {
         const configToRun = exportConfig();
         runSimulation(configToRun, debugSteps, streamLogs);
@@ -197,10 +221,12 @@ function App() {
         (value: number) => updateDrillsConfig('mining_productivity_level', value),
         [updateDrillsConfig]
     );
-    const handleExcludeChange = useCallback(
-        (items: string[]) => transferPlan && updateIgnoredIngredients(items, transferPlan),
-        [transferPlan, updateIgnoredIngredients]
-    );
+    const handleExcludeChange = useCallback((items: string[]) => {
+        if (validation.status === 'valid') {
+            revalidateOnChangeRef.current = true;
+            updateIgnoredIngredients(items, validation.validation.transfer_plan);
+        }
+    }, [validation, updateIgnoredIngredients]);
 
     const handleImportConfig = useCallback((imported: Config) => {
         importConfig(imported);
@@ -257,6 +283,9 @@ function App() {
                         progressStore={progressStore}
                         onGenerate={handleGenerate}
                         generateDisabled={!canGenerate}
+                        onValidate={handleValidate}
+                        validateDisabled={!canGenerate}
+                        validationStatus={validationStatus}
                         blueprintString={blueprintString}
                         selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
                     />
@@ -418,6 +447,17 @@ function App() {
                                 />
                             </Box>
 
+
+                            <ValidationPanel
+                                ref={validationPanelRef}
+                                validation={validation}
+                                isOutOfDate={isValidationOutOfDate}
+                                onValidate={handleValidate}
+                                canValidate={Boolean(canGenerate)}
+                                isGenerating={isRunning}
+                                excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
+                                onExcludeChange={handleExcludeChange}
+                            />
                         </Box>
 
                         <Box sx={{ display: view === 'results' ? 'block' : 'none' }}>
@@ -437,10 +477,6 @@ function App() {
                                 clockWindows={clockWindows}
                                 shiftOptions={shiftOptions}
                                 swingBackoffReport={swingBackoffReport}
-                                transferPlan={transferPlan}
-                                usedLcm={usedLcm}
-                                excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
-                                onExcludeChange={handleExcludeChange}
                                 logs={logs}
                                 debugSteps={debugSteps}
                                 onDebugStepsChange={setDebugSteps}

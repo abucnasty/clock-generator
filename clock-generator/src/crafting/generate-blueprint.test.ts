@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, validateConfig, BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
@@ -355,6 +355,34 @@ describe("generateClockForConfig", () => {
 
         it("uses it for every clock alternative", () => {
             expect(alternatives.map(a => a.result.used_terminal_swing_count).every(count => count === 2)).toBe(true);
+        });
+    });
+
+    describe("validateConfig", () => {
+        it("returns the transfer plan a generation uses, without generating", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            const validation = validateConfig(config);
+            const generated = generateClockForConfig(config);
+
+            expect(validation.transfer_plan).toEqual(generated.serializable_transfer_plan);
+            expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, period_ticks: 288 });
+        });
+
+        it("uses the forced output swings and LCM of the config", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            const validation = validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });
+            expect(validation).toMatchObject({ output_swings_per_cycle: 2, cycle_ticks: 288 });
+        });
+
+        it("throws for a machine without inserters", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+            expect(() => validateConfig(config)).toThrow("Missing inserter coverage");
+        });
+
+        it("throws when the machines cannot reach the target rate", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            expect(() => validateConfig({ ...config, target_output: { ...config.target_output, items_per_second: 1600 } }))
+                .toThrow("cannot meet the target production rate");
         });
     });
 

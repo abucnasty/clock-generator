@@ -1,10 +1,16 @@
 import { Check, ContentCopy } from '@mui/icons-material';
-import { Box, Button, CircularProgress, Paper, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, Paper, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { GenerationProgressStatus } from './BlueprintOutput';
 
 export type WorkflowView = 'configure' | 'results';
+
+const VALIDATION_CHIP = {
+    'valid': { label: 'Valid', color: 'success' },
+    'invalid': { label: 'Invalid', color: 'error' },
+    'out-of-date': { label: 'Changed since validation', color: 'warning' },
+} as const;
 
 interface WorkflowBarProps {
     view: WorkflowView;
@@ -13,6 +19,10 @@ interface WorkflowBarProps {
     progressStore: GenerationProgressStore;
     onGenerate: () => void;
     generateDisabled: boolean;
+    onValidate: () => void;
+    validateDisabled: boolean;
+    /** Where the Validate step stands for the config as it is now */
+    validationStatus: 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
     /** Blueprint of the selected potential clock, once one is generated */
     blueprintString: string | null;
     /** Name of the selected potential clock */
@@ -20,8 +30,8 @@ interface WorkflowBarProps {
 }
 
 /**
- * Stays in view under the app bar: switches between configuring the build and its results, and keeps the two
- * actions of the workflow (generate, copy the blueprint) one click away from either.
+ * Stays in view under the app bar: switches between configuring the build and its results, and keeps the steps
+ * of the workflow (validate, generate, copy the blueprint) one click away from either.
  */
 export function WorkflowBar({
     view,
@@ -30,6 +40,9 @@ export function WorkflowBar({
     progressStore,
     onGenerate,
     generateDisabled,
+    onValidate,
+    validateDisabled,
+    validationStatus,
     blueprintString,
     selectedLabel,
 }: WorkflowBarProps) {
@@ -92,16 +105,37 @@ export function WorkflowBar({
                         </Button>
                     </>
                 )}
+                {validationStatus !== 'none' && validationStatus !== 'running' && (
+                    <Chip
+                        size="small"
+                        variant="outlined"
+                        label={VALIDATION_CHIP[validationStatus].label}
+                        color={VALIDATION_CHIP[validationStatus].color}
+                    />
+                )}
                 <Button
-                    variant="contained"
+                    variant="outlined"
                     size="small"
-                    onClick={onGenerate}
-                    color="secondary"
-                    disabled={generateDisabled || isLoading}
-                    startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                    onClick={onValidate}
+                    disabled={validateDisabled || isLoading || validationStatus === 'running'}
                 >
-                    {isLoading ? 'Generating...' : 'Generate'}
+                    {validationStatus === 'running' ? 'Validating...' : 'Validate'}
                 </Button>
+                <Tooltip title={validationStatus === 'valid' ? '' : 'Validate the configuration first'} arrow>
+                    {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
+                    <span>
+                        <Button
+                            variant="contained"
+                            size="small"
+                            onClick={onGenerate}
+                            color="secondary"
+                            disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
+                            startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                        >
+                            {isLoading ? 'Generating...' : 'Generate'}
+                        </Button>
+                    </span>
+                </Tooltip>
             </Box>
             {isLoading && (
                 <Box sx={{ mt: 1 }}>

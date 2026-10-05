@@ -61,6 +61,7 @@ export {
 
 export {
     generateClockForConfig,
+    validateConfig,
     generateClockWithSwingBackoff,
     generateClockAlternatives,
     blueprintFileFor,
@@ -81,6 +82,7 @@ export {
     CheckedShiftRow,
     ShiftRangeEdge,
     ShiftedSwings,
+    ConfigValidation,
     SerializableClockWindows,
     GenerateClockOptions,
     DebugSteps,

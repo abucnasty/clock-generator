@@ -337,18 +337,9 @@ export function generateClockForConfig(
     relative_tick = simulation_context.tick_provider.getCurrentTick();
     debug.disable();
 
-    // Compute crafting cycle plan
-    const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
+    const { target_production_rate, output_machine_state_machines, output_inserters, crafting_cycle_plan } =
+        planCraftingCycle(config, simulation_context, logger);
 
-    // Find all output machines (machines that produce the target output item)
-    const output_machine_state_machines = simulation_context.machines.filter(
-        it => it.machine_state.machine.output.item_name === target_production_rate.machine_production_rate.item
-    );
-    assert(
-        output_machine_state_machines.length > 0,
-        `No machine with output item ${target_production_rate.machine_production_rate.item} found`
-    );
-    
     // Clear final output machine buffers to prevent OUTPUT_FULL during simulation start
     // This is especially important for fractional swing scenarios where the machine
     // produces slightly more than what gets cleared per sub-cycle
@@ -363,39 +354,6 @@ export function generateClockForConfig(
         }
     });
 
-    // validate target production rate can be met
-    const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => it.machine_state.machine.output.production_rate.amount_per_second)
-        .reduce((a, b) => a.add(b), fraction(0))
-        .multiply(fraction(config.target_output.copies));
-    assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
-       "The current configuration cannot meet the target production rate. " +
-       `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +
-       `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
-    )
-
-    // Find output inserters for each output machine
-    const output_inserters = output_machine_state_machines.map(machine_state_machine => {
-        const inserter = simulation_context.state_registry
-            .getAllStates()
-            .filter(EntityState.isInserter)
-            .find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
-        assert(
-            inserter !== undefined,
-            `No inserter with source machine ${machine_state_machine.machine_state.entity_id} found`
-        );
-        return inserter;
-    });
-
-    const crafting_cycle_plan = computeCraftingCyclePlan(
-        target_production_rate,
-        output_machine_state_machines.map(it => it.machine_state),
-        simulation_context.entity_registry,
-        output_inserters.map(it => it.inserter),
-        config,
-        logger
-    );
-
     logger.log("All machines are output blocked.");
     simulation_context.machines.forEach(it => {
         MachineState.print(it.machine_state, logger);
@@ -403,13 +361,8 @@ export function generateClockForConfig(
 
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     EntityTransferCountMap.print(swing_counts, logger);
-    assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
-
-    const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
-    const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
-    const recipe_lcm = config.overrides?.lcm ?? computed_lcm;
+    const { computed_lcm, recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
     logger.log(`Simulation context ingredient LCM: ${recipe_lcm}`);
-    const serializable_transfer_plan = EntityTransferCountMap.serialize(swing_counts, ignored_ingredients);
 
     logger.log("\n--- Swing Distributions ---");
     if (crafting_cycle_plan.swing_distribution) {
@@ -803,6 +756,116 @@ export function generateClockForConfig(
             computed_lcm,
         };
     }
+}
+
+/**
+ * The crafting cycle the clock is planned around, for a build whose machines have been run until output blocked
+ * (the prepare step): what was crafted by then sets how many hands the output inserters take per cycle.
+ * Throws when the build cannot reach the target rate or an output machine has no inserter taking from it.
+ */
+function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger) {
+    const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
+
+    // Find all output machines (machines that produce the target output item)
+    const output_machine_state_machines = simulation_context.machines.filter(
+        it => it.machine_state.machine.output.item_name === target_production_rate.machine_production_rate.item
+    );
+    assert(
+        output_machine_state_machines.length > 0,
+        `No machine with output item ${target_production_rate.machine_production_rate.item} found`
+    );
+
+    // validate target production rate can be met
+    const total_output_capacity_per_second = output_machine_state_machines
+        .map(it => it.machine_state.machine.output.production_rate.amount_per_second)
+        .reduce((a, b) => a.add(b), fraction(0))
+        .multiply(fraction(config.target_output.copies));
+    assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
+       "The current configuration cannot meet the target production rate. " +
+       `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +
+       `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
+    )
+
+    // Find output inserters for each output machine
+    const output_inserters = output_machine_state_machines.map(machine_state_machine => {
+        const inserter = simulation_context.state_registry
+            .getAllStates()
+            .filter(EntityState.isInserter)
+            .find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
+        assert(
+            inserter !== undefined,
+            `No inserter with source machine ${machine_state_machine.machine_state.entity_id} found`
+        );
+        return inserter;
+    });
+
+    const crafting_cycle_plan = computeCraftingCyclePlan(
+        target_production_rate,
+        output_machine_state_machines.map(it => it.machine_state),
+        simulation_context.entity_registry,
+        output_inserters.map(it => it.inserter),
+        config,
+        logger
+    );
+
+    return { target_production_rate, output_machine_state_machines, output_inserters, crafting_cycle_plan };
+}
+
+/** The hands every inserter and drill moves per crafting cycle, and the cycles the clock needs to make them whole */
+function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCyclePlan, simulation_context: SimulationContext) {
+    const swing_counts = crafting_cycle_plan.entity_transfer_map;
+    assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
+
+    const ignored_ingredients = config.overrides?.ignored_lcm_ingredients;
+    const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
+    return {
+        computed_lcm,
+        recipe_lcm: config.overrides?.lcm ?? computed_lcm,
+        serializable_transfer_plan: EntityTransferCountMap.serialize(swing_counts, ignored_ingredients),
+    };
+}
+
+/** What validating a config finds out before any clock is generated */
+export interface ConfigValidation {
+    /** Hands each inserter and drill moves per crafting cycle */
+    transfer_plan: SerializableTransferPlan;
+    /** Crafting cycles in one clock period: the computed LCM, or the config's override */
+    used_lcm: number;
+    /** Hands each output inserter takes per crafting cycle, before any backoff a generation may apply */
+    output_swings_per_cycle: number;
+    cycle_ticks: number;
+    period_ticks: number;
+}
+
+/**
+ * Checks that a clock can be planned for the config and returns that plan, without generating any clock: every
+ * ingredient and output has an inserter, the machines can reach the target rate, and every belt that is filled is
+ * planned for. Costs one prepare run (the machines crafting until output blocked) instead of the hundreds of
+ * simulations a generation does. Throws with the reason when the config is not valid.
+ *
+ * A generation can still end up with another plan than this one: it lowers the output swings when the planned
+ * count is unstable, and offers other counts as potential clocks.
+ */
+export function validateConfig(config: Config, options: { logger?: Logger } = {}): ConfigValidation {
+    const logger = options.logger ?? { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
+    assertInserterCoverage(config);
+
+    const simulation_context = SimulationContext.fromConfig(config);
+    new PrepareStep(simulation_context).execute();
+
+    const { crafting_cycle_plan, output_inserters } = planCraftingCycle(config, simulation_context, logger);
+    const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
+    const cycle_ticks = crafting_cycle_plan.total_duration.ticks;
+    const output_ids = new Set(output_inserters.map(it => it.inserter.entity_id.id));
+    const output_plan = crafting_cycle_plan.entity_transfer_map.entries_array().find(([entity_id]) => output_ids.has(entity_id.id));
+    const output_swings_per_cycle = output_plan?.[1].total_transfer_count.toDecimal() ?? 1;
+    return {
+        transfer_plan: serializable_transfer_plan,
+        used_lcm: recipe_lcm,
+        output_swings_per_cycle,
+        cycle_ticks,
+        period_ticks: cycle_ticks * recipe_lcm,
+    };
 }
 
 /**
