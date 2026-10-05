@@ -1,5 +1,5 @@
 import { InventoryState, WritableInventoryState } from "./inventory-state";
-import { ProgressState } from "./progress-state";
+import { FuelProgressState, ProgressState } from "./progress-state";
 import { EntityId, Machine } from "../entities";
 import { EntityState } from "./entity-state";
 import { Logger, defaultLogger } from "../common/logger";
@@ -19,6 +19,7 @@ export class MachineState implements EntityState {
     public static machineInputIsBlocked = machineInputIsBlocked
     public static machineIsOutputBlocked = machineIsOutputBlocked
     public static machineAcceptsItem = machineAcceptsItem
+    public static insertItem = insertItem
     public static print = printMachineState
 
     constructor(
@@ -26,7 +27,10 @@ export class MachineState implements EntityState {
         public readonly machine: Machine,
         public readonly craftingProgress: ProgressState,
         public readonly bonusProgress: ProgressState,
+        public readonly fuelProgress: FuelProgressState,
         public readonly inventoryState: WritableInventoryState,
+        /** The burner fuel slot, kept apart from the ingredients and output since the fuel can also be the product */
+        public readonly fuelInventory: WritableInventoryState,
         public craftCount: number,
         public status: MachineStatus,
         public totalCrafted: number,
@@ -39,12 +43,18 @@ export class MachineState implements EntityState {
 
 function forMachine(machine: Machine): MachineState {
     const inventoryState = InventoryState.createFromMachineInputs(machine.inputs);
+    const fuelInventory = InventoryState.empty();
+    if (machine.fuel_slot) {
+        fuelInventory.addQuantity(machine.fuel_slot.fuel.item_name, 0);
+    }
     return new MachineState(
         machine.entity_id,
         machine,
         ProgressState.empty(),
         ProgressState.empty(),
+        FuelProgressState.empty(),
         inventoryState,
+        fuelInventory,
         0,
         MachineStatus.INGREDIENT_SHORTAGE,
         0,
@@ -57,17 +67,29 @@ function clone(machineState: MachineState): MachineState {
         machineState.machine,
         ProgressState.clone(machineState.craftingProgress),
         ProgressState.clone(machineState.bonusProgress),
+        FuelProgressState.clone(machineState.fuelProgress),
         machineState.inventoryState.clone(),
+        machineState.fuelInventory.clone(),
         machineState.craftCount,
         machineState.status,
         machineState.totalCrafted,
     )
 }
 
+/** An inserter's drop into a machine: fuel goes to the fuel slot, everything else to the ingredients */
+function insertItem(machineState: MachineState, itemName: string, quantity: number): void {
+    const inventory = isFuel(machineState.machine, itemName) ? machineState.fuelInventory : machineState.inventoryState;
+    inventory.addQuantity(itemName, quantity);
+}
+
 function machineAcceptsItem(machineState: MachineState, itemName: string): boolean {
     const machine = machineState.machine;
 
-    return machine.inputs.has(itemName);
+    return machine.inputs.has(itemName) || isFuel(machine, itemName);
+}
+
+function isFuel(machine: Machine, itemName: string): boolean {
+    return machine.fuel_slot?.fuel.item_name === itemName;
 }
 
 function machineInputIsBlocked(machineState: MachineState, ingredientName: string): boolean {
@@ -76,11 +98,17 @@ function machineInputIsBlocked(machineState: MachineState, ingredientName: strin
         return true;
     }
 
+    const machine = machineState.machine;
+
+    // fuel goes in its own slot, which a full output does not block
+    if (machine.fuel_slot && isFuel(machine, ingredientName)) {
+        return machineState.fuelInventory.getQuantity(ingredientName) >= machine.fuel_slot.automated_insertion_limit;
+    }
+
     if (machineIsOutputBlocked(machineState)) {
         return true;
     }
 
-    const machine = machineState.machine;
     const input = machine.inputs.getOrThrow(ingredientName);
     const currentQuantity = machineState.inventoryState.getQuantity(input.ingredient.name);
 
@@ -104,8 +132,14 @@ function printMachineState(machineState: MachineState, logger: Logger = defaultL
     logger.log(`  Total Crafted: ${machineState.totalCrafted}`);
     logger.log(`  Crafting Progress: ${machineState.craftingProgress.progress}`);
     logger.log(`  Bonus Progress: ${machineState.bonusProgress.progress}`);
+    if (machineState.machine.fuel_slot) {
+        logger.log(`  Fuel Burning: ${machineState.fuelProgress.energy_remaining_mj} MJ left in the burning ${machineState.machine.fuel_slot.fuel.item_name}`);
+    }
     logger.log(`  Inventory State:`);
     for (const inventory_item of machineState.inventoryState.getAllItems()) {
         logger.log(`    ${inventory_item.item_name}: ${inventory_item.quantity}`);
+    }
+    for (const fuel_item of machineState.fuelInventory.getAllItems()) {
+        logger.log(`  Fuel Inventory: ${fuel_item.item_name}: ${fuel_item.quantity}`);
     }
 }

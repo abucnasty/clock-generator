@@ -73,6 +73,9 @@ export class InserterFactory {
             machine.inputs.forEach((input) => {
                 sink_consumed_items.add(input.ingredient.name)
             })
+            if (machine.fuel_slot) {
+                sink_consumed_items.add(machine.fuel_slot.fuel.item_name)
+            }
         }
 
         if (sink.type === EntityType.CHEST) {

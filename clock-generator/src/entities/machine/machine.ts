@@ -1,7 +1,7 @@
 import { fraction } from "fractionability"
 import { MachineConfiguration } from "../../config";
 import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
-import { BurnerEnergySource } from "./fuel";
+import { BurnerEnergySource, FuelSlot } from "./fuel";
 import { MachineMetadata } from "./machine-metadata";
 import { MachineOutput, OutputBlock, OverloadMultiplier, ProductionRate } from "./output";
 import { RecipeMetadata } from "./recipe";
@@ -31,6 +31,7 @@ export class Machine implements Entity {
         public readonly bonus_productivity_rate: BonusProductivityRate,
         public readonly insertion_duration: InsertionDuration,
         public readonly fuel_consumption?: FuelConsumption,
+        public readonly fuel_slot?: FuelSlot,
     ) {}
 
     public toString(): string {
@@ -104,22 +105,30 @@ function createMachine(
         craftingRate,
         bonusProductivityRate,
         insertionDurationPeriod,
-        createFuelConsumption(metadata),
+        ...createFuel(metadata),
     );
 }
 
-function createFuelConsumption(metadata: MachineMetadata): FuelConsumption | undefined {
+function createFuel(metadata: MachineMetadata): [FuelConsumption?, FuelSlot?] {
     const source = BurnerEnergySource.forMachineType(metadata.type);
     if (!source) {
-        return undefined;
+        return [];
     }
-    return FuelConsumption.fromCraftingSpeed(
+    const fuel = BurnerEnergySource.selectFuel(source, metadata.fuel);
+    if (metadata.recipe.inputsPerCraft.has(fuel.item_name)) {
+        throw new Error(
+            `Recipe ${metadata.recipe.name} uses ${fuel.item_name} as an ingredient, which is also the fuel of a ${metadata.type}. ` +
+            `A machine with the same item as ingredient and fuel is not supported yet.`
+        );
+    }
+    const consumption = FuelConsumption.fromCraftingSpeed(
         source,
-        BurnerEnergySource.selectFuel(source, metadata.fuel),
+        fuel,
         metadata.crafting_speed,
         metadata.recipe.energy_required,
         metadata.energy_consumption_bonus ?? 0,
     );
+    return [consumption, FuelSlot.create(fuel, consumption)];
 }
 
 function printMachineFacts(machine: Machine, logger: Logger = defaultLogger): void {

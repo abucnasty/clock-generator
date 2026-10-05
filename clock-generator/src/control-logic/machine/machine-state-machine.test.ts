@@ -198,3 +198,72 @@ describe("Machine State Machine", () => {
         expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
     });
 });
+describe("Machine State Machine with a fuel slot", () => {
+    // 4s recipe at crafting speed 2: 120 ticks per craft, 1 MJ per craft, so one 2 MJ nutrient pays for 2 crafts
+    const createBiochamberState = (mash: number, nutrients: number) => {
+        const machine_state = MachineState.forMachine(
+            createMachine("nutrients-from-yumako-mash", { type: MachineType.BIOCHAMBER, crafting_speed: 2 })
+        )
+        machine_state.inventoryState.addQuantity("yumako-mash", mash)
+        machine_state.fuelInventory.addQuantity("nutrients", nutrients)
+        const state_machine = MachineStateMachine.create({ machine_state })
+        return { machine_state, state_machine }
+    }
+
+    // the nutrients the recipe makes are taken away so a full output never stops the machine
+    const run = (machine_state: MachineState, state_machine: MachineStateMachine, ticks: number) => {
+        for (let i = 0; i < ticks; i++) {
+            executeControlLogicForTicks(state_machine, 1)
+            machine_state.inventoryState.setQuantity("nutrients", 0)
+        }
+    }
+
+    test("does not start a craft, or consume its ingredients, without fuel", () => {
+        const { machine_state, state_machine } = createBiochamberState(8, 0)
+        run(machine_state, state_machine, 300)
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+        expect(machine_state.craftCount).toBe(0)
+        expect(machine_state.inventoryState.getQuantity("yumako-mash")).toBe(8)
+    })
+
+    test("burns one nutrient for every two crafts", () => {
+        const { machine_state, state_machine } = createBiochamberState(12, 1)
+        run(machine_state, state_machine, 600)
+        expect(machine_state.craftCount).toBe(2)
+        expect(machine_state.fuelInventory.getQuantity("nutrients")).toBe(0)
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+    })
+
+    test("a craft in progress waits for fuel and resumes where it stopped", () => {
+        const { machine_state, state_machine } = createBiochamberState(16, 1)
+        run(machine_state, state_machine, 180)
+        // second craft is half done and has used up the nutrient
+        expect(machine_state.craftCount).toBe(1)
+        run(machine_state, state_machine, 100)
+        expect(machine_state.craftCount).toBe(2)
+        machine_state.fuelInventory.addQuantity("nutrients", 1)
+        run(machine_state, state_machine, 400)
+        expect(machine_state.craftCount).toBe(4)
+        expect(machine_state.inventoryState.getQuantity("yumako-mash")).toBe(0)
+    })
+
+    test("machines without a fuel slot are unaffected", () => {
+        const machine_state = MachineState.forMachine(createMachine("iron-gear-wheel"))
+        machine_state.inventoryState.addQuantity("iron-plate", 2)
+        executeControlLogicForTicks(MachineStateMachine.create({ machine_state }), 60)
+        expect(machine_state.craftCount).toBe(1)
+    })
+
+    test("accepts fuel up to its insertion limit, even while the output is full", () => {
+        const { machine_state } = createBiochamberState(0, 0)
+        expect(MachineState.machineAcceptsItem(machine_state, "nutrients")).toBe(true)
+        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(false)
+        machine_state.fuelInventory.addQuantity("nutrients", machine_state.machine.fuel_slot!.automated_insertion_limit)
+        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(true)
+        expect(MachineState.machineAcceptsItem(machine_state, "coal")).toBe(false)
+    })
+
+    test("rejects a recipe that uses the fuel as an ingredient", () => {
+        expect(() => createMachine("biochamber", { type: MachineType.BIOCHAMBER })).toThrow(/fuel/)
+    })
+})
