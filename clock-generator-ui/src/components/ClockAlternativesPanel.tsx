@@ -1,6 +1,7 @@
 import { InfoOutlined } from '@mui/icons-material';
 import {
     Box,
+    Button,
     Chip,
     CircularProgress,
     Paper,
@@ -14,6 +15,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
+import { useState } from 'react';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 
 // fractional (subtick) periods are shown to 3 decimals
@@ -41,9 +43,20 @@ interface ClockAlternativesPanelProps {
 }
 
 export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, pending = [] }: ClockAlternativesPanelProps) {
+    const [showUnstable, setShowUnstable] = useState(false);
+
     if (alternatives.length === 0 && pending.length === 0) {
         return null;
     }
+
+    // unstable clocks are hidden until asked for, unless nothing is stable: then they are all there is to look at
+    const unstableCount = alternatives.filter(alternative => !alternative.isStable).length;
+    const anyStable = unstableCount < alternatives.length;
+    const hidesUnstable = anyStable && !showUnstable;
+    const rows = alternatives
+        .map((alternative, index) => ({ alternative, index }))
+        .filter(({ alternative, index }) => !hidesUnstable || alternative.isStable || index === selectedIndex);
+    const hiddenCount = alternatives.length - rows.length;
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
@@ -52,6 +65,9 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                 Each potential clock was checked by simulating the build driven only by the clock windows,
                 starting the clock at several points. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
+                {!anyStable && alternatives.length > 0 && pending.length === 0 && (
+                    <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>
+                )}
             </Typography>
             <TableContainer>
                 <Table size="small">
@@ -75,7 +91,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {alternatives.map((alternative, index) => (
+                        {rows.map(({ alternative, index }) => (
                             <TableRow
                                 key={alternative.id}
                                 hover
@@ -139,6 +155,15 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                     </TableBody>
                 </Table>
             </TableContainer>
+            {anyStable && (showUnstable ? unstableCount > 0 : hiddenCount > 0) && (
+                <Box sx={{ mt: 1 }}>
+                    <Button size="small" onClick={() => setShowUnstable(shown => !shown)}>
+                        {showUnstable
+                            ? `Hide ${unstableCount} unstable clock${unstableCount === 1 ? '' : 's'}`
+                            : `Show ${hiddenCount} unstable clock${hiddenCount === 1 ? '' : 's'} that ${hiddenCount === 1 ? 'was' : 'were'} tried`}
+                    </Button>
+                </Box>
+            )}
         </Paper>
     );
 }

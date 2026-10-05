@@ -1,7 +1,7 @@
 {
   "name": "clock-generator-ui",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,6 +19,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@fontsource/titillium-web": "^5.3.0",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "@xyflow/react": "^12.10.2",

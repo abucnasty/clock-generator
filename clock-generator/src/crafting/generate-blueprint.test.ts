@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, validateConfig, BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
@@ -358,6 +358,34 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    describe("validateConfig", () => {
+        it("returns the transfer plan a generation uses, without generating", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            const validation = validateConfig(config);
+            const generated = generateClockForConfig(config);
+
+            expect(validation.transfer_plan).toEqual(generated.serializable_transfer_plan);
+            expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, period_ticks: 288 });
+        });
+
+        it("uses the forced output swings and LCM of the config", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            const validation = validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });
+            expect(validation).toMatchObject({ output_swings_per_cycle: 2, cycle_ticks: 288 });
+        });
+
+        it("throws for a machine without inserters", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.BAD_ACCUMULATOR_CONFIG);
+            expect(() => validateConfig(config)).toThrow("Missing inserter coverage");
+        });
+
+        it("throws when the machines cannot reach the target rate", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+            expect(() => validateConfig({ ...config, target_output: { ...config.target_output, items_per_second: 1600 } }))
+                .toThrow("cannot meet the target production rate");
+        });
+    });
+
     describe("config validation", () => {
         it("throw error if the current configuration cannot meet the target production rate", async () => {
             const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
@@ -678,6 +706,51 @@ describe("generateClockForConfig", () => {
                 expect(dropsOf(planned.result.serializable_state_transition_history)).toEqual([5, 149]);
                 expect(dropsOf(planned.result.clock_only_run!.state_transition_history)).toEqual([7, 19]);
                 expect(planned.result.clock_only_run!.transfer_history.total_duration_ticks).toBe(288);
+            });
+        });
+
+        describe("insights", () => {
+            const { alternatives } = generateClockAlternatives(config);
+            const insightsOf = (id: string) => alternatives.find(a => a.id === id)!.insights;
+            const insight = (id: string, insight_id: string) => insightsOf(id).find(it => it.id === insight_id);
+
+            it("says how much time the machine has to spare", () => {
+                expect(insight("planned", "spare-time")).toMatchObject({
+                    scope: "build",
+                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each clock period",
+                    table: { rows: [["Machine 1 (flying-robot-frame)", "279", "9", "17.4"]] },
+                });
+            });
+
+            it("lists every ingredient's insertion limit and hands per period", () => {
+                expect(insight("planned", "insertion-limits")?.table?.rows).toEqual([
+                    ["Machine 1 (flying-robot-frame)", "steel-plate", "1", "6", "Inserter 2", "16", "1"],
+                    ["Machine 1 (flying-robot-frame)", "electric-engine-unit", "1", "6", "Inserter 2", "16", "1"],
+                    ["Machine 1 (flying-robot-frame)", "electronic-circuit", "3", "18", "Inserter 3", "16", "3"],
+                    ["Machine 1 (flying-robot-frame)", "battery", "2", "12", "Inserter 3", "16", "2"],
+                ]);
+                expect(insight("planned", "insertion-limits")?.what).toContain("takes electronic-circuit only while it holds fewer than 18");
+            });
+
+            it("says how long a full output hand takes", () => {
+                expect(insight("planned", "output-hand")?.title).toBe("A full hand of flying-robot-frame takes 139.4 ticks to make");
+            });
+
+            it("points out where the exported clock swings differently than the plan", () => {
+                expect(insight("planned", "plan-versus-clock")?.what)
+                    .toContain("Inserter 1 drops at ticks 7, 19 where the plan had 5, 149");
+            });
+
+            it("does not compare shifted swings with the plan they were moved off", () => {
+                expect(insight("shifted-swings", "plan-versus-clock")).toBeUndefined();
+            });
+
+            it("explains an unstable clock instead of reading build numbers from it", () => {
+                const ids = insightsOf("swings-2").map(it => it.id);
+                expect(ids).toContain("unstable");
+                expect(ids).not.toContain("spare-time");
+                expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a clock period");
+                expect(insight("swings-2", "insertion-limits")?.table?.rows).toHaveLength(4);
             });
         });
 

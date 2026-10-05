@@ -92,6 +92,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
         clockWindows: result.clock_windows,
+        insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
@@ -148,6 +149,18 @@ function runStreaming(
     }
 }
 
+function handleValidate(requestId: number, config: Config): void {
+    try {
+        postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
+    } catch (error) {
+        postResponse({
+            type: 'validation-failed',
+            requestId,
+            message: error instanceof Error ? error.message : 'Validation failed',
+        });
+    }
+}
+
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
         const plan = clockGenerator.planClockAlternatives(config, options);
@@ -175,6 +188,9 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     switch (request.type) {
         case 'initialize':
             await handleInitialize(request.factorioDataUrl);
+            break;
+        case 'validate':
+            handleValidate(request.requestId, request.config);
             break;
         case 'plan':
             handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);
