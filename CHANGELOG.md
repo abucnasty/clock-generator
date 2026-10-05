@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Biochamber machine type. A biochamber crafts like an assembler and burns nutrients as fuel while crafting. Machine facts show how many nutrients it consumes per second and per craft. A biochamber uses 500 kW and a nutrients item is worth 2 MJ, so it burns 0.25 nutrients per second at the base energy consumption; the rate scales with an optional energy consumption bonus (speed modules raise it, efficiency modules lower it, to a minimum of -80%), and a craft burns more or fewer nutrients with the machine's crafting speed and recipe time. Productivity does not change the rate.
-- Machine config gains an optional `energy_consumption_bonus` (percent, default 0). The UI offers a Biochamber machine type and an Energy Consumption field for it.
+- Fuel consumption for machines that burn fuel. A machine type declares an energy usage and the fuels it accepts, and machine facts show how many fuel items it burns per second and per craft. Fuel is burned only while crafting; the rate scales with an optional energy consumption bonus (speed modules raise it, efficiency modules lower it, to a minimum of -80%), a craft burns more or fewer items with the machine's crafting speed and recipe time, and productivity does not change the rate.
+- Biochamber machine type, the first machine that burns fuel. It crafts like an assembler, uses 500 kW and burns nutrients (2 MJ each, its only fuel), 0.25 nutrients per second at the base energy consumption.
+- Machine config gains an optional `energy_consumption_bonus` (percent, default 0) and `fuel` (defaults to the machine type's first accepted fuel). The UI offers a Biochamber machine type and an Energy Consumption field for it, and shows fuel consumption in the machine facts.
 
 ## [0.5.0] - 2026-10-05
 

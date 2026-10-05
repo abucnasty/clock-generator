@@ -166,16 +166,16 @@ describe("Machine Entity - Output Production Rates", () => {
     })
 })
 describe("Biochamber", () => {
-    test("reports nutrient consumption and output blocking like a machine", () => {
+    test("reports fuel consumption and output blocking like a machine", () => {
         const biochamber = createMachine("nutrients-from-yumako-mash", { type: "biochamber", crafting_speed: 2, energy_consumption_bonus: 50 })
-        expect(biochamber.nutrient_consumption?.rate_per_second).toBeCloseTo(0.375)
+        expect(biochamber.fuel_consumption?.rate_per_second).toBeCloseTo(0.375)
         // 4s recipe at speed 2 = 2s per craft
-        expect(biochamber.nutrient_consumption?.amount_per_craft).toBeCloseTo(0.75)
-        expect(Machine.getMachineFacts(biochamber).nutrients?.energy_consumption_bonus).toBe(50)
+        expect(biochamber.fuel_consumption?.amount_per_craft).toBeCloseTo(0.75)
+        expect(Machine.getMachineFacts(biochamber).fuel).toMatchObject({ item_name: "nutrients", energy_consumption_bonus: 50 })
         expect(biochamber.output.outputBlock.quantity).toBeGreaterThan(0)
     })
 
-    test("non-biochamber machines have no nutrient consumption", () => {
-        expect(createMachine("iron-gear-wheel").nutrient_consumption).toBeUndefined()
+    test("machines without a burner have no fuel consumption", () => {
+        expect(createMachine("iron-gear-wheel").fuel_consumption).toBeUndefined()
     })
 })

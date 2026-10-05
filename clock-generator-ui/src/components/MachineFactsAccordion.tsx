@@ -128,20 +128,20 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     </Box>
                 </Box>
 
-                {facts.nutrients && (
+                {facts.fuel && (
                     <>
                         <Divider sx={{ my: 1.5 }} />
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                             <FactItem
-                                icon="nutrients"
-                                label="Nutrients"
-                                value={`${facts.nutrients.consumption_rate_per_second.toFixed(4)}/s`}
-                                tooltip={`${facts.nutrients.consumption_rate_per_second}/s while crafting`}
+                                icon={facts.fuel.item_name}
+                                label="Fuel"
+                                value={`${facts.fuel.consumption_rate_per_second.toFixed(4)}/s`}
+                                tooltip={`${facts.fuel.consumption_rate_per_second}/s while crafting`}
                             />
                             <FactItem
-                                label="Nutrients Per Craft"
-                                value={facts.nutrients.amount_per_craft.toFixed(4)}
-                                tooltip={`${facts.nutrients.amount_per_craft}`}
+                                label="Fuel Per Craft"
+                                value={facts.fuel.amount_per_craft.toFixed(4)}
+                                tooltip={`${facts.fuel.amount_per_craft}`}
                             />
                         </Box>
                     </>
@@ -227,6 +227,8 @@ interface FactItemProps {
 
 const FACT_DESCRIPTIONS: Record<string, string> = {
     'Output Item': 'Output item name',
+    'Fuel': 'Fuel items burned per second while crafting',
+    'Fuel Per Craft': 'Fuel items burned per craft',
     'Amount Per Craft': 'Amount produced per craft (including productivity)',
     'Rate': 'Output rate in items per second',
     'Output Block': 'Output block size (items per output cycle)',

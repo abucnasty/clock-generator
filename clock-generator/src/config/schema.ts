@@ -30,6 +30,7 @@ export const MachineConfigurationSchema = z.object({
     crafting_speed: z.number().positive(),
     type: z.enum(Object.values(MachineType)).optional(),
     energy_consumption_bonus: z.number().min(-80).optional(),
+    fuel: z.string().optional(),
 });
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
