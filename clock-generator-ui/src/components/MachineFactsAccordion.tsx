@@ -128,6 +128,25 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     </Box>
                 </Box>
 
+                {facts.nutrients && (
+                    <>
+                        <Divider sx={{ my: 1.5 }} />
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                            <FactItem
+                                icon="nutrients"
+                                label="Nutrients"
+                                value={`${facts.nutrients.consumption_rate_per_second.toFixed(4)}/s`}
+                                tooltip={`${facts.nutrients.consumption_rate_per_second}/s while crafting`}
+                            />
+                            <FactItem
+                                label="Nutrients Per Craft"
+                                value={facts.nutrients.amount_per_craft.toFixed(4)}
+                                tooltip={`${facts.nutrients.amount_per_craft}`}
+                            />
+                        </Box>
+                    </>
+                )}
+
                 {facts.inputs.length > 0 && (
                     <>
                         <Divider sx={{ my: 1.5 }} />
