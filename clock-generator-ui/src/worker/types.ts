@@ -6,6 +6,7 @@ import type {
     Config,
     DebugSteps,
     LogMessage,
+    SerializableClockWindows,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
     SerializableTransferPlan,
@@ -30,6 +31,14 @@ export interface ClockAlternativeView {
     blueprintString: string;
     transferHistory: SerializableTransferHistory;
     stateTransitionHistory: SerializableStateTransitionHistory;
+    /**
+     * The build driven only by the exported clock windows. Null when the histories above already are that run
+     * (observed windows) or no clock-only check ran.
+     */
+    clockOnlyTransferHistory: SerializableTransferHistory | null;
+    clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    /** Decider windows in the blueprint, per entity id */
+    clockWindows: SerializableClockWindows;
     simulationDurationTicks: number;
     swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan;

@@ -11,6 +11,7 @@ import {
     IconButton,
     ThemeProvider,
     Toolbar,
+    Paper,
     Typography,
     createTheme,
     Alert,
@@ -97,6 +98,9 @@ function App() {
         blueprintString,
         transferHistory,
         stateTransitionHistory,
+        clockOnlyTransferHistory,
+        clockOnlyStateTransitionHistory,
+        clockWindows,
         simulationDurationTicks,
         swingBackoffReport,
         transferPlan,
@@ -162,6 +166,11 @@ function App() {
     const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
+    const [timelineRun, setTimelineRun] = useState<'clock' | 'plan'>('clock');
+    const hasClockOnlyRun = clockOnlyTransferHistory !== null && clockOnlyStateTransitionHistory !== null;
+    const showClockOnlyRun = hasClockOnlyRun && timelineRun === 'clock';
+    const shownTransferHistory = showClockOnlyRun ? clockOnlyTransferHistory : transferHistory;
+    const shownStateTransitionHistory = showClockOnlyRun ? clockOnlyStateTransitionHistory : stateTransitionHistory;
 
     const coverageIssues = useInserterValidation(exportConfig, isInitialized);
 
@@ -430,15 +439,40 @@ function App() {
                                 </Box>
                             )}
 
-                            {transferHistory && (
+                            {hasClockOnlyRun && (
+                                <Paper variant="outlined" sx={{ mt: 2, p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                    <ToggleButtonGroup
+                                        value={timelineRun}
+                                        exclusive
+                                        onChange={(_, value) => { if (value) setTimelineRun(value); }}
+                                        size="small"
+                                        aria-label="Simulation shown in the timelines"
+                                    >
+                                        <ToggleButton value="clock">Exported clock</ToggleButton>
+                                        <ToggleButton value="plan">Plan</ToggleButton>
+                                    </ToggleButtonGroup>
+                                    <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
+                                        {timelineRun === 'clock'
+                                            ? 'The timelines show the build driven only by the clock windows in the blueprint. '
+                                                + 'This is the run the Status and Clock-only output columns are judged on.'
+                                            : 'The timelines show the planning simulation the clock windows were taken from. '
+                                                + 'Inserters also wait on their machine\'s inventory there, so swings can land differently than with the clock alone.'}
+                                    </Typography>
+                                </Paper>
+                            )}
+
+                            {shownTransferHistory && (
                                 <Box sx={{ mt: 2 }}>
-                                    <TransferHistoryVisualization transferHistory={transferHistory} />
+                                    <TransferHistoryVisualization transferHistory={shownTransferHistory} />
                                 </Box>
                             )}
 
-                            {stateTransitionHistory && (
+                            {shownStateTransitionHistory && (
                                 <Box sx={{ mt: 2 }}>
-                                    <StateTransitionTimeline stateTransitionHistory={stateTransitionHistory} />
+                                    <StateTransitionTimeline
+                                        stateTransitionHistory={shownStateTransitionHistory}
+                                        clockWindows={clockWindows ?? undefined}
+                                    />
                                 </Box>
                             )}
 

@@ -19,6 +19,19 @@ import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
+function statusDetail(alternative: ClockAlternativeView): string {
+    const check = alternative.asBuilt;
+    if (!check) {
+        return 'Not checked';
+    }
+    const phases = `${check.start_phases_checked} clock start phase(s) simulated`;
+    if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
+        return phases;
+    }
+    return `${phases}. The build repeats every ${check.repeat_periods} periods, moving ${check.repeat_output_items} of `
+        + `${alternative.expectedOutputItems * check.repeat_periods} items over them`;
+}
+
 interface ClockAlternativesPanelProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
@@ -102,12 +115,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                         : '—'}
                                 </TableCell>
                                 <TableCell>
-                                    <Tooltip
-                                        title={alternative.asBuilt
-                                            ? `${alternative.asBuilt.start_phases_checked} clock start phase(s) simulated`
-                                            : 'Not checked'}
-                                        arrow
-                                    >
+                                    <Tooltip title={statusDetail(alternative)} arrow>
                                         <Chip
                                             size="small"
                                             label={alternative.isStable ? 'Stable' : 'Unstable'}

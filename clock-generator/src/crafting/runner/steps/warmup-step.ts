@@ -20,6 +20,9 @@ export class WarmupStep implements RunnerStep {
     /** Ticks actually simulated by the last execute() */
     public ticks_run = 0;
 
+    /** Periods after which the state repeats, once the last execute() saw a period boundary repeat an earlier one */
+    public repeat_periods: number | undefined = undefined;
+
     public execute(): void {
         const context = this.simulation_context
         const control_logic = this.control_logic;
@@ -27,6 +30,7 @@ export class WarmupStep implements RunnerStep {
         const start_tick = context.tick_provider.getCurrentTick();
         const end_tick = start_tick + this.duration.ticks;
         const boundary_by_key = new Map<string, number>();
+        this.repeat_periods = undefined;
 
         while (true) {
             const current_tick = context.tick_provider.getCurrentTick();
@@ -39,6 +43,9 @@ export class WarmupStep implements RunnerStep {
                 const last_boundary = this.duration.ticks / this.steady_state.period_ticks;
                 const key = this.steady_state.key();
                 const earlier = boundary_by_key.get(key);
+                if (earlier !== undefined) {
+                    this.repeat_periods ??= boundary - earlier;
+                }
                 if (earlier !== undefined && (last_boundary - boundary) % (boundary - earlier) === 0) {
                     break;
                 }

@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version.
 
+## [0.4.0] - 2026-10-05
+
+### Added
+- The timelines can show the selected clock driven only by its exported clock windows ("Exported clock", now the default) or the planning simulation the windows were taken from ("Plan"). The two can differ: with the clock alone an inserter may drop twice after one window and only load its hand in the next.
+- The state transition timeline marks each inserter's clock windows along the top of its row.
+
+### Fixed
+- The clock-only check no longer calls a clock stable when it reaches the expected output in the simulated period but only repeats every few periods and falls short over them. The output is now also counted over the whole repeat.
+- Warmup of a clock-only simulation stops as soon as the build repeats. A field that never changed kept the repeat from being detected, so every warmup ran its full length.
+
 ## [0.3.1] - 2026-10-05
 
 ### Changed

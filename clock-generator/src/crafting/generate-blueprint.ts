@@ -60,6 +60,12 @@ const FULL_CHECK_START_PHASES = 112;
 
 export type SerializableClockWindows = Record<string, { start: number; end: number }[]>;
 
+/** What the build does when only the exported clock windows drive it, from the unshifted clock start */
+export interface ClockOnlyRun {
+    transfer_history: SerializableTransferHistory;
+    state_transition_history: SerializableStateTransitionHistory;
+}
+
 export interface AsBuiltStabilityCheck {
     /** Whether the blueprint's clock windows alone, without the simulator's inventory conditions, produce the expected output from every start phase tried */
     is_stable: boolean;
@@ -69,6 +75,10 @@ export interface AsBuiltStabilityCheck {
     start_phases_checked: number;
     /** Clock offset of the first failing start phase */
     failed_start_offset?: number;
+    /** Periods after which the reported run repeats, when the simulation found the repeat; see SimulationStabilityCheck */
+    repeat_periods?: number;
+    /** Output items of the reported run over its repeat_periods periods; set when repeat_periods is more than 1 */
+    repeat_output_items?: number;
 }
 
 export interface SimulationStabilityCheck {
@@ -80,6 +90,13 @@ export interface SimulationStabilityCheck {
     expected_output_items: number;
     /** The LCM value used in this simulation run */
     used_lcm: number;
+    /**
+     * Periods after which the simulated state repeats exactly. Only known for a run driven by clock windows alone
+     * whose warmup reached the repeat. Above 1, the simulated period is one of several that differ.
+     */
+    repeat_periods?: number;
+    /** Output items over repeat_periods periods, required to match the expected output too; set when repeat_periods is more than 1 */
+    repeat_output_items?: number;
     /** Re-simulation driven only by the exported clock windows; absent when verify_as_built is disabled */
     as_built?: AsBuiltStabilityCheck;
 }
@@ -136,6 +153,12 @@ export interface BlueprintGenerationResult {
     serializable_transfer_history: SerializableTransferHistory;
     /** Serializable state transition history for UI visualization */
     serializable_state_transition_history: SerializableStateTransitionHistory;
+    /**
+     * The clock-only check's unshifted run, when it is a different simulation than the histories above
+     * (planned windows come from a run where inserters also wait on inventory). Absent when no clock-only
+     * check ran or the histories above already are that run (observed windows).
+     */
+    clock_only_run?: ClockOnlyRun;
     /** The LCM value used in this simulation run */
     used_lcm: number;
     /** The effective terminal swing count (output swings per base cycle) used in this simulation run */
@@ -497,11 +520,31 @@ export function generateClockForConfig(
         logger.log(`Stability check: belt ${lane.belt_id} ${lane.item_name} exported ${lane.actual}, consumers take ${lane.expected}`);
     }
 
+    // the simulated period can hit the expected output while the periods it alternates with fall short
+    const repeat_periods = warmup_step.repeat_periods;
+    let repeat_output_items: number | undefined;
+    if (repeat_periods !== undefined && repeat_periods > 1 && duration.ticks * repeat_periods < MAX_SIMULATION_TICKS) {
+        state_transition_history.recording = false;
+        new SimulateStep(new_simulation_context, Duration.ofTicks(duration.ticks * (repeat_periods - 1))).execute();
+        repeat_output_items = 0;
+        for (const [entity_id, transfers] of inventory_transfer_history.entries()) {
+            if (output_inserter_ids.has(entity_id.id)) {
+                repeat_output_items += transfers.reduce((s, t) => s + t.amount, 0);
+            }
+        }
+        logger.log(`Stability check: state repeats every ${repeat_periods} periods, output over them=${repeat_output_items}`);
+    }
+    const repeats_at_expected_output = repeat_periods === undefined || repeat_output_items === undefined
+        || Math.abs(repeat_output_items - total_expected_output_float * repeat_periods) <= LCM_STABILITY_TOLERANCE * repeat_periods;
+
     const stability_check: SimulationStabilityCheck = {
-        is_stable: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0,
+        is_stable: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0
+            && repeats_at_expected_output,
         actual_output_items: total_actual_output,
         expected_output_items: total_expected_output,
         used_lcm: recipe_lcm,
+        repeat_periods,
+        repeat_output_items,
     };
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.is_stable} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
@@ -567,11 +610,19 @@ export function generateClockForConfig(
         ? { clock: subtick_clock, blueprint: blueprintForWindows(windows, subtick_clock) }
         : undefined;
 
+    let clock_only_run: ClockOnlyRun | undefined;
+    const clockOnlyRunOf = (run: BlueprintGenerationResult): ClockOnlyRun => ({
+        transfer_history: run.serializable_transfer_history,
+        state_transition_history: run.serializable_state_transition_history,
+    });
+
     if (config.overrides?.derive_clock_windows) {
         const planned_stable = stability_check.is_stable;
         const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-        let planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
-            (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`)).check;
+        const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+            (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`));
+        let planned_check = planned_run.check;
+        clock_only_run = clockOnlyRunOf(planned_run.result);
         if (planned_stable && planned_check.is_stable) {
             planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`)).check;
@@ -629,8 +680,10 @@ export function generateClockForConfig(
     }
 
     if (options.verify_as_built ?? false) {
-        stability_check.as_built = runAsBuiltCheck(config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
-            (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`)).check;
+        const as_built_run = runAsBuiltCheck(config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+            (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`));
+        stability_check.as_built = as_built_run.check;
+        clock_only_run = clockOnlyRunOf(as_built_run.result);
         stability_check.is_stable = stability_check.is_stable && stability_check.as_built.is_stable;
         logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.is_stable}`);
     }
@@ -665,6 +718,7 @@ export function generateClockForConfig(
             transfer_history: final_history,
             serializable_transfer_history,
             serializable_state_transition_history,
+            clock_only_run,
             used_lcm: recipe_lcm,
             used_terminal_swing_count,
             stability_check,
@@ -893,6 +947,8 @@ function deriveWithOutputWindows(
             check.is_stable = false;
             check.actual_output_items = full.actual_output_items;
             check.failed_start_offset = full.failed_start_offset;
+            check.repeat_periods = full.repeat_periods;
+            check.repeat_output_items = full.repeat_output_items;
         }
     }
 
@@ -1009,6 +1065,8 @@ function runAsBuiltCheck(
         is_stable: result.stability_check.is_stable,
         actual_output_items: result.stability_check.actual_output_items,
         start_phases_checked: 1,
+        repeat_periods: result.stability_check.repeat_periods,
+        repeat_output_items: result.stability_check.repeat_output_items,
     };
     report?.(1, total);
     if (!check.is_stable) {
@@ -1025,6 +1083,8 @@ function runAsBuiltCheck(
             check.is_stable = false;
             check.actual_output_items = shifted.stability_check.actual_output_items;
             check.failed_start_offset = offset;
+            check.repeat_periods = shifted.stability_check.repeat_periods;
+            check.repeat_output_items = shifted.stability_check.repeat_output_items;
             break;
         }
     }
@@ -1753,6 +1813,20 @@ function alternativeDefinitions(
     ];
 }
 
+/** Sentences for an alternative's description about what the clock-only check found beyond the output count */
+function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_output_items: number): string {
+    if (as_built === undefined) {
+        return "";
+    }
+    let notes = "";
+    if (as_built.repeat_periods !== undefined && as_built.repeat_output_items !== undefined) {
+        const expected = expected_output_items * as_built.repeat_periods;
+        notes += ` In the clock-only check the build repeats every ${as_built.repeat_periods} periods instead of every period, `
+            + `moving ${as_built.repeat_output_items} of ${expected} items over them.`;
+    }
+    return notes;
+}
+
 function runAlternative(definition: AlternativeDefinition, copies: number, logger: Logger): ClockAlternativeRun | null {
     let result: BlueprintGenerationResult;
     try {
@@ -1773,7 +1847,7 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
-    const description = definition.description + planning_note;
+    const description = definition.description + planning_note + asBuiltNotes(as_built, expected_output_items);
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
     const period = result.simulation_duration.ticks;
     const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;

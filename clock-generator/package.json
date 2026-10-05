@@ -1,6 +1,6 @@
 {
   "name": "clock-generator",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Factorio clock generator for crafting machines",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

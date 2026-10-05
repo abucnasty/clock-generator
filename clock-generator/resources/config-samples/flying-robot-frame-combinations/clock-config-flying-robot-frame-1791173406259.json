@@ -1,0 +1,110 @@
+{
+  "target_output": {
+    "recipe": "flying-robot-frame",
+    "items_per_second": 160,
+    "copies": 24
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "flying-robot-frame",
+      "productivity": 100,
+      "crafting_speed": 68.890625,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "flying-robot-frame"
+      ],
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "steel-plate",
+        "electric-engine-unit"
+      ],
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit",
+        "battery"
+      ],
+      "id": 3
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "processing-unit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "flying-robot-frame",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "electric-engine-unit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "battery",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

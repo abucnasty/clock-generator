@@ -630,4 +630,80 @@ describe("generateClockForConfig", () => {
             expect(transferred_items.has("iron-gear-wheel")).toBe(true);
         });
     });
+
+    // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
+    // expected output in one simulated period without the build actually repeating that period.
+    describe("FLYING_ROBOT_FRAME clock-only check", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
+
+        // enable ranges as the inserters see them (decider windows shifted by the circuit latency)
+        const clocked = (windows: Record<number, [number, number][]>) => generateClockForConfig({
+            ...config,
+            inserters: config.inserters.map(inserter => ({
+                ...inserter,
+                overrides: {
+                    enable_control: {
+                        mode: "CLOCKED" as const,
+                        ranges: windows[inserter.id!].map(([start, end]) => ({ start, end })),
+                        period_duration_ticks: 288,
+                    },
+                },
+            })),
+        });
+
+        describe("planned clock", () => {
+            const { alternatives } = generateClockAlternatives(config);
+            const planned = alternatives.find(a => a.id === "planned")!;
+
+            it("is stable and repeats every period", () => {
+                expect(planned.is_stable).toBe(true);
+                expect(planned.result.stability_check.as_built?.repeat_periods).toBe(1);
+            });
+
+            // the timelines default to this run; it differs from the planning run the windows were taken from
+            it("carries the clock-only run, where both hands are dropped after the first window", () => {
+                const dropsOf = (history: typeof planned.result.serializable_state_transition_history) => history.entities
+                    .find(entity => entity.entity_id === "inserter:1")!.transitions
+                    .filter(transition => transition.to_status === "DROP")
+                    .map(transition => transition.tick);
+
+                expect(dropsOf(planned.result.serializable_state_transition_history)).toEqual([5, 149]);
+                expect(dropsOf(planned.result.clock_only_run!.state_transition_history)).toEqual([7, 19]);
+                expect(planned.result.clock_only_run!.transfer_history.total_duration_ticks).toBe(288);
+            });
+        });
+
+        // built by hand and run in game: output swings 116 and 172 ticks apart
+        describe("hand-made clock with unevenly spaced output swings", () => {
+            const result = clocked({
+                1: [[2, 15], [118, 131]],
+                2: [[15, 35]],
+                3: [[15, 45], [131, 149]],
+            });
+
+            it("is stable and repeats every period", () => {
+                expect(result.stability_check.is_stable).toBe(true);
+                expect(result.stability_check.repeat_periods).toBe(1);
+                expect(result.stability_check.repeat_output_items).toBeUndefined();
+            });
+        });
+
+        describe("clock that reaches the expected output only every other period", () => {
+            const result = clocked({
+                1: [[2, 15], [59, 72]],
+                2: [[15, 35]],
+                3: [[15, 45], [201, 219]],
+            });
+
+            it("moves the expected output in the simulated period", () => {
+                expect(result.stability_check.actual_output_items).toBe(result.stability_check.expected_output_items);
+            });
+
+            it("is unstable because the two periods it repeats over move half of it", () => {
+                expect(result.stability_check.repeat_periods).toBe(2);
+                expect(result.stability_check.repeat_output_items).toBe(32);
+                expect(result.stability_check.is_stable).toBe(false);
+            });
+        });
+    });
 });
