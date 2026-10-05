@@ -28,6 +28,7 @@ import { RunnerStepType } from "./runner/steps/runner-step";
 import { Logger, defaultLogger } from "../common/logger";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
+import { ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
 import { SerializableStateTransitionHistory, serializeStateTransitionHistory } from "./sequence/state-transition-serializer";
 import { InserterStateTransitionTrackerPlugin } from "../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
@@ -193,6 +194,8 @@ export interface BlueprintGenerationResult {
     serializable_transfer_history: SerializableTransferHistory;
     /** Serializable state transition history for UI visualization */
     serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** Insertion limits, crafting time and output per craft of every machine */
+    machine_facts: MachineFactsEntry[];
     /** With the shifted_cycle option: the swings that were moved, where else they could go and what limits that */
     shifted_cycle?: ShiftedSwings;
     /**
@@ -787,6 +790,10 @@ export function generateClockForConfig(
             transfer_history: final_history,
             serializable_transfer_history,
             serializable_state_transition_history,
+            machine_facts: simulation_context.machines.map(it => ({
+                entity_id: it.machine_state.machine.entity_id.id,
+                facts: Machine.getMachineFacts(it.machine_state.machine),
+            })),
             shifted_cycle,
             clock_only_run,
             used_lcm: recipe_lcm,
@@ -2130,6 +2137,8 @@ export interface ClockAlternative {
     is_stable: boolean;
     /** Output of all copies at the period the exported clock actually runs (whole ticks unless it is a subtick clock) */
     items_per_second: number;
+    /** What the simulation found that is worth explaining about the build and this clock */
+    insights: ClockInsight[];
     result: BlueprintGenerationResult;
 }
 
@@ -2386,10 +2395,11 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
         + `) start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
     const description = definition.description + moved_note + shifted_note + planning_note + asBuiltNotes(as_built, expected_output_items);
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
+    const insights = clockInsights(result, is_stable);
     const period = result.simulation_duration.ticks;
     const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), insights, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -2407,6 +2417,7 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
                 inserter_window_count,
                 is_stable,
                 items_per_second: rateAt(period),
+                insights,
                 result: { ...result, blueprint: result.subtick.blueprint },
             },
             {
@@ -2418,6 +2429,7 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
                 inserter_window_count,
                 is_stable,
                 items_per_second: rateAt(rounded),
+                insights,
                 result,
             },
         ],

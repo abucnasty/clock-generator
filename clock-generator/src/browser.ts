@@ -240,3 +240,4 @@ export {
     Machine,
     ComputeMachineFactsParams,
 } from './entities/machine';
+export type { ClockInsight, MachineFactsEntry } from './crafting/insights';

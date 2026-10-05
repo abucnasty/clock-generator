@@ -1,6 +1,7 @@
 import type {
     AsBuiltStabilityCheck,
     CheckedShiftRow,
+    ClockInsight,
     ShiftRangeEdge,
     ClockAlternativeContext,
     ClockAlternativeRun,
@@ -57,6 +58,8 @@ export interface ClockAlternativeView {
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
+    /** What the simulation found that is worth explaining about the build and this clock */
+    insights: ClockInsight[];
     /** Null unless this clock moved a crafting cycle or an output swing */
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;

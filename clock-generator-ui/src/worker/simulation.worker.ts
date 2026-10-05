@@ -92,6 +92,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
         clockWindows: result.clock_windows,
+        insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,

@@ -80,8 +80,8 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     const plannedChecked = options.rows.some(row => row.shifts.some(shift => shift.shift_ticks === 0));
 
     return (
-        <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
-            <Typography variant="h6">
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
                 {options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -90,7 +90,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     : <>This clock moves {options.movedDescription} </>}
                 {describeShift(options.chosenShiftTicks)} than planned.
                 {range && range.from !== range.to && (
-                    <> They can start anywhere from {describeShift(range.from)} to {describeShift(range.to)}, checked every {cell} ticks.</>
+                    <> Places from {describeShift(range.from)} to {describeShift(range.to)} work, checked every {cell} ticks.</>
                 )}
                 {options.moved === 'swings' && (
                     <> A machine takes an input hand once it is below its insertion limit and before it runs out, and gives an output hand once a full one is ready.</>
