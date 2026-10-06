@@ -26,10 +26,6 @@
 ---@field type "machine"|"belt"|"chest" The target type
 ---@field unit_number number The unit number of the target entity
 
----@class InserterBeltLaneInfo
----@field lane number The lane index (1 = right, 2 = left)
----@field ingredient string The item on this lane
-
 ---@class InfinityFilterData
 ---@field item_name string The item name
 ---@field request_count number The quantity of items
@@ -53,8 +49,6 @@
 ---@field filters string[] Item filters set on the inserter
 ---@field source InserterTargetRef|nil The pickup target
 ---@field sink InserterTargetRef|nil The drop target
----@field source_recipe_outputs string[]|nil Recipe outputs from source machine
----@field source_belt_lanes InserterBeltLaneInfo[]|nil Belt lane contents from source belt
 
 ---@class PlayerData
 ---@field machines MachineData[] Extracted machine data

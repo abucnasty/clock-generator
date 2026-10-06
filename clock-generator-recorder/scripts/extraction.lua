@@ -227,8 +227,6 @@ local function extract_inserter_data(entity)
 
     -- Get source (pickup target)
     local source = nil
-    local source_recipe_outputs = nil
-    local source_belt_lanes = nil
     local pickup_target = entity.pickup_target
     if pickup_target and pickup_target.valid then
         local target_type = helpers.get_target_type(pickup_target)
@@ -238,44 +236,6 @@ local function extract_inserter_data(entity)
                 unit_number = pickup_target.unit_number
             }
 
-            -- If source is a machine, get its recipe outputs for auto-configuration
-            if target_type == "machine" then
-                local recipe = helpers.get_recipe_or_previous(pickup_target)
-                if recipe then
-                    source_recipe_outputs = {}
-                    for _, product in pairs(recipe.products) do
-                        if product.type == "item" then
-                            table.insert(source_recipe_outputs, product.name)
-                        end
-                    end
-                end
-                -- If source is a belt, get contents from each lane
-            elseif target_type == "belt" then
-                source_belt_lanes = {}
-                local max_lines = pickup_target.get_max_transport_line_index()
-                -- Check which lanes the inserter picks from
-                local picks_left = entity.pickup_from_left_lane
-                local picks_right = entity.pickup_from_right_lane
-
-                local default_belt_stack_size = helpers.get_default_belt_stack_size(pickup_target.force)
-
-                for i = 1, math.min(max_lines, 2) do
-                    local is_right_lane = (i == 1)
-                    local is_left_lane = (i == 2)
-
-                    -- Only get contents for lanes the inserter actually picks from
-                    if (is_right_lane and picks_right) or (is_left_lane and picks_left) then
-                        local transport_line = pickup_target.get_transport_line(i)
-                        local ingredient, _ = helpers.get_lane_info(transport_line, default_belt_stack_size)
-                        if ingredient then
-                            table.insert(source_belt_lanes, {
-                                lane = i,
-                                ingredient = ingredient
-                            })
-                        end
-                    end
-                end
-            end
         end
     end
 
@@ -299,9 +259,7 @@ local function extract_inserter_data(entity)
         stack_size = stack_size,
         filters = filters,
         source = source,
-        sink = sink,
-        source_recipe_outputs = source_recipe_outputs,
-        source_belt_lanes = source_belt_lanes
+        sink = sink
     }
 
     return data

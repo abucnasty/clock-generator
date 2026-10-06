@@ -143,25 +143,11 @@ function export.to_table(result)
             stack_size = inserter.stack_size
         }
 
-        -- Determine filters - use explicit filters first, then infer from source
-        local filters = {}
+        -- Only the filters set on the inserter itself are exported. Which items it moves is worked out by the
+        -- clock generator from what its source provides and its sink accepts; guessing it here produces filters
+        -- the sink does not accept.
         if #inserter.filters > 0 then
-            filters = inserter.filters
-        elseif inserter.source_recipe_outputs and #inserter.source_recipe_outputs > 0 then
-            -- Infer from source machine's recipe outputs
-            filters = inserter.source_recipe_outputs
-        elseif inserter.source_belt_lanes and #inserter.source_belt_lanes > 0 then
-            -- Infer from source belt's lane contents
-            for _, lane_data in ipairs(inserter.source_belt_lanes) do
-                if lane_data.ingredient then
-                    table.insert(filters, lane_data.ingredient)
-                end
-            end
-        end
-
-        -- Add filters if any exist (including inferred ones)
-        if #filters > 0 then
-            inserter_export.filters = filters
+            inserter_export.filters = inserter.filters
         end
 
         table.insert(output.inserters, inserter_export)
