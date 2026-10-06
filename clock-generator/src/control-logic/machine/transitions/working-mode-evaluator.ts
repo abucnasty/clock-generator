@@ -29,6 +29,10 @@ export class WorkingModeTransitionEvaluator implements ModeTransitionEvaluator<M
             return ModeTransition.transition(this.output_full_mode, `machine cannot fit another craft of ${amount_per_craft} ${output_item.item_name} under max stack size of ${output_block.max_stack_size}`);
         }
 
+        if (!this.working_mode.byProductsHaveSpace()) {
+            return ModeTransition.transition(this.output_full_mode, "a by-product has filled its stack");
+        }
+
         if (output_item.quantity >= output_block.quantity) {
             return ModeTransition.transition(this.output_full_mode, `output item "${output_item.item_name}" = ${output_item.quantity} waiting to be removed`);
         }

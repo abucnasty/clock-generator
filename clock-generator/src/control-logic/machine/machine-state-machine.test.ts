@@ -267,3 +267,56 @@ describe("Machine State Machine with a fuel slot", () => {
         expect(() => createMachine("biochamber", { type: MachineType.BIOCHAMBER })).toThrow(/fuel/)
     })
 })
+
+describe("Machine State Machine with several outputs", () => {
+    // jellynut-processing: 1 jellynut -> 4 jelly and 1 jellynut-seed at 2%, in 1s
+    const createProcessing = (productivity = 0) => {
+        const machine_state = MachineState.forMachine(
+            createMachine("jellynut-processing", { type: MachineType.BIOCHAMBER, productivity })
+        )
+        machine_state.fuelInventory.addQuantity("nutrients", 5)
+        return { machine_state, state_machine: MachineStateMachine.create({ machine_state }) }
+    }
+
+    test("the main product is the result with the largest expected amount", () => {
+        const { machine_state } = createProcessing()
+        expect(machine_state.machine.output.item_name).toBe("jelly")
+        expect(machine_state.machine.outputs.map(it => it.item_name)).toEqual(["jelly", "jellynut-seed"])
+    })
+
+    test("a by-product is made at its expected amount, carrying fractions over", () => {
+        const { machine_state, state_machine } = createProcessing()
+        machine_state.inventoryState.addQuantity("jellynut", 50)
+        for (let i = 0; i < 50 * 60; i++) {
+            executeControlLogicForTicks(state_machine, 1)
+            machine_state.inventoryState.setQuantity("jelly", 0)
+            machine_state.fuelInventory.setQuantity("nutrients", 5)
+        }
+        expect(machine_state.craftCount).toBe(50)
+        expect(machine_state.inventoryState.getQuantity("jellynut-seed")).toBe(1)
+    })
+
+    test("productivity multiplies a by-product's rate", () => {
+        const { machine_state } = createProcessing(100)
+        const seed = machine_state.machine.outputs[1]
+        expect(seed.amount_per_craft.toDecimal()).toBeCloseTo(0.04)
+        expect(seed.production_rate.amount_per_second.toDecimal()).toBeCloseTo(0.04)
+    })
+
+    test("the machine is output full as soon as any output reaches its stack size", () => {
+        const { machine_state, state_machine } = createProcessing()
+        const seed_stack_size = machine_state.machine.outputs[1].outputBlock.max_stack_size
+        machine_state.inventoryState.addQuantity("jellynut", 10)
+        executeControlLogicForTicks(state_machine, 5)
+        expect(machine_state.status).toBe(MachineStatus.WORKING)
+        machine_state.inventoryState.setQuantity("jellynut-seed", seed_stack_size)
+        executeControlLogicForTicks(state_machine, 120)
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
+        // the craft that was underway finished and no other started
+        expect(machine_state.inventoryState.getQuantity("jellynut")).toBe(9)
+
+        machine_state.inventoryState.setQuantity("jellynut-seed", 0)
+        executeControlLogicForTicks(state_machine, 10)
+        expect(machine_state.status).toBe(MachineStatus.WORKING)
+    })
+})

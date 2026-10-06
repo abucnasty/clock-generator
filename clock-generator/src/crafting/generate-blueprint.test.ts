@@ -368,6 +368,21 @@ describe("generateClockForConfig", () => {
             expect(validation).toMatchObject({ used_lcm: 2, output_swings_per_cycle: 1, cycle_ticks: 144, period_ticks: 288 });
         });
 
+        it("does not plan the inserter taking away a by-product nothing in the config uses", async () => {
+            // jellynut-processing makes jellynut-seed at 2%; its inserter just clears it onto an export belt
+            const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+            const validation = validateConfig(config);
+            const seed_inserters = validation.transfer_plan.entities
+                .filter(entity => entity.item_transfers.some(transfer => transfer.item_name === "jellynut-seed"));
+            expect(seed_inserters).toEqual([]);
+            expect(validation.used_lcm).toBe(4);
+        });
+
+        it("names an inserter missing from the transfer plan when generating", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+            expect(() => generateClockForConfig(config)).toThrow(/Inserter 11 \(belt:3 to machine:1, carrying nutrients\) is missing from the transfer plan/);
+        });
+
         it("uses the forced output swings and LCM of the config", async () => {
             const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
             const validation = validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });

@@ -106,7 +106,10 @@ export class InserterPickupMode implements InserterMode {
     }
 
     private pickupFromMachine(state: InserterState, source: MachineState): void {
-        const output_item_name = source.machine.output.ingredient.name;
+        const output_item_name = this.itemToPickupFromMachine(state, source);
+        if (output_item_name === null) {
+            return;
+        }
         const output_quantity = source.inventoryState.getQuantity(output_item_name);
 
         const held_item = state.held_item ?? { item_name: output_item_name, quantity: 0 }
@@ -153,6 +156,17 @@ export class InserterPickupMode implements InserterMode {
         state.held_item = { item_name: held_item.item_name, quantity: held_item.quantity + pickup_quantity };
         state.inventoryState.addQuantity(first_available_item, pickup_quantity);
         source.inventoryState.removeQuantity(first_available_item, pickup_quantity);
+    }
+
+    /** The item in hand, else the first filtered item the machine has and the sink can take */
+    private itemToPickupFromMachine(state: InserterState, source: MachineState): ItemName | null {
+        if (state.held_item !== null) {
+            return state.held_item.item_name;
+        }
+        const item = Array.from(state.inserter.filtered_items).find(it =>
+            source.inventoryState.getQuantity(it) > 0 && this.canPickupItemForSink(it)
+        );
+        return item ?? null;
     }
 
     private canPickupItemForSink(item_name: ItemName): boolean {

@@ -4,7 +4,8 @@ import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
 import { BurnerEnergySource, FuelSlot } from "./fuel";
 import { MachineMetadata } from "./machine-metadata";
 import { MachineOutput, OutputBlock, OverloadMultiplier, ProductionRate } from "./output";
-import { RecipeMetadata } from "./recipe";
+import { RecipeMetadata, expectedAmount, amountIgnoredByProductivity } from "./recipe";
+import { EnrichedIngredient } from "../../data";
 import { BonusProductivityRate, CraftingRate, InsertionDuration, FuelConsumption } from "./traits";
 import { Entity } from "../entity";
 import { EntityId } from "../entity-id";
@@ -27,6 +28,8 @@ export class Machine implements Entity {
         public readonly overload_multiplier: OverloadMultiplier,
         public readonly inputs: MachineInputs,
         public readonly output: MachineOutput,
+        /** The main product first, then the by-products */
+        public readonly outputs: readonly MachineOutput[],
         public readonly crafting_rate: CraftingRate,
         public readonly bonus_productivity_rate: BonusProductivityRate,
         public readonly insertion_duration: InsertionDuration,
@@ -91,6 +94,10 @@ function createMachine(
         outputBlock: OutputBlock.fromRecipe(metadata.type, recipe, overload_multiplier)
     };
 
+    const byProducts = recipe.outputs.slice(1).map(result =>
+        createByProductOutput(result, craftingRate.crafts_per_tick, metadata.productivity)
+    );
+
     
 
     const insertionDurationPeriod = InsertionDuration.create(machineOutput.production_rate, overload_multiplier)
@@ -102,11 +109,30 @@ function createMachine(
         overload_multiplier,
         machineInputs,
         machineOutput,
+        [machineOutput, ...byProducts],
         craftingRate,
         bonusProductivityRate,
         insertionDurationPeriod,
         ...createFuel(metadata),
     );
+}
+
+/**
+ * A by-product's rate is its expected amount per craft, a probable result counted by its probability.
+ * Productivity multiplies it except for the part of the amount the recipe ignores for productivity.
+ */
+function createByProductOutput(result: EnrichedIngredient, crafts_per_tick: number, productivity: number): MachineOutput {
+    const productive_amount = fraction(expectedAmount(result) - amountIgnoredByProductivity(result));
+    const amount_per_craft = productive_amount
+        .multiply(fraction(1).add(fraction(productivity).divide(100)))
+        .add(fraction(amountIgnoredByProductivity(result)));
+    return {
+        item_name: result.name,
+        amount_per_craft,
+        production_rate: ProductionRate.perTick(result.name, amount_per_craft.multiply(fraction(crafts_per_tick))),
+        ingredient: result,
+        outputBlock: OutputBlock.forByProduct(result),
+    };
 }
 
 function createFuel(metadata: MachineMetadata): [FuelConsumption?, FuelSlot?] {
