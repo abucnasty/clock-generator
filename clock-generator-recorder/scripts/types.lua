@@ -8,6 +8,7 @@
 ---@field energy_consumption_bonus number|nil Energy consumption effect as a percentage (biochambers only)
 
 ---@class DrillData
+---@field entity LuaEntity The drill itself
 ---@field drill_type string The specific drill type (e.g., "electric-mining-drill")
 ---@field mined_item_name string The resource being mined
 ---@field speed_bonus number The speed bonus from modules/beacons

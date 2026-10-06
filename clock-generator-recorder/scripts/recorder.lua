@@ -160,7 +160,7 @@ local function fuel_item_names(burner)
 end
 
 ---@param result ExtractionResult
----@return table[] inserters, table[] machines
+---@return table[] inserters, table[] machines, table[] drills
 local function build_tracks(result)
     local inserters = {}
     for _, exported in ipairs(export.exported_inserters(result)) do
@@ -213,7 +213,33 @@ local function build_tracks(result)
             },
         })
     end
-    return inserters, machines
+    -- A mining drill that drops into a machine: its status and how far along the ore it is mining is
+    local drills = {}
+    for id, drill in ipairs(result.drills) do
+        local entity = drill.entity
+        local target_id = drill.drop_target_unit_number and result.unit_number_to_id[drill.drop_target_unit_number] or nil
+        table.insert(drills, {
+            entity = entity,
+            info = {
+                id = id,
+                unit_number = entity.unit_number,
+                name = entity.name,
+                mined_item_name = drill.mined_item_name,
+                target = target_id and { type = "machine", id = target_id } or nil,
+            },
+            samples = { status = {}, mining_progress = {}, bonus_mining_progress = {} },
+        })
+    end
+    return inserters, machines, drills
+end
+
+---A number attribute of an entity, or 0 where this Factorio version does not have it
+---@param entity LuaEntity
+---@param attribute string
+---@return number
+local function number_or_zero(entity, attribute)
+    local ok, value = pcall(function() return entity[attribute] end)
+    return ok and type(value) == "number" and value or 0
 end
 
 ---@param recording table
@@ -269,6 +295,19 @@ local function sample(recording)
             end
         else
             record_change(s.status, index, "invalid")
+        end
+    end
+
+    for _, track in ipairs(recording.drills or {}) do
+        local entity, s = track.entity, track.samples
+        if entity.valid then
+            record_change(s.status, index, status_name(entity))
+            table.insert(s.mining_progress, round4(number_or_zero(entity, "mining_progress")))
+            table.insert(s.bonus_mining_progress, round4(number_or_zero(entity, "bonus_mining_progress")))
+        else
+            record_change(s.status, index, "invalid")
+            table.insert(s.mining_progress, 0)
+            table.insert(s.bonus_mining_progress, 0)
         end
     end
 end
@@ -327,6 +366,7 @@ function recorder.finish(reason)
         config = recording.config,
         inserters = serialize_tracks(recording.inserters),
         machines = serialize_tracks(recording.machines),
+        drills = serialize_tracks(recording.drills or {}),
     }
 
     local filename = "clock-generator-recorder/recording-" .. recording.start_game_tick .. ".json"
@@ -346,7 +386,7 @@ function recorder.start(force, entities, player_index)
     end
 
     local result = extraction.extract_all_entities(entities, force)
-    local inserters, machines = build_tracks(result)
+    local inserters, machines, drills = build_tracks(result)
     if #inserters == 0 and #machines == 0 then
         notify(player_index, "No machines or inserters found in selection.")
         return false
@@ -371,13 +411,14 @@ function recorder.start(force, entities, player_index)
         config = export.to_table(result),
         inserters = inserters,
         machines = machines,
+        drills = drills,
     }
 
     if clock then
         notify(player_index, "Found clock combinator. Waiting for it to wrap to start recording "
             .. storage.recording.periods .. " period(s)"
             .. (storage.recording.minimum_ticks > 0 and (", and whole periods until at least " .. storage.recording.minimum_ticks .. " ticks,") or "")
-            .. " of " .. #inserters .. " inserters and " .. #machines .. " machines.")
+            .. " of " .. #inserters .. " inserters, " .. #machines .. " machines and " .. #drills .. " mining drills.")
     else
         notify(player_index, "No clock combinator selected; recording "
             .. storage.recording.fallback_ticks .. " ticks without clock alignment.")

@@ -51,10 +51,14 @@ export class EnableControlFactory {
         if (this.terminal_inserter_states.has(entity_state)) {
             // Find the corresponding terminal machine for this inserter
             const terminal_machine = this.findTerminalMachineForInserter(entity_state);
-            return this.transferCountFromMachine(
+            const by_clock = this.transferCountFromMachine(
                 entity_state,
                 terminal_machine,
             );
+            if (this.crafting_cycle_plan.fractional_swings_enabled) {
+                return by_clock;
+            }
+            return EnableControl.all([this.plannedItemsAndNoMore(entity_state, terminal_machine), by_clock]);
         }
 
         // an inserter that only fills a fuel slot, or only takes by-products off a machine, is not part of the plan: it
@@ -527,6 +531,36 @@ export class EnableControlFactory {
             )
         }
         return AlwaysEnabledControl;
+    }
+
+    /**
+     * Holds the output inserter to what its planned swings move: every span of cycles (2 cycles for 5/2 swings per
+     * cycle) allows it that many hands more, and it is enabled while it has picked up less than a hand over what it
+     * was allowed so far. The output inserter is what holds the whole build to its rate: everything before it runs
+     * until its machine is full. Its window alone does not, since a window still on when the inserter is back lets it
+     * take what the machine made since, and a build with product to spare then makes more than was asked for. The
+     * hand of slack lets it start on its next hand early, as it does in game, without getting ahead by more.
+     */
+    private plannedItemsAndNoMore(inserter_state: InserterState, source_state: MachineState): EnableControl {
+        const swings_per_cycle = this.transferCountOf(inserter_state.inserter).total_transfer_count;
+        const hand_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
+        const items_per_span = swings_per_cycle.getNumerator * hand_size;
+        const span_ticks = this.crafting_cycle_plan.total_duration.ticks * swings_per_cycle.getDenominator;
+
+        let span: number | null = null;
+        let allowed = 0;
+        return EnableControl.lambda(() => {
+            const picked_up = inserter_state.items_picked_up;
+            const current_span = Math.floor(this.tick_provider.getCurrentTick() / span_ticks);
+            if (span === null || current_span !== span) {
+                // the ticks start over between the warm up and the run that is recorded: one span more, as any other
+                const spans_passed = span !== null && current_span > span ? current_span - span : 1;
+                // what was not picked up is not saved up for later
+                allowed = Math.min(allowed + spans_passed * items_per_span, picked_up + items_per_span);
+                span = current_span;
+            }
+            return picked_up < allowed + hand_size - 1;
+        });
     }
 
     private transferCountFromMachine(

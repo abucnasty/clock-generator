@@ -39,6 +39,7 @@ local function extract_mining_drill_data(entity)
 
     ---@type DrillData
     local data = {
+        entity = entity,
         drill_type = entity.name,
         mined_item_name = mining_target.name,
         speed_bonus = speed_bonus,

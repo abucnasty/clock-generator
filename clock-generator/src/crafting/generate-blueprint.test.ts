@@ -478,12 +478,17 @@ describe("generateClockForConfig", () => {
             expect(four_swings?.result.crafting_cycle_plan.total_duration.ticks).toBe(64);
         });
 
-        // The plastic machine's coal inserter is refilled by its planned swings each cycle, so the coal windows of the
-        // planned period bring the 144 coal every period needs. Refilled up to the insertion limit instead, the swings
-        // bunch up with no relation to the period, and the one period that is observed held 112 coal.
-        it("is stable as built with the coal windows of its planned period", () => {
-            expect(four_swings?.is_stable).toBe(true);
-            expect(four_swings?.result.stability_check.as_built?.is_stable).toBe(true);
+        // The plastic inserters to the foundries swing by what the machines hold, 32 hands a period on average but 33
+        // in some periods and 31 in others. A foundry that got a hand more has product to spare, and its output
+        // inserter, whose window is on for the whole period, takes a hand more in that period.
+        it("is not stable as built: the plastic inserters bring a hand more in some periods", () => {
+            expect(four_swings?.is_stable).toBe(false);
+            expect(four_swings?.result.stability_check.as_built?.is_stable).toBe(false);
+        });
+
+        it("is stable as built with the planned clock and belt pickup slack", () => {
+            expect(alternatives[0].id).toBe("planned-belt-slack");
+            expect(alternatives[0].is_stable).toBe(true);
         });
 
         it("is stable at the target rate with 3 output swings per cycle", () => {

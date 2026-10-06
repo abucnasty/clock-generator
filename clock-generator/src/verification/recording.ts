@@ -54,6 +54,22 @@ const RecordedMachineSchema = z.object({
     }),
 });
 
+/** A mining drill that drops into a machine */
+const RecordedDrillSchema = z.object({
+    id: z.number().int(),
+    unit_number: z.number().optional(),
+    name: z.string(),
+    mined_item_name: z.string(),
+    target: TargetRefSchema.optional(),
+    samples: z.object({
+        status: changeList(z.string()),
+        /** How far along the ore being mined is, 0 to 1, per sample */
+        mining_progress: luaArray(z.number()),
+        /** How full the mining productivity bar is, 0 to 1, per sample */
+        bonus_mining_progress: luaArray(z.number()),
+    }),
+});
+
 const RecordedConfigSchema = z.object({
     inserters: luaArray(z.object({
         source: TargetRefSchema,
@@ -77,6 +93,8 @@ export const RecordingSchema = z.object({
     config: RecordedConfigSchema,
     inserters: luaArray(RecordedInserterSchema),
     machines: luaArray(RecordedMachineSchema),
+    /** Absent in recordings made before the recorder sampled drills */
+    drills: luaArray(RecordedDrillSchema).optional(),
 });
 
 export type Recording = z.infer<typeof RecordingSchema>;
