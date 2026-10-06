@@ -36,20 +36,30 @@ describe("fuel clocks", () => {
         expect(fuelOnlyInserters(registry).map(inserter => inserter.entity_id.id)).toEqual(["inserter:3"]);
     });
 
-    it("repeats within a divisor of the period, at least as often as the fuel slot's limit lasts", async () => {
-        // 926% energy consumption: 2.565 nutrients a second, so the 5 nutrients the slot holds last about 117 ticks
+    it("repeats on a clock of its own, as often as the fuel slot's limit lasts", async () => {
+        // 926% energy consumption: 2.565 nutrients a second, so the 5 nutrients the slot holds last 116 ticks
         const registry = await registryOf();
-        const period = 960;
-        const clock = unplannedInserterClocks(registry, period).get("inserter:3")!;
+        const clock = unplannedInserterClocks(registry, 960).get("inserter:3")!;
 
-        expect(period % clock.modulus).toBe(0);
-        expect(clock.modulus).toBeLessThanOrEqual(117);
-        expect(clock.modulus).toBeGreaterThan(25);
+        expect(clock.own_clock).toBe(true);
+        // not rounded down to a divisor of the 960 tick period, which would be 96
+        expect(clock.modulus).toBe(116);
         expect(clock.window.end_inclusive).toBeLessThan(clock.modulus);
+    });
 
-        const windows = clockWindowsOverPeriod(clock, period);
-        expect(windows).toHaveLength(period / clock.modulus);
-        windows.forEach((window, index) => expect(window.start_inclusive).toBe(index * clock.modulus + clock.window.start_inclusive));
+    it("looks less often at the slot of a machine that crafts part of the time", async () => {
+        const registry = await registryOf();
+        // crafting 80% of the time burns the 5 nutrients in 116 / 0.8 ticks, less the 5% the share is counted higher
+        const clock = unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.8]])).get("inserter:3")!;
+        expect(clock.modulus).toBe(139);
+        // a share of nearly all the time is not counted over all the time
+        expect(unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.99]])).get("inserter:3")!.modulus).toBe(116);
+    });
+
+    it("is the same whatever the clock period is", async () => {
+        const registry = await registryOf();
+        expect(unplannedInserterClocks(registry, 64).get("inserter:3")!.modulus).toBe(116);
+        expect(unplannedInserterClocks(registry, 97).get("inserter:3")!.modulus).toBe(116);
     });
 
     it("swings more often for a machine that burns fuel faster", async () => {

@@ -226,11 +226,24 @@ function compareClocked(
     const { modulus, window } = clock_of_inserter;
     const length = window.end - window.start;
     const outside: ClockedInserterComparison["outside"] = [];
-    for (const swing of game) {
-        // the inserter picks up after its window opens, a few ticks behind the clock like any other inserter
-        const offset = wrapOffset(swing.start_clock - window.start, modulus);
-        if (offset < -options.tolerance_ticks || offset > length + options.match_window_ticks) {
-            outside.push({ item_name: swing.item_name, clock: swing.start_clock });
+    if (clock_of_inserter.own_clock) {
+        // The clock of a fuel inserter is not recorded and runs free of the clock of the period, so only how the
+        // swings sit to each other can be checked: all of them start within one window's length of the same tick of
+        // the fuel clock, counted in recorded ticks.
+        const offsets = game.map(swing => wrapOffset(swing.pickup_index - (game[0]?.pickup_index ?? 0), modulus));
+        const earliest = Math.min(0, ...offsets);
+        game.forEach((swing, index) => {
+            if (offsets[index] - earliest > length + options.match_window_ticks + options.tolerance_ticks) {
+                outside.push({ item_name: swing.item_name, clock: swing.pickup_index });
+            }
+        });
+    } else {
+        for (const swing of game) {
+            // the inserter picks up after its window opens, a few ticks behind the clock like any other inserter
+            const offset = wrapOffset(swing.start_clock - window.start, modulus);
+            if (offset < -options.tolerance_ticks || offset > length + options.match_window_ticks) {
+                outside.push({ item_name: swing.item_name, clock: swing.start_clock });
+            }
         }
     }
     return {

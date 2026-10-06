@@ -10,7 +10,9 @@ export class SimulateStep implements RunnerStep {
 
     constructor(
         private readonly simulation_context: SimulationContext,
-        private readonly duration: Duration
+        private readonly duration: Duration,
+        /** Called after every simulated tick */
+        private readonly after_tick?: () => void,
     ) {
         this.control_logic = this.build()
     }
@@ -28,6 +30,7 @@ export class SimulateStep implements RunnerStep {
                 break;
             }
             control_logic.executeForTick();
+            this.after_tick?.();
         }
     }
 

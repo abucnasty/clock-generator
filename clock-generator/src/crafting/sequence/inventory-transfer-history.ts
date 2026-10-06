@@ -18,8 +18,11 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
     }
 
     public static removeDuplicateEntities(history: InventoryTransferHistory): InventoryTransferHistory {
-        const deduplicated = deduplicateEntityTransfers(history.getAllTransfers());
-        return new InventoryTransferHistory(deduplicated);
+        const merged_entities = new Map<string, EntityId[]>();
+        const deduplicated = deduplicateEntityTransfers(history.getAllTransfers(), merged_entities);
+        const result = new InventoryTransferHistory(deduplicated);
+        result.merged_entities = merged_entities;
+        return result;
     }
 
     public static offsetHistory(
@@ -113,6 +116,9 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
     ) {
         super(Array.from(transfers.entries()));
     }
+
+    /** The entities removeDuplicateEntities left out, by the id of the entity that stands for them */
+    public merged_entities: ReadonlyMap<string, EntityId[]> = new Map();
 
     /** Off during prepare and warmup, whose transfers are cleared before the measured run anyway */
     public recording = true;
@@ -253,7 +259,10 @@ function printInventoryTransfers(
 /**
  * if two entities have the exact same transfer ranges and items, we can reduce them to one entity
  */
-function deduplicateEntityTransfers(transfers: ReadonlyMap<EntityId, InventoryTransfer[]>): Map<EntityId, InventoryTransfer[]> {
+function deduplicateEntityTransfers(
+    transfers: ReadonlyMap<EntityId, InventoryTransfer[]>,
+    merged_entities: Map<string, EntityId[]> = new Map(),
+): Map<EntityId, InventoryTransfer[]> {
     const result: Map<EntityId, InventoryTransfer[]> = new Map();
 
     const seenTransferSignatures: Map<string, EntityId> = new Map();
@@ -270,6 +279,8 @@ function deduplicateEntityTransfers(transfers: ReadonlyMap<EntityId, InventoryTr
             result.set(entityId, transferList);
         } else {
             // duplicate found, skip adding this entity
+            const kept = seenTransferSignatures.get(signature)!;
+            merged_entities.set(kept.id, (merged_entities.get(kept.id) ?? []).concat(entityId));
         }
     });
 

@@ -5,18 +5,22 @@ import { Belt, Entity, handSizeFor, Inserter, Machine, ReadableEntityRegistry } 
 const WINDOW_SLACK_TICKS = 4;
 
 /**
- * An inserter that is not part of the transfer plan is enabled by a window that repeats every `modulus` ticks, a
- * divisor of the clock period, so the clock of the period holds a whole number of repeats. Its machine's inventory is
- * only looked at inside the window: the rest of the time the inserter ignores it.
+ * An inserter that is not part of the transfer plan is enabled by a window that repeats every `modulus` ticks. Its
+ * machine's inventory is only looked at inside the window: the rest of the time the inserter ignores it.
  *
- * - "fuel": fills the fuel slot of a burner machine
- * - "by-product": takes a by-product, which no machine in the config uses, off its machine
+ * - "fuel": fills the fuel slot of a burner machine. Nothing in the plan depends on when it swings, so it runs on a
+ *   clock of its own that counts `modulus` ticks, whatever the clock period is: the fewer windows, the less often the
+ *   inserter is woken up to find the fuel slot full.
+ * - "by-product": takes a by-product, which no machine in the config uses, off its machine. Its `modulus` is a divisor
+ *   of the clock period, so the clock of the period holds a whole number of repeats.
  */
 export interface InserterClock {
     inserter_id: string;
     kind: "fuel" | "by-product";
-    /** Ticks between the starts of two windows; divides the clock period */
+    /** Ticks between the starts of two windows; divides the clock period unless the inserter has a clock of its own */
     modulus: number;
+    /** The window is on a clock of its own that counts `modulus` ticks, not on the clock of the period */
+    own_clock: boolean;
     /** The window within the first `modulus` ticks */
     window: OpenRange;
 }
@@ -69,23 +73,29 @@ function pickupTicks(inserter: Inserter, entity_registry: ReadableEntityRegistry
     return inserter.animation.pickup.ticks;
 }
 
-/** The clock of an inserter that repeats every at most `interval_ticks`, which `index` staggers from the others on the same machine */
+/**
+ * The clock of an inserter that repeats every at most `interval_ticks`, which `index` staggers from the others on the
+ * same machine. On the clock of the period (`period_ticks`) it repeats every divisor of the period; on a clock of its
+ * own (`period_ticks` null) every `interval_ticks`.
+ */
 function clockEvery(
     inserter: Inserter,
     kind: InserterClock["kind"],
     interval_ticks: number,
     pickup_ticks: number,
-    period_ticks: number,
+    period_ticks: number | null,
     index: number,
     cannot_keep_up: () => string,
 ): InserterClock {
     const swing_ticks = inserter.animation.total.ticks + 1;
-    const modulus = largestDivisorAtMost(period_ticks, interval_ticks, swing_ticks);
+    const modulus = period_ticks === null
+        ? (interval_ticks >= swing_ticks ? interval_ticks : null)
+        : largestDivisorAtMost(period_ticks, interval_ticks, swing_ticks);
     if (modulus === null) {
         throw new Error(
             `Inserter ${inserter.entity_id.id.replace("inserter:", "")} cannot keep up: ${cannot_keep_up()} lasts ${interval_ticks} ticks `
             + `and a swing takes ${swing_ticks}`
-            + (interval_ticks >= swing_ticks ? ` (and no divisor of the ${period_ticks} tick clock fits between them)` : "")
+            + (interval_ticks >= swing_ticks && period_ticks !== null ? ` (and no divisor of the ${period_ticks} tick clock fits between them)` : "")
             + ". Add another inserter or raise its stack size."
         );
     }
@@ -97,15 +107,26 @@ function clockEvery(
         inserter_id: inserter.entity_id.id,
         kind,
         modulus,
+        own_clock: period_ticks === null,
         window: OpenRange.from(start, start + window_ticks - 1),
     };
 }
 
 /**
- * The fuel clock of an inserter, for a clock of `period_ticks`. The fuel slot stops a swing once it holds its limit,
- * so at a window the slot has either the limit, or gets a hand. Either way it holds at least the limit (or the hand,
- * if that is less), which lasts the machine `items / burn rate` ticks while it crafts. The window repeats at least that
- * often, so the slot never runs dry; a window more often than needed only lets the slot fill sooner.
+ * Fuel is burned while a machine crafts, and a machine burns a little more than its crafting share predicts (up to 3.5%
+ * in recordings), so the share is counted this much higher.
+ */
+const CRAFTING_SHARE_MARGIN = 1.05;
+
+/**
+ * The fuel clock of an inserter. The fuel slot stops a swing once it holds its limit, so at a window the slot has
+ * either the limit, or gets a hand. Either way it holds at least the limit (or the hand, if that is less), which lasts
+ * the machine `items / burn rate` ticks of crafting. The window repeats that often, so the slot never runs dry; a
+ * window more often than that only wakes the inserter up to find the slot full.
+ *
+ * `crafting_share` is the part of the time the machine crafts in the plan (1 when it never stops). A machine that
+ * crafts 80% of the time burns its fuel 80% as fast, so its slot is looked at that much less often. A machine that
+ * crafts more than planned, as it can while a build starts up, may run out of fuel for a few ticks before a window.
  *
  * `index` staggers the windows of the inserters that fill the same machine, so they do not all start on the same tick.
  */
@@ -113,8 +134,8 @@ export function fuelClockFor(
     inserter: Inserter,
     machine: Machine,
     entity_registry: ReadableEntityRegistry,
-    period_ticks: number,
     index: number = 0,
+    crafting_share: number = 1,
 ): InserterClock {
     const consumption = machine.fuel_consumption;
     const slot = machine.fuel_slot;
@@ -124,9 +145,10 @@ export function fuelClockFor(
 
     const hand = handSizeFor(inserter, slot.fuel.item_name);
     const items_in_slot_at_a_window = Math.min(hand, slot.automated_insertion_limit);
-    const burn_interval_ticks = Math.floor(items_in_slot_at_a_window / consumption.rate_per_tick);
+    const burning_share = Math.min(1, Math.max(crafting_share, 0) * CRAFTING_SHARE_MARGIN) || 1;
+    const burn_interval_ticks = Math.floor(items_in_slot_at_a_window / (consumption.rate_per_tick * burning_share));
     return clockEvery(
-        inserter, "fuel", burn_interval_ticks, pickupTicks(inserter, entity_registry, slot.fuel.item_name), period_ticks, index,
+        inserter, "fuel", burn_interval_ticks, pickupTicks(inserter, entity_registry, slot.fuel.item_name), null, index,
         () => `${items_in_slot_at_a_window} ${slot.fuel.item_name} in the fuel slot of ${machine.entity_id.id}`,
     );
 }
@@ -182,8 +204,15 @@ export function byProductClockFor(
     );
 }
 
-/** The clock of every inserter outside the plan that has one, keyed by inserter id */
-export function unplannedInserterClocks(entity_registry: ReadableEntityRegistry, period_ticks: number): Map<string, InserterClock> {
+/**
+ * The clock of every inserter outside the plan that has one, keyed by inserter id. `crafting_shares` is the part of the
+ * time each machine crafts in the plan, by machine id; a machine without one is taken to craft all the time.
+ */
+export function unplannedInserterClocks(
+    entity_registry: ReadableEntityRegistry,
+    period_ticks: number,
+    crafting_shares: ReadonlyMap<string, number> = new Map(),
+): Map<string, InserterClock> {
     const clocks = new Map<string, InserterClock>();
     const used_per_machine = new Map<string, number>();
     const nextIndex = (machine: Machine) => {
@@ -195,7 +224,7 @@ export function unplannedInserterClocks(entity_registry: ReadableEntityRegistry,
     for (const inserter of fuelOnlyInserters(entity_registry)) {
         const machine = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
         if (Entity.isMachine(machine)) {
-            clocks.set(inserter.entity_id.id, fuelClockFor(inserter, machine, entity_registry, period_ticks, nextIndex(machine)));
+            clocks.set(inserter.entity_id.id, fuelClockFor(inserter, machine, entity_registry, nextIndex(machine), crafting_shares.get(machine.entity_id.id) ?? 1));
         }
     }
     for (const inserter of byProductOnlyInserters(entity_registry)) {
@@ -207,7 +236,7 @@ export function unplannedInserterClocks(entity_registry: ReadableEntityRegistry,
     return clocks;
 }
 
-/** The windows of a clock repeated over a clock period */
+/** The windows of a clock repeated over a clock period, for a clock that divides it */
 export function clockWindowsOverPeriod(clock: InserterClock, period_ticks: number): OpenRange[] {
     const windows: OpenRange[] = [];
     for (let start = 0; start < period_ticks; start += clock.modulus) {

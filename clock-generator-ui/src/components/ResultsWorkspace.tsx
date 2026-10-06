@@ -9,17 +9,18 @@ import type {
     SwingBackoffReport,
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
-import type { FuelConsumptionViewData, ShiftOptionsView } from '../worker/types';
+import type { FuelViewData, ShiftOptionsView } from '../worker/types';
 import { BlueprintOutput } from './BlueprintOutput';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DebugPanel } from './DebugPanel';
+import { FuelPanel } from './FuelPanel';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 
-type ResultsTab = 'insights' | 'timelines' | 'blueprint' | 'log';
+type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
 interface ResultsWorkspaceProps {
     isRunning: boolean;
@@ -35,8 +36,8 @@ interface ResultsWorkspaceProps {
     /** The selected clock driven only by its exported windows; null when the histories above already are that run */
     clockOnlyTransferHistory: SerializableTransferHistory | null;
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
-    /** The exported clock run over several periods to show fuel consumption; null when no machine burns fuel */
-    fuelConsumptionView: FuelConsumptionViewData | null;
+    /** Fuel use and the exported fuel clocks of the selected clock; null when no inserter only fills a fuel slot */
+    fuelView: FuelViewData | null;
     clockWindows: SerializableClockWindows | null;
     shiftOptions: ShiftOptionsView | null;
     swingBackoffReport: SwingBackoffReport | null;
@@ -59,16 +60,15 @@ function TabBody({ shown, children }: { shown: boolean; children: ReactNode }) {
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const [tab, setTab] = useState<ResultsTab>('timelines');
-    const [timelineRun, setTimelineRun] = useState<'clock' | 'plan' | 'fuel'>('clock');
+    const [timelineRun, setTimelineRun] = useState<'clock' | 'plan'>('clock');
 
     const hasClockOnlyRun = props.clockOnlyTransferHistory !== null && props.clockOnlyStateTransitionHistory !== null;
-    const fuelView = props.fuelConsumptionView;
-    const showFuelView = fuelView !== null && timelineRun === 'fuel';
+    const fuelView = props.fuelView;
+    // the fuel tab is only there for a build with fuel inserters
+    const shownTab: ResultsTab = tab === 'fuel' && fuelView === null ? 'timelines' : tab;
     const showClockOnlyRun = hasClockOnlyRun && timelineRun === 'clock';
-    const transferHistory = showFuelView ? fuelView.transferHistory
-        : showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
-    const stateTransitionHistory = showFuelView ? fuelView.stateTransitionHistory
-        : showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
+    const transferHistory = showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
+    const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
 
     return (
@@ -96,19 +96,20 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
             <Box sx={{ display: hasResults ? 'block' : 'none', mt: 2 }}>
                 <Tabs
-                    value={tab}
+                    value={shownTab}
                     onChange={(_, value: ResultsTab) => setTab(value)}
                     variant="scrollable"
                     scrollButtons="auto"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
                     <Tab value="timelines" label="Timelines" />
+                    {fuelView !== null && <Tab value="fuel" label="Fuel" />}
                     <Tab value="insights" label="Insights" />
                     <Tab value="blueprint" label="Blueprint" />
                     <Tab value="log" label="Log" />
                 </Tabs>
 
-                <TabBody shown={tab === 'insights'}>
+                <TabBody shown={shownTab === 'insights'}>
                     <SwingBackoffReportDisplay report={props.swingBackoffReport} />
                     <InsightsPanel
                         insights={props.alternatives[props.selectedIndex]?.insights ?? []}
@@ -118,8 +119,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     </InsightsPanel>
                 </TabBody>
 
-                <TabBody shown={tab === 'timelines'}>
-                    {(hasClockOnlyRun || fuelView !== null) && (
+                <TabBody shown={shownTab === 'timelines'}>
+                    {hasClockOnlyRun && (
                         <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                             <ToggleButtonGroup
                                 value={timelineRun}
@@ -128,18 +129,11 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                                 size="small"
                                 aria-label="Simulation shown in the timelines"
                             >
-                                {hasClockOnlyRun && <ToggleButton value="clock">Exported clock</ToggleButton>}
-                                {hasClockOnlyRun && <ToggleButton value="plan">Plan</ToggleButton>}
-                                {fuelView !== null && <ToggleButton value="fuel">Fuel consumption</ToggleButton>}
+                                <ToggleButton value="clock">Exported clock</ToggleButton>
+                                <ToggleButton value="plan">Plan</ToggleButton>
                             </ToggleButtonGroup>
                             <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
-                                {timelineRun === 'fuel' && fuelView !== null
-                                    ? `The timelines show the exported clock run for ${fuelView.periods} periods (${fuelView.durationTicks} ticks). `
-                                        + 'A hand of fuel lasts a machine longer than one clock period and the fuel slot only takes more once it is nearly empty, '
-                                        + 'so a fuel inserter swings once in a few periods. The clock itself is still one period; '
-                                        + 'this view is longer only to show the fuel being consumed.'
-                                        + (fuelView.fuelSwingsRecorded ? '' : ' No fuel inserter swung even over this run.')
-                                    : timelineRun === 'clock'
+                                {timelineRun === 'clock'
                                     ? 'The timelines show the build driven only by the clock windows in the blueprint. '
                                         + 'This is the run the Status and Clock-only output columns are judged on.'
                                     : 'The timelines show the planning simulation the clock windows were taken from. '
@@ -156,13 +150,17 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         <Box sx={{ mt: 2 }}>
                             <StateTransitionTimeline
                                 stateTransitionHistory={stateTransitionHistory}
-                                clockWindows={showFuelView ? undefined : props.clockWindows ?? undefined}
+                                clockWindows={props.clockWindows ?? undefined}
                             />
                         </Box>
                     )}
                 </TabBody>
 
-                <TabBody shown={tab === 'blueprint'}>
+                <TabBody shown={shownTab === 'fuel'}>
+                    {fuelView !== null && <FuelPanel fuel={fuelView} />}
+                </TabBody>
+
+                <TabBody shown={shownTab === 'blueprint'}>
                     <BlueprintOutput
                         blueprintString={props.blueprintString}
                         simulationDurationTicks={props.simulationDurationTicks ?? undefined}
@@ -171,7 +169,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             </Box>
 
             {/* reachable before anything is generated: it holds the debug options a generation runs with */}
-            <Box sx={{ display: !hasResults || tab === 'log' ? 'block' : 'none', pt: 2 }}>
+            <Box sx={{ display: !hasResults || shownTab === 'log' ? 'block' : 'none', pt: 2 }}>
                 <DebugPanel
                     logs={props.logs}
                     debugSteps={props.debugSteps}

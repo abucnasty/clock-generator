@@ -92,6 +92,7 @@ export {
     GenerationProgress,
     AsBuiltStabilityCheck,
     ClockOnlyRun,
+    FuelConsumptionView,
     CheckedShift,
     CheckedShiftRow,
     ShiftRangeEdge,
@@ -104,6 +105,13 @@ export {
     SwingAttemptResult,
     SwingBackoffReport,
 } from './crafting/generate-blueprint';
+
+export {
+    FuelPlan,
+    FuelMachinePlan,
+    FuelInserterPlan,
+    FuelLevelSeries,
+} from './crafting/fuel-view';
 
 export {
     SerializableTransferPlan,

@@ -16,10 +16,11 @@ beforeAll(() => {
 
 /**
  * A recording of the single biochamber with a fuel inserter (926% energy consumption), made up from the clock the
- * simulation exports: the fuel inserter drops 16 nutrients at `swing_offsets` into each window, and the machine burns
- * `burn_factor` times the fuel its configuration predicts.
+ * simulation exports: the fuel inserter drops 16 nutrients at `swing_offset` into a window of its fuel clock (every
+ * swing after the first `later_swing_offset` ticks later still), and the machine burns `burn_factor` times the fuel
+ * its configuration predicts.
  */
-async function recordFuelBiochamber(options: { swing_offset?: number; burn_factor?: number; out_of_fuel_from?: number } = {}) {
+async function recordFuelBiochamber(options: { swing_offset?: number; later_swing_offset?: number; burn_factor?: number; out_of_fuel_from?: number } = {}) {
     const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
     const result = generateClockForConfig(config, { logger: quiet });
     const period = result.simulation_duration.ticks;
@@ -37,14 +38,16 @@ async function recordFuelBiochamber(options: { swing_offset?: number; burn_facto
     const burning: number[] = [];
     let items = 10;
     let remaining = 1;
+    let swings = 0;
     for (let i = 0; i < sample_count; i++) {
         const at = i % modulus;
-        const window_start = window.start + swing_offset;
+        const window_start = window.start + swing_offset + (swings > 0 ? options.later_swing_offset ?? 0 : 0);
         if (at === window_start && items < 5) {
+            swings++;
             // the hand holds the fuel for a few ticks, then the slot has it
             for (let h = 0; h < 4; h++) held_count[i + h] = 16;
         }
-        if (at === window_start + 4 && items < 5 + 16 && held_count[i - 1] === 16) {
+        if (held_count[i - 1] === 16 && held_count[i] === 0) {
             items += 16;
         }
         remaining -= power_mj_per_tick;
@@ -124,8 +127,9 @@ describe("comparing a recording with an inserter outside the plan", () => {
         expect(report.issues.filter(issue => issue.includes("Inserter 3"))).toEqual([]);
     });
 
-    it("flags a swing that starts outside the window", async () => {
-        const report = await compare({ swing_offset: 50 });
+    // the fuel clock runs free of the recorded clock, so the first swing says where its windows are
+    it("flags a swing that does not start in a window of the fuel clock the others started in", async () => {
+        const report = await compare({ later_swing_offset: 50 });
         const [fuel_inserter] = report.clocked_inserters;
 
         expect(fuel_inserter.outside.length).toBeGreaterThan(0);

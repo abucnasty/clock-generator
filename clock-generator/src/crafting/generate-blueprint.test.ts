@@ -387,6 +387,35 @@ describe("generateClockForConfig", () => {
             expect(clocks.filter(clock => clock.kind === "fuel").length).toBe(3);
             expect(clocks.filter(clock => clock.kind === "by-product").length).toBe(1);
         });
+
+        // 5 nutrients last a rocket fuel biochamber 89 ticks of crafting and the jellynut one 116. They craft 89% and
+        // 80% of the time, so with the 5% the share is counted higher that is 95 and 138 ticks: on the 128 tick clock
+        // both were rounded down to 64.
+        it("looks at each fuel slot as seldom as the machine's crafting share allows, on fuel clocks of their own", () => {
+            const clocks = alternative("planned").result.unplanned_inserter_clocks!;
+            const fuel_moduli = sample.config.inserters
+                .filter(it => it.source.type === "belt" && it.source.id === 3)
+                .map(it => [it.sink.id, clocks[`inserter:${it.id}`]] as const);
+            expect(fuel_moduli).toHaveLength(3);
+            for (const [machine_id, clock] of fuel_moduli) {
+                expect(clock.own_clock).toBe(true);
+                expect(clock.modulus).toBe(machine_id === 2 ? 138 : 95);
+                expect(clock.window).toEqual({ start: 0, end: 7 });
+            }
+        });
+
+        it("keeps every machine fuelled over the fuel consumption view", () => {
+            const view = alternative("planned").result.fuel_consumption_view!;
+            expect(view.fuel_swings_recorded).toBe(true);
+            // a hand of 16 nutrients each time, and a slot that never runs dry shows as a machine that never lacks ingredients
+            const fuel_transfers = view.transfer_history.entities
+                .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id))
+                .flatMap(entity => entity.transfers);
+            expect(fuel_transfers.length).toBeGreaterThan(0);
+            fuel_transfers.forEach(transfer => expect(transfer.amount).toBe(16));
+            const jellynut_machine = view.state_transition_history.entities.find(entity => entity.entity_id === "machine:2")!;
+            expect(jellynut_machine.transitions.map(transition => transition.to_status)).not.toContain("INGREDIENT_SHORTAGE");
+        });
     });
 
     describe("rocket fuel biochambers fed jelly by inserters with no time to spare", async () => {
@@ -518,7 +547,7 @@ describe("generateClockForConfig", () => {
     describe("a biochamber with a fuel inserter", () => {
         const quiet = { log() {}, warn() {}, error() {}, debug() {} };
 
-        it("is stable as built, with the fuel inserter on a clock that repeats within the period", async () => {
+        it("is stable as built, with the fuel inserter on a clock of its own", async () => {
             // 926% energy consumption: the biochamber burns about 5 nutrients a craft, most of the 6 it makes
             const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
             const result = generateClockForConfig(config, { verify_as_built: true, logger: quiet });
@@ -526,13 +555,11 @@ describe("generateClockForConfig", () => {
             expect(result.stability_check.is_stable).toBe(true);
             expect(result.stability_check.as_built?.is_stable).toBe(true);
 
-            const fuel_windows = result.clock_windows["inserter:3"];
-            expect(fuel_windows.length).toBeGreaterThan(1);
-            // every window is the same distance from the one before it, and that distance divides the period
-            const starts = fuel_windows.map(window => window.start);
-            const modulus = starts[1] - starts[0];
-            expect(starts.every((start, index) => index === 0 || start - starts[index - 1] === modulus)).toBe(true);
-            expect(result.simulation_duration.ticks % modulus).toBe(0);
+            // the fuel clock counts its own ticks, so the fuel inserter has no windows on the clock of the period
+            expect(result.clock_windows["inserter:3"]).toBeUndefined();
+            const fuel_clock = result.unplanned_inserter_clocks!["inserter:3"];
+            expect(fuel_clock).toMatchObject({ kind: "fuel", own_clock: true });
+            expect(result.simulation_duration.ticks % fuel_clock.modulus).not.toBe(0);
         });
 
         it("does not change the LCM", async () => {
@@ -551,7 +578,10 @@ describe("generateClockForConfig", () => {
             expect(result.stability_check.is_stable).toBe(true);
             expect(result.stability_check.as_built?.is_stable).toBe(true);
             const fuel_inserter_ids = ["inserter:10", "inserter:12", "inserter:13"];
-            fuel_inserter_ids.forEach(id => expect(result.clock_windows[id]?.length).toBeGreaterThan(1));
+            fuel_inserter_ids.forEach(id => {
+                expect(result.clock_windows[id]).toBeUndefined();
+                expect(result.unplanned_inserter_clocks![id].own_clock).toBe(true);
+            });
         });
 
         describe("the fuel consumption view", () => {
@@ -598,19 +628,69 @@ describe("generateClockForConfig", () => {
             });
         });
 
-        it("merges fuel inserters with the same windows into one described combinator", async () => {
+        describe("the blueprint of rocket fuel biochambers", async () => {
             const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
             const result = generateClockForConfig(config, { logger: quiet });
+            const period = result.simulation_duration.ticks;
+            const fuel_moduli = Array.from(new Set(Object.values(result.unplanned_inserter_clocks!)
+                .filter(clock => clock.own_clock).map(clock => clock.modulus))).sort((a, b) => a - b);
+            const entities = result.blueprint.entities;
+            const behavior = (entity: typeof entities[number]) => JSON.stringify(entity.control_behavior ?? {});
+            const clocks = entities.filter(entity => (entity.player_description ?? "").startsWith("Clock for"));
+            const modulos = entities.filter(entity => entity.name === "arithmetic-combinator");
 
-            const nutrient_deciders = result.blueprint.entities.filter(entity =>
-                entity.name === "decider-combinator"
-                && JSON.stringify(entity.control_behavior ?? {}).includes('"name":"nutrients"'));
-            // the three biochambers burn at rates that give the same windows
-            expect(nutrient_deciders).toHaveLength(1);
-            const description = nutrient_deciders[0].player_description ?? "";
-            expect(description).toContain("(fuel)");
-            expect(description).toContain("swings every");
-            expect(description).toContain("fuel slot");
+            it("has two fuel clocks, one for the rocket fuel biochambers and one for the jellynut one", () => {
+                expect(fuel_moduli).toHaveLength(2);
+            });
+
+            it("counts one clock long enough for the period and every fuel clock to fit a whole number of times", () => {
+                expect(clocks).toHaveLength(1);
+                expect(entities.filter(entity => (entity.player_description ?? "").startsWith("Fuel clock"))).toHaveLength(0);
+                const counted_to = Number(/"constant":(\d+)/.exec(behavior(clocks[0]))![1]) + 1;
+                [period, ...fuel_moduli].forEach(ticks => expect(counted_to % ticks).toBe(0));
+                // on a signal of its own, which leaves the clock signal for the clock of the period
+                expect(behavior(clocks[0])).toContain('"name":"signal-T"');
+                expect(behavior(clocks[0])).not.toContain('"name":"signal-clock"');
+            });
+
+            it("gives the clock of the period and each fuel clock as a modulo of the one clock", () => {
+                expect(modulos).toHaveLength(1 + fuel_moduli.length);
+                modulos.forEach(modulo => expect(behavior(modulo)).toContain('"first_signal":{"name":"signal-T"'));
+                const period_clock = modulos.filter(modulo => behavior(modulo).includes('"output_signal":{"name":"signal-clock"'));
+                expect(period_clock).toHaveLength(1);
+                expect(behavior(period_clock[0])).toContain(`"second_constant":${period}`);
+                fuel_moduli.forEach(modulus =>
+                    expect(modulos.filter(modulo => behavior(modulo).includes(`"second_constant":${modulus}`))).toHaveLength(1));
+            });
+
+            it("puts fuel inserters with the same windows on one described combinator", () => {
+                const nutrient_deciders = entities.filter(entity =>
+                    entity.name === "decider-combinator" && behavior(entity).includes('"name":"nutrients"'));
+                // the two rocket fuel biochambers burn at the same rate and share a combinator; the jellynut one has its own
+                expect(nutrient_deciders).toHaveLength(2);
+                nutrient_deciders.forEach(decider => {
+                    const description = decider.player_description ?? "";
+                    expect(description).toContain("(fuel)");
+                    expect(description).toContain("swings every");
+                    expect(description).toContain("fuel clock");
+                    // reads its fuel clock, not the clock of the period
+                    expect(behavior(decider)).not.toContain('"name":"signal-clock"');
+                });
+            });
+
+            it("leaves the other combinators reading the clock signal", () => {
+                const planned_deciders = entities.filter(entity =>
+                    entity.name === "decider-combinator" && !clocks.includes(entity) && !behavior(entity).includes('"name":"nutrients"'));
+                expect(planned_deciders.length).toBeGreaterThan(0);
+                planned_deciders.forEach(decider => expect(behavior(decider)).toContain('"name":"signal-clock"'));
+            });
+
+            it("is not offered again as a modulo blueprint for the fuel clocks alone", () => {
+                if (result.modulo_blueprint) {
+                    expect(result.modulo_blueprint.label).toContain("(modulo clock)");
+                }
+                expect(result.blueprint.label).not.toContain("(modulo clock)");
+            });
         });
     });
 
