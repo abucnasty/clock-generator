@@ -88,6 +88,8 @@ const FACTORIO_TO_SIM_MACHINE_STATUS: Record<string, MachineStatus> = {
     item_ingredient_shortage: MachineStatus.INGREDIENT_SHORTAGE,
     fluid_ingredient_shortage: MachineStatus.INGREDIENT_SHORTAGE,
     no_ingredients: MachineStatus.INGREDIENT_SHORTAGE,
+    // the simulator has no separate status for a burner machine out of fuel
+    no_fuel: MachineStatus.INGREDIENT_SHORTAGE,
     full_output: MachineStatus.OUTPUT_FULL,
 };
 

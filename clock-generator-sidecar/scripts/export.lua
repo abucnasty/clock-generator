@@ -52,6 +52,8 @@ end
 ---@return string
 function export.to_json(result)
     local output = {
+        -- lets the clock generator tell when the mod is too old to export everything it can use
+        sidecar_version = script.active_mods["clock-generator-sidecar"],
         machines = {},
         drills = {
             mining_productivity_level = result.mining_productivity_level,
@@ -69,7 +71,8 @@ function export.to_json(result)
             recipe = machine.recipe,
             crafting_speed = machine.crafting_speed,
             productivity = machine.productivity,
-            type = machine.type
+            type = machine.type,
+            energy_consumption_bonus = machine.energy_consumption_bonus
         })
     end
     

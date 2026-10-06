@@ -3,7 +3,8 @@
 ---@field recipe string Recipe name (for machines/furnaces)
 ---@field crafting_speed number Effective crafting speed with bonuses (for machines/furnaces)
 ---@field productivity number Productivity bonus as percentage (0-100+)
----@field type "machine"|"furnace"|"mining-drill" Entity type category
+---@field type "machine"|"furnace"|"biochamber"|"mining-drill" Entity type category
+---@field energy_consumption_bonus number|nil Energy consumption effect as a percentage (biochambers only)
 
 ---@class DrillData
 ---@field drill_type string The specific drill type (e.g., "electric-mining-drill")

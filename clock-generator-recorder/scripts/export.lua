@@ -89,7 +89,8 @@ function export.to_table(result)
             recipe = machine.recipe,
             crafting_speed = machine.crafting_speed,
             productivity = machine.productivity,
-            type = machine.type
+            type = machine.type,
+            energy_consumption_bonus = machine.energy_consumption_bonus
         })
     end
     
