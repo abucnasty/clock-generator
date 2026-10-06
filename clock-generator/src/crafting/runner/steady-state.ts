@@ -4,7 +4,7 @@ import { SimulationContext } from "../sequence";
 
 // running totals only grow, so they never repeat and do not drive the simulation;
 // an inserter state's `tick` is never updated, so relative to the current tick it would never repeat either
-const COUNTER_FIELDS = new Set(["craftCount", "totalCrafted", "tick", "items_picked_up"]);
+const COUNTER_FIELDS = new Set(["craftCount", "totalCrafted", "tick", "items_picked_up", "items_dropped"]);
 
 function entityStateKey(state: EntityState, tick: number): string {
     const progress = (state as { craftingProgress?: { progress: number }; bonusProgress?: { progress: number } });

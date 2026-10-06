@@ -85,7 +85,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                             </TableCell>
                             <TableCell align="right">Clock period</TableCell>
                             <TableCell align="right">Inserter windows</TableCell>
-                            <TableCell align="right">Rate (items/s)</TableCell>
+                            <TableCell align="right">Rate achieved (items/s)</TableCell>
                             <TableCell align="right">Clock-only output</TableCell>
                             <TableCell>Status</TableCell>
                         </TableRow>

@@ -46,6 +46,8 @@ export interface InserterState extends EntityState, InserterStatusState {
     held_item: InserterHandContents | null;
     /** Items the inserter has picked up so far */
     items_picked_up: number;
+    /** Items the inserter has dropped so far */
+    items_dropped: number;
 }
 
 function createIdleInserterState(inserter: Inserter): InserterState {
@@ -57,6 +59,7 @@ function createIdleInserterState(inserter: Inserter): InserterState {
         tick: 0,
         held_item: null,
         items_picked_up: 0,
+        items_dropped: 0,
     };
 }
 
@@ -69,6 +72,7 @@ function clone(state: InserterState): InserterState {
         tick: state.tick,
         held_item: state.held_item ? { ...state.held_item } : null,
         items_picked_up: state.items_picked_up,
+        items_dropped: state.items_dropped,
     };
 }
 

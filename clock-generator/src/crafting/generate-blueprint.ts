@@ -545,6 +545,12 @@ export function generateClockForConfig(
     const fuel_level_recorder = options.fuel_levels
         ? new FuelLevelRecorder(new_simulation_context.machines.map(it => it.machine_state))
         : undefined;
+    // What the output inserters drop in the recorded run is counted as they drop it. Their transfers are no measure
+    // of it: a hand is recorded when the inserter is back, so one dropped in the last ticks of the run is missing.
+    const output_inserter_states = new_simulation_context.inserters
+        .map(it => it.inserter_state)
+        .filter(state => output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
+    const dropped_before_run = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0);
     const simulate_step = new SimulateStep(new_simulation_context, recorded_duration,
         fuel_level_recorder && (() => fuel_level_recorder.record()));
     if (debug_steps[RunnerStepType.SIMULATE]) {
@@ -578,12 +584,7 @@ export function generateClockForConfig(
     // Compute output stability: compare actual items transferred by output inserters
     // against the expected amount derived from the crafting cycle plan.
     const output_inserter_ids = new Set(output_inserters.map(os => os.inserter.entity_id.id));
-    let total_actual_output = 0;
-    for (const [entity_id, transfers] of final_history.entries()) {
-        if (output_inserter_ids.has(entity_id.id)) {
-            total_actual_output += transfers.reduce((s, t) => s + t.amount, 0);
-        }
-    }
+    const total_actual_output = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0) - dropped_before_run;
     let total_expected_output_float = 0;
     for (const [entity_id, etc] of swing_counts.entries()) {
         if (output_inserter_ids.has(entity_id.id)) {
@@ -2449,7 +2450,7 @@ export interface ClockAlternative {
     inserter_window_count: number;
     /** The clock-only check (the build driven only by the exported clock windows) reaches the expected output */
     is_stable: boolean;
-    /** Output of all copies at the period the exported clock actually runs (whole ticks unless it is a subtick clock) */
+    /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
@@ -2687,7 +2688,8 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
         logger.log(`Clock alternative "${definition.label}" could not be generated: ${error instanceof Error ? error.message : error}`);
         return null;
     }
-    const { id, label } = definition;
+    const { id } = definition;
+    const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
     const inserter_window_count = Object.entries(result.clock_windows)
         .filter(([key]) => key.startsWith("inserter:"))
@@ -2711,7 +2713,9 @@ function runAlternative(definition: AlternativeDefinition, copies: number, logge
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
     const insights = clockInsights(result, is_stable);
     const period = result.simulation_duration.ticks;
-    const rateAt = (clock_period: number) => result.stability_check.expected_output_items * 60 / clock_period * copies;
+    // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
+    const achieved_output_items = as_built?.actual_output_items ?? actual_output_items;
+    const rateAt = (clock_period: number) => achieved_output_items * 60 / clock_period * copies;
     if (!result.subtick) {
         return { signature, alternatives: [{ id, label, description, inserter_window_count, is_stable, items_per_second: rateAt(period), insights, result }] };
     }
@@ -2763,6 +2767,18 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
     };
     const tasks = alternativeDefinitions(config, context, {}).map(({ id, label }) => ({ id, label }));
     return { primary, context, tasks };
+}
+
+/**
+ * The label of an alternative with the output swings per cycle it ended up with, e.g. "Planned: 6 output swings per
+ * cycle". The alternatives named after a swing count already say it.
+ */
+function withOutputSwings(definition: { id: string; label: string }, swings: number): string {
+    if (definition.id.startsWith("swings-")) {
+        return definition.label;
+    }
+    const count = Number.isInteger(swings) ? `${swings}` : swings.toFixed(2).replace(/0+$/, "");
+    return `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
 }
 
 /** Generates one alternative listed by planClockAlternatives; progress goes to options.on_progress_detail */

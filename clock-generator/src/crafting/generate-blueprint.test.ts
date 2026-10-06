@@ -467,6 +467,40 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    // Three furnaces fed by mining drills that drop straight into them, 40 bricks a second each. A furnace makes 43 a
+    // second, so the window of its output inserter is all that holds it to 40. Recorded in Factorio 2.1.21: the clocks
+    // with 1, 3 and 6 output swings each moved exactly their hands every period for 10 periods, from every furnace.
+    describe("stone bricks from mining drills that drop into the furnaces", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
+        const { alternatives } = generateClockAlternatives(config);
+        const alternative = (id: string) => alternatives.find(a => a.id === id)!;
+        const outputWindows = (id: string) => alternative(id).result.clock_windows["inserter:1"].map(w => [w.start, w.end]);
+
+        it.each([
+            ["swings-1", 72, 48, [[1, 10], [25, 34], [49, 58]]],
+            ["fractional", 72, 48, [[1, 34]]],
+            ["planned-belt-slack", 144, 96, [[1, 70]]],
+        ] as const)("%s is stable as built with the windows that ran in game", (id, period, bricks, windows) => {
+            const result = alternative(id).result;
+            expect(result.simulation_duration.ticks).toBe(period);
+            expect(outputWindows(id)).toEqual(windows);
+            expect(alternative(id).is_stable).toBe(true);
+            expect(result.stability_check.as_built).toMatchObject({ is_stable: true, actual_output_items: bricks });
+        });
+
+        // a hand takes the inserter 12 ticks: a window for 3 hands is on for at least 2 of them, and off before a
+        // fourth can start, whether the furnace has bricks to spare or not
+        it("keeps a window for 3 hands shorter than 3 hands take", () => {
+            const [[start, end]] = outputWindows("fractional");
+            expect(end - start).toBeGreaterThanOrEqual(2 * 12);
+            expect(end - start).toBeLessThan(3 * 12);
+        });
+
+        it("enables each drill for a few ticks a cycle, which fills the furnace up to what a drill may insert", () => {
+            expect(alternative("fractional").result.clock_windows["drill:1"].map(w => [w.start, w.end])).toEqual([[1, 3]]);
+        });
+    });
+
     // 4 output swings per 64 tick cycle is the optimal clock; the planner alone only reaches 2 swings
     describe("two foundry low density structures with plastic exports", async () => {
         const config = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_TWO_FOUNDRY);
@@ -486,9 +520,8 @@ describe("generateClockForConfig", () => {
             expect(four_swings?.result.stability_check.as_built?.is_stable).toBe(false);
         });
 
-        it("is stable as built with the planned clock and belt pickup slack", () => {
-            expect(alternatives[0].id).toBe("planned-belt-slack");
-            expect(alternatives[0].is_stable).toBe(true);
+        it("is stable as built with the planned clock", () => {
+            expect(alternatives.find(a => a.id === "planned")?.is_stable).toBe(true);
         });
 
         it("is stable at the target rate with 3 output swings per cycle", () => {
