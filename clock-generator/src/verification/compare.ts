@@ -1,8 +1,8 @@
 import { Config } from "../config";
 import { BlueprintGenerationResult } from "../crafting/generate-blueprint";
-import { EntityId } from "../entities";
+import { EntityId, Machine } from "../entities";
 import { EntityMatch } from "./entity-matching";
-import { Recording, recordedClockPeriod } from "./recording";
+import { expandChangeList, RecordedMachine, Recording, recordedClockPeriod } from "./recording";
 import { clockValues, extractTransfers, machineStatuses, RecordedTransfer } from "./recording-history";
 
 export interface CompareOptions {
@@ -11,6 +11,9 @@ export interface CompareOptions {
     /** Max distance (ticks) outside a simulated window for a recorded swing to still count toward it */
     match_window_ticks: number;
 }
+
+/** How far the fuel burned in game may be from what the configured energy consumption predicts before it is flagged */
+const FUEL_RATIO_TOLERANCE = 0.1;
 
 export const DEFAULT_COMPARE_OPTIONS: CompareOptions = {
     tolerance_ticks: 2,
@@ -47,6 +50,50 @@ export interface InserterComparison {
     truncated: number;
     /** Median first_offset; the inserter's in-game latency behind the simulated schedule */
     median_offset: number | null;
+    /**
+     * Periods in which the swings landed in the windows moved a different total than the simulation. A swing next to
+     * another can belong to either window, so a window's own amount can differ while its period's total does not.
+     */
+    amount_mismatch_periods: number[];
+}
+
+/** An inserter outside the plan (fuel, or taking a by-product away): its swings checked against the clock it is enabled by */
+export interface ClockedInserterComparison {
+    config_id: number;
+    recorded_id: number;
+    kind: "fuel" | "by-product";
+    /** The window repeats every `modulus` ticks of the clock, and is enabled for ticks `window` of each */
+    modulus: number;
+    window: { start: number; end: number };
+    swings: number;
+    /** Recorded swings that started outside every window, with the clock tick they started at */
+    outside: { item_name: string; clock: number }[];
+    /** Distinct amounts the swings moved */
+    amounts: number[];
+    items: string[];
+    /** Recorded swings cut off by the start/end of the recording (not compared) */
+    truncated: number;
+}
+
+/** What a burner machine burned, against what its energy consumption predicts */
+export interface FuelComparison {
+    config_id: number;
+    recorded_id: number;
+    fuel_item: string;
+    /** Ticks the machine was crafting */
+    working_ticks: number;
+    /** Energy taken out of the fuel slot and the burning item, in MJ */
+    consumed_mj: number;
+    /** What the machine burns while crafting for that long at its configured energy consumption, in MJ */
+    expected_mj: number;
+    /** consumed / expected, null when the machine did not craft */
+    ratio: number | null;
+    consumed_items: number;
+    expected_items: number;
+    /** Ticks the game reported the machine had no fuel */
+    no_fuel_ticks: number;
+    slot_min: number;
+    slot_max: number;
 }
 
 export interface MachineComparison {
@@ -63,6 +110,8 @@ export interface ComparisonReport {
     recorded_periods: number;
     inserters: InserterComparison[];
     machines: MachineComparison[];
+    clocked_inserters: ClockedInserterComparison[];
+    fuel: FuelComparison[];
     output_items: { sim_per_period: number; game_per_period: number[] };
     match: EntityMatch;
     issues: string[];
@@ -91,10 +140,30 @@ function periodIndices(clock: number[]): number[] {
     return out;
 }
 
-function simTransfersFor(result: BlueprintGenerationResult, config_id: number) {
+interface SimulatedTransfer {
+    item_name: string;
+    start: number;
+    end: number;
+    amount: number;
+}
+
+/**
+ * What an inserter moved in the simulation. When the generation ran the exported clock windows on their own (the clock-only
+ * run) that is the run to compare with: it is what the blueprint does in game. The planning simulation also makes inserters
+ * wait on their machine's inventory, so it can swing differently than the clock does.
+ */
+function simTransfersFor(result: BlueprintGenerationResult, config_id: number): SimulatedTransfer[] {
     const key = EntityId.forInserter(config_id).id;
+    if (result.clock_only_run) {
+        const entity = result.clock_only_run.transfer_history.entities.find(e => e.entity_id === key);
+        return (entity?.transfers ?? []).map(t => ({ item_name: t.item_name, start: t.start_tick, end: t.end_tick, amount: t.amount }));
+    }
     for (const [entity_id, transfers] of result.transfer_history.entries()) {
-        if (entity_id.id === key) return transfers;
+        if (entity_id.id === key) {
+            return transfers.map(t => ({
+                item_name: t.item_name, start: t.tick_range.start_inclusive, end: t.tick_range.end_inclusive, amount: t.amount,
+            }));
+        }
     }
     return [];
 }
@@ -123,8 +192,11 @@ function compareWindows(
         let best: { index: number; distance: number; offset: number } | null = null;
         sim.forEach((s, index) => {
             if (s.item_name !== g.item_name) return;
-            const offset = wrapOffset(g.start_clock - s.start, period);
             const length = s.end - s.start;
+            // ticks after the window opened, around the clock; a long window covers most of the period, so a swing in its
+            // second half is late in the window and not early for the next one
+            const after = (((g.start_clock - s.start) % period) + period) % period;
+            const offset = after <= length + window_ticks ? after : after - period;
             if (offset < -window_ticks || offset > length + window_ticks) return;
             const distance = offset < 0 ? -offset : Math.max(0, offset - length);
             if (!best || distance < best.distance) best = { index, distance, offset };
@@ -142,9 +214,85 @@ function compareWindows(
     return { windows, extra };
 }
 
+function compareClocked(
+    config_id: number,
+    recorded_id: number,
+    clock_of_inserter: NonNullable<BlueprintGenerationResult["unplanned_inserter_clocks"]>[string],
+    game: RecordedTransfer[],
+    truncated: number,
+    clock: number[],
+    options: CompareOptions,
+): ClockedInserterComparison {
+    const { modulus, window } = clock_of_inserter;
+    const length = window.end - window.start;
+    const outside: ClockedInserterComparison["outside"] = [];
+    for (const swing of game) {
+        // the inserter picks up after its window opens, a few ticks behind the clock like any other inserter
+        const offset = wrapOffset(swing.start_clock - window.start, modulus);
+        if (offset < -options.tolerance_ticks || offset > length + options.match_window_ticks) {
+            outside.push({ item_name: swing.item_name, clock: swing.start_clock });
+        }
+    }
+    return {
+        config_id,
+        recorded_id,
+        kind: clock_of_inserter.kind,
+        modulus,
+        window,
+        swings: game.length,
+        outside,
+        amounts: Array.from(new Set(game.map(swing => swing.amount))).sort((a, b) => a - b),
+        items: Array.from(new Set(game.map(swing => swing.item_name))).sort(),
+        truncated,
+    };
+}
+
+/** Compares the fuel a recorded burner machine burned with what its configured energy consumption predicts */
+function compareFuel(recorded: RecordedMachine, config_id: number, config: Config, sample_count: number): FuelComparison | null {
+    const machine_config = config.machines.find(m => m.id === config_id);
+    if (!machine_config) return null;
+    const machine = Machine.fromConfig(machine_config);
+    const slot = machine.fuel_slot;
+    const consumption = machine.fuel_consumption;
+    if (!slot || !consumption) return null;
+
+    const fuel_value_mj = slot.fuel.fuel_value_mj;
+    const slot_counts = recorded.samples.fuel?.[slot.fuel.item_name];
+    const burning = recorded.samples.burning_remaining;
+    const statuses = expandChangeList(recorded.samples.status, sample_count, "none");
+    const working_ticks = statuses.filter(status => status === "working").length;
+    const no_fuel_ticks = statuses.filter(status => status === "no_fuel").length;
+
+    // the energy held by the fuel slot and the burning item only rises when an inserter drops fuel in, so what falls is burned
+    let consumed_mj = 0;
+    if (slot_counts && burning) {
+        const energy = (i: number) => (slot_counts[i] ?? 0) * fuel_value_mj + (burning[i] ?? 0);
+        for (let i = 1; i < Math.min(slot_counts.length, burning.length); i++) {
+            consumed_mj += Math.max(0, energy(i - 1) - energy(i));
+        }
+    }
+    const expected_mj = working_ticks * consumption.rate_per_tick * fuel_value_mj;
+    return {
+        config_id,
+        recorded_id: recorded.id,
+        fuel_item: slot.fuel.item_name,
+        working_ticks,
+        consumed_mj,
+        expected_mj,
+        ratio: expected_mj > 0 ? consumed_mj / expected_mj : null,
+        consumed_items: consumed_mj / fuel_value_mj,
+        expected_items: expected_mj / fuel_value_mj,
+        no_fuel_ticks,
+        slot_min: slot_counts && slot_counts.length > 0 ? Math.min(...slot_counts) : 0,
+        slot_max: slot_counts && slot_counts.length > 0 ? Math.max(...slot_counts) : 0,
+    };
+}
+
 function simMachineStatusPerTick(result: BlueprintGenerationResult, config_id: number, period: number): string[] | null {
     const key = EntityId.forMachine(config_id).id;
-    const entity = result.serializable_state_transition_history.entities.find(e => e.entity_id === key);
+    // the exported clock's run when there is one, like the inserters
+    const history = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
+    const entity = history.entities.find(e => e.entity_id === key);
     if (!entity) return null;
     const statuses: string[] = new Array(period);
     const transitions = [...entity.transitions].sort((a, b) => a.tick - b.tick);
@@ -186,20 +334,23 @@ export function compareRecording(
     const recorded_periods = (periods_of_sample[periods_of_sample.length - 1] ?? 0) + 1;
 
     const inserters: InserterComparison[] = [];
+    const clocked_inserters: ClockedInserterComparison[] = [];
     const game_swings_by_config_id = new Map<number, RecordedTransfer[]>();
     for (const recorded of recording.inserters) {
         const config_id = match.inserters.get(recorded.id);
         if (config_id === undefined) continue;
 
-        const sim = simTransfersFor(result, config_id).map(t => ({
-            item_name: t.item_name,
-            start: t.tick_range.start_inclusive,
-            end: t.tick_range.end_inclusive,
-            amount: t.amount,
-        }));
+        const sim = simTransfersFor(result, config_id);
         const game_all = extractTransfers(recorded, clock);
         const game = game_all.filter(t => !t.truncated_start && !t.truncated_end);
         game_swings_by_config_id.set(config_id, game);
+
+        // an inserter outside the plan swings by its own clock and the state of its machine, not once per period
+        const clock_of_inserter = result.unplanned_inserter_clocks?.[EntityId.forInserter(config_id).id];
+        if (clock_of_inserter) {
+            clocked_inserters.push(compareClocked(config_id, recorded.id, clock_of_inserter, game, game_all.length - game.length, clock, options));
+            continue;
+        }
 
         const windows: WindowComparison[] = [];
         const extra: ExtraSwing[] = [];
@@ -208,6 +359,17 @@ export function compareRecording(
             windows.push(...compared.windows);
             extra.push(...compared.extra);
         }
+        const totals_by_period = new Map<number, { sim: number; game: number }>();
+        for (const w of windows) {
+            const total = totals_by_period.get(w.period) ?? { sim: 0, game: 0 };
+            total.sim += w.sim_amount;
+            total.game += w.game_amount;
+            totals_by_period.set(w.period, total);
+        }
+        for (const e of extra) {
+            const total = totals_by_period.get(e.period);
+            if (total) total.game += e.amount;
+        }
         inserters.push({
             config_id,
             recorded_id: recorded.id,
@@ -215,6 +377,9 @@ export function compareRecording(
             extra,
             truncated: game_all.length - game.length,
             median_offset: median(windows.flatMap(w => w.first_offset === null ? [] : [w.first_offset])),
+            amount_mismatch_periods: Array.from(totals_by_period)
+                .filter(([period_index, total]) => total.sim !== total.game && windows.some(w => w.period === period_index && w.game_swings > 0))
+                .map(([period_index]) => period_index),
         });
     }
     inserters.sort((a, b) => a.config_id - b.config_id);
@@ -222,8 +387,9 @@ export function compareRecording(
     for (const ins of inserters) {
         const missed = ins.windows.filter(w => w.game_swings === 0);
         if (missed.length > 0) issues.push(`Inserter ${ins.config_id}: ${missed.length} simulated window(s) had no swing in game.`);
-        const amount = ins.windows.filter(w => w.game_swings > 0 && w.game_amount !== w.sim_amount);
-        if (amount.length > 0) issues.push(`Inserter ${ins.config_id}: ${amount.length} window(s) moved a different amount than simulated.`);
+        if (ins.amount_mismatch_periods.length > 0) {
+            issues.push(`Inserter ${ins.config_id}: moved a different amount than simulated in period(s) ${ins.amount_mismatch_periods.join(", ")}.`);
+        }
         if (ins.extra.length > 0) issues.push(`Inserter ${ins.config_id}: ${ins.extra.length} in-game swing(s) outside any simulated window.`);
         const drift = ins.windows.filter(w => w.first_offset !== null && ins.median_offset !== null
             && Math.abs(w.first_offset - ins.median_offset) > options.tolerance_ticks);
@@ -263,6 +429,33 @@ export function compareRecording(
     }
     machines.sort((a, b) => a.config_id - b.config_id);
 
+    const fuel: FuelComparison[] = [];
+    for (const recorded of recording.machines) {
+        const config_id = match.machines.get(recorded.id);
+        if (config_id === undefined) continue;
+        const comparison = compareFuel(recorded, config_id, config, recording.sample_count);
+        if (!comparison) continue;
+        fuel.push(comparison);
+        if (!recorded.samples.fuel) {
+            issues.push(`Machine ${config_id} burns fuel but the recording has no fuel samples; record with clock-generator-recorder 0.2.0 or newer.`);
+        }
+        if (comparison.no_fuel_ticks > 0) {
+            issues.push(`Machine ${config_id}: out of fuel for ${comparison.no_fuel_ticks} tick(s) in game.`);
+        }
+        if (comparison.ratio !== null && Math.abs(comparison.ratio - 1) > FUEL_RATIO_TOLERANCE) {
+            issues.push(`Machine ${config_id}: burned ${(comparison.ratio * 100).toFixed(1)}% of the ${comparison.fuel_item} its energy consumption predicts `
+                + `(${comparison.consumed_items.toFixed(1)} vs ${comparison.expected_items.toFixed(1)} items); check energy_consumption_bonus.`);
+        }
+    }
+    fuel.sort((a, b) => a.config_id - b.config_id);
+
+    for (const clocked of clocked_inserters) {
+        if (clocked.outside.length > 0) {
+            issues.push(`Inserter ${clocked.config_id}: ${clocked.outside.length} in-game swing(s) started outside its clock window `
+                + `(every ${clocked.modulus} ticks, ticks ${clocked.window.start}-${clocked.window.end}).`);
+        }
+    }
+
     const output_machine_ids = new Set(config.machines.filter(m => m.recipe === config.target_output.recipe).map(m => m.id));
     const output_inserter_ids = inserters.map(ins => ins.config_id).filter(id => {
         const cfg = config.inserters.find((c, index) => (c.id ?? index + 1) === id);
@@ -293,6 +486,8 @@ export function compareRecording(
         recorded_periods,
         inserters,
         machines,
+        clocked_inserters,
+        fuel,
         output_items: { sim_per_period, game_per_period },
         match,
         issues,
@@ -309,7 +504,8 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
     lines.push("");
     lines.push("Inserters (config id), offsets are game clock minus simulated window start:");
     for (const ins of report.inserters) {
-        const flagged = ins.windows.filter(w => w.game_swings === 0 || w.game_amount !== w.sim_amount
+        const flagged = ins.windows.filter(w => w.game_swings === 0
+            || (w.game_amount !== w.sim_amount && ins.amount_mismatch_periods.includes(w.period))
             || (w.first_offset !== null && ins.median_offset !== null && Math.abs(w.first_offset - ins.median_offset) > options.tolerance_ticks));
         const ok = flagged.length === 0 && ins.extra.length === 0;
         lines.push(`  ${ok ? "OK  " : "DIFF"} inserter ${ins.config_id} (recorded ${ins.recorded_id}): ${ins.windows.length} windows, usual offset ${ins.median_offset ?? "n/a"} ticks, ${ins.extra.length} extra swing(s)${ins.truncated ? `, ${ins.truncated} truncated` : ""}`);
@@ -318,6 +514,25 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
             lines.push(`         period ${w.period} ${w.item_name} sim [${w.sim_start}-${w.sim_end}] x${w.sim_amount} -> game ${game}`);
         }
         for (const e of ins.extra) lines.push(`         period ${e.period} EXTRA ${e.item_name} game @${e.start} x${e.amount}`);
+    }
+    if (report.clocked_inserters.length > 0) {
+        lines.push("");
+        lines.push("Inserters outside the plan (fuel, by-products), checked against their clock windows:");
+        for (const ins of report.clocked_inserters) {
+            const ok = ins.outside.length === 0;
+            lines.push(`  ${ok ? "OK  " : "DIFF"} inserter ${ins.config_id} (recorded ${ins.recorded_id}, ${ins.kind}): ${ins.swings} swing(s) of ${ins.items.join("|") || "nothing"} `
+                + `x${ins.amounts.join("/") || "-"}, window ticks ${ins.window.start}-${ins.window.end} every ${ins.modulus}, ${ins.outside.length} outside${ins.truncated ? `, ${ins.truncated} truncated` : ""}`);
+            for (const o of ins.outside.slice(0, 5)) lines.push(`         ${o.item_name} swing at clock ${o.clock} (${o.clock % ins.modulus} of ${ins.modulus})`);
+        }
+    }
+    if (report.fuel.length > 0) {
+        lines.push("");
+        lines.push("Fuel burned by burner machines, against the configured energy consumption:");
+        for (const f of report.fuel) {
+            const ratio = f.ratio === null ? "n/a" : `${(f.ratio * 100).toFixed(1)}%`;
+            lines.push(`  machine ${f.config_id} (recorded ${f.recorded_id}): burned ${f.consumed_items.toFixed(1)} ${f.fuel_item} vs ${f.expected_items.toFixed(1)} expected over ${f.working_ticks} working ticks (${ratio}), `
+                + `fuel slot ${f.slot_min}-${f.slot_max}, ${f.no_fuel_ticks} tick(s) out of fuel`);
+        }
     }
     lines.push("");
     lines.push("Machines (config id): status agreement per tick");

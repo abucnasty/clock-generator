@@ -32,7 +32,8 @@ async function main() {
     console.log = () => {};
     const result = (() => {
         try {
-            return generateClockForConfig(config, { logger: { log: () => {}, warn: () => {}, error: console.error, debug: () => {} } });
+            // verify_as_built runs the exported clock windows on their own, which is what the blueprint does in game
+            return generateClockForConfig(config, { verify_as_built: true, logger: { log: () => {}, warn: () => {}, error: console.error, debug: () => {} } });
         } finally {
             console.log = log;
         }

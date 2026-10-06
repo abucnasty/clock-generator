@@ -100,6 +100,25 @@ export interface ShiftedSwings {
     latest: ShiftRangeEdge;
 }
 
+export interface SerializableInserterClock {
+    kind: InserterClock["kind"];
+    /** Ticks between the starts of two windows; divides the clock period */
+    modulus: number;
+    /** The window within the first `modulus` ticks, as inclusive ticks */
+    window: { start: number; end: number };
+}
+
+function serializeInserterClocks(clocks: ReadonlyMap<string, InserterClock>): Record<string, SerializableInserterClock> | undefined {
+    if (clocks.size === 0) {
+        return undefined;
+    }
+    return Object.fromEntries(Array.from(clocks, ([id, clock]) => [id, {
+        kind: clock.kind,
+        modulus: clock.modulus,
+        window: { start: clock.window.start_inclusive, end: clock.window.end_inclusive },
+    }]));
+}
+
 /** The exported clock run over several periods, to show how a burner machine uses its fuel */
 export interface FuelConsumptionView {
     /** Periods of the clock the view covers; the clock itself stays one period */
@@ -218,6 +237,11 @@ export interface BlueprintGenerationResult {
      * check ran or the histories above already are that run (observed windows).
      */
     clock_only_run?: ClockOnlyRun;
+    /**
+     * The clocks of the inserters outside the plan (fuel inserters, and inserters taking a by-product away), by inserter id:
+     * the window repeats every `modulus` ticks of the clock. Absent when there are none.
+     */
+    unplanned_inserter_clocks?: Record<string, SerializableInserterClock>;
     /**
      * The exported clock run for several periods, when a machine burns fuel: a fuel inserter swings once in a few
      * periods, so one period seldom shows it inserting. Extended only to show the fuel being consumed; the clock
@@ -743,6 +767,7 @@ export function generateClockForConfig(
                 belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
                 crafting_cycle_plan,
                 fuel_consumption_view: fuelConsumptionViewFor(windows),
+                unplanned_inserter_clocks: serializeInserterClocks(inserter_clocks),
                 used_lcm: recipe_lcm,
                 used_terminal_swing_count,
                 stability_check,
@@ -806,6 +831,7 @@ export function generateClockForConfig(
             shifted_cycle,
             clock_only_run,
             fuel_consumption_view: fuelConsumptionViewFor(planned_windows),
+            unplanned_inserter_clocks: serializeInserterClocks(inserter_clocks),
             used_lcm: recipe_lcm,
             used_terminal_swing_count,
             stability_check,
