@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, validateConfig, BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import type { Config } from "../config/schema";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
 
@@ -319,6 +320,123 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    /** What the rocket fuel samples have in common: two rocket fuel biochambers fed jelly by one jellynut biochamber */
+    const rocketFuelSample = async (path: string) => {
+        const config = await loadConfigFromFile(path);
+        const ids = (matches: (inserter: Config["inserters"][number]) => boolean) =>
+            config.inserters.filter(matches).map(inserter => `inserter:${inserter.id}`);
+        const { alternatives } = generateClockAlternatives(config);
+        const alternative = (id: string) => alternatives.find(a => a.id === id)!;
+        /** Items an inserter moves in the planned period */
+        const moved = (inserter_id: string): number => alternative("planned").result.serializable_transfer_history.entities
+            .find(entity => entity.entity_id === inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
+        return {
+            config,
+            alternatives,
+            alternative,
+            moved,
+            period: alternative("planned").result.simulation_duration.ticks,
+            jelly_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "machine"),
+            output_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "belt" && it.source.id !== 2),
+            // belt 1 carries bioflux and jellynut: machine 2 takes the jellynut, the rocket fuel machines the bioflux
+            jellynut_inserter_id: ids(it => it.source.type === "belt" && it.source.id === 1 && it.sink.id === 2)[0],
+            bioflux_inserter_ids: ids(it => it.source.type === "belt" && it.source.id === 1 && it.sink.id !== 2),
+        };
+    };
+
+    describe("rocket fuel biochambers at 60 per second", async () => {
+        const sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const { alternative, moved, period } = sample;
+
+        // 16 jelly a hand is 15/4 hands a 32 tick cycle
+        it("has a 128 tick period", () => {
+            expect(period).toBe(128);
+        });
+
+        it.each(["planned-belt-slack", "planned", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
+            expect(alternative(id).is_stable).toBe(true);
+            expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
+            expect(alternative(id).items_per_second).toBe(60);
+        });
+
+        it("selects the planned clock with belt pickup slack", () => {
+            expect(sample.alternatives[0].id).toBe("planned-belt-slack");
+            expect(sample.alternatives[0].is_stable).toBe(true);
+        });
+
+        it("moves what a period needs through every planned inserter", () => {
+            // 128 rocket fuel is 32 crafts of 30 jelly and 2 bioflux, and 480 jelly is 48 jellynut a 64 ticks
+            sample.output_inserter_ids.forEach(id => expect(moved(id)).toBe(64));
+            sample.jelly_inserter_ids.forEach(id => expect(moved(id)).toBe(240));
+            sample.bioflux_inserter_ids.forEach(id => expect(moved(id)).toBe(32));
+            expect(moved(sample.jellynut_inserter_id)).toBe(96);
+        });
+
+        // one hand of bioflux each 64 ticks rather than both at once: both at once holds the rocket fuel machine's
+        // bioflux over its insertion limit, and the jelly inserters wait for it
+        it("spreads the two hands of bioflux a period over two windows", () => {
+            const windows = alternative("planned").result.clock_windows;
+            for (const id of sample.bioflux_inserter_ids) {
+                expect(windows[id].length).toBe(2);
+                expect(windows[id][1].start - windows[id][0].start).toBe(64);
+            }
+        });
+
+        it("clocks the fuel and seed inserters outside the plan", () => {
+            const clocks = Object.values(alternative("planned").result.unplanned_inserter_clocks ?? {});
+            expect(clocks.filter(clock => clock.kind === "fuel").length).toBe(3);
+            expect(clocks.filter(clock => clock.kind === "by-product").length).toBe(1);
+        });
+    });
+
+    describe("rocket fuel biochambers fed jelly by inserters with no time to spare", async () => {
+        // 15 jelly a hand is 8 hands a 64 tick period for each jelly inserter, and a hand takes them 8 ticks
+        const sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL_JELLY_STACK_15);
+        const { alternative, period, jelly_inserter_ids, jellynut_inserter_id } = sample;
+
+        it("sets the jelly inserters to 15 a hand", () => {
+            const jelly_inserters = sample.config.inserters.filter(it => it.source.type === "machine" && it.sink.type === "machine");
+            expect(jelly_inserters.map(it => it.stack_size)).toEqual([15, 15, 15, 15]);
+        });
+
+        it("has a 64 tick period", () => {
+            expect(period).toBe(64);
+        });
+
+        it.each(["planned-belt-slack", "planned", "fractional", "derived"])("%s is stable as built", (id) => {
+            expect(alternative(id).is_stable).toBe(true);
+            expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
+            expect(alternative(id).items_per_second).toBe(60);
+        });
+
+        // the hand a jelly inserter picks up at the end of a period is dropped in the next one: its pickup needs a
+        // window at the end of the period, or the exported clock moves 7 of the 8 hands
+        it("keeps the jelly inserters enabled for the hand that is in flight when the period starts", () => {
+            const windows = alternative("planned").result.clock_windows;
+            for (const id of jelly_inserter_ids) {
+                const last_window = windows[id][windows[id].length - 1];
+                expect(windows[id].length).toBe(2);
+                expect(last_window.end).toBeGreaterThanOrEqual(period - 1);
+            }
+        });
+
+        it("moves the planned 8 hands of jelly a period", () => {
+            const history = alternative("planned").result.serializable_transfer_history;
+            for (const id of jelly_inserter_ids) {
+                const moved = history.entities.find(entity => entity.entity_id === id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
+                expect(moved).toBe(8 * 15);
+            }
+        });
+
+        // 3 hands of 16 jellynut a period: refilled up to the insertion limit of 67 instead, the hands come 5 at a
+        // time every 100 ticks or so, and the one period that is observed sees 1 of them
+        it("brings the planned 3 hands of jellynut in the planned period", () => {
+            const history = alternative("planned").result.serializable_transfer_history;
+            const moved = history.entities.find(entity => entity.entity_id === jellynut_inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
+            expect(moved).toBe(3 * 16);
+        });
+    });
+
     // 4 output swings per 64 tick cycle is the optimal clock; the planner alone only reaches 2 swings
     describe("two foundry low density structures with plastic exports", async () => {
         const config = await loadConfigFromFile(ConfigPaths.LOW_DENSITY_TWO_FOUNDRY);
@@ -330,12 +448,12 @@ describe("generateClockForConfig", () => {
             expect(four_swings?.result.crafting_cycle_plan.total_duration.ticks).toBe(64);
         });
 
-        // The plastic machine crafts its coal up to the stack size, past its output block of 68, and its coal inserter
-        // only picks up below the block (as in game). The coal windows observed in the planned period then bring 112 of
-        // the 144 coal a period needs, so the exported clock falls short; with the coal inserter always on it holds.
-        it("is not stable as built with the coal windows observed in its planned period", () => {
-            expect(four_swings?.is_stable).toBe(false);
-            expect(four_swings?.result.stability_check.as_built?.is_stable).toBe(false);
+        // The plastic machine's coal inserter is refilled by its planned swings each cycle, so the coal windows of the
+        // planned period bring the 144 coal every period needs. Refilled up to the insertion limit instead, the swings
+        // bunch up with no relation to the period, and the one period that is observed held 112 coal.
+        it("is stable as built with the coal windows of its planned period", () => {
+            expect(four_swings?.is_stable).toBe(true);
+            expect(four_swings?.result.stability_check.as_built?.is_stable).toBe(true);
         });
 
         it("is stable at the target rate with 3 output swings per cycle", () => {

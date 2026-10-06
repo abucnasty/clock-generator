@@ -517,6 +517,7 @@ export function generateClockForConfig(
     state_transition_history.clear();
     inventory_transfer_history.recording = true;
     state_transition_history.recording = true;
+    inventory_transfer_history.ticks_before_run = simulation_context.tick_provider.getCurrentTick() - relative_tick;
     relative_tick = simulation_context.tick_provider.getCurrentTick();
     resettable_registry.resetAll();
     
@@ -540,6 +541,7 @@ export function generateClockForConfig(
         offset_history,
         simulation_context.entity_registry,
         crafting_cycle_plan.entity_transfer_map,
+        duration.ticks,
     );
     const final_history = clipBeltFillerWindows(
         trimmed_history,

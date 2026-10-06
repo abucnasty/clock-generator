@@ -9,6 +9,8 @@ import { InserterMode } from "../modes";
 export interface TransferSnapshot {
     item_name: string;
     pickup_tick: number;
+    /** The pickup tick as it was read when it happened, set when it was before the tick provider was last moved back */
+    pickup_tick_before_reset?: number;
     tick_range: OpenRange;
     transition: {
         from_status: InserterStatus;
@@ -64,10 +66,12 @@ export class InserterTransferTrackerPlugin implements ModePlugin<InserterMode> {
         // This can happen when an inserter started picking up during warmup
         // but completed its transfer during the simulation period.
         // Warmup ticks are large positive numbers, so if pickup > current, it's from warmup.
-        const clamped_pickup_tick = last_pickup.tick > current_tick ? 0 : last_pickup.tick;
+        const picked_up_before_reset = last_pickup.tick > current_tick;
+        const clamped_pickup_tick = picked_up_before_reset ? 0 : last_pickup.tick;
 
         const inserter_transfer: TransferSnapshot = {
             pickup_tick: clamped_pickup_tick,
+            pickup_tick_before_reset: picked_up_before_reset ? last_pickup.tick : undefined,
             item_name: exited!.held_item?.item_name ?? "unknown",
             tick_range: OpenRange.from(
                 clamped_pickup_tick,

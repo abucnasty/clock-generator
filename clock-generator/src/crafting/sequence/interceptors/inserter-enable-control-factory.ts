@@ -159,24 +159,53 @@ export class EnableControlFactory {
             return AlwaysEnabledControl
         }
 
+        const inserter_state = this.entity_state_registry.getStateByEntityIdOrThrow(inserter.entity_id);
+        assertIsInserterState(inserter_state);
+        const item_transfers = this.transferCountOf(inserter).item_transfers;
+
+        // hands of each item dropped so far, counted when the hand empties
+        const hands_dropped = new Map<ItemName, number>();
+        let held_item_name: ItemName | null = null;
+        const countDroppedHands = () => {
+            const now_held = inserter_state.held_item?.item_name ?? null;
+            if (held_item_name !== null && now_held !== held_item_name) {
+                hands_dropped.set(held_item_name, (hands_dropped.get(held_item_name) ?? 0) + 1);
+            }
+            held_item_name = now_held;
+        };
+
         const enable_control = EnableControl.any(
             transferred_items.map(source_item_name => {
                 const sink_input = sink_state.machine.getInsertableInputOrThrow(source_item_name);
                 const minimum_required = sink_input.consumption_rate.amount_per_craft
                 const automated_insertion_limit = sink_input.automated_insertion_limit.quantity;
                 const sink_consumption_per_tick = sink_input.consumption_rate.rate_per_tick;
+                // The planned swings of a whole number of cycles, e.g. 3 for 3/2 swings per cycle. Refilling by exactly
+                // that many, rather than up to the insertion limit, makes the refills repeat with the clock period: a
+                // refill up to the limit takes as many swings as the limit has room for, which has nothing to do with
+                // the period, so one period of the simulation would see more or fewer swings than every period needs.
+                const planned_swings = item_transfers.find(it => it.item_name === source_item_name)?.transfer_count.getNumerator
+                    ?? Number.POSITIVE_INFINITY;
 
-                return EnableControl.latched({
-                    base: EnableControl.lambda(() => {
-                        const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
-                        const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer);
-                        return sink_quantity_after_transfer < minimum_required * buffer_multiplier
-                    }),
-                    release: EnableControl.lambda(() => {
-                        const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
-                        return sink_quantity >= automated_insertion_limit
-                    })
-                })
+                let refilling = false;
+                let hands_dropped_before_refill = 0;
+                return EnableControl.lambda(() => {
+                    countDroppedHands();
+                    const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
+                    const dropped = hands_dropped.get(source_item_name) ?? 0;
+                    if (refilling) {
+                        if (sink_quantity >= automated_insertion_limit || dropped - hands_dropped_before_refill >= planned_swings) {
+                            refilling = false;
+                        }
+                        return refilling;
+                    }
+                    const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer);
+                    if (sink_quantity_after_transfer < minimum_required * buffer_multiplier) {
+                        refilling = true;
+                        hands_dropped_before_refill = dropped;
+                    }
+                    return refilling;
+                });
             })
         )
         return enable_control;
