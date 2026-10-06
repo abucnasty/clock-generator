@@ -4,7 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { Machine, MachineType, RecipeMetadata } from "../entities";
 import { MachineState } from "../state";
 import { FuelLevelRecorder, fuelPlan } from "./fuel-view";
-import { generateClockForConfig } from "./generate-blueprint";
+import { generateClockAlternatives, generateClockForConfig } from "./generate-blueprint";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
 
@@ -38,9 +38,9 @@ describe("the fuel plan", () => {
 
         it("gives the exported fuel clock of each fuel inserter and how often it should swing on it", () => {
             expect(plan.inserters.map(inserter => [inserter.inserter_id, inserter.machine_id, inserter.modulus])).toEqual([
-                ["inserter:10", "machine:1", 95],
-                ["inserter:12", "machine:2", 138],
-                ["inserter:13", "machine:3", 95],
+                ["inserter:10", "machine:1", 88],
+                ["inserter:12", "machine:2", 128],
+                ["inserter:13", "machine:3", 88],
             ]);
             for (const inserter of plan.inserters) {
                 const exported = result.unplanned_inserter_clocks![inserter.inserter_id];
@@ -57,8 +57,9 @@ describe("the fuel plan", () => {
         });
 
         it("counts the period and every fuel clock on one merged clock", () => {
-            // lcm(128, 95, 138)
-            expect(plan.merged_clock_ticks).toBe(839040);
+            // lcm(128, 88, 128): the fuel clocks are divisors of 11 periods, a little shorter than the 91 and 132
+            // ticks the fuel lasts, where the clock for those would count 384384 ticks
+            expect(plan.merged_clock_ticks).toBe(1408);
             expect(plan.separate_clocks_reason).toBeUndefined();
         });
 
@@ -68,8 +69,9 @@ describe("the fuel plan", () => {
             expect(fractional.merged_clock_ticks).toBeNull();
             expect(fractional.separate_clocks_reason).toBe("fractional_period");
 
-            const long_period = 2 ** 30 + 1;
-            const too_long = fuelPlan(registry, unplannedInserterClocks(registry, long_period), new Map(), long_period)!;
+            // fuel clocks that share no factor with a long period
+            const long_period = 2 ** 31 - 1;
+            const too_long = fuelPlan(registry, unplannedInserterClocks(registry, 128), new Map(), long_period)!;
             expect(too_long.merged_clock_ticks).toBeNull();
             expect(too_long.separate_clocks_reason).toBe("merged_clock_too_long");
         });
@@ -209,5 +211,17 @@ describe("FuelLevelRecorder", () => {
         expect(levels.max[166]).toBe(20);
         expect(levels.empty_ticks).toBe(1);
         expect(levels.first_empty_tick).toBe(500);
+    });
+});
+
+describe("the fuel consumption view of every clock alternative", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    const { alternatives } = generateClockAlternatives(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } });
+
+    // the observed windows are run as they are for the view, not observed again
+    it.each(alternatives.map(alternative => [alternative.id, alternative] as const))("%s has the fuel every burner machine held", (_id, alternative) => {
+        const view = alternative.result.fuel_consumption_view!;
+        expect(view.fuel_levels.map(levels => levels.machine_id)).toEqual(["machine:1", "machine:2", "machine:3"]);
+        view.fuel_levels.forEach(levels => expect(Number.isFinite(levels.min_level)).toBe(true));
     });
 });

@@ -209,17 +209,19 @@ describe("the clock of a blueprint with fuel inserters", () => {
         const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
         const result = generateClockForConfig(config, { logger: quiet, fuel_consumption_view: false });
         const period = result.simulation_duration.ticks;
-        const fuel_clock = Object.values(result.unplanned_inserter_clocks!).find(clock => clock.own_clock && clock.modulus === 138)!;
+        const fuel_clock = Object.values(result.unplanned_inserter_clocks!).find(clock => clock.own_clock)!;
         const window_ticks = fuel_clock.window.end - fuel_clock.window.start + 1;
 
-        // the jellynut biochamber is the only one with a fuel clock of 138 ticks, and its combinator the only one of
-        // nutrients that reads it
+        // the rocket fuel biochambers share a fuel clock and its combinator, and the jellynut biochamber has its own
         const blueprint = result.blueprint;
         const nutrient_deciders = blueprint.entities.filter(entity => entity.name === "decider-combinator" && behavior(entity).includes('"signal":{"name":"nutrients"'));
         expect(nutrient_deciders).toHaveLength(2);
 
-        // a whole number of counts of both fuel clocks
-        const span = 95 * 138;
+        const fuel_moduli = Array.from(new Set(Object.values(result.unplanned_inserter_clocks!)
+            .filter(clock => clock.own_clock).map(clock => clock.modulus))).sort((a, b) => a - b);
+        expect(fuel_moduli).toEqual([88, 128]);
+        // the one clock counts a whole number of every fuel clock
+        const span = 1408 * 2;
         const bioflux = enabledTicks(blueprint, "bioflux", span);
         // every period has the same ticks enabled
         const of_period = (index: number) => bioflux.filter(tick => Math.floor(tick / period) === index).map(tick => tick % period);
@@ -227,7 +229,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
         expect(of_period(5)).toEqual(of_period(1));
         expect(of_period(9)).toEqual(of_period(1));
 
-        // one of the two nutrient combinators is enabled for a window every 138 ticks, the other every 95
+        // one of the two nutrient combinators is enabled for a window every 88 ticks, the other every 128
         const fuel_windows = (modulus: number) => {
             const decider = nutrient_deciders.find(entity => {
                 const signal = /"first_signal":\{"name":"([^"]+)"/.exec(behavior(entity))![1];
@@ -236,7 +238,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
             })!;
             return enabledTicks({ ...blueprint, entities: blueprint.entities.filter(entity => !nutrient_deciders.includes(entity) || entity === decider) }, "nutrients", span);
         };
-        for (const modulus of [95, 138]) {
+        for (const modulus of fuel_moduli) {
             const enabled = fuel_windows(modulus);
             expect(enabled.length).toBe(Math.floor(span / modulus) * window_ticks);
             const starts = enabled.filter((tick, index) => index === 0 || tick !== enabled[index - 1] + 1);

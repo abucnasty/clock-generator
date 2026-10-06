@@ -389,9 +389,9 @@ describe("generateClockForConfig", () => {
         });
 
         // 5 nutrients last a rocket fuel biochamber 89 ticks of crafting and the jellynut one 116. They craft 89% and
-        // 80% of the time, so with the 5% the share is counted higher that is 95 and 138 ticks: on the 128 tick clock
-        // both were rounded down to 64.
-        it("looks at each fuel slot as seldom as the machine's crafting share allows, on fuel clocks of their own", () => {
+        // 80% of the time, so with the 10% the share is counted higher that is 91 and 132 ticks. The fuel clocks are 88
+        // and 128, divisors of 11 periods, so one clock of 1408 ticks holds them; on the 128 tick clock both were 64.
+        it("looks at each fuel slot nearly as seldom as the machine's crafting share allows, on fuel clocks of their own", () => {
             const clocks = alternative("planned").result.unplanned_inserter_clocks!;
             const fuel_moduli = sample.config.inserters
                 .filter(it => it.source.type === "belt" && it.source.id === 3)
@@ -399,9 +399,10 @@ describe("generateClockForConfig", () => {
             expect(fuel_moduli).toHaveLength(3);
             for (const [machine_id, clock] of fuel_moduli) {
                 expect(clock.own_clock).toBe(true);
-                expect(clock.modulus).toBe(machine_id === 2 ? 138 : 95);
+                expect(clock.modulus).toBe(machine_id === 2 ? 128 : 88);
                 expect(clock.window).toEqual({ start: 0, end: 7 });
             }
+            expect(alternative("planned").result.fuel_plan?.merged_clock_ticks).toBe(1408);
         });
 
         it("keeps every machine fuelled over the fuel consumption view", () => {
@@ -654,7 +655,8 @@ describe("generateClockForConfig", () => {
             });
 
             it("gives the clock of the period and each fuel clock as a modulo of the one clock", () => {
-                expect(modulos).toHaveLength(1 + fuel_moduli.length);
+                // a fuel clock of as many ticks as the period is the clock of the period
+                expect(modulos).toHaveLength(new Set([period, ...fuel_moduli]).size);
                 modulos.forEach(modulo => expect(behavior(modulo)).toContain('"first_signal":{"name":"signal-T"'));
                 const period_clock = modulos.filter(modulo => behavior(modulo).includes('"output_signal":{"name":"signal-clock"'));
                 expect(period_clock).toHaveLength(1);
@@ -673,8 +675,8 @@ describe("generateClockForConfig", () => {
                     expect(description).toContain("(fuel)");
                     expect(description).toContain("swings every");
                     expect(description).toContain("fuel clock");
-                    // reads its fuel clock, not the clock of the period
-                    expect(behavior(decider)).not.toContain('"name":"signal-clock"');
+                    // reads a modulo of the one clock
+                    expect(behavior(decider)).not.toContain('"name":"signal-T"');
                 });
             });
 

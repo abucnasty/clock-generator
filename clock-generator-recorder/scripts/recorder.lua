@@ -360,6 +360,7 @@ function recorder.start(force, entities, player_index)
         clock = clock,
         clock_values = {},
         periods = settings_table["clock-generator-recorder-periods"].value,
+        minimum_ticks = settings_table["clock-generator-recorder-minimum-ticks"].value,
         fallback_ticks = settings_table["clock-generator-recorder-ticks-without-clock"].value,
         phase = clock and "waiting" or "recording",
         waited_ticks = 0,
@@ -374,7 +375,9 @@ function recorder.start(force, entities, player_index)
 
     if clock then
         notify(player_index, "Found clock combinator. Waiting for it to wrap to start recording "
-            .. storage.recording.periods .. " period(s) of " .. #inserters .. " inserters and " .. #machines .. " machines.")
+            .. storage.recording.periods .. " period(s)"
+            .. (storage.recording.minimum_ticks > 0 and (", and whole periods until at least " .. storage.recording.minimum_ticks .. " ticks,") or "")
+            .. " of " .. #inserters .. " inserters and " .. #machines .. " machines.")
     else
         notify(player_index, "No clock combinator selected; recording "
             .. storage.recording.fallback_ticks .. " ticks without clock alignment.")
@@ -412,8 +415,9 @@ function recorder.on_tick()
         local value = read_clock(recording.clock) or 0
         if recording.sample_count > 0 and value < recording.last_clock then
             recording.wraps = recording.wraps + 1
-            if recording.wraps >= recording.periods then
-                recorder.finish("recorded " .. recording.periods .. " clock period(s)")
+            -- whole periods: at least the periods asked for, and more until the minimum ticks are recorded
+            if recording.wraps >= recording.periods and recording.sample_count >= (recording.minimum_ticks or 0) then
+                recorder.finish("recorded " .. recording.wraps .. " clock period(s)")
                 return
             end
         end

@@ -2093,8 +2093,9 @@ function fuelConsumptionView(
     const fuel_inserter_ids = fuel_inserters.map(inserter => inserter.entity_id.id);
     let periods = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / period)), max_periods);
     while (true) {
+        // the windows are run as they are: observing them again would return that run instead, without the fuel levels
         const run = generateClockForConfig(
-            buildAsBuiltConfig(config, windows, period),
+            buildAsBuiltConfig({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period),
             { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods, fuel_levels: true },
         );
         const swung = run.serializable_transfer_history.entities
