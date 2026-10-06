@@ -1360,8 +1360,19 @@ function shiftEdgeNotes(
         if (fed === undefined || !fed.startsWith("machine:")) {
             continue;
         }
-        for (const segment of segmentsOf(fed)) {
-            const stopped = segment.status === MachineStatus.INGREDIENT_SHORTAGE || segment.status === MachineStatus.OUTPUT_FULL;
+        const isStopped = (status: string) => status === MachineStatus.INGREDIENT_SHORTAGE || status === MachineStatus.OUTPUT_FULL;
+        // a machine out of ingredients shows full output until its output drops under the output block: one stop
+        const stops = segmentsOf(fed).reduce<{ status: string; start: number; end: number }[]>((merged, segment) => {
+            const last = merged[merged.length - 1];
+            if (last !== undefined && isStopped(last.status) && isStopped(segment.status) && last.end === segment.start) {
+                merged[merged.length - 1] = { status: segment.status, start: last.start, end: segment.end };
+            } else {
+                merged.push(segment);
+            }
+            return merged;
+        }, []);
+        for (const segment of stops) {
+            const stopped = isStopped(segment.status);
             if (stopped && segment.end > span.start && segment.end <= span.end + MIN_SHIFT_EDGE_WAIT_TICKS && segment.end - segment.start >= MIN_SHIFT_EDGE_WAIT_TICKS) {
                 const label = entities.get(fed)?.label ?? fed;
                 notes.add(segment.status === MachineStatus.INGREDIENT_SHORTAGE

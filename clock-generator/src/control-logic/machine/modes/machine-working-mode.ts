@@ -65,6 +65,28 @@ export class MachineWorkingMode implements MachineMode {
         return (this.isCraftInProgress() || this.canStartCraft()) && this.hasFuel();
     }
 
+    /**
+     * Why a machine that cannot craft shows a full output, or null when it only waits for ingredients.
+     * As in the game, the output block (overload multiplier x recipe amount) names the status of an idle
+     * machine and stops its inserters from fetching ingredients, but never stops a craft that has them.
+     */
+    public outputFullReason(): string | null {
+        const output_item = this.output_item;
+        const amount_per_craft = this.state.machine.output.ingredient.amount;
+        // e.g. 99/100 plastic bars with 2 per craft: no room for another craft
+        if (!this.hasOutputSpaceFor(amount_per_craft)) {
+            return `machine cannot fit another craft of ${amount_per_craft} ${output_item.item_name} under max stack size of ${this.state.machine.output.outputBlock.max_stack_size}`;
+        }
+        if (!this.byProductsHaveSpace()) {
+            return "a by-product has filled its stack";
+        }
+        const output_block = this.state.machine.output.outputBlock;
+        if (output_item.quantity >= output_block.quantity) {
+            return `output item "${output_item.item_name}" = ${output_item.quantity} is at its output block of ${output_block.quantity}`;
+        }
+        return null;
+    }
+
     private hasFuel(): boolean {
         return this.availableFuelEnergy() > PROGRESS_EPSILON || this.state.machine.fuel_slot === undefined;
     }

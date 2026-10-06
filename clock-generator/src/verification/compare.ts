@@ -456,7 +456,10 @@ export function compareRecording(
         }
     }
 
-    const output_machine_ids = new Set(config.machines.filter(m => m.recipe === config.target_output.recipe).map(m => m.id));
+    // the target is an item, which a machine makes with a recipe of another name (rocket-fuel from rocket-fuel-from-jelly)
+    const output_machine_ids = new Set(config.machines
+        .filter(m => Machine.fromConfig(m).output.item_name === config.target_output.recipe)
+        .map(m => m.id));
     const output_inserter_ids = inserters.map(ins => ins.config_id).filter(id => {
         const cfg = config.inserters.find((c, index) => (c.id ?? index + 1) === id);
         return cfg?.source.type === "machine" && output_machine_ids.has(cfg.source.id);
