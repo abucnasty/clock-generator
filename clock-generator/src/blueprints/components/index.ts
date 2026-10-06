@@ -6,3 +6,5 @@ export * from "./decider-combinator"
 export * from "./control-behavior"
 export * from "./constant-combinator"
 export * from "./wire"
+export * from "./player-description"
+

@@ -411,6 +411,27 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    describe("combinator descriptions", () => {
+        const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+
+        // Factorio keeps at most 500 bytes of the description of a combinator
+        it.each([
+            ["rocket fuel with a by-product", ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL],
+            ["flying robot frames", ConfigPaths.FLYING_ROBOT_FRAME],
+            ["logistic science with a shared inserter", ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER],
+        ])("are at most 500 bytes in the blueprint of %s", async (_name, path) => {
+            const config = await loadConfigFromFile(path);
+            const result = generateClockForConfig(config, { logger: quiet });
+            const descriptions = [result.blueprint, result.modulo_blueprint, result.subtick?.blueprint]
+                .flatMap(blueprint => blueprint?.entities ?? [])
+                .map(entity => entity.player_description)
+                .filter((description): description is string => description !== undefined);
+
+            expect(descriptions.length).toBeGreaterThan(0);
+            descriptions.forEach(description => expect(new TextEncoder().encode(description).length).toBeLessThanOrEqual(500));
+        });
+    });
+
     describe("validateConfig", () => {
         it("returns the transfer plan a generation uses, without generating", async () => {
             const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);

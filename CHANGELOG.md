@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - An inserter moves at most what the item stacks to, and when it drops on a belt it unloads early instead of waiting for a count that would leave a partial stack on the belt. An item that stacks to 10 on a belt lane of 4 moves 8 per swing, not the inserter's stack size. The transfer plan, the simulation and the clock use this hand size instead of the inserter's stack size for every item and inserter.
 - An inserter taking a by-product off a machine picks it up: it only looked for the machine's main product, so an inserter filtered to a by-product never picked anything up, the by-product filled its stack and blocked the machine.
+- The description of a combinator in a blueprint is at most 500 bytes, which is all Factorio keeps of it. Longer descriptions are cut after the last line that fits, with an ellipsis, instead of being exported whole.
 
 ### Changed
 - Generating a clock names the inserter that is missing from the transfer plan, with its source, sink and items, instead of failing with `No value found for key`. A clock cannot yet be generated for a config with an inserter that fills a fuel slot.
