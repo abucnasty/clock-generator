@@ -330,9 +330,18 @@ describe("generateClockForConfig", () => {
             expect(four_swings?.result.crafting_cycle_plan.total_duration.ticks).toBe(64);
         });
 
-        it("is stable at the target rate", () => {
-            expect(four_swings?.is_stable).toBe(true);
-            expect(four_swings?.items_per_second).toBe(120);
+        // The plastic machine crafts its coal up to the stack size, past its output block of 68, and its coal inserter
+        // only picks up below the block (as in game). The coal windows observed in the planned period then bring 112 of
+        // the 144 coal a period needs, so the exported clock falls short; with the coal inserter always on it holds.
+        it("is not stable as built with the coal windows observed in its planned period", () => {
+            expect(four_swings?.is_stable).toBe(false);
+            expect(four_swings?.result.stability_check.as_built?.is_stable).toBe(false);
+        });
+
+        it("is stable at the target rate with 3 output swings per cycle", () => {
+            const three_swings = alternatives.find(a => a.id === "swings-3");
+            expect(three_swings?.is_stable).toBe(true);
+            expect(three_swings?.items_per_second).toBe(120);
         });
 
         it("enables the output inserters for one batch of swings per cycle", () => {
@@ -938,9 +947,10 @@ describe("generateClockForConfig", () => {
                 const rows = uneven.result.derived_clock_windows!.moved_output_swing!.shifts_checked;
                 expect(rows.map(row => row.index)).toEqual([2]);
                 expect(rows[0].shifts.filter(shift => shift.is_stable).map(shift => shift.shift_ticks))
-                    .toEqual([-70, -52, -35, -17, 17, 35, 70]);
+                    .toEqual([-70, -52, -35, -17, 17, 35, 52, 70]);
+                // 52 works since a machine at its output block crafts the ingredients that reach it, as in game
                 expect(rows[0].shifts.filter(shift => !shift.is_stable).map(shift => shift.shift_ticks))
-                    .toEqual([-105, -87, 52, 87, 105]);
+                    .toEqual([-105, -87, 87, 105]);
             });
 
             it("observes the input windows again for the moved swing", () => {
@@ -997,7 +1007,8 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.shifted_cycle!.latest).toEqual({
                     shift_ticks: 45,
                     is_search_limit: false,
-                    notes: ["Machine 1 (flying-robot-frame) stops for 9 ticks until these swings arrive, out of ingredients with its output waiting to be removed"],
+                    // full output while its output is at the block, then short of ingredients: one 9 tick stop
+                    notes: ["Machine 1 (flying-robot-frame) is out of ingredients for 9 ticks until these swings arrive"],
                 });
             });
 
