@@ -6,6 +6,7 @@ Date: 2026-10-05
     - Biochambers are exported with the type "biochamber" and their energy consumption bonus (energy_consumption_bonus, in percent)
   Bugfixes:
     - Inserters are exported with only the filters set on the inserter, not filters guessed from the source machine's recipe or the source belt's lanes
+    - Starting a recording of a burner machine no longer fails on a Factorio version without the item prototype attribute fuel_category: the fuel items are found with the prototype filter, the attribute, the burner's contents or the biochamber's nutrients, and a burner attribute that is missing while recording records zero instead of an error
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.0
 Date: 2026-10-02
