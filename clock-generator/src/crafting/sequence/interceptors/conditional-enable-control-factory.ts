@@ -140,7 +140,7 @@ export class ConditionalEnableControlFactory {
         context: EvaluationContext
     ): number {
         const machine = this.getMachineState(entity, context);
-        const input = machine.machine.inputs.get(item_name);
+        const input = machine.machine.getInsertableInput(item_name);
         assert(input, `Item ${item_name} not found in machine inputs`);
         return input.automated_insertion_limit.quantity;
     }

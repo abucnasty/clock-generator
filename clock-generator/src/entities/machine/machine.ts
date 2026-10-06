@@ -11,6 +11,7 @@ import { Entity } from "../entity";
 import { EntityId } from "../entity-id";
 import { Percentage, SerializableMachineFacts, SerializableMachineInput } from "../../data-types";
 import { MachineInputs } from "./input/machine-inputs";
+import { MachineInput } from "./input/machine-input";
 import { defaultLogger, Logger } from "../../common/logger";
 
 
@@ -36,6 +37,55 @@ export class Machine implements Entity {
         public readonly fuel_consumption?: FuelConsumption,
         public readonly fuel_slot?: FuelSlot,
     ) {}
+
+    /** The input an inserter fills for an item: the ingredient, or the fuel a burner machine burns */
+    public getInsertableInput(item_name: string): MachineInput | undefined {
+        const ingredient = this.inputs.get(item_name);
+        if (ingredient || this.fuel_slot?.fuel.item_name !== item_name) {
+            return ingredient;
+        }
+        return this.fuel_input;
+    }
+
+    /** True when an inserter carrying exactly these items only fills this machine's fuel slot */
+    public isFuelOnly(item_names: ReadonlySet<string>): boolean {
+        const fuel_item = this.fuel_slot?.fuel.item_name;
+        return fuel_item !== undefined && item_names.size > 0
+            && Array.from(item_names).every(it => it === fuel_item && !this.inputs.has(it));
+    }
+
+    /** Every input an inserter can fill: the ingredients, and the fuel of a burner machine */
+    public getInsertableInputs(): MachineInput[] {
+        const fuel_input = this.fuel_input;
+        return fuel_input ? [...this.inputs.values(), fuel_input] : Array.from(this.inputs.values());
+    }
+
+    public getInsertableInputOrThrow(item_name: string): MachineInput {
+        const input = this.getInsertableInput(item_name);
+        if (!input) {
+            throw new Error(`${this} has no input for ${item_name}`);
+        }
+        return input;
+    }
+
+    private get fuel_input(): MachineInput | undefined {
+        const slot = this.fuel_slot;
+        const consumption = this.fuel_consumption;
+        if (!slot || !consumption) {
+            return undefined;
+        }
+        return {
+            item_name: slot.fuel.item_name,
+            consumption_rate: {
+                item: slot.fuel.item_name,
+                rate_per_second: consumption.rate_per_second,
+                rate_per_tick: consumption.rate_per_tick,
+                amount_per_craft: consumption.amount_per_craft,
+            },
+            automated_insertion_limit: { quantity: slot.automated_insertion_limit, item: slot.fuel.item_name },
+            ingredient: { type: "item", name: slot.fuel.item_name, amount: consumption.amount_per_craft },
+        };
+    }
 
     public toString(): string {
         return `Machine(${this.entity_id.id}, recipe=${this.metadata.recipe.name})`;

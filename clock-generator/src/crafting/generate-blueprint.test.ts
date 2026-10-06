@@ -371,6 +371,46 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    describe("a biochamber with a fuel inserter", () => {
+        const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+
+        it("is stable as built, with the fuel inserter on a clock that repeats within the period", async () => {
+            // 926% energy consumption: the biochamber burns about 5 nutrients a craft, most of the 6 it makes
+            const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+            const result = generateClockForConfig(config, { verify_as_built: true, logger: quiet });
+
+            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.as_built?.is_stable).toBe(true);
+
+            const fuel_windows = result.clock_windows["inserter:3"];
+            expect(fuel_windows.length).toBeGreaterThan(1);
+            // every window is the same distance from the one before it, and that distance divides the period
+            const starts = fuel_windows.map(window => window.start);
+            const modulus = starts[1] - starts[0];
+            expect(starts.every((start, index) => index === 0 || start - starts[index - 1] === modulus)).toBe(true);
+            expect(result.simulation_duration.ticks % modulus).toBe(0);
+        });
+
+        it("does not change the LCM", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+            const without_fuel = { ...config, machines: config.machines.map(machine => ({ ...machine, type: "machine" as const })) };
+            const with_fuel_inserter = generateClockForConfig(config, { logger: quiet });
+            const plain = generateClockForConfig(
+                { ...without_fuel, inserters: config.inserters.filter(inserter => inserter.id !== 3) }, { logger: quiet });
+            expect(with_fuel_inserter.used_lcm).toBe(plain.used_lcm);
+        });
+
+        it("keeps the rocket fuel chain stable as built with the fuel of three biochambers", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
+            const result = generateClockForConfig(config, { verify_as_built: true, logger: quiet });
+
+            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.as_built?.is_stable).toBe(true);
+            const fuel_inserter_ids = ["inserter:10", "inserter:12", "inserter:13"];
+            fuel_inserter_ids.forEach(id => expect(result.clock_windows[id]?.length).toBeGreaterThan(1));
+        });
+    });
+
     describe("validateConfig", () => {
         it("returns the transfer plan a generation uses, without generating", async () => {
             const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
@@ -388,12 +428,11 @@ describe("generateClockForConfig", () => {
             const seed_inserters = validation.transfer_plan.entities
                 .filter(entity => entity.item_transfers.some(transfer => transfer.item_name === "jellynut-seed"));
             expect(seed_inserters).toEqual([]);
+            // the nutrients its biochambers burn are not part of the plan, so they leave the LCM alone
+            const fuel_inserters = validation.transfer_plan.entities
+                .filter(entity => entity.item_transfers.some(transfer => transfer.item_name === "nutrients"));
+            expect(fuel_inserters).toEqual([]);
             expect(validation.used_lcm).toBe(4);
-        });
-
-        it("names an inserter missing from the transfer plan when generating", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
-            expect(() => generateClockForConfig(config)).toThrow(/Inserter 11 \(belt:3 to machine:1, carrying nutrients\) is missing from the transfer plan/);
         });
 
         it("uses the forced output swings and LCM of the config", async () => {

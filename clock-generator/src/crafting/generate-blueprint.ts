@@ -4,7 +4,8 @@ import { EnableControlOverrideConfig, EnableControlRange } from '../config/schem
 import { assertInserterCoverage } from '../config/inserter-coverage-validator';
 import { DebugPluginFactory } from './sequence/debug/debug-plugin-factory';
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from './sequence/debug/debug-settings-provider';
-import { cloneSimulationContextWithInterceptors, SimulationContext } from './sequence/simulation-context';
+import { FuelClock, fuelClocks, fuelWindowsOverPeriod } from './sequence/fuel-clock';
+import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig, SimulationContext } from './sequence/simulation-context';
 import { Duration, OpenRange } from '../data-types';
 import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from '../entities';
 import { TargetProductionRate } from "./target-production-rate";
@@ -390,13 +391,17 @@ export function generateClockForConfig(
         simulation_context.state_registry
     );
 
+    // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the period
+    const fuel_clocks = fuelClocks(simulation_context.entity_registry, crafting_cycle_plan.total_duration.ticks * recipe_lcm);
+
     // Create automatic enable control factory
     const enable_control_factory = new EnableControlFactory(
         simulation_context.state_registry,
         crafting_cycle_plan,
         relative_tick_provider,
         resettable_registry,
-        logger
+        logger,
+        fuel_clocks,
     );
 
     // Clone simulation context with interceptors
@@ -602,7 +607,9 @@ export function generateClockForConfig(
             };
         }
     }
-    const blueprintForWindows = (windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): FactorioBlueprint => createSignalPerInserterBlueprint(
+    const blueprintForWindows = (all_windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): FactorioBlueprint => {
+        const windows = withFuelWindows(all_windows, fuel_clocks, duration.ticks);
+        return createSignalPerInserterBlueprint(
         target_production_rate.machine_production_rate.item,
         crafting_cycle_plan,
         duration,
@@ -616,6 +623,7 @@ export function generateClockForConfig(
         subtick_clock,
         use_modulo,
     );
+    };
     const moduloBlueprintFor = (windows: Map<string, OpenRange[]>) => {
         if (options.modulo_blueprint === false) {
             return undefined;
@@ -685,7 +693,7 @@ export function generateClockForConfig(
                 blueprint: blueprintForWindows(windows),
                 modulo_blueprint: moduloBlueprintFor(windows),
                 subtick: subtickClockFor(windows),
-                clock_windows: serializeClockWindows(windows),
+                clock_windows: serializeClockWindows(withFuelWindows(windows, fuel_clocks, duration.ticks)),
                 belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
                 crafting_cycle_plan,
                 used_lcm: recipe_lcm,
@@ -737,7 +745,7 @@ export function generateClockForConfig(
             blueprint,
             modulo_blueprint: moduloBlueprintFor(planned_windows),
             subtick: subtickClockFor(planned_windows),
-            clock_windows: serializeClockWindows(planned_windows),
+            clock_windows: serializeClockWindows(withFuelWindows(planned_windows, fuel_clocks, duration.ticks)),
             belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
             crafting_cycle_plan,
             simulation_duration: duration,
@@ -1947,6 +1955,22 @@ function subtickClockForPeriod(period: number): SubtickClock | null {
     return null;
 }
 
+/** The windows of a clock with the fuel inserters on the clocks of their own, which do not come from the plan */
+function withFuelWindows(
+    windows: Map<string, OpenRange[]>,
+    fuel_clocks: ReadonlyMap<string, FuelClock>,
+    period: number,
+): Map<string, OpenRange[]> {
+    if (fuel_clocks.size === 0) {
+        return windows;
+    }
+    const result = new Map(windows);
+    for (const [inserter_id, clock] of fuel_clocks) {
+        result.set(inserter_id, fuelWindowsOverPeriod(clock, period));
+    }
+    return result;
+}
+
 function windowsFromHistory(history: InventoryTransferHistory): Map<string, OpenRange[]> {
     const windows = new Map<string, OpenRange[]>();
     for (const [entity_id, transfers] of history.entries()) {
@@ -2041,7 +2065,9 @@ function buildAsBuiltConfig(
     period: number,
 ): Config {
     const windows = new Map<string, EnableControlRange[]>();
-    for (const [key, ranges] of decider_windows) {
+    // fuel inserters swing on clocks of their own, which the blueprint exports as repeating windows
+    const fuel_clocks = fuelClocks(createEntityRegistryFromConfig(config), period);
+    for (const [key, ranges] of withFuelWindows(decider_windows, fuel_clocks, period)) {
         windows.set(key, shiftRangesForCircuitLatency(ranges, period));
     }
 
