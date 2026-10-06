@@ -97,16 +97,63 @@ local function recipe_item_names(recipe, key)
     return names
 end
 
----Names of the items a burner machine accepts as fuel
+---Names of the items a burner machine accepts as fuel. Which prototype attributes and filters exist differs between
+---Factorio versions, so each way of finding them is tried safely, and the fuel of a biochamber is the last resort.
 ---@param burner LuaBurner
 ---@return string[]
 local function fuel_item_names(burner)
-    local categories = burner.fuel_categories
-    local names = {}
-    for name, item in pairs(prototypes.item) do
-        if item.fuel_category and categories[item.fuel_category] then
-            table.insert(names, name)
+    local found = {}
+
+    local categories = {}
+    local ok_categories, fuel_categories = pcall(function() return burner.fuel_categories end)
+    if ok_categories and fuel_categories then
+        for category in pairs(fuel_categories) do
+            categories[category] = true
         end
+    end
+
+    -- the items of each fuel category, from the prototype filter
+    for category in pairs(categories) do
+        local ok, items = pcall(prototypes.get_item_filtered, { { filter = "fuel-category", ["fuel-category"] = category } })
+        if ok and items then
+            for name in pairs(items) do
+                found[name] = true
+            end
+        end
+    end
+
+    -- else the fuel category of every item prototype, where the attribute exists
+    if next(found) == nil then
+        for name, item in pairs(prototypes.item) do
+            local ok, category = pcall(function() return item.fuel_category end)
+            if ok and category and categories[category] then
+                found[name] = true
+            end
+        end
+    end
+
+    -- else whatever the burner holds or burns now
+    if next(found) == nil then
+        local ok_inventory, inventory = pcall(function() return burner.inventory end)
+        if ok_inventory and inventory then
+            for _, stack in pairs(inventory.get_contents()) do
+                found[stack.name] = true
+            end
+        end
+        local ok_burning, burning = pcall(function() return burner.currently_burning end)
+        if ok_burning and burning and burning.name then
+            found[burning.name.name] = true
+        end
+    end
+
+    -- biochambers burn nutrients and nothing else
+    if next(found) == nil and categories["nutrients"] then
+        found["nutrients"] = true
+    end
+
+    local names = {}
+    for name in pairs(found) do
+        table.insert(names, name)
     end
     table.sort(names)
     return names
@@ -209,14 +256,16 @@ local function sample(recording)
             end
             local burner = s.fuel and entity.burner
             if burner then
-                local fuel_inventory = burner.inventory
+                -- the burner's attributes differ between Factorio versions, so a missing one records nothing instead of crashing
+                local _, fuel_inventory = pcall(function() return burner.inventory end)
                 for name, values in pairs(s.fuel) do
                     table.insert(values, fuel_inventory and fuel_inventory.get_item_count(name) or 0)
                 end
                 -- energy left in the item being burned, in MJ
-                table.insert(s.burning_remaining, round4(burner.remaining_burning_fuel / 1000000))
-                local burning = burner.currently_burning
-                record_change(s.currently_burning, index, burning and burning.name.name or "")
+                local _, remaining = pcall(function() return burner.remaining_burning_fuel end)
+                table.insert(s.burning_remaining, round4((remaining or 0) / 1000000))
+                local _, burning = pcall(function() return burner.currently_burning end)
+                record_change(s.currently_burning, index, burning and burning.name and burning.name.name or "")
             end
         else
             record_change(s.status, index, "invalid")
