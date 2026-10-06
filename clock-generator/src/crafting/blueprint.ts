@@ -8,7 +8,7 @@ import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities"
 import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
-import { FuelClock } from "./sequence/fuel-clock";
+import { InserterClock } from "./sequence/unplanned-inserter-clock";
 
 function createDeciderCombinatorForTransfers(
     inventory_transfers: InventoryTransfer[],
@@ -19,7 +19,7 @@ function createDeciderCombinatorForTransfers(
     position: Position,
     mapRanges: (ranges: OpenRange[]) => OpenRange[] = ranges => ranges,
     modulo?: { split: ModuloRanges; signal: SignalId },
-    fuel_clock?: FuelClock,
+    inserter_clock?: InserterClock,
 ): DeciderCombinatorEntity {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
     const entity_number = entity_id.id.split(":")[1]
@@ -48,8 +48,8 @@ function createDeciderCombinatorForTransfers(
         )
     }
 
-    if (!swing_counts && fuel_clock && Entity.isInserter(entity)) {
-        description_lines = fuelClockDescriptionLines(entity_id, entity, items, fuel_clock);
+    if (!swing_counts && inserter_clock && Entity.isInserter(entity)) {
+        description_lines = unplannedInserterClockDescriptionLines(entity_id, entity, items, inserter_clock);
     }
 
     if (items.size === 1) {
@@ -74,24 +74,41 @@ function createDeciderCombinatorForTransfers(
     return deciderCombinator
 }
 
-/** An inserter that only fills a fuel slot is not part of the plan, so it has a clock of its own instead of swing counts */
-function fuelClockDescriptionLines(
+/**
+ * An inserter outside the plan, one that only fills a fuel slot or takes a by-product away, has a clock of its own
+ * instead of swing counts
+ */
+function unplannedInserterClockDescriptionLines(
     inserter_id: EntityId,
     inserter: Inserter,
     item_names: Set<string>,
-    fuel_clock: FuelClock,
+    inserter_clock: InserterClock,
 ): string[] {
     const inserter_number = inserter_id.id.split(":")[1];
     const item_icons = Array.from(item_names).map(item_name => SignalId.toDescriptionString(SignalId.item(item_name)));
-    const machine_number = inserter.sink.entity_id.id.split(":")[1];
-    const window = fuel_clock.window;
+    const window = inserter_clock.window;
+    const clock_line = `- looks every ${inserter_clock.modulus} ticks, enabled for ticks ${window.start_inclusive}-${window.end_inclusive} of each`;
+    const plan_line = "- not part of the swing counts, so it does not change the length of the clock";
+
+    if (inserter_clock.kind === "fuel") {
+        const machine_number = inserter.sink.entity_id.id.split(":")[1];
+        return [
+            `Inserter ${inserter_number} for ${item_icons.join("|")} (fuel)`,
+            `Fills the fuel slot of machine ${machine_number}, which holds at most a few items:`,
+            clock_line.replace("looks", "swings"),
+            plan_line,
+            "- skips a swing while the fuel slot is full",
+            "- fuel inserters of other machines with the same windows are wired to this combinator",
+        ];
+    }
+    const machine_number = inserter.source.entity_id.id.split(":")[1];
     return [
-        `Inserter ${inserter_number} for ${item_icons.join("|")} (fuel)`,
-        `Fills the fuel slot of machine ${machine_number}, which holds at most a few items:`,
-        `- swings every ${fuel_clock.modulus} ticks, enabled for ticks ${window.start_inclusive}-${window.end_inclusive} of each`,
-        "- not part of the swing counts, so it does not change the length of the clock",
-        "- skips a swing while the fuel slot is full",
-        "- fuel inserters of other machines with the same windows are wired to this combinator",
+        `Inserter ${inserter_number} for ${item_icons.join("|")} (by-product)`,
+        `Takes ${item_icons.join("|")} the machine ${machine_number} makes on the side, which nothing uses:`,
+        clock_line,
+        plan_line,
+        "- ignores the machine's output outside the window",
+        "- takes what is ready and swings once its hand is full",
     ];
 }
 
@@ -270,7 +287,7 @@ export function createSignalPerInserterBlueprint(
     entityRegistry: ReadableEntityRegistry,
     subtick_clock?: SubtickClock,
     use_modulo: boolean = false,
-    fuel_clocks: ReadonlyMap<string, FuelClock> = new Map(),
+    inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
 ): FactorioBlueprint {
 
     const inventory_transfers = history.getAllTransfers()
@@ -350,7 +367,7 @@ export function createSignalPerInserterBlueprint(
                 Position.fromXY(x, 0),
                 subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRanges,
                 split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
-                fuel_clocks.get(entityId.id),
+                inserter_clocks.get(entityId.id),
             )
         )
     })

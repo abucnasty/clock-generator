@@ -8,7 +8,7 @@ import { computeSimulationMode, SimulationMode, simulationModeForInput } from ".
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { SwingDistribution } from "../cycle/swing-distribution";
-import { FuelClock } from "../fuel-clock";
+import { InserterClock } from "../unplanned-inserter-clock";
 import { Logger } from "../../../common/logger";
 
 export class EnableControlFactory {
@@ -24,8 +24,8 @@ export class EnableControlFactory {
         private readonly tick_provider: TickProvider,
         private readonly resettable_registry: ResettableRegistry,
         private readonly logger: Logger,
-        /** The clocks of the inserters that only fill a fuel slot, which are not part of the plan */
-        private readonly fuel_clocks: ReadonlyMap<string, FuelClock> = new Map(),
+        /** The clocks of the inserters that only fill a fuel slot or take a by-product away, which are not part of the plan */
+        private readonly inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
     ) {
         this.target_output_item_name = this.crafting_cycle_plan.production_rate.machine_production_rate.item;
         this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
@@ -57,10 +57,12 @@ export class EnableControlFactory {
             );
         }
 
-        // an inserter that only fills a fuel slot is not part of the plan: it swings on a clock of its own, which
-        // repeats every `modulus` ticks, and the limit of the fuel slot skips a swing when the slot is full
-        if (EntityState.isMachine(sink_state) && sink_state.machine.isFuelOnly(entity_state.inserter.filtered_items)) {
-            return this.fuelClocked(entity_id);
+        // an inserter that only fills a fuel slot, or only takes by-products off a machine, is not part of the plan: it
+        // is enabled by a window that repeats every `modulus` ticks and ignores the machine's inventory the rest of the
+        // time. The limit of a fuel slot skips a window when it is full, and a by-product inserter takes what is ready.
+        if (this.inserter_clocks.has(entity_id.id)
+            || (EntityState.isMachine(sink_state) && sink_state.machine.isFuelOnly(entity_state.inserter.filtered_items))) {
+            return this.unplannedInserterClocked(entity_id);
         }
 
         const additional_enable_controls: EnableControl[] = [];
@@ -1073,14 +1075,14 @@ export class EnableControlFactory {
         return clocked_control;
     }
 
-    private fuelClocked(entity_id: EntityId): EnableControl {
-        const fuel_clock = this.fuel_clocks.get(entity_id.id);
-        if (!fuel_clock) {
+    private unplannedInserterClocked(entity_id: EntityId): EnableControl {
+        const inserter_clock = this.inserter_clocks.get(entity_id.id);
+        if (!inserter_clock) {
             return AlwaysEnabledControl;
         }
         const clocked_control = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(fuel_clock.modulus),
-            enabledRanges: [fuel_clock.window],
+            periodDuration: Duration.ofTicks(inserter_clock.modulus),
+            enabledRanges: [inserter_clock.window],
             tickProvider: this.tick_provider,
         });
         this.resettable_registry.register(clocked_control);

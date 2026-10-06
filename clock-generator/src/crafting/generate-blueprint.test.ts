@@ -369,6 +369,23 @@ describe("generateClockForConfig", () => {
             expect(result.stability_check.actual_output_items).toBeGreaterThan(0);
             expect(result.stability_check.as_built?.is_stable).toBe(true);
         });
+
+        it("clocks the inserter taking the by-product off, so it only looks at the machine now and then", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
+            const result = generateClockForConfig(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } });
+
+            // it is not in the plan, so its clock repeats within the period instead of coming from swing counts
+            const windows = result.clock_windows["inserter:11"];
+            expect(windows.length).toBeGreaterThanOrEqual(1);
+            expect(windows[0].end - windows[0].start).toBeLessThan(20);
+            expect(result.serializable_transfer_plan.entities.map(entity => entity.entity_id)).not.toContain("inserter:11");
+
+            const described = result.blueprint.entities
+                .map(entity => entity.player_description ?? "")
+                .find(description => description.includes("(by-product)"));
+            expect(described).toContain("Inserter 11 for [item=jellynut-seed]");
+            expect(described).toContain("looks every");
+        });
     });
 
     describe("a biochamber with a fuel inserter", () => {
