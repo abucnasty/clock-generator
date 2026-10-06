@@ -4,6 +4,8 @@ Date: 2026-10-05
   Features:
     - Record the fuel slot of burner machines (biochambers) every tick, the energy left in the fuel item being burned, and which fuel item is burning
     - Biochambers are exported with the type "biochamber" and their energy consumption bonus (energy_consumption_bonus, in percent)
+  Bugfixes:
+    - Inserters are exported with only the filters set on the inserter, not filters guessed from the source machine's recipe or the source belt's lanes
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.0
 Date: 2026-10-02
