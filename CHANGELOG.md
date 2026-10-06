@@ -5,7 +5,7 @@ The Factorio mods keep their own `changelog.txt`.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-`clock-generator/package.json` and `clock-generator-ui/package.json` share the same version.
+`clock-generator/package.json`, `clock-generator-ui/package.json` and the sidecar mod (`clock-generator-sidecar/info.json`) share the same version; see Versioning in the README.
 
 ## [Unreleased]
 
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validation reports a missing inserter for the fuel of a burner machine, like it does for missing ingredients.
 - Recipes with more than one result, such as `jellynut-processing`. The result with the largest expected amount is the main product; the others are by-products. A by-product is made at its expected amount (its amount times its probability, with productivity applied except to the part of the amount the recipe ignores for productivity), and fractions carry over until they add up to a whole item. Inserters out of a machine can carry any of its results, and a machine is output full as soon as any of its results reaches the stack size of the item. An inserter that only takes by-products no machine in the config uses is not planned: it clears them from the machine whatever belt it fills, so it needs no export rate and adds nothing to the LCM.
 - Recordings of burner machines carry the fuel slot, the energy left in the burning fuel item and which fuel item is burning, and a machine out of fuel (`no_fuel`) counts as waiting when a recording is compared with the simulation. Recordings without them still load.
+- Pasting from the sidecar mod runs the data through a pipeline of steps. Each step returns either nothing or a sentence about what the user is missing because the mod is older than the version that exports it, and the sentences are folded into one message the import dialog shows, with the version that exported the data and one request to update the mod. A step is added for each feature of the config the sidecar exports from a version on. The first one says that biochambers from a sidecar older than 0.6.0 have no energy consumption.
 
 ### Changed
 - Generating a clock names the inserter that is missing from the transfer plan, with its source, sink and items, instead of failing with `No value found for key`. A clock cannot yet be generated for a config with an inserter that fills a fuel slot.
