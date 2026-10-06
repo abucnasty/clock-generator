@@ -358,6 +358,19 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    describe("a machine with a by-product", () => {
+        it("is stable as built when an inserter takes the by-product off for good", async () => {
+            // jellynut-processing makes jelly for two machines and the seed at 2%; the seeds fill their stack of 10 and
+            // block the machine unless the inserter taking them off picks them up although they are not its main product
+            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
+            const result = generateClockForConfig(config, { verify_as_built: true, logger: { log() {}, warn() {}, error() {}, debug() {} } });
+
+            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.actual_output_items).toBeGreaterThan(0);
+            expect(result.stability_check.as_built?.is_stable).toBe(true);
+        });
+    });
+
     describe("validateConfig", () => {
         it("returns the transfer plan a generation uses, without generating", async () => {
             const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);

@@ -196,11 +196,17 @@ function canPickupFromEntity(inserter_state: InserterState, entity_state: Entity
     }
 
     if (EntityState.isMachine(entity_state)) {
-        const output_item_name = entity_state.machine.output.ingredient.name;
-        const output_quantity = entity_state.inventoryState.getQuantity(output_item_name);
         // TODO: this should be configurable, setting to stack size for now
         const output_threshold = 1
-        if (output_quantity >= output_threshold && canPickupItem(inserter_state, output_item_name)) {
+        // a hand holds one kind of item, so a hand with something in it can only take more of that
+        const held_item_name = inserter_state.held_item?.item_name;
+        // any result of the machine, not only its main product: a by-product inserter takes the by-product
+        const picks_an_output = entity_state.machine.outputs.some(output =>
+            (held_item_name === undefined || held_item_name === output.item_name)
+            && entity_state.inventoryState.getQuantity(output.item_name) >= output_threshold
+            && canPickupItem(inserter_state, output.item_name)
+        );
+        if (picks_an_output) {
             return true;
         }
     }
