@@ -50,10 +50,11 @@ function RanOutAlert({ run }: { run: FuelRunView }) {
             </Alert>
         );
     }
-    const lowest = Math.min(...run.levels.map(levels => levels.min_level));
+    const lowest = run.levels.length > 0 ? Math.min(...run.levels.map(levels => levels.min_level)) : null;
     return (
         <Alert severity={run.fuelSwingsRecorded ? 'success' : 'warning'} sx={{ mb: 2 }}>
-            {`No machine ran out of fuel over the ${span} simulated. The lowest any machine got was ${lowest.toFixed(2)} items.`}
+            {`No machine ran out of fuel over the ${span} simulated.`}
+            {lowest !== null && ` The lowest any machine got was ${lowest.toFixed(2)} items.`}
             {!run.fuelSwingsRecorded && ' No fuel inserter swung in that time, so the refills are not shown.'}
         </Alert>
     );

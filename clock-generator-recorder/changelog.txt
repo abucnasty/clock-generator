@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.3.0
+Date: 2026-10-06
+  Features:
+    - Setting "Minimum ticks to record": keeps recording whole clock periods until at least that many ticks are recorded, for a longer look at slow things like fuel
+    - Up to 100000 clock periods can be recorded, where 100 was the most
+---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 2026-10-05
   Features:

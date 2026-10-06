@@ -113,10 +113,11 @@ function clockEvery(
 }
 
 /**
- * Fuel is burned while a machine crafts, and a machine burns a little more than its crafting share predicts (up to 3.5%
- * in recordings), so the share is counted this much higher.
+ * Fuel is burned while a machine crafts, and a machine burns more than its crafting share predicts: each time it stops
+ * and starts it spends most of a tick's fuel without crafting (up to 5.3% more in recordings). The share is counted
+ * this much higher.
  */
-const CRAFTING_SHARE_MARGIN = 1.05;
+const CRAFTING_SHARE_MARGIN = 1.1;
 
 /**
  * The fuel clock of an inserter. The fuel slot stops a swing once it holds its limit, so at a window the slot has
@@ -129,6 +130,8 @@ const CRAFTING_SHARE_MARGIN = 1.05;
  * crafts more than planned, as it can while a build starts up, may run out of fuel for a few ticks before a window.
  *
  * `index` staggers the windows of the inserters that fill the same machine, so they do not all start on the same tick.
+ * With `shared_clock_ticks`, the ticks one clock counts for the period and every fuel clock, the window repeats every
+ * divisor of that.
  */
 export function fuelClockFor(
     inserter: Inserter,
@@ -136,21 +139,78 @@ export function fuelClockFor(
     entity_registry: ReadableEntityRegistry,
     index: number = 0,
     crafting_share: number = 1,
+    shared_clock_ticks: number | null = null,
 ): InserterClock {
+    const slot = machine.fuel_slot;
+    if (!machine.fuel_consumption || !slot) {
+        throw new Error(`${machine} does not burn fuel`);
+    }
+
+    const items_in_slot_at_a_window = Math.min(handSizeFor(inserter, slot.fuel.item_name), slot.automated_insertion_limit);
+    const burn_interval_ticks = fuelBurnIntervalTicks(inserter, machine, crafting_share);
+    const swing_ticks = inserter.animation.total.ticks + 1;
+    // a little more often than the fuel lasts, where that lets one short clock hold every fuel clock
+    const interval_ticks = shared_clock_ticks === null
+        ? burn_interval_ticks
+        : largestDivisorAtMost(shared_clock_ticks, burn_interval_ticks, swing_ticks) ?? burn_interval_ticks;
+    return clockEvery(
+        inserter, "fuel", interval_ticks, pickupTicks(inserter, entity_registry, slot.fuel.item_name), null, index,
+        () => `${items_in_slot_at_a_window} ${slot.fuel.item_name} in the fuel slot of ${machine.entity_id.id}`,
+    );
+}
+
+/** Ticks the fuel a slot is sure to hold at a window lasts a machine that crafts `crafting_share` of the time */
+export function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, crafting_share: number = 1): number {
     const consumption = machine.fuel_consumption;
     const slot = machine.fuel_slot;
     if (!consumption || !slot) {
         throw new Error(`${machine} does not burn fuel`);
     }
-
-    const hand = handSizeFor(inserter, slot.fuel.item_name);
-    const items_in_slot_at_a_window = Math.min(hand, slot.automated_insertion_limit);
+    const items_in_slot_at_a_window = Math.min(handSizeFor(inserter, slot.fuel.item_name), slot.automated_insertion_limit);
     const burning_share = Math.min(1, Math.max(crafting_share, 0) * CRAFTING_SHARE_MARGIN) || 1;
-    const burn_interval_ticks = Math.floor(items_in_slot_at_a_window / (consumption.rate_per_tick * burning_share));
-    return clockEvery(
-        inserter, "fuel", burn_interval_ticks, pickupTicks(inserter, entity_registry, slot.fuel.item_name), null, index,
-        () => `${items_in_slot_at_a_window} ${slot.fuel.item_name} in the fuel slot of ${machine.entity_id.id}`,
-    );
+    return Math.floor(items_in_slot_at_a_window / (consumption.rate_per_tick * burning_share));
+}
+
+/** Longest the one clock for the period and the fuel clocks is made to count: 10 minutes */
+export const MAX_SHARED_FUEL_CLOCK_TICKS = 36_000;
+
+/** How many more enables than the fuel needs are taken for a shorter clock */
+export const SHARED_FUEL_CLOCK_TOLERANCE = 1.05;
+
+/**
+ * The ticks one clock counts to hold the period and every fuel clock: a few periods, with each fuel clock a divisor of
+ * it that is no longer than its fuel lasts. Fuel clocks of exactly the ticks their fuel lasts seldom share a factor
+ * with the period or each other, and the clock that holds them all counts for hours (839040 ticks for a period of 128
+ * with fuel clocks of 95 and 138). Looking a little more often gives a short one: 1408 ticks holds fuel clocks of 88
+ * and 128.
+ *
+ * It is the fewest periods whose fuel clocks enable no more than `SHARED_FUEL_CLOCK_TOLERANCE` times as often as the
+ * fuel needs, or, when no count up to `MAX_SHARED_FUEL_CLOCK_TICKS` does, the one that enables the least. Null when
+ * the period is not a whole number of ticks, or no count has a divisor for every fuel clock.
+ */
+export function sharedFuelClockTicks(
+    period_ticks: number,
+    fuel_clocks: ReadonlyArray<{ burn_interval_ticks: number; swing_ticks: number }>,
+): number | null {
+    if (!Number.isInteger(period_ticks) || period_ticks < 1 || fuel_clocks.length === 0) {
+        return null;
+    }
+    const needed = fuel_clocks.reduce((sum, clock) => sum + 1 / clock.burn_interval_ticks, 0);
+    let best: { ticks: number; enables: number } | null = null;
+    for (let ticks = period_ticks; ticks <= Math.max(period_ticks, MAX_SHARED_FUEL_CLOCK_TICKS); ticks += period_ticks) {
+        const moduli = fuel_clocks.map(clock => largestDivisorAtMost(ticks, clock.burn_interval_ticks, clock.swing_ticks));
+        if (moduli.some(modulus => modulus === null)) {
+            continue;
+        }
+        const enables = moduli.reduce((sum: number, modulus) => sum + 1 / modulus!, 0);
+        if (enables <= needed * SHARED_FUEL_CLOCK_TOLERANCE + 1e-12) {
+            return ticks;
+        }
+        if (best === null || enables < best.enables - 1e-12) {
+            best = { ticks, enables };
+        }
+    }
+    return best?.ticks ?? null;
 }
 
 /**
@@ -221,11 +281,16 @@ export function unplannedInserterClocks(
         return index;
     };
 
-    for (const inserter of fuelOnlyInserters(entity_registry)) {
+    const fuel_inserters = fuelOnlyInserters(entity_registry).flatMap(inserter => {
         const machine = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
-        if (Entity.isMachine(machine)) {
-            clocks.set(inserter.entity_id.id, fuelClockFor(inserter, machine, entity_registry, nextIndex(machine), crafting_shares.get(machine.entity_id.id) ?? 1));
-        }
+        return Entity.isMachine(machine) ? [{ inserter, machine, crafting_share: crafting_shares.get(machine.entity_id.id) ?? 1 }] : [];
+    });
+    const shared_clock_ticks = sharedFuelClockTicks(period_ticks, fuel_inserters.map(({ inserter, machine, crafting_share }) => ({
+        burn_interval_ticks: fuelBurnIntervalTicks(inserter, machine, crafting_share),
+        swing_ticks: inserter.animation.total.ticks + 1,
+    })));
+    for (const { inserter, machine, crafting_share } of fuel_inserters) {
+        clocks.set(inserter.entity_id.id, fuelClockFor(inserter, machine, entity_registry, nextIndex(machine), crafting_share, shared_clock_ticks));
     }
     for (const inserter of byProductOnlyInserters(entity_registry)) {
         const machine = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id);

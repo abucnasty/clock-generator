@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";
-import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, largestDivisorAtMost, unplannedInserterClocks } from "./unplanned-inserter-clock";
+import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, largestDivisorAtMost, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
 import { Entity, Machine } from "../../entities";
 import { SimulationContext } from "./simulation-context";
 
@@ -36,30 +36,31 @@ describe("fuel clocks", () => {
         expect(fuelOnlyInserters(registry).map(inserter => inserter.entity_id.id)).toEqual(["inserter:3"]);
     });
 
-    it("repeats on a clock of its own, as often as the fuel slot's limit lasts", async () => {
+    it("repeats on a clock of its own, nearly as seldom as the fuel slot's limit lasts", async () => {
         // 926% energy consumption: 2.565 nutrients a second, so the 5 nutrients the slot holds last 116 ticks
         const registry = await registryOf();
         const clock = unplannedInserterClocks(registry, 960).get("inserter:3")!;
 
         expect(clock.own_clock).toBe(true);
-        // not rounded down to a divisor of the 960 tick period, which would be 96
-        expect(clock.modulus).toBe(116);
+        // not a divisor of the 960 tick period, which would be 96, but of 7 periods: 6720 ticks
+        expect(clock.modulus).toBe(112);
+        expect(6720 % clock.modulus).toBe(0);
         expect(clock.window.end_inclusive).toBeLessThan(clock.modulus);
     });
 
     it("looks less often at the slot of a machine that crafts part of the time", async () => {
         const registry = await registryOf();
-        // crafting 80% of the time burns the 5 nutrients in 116 / 0.8 ticks, less the 5% the share is counted higher
+        // crafting 80% of the time burns the 5 nutrients in 116 / 0.8 ticks, less the 10% the share is counted higher: 132
         const clock = unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.8]])).get("inserter:3")!;
-        expect(clock.modulus).toBe(139);
+        expect(clock.modulus).toBeLessThanOrEqual(132);
+        expect(clock.modulus).toBeGreaterThanOrEqual(132 / 1.05);
         // a share of nearly all the time is not counted over all the time
-        expect(unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.99]])).get("inserter:3")!.modulus).toBe(116);
+        expect(unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.99]])).get("inserter:3")!.modulus).toBe(112);
     });
 
-    it("is the same whatever the clock period is", async () => {
+    it("is as seldom as the fuel lasts when the period is not a whole number of ticks, with a clock of its own", async () => {
         const registry = await registryOf();
-        expect(unplannedInserterClocks(registry, 64).get("inserter:3")!.modulus).toBe(116);
-        expect(unplannedInserterClocks(registry, 97).get("inserter:3")!.modulus).toBe(116);
+        expect(unplannedInserterClocks(registry, 960.5).get("inserter:3")!.modulus).toBe(116);
     });
 
     it("swings more often for a machine that burns fuel faster", async () => {
@@ -130,5 +131,48 @@ describe("by-product clocks", () => {
         // a prime clock period above the time a hand of seeds takes has no divisor between a swing and that time
         expect(() => byProductClockFor(inserter, machine as Machine, registry, 211))
             .toThrow(/cannot keep up: a hand of jellynut-seed the machine makes lasts/);
+    });
+});
+
+describe("sharedFuelClockTicks", () => {
+    const fuelClocks = (...burn_interval_ticks: number[]) => burn_interval_ticks.map(ticks => ({ burn_interval_ticks: ticks, swing_ticks: 12 }));
+    const moduliOf = (shared: number, ...burn_interval_ticks: number[]) => burn_interval_ticks.map(ticks => largestDivisorAtMost(shared, ticks, 12));
+
+    it("is the fewest periods whose divisors enable at most 5% more often than the fuel needs", () => {
+        // the rocket fuel build: 5 nutrients last 95 ticks in two machines and 138 in the third
+        const shared = sharedFuelClockTicks(128, fuelClocks(95, 95, 138))!;
+        expect(shared).toBe(23 * 128);
+        expect(moduliOf(shared, 95, 138)).toEqual([92, 128]);
+        // 11 periods give 88 and 128, 8% more enables than 95 and 138
+        expect(moduliOf(11 * 128, 95, 138)).toEqual([88, 128]);
+    });
+
+    it("is the same count for a period that divides another", () => {
+        expect(sharedFuelClockTicks(64, fuelClocks(95, 95, 138))).toBe(23 * 128);
+    });
+
+    it("is the period when its own divisors are close enough", () => {
+        expect(sharedFuelClockTicks(960, fuelClocks(96))).toBe(960);
+        expect(sharedFuelClockTicks(960, fuelClocks(97))).toBe(960);
+    });
+
+    it("is the count that enables the least when none up to 10 minutes is within 5%", () => {
+        // no count of 9000 ticks up to 10 minutes has a divisor from 91 to 95: 90 it is, 5.6% more enables, in one period
+        const shared = sharedFuelClockTicks(9000, fuelClocks(95))!;
+        expect(shared).toBe(9000);
+        expect(moduliOf(shared, 95)).toEqual([90]);
+        // 7201 = 19 x 379: one period has 19 only, and 4 periods have 76, the longest any count up to 10 minutes has
+        expect(sharedFuelClockTicks(7201, fuelClocks(200))).toBe(4 * 7201);
+        expect(moduliOf(4 * 7201, 200)).toEqual([76]);
+    });
+
+    it("is null when no count up to 10 minutes has a divisor for a fuel clock", () => {
+        // 30011 is prime, with no divisor from a swing's 12 ticks to 95, and two periods are over 10 minutes
+        expect(sharedFuelClockTicks(30011, fuelClocks(95))).toBeNull();
+    });
+
+    it("is null without fuel clocks or for a period that is not a whole number of ticks", () => {
+        expect(sharedFuelClockTicks(128, [])).toBeNull();
+        expect(sharedFuelClockTicks(128.5, fuelClocks(95))).toBeNull();
     });
 });
