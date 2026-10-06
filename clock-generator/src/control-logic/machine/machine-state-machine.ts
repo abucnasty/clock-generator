@@ -51,10 +51,12 @@ function create(args: {
         [ingredient_shortage_mode, new IngredientShortageModeTransitionEvaluator(
             machine_state,
             working_mode,
+            output_full_mode,
         )],
         [output_full_mode, new OutputFullModeTransitionEvaluator(
             machine_state,
             working_mode,
+            ingredient_shortage_mode,
         )],
     ]);
 

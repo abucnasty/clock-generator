@@ -6,7 +6,7 @@
  */
 
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, ShiftOptionsView, WorkerRequest, WorkerResponse } from './types';
+import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
@@ -71,6 +71,29 @@ function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['res
     return null;
 }
 
+/** The fuel plan with the part of the fuel run the page draws: the fuel levels and the fuel inserters' swings */
+function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result']): FuelViewData | null {
+    if (!result.fuel_plan) {
+        return null;
+    }
+    const view = result.fuel_consumption_view;
+    return {
+        plan: result.fuel_plan,
+        run: view ? {
+            periods: view.periods,
+            durationTicks: view.duration_ticks,
+            fuelSwingsRecorded: view.fuel_swings_recorded,
+            ranOutOfFuel: view.ran_out_of_fuel,
+            levels: view.fuel_levels,
+            swings: Object.fromEntries(view.transfer_history.entities
+                .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id))
+                .map(entity => [entity.entity_id, entity.transfers.map(transfer => (
+                    { start: transfer.start_tick, end: transfer.end_tick, amount: transfer.amount }
+                ))])),
+        } : null,
+    };
+}
+
 function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | null {
     if (!run) {
         return null;
@@ -91,6 +114,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         stateTransitionHistory: result.serializable_state_transition_history,
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
+        fuelView: fuelViewOf(result),
         clockWindows: result.clock_windows,
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),

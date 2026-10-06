@@ -198,6 +198,95 @@ describe("Machine State Machine", () => {
         expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
     });
 });
+/**
+ * The output block as recorded in Factorio 2.1: a machine that cannot start a craft shows full output while its
+ * output is at overload multiplier x recipe amount (productivity not counted) and ingredient shortage below it,
+ * but a machine with its ingredients keeps crafting past the block, up to the stack size.
+ */
+describe("Machine State Machine at the output block", () => {
+    // rocket-fuel-from-jelly in the gleba rocket fuel recordings: 7.09 ticks per craft, 1 rocket fuel per craft and
+    // 3 more from 300% productivity, output block 11 (overload multiplier 11 x 1), stack size 20
+    const createRocketFuel = (rocket_fuel: number, crafts_of_ingredients: number) => {
+        const machine_state = MachineState.forMachine(
+            createMachine("rocket-fuel-from-jelly", { type: MachineType.BIOCHAMBER, crafting_speed: 84.6655, productivity: 300 })
+        )
+        machine_state.fuelInventory.addQuantity("nutrients", 10)
+        machine_state.inventoryState.addQuantity("rocket-fuel", rocket_fuel)
+        machine_state.inventoryState.addQuantity("jelly", 30 * crafts_of_ingredients)
+        machine_state.inventoryState.addQuantity("bioflux", 2 * crafts_of_ingredients)
+        const state_machine = MachineStateMachine.create({ machine_state })
+        return { machine_state, state_machine }
+    }
+
+    test("the output block is the overload multiplier times the recipe amount, without productivity", () => {
+        const { machine_state } = createRocketFuel(0, 0)
+        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "rocket-fuel", quantity: 11, max_stack_size: 20 })
+    })
+
+    // the lowest output the game showed full output at and the highest it showed ingredient shortage at, per recording
+    test.each([
+        { recipe: "advanced-circuit", crafting_speed: 100.0625, productivity: 175, block: 21 },         // full at 21, short at 20
+        { recipe: "engine-unit", crafting_speed: 49.0859375, productivity: 100, block: 7 },             // full at 16, short at 0
+        { recipe: "chemical-science-pack", crafting_speed: 66.0253125, productivity: 100, block: 10 },  // full at 12, short at 8
+        { recipe: "utility-science-pack", crafting_speed: 52.9159375, productivity: 100, block: 12 },   // full at 14, short at 6
+        { recipe: "casting-low-density-structure", crafting_speed: 225.331, productivity: 300, block: 19 }, // full at 20, short at 16
+        { recipe: "tungsten-plate", crafting_speed: 169.331, productivity: 150, block: 21 },            // full at 28, short at 16
+    ])("$recipe blocks at $block like in game", ({ recipe, crafting_speed, productivity, block }) => {
+        const machine = createMachine(recipe, { crafting_speed, productivity })
+        expect(machine.output.outputBlock.quantity).toBe(block)
+    })
+
+    test("keeps crafting with its ingredients while its output is over the block", () => {
+        // in game a craft started with 12 rocket fuel in the output and finished at 14 (gleba recording, tick 65)
+        const { machine_state, state_machine } = createRocketFuel(12, 2)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.WORKING)
+        executeControlLogicForTicks(state_machine, 20)
+        expect(machine_state.craftCount).toBe(2)
+        expect(machine_state.inventoryState.getQuantity("rocket-fuel")).toBe(20)
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
+    })
+
+    test("is output full once out of ingredients with its output at the block, and short of ingredients under it", () => {
+        // in game: 16 rocket fuel and too little jelly shows full output, 8 left after a pickup shows ingredient shortage
+        const { machine_state, state_machine } = createRocketFuel(16, 0)
+        executeControlLogicForTicks(state_machine, 2)
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
+        machine_state.inventoryState.setQuantity("rocket-fuel", 11)
+        executeControlLogicForTicks(state_machine, 2)
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
+        machine_state.inventoryState.setQuantity("rocket-fuel", 8)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+    })
+
+    test("a full output machine works again as soon as its ingredients arrive, even at the block", () => {
+        // in game an advanced circuit machine at its block of 21 started a craft the tick its copper cable arrived
+        const { machine_state, state_machine } = createRocketFuel(12, 0)
+        executeControlLogicForTicks(state_machine, 2)
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
+        machine_state.inventoryState.addQuantity("jelly", 30)
+        machine_state.inventoryState.addQuantity("bioflux", 2)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.WORKING)
+        expect(machine_state.inventoryState.getQuantity("jelly")).toBe(0)
+    })
+
+    test("its inserters only fetch ingredients while the output is under the block", () => {
+        const { machine_state } = createRocketFuel(11, 0)
+        expect(MachineState.machineInputIsBlocked(machine_state, "jelly")).toBe(true)
+        machine_state.inventoryState.setQuantity("rocket-fuel", 10)
+        expect(MachineState.machineInputIsBlocked(machine_state, "jelly")).toBe(false)
+    })
+
+    test("an idle machine started with its output at the block shows full output", () => {
+        const { machine_state, state_machine } = createRocketFuel(11, 0)
+        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
+    })
+})
+
 describe("Machine State Machine with a fuel slot", () => {
     // 4s recipe at crafting speed 2: 120 ticks per craft, 1 MJ per craft, so one 2 MJ nutrient pays for 2 crafts
     const createBiochamberState = (mash: number, nutrients: number) => {

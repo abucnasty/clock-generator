@@ -1,0 +1,88 @@
+{
+  "target_output": {
+    "recipe": "nutrients",
+    "items_per_second": 3,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "nutrients-from-yumako-mash",
+      "productivity": 0,
+      "crafting_speed": 2,
+      "type": "biochamber",
+      "energy_consumption_bonus": 926.17
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 2
+      },
+      "stack_size": 16
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "belt",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "yumako-mash",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

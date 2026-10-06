@@ -15,7 +15,8 @@ export function simulationModeForInput(
     inserter: Inserter,
     sink_machine: Machine
 ): SimulationMode {
-    const machine_inputs = Array.from(sink_machine.inputs.values());
+    // the fuel slot takes only a few items, so an inserter filling it is limited by it like by any low insertion limit
+    const machine_inputs = sink_machine.getInsertableInputs();
     const filtered_items = inserter.filtered_items;
     const is_input_inserter = inserter.sink.entity_id.id === sink_machine.entity_id.id;
     assert(is_input_inserter, `Inserter ${inserter.entity_id} is not an input inserter for machine ${sink_machine.entity_id}`)

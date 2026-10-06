@@ -1,12 +1,17 @@
 import { MachineState } from "../../../state";
 import { ModeTransitionEvaluator, ModeTransition } from "../../mode";
-import { MachineMode, MachineWorkingMode } from "../modes";
+import { MachineIngredientShortageMode, MachineMode, MachineWorkingMode } from "../modes";
 
+/**
+ * Full output is only the status of a machine that cannot craft: it works again as soon as a craft can start,
+ * even with its output still at the output block, and waits for ingredients once the output drops under it.
+ */
 export class OutputFullModeTransitionEvaluator implements ModeTransitionEvaluator<MachineMode> {
-    
+
     constructor(
         private readonly machine_state: MachineState,
         private readonly working_mode: MachineWorkingMode,
+        private readonly ingredient_shortage_mode: MachineIngredientShortageMode,
     ) {}
 
     public onEnter(fromMode: MachineMode): void {}
@@ -14,24 +19,14 @@ export class OutputFullModeTransitionEvaluator implements ModeTransitionEvaluato
     public onExit(toMode: MachineMode): void {}
 
     public evaluateTransition(): ModeTransition<MachineMode> {
-        if (!this.working_mode.hasEnoughInputsForCraft()) {
-            return ModeTransition.NONE
+        if (this.working_mode.hasEnoughInputsForCraft()) {
+            return ModeTransition.transition(this.working_mode, "machine has enough inputs and room for a craft");
         }
 
-        const current_output = this.working_mode.output_item;
-        const output_block = this.machine_state.machine.output.outputBlock
-
-
-        const number_of_inputs = this.machine_state.machine.inputs.size;
-
-        if (number_of_inputs === 0) { // fluid only recipes
-            if (current_output.quantity < output_block.max_stack_size) {
-                return ModeTransition.transition(this.working_mode, `machine has dropped under max stack size of ${output_block.max_stack_size} ${current_output.item_name}`);
-            }
-        }
-
-        if (current_output.quantity < output_block.quantity) {
-            return ModeTransition.transition(this.working_mode, `output "${current_output.item_name}" ${current_output.quantity} < ${output_block.quantity}`);
+        if (this.working_mode.outputFullReason() === null) {
+            const output_item = this.working_mode.output_item;
+            const output_block = this.machine_state.machine.output.outputBlock;
+            return ModeTransition.transition(this.ingredient_shortage_mode, `output "${output_item.item_name}" ${output_item.quantity} < ${output_block.quantity} and not enough inputs for craft`);
         }
         return ModeTransition.NONE;
     }

@@ -3,6 +3,8 @@ import type {
     CheckedShiftRow,
     ClockInsight,
     ConfigValidation,
+    FuelLevelSeries,
+    FuelPlan,
     ShiftRangeEdge,
     ClockAlternativeContext,
     ClockAlternativeRun,
@@ -17,7 +19,36 @@ import type {
     SwingBackoffReport,
 } from 'clock-generator/browser';
 
+/** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
+export interface FuelSwing {
+    start: number;
+    end: number;
+    amount: number;
+}
+
+/** The exported clock run over several periods, long enough to show the burner machines being refilled */
+export interface FuelRunView {
+    /** Periods of the clock the run covers; the clock itself stays one period */
+    periods: number;
+    durationTicks: number;
+    /** Whether a fuel inserter swung in the run; false when none did even over the longest run tried */
+    fuelSwingsRecorded: boolean;
+    ranOutOfFuel: boolean;
+    /** The fuel each burner machine held over the run */
+    levels: FuelLevelSeries[];
+    /** The swings of each fuel inserter, by inserter id */
+    swings: Record<string, FuelSwing[]>;
+}
+
+/** Fuel is outside the transfer plan: what the burner machines use, the fuel clocks exported for them, and a run of them */
+export interface FuelViewData {
+    plan: FuelPlan;
+    /** Null when the run was not made */
+    run: FuelRunView | null;
+}
+
 /** Every place tried for the swings a potential clock moved off their planned start */
+
 export interface ShiftOptionsView {
     moved: 'swings' | 'output-swing';
     /** Row (see `rows`) this clock moved, and by how many ticks (negative is earlier) */
@@ -57,6 +88,8 @@ export interface ClockAlternativeView {
      */
     clockOnlyTransferHistory: SerializableTransferHistory | null;
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    /** Fuel use and the exported fuel clocks; null when no inserter only fills a fuel slot */
+    fuelView: FuelViewData | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
     /** What the simulation found that is worth explaining about the build and this clock */

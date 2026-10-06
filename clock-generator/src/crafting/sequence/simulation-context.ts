@@ -54,13 +54,8 @@ export class SimulationContext {
 export type MachineStateMachineInterceptor = (entity_state: EntityState) => MachineStateMachine | null
 export type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterStateMachine | null
 
-function createSimulationContextFromConfig(
-    config: Config,
-    interceptors: {
-        machine_interceptor?: MachineStateMachineInterceptor,
-        inserter_interceptor?: InserterStateMachineInterceptor,
-    } = {}
-): SimulationContext {
+/** The entities of a config: belts, machines, chests, inserters and drills, without any state */
+export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
     const entity_registry = new EntityRegistry();
 
     const inserter_factory = new InserterFactory(entity_registry);
@@ -94,6 +89,17 @@ function createSimulationContextFromConfig(
         })
     }
 
+    return entity_registry;
+}
+
+function createSimulationContextFromConfig(
+    config: Config,
+    interceptors: {
+        machine_interceptor?: MachineStateMachineInterceptor,
+        inserter_interceptor?: InserterStateMachineInterceptor,
+    } = {}
+): SimulationContext {
+    const entity_registry = createEntityRegistryFromConfig(config);
 
     const state_factory = new EntityStateFactory(entity_registry);
 

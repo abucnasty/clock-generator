@@ -20,6 +20,7 @@ export class MachineState implements EntityState {
     public static machineIsOutputBlocked = machineIsOutputBlocked
     public static machineAcceptsItem = machineAcceptsItem
     public static insertItem = insertItem
+    public static insertableQuantity = insertableQuantity
     public static print = printMachineState
 
     constructor(
@@ -85,6 +86,12 @@ function clone(machineState: MachineState): MachineState {
 function insertItem(machineState: MachineState, itemName: string, quantity: number): void {
     const inventory = isFuel(machineState.machine, itemName) ? machineState.fuelInventory : machineState.inventoryState;
     inventory.addQuantity(itemName, quantity);
+}
+
+/** How many of an item an inserter has put into a machine: the ingredient, or the fuel in the fuel slot */
+function insertableQuantity(machineState: MachineState, itemName: string): number {
+    const inventory = isFuel(machineState.machine, itemName) ? machineState.fuelInventory : machineState.inventoryState;
+    return inventory.getQuantity(itemName);
 }
 
 function machineAcceptsItem(machineState: MachineState, itemName: string): boolean {

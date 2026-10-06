@@ -71,9 +71,10 @@ export class DeciderCombinatorEntityBuilder {
 
 function clock(
     threshold: number,
-    step: number = 1
+    step: number = 1,
+    /** The signal the clock counts on */
+    clockSignalId: SignalId = SignalId.clock,
 ): DeciderCombinatorEntityBuilder {
-    const clockSignalId = SignalId.clock
 
     const condition = new DeciderCombinatorConditionBuilder(clockSignalId)
         .setComparator(ComparatorString.LESS_THAN)

@@ -98,6 +98,7 @@ function App() {
         stateTransitionHistory,
         clockOnlyTransferHistory,
         clockOnlyStateTransitionHistory,
+        fuelView,
         clockWindows,
         shiftOptions,
         simulationDurationTicks,
@@ -474,6 +475,7 @@ function App() {
                                 stateTransitionHistory={stateTransitionHistory}
                                 clockOnlyTransferHistory={clockOnlyTransferHistory}
                                 clockOnlyStateTransitionHistory={clockOnlyStateTransitionHistory}
+                                fuelView={fuelView}
                                 clockWindows={clockWindows}
                                 shiftOptions={shiftOptions}
                                 swingBackoffReport={swingBackoffReport}

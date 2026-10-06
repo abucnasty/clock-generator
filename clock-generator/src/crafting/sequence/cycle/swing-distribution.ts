@@ -261,7 +261,7 @@ function computeSwingDistributionForEntity(
         throw new Error(`No item transfers found for entity ${entity_id.id}`);
     }
     
-    const machine_input = sink_machine.inputs.get(primary_item);
+    const machine_input = sink_machine.getInsertableInput(primary_item);
     if (!machine_input) {
         throw new Error(`Machine ${sink_machine.entity_id.id} has no input for item ${primary_item}`);
     }
