@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Machine config gains an optional `energy_consumption_bonus` (percent, default 0) and `fuel` (defaults to the machine type's first accepted fuel). The UI offers a Biochamber machine type and an Energy Consumption field for it, and shows fuel consumption in the machine facts.
 - Fuel slot on burner machines. Inserters can drop fuel into a biochamber's fuel slot, up to 5 items, and the machine burns it while crafting, spending energy in proportion to crafting progress. A craft will not start without fuel, and a craft in progress waits for fuel and then carries on. The fuel slot is separate from the ingredients and output, so a biochamber making nutrients can also be fuelled with nutrients. A recipe that uses the fuel as an ingredient is not supported yet.
 - Validation reports a missing inserter for the fuel of a burner machine, like it does for missing ingredients.
+- Recipes with more than one result, such as `jellynut-processing`. The result with the largest expected amount is the main product; the others are by-products. A by-product is made at its expected amount (its amount times its probability, with productivity applied except to the part of the amount the recipe ignores for productivity), and fractions carry over until they add up to a whole item. Inserters out of a machine can carry any of its results, and a machine is output full as soon as any of its results reaches the stack size of the item. An inserter that only takes by-products no machine in the config uses is not planned: it clears them from the machine whatever belt it fills, so it needs no export rate and adds nothing to the LCM.
+
+### Changed
+- Generating a clock names the inserter that is missing from the transfer plan, with its source, sink and items, instead of failing with `No value found for key`. A clock cannot yet be generated for a config with an inserter that fills a fuel slot.
+- Sample config `gleba-rocket-fuel`: three biochambers making rocket fuel from jelly, with jellynut-seed as a by-product put on an export belt.
 
 ## [0.5.0] - 2026-10-05
 

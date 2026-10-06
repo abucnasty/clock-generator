@@ -1,4 +1,5 @@
 import { InventoryItem, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
+import { MachineOutput } from "../../../entities";
 import { MachineMode } from "./machine-mode";
 
 // absorbs floating point drift when summing fractional per-tick progress
@@ -43,6 +44,7 @@ export class MachineWorkingMode implements MachineMode {
 
             if (progress >= 1 - PROGRESS_EPSILON) {
                 this.addOutput(this.state.machine.output.ingredient.amount);
+                this.addByProducts();
                 this.state.craftCount += 1;
                 progress = 0;
             }
@@ -118,7 +120,40 @@ export class MachineWorkingMode implements MachineMode {
                 return false;
             }
         }
-        return this.hasOutputSpaceFor(this.state.machine.output.ingredient.amount);
+        return this.hasOutputSpaceFor(this.state.machine.output.ingredient.amount) && this.byProductsHaveSpace();
+    }
+
+    /** By-products block the machine only once their stack is full */
+    public byProductsHaveSpace(): boolean {
+        return this.byProducts.every(output => {
+            const quantity = this.inventory_state.getQuantity(output.item_name);
+            const max_stack_size = output.outputBlock.max_stack_size;
+            return quantity < max_stack_size && quantity + this.wholeItemsMadeByNextCraft(output) <= max_stack_size;
+        });
+    }
+
+    private get byProducts(): readonly MachineOutput[] {
+        return this.state.machine.outputs.slice(1);
+    }
+
+    private carryOf(output: MachineOutput): number {
+        return this.state.byProductCarry.get(output.item_name) ?? 0;
+    }
+
+    private wholeItemsMadeByNextCraft(output: MachineOutput): number {
+        return Math.floor(this.carryOf(output) + output.amount_per_craft.toDecimal() + PROGRESS_EPSILON);
+    }
+
+    /** A by-product is made at its expected amount: fractions carry over until they add up to a whole item */
+    private addByProducts(): void {
+        for (const output of this.byProducts) {
+            const total = this.carryOf(output) + output.amount_per_craft.toDecimal();
+            const whole = Math.floor(total + PROGRESS_EPSILON);
+            if (whole > 0) {
+                this.inventory_state.addQuantity(output.item_name, whole);
+            }
+            this.state.byProductCarry.set(output.item_name, Math.max(0, total - whole));
+        }
     }
 
     private hasOutputSpaceFor(amount: number): boolean {

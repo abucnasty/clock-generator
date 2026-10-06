@@ -1,4 +1,3 @@
-import { fraction } from "fractionability";
 import { ItemName } from "../../../data";
 import { TICKS_PER_SECOND } from "../../../data-types";
 import { BurnerEnergySource, Fuel } from "../fuel";
@@ -34,14 +33,15 @@ function fromCraftingSpeed(
     energyConsumptionBonusPercent: number = 0,
 ): FuelConsumption {
     const bonus = Math.max(energyConsumptionBonusPercent, MIN_ENERGY_CONSUMPTION_BONUS_PERCENT);
-    const kw = fraction(source.energy_usage_kw).multiply(fraction(100).add(fraction(bonus)).divide(100));
-    const itemsPerSecond = kw.divide(fuel.fuel_value_mj * 1000);
-    const secondsPerCraft = fraction(craftingTime).divide(craftingSpeed);
+    // plain numbers: decimal crafting speeds and bonuses make fractions with numerators and denominators too big to keep exact
+    const kw = source.energy_usage_kw * (100 + bonus) / 100;
+    const itemsPerSecond = kw / (fuel.fuel_value_mj * 1000);
+    const secondsPerCraft = craftingTime / craftingSpeed;
     return {
         item: fuel.item_name,
-        rate_per_second: itemsPerSecond.toDecimal(),
-        rate_per_tick: itemsPerSecond.divide(TICKS_PER_SECOND).toDecimal(),
-        amount_per_craft: itemsPerSecond.multiply(secondsPerCraft).toDecimal(),
+        rate_per_second: itemsPerSecond,
+        rate_per_tick: itemsPerSecond / TICKS_PER_SECOND.toDecimal(),
+        amount_per_craft: itemsPerSecond * secondsPerCraft,
     };
 }
 

@@ -25,6 +25,12 @@ describe("FuelConsumption", () => {
         expect(c.rate_per_second).toBeCloseTo(0.05);
     });
 
+    it("handles decimal crafting speeds and consumption bonuses", () => {
+        const c = FuelConsumption.fromCraftingSpeed(biochamber, NUTRIENTS, 56.122, 1, 926.17);
+        expect(c.rate_per_second).toBeCloseTo(0.25 * 10.2617);
+        expect(c.amount_per_craft).toBeCloseTo(0.25 * 10.2617 / 56.122);
+    });
+
     it("works for any energy source and fuel", () => {
         const c = FuelConsumption.fromCraftingSpeed(
             { energy_usage_kw: 90, fuels: [{ item_name: "coal", fuel_value_mj: 4 }] },

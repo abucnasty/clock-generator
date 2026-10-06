@@ -141,7 +141,7 @@ export class EnableControlFactory {
         const mode: SimulationMode = computeSimulationMode(
             sink_state.machine,
             inserter,
-            this.entity_transfer_map.getOrThrow(inserter.entity_id),
+            this.transferCountOf(inserter),
         );
 
         if (mode === SimulationMode.LOW_INSERTION_LIMITS) {
@@ -336,7 +336,7 @@ export class EnableControlFactory {
         const mode: SimulationMode = computeSimulationMode(
             sink_state.machine,
             inserter,
-            this.entity_transfer_map.getOrThrow(inserter.entity_id),
+            this.transferCountOf(inserter),
         );
 
         // For fractional swings, use clocked control to schedule inserters at end of subcycle
@@ -447,7 +447,7 @@ export class EnableControlFactory {
      */
     private shouldUseClockedControlForInputs(inserter: Inserter, machine: Machine): boolean {
         const insertion_duration = machine.insertion_duration.tick_duration.toDecimal();
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter);
         const total_transfer_duration = inserter.animation.total.ticks * Math.ceil(transfer_count.total_transfer_count.toDecimal());
 
         const ratios_are_all_equal = new Set(transfer_count.item_transfers.map(it => it.transfer_count.toDecimal())).size === 1;
@@ -497,7 +497,7 @@ export class EnableControlFactory {
         const mode = computeSimulationMode(
             source_state.machine,
             inserter_state.inserter,
-            this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id),
+            this.transferCountOf(inserter_state.inserter),
         );
 
         // For fractional swings, use simple clocked ranges at the BEGINNING of each sub-cycle
@@ -638,7 +638,7 @@ export class EnableControlFactory {
         inserter_state: InserterState,
         sink_state: MachineState,
     ): OpenRange[] {
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter_state.inserter);
         const animation = inserter_state.inserter.animation;
         const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
 
@@ -704,7 +704,7 @@ export class EnableControlFactory {
         inserter_state: InserterState,
         sink_state: MachineState,
     ): OpenRange[] {
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter_state.inserter);
         const animation = inserter_state.inserter.animation;
         const total_transfer_duration = Duration.ofTicks(
             animation.total.ticks * Math.ceil(transfer_count.total_transfer_count.toDecimal())
@@ -937,14 +937,14 @@ export class EnableControlFactory {
         inserter_state: InserterState,
         source_state: MachineState,
     ): OpenRange {
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter_state.inserter);
         const total_transfer_count = Math.ceil(transfer_count.total_transfer_count.toDecimal());
         const animation = inserter_state.inserter.animation;
 
         const mode = computeSimulationMode(
             source_state.machine,
             inserter_state.inserter,
-            this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id),
+            this.transferCountOf(inserter_state.inserter),
         );
 
         if (mode === SimulationMode.LOW_INSERTION_LIMITS) {
@@ -1040,7 +1040,7 @@ export class EnableControlFactory {
      * spreads over as many cycles as its denominator, e.g. 5/2 swings is 2 then 3.
      */
     private plannedSwingsOntoBelt(inserter: Inserter): EnableControl {
-        const swings_per_cycle = this.entity_transfer_map.getOrThrow(inserter.entity_id).total_transfer_count;
+        const swings_per_cycle = this.transferCountOf(inserter).total_transfer_count;
         const numerator = swings_per_cycle.getNumerator;
         const cycles = swings_per_cycle.getDenominator;
         const cycle_ticks = this.crafting_cycle_plan.total_duration.ticks;
@@ -1128,6 +1128,19 @@ export class EnableControlFactory {
      * integer. This detects cases like copper=1/2 + gear=1/2 = 1 total that arise when
      * the user sets terminal_swing_count below the natural maximum value.
      */
+    /** The planned transfers of an inserter, which clock windows are made from */
+    private transferCountOf(inserter: Inserter) {
+        const transfer_count = this.entity_transfer_map.get(inserter.entity_id);
+        if (!transfer_count) {
+            const items = Array.from(inserter.filtered_items).join(", ");
+            throw new Error(
+                `Inserter ${inserter.entity_id.id.replace("inserter:", "")} (${inserter.source.entity_id.id} to ${inserter.sink.entity_id.id}, carrying ${items}) `
+                + `is missing from the transfer plan, so no clock windows can be made for it.`
+            );
+        }
+        return transfer_count;
+    }
+
     private hasFractionalPerItemTransfers(inserter: Inserter): boolean {
         const transfer_count = this.entity_transfer_map.get(inserter.entity_id);
         if (!transfer_count || transfer_count.item_transfers.length <= 1) {

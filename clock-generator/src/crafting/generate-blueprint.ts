@@ -898,10 +898,29 @@ function clipBeltFillerWindows(
     })));
 }
 
+/**
+ * An inserter that only takes by-products no machine in the config uses just clears them out of the machine,
+ * whatever it puts them on. Nothing in the chain depends on its rate, so it is not planned.
+ */
+function takesUnusedByProductsOnly(entity_registry: ReadableEntityRegistry, inserter: Inserter): boolean {
+    const source = entity_registry.getEntityById(inserter.source.entity_id);
+    if (!source || !Entity.isMachine(source) || inserter.filtered_items.size === 0) {
+        return false;
+    }
+    const machines = entity_registry.getAll().filter(Entity.isMachine);
+    const by_products = new Set(source.outputs.slice(1).map(it => it.item_name));
+    return Array.from(inserter.filtered_items).every(item_name =>
+        by_products.has(item_name) && !machines.some(machine => machine.inputs.has(item_name))
+    );
+}
+
 /** An inserter filling a belt nothing in the config empties has no rate to plan for */
 function assertBeltFillersPlanned(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap): void {
     for (const inserter of entity_registry.getAll().filter(Entity.isInserter)) {
         if (!EntityId.isBelt(inserter.sink.entity_id) || swing_counts.has(inserter.entity_id)) {
+            continue;
+        }
+        if (takesUnusedByProductsOnly(entity_registry, inserter)) {
             continue;
         }
         const items = Array.from(inserter.filtered_items).join(", ");

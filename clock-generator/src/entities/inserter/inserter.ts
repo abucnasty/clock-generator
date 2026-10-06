@@ -54,7 +54,7 @@ export class InserterFactory {
         if (source.type === EntityType.MACHINE) {
             const machine = this.entity_registry.getEntityByIdOrThrow(EntityId.forMachine(source.id))
             assertIsMachine(machine)
-            source_provided_items.add(machine.output.ingredient.name)
+            machine.outputs.forEach(output => source_provided_items.add(output.item_name))
         }
 
         if (source.type === EntityType.CHEST) {

@@ -28,6 +28,8 @@ export class MachineState implements EntityState {
         public readonly craftingProgress: ProgressState,
         public readonly bonusProgress: ProgressState,
         public readonly fuelProgress: FuelProgressState,
+        /** Fractions of a by-product made so far that do not yet add up to a whole item */
+        public readonly byProductCarry: Map<string, number>,
         public readonly inventoryState: WritableInventoryState,
         /** The burner fuel slot, kept apart from the ingredients and output since the fuel can also be the product */
         public readonly fuelInventory: WritableInventoryState,
@@ -43,6 +45,7 @@ export class MachineState implements EntityState {
 
 function forMachine(machine: Machine): MachineState {
     const inventoryState = InventoryState.createFromMachineInputs(machine.inputs);
+    machine.outputs.forEach(output => inventoryState.addQuantity(output.item_name, 0));
     const fuelInventory = InventoryState.empty();
     if (machine.fuel_slot) {
         fuelInventory.addQuantity(machine.fuel_slot.fuel.item_name, 0);
@@ -53,6 +56,7 @@ function forMachine(machine: Machine): MachineState {
         ProgressState.empty(),
         ProgressState.empty(),
         FuelProgressState.empty(),
+        new Map(),
         inventoryState,
         fuelInventory,
         0,
@@ -68,6 +72,7 @@ function clone(machineState: MachineState): MachineState {
         ProgressState.clone(machineState.craftingProgress),
         ProgressState.clone(machineState.bonusProgress),
         FuelProgressState.clone(machineState.fuelProgress),
+        new Map(machineState.byProductCarry),
         machineState.inventoryState.clone(),
         machineState.fuelInventory.clone(),
         machineState.craftCount,
