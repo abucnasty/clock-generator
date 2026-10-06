@@ -1,4 +1,4 @@
-import { ControlBehavior, Entity, EntityType, Position } from "../components";
+import { ControlBehavior, Entity, EntityType, fitPlayerDescription, Position } from "../components";
 
 export interface ConstantCombinatorEntity extends Entity {
     readonly name: EntityType;
@@ -25,7 +25,7 @@ export class ConstantCombinatorEntityBuilder {
     }
 
     public setPlayerDescription(description: string): ConstantCombinatorEntityBuilder {
-        this.player_description = description;
+        this.player_description = fitPlayerDescription(description.split("\n"));
         return this;
     }
 

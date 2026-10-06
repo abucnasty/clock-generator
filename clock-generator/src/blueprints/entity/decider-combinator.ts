@@ -13,7 +13,8 @@ import {
     EntityType,
     Position,
     SignalId,
-    DeciderCombinatorOutput
+    DeciderCombinatorOutput,
+    fitPlayerDescription,
 } from "../components";
 
 
@@ -46,12 +47,12 @@ export class DeciderCombinatorEntityBuilder {
     }
 
     public setPlayerDescription(description: string): DeciderCombinatorEntityBuilder {
-        this.player_description = description;
+        this.player_description = fitPlayerDescription(description.split("\n"));
         return this;
     }
 
     public setMultiLinePlayerDescription(description: string[]): DeciderCombinatorEntityBuilder {
-        this.player_description = description.join("\n");
+        this.player_description = fitPlayerDescription(description);
         return this;
     }
 
