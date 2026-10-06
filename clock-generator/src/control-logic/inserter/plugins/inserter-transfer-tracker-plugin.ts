@@ -1,3 +1,4 @@
+import { handSizeFor } from "../../../entities";
 import { OpenRange } from "../../../data-types";
 import { InserterHandContents, InserterState, InserterStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
@@ -77,7 +78,7 @@ export class InserterTransferTrackerPlugin implements ModePlugin<InserterMode> {
                 to_status: to_status,
             },
             // TODO: this assumes full transfer, should only work with stack inserters
-            amount: this.inserter_state.inserter.metadata.stack_size
+            amount: exited!.held_item?.quantity ?? handSizeFor(this.inserter_state.inserter, exited!.held_item?.item_name ?? "")
         };
         this.callback(inserter_transfer);
 

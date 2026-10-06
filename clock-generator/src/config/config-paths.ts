@@ -50,4 +50,5 @@ export const ConfigPaths = {
     LOW_DENSITY_TWO_FOUNDRY: path.join(CONFIG_SAMPLES_DIR, 'low-density-two-foundry-120-per-second.json'),
     LOGISTIC_SCIENCE_DI: path.join(CONFIG_SAMPLES_DIR, 'logistic-science-di.json'),
     GLEBA_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba-rocket-fuel', 'clock-config-rocket-fuel-1791211039496.json'),
+    JELLYNUT_PROCESSING_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'multi-output', 'jellynut-processing-rocket-fuel.json'),
 } as const;

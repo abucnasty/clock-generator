@@ -1,3 +1,4 @@
+import { handSizeFor } from "../../../entities";
 import assert from "../../../common/assert";
 import { ItemName } from "../../../data";
 import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -55,9 +56,15 @@ export class InserterPickupMode implements InserterMode {
             this.pickupFromChest(this.inserterState, source);
         }
 
-        if (this.heldItemQuantity() === this.inserterState.inserter.metadata.stack_size) {
+        if (this.isHandFull()) {
             return;
-        }        
+        }
+    }
+
+    /** A hand is full at the inserter's hand size for the item it holds */
+    private isHandFull(): boolean {
+        const held_item = this.inserterState.held_item;
+        return held_item !== null && held_item.quantity === handSizeFor(this.inserterState.inserter, held_item.item_name);
     }
 
     private heldItemQuantity(): number {
@@ -73,13 +80,12 @@ export class InserterPickupMode implements InserterMode {
         }
 
         const held_item = inserter_state.held_item
-        const inserter_stack_size = inserter_state.inserter.metadata.stack_size;
 
         if (held_item) {
             const lane = source.belt.lanes.find(lane => lane.ingredient_name === held_item.item_name);
             assert(lane, `No belt lane found for item ${held_item.item_name}`);
             // Pick up at most lane.stack_size items, but cap at remaining capacity
-            const remaining_capacity = inserter_stack_size - held_item.quantity;
+            const remaining_capacity = handSizeFor(inserter_state.inserter, held_item.item_name) - held_item.quantity;
             const pickup_quantity = Math.min(lane.stack_size, remaining_capacity);
             
             if (pickup_quantity <= 0) {
@@ -97,7 +103,7 @@ export class InserterPickupMode implements InserterMode {
                 const lane = source.belt.lanes.find(lane => lane.ingredient_name === item_name);
                 assert(lane, `No belt lane found for item ${item_name}`);
                 // Pick up at most lane.stack_size items, but cap at inserter stack size
-                const pickup_quantity = Math.min(lane.stack_size, inserter_stack_size);
+                const pickup_quantity = Math.min(lane.stack_size, handSizeFor(inserter_state.inserter, item_name));
                 inserter_state.held_item = { item_name: item_name, quantity: pickup_quantity };
                 inserter_state.inventoryState.addQuantity(item_name, pickup_quantity);
                 return;
@@ -115,7 +121,7 @@ export class InserterPickupMode implements InserterMode {
         const held_item = state.held_item ?? { item_name: output_item_name, quantity: 0 }
 
         const pickup_quantity = Math.min(
-            state.inserter.metadata.stack_size - held_item.quantity,
+            handSizeFor(state.inserter, held_item.item_name) - held_item.quantity,
             output_quantity
         );
 
@@ -145,7 +151,7 @@ export class InserterPickupMode implements InserterMode {
         const held_item = state.held_item ?? { item_name: first_available_item, quantity: 0 };
 
         const pickup_quantity = Math.min(
-            state.inserter.metadata.stack_size - held_item.quantity,
+            handSizeFor(state.inserter, held_item.item_name) - held_item.quantity,
             source.getCurrentQuantity(first_available_item)
         );
 
@@ -190,11 +196,17 @@ function canPickupFromEntity(inserter_state: InserterState, entity_state: Entity
     }
 
     if (EntityState.isMachine(entity_state)) {
-        const output_item_name = entity_state.machine.output.ingredient.name;
-        const output_quantity = entity_state.inventoryState.getQuantity(output_item_name);
         // TODO: this should be configurable, setting to stack size for now
         const output_threshold = 1
-        if (output_quantity >= output_threshold && canPickupItem(inserter_state, output_item_name)) {
+        // a hand holds one kind of item, so a hand with something in it can only take more of that
+        const held_item_name = inserter_state.held_item?.item_name;
+        // any result of the machine, not only its main product: a by-product inserter takes the by-product
+        const picks_an_output = entity_state.machine.outputs.some(output =>
+            (held_item_name === undefined || held_item_name === output.item_name)
+            && entity_state.inventoryState.getQuantity(output.item_name) >= output_threshold
+            && canPickupItem(inserter_state, output.item_name)
+        );
+        if (picks_an_output) {
             return true;
         }
     }

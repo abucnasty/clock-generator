@@ -1,5 +1,5 @@
 import { InserterConfig } from "../../config";
-import { ItemName } from "../../data";
+import { FactorioDataService, ItemName } from "../../data";
 import { BeltStackSize, Lane, ReadableBeltRegistry } from "../belt";
 import { EntityType } from "../entity-type";
 import { ReadableMachineRegistry } from "../machine";
@@ -22,7 +22,32 @@ export interface Inserter extends Entity {
     sink: InserterTarget;
     source: InserterTarget;
     filtered_items: Set<ItemName>;
+    /** Items per hand for each item it carries; see handSizeFor */
+    hand_sizes?: ReadonlyMap<ItemName, number>;
     animation: InserterAnimation;
+}
+
+/**
+ * Items an inserter moves per swing of an item. A hand never holds more than the item stacks to, and an inserter
+ * dropping on a belt unloads early rather than wait for a count that would leave a partial stack on the belt: an
+ * item that stacks to 10 on a belt lane of 4 moves 8 per swing, not 10 (it would drop 4, 4 and 2).
+ */
+export function handSizeFor(inserter: Inserter, item_name: ItemName): number {
+    return inserter.hand_sizes?.get(item_name) ?? inserter.metadata.stack_size;
+}
+
+function effectiveHandSize(inserter_stack_size: number, item_name: ItemName, belt_lane_stack_size?: number): number {
+    let item_stack_size = Number.POSITIVE_INFINITY;
+    try {
+        item_stack_size = FactorioDataService.findItemOrThrow(item_name).stack_size;
+    } catch {
+        // an item the data does not know has no stack size to limit the hand
+    }
+    const capacity = Math.min(inserter_stack_size, item_stack_size);
+    if (belt_lane_stack_size === undefined || capacity < belt_lane_stack_size) {
+        return capacity;
+    }
+    return Math.floor(capacity / belt_lane_stack_size) * belt_lane_stack_size;
 }
 
 
@@ -96,15 +121,23 @@ export class InserterFactory {
 
         // Calculate belt drop metadata if sink is a belt
         let beltDropMetadata: BeltDropMetadata | undefined;
+        const hand_sizes = new Map<ItemName, number>();
         if (sink.type === EntityType.BELT) {
             const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(sink.id));
             assertIsBelt(belt);
             const selectedLane = this.selectLaneForDrop(belt.lanes, filtered_items);
+            filtered_items.forEach(item_name => {
+                const lane = belt.lanes.find(it => it.ingredient_name === item_name) ?? selectedLane;
+                hand_sizes.set(item_name, effectiveHandSize(config.stack_size, item_name, lane.stack_size));
+            });
             beltDropMetadata = {
                 belt_speed: belt.belt_speed,
                 belt_stack_size: selectedLane.stack_size as BeltStackSize,
-                inserter_stack_size: config.stack_size
+                inserter_stack_size: hand_sizes.get(selectedLane.ingredient_name)
+                    ?? Math.min(config.stack_size, ...Array.from(hand_sizes.values()))
             };
+        } else {
+            filtered_items.forEach(item_name => hand_sizes.set(item_name, effectiveHandSize(config.stack_size, item_name)));
         }
 
         const metadata = InserterMetadata.create(
@@ -128,6 +161,7 @@ export class InserterFactory {
                 item_names: sink_consumed_items
             },
             filtered_items,
+            hand_sizes,
             animation: InserterAnimation.fromMetadata(metadata.animation)
         }
     }

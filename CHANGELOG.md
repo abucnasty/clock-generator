@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recordings of burner machines carry the fuel slot, the energy left in the burning fuel item and which fuel item is burning, and a machine out of fuel (`no_fuel`) counts as waiting when a recording is compared with the simulation. Recordings without them still load.
 - Pasting from the sidecar mod runs the data through a pipeline of steps. Each step returns either nothing or a sentence about what the user is missing because the mod is older than the version that exports it, and the sentences are folded into one message the import dialog shows, with the version that exported the data and one request to update the mod. A step is added for each feature of the config the sidecar exports from a version on. The first one says that biochambers from a sidecar older than 0.6.0 have no energy consumption.
 
+### Fixed
+- An inserter moves at most what the item stacks to, and when it drops on a belt it unloads early instead of waiting for a count that would leave a partial stack on the belt. An item that stacks to 10 on a belt lane of 4 moves 8 per swing, not the inserter's stack size. The transfer plan, the simulation and the clock use this hand size instead of the inserter's stack size for every item and inserter.
+- An inserter taking a by-product off a machine picks it up: it only looked for the machine's main product, so an inserter filtered to a by-product never picked anything up, the by-product filled its stack and blocked the machine.
+
 ### Changed
 - Generating a clock names the inserter that is missing from the transfer plan, with its source, sink and items, instead of failing with `No value found for key`. A clock cannot yet be generated for a config with an inserter that fills a fuel slot.
 - Sample config `gleba-rocket-fuel`: three biochambers making rocket fuel from jelly, with jellynut-seed as a by-product put on an export belt.
