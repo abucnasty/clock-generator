@@ -3,7 +3,7 @@ import Fraction, { fraction } from "fractionability";
 import { Duration } from "../../../data-types/duration";
 import { TargetProductionRate } from "../../target-production-rate";
 import { EntityTransferCountMap } from "./swing-counts";
-import { Entity, ReadableEntityRegistry } from "../../../entities";
+import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 
@@ -75,12 +75,13 @@ function createPlan(
     });
 
     // All output inserters should have the same stack size for consistent cycle timing
-    const output_stack_size = output_inserters[0].metadata.stack_size;
+    const output_item = target_production_rate.machine_production_rate.item;
+    const output_stack_size = handSizeFor(output_inserters[0], output_item);
     for (const inserter of output_inserters) {
         assert(
-            inserter.metadata.stack_size === output_stack_size,
+            handSizeFor(inserter, output_item) === output_stack_size,
             `All output inserters must have the same stack size. ` +
-            `Expected ${output_stack_size} but found ${inserter.metadata.stack_size} on inserter for machine ${inserter.source.entity_id.id}`
+            `Expected ${output_stack_size} but found ${handSizeFor(inserter, output_item)} on inserter for machine ${inserter.source.entity_id.id}`
         );
     }
 

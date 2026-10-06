@@ -1,5 +1,5 @@
 import assert from "../../../common/assert";
-import { EntityId, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
+import { EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
 import { EntityTransferCountMap } from "../cycle/swing-counts";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -186,7 +186,7 @@ export class EnableControlFactory {
         sink_state: ChestState,
     ): EnableControl {
         const source_item_name = source_state.machine.output.item_name;
-        const stack_size = inserter.metadata.stack_size;
+        const stack_size = handSizeFor(inserter, source_item_name);
 
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
@@ -354,7 +354,7 @@ export class EnableControlFactory {
                 clocked_control,
                 this.sourceIsGreaterThanStackSize(
                     source_state,
-                    inserter.metadata.stack_size,
+                    handSizeFor(inserter, source_item_name),
                 ),
                 this.latchedUntilLessThanMinimum(
                     sink_state,
@@ -365,7 +365,7 @@ export class EnableControlFactory {
         }
 
         if (mode === SimulationMode.LOW_INSERTION_LIMITS) {
-            if (sink_state.machine.output.outputBlock.quantity < inserter.metadata.stack_size) {
+            if (sink_state.machine.output.outputBlock.quantity < handSizeFor(inserter, source_item_name)) {
                 return EnableControl.always
             }
             return this.latchedUntilLessThanMinimum(
@@ -375,7 +375,7 @@ export class EnableControlFactory {
             )
         }
 
-        if (source_state.machine.output.outputBlock.quantity < inserter.metadata.stack_size) {
+        if (source_state.machine.output.outputBlock.quantity < handSizeFor(inserter, source_item_name)) {
             return EnableControl.all([
                 this.latchedUntilLessThanMinimum(
                     sink_state,
@@ -389,7 +389,7 @@ export class EnableControlFactory {
             [
                 this.sourceIsGreaterThanStackSize(
                     source_state,
-                    inserter.metadata.stack_size,
+                    handSizeFor(inserter, source_item_name),
                 ),
                 this.latchedUntilLessThanMinimum(
                     sink_state,
@@ -525,7 +525,7 @@ export class EnableControlFactory {
                     clocked_control,
                     this.sourceIsGreaterThanStackSize(
                         source_state,
-                        inserter_state.inserter.metadata.stack_size,
+                        handSizeFor(inserter_state.inserter, source_state.machine.output.item_name),
                     )
                 ]
             )
@@ -886,7 +886,7 @@ export class EnableControlFactory {
         inserter: Inserter,
         total_transfer_count: number,
     ): boolean {
-        const stack_size = inserter.metadata.stack_size;
+        const stack_size = handSizeFor(inserter, source_machine.output.item_name);
         const ticks_to_stack = this.ticksToProduceStack(source_machine, stack_size);
         const cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
 
@@ -968,7 +968,7 @@ export class EnableControlFactory {
             // The enable window may wrap around the cycle boundary.
             if (this.isSlowMachine(source_state.machine, inserter_state.inserter, total_transfer_count)) {
                 const cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
-                const stack_size = inserter_state.inserter.metadata.stack_size;
+                const stack_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
                 const ticks_to_stack = this.ticksToProduceStack(source_state.machine, stack_size);
 
                 // Calculate when the inserter should start (when first stack is ready)
@@ -1078,7 +1078,7 @@ export class EnableControlFactory {
 
     private sourceIsGreaterThanStackSize(
         source: MachineState,
-        stack_size: InserterStackSize
+        stack_size: number
     ): EnableControl {
         return this.sourceIsGreaterThan(source, stack_size);
     }

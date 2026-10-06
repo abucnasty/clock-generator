@@ -1,5 +1,5 @@
 import Fraction, { fraction } from "fractionability";
-import { Belt, Chest, Entity, EntityId, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
+import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
 import { MachineIngredientRatios } from "./machine-ratios";
 import * as math from "mathjs"
@@ -106,7 +106,7 @@ function addBeltLaneConsumption(
             }));
         if (consumed.length > 0) {
             // the target output inserters are already planned
-            computeSwingCountsThroughBelt(belt, entity_registry, 1, consumed, result,
+            computeSwingCountsThroughBelt(belt, entity_registry, () => 1, consumed, result,
                 filler => !output_machine_ids.has(filler.source.entity_id.id));
         }
     }
@@ -139,12 +139,13 @@ function computeOutputSwingCounts(
         );
 
         // Validate all output inserters have the same stack size
-        const first_stack_size = inserters[0].metadata.stack_size;
+        const first_stack_size = handSizeFor(inserters[0], machine.output.item_name);
         for (const inserter of inserters) {
+            const hand_size = handSizeFor(inserter, machine.output.item_name);
             assert(
-                inserter.metadata.stack_size === first_stack_size,
+                hand_size === first_stack_size,
                 `All output inserters from machine ${machine.entity_id.id} must have the same stack size. ` +
-                `Found ${inserter.metadata.stack_size} but expected ${first_stack_size}.`
+                `Found ${hand_size} but expected ${first_stack_size}.`
             );
         }
     }
@@ -266,7 +267,7 @@ function computeInserterSwingCounts(
                 transfer_count: output_swing_count
             }],
             total_transfer_count: output_swing_count,
-            stack_size: output_inserter.metadata.stack_size
+            stack_size: handSizeFor(output_inserter, machine.output.item_name)
         })
     }
 
@@ -323,7 +324,7 @@ function computeInserterSwingCounts(
 
                 // Calculate the number of swings needed to deliver this amount
                 // swing_count = amount_per_inserter / stack_size
-                const swing_count = amount_per_inserter.divide(inserter.metadata.stack_size);
+                const swing_count = amount_per_inserter.divide(handSizeFor(inserter, item_name));
 
                 item_transfers.push({
                     item_name,
@@ -340,7 +341,7 @@ function computeInserterSwingCounts(
                 entity: inserter,
                 item_transfers,
                 total_transfer_count,
-                stack_size: inserter.metadata.stack_size
+                stack_size: handSizeFor(inserter, item_transfers[0].item_name)
             });
             computeUpstreamOfFiller(inserter, total_transfer_count, item_transfers, entity_registry, result);
         }
@@ -390,7 +391,7 @@ function computeInserterSwingCounts(
  * @param chest - The chest being used as a buffer
  * @param entity_registry - Registry containing all entities
  * @param downstream_transfer_count - The total transfer count from the downstream inserter
- * @param downstream_stack_size - The stack size of the downstream inserter
+ * @param downstream_hand_size - Items per hand of the downstream inserter, for an item
  * @param downstream_item_transfers - The item transfers from the downstream inserter
  * @param result - Accumulated results to add to
  */
@@ -398,7 +399,7 @@ function computeSwingCountsThroughChest(
     chest: Chest,
     entity_registry: ReadableEntityRegistry,
     downstream_transfer_count: Fraction,
-    downstream_stack_size: number,
+    downstream_hand_size: (item_name: string) => number,
     downstream_item_transfers: ItemTransfer[],
     result: EntityTransferCountMap
 ): void {
@@ -431,7 +432,7 @@ function computeSwingCountsThroughChest(
                 
                 // Adjust for stack size differences between filler and downstream inserters
                 // If filler has different stack size, it needs proportionally different swings
-                const stack_size_ratio = downstream_stack_size / filler_inserter.metadata.stack_size;
+                const stack_size_ratio = downstream_hand_size(downstream_transfer.item_name) / handSizeFor(filler_inserter, downstream_transfer.item_name);
                 const adjusted_transfer = transfer_per_filler.multiply(stack_size_ratio);
 
                 filler_item_transfers.push({
@@ -447,7 +448,7 @@ function computeSwingCountsThroughChest(
                 entity: filler_inserter,
                 item_transfers: filler_item_transfers,
                 total_transfer_count: filler_total_transfer_count,
-                stack_size: filler_inserter.metadata.stack_size
+                stack_size: handSizeFor(filler_inserter, filler_item_transfers[0].item_name)
             });
             computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result);
         }
@@ -470,7 +471,7 @@ function computeUpstreamOfFiller(
             filler_source,
             entity_registry,
             filler_total_transfer_count,
-            filler_inserter.metadata.stack_size,
+            handSizeFor(filler_inserter, filler_item_transfers[0].item_name),
             result,
             filler_inserter  // Pass the filler inserter as the known output inserter
         );
@@ -479,7 +480,7 @@ function computeUpstreamOfFiller(
             filler_source,
             entity_registry,
             filler_total_transfer_count,
-            filler_inserter.metadata.stack_size,
+            item_name => handSizeFor(filler_inserter, item_name),
             filler_item_transfers,
             result
         );
@@ -487,7 +488,7 @@ function computeUpstreamOfFiller(
         computeSwingCountsThroughBelt(
             filler_source,
             entity_registry,
-            filler_inserter.metadata.stack_size,
+            item_name => handSizeFor(filler_inserter, item_name),
             filler_item_transfers,
             result
         );
@@ -502,7 +503,7 @@ function computeUpstreamOfFiller(
 function computeSwingCountsThroughBelt(
     belt: Belt,
     entity_registry: ReadableEntityRegistry,
-    downstream_stack_size: number,
+    downstream_hand_size: (item_name: string) => number,
     downstream_item_transfers: ItemTransfer[],
     result: EntityTransferCountMap,
     include_filler: (filler: Inserter) => boolean = () => true
@@ -523,8 +524,8 @@ function computeSwingCountsThroughBelt(
             const fillers_for_item = fillers.filter(it => it.filtered_items.has(downstream_transfer.item_name)).length;
             const transfer_count = downstream_transfer.transfer_count
                 .divide(fillers_for_item)
-                .multiply(downstream_stack_size)
-                .divide(filler_inserter.metadata.stack_size);
+                .multiply(downstream_hand_size(downstream_transfer.item_name))
+                .divide(handSizeFor(filler_inserter, downstream_transfer.item_name));
             filler_item_transfers.push({ item_name: downstream_transfer.item_name, transfer_count });
             filler_total_transfer_count = filler_total_transfer_count.add(transfer_count);
         }
@@ -534,7 +535,7 @@ function computeSwingCountsThroughBelt(
                 entity: filler_inserter,
                 item_transfers: filler_item_transfers,
                 total_transfer_count: filler_total_transfer_count,
-                stack_size: filler_inserter.metadata.stack_size
+                stack_size: handSizeFor(filler_inserter, filler_item_transfers[0].item_name)
             });
             computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result);
         }

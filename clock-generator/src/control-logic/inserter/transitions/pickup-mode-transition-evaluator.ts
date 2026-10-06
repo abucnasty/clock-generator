@@ -1,3 +1,4 @@
+import { handSizeFor } from "../../../entities";
 import { EntityState, InserterState } from "../../../state";
 import { EnableControl } from "../../enable-control";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
@@ -22,7 +23,8 @@ export class PickupModeTransitionEvaluator implements ModeTransitionEvaluator<In
 
     public evaluateTransition(): ModeTransition<InserterMode> {
 
-        if (this.heldItemQuantity() === this.inserterState.inserter.metadata.stack_size) {
+        const held_item = this.inserterState.held_item;
+        if (held_item !== null && held_item.quantity === handSizeFor(this.inserterState.inserter, held_item.item_name)) {
             return ModeTransition.transition(this.swing_mode, `Picked up full stack of ${this.heldItemName()}`);
         }
 

@@ -1,6 +1,6 @@
 import assert from "../../common/assert";
 import { Duration } from "../../data-types";
-import { Inserter, InserterStackSize, Machine } from "../../entities";
+import { handSizeFor, Inserter, InserterStackSize, Machine } from "../../entities";
 import { EntityTransferCount } from "./cycle/swing-counts";
 
 export const SimulationMode = {
@@ -46,7 +46,7 @@ export function simulationModeForOutput(
     const output_block = source_machine.output.outputBlock;
 
     const expected_transfer_count = entity_transfer_count.total_transfer_count;
-    const expected_transfer_amount = expected_transfer_count.multiply(inserter.metadata.stack_size).toDecimal();
+    const expected_transfer_amount = expected_transfer_count.multiply(handSizeFor(inserter, source_machine.output.item_name)).toDecimal();
 
 
     if (expected_transfer_amount > output_block.quantity) {
@@ -56,7 +56,7 @@ export function simulationModeForOutput(
         return SimulationMode.PREVENT_DESYNCS;
     }
 
-    const any_input_has_low_insertion_limit = machine_inputs.some(it => it.automated_insertion_limit.quantity < inserter.metadata.stack_size);
+    const any_input_has_low_insertion_limit = machine_inputs.some(it => it.automated_insertion_limit.quantity < handSizeFor(inserter, source_machine.output.item_name));
 
     if (any_input_has_low_insertion_limit) {
         return SimulationMode.LOW_INSERTION_LIMITS;

@@ -6,7 +6,7 @@ import { DebugPluginFactory } from './sequence/debug/debug-plugin-factory';
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from './sequence/debug/debug-settings-provider';
 import { cloneSimulationContextWithInterceptors, SimulationContext } from './sequence/simulation-context';
 import { Duration, OpenRange } from '../data-types';
-import { assertIsMachine, Entity, EntityId, Inserter, Machine, ReadableEntityRegistry } from '../entities';
+import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from '../entities';
 import { TargetProductionRate } from "./target-production-rate";
 import { EntityState, InserterStatus, MachineState, MachineStatus } from "../state";
 import Fraction, { fraction } from "fractionability";
@@ -561,7 +561,8 @@ export function generateClockForConfig(
     if (options.full_hand_output) {
         // waiting for a full hand past the output block would refuse input drops every cycle
         const full_hand_fits = output_inserters.every((os, index) =>
-            os.inserter.metadata.stack_size < output_machine_state_machines[index].machine_state.machine.output.outputBlock.quantity);
+            handSizeFor(os.inserter, output_machine_state_machines[index].machine_state.machine.output.item_name)
+                < output_machine_state_machines[index].machine_state.machine.output.outputBlock.quantity);
         const output_swings = new Map<string, number>();
         for (const [entity_id, etc] of swing_counts.entries()) {
             if (output_inserter_ids.has(entity_id.id)) {
@@ -1916,7 +1917,7 @@ function fullHandTransferWindows(
             continue;
         }
         const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
-        const stack_size = entity.metadata.stack_size;
+        const stack_size = Entity.isMachine(source) ? handSizeFor(entity, source.output.item_name) : entity.metadata.stack_size;
         if (!Entity.isMachine(source) || stack_size >= source.output.outputBlock.quantity
             || transfers.length === 0 || transfers.some(t => t.amount !== stack_size)) {
             continue;
@@ -2675,7 +2676,7 @@ function computeCraftingCyclePlan(
         const output_crafted = machine_state.craftCount * output_machine.output.amount_per_craft.toDecimal();
         logger.log(`Output machine ${output_machine.entity_id.id} crafted ${output_crafted} ${output_item_name}`);
         
-        const machine_max_swings = fraction(output_crafted).divide(inserter.metadata.stack_size);
+        const machine_max_swings = fraction(output_crafted).divide(handSizeFor(inserter, output_item_name));
         
         if (max_swings_possible === null || machine_max_swings.toDecimal() < max_swings_possible.toDecimal()) {
             max_swings_possible = machine_max_swings;
