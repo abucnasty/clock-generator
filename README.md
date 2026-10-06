@@ -6,6 +6,8 @@
 The clock generator (`clock-generator`, `clock-generator-ui`) and the `clock-generator-sidecar` mod always share one
 version. Bump them together in every release, and set `LATEST_SIDECAR_VERSION` in
 `clock-generator/src/config/sidecar-version.ts` to match. A test fails if they drift apart.
+Merging a new version to `master` creates the GitHub release and publishes the sidecar to the Factorio mod portal
+(needs the `FACTORIO_MOD_API_KEY` secret).
 
 ## Clock Generator
 

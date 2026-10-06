@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      released: ${{ steps.release.outputs.released }}
     steps:
       - uses: actions/checkout@v4
 
@@ -18,19 +21,22 @@ jobs:
         run: |
           GENERATOR=$(node -p "require('./clock-generator/package.json').version")
           UI=$(node -p "require('./clock-generator-ui/package.json').version")
-          if [ "$GENERATOR" != "$UI" ]; then
-            echo "::error::clock-generator ($GENERATOR) and clock-generator-ui ($UI) versions differ"
+          SIDECAR=$(node -p "require('./clock-generator-sidecar/info.json').version")
+          if [ "$GENERATOR" != "$UI" ] || [ "$GENERATOR" != "$SIDECAR" ]; then
+            echo "::error::versions differ: clock-generator $GENERATOR, clock-generator-ui $UI, clock-generator-sidecar $SIDECAR"
             exit 1
           fi
           echo "version=$GENERATOR" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
+        id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           if gh release view "v$VERSION" > /dev/null 2>&1; then
             echo "v$VERSION is already released, skipping."
+            echo "released=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           NOTES=$(awk -v version="$VERSION" 'index($0, "## [" version "]") == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md)
@@ -39,3 +45,46 @@ jobs:
             exit 1
           fi
           gh release create "v$VERSION" --title "v$VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
+          echo "released=true" >> "$GITHUB_OUTPUT"
+
+  publish-sidecar:
+    # The sidecar mod has the same version as the rest of the project, so every new release is published to the portal
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    # holds the FACTORIO_MOD_API_KEY secret, and can require approval before anything is published
+    environment: mod-portal
+    env:
+      MOD_NAME: clock-generator-sidecar
+      VERSION: ${{ needs.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip when the portal already has this version
+        id: portal
+        run: |
+          if curl -fsS "https://mods.factorio.com/api/mods/$MOD_NAME/full" | jq -e --arg v "$VERSION" '.releases[] | select(.version == $v)' > /dev/null; then
+            echo "$MOD_NAME $VERSION is already on the mod portal, skipping."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the mod
+        if: steps.portal.outputs.publish == 'true'
+        run: ./clock-generator-sidecar/build.sh
+
+      - name: Upload to the mod portal
+        if: steps.portal.outputs.publish == 'true'
+        env:
+          FACTORIO_MOD_API_KEY: ${{ secrets.FACTORIO_MOD_API_KEY }}
+        run: |
+          if [ -z "$FACTORIO_MOD_API_KEY" ]; then
+            echo "::error::The FACTORIO_MOD_API_KEY secret is not set"
+            exit 1
+          fi
+          UPLOAD_URL=$(curl -fsS -X POST https://mods.factorio.com/api/v2/mods/releases/init_upload \
+            -H "Authorization: Bearer $FACTORIO_MOD_API_KEY" \
+            -F "mod=$MOD_NAME" | jq -er '.upload_url')
+          curl -fsS -X POST "$UPLOAD_URL" -F "file=@clock-generator-sidecar/${MOD_NAME}_${VERSION}.zip"
+          echo "Published $MOD_NAME $VERSION to the mod portal."
