@@ -132,10 +132,17 @@ export function fuelClockFor(
 }
 
 /**
- * The clock of an inserter that takes by-products off a machine. The machine makes `rate` of a by-product a tick, so
- * a hand of it builds up in `hand / rate` ticks; the window repeats at least that often, which takes everything the
- * machine made, so the by-product never fills its stack and blocks the machine. The window is short: the inserter
- * checks the machine's output only there, picks up what is ready, and swings once its hand is full.
+ * The clock of an inserter that takes by-products off a machine. The machine makes `rate` of a by-product a tick, and
+ * the window repeats often enough for two things:
+ *
+ * - a hand of it builds up in `hand / rate` ticks, which the window repeats within, so everything the machine made is taken;
+ * - the machine never holds more than the stack size allows, or it is blocked until the next window. The hand takes
+ *   what is there when the window opens, but the machine can still hold what it did not take, and a by-product made by
+ *   chance (a probability per craft) comes in streaks, so only the room the stack has over a hand is counted on: the
+ *   window repeats within `(stack size - hand) / rate` ticks.
+ *
+ * The window is short: the inserter checks the machine's output only there, picks up what is ready, and swings once its
+ * hand is full. When no divisor of the clock period fits the stack's room, the hand's interval is used instead.
  */
 export function byProductClockFor(
     inserter: Inserter,
@@ -148,17 +155,30 @@ export function byProductClockFor(
     if (by_products.length === 0) {
         throw new Error(`${inserter.entity_id.id} does not take a by-product of ${machine.entity_id.id}`);
     }
-    // the item that builds up its hand soonest sets how often the inserter has to look
-    const soonest = by_products
-        .map(output => ({
+    const swing_ticks = inserter.animation.total.ticks + 1;
+    // the item that fills first sets how often the inserter has to look
+    const limits = by_products.map(output => {
+        const hand = handSizeFor(inserter, output.item_name);
+        const rate = output.production_rate.amount_per_tick.toDecimal();
+        const room_over_a_hand = Math.max(output.outputBlock.max_stack_size - hand, 1);
+        return {
             output,
-            ticks_to_a_hand: Math.floor(handSizeFor(inserter, output.item_name) / output.production_rate.amount_per_tick.toDecimal()),
-        }))
-        .reduce((first, next) => next.ticks_to_a_hand < first.ticks_to_a_hand ? next : first);
+            hand_ticks: Math.floor(hand / rate),
+            stack_ticks: Math.floor(room_over_a_hand / rate),
+        };
+    });
+    const soonest = (key: "hand_ticks" | "stack_ticks") =>
+        limits.reduce((first, next) => next[key] < first[key] ? next : first);
+
+    // a divisor that keeps the stack clear if there is one, else one that at least takes a hand as it builds up
+    const for_stack = soonest("stack_ticks");
+    const stack_fits = largestDivisorAtMost(period_ticks, for_stack.stack_ticks, swing_ticks) !== null;
+    const chosen = stack_fits ? for_stack : soonest("hand_ticks");
+    const interval_ticks = stack_fits ? chosen.stack_ticks : chosen.hand_ticks;
     return clockEvery(
-        inserter, "by-product", soonest.ticks_to_a_hand,
-        pickupTicks(inserter, entity_registry, soonest.output.item_name), period_ticks, index,
-        () => `a hand of ${soonest.output.item_name} the machine makes`,
+        inserter, "by-product", interval_ticks,
+        pickupTicks(inserter, entity_registry, chosen.output.item_name), period_ticks, index,
+        () => `a hand of ${chosen.output.item_name} the machine makes`,
     );
 }
 

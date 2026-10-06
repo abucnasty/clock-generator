@@ -93,10 +93,24 @@ describe("by-product clocks", () => {
 
         expect(clock.kind).toBe("by-product");
         expect(period % clock.modulus).toBe(0);
-        // the seed is made at about 0.047 a tick at most, so a hand of 8 builds up in about 171 ticks
-        expect(clock.modulus).toBeLessThanOrEqual(171);
+        // the seed is made at about 0.047 a tick at most, so a hand of 8 builds up in about 171 ticks, but the stack of 10
+        // only has room for 2 over a hand: the machine is looked at at least every 2 / 0.047 = 42 ticks
+        expect(clock.modulus).toBeLessThanOrEqual(42);
+        expect(clock.modulus).toBe(32);
         // a short look, not a long wait at the machine
         expect(clock.window.end_inclusive - clock.window.start_inclusive + 1).toBeLessThan(clock.modulus);
+    });
+
+    it("uses the time a hand takes to build up when no divisor of the period fits the stack's room", async () => {
+        const registry = await registryOf();
+        const inserter = byProductOnlyInserters(registry)[0];
+        const machine = registry.getEntityByIdOrThrow(inserter.source.entity_id) as Machine;
+        // 118 ticks (2 x 59) has the divisors 1, 2, 59 and 118: none from a swing's time to 42, but 59 is within the 171
+        // ticks a hand takes
+        const clock = byProductClockFor(inserter, machine, registry, 118);
+        expect(118 % clock.modulus).toBe(0);
+        expect(clock.modulus).toBeGreaterThan(42);
+        expect(clock.modulus).toBeLessThanOrEqual(171);
     });
 
     it("says when one inserter cannot keep up", async () => {
