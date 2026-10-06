@@ -18,6 +18,17 @@ import type {
 } from 'clock-generator/browser';
 
 /** Every place tried for the swings a potential clock moved off their planned start */
+/** The exported clock run over several periods, extended only to show how a burner machine consumes its fuel */
+export interface FuelConsumptionViewData {
+    /** Periods of the clock the view covers; the clock itself stays one period */
+    periods: number;
+    durationTicks: number;
+    /** Whether a fuel inserter swung in the view; false when none did even over the longest run tried */
+    fuelSwingsRecorded: boolean;
+    transferHistory: SerializableTransferHistory;
+    stateTransitionHistory: SerializableStateTransitionHistory;
+}
+
 export interface ShiftOptionsView {
     moved: 'swings' | 'output-swing';
     /** Row (see `rows`) this clock moved, and by how many ticks (negative is earlier) */
@@ -57,6 +68,8 @@ export interface ClockAlternativeView {
      */
     clockOnlyTransferHistory: SerializableTransferHistory | null;
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    /** The exported clock run for several periods to show a burner machine's fuel consumption; null without one */
+    fuelConsumptionView: FuelConsumptionViewData | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
     /** What the simulation found that is worth explaining about the build and this clock */

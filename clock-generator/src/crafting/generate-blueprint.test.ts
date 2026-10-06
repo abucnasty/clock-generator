@@ -409,6 +409,65 @@ describe("generateClockForConfig", () => {
             const fuel_inserter_ids = ["inserter:10", "inserter:12", "inserter:13"];
             fuel_inserter_ids.forEach(id => expect(result.clock_windows[id]?.length).toBeGreaterThan(1));
         });
+
+        describe("the fuel consumption view", () => {
+            it("runs the exported clock for several periods so the fuel inserter shows inserting", async () => {
+                const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+                const result = generateClockForConfig(config, { logger: quiet });
+                const view = result.fuel_consumption_view!;
+
+                // a hand of fuel lasts the machine longer than the 960 tick clock, so one period seldom has a swing
+                expect(view.periods).toBeGreaterThanOrEqual(2);
+                expect(view.duration_ticks).toBe(view.periods * result.simulation_duration.ticks);
+                expect(view.state_transition_history.total_duration_ticks).toBe(view.duration_ticks);
+                expect(view.fuel_inserter_ids).toEqual(["inserter:3"]);
+                expect(view.fuel_swings_recorded).toBe(true);
+
+                const fuel_transfers = view.transfer_history.entities.find(entity => entity.entity_id === "inserter:3")!.transfers;
+                expect(fuel_transfers.length).toBeGreaterThan(0);
+                fuel_transfers.forEach(transfer => {
+                    expect(transfer.item_name).toBe("nutrients");
+                    expect(transfer.amount).toBe(16);
+                });
+            });
+
+            it("leaves the clock and its stability as they are", async () => {
+                const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
+                const result = generateClockForConfig(config, { logger: quiet });
+                expect(result.simulation_duration.ticks).toBe(result.serializable_state_transition_history.total_duration_ticks);
+                expect(result.stability_check.is_stable).toBe(true);
+            });
+
+            it("shows the fuel being consumed in a chain that also moves a by-product", async () => {
+                const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
+                const view = generateClockForConfig(config, { logger: quiet }).fuel_consumption_view!;
+
+                expect(view.fuel_swings_recorded).toBe(true);
+                const swung = view.transfer_history.entities
+                    .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
+                expect(swung.length).toBeGreaterThan(0);
+            });
+
+            it("is absent when no machine burns fuel", async () => {
+                const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
+                expect(generateClockForConfig(config, { logger: quiet }).fuel_consumption_view).toBeUndefined();
+            });
+        });
+
+        it("merges fuel inserters with the same windows into one described combinator", async () => {
+            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
+            const result = generateClockForConfig(config, { logger: quiet });
+
+            const nutrient_deciders = result.blueprint.entities.filter(entity =>
+                entity.name === "decider-combinator"
+                && JSON.stringify(entity.control_behavior ?? {}).includes('"name":"nutrients"'));
+            // the three biochambers burn at rates that give the same windows
+            expect(nutrient_deciders).toHaveLength(1);
+            const description = nutrient_deciders[0].player_description ?? "";
+            expect(description).toContain("(fuel)");
+            expect(description).toContain("swings every");
+            expect(description).toContain("fuel slot");
+        });
     });
 
     describe("combinator descriptions", () => {
@@ -416,9 +475,9 @@ describe("generateClockForConfig", () => {
 
         // Factorio keeps at most 500 bytes of the description of a combinator
         it.each([
-            ["rocket fuel with a by-product", ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL],
+            ["rocket fuel biochambers", ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS],
+            ["a biochamber with a fuel inserter", ConfigPaths.BIOCHAMBER_FUEL],
             ["flying robot frames", ConfigPaths.FLYING_ROBOT_FRAME],
-            ["logistic science with a shared inserter", ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER],
         ])("are at most 500 bytes in the blueprint of %s", async (_name, path) => {
             const config = await loadConfigFromFile(path);
             const result = generateClockForConfig(config, { logger: quiet });

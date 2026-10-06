@@ -91,6 +91,13 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         stateTransitionHistory: result.serializable_state_transition_history,
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
+        fuelConsumptionView: result.fuel_consumption_view ? {
+            periods: result.fuel_consumption_view.periods,
+            durationTicks: result.fuel_consumption_view.duration_ticks,
+            fuelSwingsRecorded: result.fuel_consumption_view.fuel_swings_recorded,
+            transferHistory: result.fuel_consumption_view.transfer_history,
+            stateTransitionHistory: result.fuel_consumption_view.state_transition_history,
+        } : null,
         clockWindows: result.clock_windows,
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),

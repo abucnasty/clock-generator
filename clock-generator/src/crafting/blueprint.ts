@@ -8,6 +8,7 @@ import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities"
 import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { FuelClock } from "./sequence/fuel-clock";
 
 function createDeciderCombinatorForTransfers(
     inventory_transfers: InventoryTransfer[],
@@ -18,6 +19,7 @@ function createDeciderCombinatorForTransfers(
     position: Position,
     mapRanges: (ranges: OpenRange[]) => OpenRange[] = ranges => ranges,
     modulo?: { split: ModuloRanges; signal: SignalId },
+    fuel_clock?: FuelClock,
 ): DeciderCombinatorEntity {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
     const entity_number = entity_id.id.split(":")[1]
@@ -46,6 +48,10 @@ function createDeciderCombinatorForTransfers(
         )
     }
 
+    if (!swing_counts && fuel_clock && Entity.isInserter(entity)) {
+        description_lines = fuelClockDescriptionLines(entity_id, entity, items, fuel_clock);
+    }
+
     if (items.size === 1) {
         outputSignalId = SignalId.item(Array.from(items)[0])
     }
@@ -66,6 +72,27 @@ function createDeciderCombinatorForTransfers(
         .build();
 
     return deciderCombinator
+}
+
+/** An inserter that only fills a fuel slot is not part of the plan, so it has a clock of its own instead of swing counts */
+function fuelClockDescriptionLines(
+    inserter_id: EntityId,
+    inserter: Inserter,
+    item_names: Set<string>,
+    fuel_clock: FuelClock,
+): string[] {
+    const inserter_number = inserter_id.id.split(":")[1];
+    const item_icons = Array.from(item_names).map(item_name => SignalId.toDescriptionString(SignalId.item(item_name)));
+    const machine_number = inserter.sink.entity_id.id.split(":")[1];
+    const window = fuel_clock.window;
+    return [
+        `Inserter ${inserter_number} for ${item_icons.join("|")} (fuel)`,
+        `Fills the fuel slot of machine ${machine_number}, which holds at most a few items:`,
+        `- swings every ${fuel_clock.modulus} ticks, enabled for ticks ${window.start_inclusive}-${window.end_inclusive} of each`,
+        "- not part of the swing counts, so it does not change the length of the clock",
+        "- skips a swing while the fuel slot is full",
+        "- fuel inserters of other machines with the same windows are wired to this combinator",
+    ];
 }
 
 function inserterSwingCountDescriptionLines(
@@ -243,6 +270,7 @@ export function createSignalPerInserterBlueprint(
     entityRegistry: ReadableEntityRegistry,
     subtick_clock?: SubtickClock,
     use_modulo: boolean = false,
+    fuel_clocks: ReadonlyMap<string, FuelClock> = new Map(),
 ): FactorioBlueprint {
 
     const inventory_transfers = history.getAllTransfers()
@@ -322,6 +350,7 @@ export function createSignalPerInserterBlueprint(
                 Position.fromXY(x, 0),
                 subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRanges,
                 split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
+                fuel_clocks.get(entityId.id),
             )
         )
     })

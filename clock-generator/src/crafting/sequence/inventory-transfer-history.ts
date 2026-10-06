@@ -49,6 +49,12 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
                 return;
             }
 
+            // an inserter that is not in the plan (one that only takes by-products away) has no swing count to trim by
+            if (!entity_transfer_count_map.has(entityId)) {
+                trimmed.set(entityId, transfers);
+                return;
+            }
+
             // Skip trimming for inserters that drop to chests (not counted in entity_transfer_count_map)
             const sink_entity = entity_registry.getEntityByIdOrThrow(entity.sink.entity_id);
             if (Entity.isChest(sink_entity)) {
