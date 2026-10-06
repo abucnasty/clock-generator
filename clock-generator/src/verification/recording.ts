@@ -45,6 +45,12 @@ const RecordedMachineSchema = z.object({
         products_finished: luaArray(z.number()),
         inputs: luaRecord(luaArray(z.number())),
         outputs: luaRecord(luaArray(z.number())),
+        /** Burner machines only: items in the fuel slot per sample, by fuel item */
+        fuel: luaRecord(luaArray(z.number())).optional(),
+        /** Burner machines only: MJ left in the fuel item being burned per sample */
+        burning_remaining: luaArray(z.number()).optional(),
+        /** Burner machines only: the fuel item being burned, "" when none */
+        currently_burning: changeList(z.string()).optional(),
     }),
 });
 

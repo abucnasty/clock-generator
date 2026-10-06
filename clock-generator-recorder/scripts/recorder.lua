@@ -97,6 +97,21 @@ local function recipe_item_names(recipe, key)
     return names
 end
 
+---Names of the items a burner machine accepts as fuel
+---@param burner LuaBurner
+---@return string[]
+local function fuel_item_names(burner)
+    local categories = burner.fuel_categories
+    local names = {}
+    for name, item in pairs(prototypes.item) do
+        if item.fuel_category and categories[item.fuel_category] then
+            table.insert(names, name)
+        end
+    end
+    table.sort(names)
+    return names
+end
+
 ---@param result ExtractionResult
 ---@return table[] inserters, table[] machines
 local function build_tracks(result)
@@ -124,6 +139,12 @@ local function build_tracks(result)
         local inputs, outputs = {}, {}
         for _, name in ipairs(recipe_item_names(recipe, "ingredients")) do inputs[name] = {} end
         for _, name in ipairs(recipe_item_names(recipe, "products")) do outputs[name] = {} end
+        -- A burner machine (biochamber) also records its fuel slot and the fuel it is burning
+        local fuel = nil
+        if entity.burner then
+            fuel = {}
+            for _, name in ipairs(fuel_item_names(entity.burner)) do fuel[name] = {} end
+        end
         table.insert(machines, {
             entity = entity,
             info = {
@@ -139,6 +160,9 @@ local function build_tracks(result)
                 products_finished = {},
                 inputs = inputs,
                 outputs = outputs,
+                fuel = fuel,
+                burning_remaining = fuel and {} or nil,
+                currently_burning = fuel and {} or nil,
             },
         })
     end
@@ -182,6 +206,17 @@ local function sample(recording)
             end
             for name, values in pairs(s.outputs) do
                 table.insert(values, output_inventory and output_inventory.get_item_count(name) or 0)
+            end
+            local burner = s.fuel and entity.burner
+            if burner then
+                local fuel_inventory = burner.inventory
+                for name, values in pairs(s.fuel) do
+                    table.insert(values, fuel_inventory and fuel_inventory.get_item_count(name) or 0)
+                end
+                -- energy left in the item being burned, in MJ
+                table.insert(s.burning_remaining, round4(burner.remaining_burning_fuel / 1000000))
+                local burning = burner.currently_burning
+                record_change(s.currently_burning, index, burning and burning.name.name or "")
             end
         else
             record_change(s.status, index, "invalid")

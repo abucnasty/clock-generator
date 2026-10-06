@@ -324,6 +324,15 @@ local function extract_crafting_machine_data(entity)
     local entity_type = "machine"
     if entity.type == "furnace" then
         entity_type = "furnace"
+    elseif entity.name == "biochamber" then
+        entity_type = "biochamber"
+    end
+
+    -- Biochambers burn nutrients; the energy consumption effect (modules/beacons) scales how fast.
+    -- consumption_bonus is a fraction (0.5 = +50%), exported as a percentage like productivity.
+    local energy_consumption_bonus = nil
+    if entity_type == "biochamber" then
+        energy_consumption_bonus = (entity.consumption_bonus or 0) * 100
     end
 
     -- Get entity productivity from modules/beacons
@@ -353,7 +362,8 @@ local function extract_crafting_machine_data(entity)
         recipe = recipe.name,
         crafting_speed = entity.crafting_speed,
         productivity = total_productivity * 100,
-        type = entity_type
+        type = entity_type,
+        energy_consumption_bonus = energy_consumption_bonus
     }
 
     return data

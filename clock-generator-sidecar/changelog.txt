@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.0
+Date: 2026-10-05
+  Features:
+    - biochambers are exported with the type "biochamber" and their energy consumption bonus (energy_consumption_bonus, in percent) so the clock generator can work out how many nutrients they burn
+---------------------------------------------------------------------------------------------------
 Version: 0.3.0
 Date: 2026-06-23
   Changes:
