@@ -389,8 +389,9 @@ describe("generateClockForConfig", () => {
         });
 
         // A rocket fuel biochamber's slot is filled up to 11 nutrients and the jellynut one's to 9. In a run of the
-        // exported clock they lasted at least 208 and 246 ticks, as in game. The fuel clocks are 192 and 240, divisors
-        // of 15 periods, so one clock of 1920 ticks holds them; on the 128 tick clock both were 64.
+        // exported clock they lasted at least 208 and 246 ticks, as in game. Less the 14 ticks a hand takes to arrive,
+        // the fuel clocks are 192 and 224, divisors of 21 periods, so one clock of 2688 ticks holds them; on the 128
+        // tick clock both were 64.
         it("looks at each fuel slot nearly as seldom as its fuel is sure to last, on fuel clocks of their own", () => {
             const clocks = alternative("planned").result.unplanned_inserter_clocks!;
             const fuel_moduli = sample.config.inserters
@@ -399,10 +400,10 @@ describe("generateClockForConfig", () => {
             expect(fuel_moduli).toHaveLength(3);
             for (const [machine_id, clock] of fuel_moduli) {
                 expect(clock.own_clock).toBe(true);
-                expect(clock.modulus).toBe(machine_id === 2 ? 240 : 192);
+                expect(clock.modulus).toBe(machine_id === 2 ? 224 : 192);
                 expect(clock.window).toEqual({ start: 0, end: 7 });
             }
-            expect(alternative("planned").result.fuel_plan?.merged_clock_ticks).toBe(1920);
+            expect(alternative("planned").result.fuel_plan?.merged_clock_ticks).toBe(2688);
             const lasted = alternative("planned").result.fuel_consumption_view!.fuel_levels.map(levels => levels.limit_lasts_ticks);
             expect(lasted).toEqual([208, 246, 208]);
         });
@@ -600,7 +601,6 @@ describe("generateClockForConfig", () => {
             expect(result.clock_windows["inserter:3"]).toBeUndefined();
             const fuel_clock = result.unplanned_inserter_clocks!["inserter:3"];
             expect(fuel_clock).toMatchObject({ kind: "fuel", own_clock: true });
-            expect(result.simulation_duration.ticks % fuel_clock.modulus).not.toBe(0);
         });
 
         it("does not change the LCM", async () => {

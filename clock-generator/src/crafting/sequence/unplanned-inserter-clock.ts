@@ -148,7 +148,9 @@ export function fuelClockFor(
     }
 
     const items_in_slot_at_a_window = Math.min(handSizeFor(inserter, slot.fuel.item_name), slot.automated_insertion_limit);
-    const burn_interval_ticks = measured_interval_ticks ?? fuelBurnIntervalTicks(inserter, machine, crafting_share);
+    const lasts_ticks = measured_interval_ticks ?? fuelBurnIntervalTicks(inserter, machine, crafting_share);
+    // the fuel also has to last while the hand that a window starts is on its way
+    const burn_interval_ticks = lasts_ticks - fuelDeliveryTicks(inserter, entity_registry, slot.fuel.item_name);
     const swing_ticks = inserter.animation.total.ticks + 1;
     // a little more often than the fuel lasts, where that lets one short clock hold every fuel clock
     const interval_ticks = shared_clock_ticks === null
@@ -158,6 +160,20 @@ export function fuelClockFor(
         inserter, "fuel", interval_ticks, pickupTicks(inserter, entity_registry, slot.fuel.item_name), null, index,
         () => `${items_in_slot_at_a_window} ${slot.fuel.item_name} in the fuel slot of ${machine.entity_id.id}`,
     );
+}
+
+/** Ticks kept spare on top of what a hand of fuel takes to arrive */
+const FUEL_DELIVERY_SPARE_TICKS = 2;
+
+/**
+ * Ticks from the start of a window until the hand it starts is in the fuel slot: the pickup with its slack for a late
+ * belt, the swing and the drop. A slot that was just full enough to be passed over at one window is down to its last
+ * fuel at the next, and burns on until that hand arrives: in game a biochamber whose fuel clock left 5 ticks was 17
+ * ticks from running out.
+ */
+export function fuelDeliveryTicks(inserter: Inserter, entity_registry: ReadableEntityRegistry, fuel_item_name: string): number {
+    return pickupTicks(inserter, entity_registry, fuel_item_name) + WINDOW_SLACK_TICKS
+        + inserter.animation.rotation.ticks + inserter.animation.drop.ticks + FUEL_DELIVERY_SPARE_TICKS;
 }
 
 /** Ticks the fuel a slot is sure to hold at a window lasts a machine that crafts `crafting_share` of the time */
@@ -298,7 +314,8 @@ export function unplannedInserterClocks(
             : undefined;
     };
     const shared_clock_ticks = sharedFuelClockTicks(period_ticks, fuel_inserters.map(({ inserter, machine, crafting_share }) => ({
-        burn_interval_ticks: measuredInterval(inserter, machine) ?? fuelBurnIntervalTicks(inserter, machine, crafting_share),
+        burn_interval_ticks: (measuredInterval(inserter, machine) ?? fuelBurnIntervalTicks(inserter, machine, crafting_share))
+            - fuelDeliveryTicks(inserter, entity_registry, machine.fuel_slot!.fuel.item_name),
         swing_ticks: inserter.animation.total.ticks + 1,
     })));
     for (const { inserter, machine, crafting_share } of fuel_inserters) {

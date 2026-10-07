@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";
-import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, largestDivisorAtMost, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
+import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, largestDivisorAtMost, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
 import { Entity, Machine } from "../../entities";
 import { SimulationContext } from "./simulation-context";
 
@@ -38,36 +38,38 @@ describe("fuel clocks", () => {
 
     it("repeats on a clock of its own, nearly as seldom as the fuel slot's limit lasts", async () => {
         // 926% energy consumption: 2.565 nutrients a second. The slot is filled up to what that burns in 192 ticks,
-        // 9 nutrients, which last 210 ticks
+        // 9 nutrients, which last 210 ticks: 196 with the 14 a hand takes to arrive taken off
         const registry = await registryOf();
+        const inserter = fuelOnlyInserters(registry)[0];
+        expect(fuelDeliveryTicks(inserter, registry, "nutrients")).toBe(14);
         const clock = unplannedInserterClocks(registry, 960).get("inserter:3")!;
 
         expect(clock.own_clock).toBe(true);
-        // not a divisor of the 960 tick period, which would be 192, but of 5 periods: 4800 ticks
-        expect(clock.modulus).toBe(200);
-        expect(4800 % clock.modulus).toBe(0);
+        // the longest divisor of the 960 tick period that is no longer
+        expect(clock.modulus).toBe(192);
         expect(clock.window.end_inclusive).toBeLessThan(clock.modulus);
     });
 
     it("looks less often at the slot of a machine that crafts part of the time", async () => {
         const registry = await registryOf();
-        // crafting 80% of the time burns the 9 nutrients in 210 / 0.8 ticks, less the 10% the share is counted higher: 239
+        // crafting 80% of the time burns the 9 nutrients in 210 / 0.8 ticks, less the 10% the share is counted higher
+        // and the 14 ticks of a hand: 225
         const clock = unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.8]])).get("inserter:3")!;
-        expect(clock.modulus).toBeLessThanOrEqual(239);
-        expect(clock.modulus).toBeGreaterThanOrEqual(239 / 1.05);
+        expect(clock.modulus).toBeLessThanOrEqual(225);
+        expect(clock.modulus).toBeGreaterThanOrEqual(225 / 1.05);
         // a share of nearly all the time is not counted over all the time
-        expect(unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.99]])).get("inserter:3")!.modulus).toBe(200);
+        expect(unplannedInserterClocks(registry, 960, new Map([["machine:1", 0.99]])).get("inserter:3")!.modulus).toBe(192);
     });
 
     it("is as seldom as the fuel lasts when the period is not a whole number of ticks, with a clock of its own", async () => {
         const registry = await registryOf();
-        expect(unplannedInserterClocks(registry, 960.5).get("inserter:3")!.modulus).toBe(210);
+        expect(unplannedInserterClocks(registry, 960.5).get("inserter:3")!.modulus).toBe(196);
     });
 
     it("is made from the ticks the fuel lasted in a run, where that is known", async () => {
         const registry = await registryOf();
         const measured = unplannedInserterClocks(registry, 960.5, new Map(), new Map([["machine:1", 180]])).get("inserter:3")!;
-        expect(measured.modulus).toBe(180);
+        expect(measured.modulus).toBe(180 - 14);
     });
 
     it("swings more often for a machine that burns fuel faster", async () => {

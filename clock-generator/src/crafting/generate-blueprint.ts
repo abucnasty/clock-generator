@@ -11,7 +11,7 @@ import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, Read
 import { TargetProductionRate } from "./target-production-rate";
 import { EntityState, InserterStatus, MachineState, MachineStatus } from "../state";
 import Fraction, { fraction } from "fractionability";
-import { createSignalPerInserterBlueprint, SubtickClock } from "./blueprint";
+import { createSignalPerInserterBlueprint, mergedClockTicks, SubtickClock } from "./blueprint";
 import { FactorioBlueprint, FactorioBlueprintFile, BlueprintBookBuilder } from "../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../control-logic";
 import { EntityTransferCountMap, SerializableTransferPlan } from "./sequence/cycle/swing-counts";
@@ -748,8 +748,7 @@ export function generateClockForConfig(
         const limit_lasted = new Map(planned_view.fuel_levels.flatMap(levels => levels.limit_lasts_ticks === null
             ? []
             : [[levels.machine_id, levels.limit_lasts_ticks] as const]));
-        const measured_intervals = new Map(Array.from(limit_lasted, ([machine_id, ticks]) =>
-            [machine_id, Math.floor(ticks * MEASURED_FUEL_INTERVAL_SHARE)] as const));
+        const measured_intervals = limit_lasted;
         let measured_clocks: Map<string, InserterClock>;
         try {
             measured_clocks = unplannedInserterClocks(simulation_context.entity_registry, duration.ticks, crafting_shares, measured_intervals);
@@ -766,7 +765,12 @@ export function generateClockForConfig(
             fuel_plan = fuelPlan(simulation_context.entity_registry, inserter_clocks, crafting_shares, duration.ticks, limit_lasted);
             return planned_view;
         }
-        const measured_view = fuelConsumptionView(config, windows, measured_clocks, duration.ticks, logger, true);
+        // Long enough for the fuel clocks to meet the clock of the period every way they do, twice over: the fuel a
+        // machine is down to depends on where its fuel windows fall in what it does
+        const measured_fuel_ticks = Array.from(measured_clocks.values()).filter(clock => clock.kind === "fuel").map(clock => clock.modulus);
+        const merged_ticks = mergedClockTicks(duration.ticks, measured_fuel_ticks);
+        const measured_view = fuelConsumptionView(config, windows, measured_clocks, duration.ticks, logger, true,
+            merged_ticks === null ? 0 : 2 * merged_ticks);
         if (measured_view === undefined || measured_view.ran_out_of_fuel) {
             logger.log("Fuel clocks: kept from the plan, a machine ran out of fuel with the measured ones");
             return planned_view;
@@ -2103,12 +2107,6 @@ function subtickClockForPeriod(period: number): SubtickClock | null {
     return null;
 }
 
-/**
- * The part of the ticks the fuel lasted at the least in a run that a fuel clock is made from. The run is what the
- * build does, tick for tick; the rest is for what it does not have, such as a belt that brings the fuel late.
- */
-const MEASURED_FUEL_INTERVAL_SHARE = 0.98;
-
 /** Longest the fuel consumption view runs, in simulated ticks */
 const MAX_FUEL_VIEW_TICKS = 100_000;
 
@@ -2129,6 +2127,8 @@ function fuelConsumptionView(
     logger: Logger,
     /** Run the fuel inserters on `inserter_clocks`, and not on the fuel clocks the run would make from its own plan */
     on_these_fuel_clocks: boolean,
+    /** Run at least this long, as far as the longest run allows */
+    min_ticks: number = 0,
 ): FuelConsumptionView | undefined {
     const registry = createEntityRegistryFromConfig(config);
     const fuel_inserters = fuelOnlyInserters(registry);
@@ -2145,7 +2145,7 @@ function fuelConsumptionView(
     }
 
     const fuel_inserter_ids = fuel_inserters.map(inserter => inserter.entity_id.id);
-    let periods = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / period)), max_periods);
+    let periods = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / period), Math.ceil(min_ticks / period)), max_periods);
     while (true) {
         // the windows are run as they are: observing them again would return that run instead, without the fuel levels
         const run = generateClockForConfig(

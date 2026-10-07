@@ -40,7 +40,7 @@ describe("the fuel plan", () => {
         it("gives the exported fuel clock of each fuel inserter and how often it should swing on it", () => {
             expect(plan.inserters.map(inserter => [inserter.inserter_id, inserter.machine_id, inserter.modulus])).toEqual([
                 ["inserter:10", "machine:1", 192],
-                ["inserter:12", "machine:2", 240],
+                ["inserter:12", "machine:2", 224],
                 ["inserter:13", "machine:3", 192],
             ]);
             for (const inserter of plan.inserters) {
@@ -52,15 +52,15 @@ describe("the fuel plan", () => {
                 expect(inserter.expected_swings_per_minute).toBeCloseTo(3600 / inserter.hand_lasts_ticks);
                 // the window repeats while the insertion limit lasts, a hand of 16 lasts about half as long again
                 expect(inserter.swing_share).toBeCloseTo(inserter.modulus / inserter.hand_lasts_ticks);
-                expect(inserter.swing_share).toBeGreaterThan(0.5);
+                expect(inserter.swing_share).toBeGreaterThan(0.45);
                 expect(inserter.swing_share).toBeLessThan(0.7);
             }
         });
 
         it("counts the period and every fuel clock on one merged clock", () => {
-            // lcm(128, 192, 240): the fuel clocks are divisors of 15 periods, a little shorter than the ticks the fuel
-            // was sure to last in a run of the exported clock
-            expect(plan.merged_clock_ticks).toBe(1920);
+            // lcm(128, 192, 224): the fuel clocks are divisors of 21 periods, a little shorter than the ticks the fuel
+            // was sure to last in a run of the exported clock, less what a hand takes to arrive
+            expect(plan.merged_clock_ticks).toBe(2688);
             expect(plan.separate_clocks_reason).toBeUndefined();
         });
 
@@ -270,12 +270,15 @@ describe("fuel clocks made from a run of the exported clock", async () => {
     it("enables each fuel inserter within the ticks its machine's fuel was sure to last", () => {
         for (const inserter of plan.inserters) {
             const lasted = view.fuel_levels.find(it => it.machine_id === inserter.machine_id)!.limit_lasts_ticks!;
-            expect(inserter.modulus).toBeLessThanOrEqual(Math.floor(lasted * 0.98));
+            // with room for the hand a window starts to arrive: 4 ticks to fill it from the belt and 4 of slack, 3 to
+            // swing, 1 to drop and 2 spare
+            expect(inserter.modulus).toBeLessThanOrEqual(lasted - 14);
             expect(result.unplanned_inserter_clocks![inserter.inserter_id].modulus).toBe(inserter.modulus);
         }
     });
 
-    it("keeps every machine fuelled on those clocks", () => {
+    it("keeps every machine fuelled on those clocks, over two rounds of the one clock that holds them", () => {
+        expect(view.duration_ticks).toBeGreaterThanOrEqual(2 * plan.merged_clock_ticks!);
         expect(view.ran_out_of_fuel).toBe(false);
         view.fuel_levels.forEach(levels => expect(levels.empty_ticks).toBe(0));
     });
