@@ -123,6 +123,14 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                 )}
             </Box>
             <Handle type="source" position={Position.Right} />
+            {data.verticalHandles && (
+                <>
+                    <Handle type="target" id="top-in" position={Position.Top} style={{ left: '35%' }} />
+                    <Handle type="source" id="top-out" position={Position.Top} style={{ left: '65%' }} />
+                    <Handle type="source" id="bottom-out" position={Position.Bottom} style={{ left: '35%' }} />
+                    <Handle type="target" id="bottom-in" position={Position.Bottom} style={{ left: '65%' }} />
+                </>
+            )}
         </>
     );
 }
