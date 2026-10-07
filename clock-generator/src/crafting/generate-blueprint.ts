@@ -4,7 +4,7 @@ import { EnableControlOverrideConfig, EnableControlRange } from '../config/schem
 import { assertInserterCoverage } from '../config/inserter-coverage-validator';
 import { DebugPluginFactory } from './sequence/debug/debug-plugin-factory';
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from './sequence/debug/debug-settings-provider';
-import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, unplannedInserterClocks } from './sequence/unplanned-inserter-clock';
+import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from './sequence/unplanned-inserter-clock';
 import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig, SimulationContext } from './sequence/simulation-context';
 import { Duration, OpenRange } from '../data-types';
 import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from '../entities';
@@ -16,6 +16,7 @@ import { FactorioBlueprint, FactorioBlueprintFile, BlueprintBookBuilder } from "
 import { ResettableRegistry, TickProvider } from "../control-logic";
 import { EntityTransferCountMap, SerializableTransferPlan } from "./sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
+import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
 import { DrillInventoryTransferPlugin } from "../control-logic/drill/plugins/drill-inventory-transfer-plugin";
 import { EnableControlFactory } from "./sequence/interceptors/inserter-enable-control-factory";
@@ -574,10 +575,15 @@ export function generateClockForConfig(
         crafting_cycle_plan.entity_transfer_map,
         duration.ticks,
     );
-    const final_history = clipBeltFillerWindows(
-        trimmed_history,
+    const final_history = windowsOfThePlanWhereInsertersRunFree(
+        clipBeltFillerWindows(
+            trimmed_history,
+            simulation_context.entity_registry,
+            new Set(output_inserters.map(os => os.inserter.entity_id.id)),
+        ),
         simulation_context.entity_registry,
-        new Set(output_inserters.map(os => os.inserter.entity_id.id)),
+        crafting_cycle_plan,
+        duration.ticks,
     );
 
     logger.log("\n--- Transfer History ---");
@@ -636,7 +642,7 @@ export function generateClockForConfig(
     };
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.is_stable} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
-    const unslacked_windows = windowsFromHistory(final_history);
+    const unslacked_windows = windowsFromHistory(final_history, simulation_context.entity_registry);
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
     const belt_pickup_slack_mode = options.belt_pickup_slack ?? "auto";
     const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (belt_pickup_slack_mode === "auto"
@@ -1063,6 +1069,88 @@ function clipBeltFillerWindows(
     })));
 }
 
+/** Ticks an output window stays on after its last planned pickup can start, well short of the next one */
+const OUTPUT_WINDOW_LAST_PICKUP_TICKS = 4;
+
+/**
+ * In a build with inserters left always enabled, what the planning run did does not repeat: when its swings were
+ * taken depends on when the free running inserters happened to deliver. Windows taken from that run are a little
+ * off in every period, and in game a build fell behind by a hand every few periods, or made a hand too many. So the
+ * inserters at the two ends of such a build, which are the ones the clock still holds, get the windows of the plan
+ * and not of the run:
+ *
+ * - the output inserter: one window at the start of every cycle, on until its last planned pickup can start. It
+ *   swings every `animation.total` ticks, and a pickup it cannot start it does not make up for later, so the build
+ *   makes at most its target, and the target while the machines keep up. A window as long as the swings took in the
+ *   run, waits for the machine included, fits one swing more when the machine has product to spare.
+ * - an inserter taking from a belt: its planned hands, fuel included and rounded up. Into the output machine they
+ *   come in one window a cycle that opens with the output window; into any other machine as windows of one hand
+ *   spread evenly over the period. A hand its machine has no room for is not taken.
+ */
+function windowsOfThePlanWhereInsertersRunFree(
+    history: InventoryTransferHistory,
+    entity_registry: ReadableEntityRegistry,
+    crafting_cycle_plan: CraftingCyclePlan,
+    period_ticks: number,
+): InventoryTransferHistory {
+    if (alwaysEnabledInserters(entity_registry).length === 0) {
+        return history;
+    }
+    const target_item = crafting_cycle_plan.production_rate.machine_production_rate.item;
+    const cycle_ticks = crafting_cycle_plan.total_duration.ticks;
+    const result = new Map<EntityId, InventoryTransfer[]>(history.entries());
+    const keyFor = (entity_id: EntityId) => Array.from(result.keys()).find(it => it.id === entity_id.id) ?? entity_id;
+
+    for (const planned of crafting_cycle_plan.entity_transfer_map.values()) {
+        const inserter = planned.entity;
+        if (!Entity.isInserter(inserter)) {
+            continue;
+        }
+        const source = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id);
+        const item_name = planned.item_transfers[0].item_name;
+
+        if (Entity.isMachine(source) && source.output.item_name === target_item && !EntityId.isMachine(inserter.sink.entity_id)) {
+            if (planned.total_transfer_count.getDenominator !== 1) {
+                continue;
+            }
+            const swings = planned.total_transfer_count.getNumerator;
+            const window_ticks = inserter.animation.total.ticks * (swings - 1) + OUTPUT_WINDOW_LAST_PICKUP_TICKS;
+            const windows: InventoryTransfer[] = [];
+            for (let cycle = 0; Math.floor(cycle * cycle_ticks) + window_ticks < period_ticks; cycle++) {
+                const start = Math.floor(cycle * cycle_ticks);
+                windows.push({ item_name: target_item, tick_range: OpenRange.from(start, start + window_ticks), amount: swings * planned.stack_size });
+            }
+            result.set(keyFor(inserter.entity_id), windows);
+        } else if (Entity.isBelt(source) && EntityId.isMachine(inserter.sink.entity_id)) {
+            const sink = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
+            const lane_stack_size = source.lanes.find(lane => lane.ingredient_name === item_name)?.stack_size ?? planned.stack_size;
+            const pickup_ticks = Math.ceil(planned.stack_size / lane_stack_size);
+            // on from the first item picked up until the hand is dropped, as the windows of a run are
+            const hand_ticks = pickup_ticks + inserter.animation.rotation.ticks + inserter.animation.drop.ticks;
+            const swing_ticks = pickup_ticks + 2 * inserter.animation.rotation.ticks + inserter.animation.drop.ticks;
+            const windows: InventoryTransfer[] = [];
+            if (Entity.isMachine(sink) && sink.output.item_name === target_item) {
+                // The output machine takes nothing while its output is full, which it is until the output inserter
+                // swings: its hands come in one window that opens with the output window of every cycle.
+                const hands = Math.ceil(planned.total_transfer_count.toDecimal() - 1e-9);
+                const window_ticks = Math.min(swing_ticks * (hands - 1) + hand_ticks, Math.floor(cycle_ticks) - 1);
+                for (let cycle = 0; Math.floor(cycle * cycle_ticks) + window_ticks < period_ticks; cycle++) {
+                    const start = Math.floor(cycle * cycle_ticks);
+                    windows.push({ item_name, tick_range: OpenRange.from(start, start + window_ticks), amount: hands * planned.stack_size });
+                }
+            } else {
+                const hands = Math.ceil(planned.total_transfer_count.toDecimal() * period_ticks / cycle_ticks - 1e-9);
+                for (let hand = 0; hand < hands; hand++) {
+                    const start = Math.floor(hand * period_ticks / hands);
+                    windows.push({ item_name, tick_range: OpenRange.from(start, Math.min(start + hand_ticks, Math.floor(period_ticks) - 1)), amount: planned.stack_size });
+                }
+            }
+            result.set(keyFor(inserter.entity_id), windows);
+        }
+    }
+    return new InventoryTransferHistory(result);
+}
+
 /** An inserter filling a belt nothing in the config empties has no rate to plan for */
 function assertBeltFillersPlanned(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap): void {
     for (const inserter of entity_registry.getAll().filter(Entity.isInserter)) {
@@ -1173,7 +1261,7 @@ function deriveClockWindows(
     as_built: AsBuiltStabilityCheck | null;
 } {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const planned_windows = windowsFromHistory(planned_history);
+    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     // drills only report WORKING/DISABLED, so their activity gives no useful window to derive
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
@@ -1642,7 +1730,7 @@ function deriveUnevenOutputClockWindows(
     moved_output_swing: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 } | null {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const planned_windows = windowsFromHistory(planned_history);
+    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
 
@@ -1792,6 +1880,37 @@ function busyDeciderRanges(
  * with the whole clock shifted to other start offsets relative to the machines' initial state.
  * Fractional periods are only checked unshifted.
  */
+/** Ticks a build with inserters left always enabled is run on its clock to see that it keeps up */
+const FREE_RUNNING_CHECK_TICKS = 36000;
+
+/**
+ * A build with inserters left always enabled does not repeat with its clock, so one period says little about it: in
+ * game such builds held their rate for thousands of ticks before a period came up a hand or two short. Its clock is
+ * run for ten minutes instead, and has to move all but a hand of what that many periods ask for.
+ */
+function longRunOfFreeRunningBuild(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    period: number,
+    one_period: BlueprintGenerationResult,
+    logger: Logger,
+): { keeps_up: boolean; output_items_per_period: number } | null {
+    const registry = createEntityRegistryFromConfig(config);
+    if (alwaysEnabledInserters(registry).length === 0) {
+        return null;
+    }
+    const periods = Math.min(Math.ceil(FREE_RUNNING_CHECK_TICKS / period), Math.floor((MAX_SIMULATION_TICKS - 1) / period));
+    if (periods <= 1) {
+        return null;
+    }
+    const run = generateClockForConfig(buildAsBuiltConfig(config, decider_windows, period), { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods });
+    const expected = one_period.stability_check.expected_output_items * periods;
+    const actual = run.stability_check.actual_output_items;
+    const hand = Math.max(...registry.getAll().filter(Entity.isInserter).map(it => it.metadata.stack_size));
+    logger.log(`Free running build over ${periods} periods: moved ${actual} of ${expected}`);
+    return { keeps_up: actual >= expected - hand && actual <= expected + hand, output_items_per_period: Math.round(actual / periods) };
+}
+
 function runAsBuiltCheck(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
@@ -1811,6 +1930,13 @@ function runAsBuiltCheck(
         repeat_output_items: result.stability_check.repeat_output_items,
     };
     report?.(1, total);
+    if (check.is_stable) {
+        const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, result, logger);
+        if (long_run && !long_run.keeps_up) {
+            check.is_stable = false;
+            check.actual_output_items = long_run.output_items_per_period;
+        }
+    }
     if (!check.is_stable) {
         check.failed_start_offset = 0;
         return { result, check };
@@ -2229,10 +2355,14 @@ function withInserterClocks(
     return result;
 }
 
-function windowsFromHistory(history: InventoryTransferHistory): Map<string, OpenRange[]> {
+/** The windows the planned transfers ran in. Inserters that are left always enabled get none. */
+function windowsFromHistory(history: InventoryTransferHistory, entity_registry: ReadableEntityRegistry): Map<string, OpenRange[]> {
+    const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
     const windows = new Map<string, OpenRange[]>();
     for (const [entity_id, transfers] of history.entries()) {
-        windows.set(entity_id.id, OpenRange.reduceRanges(transfers.map(t => t.tick_range)));
+        if (!always_enabled.has(entity_id.id)) {
+            windows.set(entity_id.id, OpenRange.reduceRanges(transfers.map(t => t.tick_range)));
+        }
     }
     return windows;
 }

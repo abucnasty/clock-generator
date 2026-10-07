@@ -1,5 +1,5 @@
 import assert from "../../../common/assert";
-import { EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
 import { EntityTransferCountMap } from "../cycle/swing-counts";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -8,7 +8,7 @@ import { computeSimulationMode, SimulationMode, simulationModeForInput } from ".
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { SwingDistribution } from "../cycle/swing-distribution";
-import { InserterClock } from "../unplanned-inserter-clock";
+import { InserterClock, alwaysEnabledInserters } from "../unplanned-inserter-clock";
 import { Logger } from "../../../common/logger";
 
 export class EnableControlFactory {
@@ -31,7 +31,18 @@ export class EnableControlFactory {
         this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
         this.terminal_machine_states = this.findFinalMachines();
         this.terminal_inserter_states = this.findFinalInserters();
+        const entities: Entity[] = [];
+        for (const state of this.entity_state_registry.getAllStates()) {
+            if (EntityState.isInserter(state)) {
+                entities.push(state.inserter);
+            } else if (EntityState.isMachine(state)) {
+                entities.push(state.machine);
+            }
+        }
+        this.always_enabled_ids = new Set(alwaysEnabledInserters({ getAll: () => entities }).map(it => it.entity_id.id));
     }
+
+    private readonly always_enabled_ids: ReadonlySet<string>;
 
     public createForEntityId(entity_id: EntityId): EnableControl {
 
@@ -67,6 +78,13 @@ export class EnableControlFactory {
         if (this.inserter_clocks.has(entity_id.id)
             || (EntityState.isMachine(sink_state) && sink_state.machine.isFuelOnly(entity_state.inserter.filtered_items))) {
             return this.unplannedInserterClocked(entity_id);
+        }
+
+        // In a build with a loop of machines the inserters between machines are not held to windows or to what their
+        // machines hold: they move what there is whenever their sink has room, as they do in game, and the output
+        // inserter holds the build to its rate.
+        if (this.always_enabled_ids.has(entity_id.id)) {
+            return AlwaysEnabledControl;
         }
 
         const additional_enable_controls: EnableControl[] = [];

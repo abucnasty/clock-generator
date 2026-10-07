@@ -1,0 +1,247 @@
+{
+  "target_output": {
+    "recipe": "agricultural-science-pack",
+    "items_per_second": 265,
+    "copies": 5
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "nutrients-from-bioflux",
+      "productivity": 150,
+      "crafting_speed": 18.4776,
+      "type": "biochamber",
+      "energy_consumption_bonus": 814.9699999999999
+    },
+    {
+      "id": 2,
+      "recipe": "nutrients-from-bioflux",
+      "productivity": 150,
+      "crafting_speed": 18.4776,
+      "type": "biochamber",
+      "energy_consumption_bonus": 814.9699999999999
+    },
+    {
+      "id": 3,
+      "recipe": "pentapod-egg",
+      "productivity": 150,
+      "crafting_speed": 64.5,
+      "type": "biochamber",
+      "energy_consumption_bonus": 1019.9999999999999
+    },
+    {
+      "id": 4,
+      "recipe": "pentapod-egg",
+      "productivity": 150,
+      "crafting_speed": 64.5,
+      "type": "biochamber",
+      "energy_consumption_bonus": 1019.9999999999999
+    },
+    {
+      "id": 5,
+      "recipe": "agricultural-science-pack",
+      "productivity": 150,
+      "crafting_speed": 90.375,
+      "type": "biochamber",
+      "energy_consumption_bonus": 1309.8000000000002
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "id": 8
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "id": 9
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "id": 10
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "id": 11
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 12
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "bioflux",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "bioflux",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "item_filter": [
+        {
+          "item_name": "agricultural-science-pack",
+          "request_count": 1
+        }
+      ]
+    }
+  ]
+}

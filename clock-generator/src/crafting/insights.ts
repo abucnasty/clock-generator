@@ -136,6 +136,40 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Ser
     };
 }
 
+/** Machines whose recipe makes one of its own ingredients, which the simulation starts already holding that ingredient */
+function loopingRecipeInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+    const rows = result.machine_facts.flatMap(machine => machine.facts.inputs
+        .filter(input => input.item_name === machine.facts.output_item)
+        .map(input => ({
+            machine: entities.find(it => it.entity_id === machine.entity_id)?.label ?? machine.entity_id,
+            recipe: machine.facts.recipe,
+            item: input.item_name,
+            per_craft: input.amount_per_craft,
+            made: machine.facts.output_per_craft,
+            started_with: input.automated_insertion_limit,
+        })));
+    if (rows.length === 0) {
+        return null;
+    }
+    const example = rows[0];
+    return {
+        id: "looping-recipe",
+        scope: "build",
+        title: `The ${example.recipe} recipe needs ${example.item} to make ${example.item}`,
+        what: `${rows.map(it => it.machine).join(", ")} craft${rows.length === 1 ? "s" : ""} ${example.item} from ${example.item}: `
+            + `${round(example.per_craft, 2)} in, ${round(example.made, 2)} out per craft (productivity included). The simulation `
+            + `starts each of these machines with ${example.started_with} ${example.item} already inside.`,
+        why: "A machine does not craft from what it has just made: its products go to the output, and the ingredient has to be "
+            + "brought to it by an inserter. With none inside, the recipe never starts, and nothing is made to bring.",
+        explanation: `The clock only holds for a build that is already running. Put ${example.item} in these machines by hand `
+            + "before turning the clock on, and again if the machines ever run empty: the clock cannot restart them.",
+        table: {
+            columns: ["Machine", "Recipe", "Item", "In per craft", "Out per craft", "Starts with"],
+            rows: rows.map(it => [it.machine, it.recipe, it.item, `${round(it.per_craft, 2)}`, `${round(it.made, 2)}`, `${it.started_with}`]),
+        },
+    };
+}
+
 /** How long a machine takes to make a full hand for the inserter that empties it */
 function outputHandInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
     const rows: { machine: string; item: string; inserter: string; hand: number; per_craft: number; crafts: number; ticks: number }[] = [];
@@ -248,6 +282,7 @@ export function clockInsights(result: BlueprintGenerationResult, is_stable: bool
     // an inserter that never moved in one run is only listed in the other
     const entities = [...run.entities, ...result.serializable_state_transition_history.entities];
     const insights: (ClockInsight | null)[] = [
+        loopingRecipeInsight(result, entities),
         is_stable ? spareTimeInsight(result, run) : null,
         insertionLimitsInsight(result, entities),
         outputHandInsight(result, entities),

@@ -21,6 +21,10 @@ export class MachineState implements EntityState {
     public static machineAcceptsItem = machineAcceptsItem
     public static insertItem = insertItem
     public static insertableQuantity = insertableQuantity
+    public static ingredientInventory = ingredientInventory
+    public static ingredientQuantity = ingredientQuantity
+    public static takesTurnForOutput = takesTurnForOutput
+    public static waitsForOutput = waitsForOutput
     public static print = printMachineState
 
     constructor(
@@ -45,6 +49,21 @@ export class MachineState implements EntityState {
      */
     public pendingOutput: number = 0;
 
+    /**
+     * Ingredients that are also a product of the recipe (a pentapod egg makes pentapod eggs). The machine keeps what
+     * it is given apart from what it makes, and never crafts from its own products.
+     */
+    public selfIngredients: WritableInventoryState = InventoryState.empty();
+
+    /**
+     * Inserters waiting to take a product from this machine, by item and inserter id, with the tick they last asked.
+     * Several inserters waiting for the same product take turns: what the machine makes goes to the one that did not
+     * take last, so two inserters on a machine that makes less than a hand at a time both fill their hands.
+     */
+    public readonly outputWaiters: Map<string, Map<string, number>> = new Map();
+    /** The inserter that last took each product, by item */
+    public readonly lastOutputTaker: Map<string, string> = new Map();
+
     public toString(): string {
         return `MachineState(${this.entity_id},recipe=${this.machine.metadata.recipe.name},status=${this.status})`;
     }
@@ -57,7 +76,7 @@ function forMachine(machine: Machine): MachineState {
     if (machine.fuel_slot) {
         fuelInventory.addQuantity(machine.fuel_slot.fuel.item_name, 0);
     }
-    return new MachineState(
+    const state = new MachineState(
         machine.entity_id,
         machine,
         ProgressState.empty(),
@@ -70,6 +89,11 @@ function forMachine(machine: Machine): MachineState {
         MachineStatus.INGREDIENT_SHORTAGE,
         0,
     );
+    // a recipe that makes its own ingredient cannot start from nothing: the machine begins with as much of it as
+    // inserters would fill it up to, like the eggs a player puts in a pentapod egg biochamber by hand
+    machine.self_ingredients.forEach(item_name =>
+        state.selfIngredients.addQuantity(item_name, machine.inputs.getOrThrow(item_name).automated_insertion_limit.quantity));
+    return state;
 }
 
 function clone(machineState: MachineState): MachineState {
@@ -87,19 +111,70 @@ function clone(machineState: MachineState): MachineState {
         machineState.totalCrafted,
     );
     cloned.pendingOutput = machineState.pendingOutput;
+    cloned.selfIngredients = machineState.selfIngredients.clone();
+    machineState.outputWaiters.forEach((waiters, item_name) => cloned.outputWaiters.set(item_name, new Map(waiters)));
+    machineState.lastOutputTaker.forEach((inserter_id, item_name) => cloned.lastOutputTaker.set(item_name, inserter_id));
     return cloned;
 }
 
-/** An inserter's drop into a machine: fuel goes to the fuel slot, everything else to the ingredients */
+/** Where a machine keeps an ingredient: with its output, or apart from it when the recipe also makes that item */
+function ingredientInventory(machineState: MachineState, itemName: string): WritableInventoryState {
+    return machineState.machine.self_ingredients.has(itemName) ? machineState.selfIngredients : machineState.inventoryState;
+}
+
+/** How many of an ingredient the machine holds to craft with */
+function ingredientQuantity(machineState: MachineState, itemName: string): number {
+    return ingredientInventory(machineState, itemName).getQuantity(itemName);
+}
+
+/**
+ * An inserter with room for `room_in_hand` more asks to take a product from the machine this tick. When the machine
+ * has less than that, inserters waiting for the same product take turns at what it makes: the one that took last is
+ * passed over while another one asked this tick or the tick before. Returns whether it is this inserter's turn, and
+ * counts it as the taker when it is.
+ */
+function takesTurnForOutput(machineState: MachineState, itemName: string, inserter_id: string, tick: number, room_in_hand: number): boolean {
+    waitsForOutput(machineState, itemName, inserter_id, tick);
+    // with enough for this hand, what is left over is there for the next inserter in the same tick
+    const takes_it_all = machineState.inventoryState.getQuantity(itemName) < room_in_hand;
+    const another_waits = Array.from(machineState.outputWaiters.get(itemName)!).some(([id, asked]) => id !== inserter_id && asked >= tick - 1);
+    if (takes_it_all && another_waits && machineState.lastOutputTaker.get(itemName) === inserter_id) {
+        return false;
+    }
+    machineState.lastOutputTaker.set(itemName, inserter_id);
+    return true;
+}
+
+/** An inserter waits for a product of the machine, which the other inserters waiting for it take into account */
+function waitsForOutput(machineState: MachineState, itemName: string, inserter_id: string, tick: number): void {
+    const waiters = machineState.outputWaiters.get(itemName) ?? new Map<string, number>();
+    machineState.outputWaiters.set(itemName, waiters);
+    waiters.set(inserter_id, tick);
+}
+
+function fuelIsBelowLimit(machineState: MachineState): boolean {
+    const slot = machineState.machine.fuel_slot;
+    return slot !== undefined && machineState.fuelInventory.getQuantity(slot.fuel.item_name) < slot.automated_insertion_limit;
+}
+
+/**
+ * An inserter's drop into a machine: fuel goes to the fuel slot, everything else to the ingredients. A hand of an
+ * item that is both goes whole to the fuel slot while that is below its limit, and to the ingredients otherwise.
+ */
 function insertItem(machineState: MachineState, itemName: string, quantity: number): void {
-    const inventory = isFuel(machineState.machine, itemName) ? machineState.fuelInventory : machineState.inventoryState;
+    const machine = machineState.machine;
+    const to_fuel = isFuel(machine, itemName) && (!machine.inputs.has(itemName) || fuelIsBelowLimit(machineState));
+    const inventory = to_fuel ? machineState.fuelInventory : ingredientInventory(machineState, itemName);
     inventory.addQuantity(itemName, quantity);
 }
 
-/** How many of an item an inserter has put into a machine: the ingredient, or the fuel in the fuel slot */
+/** How many of an item an inserter has put into a machine: the ingredient, or the fuel in the fuel slot when it is only fuel */
 function insertableQuantity(machineState: MachineState, itemName: string): number {
-    const inventory = isFuel(machineState.machine, itemName) ? machineState.fuelInventory : machineState.inventoryState;
-    return inventory.getQuantity(itemName);
+    const machine = machineState.machine;
+    if (isFuel(machine, itemName) && !machine.inputs.has(itemName)) {
+        return machineState.fuelInventory.getQuantity(itemName);
+    }
+    return ingredientQuantity(machineState, itemName);
 }
 
 function machineAcceptsItem(machineState: MachineState, itemName: string): boolean {
@@ -120,9 +195,14 @@ function machineInputIsBlocked(machineState: MachineState, ingredientName: strin
 
     const machine = machineState.machine;
 
-    // fuel goes in its own slot, which a full output does not block
-    if (machine.fuel_slot && isFuel(machine, ingredientName)) {
-        return machineState.fuelInventory.getQuantity(ingredientName) >= machine.fuel_slot.automated_insertion_limit;
+    // fuel goes in its own slot, which neither a full output nor a full ingredient blocks
+    if (isFuel(machine, ingredientName)) {
+        if (fuelIsBelowLimit(machineState)) {
+            return false;
+        }
+        if (!machine.inputs.has(ingredientName)) {
+            return true;
+        }
     }
 
     if (machineIsOutputBlocked(machineState)) {
@@ -130,7 +210,7 @@ function machineInputIsBlocked(machineState: MachineState, ingredientName: strin
     }
 
     const input = machine.inputs.getOrThrow(ingredientName);
-    const currentQuantity = machineState.inventoryState.getQuantity(input.ingredient.name);
+    const currentQuantity = ingredientQuantity(machineState, input.ingredient.name);
 
     return currentQuantity >= input.automated_insertion_limit.quantity;
 }
@@ -158,6 +238,9 @@ function printMachineState(machineState: MachineState, logger: Logger = defaultL
     logger.log(`  Inventory State:`);
     for (const inventory_item of machineState.inventoryState.getAllItems()) {
         logger.log(`    ${inventory_item.item_name}: ${inventory_item.quantity}`);
+    }
+    for (const inventory_item of machineState.selfIngredients.getAllItems()) {
+        logger.log(`    ${inventory_item.item_name} (ingredient): ${inventory_item.quantity}`);
     }
     for (const fuel_item of machineState.fuelInventory.getAllItems()) {
         logger.log(`  Fuel Inventory: ${fuel_item.item_name}: ${fuel_item.quantity}`);

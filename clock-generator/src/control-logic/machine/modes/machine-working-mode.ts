@@ -1,5 +1,5 @@
 import { InventoryItem, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
-import { ENERGY_BUFFER_TICKS, MachineOutput } from "../../../entities";
+import { ENERGY_BUFFER_TICKS, MachineOutput, amountIgnoredByProductivity } from "../../../entities";
 import { MachineMode } from "./machine-mode";
 
 // absorbs floating point drift when summing fractional per-tick progress
@@ -75,7 +75,12 @@ export class MachineWorkingMode implements MachineMode {
 
     /** Products of a finished craft, or of a paid out productivity bar, that the output has no room for */
     private holdsProducts(): boolean {
-        return this.state.pendingOutput > 0 && !this.hasOutputSpaceFor(this.state.machine.output.ingredient.amount);
+        return this.state.pendingOutput > 0 && !this.hasOutputSpaceFor(this.nextHeldAmount());
+    }
+
+    /** Held products go to the output a craft's amount at a time, or what is left of them */
+    private nextHeldAmount(): number {
+        return Math.min(this.state.pendingOutput, this.state.machine.output.ingredient.amount);
     }
 
     /**
@@ -83,12 +88,15 @@ export class MachineWorkingMode implements MachineMode {
      * time, as far as they fit
      */
     private releaseHeldProducts(): void {
-        const amount = this.state.machine.output.ingredient.amount;
+        // a full bar pays the amount less what the recipe ignores for productivity: 1 of the 2 pentapod eggs
+        const output = this.state.machine.output.ingredient;
+        const amount_per_bonus = output.amount - amountIgnoredByProductivity(output);
         while (this.state.bonusProgress.progress >= 1 - PROGRESS_EPSILON) {
-            this.state.pendingOutput += amount;
+            this.state.pendingOutput += amount_per_bonus;
             this.state.bonusProgress.progress = Math.max(0, this.state.bonusProgress.progress - 1);
         }
-        while (this.state.pendingOutput > 0 && this.hasOutputSpaceFor(amount)) {
+        while (this.state.pendingOutput > 0 && this.hasOutputSpaceFor(this.nextHeldAmount())) {
+            const amount = this.nextHeldAmount();
             this.addOutput(amount);
             this.state.pendingOutput -= amount;
         }
@@ -203,7 +211,7 @@ export class MachineWorkingMode implements MachineMode {
     private canStartCraft(): boolean {
         const recipe = this.state.machine.metadata.recipe;
         for (const ingredient of recipe.raw.ingredients) {
-            const available = this.inventory_state.getQuantity(ingredient.name);
+            const available = MachineState.ingredientQuantity(this.state, ingredient.name);
             const required = recipe.inputsPerCraft.get(ingredient.name)!.amount;
             if (available < required) {
                 return false;
@@ -269,7 +277,7 @@ export class MachineWorkingMode implements MachineMode {
 
     private consumeInputsForCraft(): void {
         this.state.machine.inputs.forEach(input => {
-            this.inventory_state.removeQuantity(
+            MachineState.ingredientInventory(this.state, input.ingredient.name).removeQuantity(
                 input.ingredient.name,
                 input.consumption_rate.amount_per_craft
             );
