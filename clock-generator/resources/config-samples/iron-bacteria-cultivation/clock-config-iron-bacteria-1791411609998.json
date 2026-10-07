@@ -1,0 +1,151 @@
+{
+  "target_output": {
+    "recipe": "iron-bacteria",
+    "items_per_second": 380,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "iron-bacteria-cultivation",
+      "productivity": 150,
+      "crafting_speed": 90.375,
+      "type": "biochamber",
+      "energy_consumption_bonus": 1309.8000000000002
+    },
+    {
+      "id": 2,
+      "recipe": "iron-bacteria-cultivation",
+      "productivity": 150,
+      "crafting_speed": 90.375,
+      "type": "biochamber",
+      "energy_consumption_bonus": 1309.8000000000002
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "id": 8
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 9
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "id": 10
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "bioflux",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "item_filter": [
+        {
+          "item_name": "iron-bacteria",
+          "request_count": 1
+        }
+      ]
+    }
+  ]
+}

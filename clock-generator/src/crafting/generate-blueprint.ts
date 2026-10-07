@@ -14,7 +14,7 @@ import Fraction, { fraction } from "fractionability";
 import { createSignalPerInserterBlueprint, mergedClockTicks, SubtickClock } from "./blueprint";
 import { FactorioBlueprint, FactorioBlueprintFile, BlueprintBookBuilder } from "../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../control-logic";
-import { EntityTransferCountMap, SerializableTransferPlan } from "./sequence/cycle/swing-counts";
+import { EntityTransferCountMap, outputInsertersOf, SerializableTransferPlan } from "./sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
 import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InserterInventoryHistoryPlugin } from "../control-logic/inserter/plugins/inserter-inventory-transfer-plugin";
@@ -403,7 +403,7 @@ export function generateClockForConfig(
     relative_tick = simulation_context.tick_provider.getCurrentTick();
     debug.disable();
 
-    const { target_production_rate, output_machine_state_machines, output_inserters, crafting_cycle_plan } =
+    const { target_production_rate, output_machine_state_machines, output_inserters, all_output_inserters, crafting_cycle_plan } =
         planCraftingCycle(config, simulation_context, logger);
 
     // Clear final output machine buffers to prevent OUTPUT_FULL during simulation start
@@ -552,7 +552,7 @@ export function generateClockForConfig(
     // of it: a hand is recorded when the inserter is back, so one dropped in the last ticks of the run is missing.
     const output_inserter_states = new_simulation_context.inserters
         .map(it => it.inserter_state)
-        .filter(state => output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
+        .filter(state => all_output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
     const dropped_before_run = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0);
     const simulate_step = new SimulateStep(new_simulation_context, recorded_duration,
         fuel_level_recorder && (() => fuel_level_recorder.record()));
@@ -579,7 +579,7 @@ export function generateClockForConfig(
         clipBeltFillerWindows(
             trimmed_history,
             simulation_context.entity_registry,
-            new Set(output_inserters.map(os => os.inserter.entity_id.id)),
+            new Set(all_output_inserters.map(os => os.inserter.entity_id.id)),
         ),
         simulation_context.entity_registry,
         crafting_cycle_plan,
@@ -591,7 +591,7 @@ export function generateClockForConfig(
 
     // Compute output stability: compare actual items transferred by output inserters
     // against the expected amount derived from the crafting cycle plan.
-    const output_inserter_ids = new Set(output_inserters.map(os => os.inserter.entity_id.id));
+    const output_inserter_ids = new Set(all_output_inserters.map(os => os.inserter.entity_id.id));
     const total_actual_output = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0) - dropped_before_run;
     let total_expected_output_float = 0;
     for (const [entity_id, etc] of swing_counts.entries()) {
@@ -600,14 +600,15 @@ export function generateClockForConfig(
         }
     }
     const total_expected_output = Math.round(total_expected_output_float);
-    // Compute effective terminal swing count from the output inserter in the entity_transfer_map
-    let used_terminal_swing_count = 1;
+    // The output swings of one output machine a cycle, over all the inserters that take from it
+    const first_output_machine_id = output_inserters[0].inserter.source.entity_id.id;
+    let swings_of_first_output_machine = 0;
     for (const [entity_id, etc] of swing_counts.entries()) {
-        if (output_inserter_ids.has(entity_id.id)) {
-            used_terminal_swing_count = Math.round(etc.total_transfer_count.toDecimal());
-            break;
+        if (output_inserter_ids.has(entity_id.id) && Entity.isInserter(etc.entity) && etc.entity.source.entity_id.id === first_output_machine_id) {
+            swings_of_first_output_machine += etc.total_transfer_count.toDecimal();
         }
     }
+    const used_terminal_swing_count = Math.max(1, Math.round(swings_of_first_output_machine));
 
     const exported_short = exportedLanesShortOfConsumption(simulation_context.entity_registry, final_history, output_inserter_ids, duration.ticks);
     for (const lane of exported_short) {
@@ -957,12 +958,15 @@ function planCraftingCycle(config: Config, simulation_context: SimulationContext
        `but target production rate is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
     )
 
-    // Find output inserters for each output machine
+    // Every inserter that takes the target item out of the build; a machine can have several
+    const inserter_states = simulation_context.state_registry.getAllStates().filter(EntityState.isInserter);
+    const all_output_inserters = output_machine_state_machines.flatMap(machine_state_machine => {
+        const ids = new Set(outputInsertersOf(machine_state_machine.machine_state.machine, simulation_context.entity_registry).map(it => it.entity_id.id));
+        return inserter_states.filter(it => ids.has(it.entity_id.id));
+    });
+    // One of them per output machine, which the swings of a cycle are counted by
     const output_inserters = output_machine_state_machines.map(machine_state_machine => {
-        const inserter = simulation_context.state_registry
-            .getAllStates()
-            .filter(EntityState.isInserter)
-            .find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
+        const inserter = all_output_inserters.find(it => it.inserter.source.entity_id.id === machine_state_machine.machine_state.entity_id.id);
         assert(
             inserter !== undefined,
             `No inserter with source machine ${machine_state_machine.machine_state.entity_id} found`
@@ -979,7 +983,7 @@ function planCraftingCycle(config: Config, simulation_context: SimulationContext
         logger
     );
 
-    return { target_production_rate, output_machine_state_machines, output_inserters, crafting_cycle_plan };
+    return { target_production_rate, output_machine_state_machines, output_inserters, all_output_inserters, crafting_cycle_plan };
 }
 
 /** The hands every inserter and drill moves per crafting cycle, and the cycles the clock needs to make them whole */
@@ -1024,12 +1028,17 @@ export function validateConfig(config: Config, options: { logger?: Logger } = {}
     const simulation_context = SimulationContext.fromConfig(config);
     new PrepareStep(simulation_context).execute();
 
-    const { crafting_cycle_plan, output_inserters } = planCraftingCycle(config, simulation_context, logger);
+    const { crafting_cycle_plan, output_inserters, all_output_inserters } = planCraftingCycle(config, simulation_context, logger);
     const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
     const cycle_ticks = crafting_cycle_plan.total_duration.ticks;
-    const output_ids = new Set(output_inserters.map(it => it.inserter.entity_id.id));
-    const output_plan = crafting_cycle_plan.entity_transfer_map.entries_array().find(([entity_id]) => output_ids.has(entity_id.id));
-    const output_swings_per_cycle = output_plan?.[1].total_transfer_count.toDecimal() ?? 1;
+    // the hands one output machine gives up a cycle, over all the inserters that take from it
+    const first_output_machine_id = output_inserters[0].inserter.source.entity_id.id;
+    const output_ids = new Set(all_output_inserters
+        .filter(it => it.inserter.source.entity_id.id === first_output_machine_id)
+        .map(it => it.inserter.entity_id.id));
+    const output_swings_per_cycle = crafting_cycle_plan.entity_transfer_map.entries_array()
+        .filter(([entity_id]) => output_ids.has(entity_id.id))
+        .reduce((sum, [, planned]) => sum + planned.total_transfer_count.toDecimal(), 0) || 1;
     return {
         transfer_plan: serializable_transfer_plan,
         used_lcm: recipe_lcm,
@@ -1125,8 +1134,11 @@ function windowsOfThePlanWhereInsertersRunFree(
             const sink = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
             const lane_stack_size = source.lanes.find(lane => lane.ingredient_name === item_name)?.stack_size ?? planned.stack_size;
             const pickup_ticks = Math.ceil(planned.stack_size / lane_stack_size);
-            // on from the first item picked up until the hand is dropped, as the windows of a run are
-            const hand_ticks = pickup_ticks + inserter.animation.rotation.ticks + inserter.animation.drop.ticks;
+            // On from the first item picked up until the hand is dropped, as the windows of a run are, and as long
+            // again as a pickup takes, twice: in game a pickup starts a few ticks into its window, and behind another
+            // inserter on the same belt it took 8 ticks and not 3 to fill the hand, while the gap that one left went by.
+            // A window that closed on a partly filled hand left it for the next window, and the machine without fuel.
+            const hand_ticks = pickup_ticks + inserter.animation.rotation.ticks + inserter.animation.drop.ticks + 2 * pickup_ticks;
             const swing_ticks = pickup_ticks + 2 * inserter.animation.rotation.ticks + inserter.animation.drop.ticks;
             const windows: InventoryTransfer[] = [];
             if (Entity.isMachine(sink) && sink.output.item_name === target_item) {
