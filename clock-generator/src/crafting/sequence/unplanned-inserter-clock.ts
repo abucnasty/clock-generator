@@ -140,6 +140,7 @@ export function fuelClockFor(
     index: number = 0,
     crafting_share: number = 1,
     shared_clock_ticks: number | null = null,
+    measured_interval_ticks?: number,
 ): InserterClock {
     const slot = machine.fuel_slot;
     if (!machine.fuel_consumption || !slot) {
@@ -147,7 +148,7 @@ export function fuelClockFor(
     }
 
     const items_in_slot_at_a_window = Math.min(handSizeFor(inserter, slot.fuel.item_name), slot.automated_insertion_limit);
-    const burn_interval_ticks = fuelBurnIntervalTicks(inserter, machine, crafting_share);
+    const burn_interval_ticks = measured_interval_ticks ?? fuelBurnIntervalTicks(inserter, machine, crafting_share);
     const swing_ticks = inserter.animation.total.ticks + 1;
     // a little more often than the fuel lasts, where that lets one short clock hold every fuel clock
     const interval_ticks = shared_clock_ticks === null
@@ -267,11 +268,14 @@ export function byProductClockFor(
 /**
  * The clock of every inserter outside the plan that has one, keyed by inserter id. `crafting_shares` is the part of the
  * time each machine crafts in the plan, by machine id; a machine without one is taken to craft all the time.
+ * `measured_fuel_intervals` is, by machine id, how many ticks the fuel its slot is filled up to lasted at the least in
+ * a run of the build: where it is known, the fuel clock is made from it and not from the crafting share.
  */
 export function unplannedInserterClocks(
     entity_registry: ReadableEntityRegistry,
     period_ticks: number,
     crafting_shares: ReadonlyMap<string, number> = new Map(),
+    measured_fuel_intervals: ReadonlyMap<string, number> = new Map(),
 ): Map<string, InserterClock> {
     const clocks = new Map<string, InserterClock>();
     const used_per_machine = new Map<string, number>();
@@ -285,12 +289,22 @@ export function unplannedInserterClocks(
         const machine = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
         return Entity.isMachine(machine) ? [{ inserter, machine, crafting_share: crafting_shares.get(machine.entity_id.id) ?? 1 }] : [];
     });
+    // a hand smaller than the slot's limit is what the slot is sure to hold, which the measured interval is not for
+    const measuredInterval = (inserter: Inserter, machine: Machine): number | undefined => {
+        const slot = machine.fuel_slot;
+        const measured = measured_fuel_intervals.get(machine.entity_id.id);
+        return slot && measured !== undefined && handSizeFor(inserter, slot.fuel.item_name) >= slot.automated_insertion_limit
+            ? measured
+            : undefined;
+    };
     const shared_clock_ticks = sharedFuelClockTicks(period_ticks, fuel_inserters.map(({ inserter, machine, crafting_share }) => ({
-        burn_interval_ticks: fuelBurnIntervalTicks(inserter, machine, crafting_share),
+        burn_interval_ticks: measuredInterval(inserter, machine) ?? fuelBurnIntervalTicks(inserter, machine, crafting_share),
         swing_ticks: inserter.animation.total.ticks + 1,
     })));
     for (const { inserter, machine, crafting_share } of fuel_inserters) {
-        clocks.set(inserter.entity_id.id, fuelClockFor(inserter, machine, entity_registry, nextIndex(machine), crafting_share, shared_clock_ticks));
+        clocks.set(inserter.entity_id.id, fuelClockFor(
+            inserter, machine, entity_registry, nextIndex(machine), crafting_share, shared_clock_ticks, measuredInterval(inserter, machine),
+        ));
     }
     for (const inserter of byProductOnlyInserters(entity_registry)) {
         const machine = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id);

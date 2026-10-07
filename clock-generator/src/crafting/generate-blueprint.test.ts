@@ -388,10 +388,10 @@ describe("generateClockForConfig", () => {
             expect(clocks.filter(clock => clock.kind === "by-product").length).toBe(1);
         });
 
-        // 5 nutrients last a rocket fuel biochamber 89 ticks of crafting and the jellynut one 116. They craft 89% and
-        // 80% of the time, so with the 10% the share is counted higher that is 91 and 132 ticks. The fuel clocks are 88
-        // and 128, divisors of 11 periods, so one clock of 1408 ticks holds them; on the 128 tick clock both were 64.
-        it("looks at each fuel slot nearly as seldom as the machine's crafting share allows, on fuel clocks of their own", () => {
+        // A rocket fuel biochamber's slot is filled up to 11 nutrients and the jellynut one's to 9. In a run of the
+        // exported clock they lasted at least 208 and 246 ticks, as in game. The fuel clocks are 192 and 240, divisors
+        // of 15 periods, so one clock of 1920 ticks holds them; on the 128 tick clock both were 64.
+        it("looks at each fuel slot nearly as seldom as its fuel is sure to last, on fuel clocks of their own", () => {
             const clocks = alternative("planned").result.unplanned_inserter_clocks!;
             const fuel_moduli = sample.config.inserters
                 .filter(it => it.source.type === "belt" && it.source.id === 3)
@@ -399,10 +399,12 @@ describe("generateClockForConfig", () => {
             expect(fuel_moduli).toHaveLength(3);
             for (const [machine_id, clock] of fuel_moduli) {
                 expect(clock.own_clock).toBe(true);
-                expect(clock.modulus).toBe(machine_id === 2 ? 128 : 88);
+                expect(clock.modulus).toBe(machine_id === 2 ? 240 : 192);
                 expect(clock.window).toEqual({ start: 0, end: 7 });
             }
-            expect(alternative("planned").result.fuel_plan?.merged_clock_ticks).toBe(1408);
+            expect(alternative("planned").result.fuel_plan?.merged_clock_ticks).toBe(1920);
+            const lasted = alternative("planned").result.fuel_consumption_view!.fuel_levels.map(levels => levels.limit_lasts_ticks);
+            expect(lasted).toEqual([208, 246, 208]);
         });
 
         it("keeps every machine fuelled over the fuel consumption view", () => {

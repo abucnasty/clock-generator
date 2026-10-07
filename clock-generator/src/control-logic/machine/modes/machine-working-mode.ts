@@ -1,17 +1,13 @@
 import { InventoryItem, MachineState, MachineStatus, WritableInventoryState } from "../../../state";
-import { MachineOutput } from "../../../entities";
+import { ENERGY_BUFFER_TICKS, MachineOutput } from "../../../entities";
 import { MachineMode } from "./machine-mode";
 
 // absorbs floating point drift when summing fractional per-tick progress
 const PROGRESS_EPSILON = 1e-9;
 
-/**
- * A burner machine works from a buffer of energy that holds this many ticks of work. A tick of work draws one tick of
- * energy from it, and the fuel tops it up again, but not after the tick the machine stops. A stopped machine is left
- * with the 1/15 tick over, which is all it has to work with on the tick it starts again: that tick makes 1/15 of a
- * tick's progress, and its top-up burns 16/15 of a tick's fuel. Measured on biochambers in Factorio 2.1.
- */
-const ENERGY_BUFFER_TICKS = 16 / 15;
+// A burner's energy buffer is topped up from its fuel after a tick of work, but not after the tick the machine stops.
+// A stopped machine is left with the 1/15 tick the buffer holds over a tick of work, which is all it has to work with
+// on the tick it starts again: that tick makes 1/15 of a tick's progress, and its top-up burns 16/15 of a tick's fuel.
 
 /**
  * Crafting follows Factorio: ingredients are removed when a craft starts and products are added when it finishes.

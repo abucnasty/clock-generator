@@ -457,7 +457,9 @@ export function generateClockForConfig(
 
     // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the period
     const crafting_shares = plannedCraftingShares(simulation_context.entity_registry, crafting_cycle_plan);
-    const inserter_clocks = unplannedInserterClocks(
+    // The fuel clocks of the planning run are made from the crafting share of the plan. The exported ones are made
+    // from what a run of the exported clock burns, once its windows are known: see fuelClocksAndViewFor.
+    let inserter_clocks = unplannedInserterClocks(
         simulation_context.entity_registry,
         crafting_cycle_plan.total_duration.ticks * recipe_lcm,
         crafting_shares,
@@ -724,16 +726,55 @@ export function generateClockForConfig(
         ? { clock: subtick_clock, blueprint: blueprintForWindows(windows, subtick_clock) }
         : undefined;
 
-    const fuel_plan = fuelPlan(simulation_context.entity_registry, inserter_clocks, crafting_shares, duration.ticks);
+    let fuel_plan = fuelPlan(simulation_context.entity_registry, inserter_clocks, crafting_shares, duration.ticks);
     const fuel_levels = fuel_level_recorder?.series();
 
-    const fuelConsumptionViewFor = (windows: Map<string, OpenRange[]>): FuelConsumptionView | undefined => {
+    /**
+     * Runs the exported clock for several periods, makes the fuel clocks from what the machines burned in it, and runs
+     * it again with those. A machine burns in bursts, more in a stretch that starts as it begins to craft than its
+     * crafting share says, and how often it stops depends on the windows: the run has both. The fuel clocks of the
+     * plan stay when there is no run, or when a machine ran out of fuel with the measured ones.
+     */
+    const fuelClocksAndViewFor = (windows: Map<string, OpenRange[]>): FuelConsumptionView | undefined => {
         // the view is for fuel: a clock for an inserter taking a by-product off a machine does not need a longer run
         const has_fuel_inserter = Array.from(inserter_clocks.values()).some(clock => clock.kind === "fuel");
         if (!has_fuel_inserter || options.fuel_consumption_view === false) {
             return undefined;
         }
-        return fuelConsumptionView(config, windows, inserter_clocks, duration.ticks, logger);
+        const planned_view = fuelConsumptionView(config, windows, inserter_clocks, duration.ticks, logger, false);
+        if (planned_view === undefined || planned_view.ran_out_of_fuel) {
+            return planned_view;
+        }
+        const limit_lasted = new Map(planned_view.fuel_levels.flatMap(levels => levels.limit_lasts_ticks === null
+            ? []
+            : [[levels.machine_id, levels.limit_lasts_ticks] as const]));
+        const measured_intervals = new Map(Array.from(limit_lasted, ([machine_id, ticks]) =>
+            [machine_id, Math.floor(ticks * MEASURED_FUEL_INTERVAL_SHARE)] as const));
+        let measured_clocks: Map<string, InserterClock>;
+        try {
+            measured_clocks = unplannedInserterClocks(simulation_context.entity_registry, duration.ticks, crafting_shares, measured_intervals);
+        } catch (error) {
+            logger.log(`Fuel clocks: kept from the plan, the measured ones cannot be made (${error instanceof Error ? error.message : error})`);
+            return planned_view;
+        }
+        const same = Array.from(measured_clocks, ([id, clock]) => {
+            const planned = inserter_clocks.get(id);
+            return planned !== undefined && planned.modulus === clock.modulus
+                && planned.window.start_inclusive === clock.window.start_inclusive && planned.window.end_inclusive === clock.window.end_inclusive;
+        }).every(Boolean);
+        if (same) {
+            fuel_plan = fuelPlan(simulation_context.entity_registry, inserter_clocks, crafting_shares, duration.ticks, limit_lasted);
+            return planned_view;
+        }
+        const measured_view = fuelConsumptionView(config, windows, measured_clocks, duration.ticks, logger, true);
+        if (measured_view === undefined || measured_view.ran_out_of_fuel) {
+            logger.log("Fuel clocks: kept from the plan, a machine ran out of fuel with the measured ones");
+            return planned_view;
+        }
+        logger.log(`Fuel clocks: made from the measured burn (${Array.from(measured_clocks.values()).filter(clock => clock.kind === "fuel").map(clock => `${clock.inserter_id} every ${clock.modulus}`).join(", ")})`);
+        inserter_clocks = measured_clocks;
+        fuel_plan = fuelPlan(simulation_context.entity_registry, inserter_clocks, crafting_shares, duration.ticks, limit_lasted);
+        return measured_view;
     };
 
     let clock_only_run: ClockOnlyRun | undefined;
@@ -788,6 +829,8 @@ export function generateClockForConfig(
                 stability_check.as_built = full_hand.check;
                 report.full_hand_inserters = full_hand.inserters;
             }
+            // before the blueprint, which exports the fuel clocks this settles on
+            const fuel_consumption_view = fuelClocksAndViewFor(windows);
             return {
                 ...(full_hand?.result ?? derived.verification),
                 blueprint: blueprintForWindows(windows),
@@ -796,7 +839,7 @@ export function generateClockForConfig(
                 clock_windows: serializeClockWindows(withInserterClocks(windows, inserter_clocks, duration.ticks)),
                 belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
                 crafting_cycle_plan,
-                fuel_consumption_view: fuelConsumptionViewFor(windows),
+                fuel_consumption_view,
                 unplanned_inserter_clocks: serializeInserterClocks(inserter_clocks),
                 fuel_plan,
                 used_lcm: recipe_lcm,
@@ -828,6 +871,8 @@ export function generateClockForConfig(
     return buildResult();
 
     function buildResult(): BlueprintGenerationResult {
+        // before the blueprint, which exports the fuel clocks this settles on
+        const fuel_consumption_view = fuelClocksAndViewFor(planned_windows);
         const blueprint = blueprintForWindows(planned_windows);
 
         // Create serializable transfer history for UI visualization
@@ -861,7 +906,7 @@ export function generateClockForConfig(
             })),
             shifted_cycle,
             clock_only_run,
-            fuel_consumption_view: fuelConsumptionViewFor(planned_windows),
+            fuel_consumption_view,
             unplanned_inserter_clocks: serializeInserterClocks(inserter_clocks),
             fuel_plan,
             fuel_levels,
@@ -2058,6 +2103,12 @@ function subtickClockForPeriod(period: number): SubtickClock | null {
     return null;
 }
 
+/**
+ * The part of the ticks the fuel lasted at the least in a run that a fuel clock is made from. The run is what the
+ * build does, tick for tick; the rest is for what it does not have, such as a belt that brings the fuel late.
+ */
+const MEASURED_FUEL_INTERVAL_SHARE = 0.98;
+
 /** Longest the fuel consumption view runs, in simulated ticks */
 const MAX_FUEL_VIEW_TICKS = 100_000;
 
@@ -2076,6 +2127,8 @@ function fuelConsumptionView(
     inserter_clocks: ReadonlyMap<string, InserterClock>,
     period: number,
     logger: Logger,
+    /** Run the fuel inserters on `inserter_clocks`, and not on the fuel clocks the run would make from its own plan */
+    on_these_fuel_clocks: boolean,
 ): FuelConsumptionView | undefined {
     const registry = createEntityRegistryFromConfig(config);
     const fuel_inserters = fuelOnlyInserters(registry);
@@ -2096,7 +2149,10 @@ function fuelConsumptionView(
     while (true) {
         // the windows are run as they are: observing them again would return that run instead, without the fuel levels
         const run = generateClockForConfig(
-            buildAsBuiltConfig({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period),
+            buildAsBuiltConfig(
+                { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period,
+                on_these_fuel_clocks ? inserter_clocks : undefined,
+            ),
             { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods, fuel_levels: true },
         );
         const swung = run.serializable_transfer_history.entities
@@ -2265,6 +2321,8 @@ function buildAsBuiltConfig(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
     period: number,
+    /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
+    fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): Config {
     const windows = new Map<string, EnableControlRange[]>();
     // inserters outside the plan swing on clocks that do not come from the windows of the plan
@@ -2276,7 +2334,12 @@ function buildAsBuiltConfig(
     const asBuiltControl = (entity_key: string, current: EnableControlOverrideConfig | undefined): EnableControlOverrideConfig => {
         // a fuel inserter is on a clock of its own, which the run makes for it from the plan like the blueprint does
         if (inserter_clocks.get(entity_key)?.own_clock) {
-            return { mode: "AUTO" };
+            const fuel_clock = fuel_clocks?.get(entity_key);
+            return fuel_clock === undefined ? { mode: "AUTO" } : {
+                mode: "CLOCKED",
+                ranges: [{ start: fuel_clock.window.start_inclusive, end: fuel_clock.window.end_inclusive }],
+                period_duration_ticks: fuel_clock.modulus,
+            };
         }
         const ranges = windows.get(entity_key);
         if (ranges && ranges.length > 0) {
