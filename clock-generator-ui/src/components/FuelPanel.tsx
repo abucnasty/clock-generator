@@ -101,7 +101,11 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                                 <TableCell align="right">{percent(machine.crafting_share)}</TableCell>
                                 <TableCell align="right">{machine.effective_burn_rate_per_second.toFixed(3)}/s</TableCell>
                                 <TableCell align="right">{machine.burned_per_period.toFixed(2)}</TableCell>
-                                <TableCell align="right">{ticksAndSeconds(machine.insertion_limit_lasts_ticks)}</TableCell>
+                                <TableCell align="right">
+                                    {machine.insertion_limit_lasted_at_least_ticks === undefined
+                                        ? ticksAndSeconds(machine.insertion_limit_lasts_ticks)
+                                        : `at least ${ticksAndSeconds(machine.insertion_limit_lasted_at_least_ticks)}`}
+                                </TableCell>
                                 <TableCell align="right">
                                     {machine.energy_consumption_bonus >= 0 ? '+' : ''}{machine.energy_consumption_bonus.toFixed(0)}%
                                 </TableCell>

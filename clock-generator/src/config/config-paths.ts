@@ -32,6 +32,7 @@ export const ConfigPaths = {
     PRODUCTIVITY_MODULE: path.join(CONFIG_SAMPLES_DIR, 'productivity-module.conf'),
     SAMPLE_CONFIG: path.join(CONFIG_SAMPLES_DIR, 'sample-config.conf'),
     STONE_BRICKS_DIRECT_INSERT: path.join(CONFIG_SAMPLES_DIR, 'stone-bricks-direct-insert.conf'),
+    STONE_BRICKS_DIRECT_INSERT_2_1: path.join(CONFIG_SAMPLES_DIR, 'stone-bricks', 'clock-config-stone-brick-1791327512026.json'),
     UTILITY_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'utility-science.conf'),
     MILITARY_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'reja-military-1.json'),
     LOW_DENSITY_STRUCTURE: path.join(CONFIG_SAMPLES_DIR, 'low-density-structure-120-per-second.json'),

@@ -39,6 +39,12 @@ export class MachineState implements EntityState {
         public totalCrafted: number,
     ) { }
 
+    /**
+     * Main product of a finished craft that did not fit under the stack size. The machine holds it, and starts no
+     * craft, until there is room for it.
+     */
+    public pendingOutput: number = 0;
+
     public toString(): string {
         return `MachineState(${this.entity_id},recipe=${this.machine.metadata.recipe.name},status=${this.status})`;
     }
@@ -67,7 +73,7 @@ function forMachine(machine: Machine): MachineState {
 }
 
 function clone(machineState: MachineState): MachineState {
-    return new MachineState(
+    const cloned = new MachineState(
         machineState.entity_id,
         machineState.machine,
         ProgressState.clone(machineState.craftingProgress),
@@ -79,7 +85,9 @@ function clone(machineState: MachineState): MachineState {
         machineState.craftCount,
         machineState.status,
         machineState.totalCrafted,
-    )
+    );
+    cloned.pendingOutput = machineState.pendingOutput;
+    return cloned;
 }
 
 /** An inserter's drop into a machine: fuel goes to the fuel slot, everything else to the ingredients */

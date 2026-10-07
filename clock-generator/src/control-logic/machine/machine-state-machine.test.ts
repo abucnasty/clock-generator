@@ -263,6 +263,9 @@ describe("Machine State Machine at the output block", () => {
     test("a full output machine works again as soon as its ingredients arrive, even at the block", () => {
         // in game an advanced circuit machine at its block of 21 started a craft the tick its copper cable arrived
         const { machine_state, state_machine } = createRocketFuel(12, 0)
+        // a burner that worked before holds the energy that is over a tick of work, enough to start on
+        const machine = machine_state.machine
+        machine_state.fuelProgress.energy_buffer_mj = machine.fuel_slot!.energy_per_craft_mj * machine.crafting_rate.crafts_per_tick / 15
         executeControlLogicForTicks(state_machine, 2)
         expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
         machine_state.inventoryState.addQuantity("jelly", 30)
@@ -376,7 +379,8 @@ describe("Machine State Machine with several outputs", () => {
     test("a by-product is made at its expected amount, carrying fractions over", () => {
         const { machine_state, state_machine } = createProcessing()
         machine_state.inventoryState.addQuantity("jellynut", 50)
-        for (let i = 0; i < 50 * 60; i++) {
+        // a tick more than the crafts take: a burner that has not worked yet takes its energy from the fuel first
+        for (let i = 0; i < 50 * 60 + 1; i++) {
             executeControlLogicForTicks(state_machine, 1)
             machine_state.inventoryState.setQuantity("jelly", 0)
             machine_state.fuelInventory.setQuantity("nutrients", 5)

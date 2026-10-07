@@ -25,6 +25,11 @@ export interface FuelMachinePlan {
     insertion_limit: number;
     /** Ticks the insertion limit lasts at the effective burn rate */
     insertion_limit_lasts_ticks: number;
+    /**
+     * The fewest ticks the insertion limit lasted in a run of the exported clock, which the fuel clock is made from: a
+     * machine burns in bursts, so less than at the effective rate. Absent when there was no such run.
+     */
+    insertion_limit_lasted_at_least_ticks?: number;
     /** Energy consumption effect in percent, e.g. 50 for +50% */
     energy_consumption_bonus: number;
 }
@@ -69,6 +74,8 @@ export function fuelPlan(
     inserter_clocks: ReadonlyMap<string, InserterClock>,
     crafting_shares: ReadonlyMap<string, number>,
     period_ticks: number,
+    /** By machine id, the fewest ticks the insertion limit lasted in a run of the exported clock */
+    limit_lasted_at_least: ReadonlyMap<string, number> = new Map(),
 ): FuelPlan | undefined {
     const fuel_inserters = fuelOnlyInserters(entity_registry).filter(inserter => inserter_clocks.get(inserter.entity_id.id)?.kind === "fuel");
     if (fuel_inserters.length === 0) {
@@ -100,6 +107,7 @@ export function fuelPlan(
             burned_per_period: effective_rate * period_ticks / TICKS_PER_SECOND,
             insertion_limit: machine.fuel_slot.automated_insertion_limit,
             insertion_limit_lasts_ticks: machine.fuel_slot.automated_insertion_limit / effective_rate * TICKS_PER_SECOND,
+            insertion_limit_lasted_at_least_ticks: limit_lasted_at_least.get(machine.entity_id.id),
             energy_consumption_bonus: machine.metadata.energy_consumption_bonus ?? 0,
         });
     }
@@ -160,6 +168,11 @@ export interface FuelLevelSeries {
     empty_ticks: number;
     /** First tick the machine had no fuel at all, or null when it always had some */
     first_empty_tick: number | null;
+    /**
+     * The fewest ticks in which the machine burned the items its fuel slot is filled up to, over every stretch of the
+     * run. Null when it never burned that many within the run.
+     */
+    limit_lasts_ticks: number | null;
 }
 
 /** Most samples a fuel level series is cut down to */
@@ -190,18 +203,45 @@ export class FuelLevelRecorder {
     }
 
     public series(): FuelLevelSeries[] {
-        return Array.from(this.levels, ([state, levels]) => seriesOf(state.machine.entity_id.id, levels));
+        return Array.from(this.levels, ([state, levels]) =>
+            seriesOf(state.machine.entity_id.id, levels, state.machine.fuel_slot!.automated_insertion_limit));
     }
 }
 
+/**
+ * The fewest ticks in which `items` of fuel were burned, over every stretch of a run: how long that much fuel is sure
+ * to last, whenever the stretch starts. A machine burns in bursts, so a stretch that starts as it begins to craft
+ * burns the fuel sooner than its average rate does. Null when no stretch of the run burned that much.
+ */
+export function fewestTicksToBurn(burned_per_tick: readonly number[], items: number): number | null {
+    let fewest: number | null = null;
+    let end = 0;
+    let burned = 0;
+    for (let start = 0; start < burned_per_tick.length; start++) {
+        while (end < burned_per_tick.length && burned <= items + FUEL_EPSILON) {
+            burned += burned_per_tick[end];
+            end += 1;
+        }
+        if (burned <= items + FUEL_EPSILON) {
+            break;
+        }
+        // the tick that took it over is not one the fuel lasted
+        const lasted = end - start - 1;
+        fewest = fewest === null ? lasted : Math.min(fewest, lasted);
+        burned -= burned_per_tick[start];
+    }
+    return fewest;
+}
+
 /** `levels[0]` is the fuel before the run, `levels[n]` after its n-th tick */
-function seriesOf(machine_id: string, levels: number[]): FuelLevelSeries {
+function seriesOf(machine_id: string, levels: number[], insertion_limit: number): FuelLevelSeries {
     const ticks = levels.length - 1;
     const ticks_per_sample = Math.max(1, Math.ceil(ticks / MAX_FUEL_LEVEL_SAMPLES));
     const round = (level: number) => Math.round(level * 100) / 100;
     const min: number[] = [];
     const max: number[] = [];
     let inserted = 0;
+    const burned_per_tick: number[] = [];
     let empty_ticks = 0;
     let first_empty_tick: number | null = null;
     let min_level = levels[0];
@@ -210,9 +250,9 @@ function seriesOf(machine_id: string, levels: number[]): FuelLevelSeries {
         const level = levels[tick];
         // a machine burns less than an item a tick, so a rise is the hand dropped in that tick less what was burned
         const rise = level - levels[tick - 1];
-        if (rise > FUEL_EPSILON) {
-            inserted += Math.ceil(rise - FUEL_EPSILON);
-        }
+        const inserted_now = rise > FUEL_EPSILON ? Math.ceil(rise - FUEL_EPSILON) : 0;
+        inserted += inserted_now;
+        burned_per_tick.push(Math.max(0, inserted_now - rise));
         if (level <= FUEL_EPSILON) {
             empty_ticks += 1;
             first_empty_tick ??= tick - 1;
@@ -238,5 +278,6 @@ function seriesOf(machine_id: string, levels: number[]): FuelLevelSeries {
         burned: levels[0] + inserted - levels[ticks],
         empty_ticks,
         first_empty_tick,
+        limit_lasts_ticks: fewestTicksToBurn(burned_per_tick, insertion_limit),
     };
 }

@@ -93,6 +93,7 @@ export class InserterPickupMode implements InserterMode {
             }
             
             held_item.quantity = held_item.quantity + pickup_quantity;
+            inserter_state.items_picked_up += pickup_quantity;
             inserter_state.inventoryState.addQuantity(held_item.item_name, pickup_quantity);
             inserter_state.held_item = held_item;
             return;
@@ -105,6 +106,7 @@ export class InserterPickupMode implements InserterMode {
                 // Pick up at most lane.stack_size items, but cap at inserter stack size
                 const pickup_quantity = Math.min(lane.stack_size, handSizeFor(inserter_state.inserter, item_name));
                 inserter_state.held_item = { item_name: item_name, quantity: pickup_quantity };
+                inserter_state.items_picked_up += pickup_quantity;
                 inserter_state.inventoryState.addQuantity(item_name, pickup_quantity);
                 return;
             }
@@ -129,6 +131,7 @@ export class InserterPickupMode implements InserterMode {
             return;
         }
 
+        state.items_picked_up += pickup_quantity;
         state.held_item = { item_name: held_item.item_name, quantity: held_item.quantity + pickup_quantity };
         state.inventoryState.addQuantity(output_item_name, pickup_quantity);
         source.inventoryState.removeQuantity(output_item_name, pickup_quantity);
@@ -159,6 +162,7 @@ export class InserterPickupMode implements InserterMode {
             return;
         }
 
+        state.items_picked_up += pickup_quantity;
         state.held_item = { item_name: held_item.item_name, quantity: held_item.quantity + pickup_quantity };
         state.inventoryState.addQuantity(first_available_item, pickup_quantity);
         source.inventoryState.removeQuantity(first_available_item, pickup_quantity);

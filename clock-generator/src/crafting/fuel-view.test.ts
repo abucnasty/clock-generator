@@ -3,7 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { Machine, MachineType, RecipeMetadata } from "../entities";
 import { MachineState } from "../state";
-import { FuelLevelRecorder, fuelPlan } from "./fuel-view";
+import { fewestTicksToBurn, FuelLevelRecorder, fuelPlan } from "./fuel-view";
 import { generateClockAlternatives, generateClockForConfig } from "./generate-blueprint";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
@@ -30,17 +30,18 @@ describe("the fuel plan", () => {
                 expect(machine.crafting_share).toBeLessThan(1);
                 expect(machine.effective_burn_rate_per_second).toBeCloseTo(machine.burn_rate_per_second * machine.crafting_share);
                 expect(machine.burned_per_period).toBeCloseTo(machine.effective_burn_rate_per_second * 128 / 60);
-                expect(machine.insertion_limit).toBe(5);
-                expect(machine.insertion_limit_lasts_ticks).toBeCloseTo(5 / machine.effective_burn_rate_per_second * 60);
+                // what the machine burns in 192 ticks at its full energy consumption, rounded up: 11 and 9 nutrients
+                expect(machine.insertion_limit).toBe(machine.machine_id === "machine:2" ? 9 : 11);
+                expect(machine.insertion_limit_lasts_ticks).toBeCloseTo(machine.insertion_limit / machine.effective_burn_rate_per_second * 60);
                 expect(machine.energy_consumption_bonus).toBeGreaterThan(0);
             }
         });
 
         it("gives the exported fuel clock of each fuel inserter and how often it should swing on it", () => {
             expect(plan.inserters.map(inserter => [inserter.inserter_id, inserter.machine_id, inserter.modulus])).toEqual([
-                ["inserter:10", "machine:1", 88],
-                ["inserter:12", "machine:2", 128],
-                ["inserter:13", "machine:3", 88],
+                ["inserter:10", "machine:1", 192],
+                ["inserter:12", "machine:2", 224],
+                ["inserter:13", "machine:3", 192],
             ]);
             for (const inserter of plan.inserters) {
                 const exported = result.unplanned_inserter_clocks![inserter.inserter_id];
@@ -49,17 +50,17 @@ describe("the fuel plan", () => {
                 expect(inserter.hand_size).toBe(16);
                 expect(inserter.enables_per_minute).toBeCloseTo(3600 / inserter.modulus);
                 expect(inserter.expected_swings_per_minute).toBeCloseTo(3600 / inserter.hand_lasts_ticks);
-                // the window repeats while the insertion limit lasts, a hand of 16 lasts about three times that
+                // the window repeats while the insertion limit lasts, a hand of 16 lasts about half as long again
                 expect(inserter.swing_share).toBeCloseTo(inserter.modulus / inserter.hand_lasts_ticks);
-                expect(inserter.swing_share).toBeGreaterThan(0.25);
-                expect(inserter.swing_share).toBeLessThan(0.35);
+                expect(inserter.swing_share).toBeGreaterThan(0.45);
+                expect(inserter.swing_share).toBeLessThan(0.7);
             }
         });
 
         it("counts the period and every fuel clock on one merged clock", () => {
-            // lcm(128, 88, 128): the fuel clocks are divisors of 11 periods, a little shorter than the 91 and 132
-            // ticks the fuel lasts, where the clock for those would count 384384 ticks
-            expect(plan.merged_clock_ticks).toBe(1408);
+            // lcm(128, 192, 224): the fuel clocks are divisors of 21 periods, a little shorter than the ticks the fuel
+            // was sure to last in a run of the exported clock, less what a hand takes to arrive
+            expect(plan.merged_clock_ticks).toBe(2688);
             expect(plan.separate_clocks_reason).toBeUndefined();
         });
 
@@ -85,11 +86,12 @@ describe("the fuel plan", () => {
                 for (const inserter of plan.inserters) {
                     const swings = view.transfer_history.entities.find(entity => entity.entity_id === inserter.inserter_id)!.transfers;
                     expect(swings.length).toBeGreaterThanOrEqual(3);
-                    // the view runs the exported fuel clock: every swing starts inside one of its windows
+                    // the view runs the exported fuel clock: every swing starts inside one of its windows, give or
+                    // take the tick the recorded transfers are moved by
                     for (const swing of swings) {
-                        const clock_tick = swing.start_tick % inserter.modulus;
+                        const clock_tick = (swing.start_tick + 1) % inserter.modulus;
                         expect(clock_tick).toBeGreaterThanOrEqual(inserter.window.start);
-                        expect(clock_tick).toBeLessThanOrEqual(inserter.window.end + 1);
+                        expect(clock_tick).toBeLessThanOrEqual(inserter.window.end + 2);
                     }
                 }
             });
@@ -223,5 +225,68 @@ describe("the fuel consumption view of every clock alternative", async () => {
         const view = alternative.result.fuel_consumption_view!;
         expect(view.fuel_levels.map(levels => levels.machine_id)).toEqual(["machine:1", "machine:2", "machine:3"]);
         view.fuel_levels.forEach(levels => expect(Number.isFinite(levels.min_level)).toBe(true));
+    });
+});
+
+describe("fewestTicksToBurn", () => {
+    it("is how long the fuel lasts from the tick that burns it soonest", () => {
+        // a machine that burns 1 a tick for 4 ticks and then rests for 4: 3 items last 3 ticks from where it starts
+        // to burn, though at its average rate they would last 6
+        const burned = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
+        expect(fewestTicksToBurn(burned, 3)).toBe(3);
+        // 4 items are burned in the 4 ticks, and last through the rest after them
+        expect(fewestTicksToBurn(burned, 4)).toBe(8);
+    });
+
+    it("is at the steady rate for a machine that never stops", () => {
+        expect(fewestTicksToBurn(new Array(100).fill(0.05), 1)).toBe(20);
+    });
+
+    it("is null when the run never burned that much", () => {
+        expect(fewestTicksToBurn([0.1, 0.1, 0.1], 5)).toBeNull();
+        expect(fewestTicksToBurn([], 5)).toBeNull();
+    });
+});
+
+describe("fuel clocks made from a run of the exported clock", async () => {
+    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+    const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    const result = generateClockForConfig(config, { logger: quiet });
+    const view = result.fuel_consumption_view!;
+    const plan = result.fuel_plan!;
+
+    it("measures how long the fuel slot's limit lasted each machine at the least", () => {
+        for (const levels of view.fuel_levels) {
+            expect(levels.limit_lasts_ticks).not.toBeNull();
+            const machine = plan.machines.find(it => it.machine_id === levels.machine_id)!;
+            expect(machine.insertion_limit_lasted_at_least_ticks).toBe(levels.limit_lasts_ticks);
+            // a machine burns in bursts: the limit never lasts longer than at the rate it burns over a whole period
+            expect(levels.limit_lasts_ticks!).toBeLessThanOrEqual(machine.insertion_limit_lasts_ticks * 1.02);
+            // and no shorter than while it crafts without a stop, which also burns a little extra as it starts
+            expect(levels.limit_lasts_ticks!).toBeGreaterThanOrEqual(Math.floor(machine.insertion_limit / machine.burn_rate_per_second * 60 * 0.9));
+        }
+    });
+
+    it("enables each fuel inserter within the ticks its machine's fuel was sure to last", () => {
+        for (const inserter of plan.inserters) {
+            const lasted = view.fuel_levels.find(it => it.machine_id === inserter.machine_id)!.limit_lasts_ticks!;
+            // with room for the hand a window starts to arrive: 4 ticks to fill it from the belt and 4 of slack, 3 to
+            // swing, 1 to drop and 2 spare
+            expect(inserter.modulus).toBeLessThanOrEqual(lasted - 14);
+            expect(result.unplanned_inserter_clocks![inserter.inserter_id].modulus).toBe(inserter.modulus);
+        }
+    });
+
+    it("keeps every machine fuelled on those clocks, over two rounds of the one clock that holds them", () => {
+        expect(view.duration_ticks).toBeGreaterThanOrEqual(2 * plan.merged_clock_ticks!);
+        expect(view.ran_out_of_fuel).toBe(false);
+        view.fuel_levels.forEach(levels => expect(levels.empty_ticks).toBe(0));
+    });
+
+    it("keeps the fuel clocks of the plan when no run is made", () => {
+        const without_run = generateClockForConfig(config, { logger: quiet, fuel_consumption_view: false });
+        expect(without_run.fuel_consumption_view).toBeUndefined();
+        expect(Object.values(without_run.unplanned_inserter_clocks!).filter(clock => clock.kind === "fuel")).toHaveLength(3);
+        without_run.fuel_plan!.machines.forEach(machine => expect(machine.insertion_limit_lasted_at_least_ticks).toBeUndefined());
     });
 });
