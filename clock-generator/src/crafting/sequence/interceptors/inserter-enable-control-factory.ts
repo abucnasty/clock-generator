@@ -1,6 +1,6 @@
 import assert from "../../../common/assert";
 import { Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
-import { EntityTransferCountMap } from "../cycle/swing-counts";
+import { EntityTransferCountMap, outputInsertersOf } from "../cycle/swing-counts";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { ItemName } from "../../../data";
@@ -29,18 +29,20 @@ export class EnableControlFactory {
     ) {
         this.target_output_item_name = this.crafting_cycle_plan.production_rate.machine_production_rate.item;
         this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
-        this.terminal_machine_states = this.findFinalMachines();
-        this.terminal_inserter_states = this.findFinalInserters();
-        const entities: Entity[] = [];
         for (const state of this.entity_state_registry.getAllStates()) {
             if (EntityState.isInserter(state)) {
-                entities.push(state.inserter);
+                this.entities.push(state.inserter);
             } else if (EntityState.isMachine(state)) {
-                entities.push(state.machine);
+                this.entities.push(state.machine);
             }
         }
-        this.always_enabled_ids = new Set(alwaysEnabledInserters({ getAll: () => entities }).map(it => it.entity_id.id));
+        this.terminal_machine_states = this.findFinalMachines();
+        this.terminal_inserter_states = this.findFinalInserters();
+        this.always_enabled_ids = new Set(alwaysEnabledInserters({ getAll: () => this.entities }).map(it => it.entity_id.id));
     }
+
+    /** The inserters and machines of the build */
+    private readonly entities: Entity[] = [];
 
     private readonly always_enabled_ids: ReadonlySet<string>;
 
@@ -1277,10 +1279,11 @@ export class EnableControlFactory {
     private findFinalInserters(): Set<InserterState> {
         const final_inserters = new Set<InserterState>();
         for (const terminal_machine of this.terminal_machine_states) {
+            const output_ids = new Set(outputInsertersOf(terminal_machine.machine, { getAll: () => this.entities }).map(it => it.entity_id.id));
             const inserters = this.entity_state_registry
                 .getAllStates()
                 .filter(EntityState.isInserter)
-                .filter(s => s.inserter.source.entity_id.id === terminal_machine.entity_id.id);
+                .filter(s => output_ids.has(s.entity_id.id));
             assert(
                 inserters.length >= 1,
                 `No inserter found taking output from terminal machine ${terminal_machine.entity_id.id}`

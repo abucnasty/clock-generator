@@ -122,7 +122,22 @@ function addBeltLaneConsumption(
     }
 }
 
-/** The inserters that take the target output: each machine's swings are split among the inserters taking from it */
+/**
+ * The inserters that take a machine's product out of the build: onto a belt or into a chest. One that hands it to
+ * another machine is planned by what that machine uses. When every inserter hands it to a machine, they all count.
+ */
+export function outputInsertersOf(machine: Machine, entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
+    const machine_ids = new Set(entity_registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
+    const taking_from_it = entity_registry.getAll()
+        .filter(Entity.isInserter)
+        .filter(inserter => inserter.source.entity_id.id === machine.entity_id.id);
+    const out_of_the_build = taking_from_it
+        .filter(inserter => !machine_ids.has(inserter.sink.entity_id.id))
+        .filter(inserter => inserter.filtered_items.size === 0 || inserter.filtered_items.has(machine.output.item_name));
+    return out_of_the_build.length > 0 ? out_of_the_build : taking_from_it;
+}
+
+/** The inserters that take the target output: each machine's swings are split among the inserters taking it out of the build */
 function planOutputInserters(
     output_machines: Machine[],
     entity_registry: ReadableEntityRegistry,
@@ -134,9 +149,7 @@ function planOutputInserters(
     assert(output_machines.length > 0, "At least one output machine is required");
 
     for (const machine of output_machines) {
-        const inserters = entity_registry.getAll()
-            .filter(Entity.isInserter)
-            .filter(inserter => inserter.source.entity_id.id === machine.entity_id.id);
+        const inserters = outputInsertersOf(machine, entity_registry);
         assert(
             inserters.length >= 1,
             `Output machine ${machine.entity_id.id} must have at least one dedicated output inserter, ` +
@@ -216,9 +229,7 @@ function computeInserterSwingCounts(
     const result: EntityTransferCountMap = existing_results;
 
     // Use the known output inserter if provided, otherwise find the first one
-    const output_inserter = known_output_inserter ?? entity_registry.getAll()
-        .filter(Entity.isInserter)
-        .find(inserter => inserter.source.entity_id.id === machine.entity_id.id);
+    const output_inserter = known_output_inserter ?? outputInsertersOf(machine, entity_registry)[0];
 
     assert(output_inserter !== undefined, `No inserter found that takes output from machine ${machine.entity_id}`);
 

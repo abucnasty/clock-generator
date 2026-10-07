@@ -324,23 +324,17 @@ describe("generateClockForConfig", () => {
     // craft starts from and send the rest to the science biochamber [5]. Bioflux and nutrients come off one belt on
     // inserters 1, 2 and 11; inserter 12 takes the science away. Recorded in Factorio 2.1.21 for 36000 ticks a clock:
     // with 1 output swing per cycle one module made exactly 53 a second (400 packs in each of 106 periods) and, at a
-    // target of 250, exactly 50; with 5 output swings per cycle it made 50.3 and 49.9.
+    // target of 250, exactly 50. With 5 output swings per cycle it made 50.3 and 49.9 while its belt inserters had
+    // windows of one hand, too short for a pickup that starts late; that clock has not been recorded since.
     describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
-        const { alternatives, selected_index } = generateClockAlternatives(config);
-        const selected = alternatives[selected_index];
-        const windows = selected.result.clock_windows;
+        const { alternatives } = generateClockAlternatives(config);
+        const one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
+        const windows = one_swing.result.clock_windows;
 
         it("holds the target of 265 a second with one output swing per cycle, on a clock of the exact period", () => {
-            expect(selected.label).toBe("1 output swing per cycle, subtick clock");
-            expect(selected.is_stable).toBe(true);
-            expect(selected.items_per_second).toBeCloseTo(265, 6);
-        });
-
-        it("does not call a clock with 5 output swings per cycle stable, which fell short in game", () => {
-            const five_swings = alternatives.filter(a => a.label.startsWith("5 output swings per cycle"));
-            expect(five_swings.length).toBeGreaterThan(0);
-            expect(five_swings.every(a => !a.is_stable)).toBe(true);
+            expect(one_swing.is_stable).toBe(true);
+            expect(one_swing.items_per_second).toBeCloseTo(265, 6);
         });
 
         it("leaves every inserter between machines always enabled", () => {
@@ -370,10 +364,63 @@ describe("generateClockForConfig", () => {
         });
 
         it("says that the egg recipe loops and that the machines start with eggs inside", () => {
-            const insight = selected.insights.find(it => it.id === "looping-recipe")!;
+            const insight = one_swing.insights.find(it => it.id === "looping-recipe")!;
             expect(insight.scope).toBe("build");
             expect(insight.what).toContain("starts each of these machines with 7 pentapod-egg already inside");
             expect(insight.table?.rows.map(row => row[0])).toHaveLength(2);
+        });
+    });
+
+    // Two iron bacteria cultivation biochambers that give each other the bacteria a craft starts from. Each has two
+    // inserters to a chest (1 and 3, 4 and 6); 7 and 8 go between the machines; 9 and 10 bring bioflux and nutrients.
+    // Recorded in Factorio 2.1.21 for 36000 ticks a clock: 576 bacteria in each of 399 periods on the subtick clock,
+    // exactly 380 a second, and in each of 400 periods on the clock rounded to 90 ticks, 384 a second. With belt
+    // windows of 8 ticks the subtick clock made 373: a fifth of them closed on a partly filled hand.
+    describe("iron bacteria from two biochambers, each with two output inserters", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+        const validation = validateConfig(config);
+        const { alternatives, selected_index } = generateClockAlternatives(config);
+        const selected = alternatives[selected_index];
+        const windows = selected.result.clock_windows;
+
+        it("validates with the hands a machine gives up a cycle, over both of its output inserters", () => {
+            // 190 a second a machine: 3 hands of 16 every 15.158 ticks
+            expect(validation.output_swings_per_cycle).toBe(3);
+            expect(validation.cycle_ticks).toBeCloseTo(15.158, 3);
+        });
+
+        it("holds the target of 380 a second with 3 hands an inserter a cycle", () => {
+            expect(selected.label).toBe("6 output swings per cycle, subtick clock");
+            expect(selected.is_stable).toBe(true);
+            expect(selected.items_per_second).toBeCloseTo(380, 6);
+        });
+
+        it("counts what all four output inserters move", () => {
+            // 6 hands a machine in each of the 3 cycles of the period
+            expect(selected.result.stability_check.expected_output_items).toBe(2 * 6 * 16 * 3);
+        });
+
+        it("does not call a clock stable whose swings do not come out whole for each output inserter", () => {
+            const odd = alternatives.filter(a => /(: | )?[135] output swings? per cycle/.test(a.label));
+            expect(odd.length).toBeGreaterThan(0);
+            expect(odd.every(a => !a.is_stable)).toBe(true);
+        });
+
+        it("opens one window a cycle for each output inserter, for its 3 hands", () => {
+            for (const id of ["inserter:1", "inserter:3", "inserter:4", "inserter:6"]) {
+                expect(windows[id]).toEqual([{ start: 0, end: 20 }, { start: 30, end: 50 }, { start: 60, end: 80 }]);
+            }
+        });
+
+        it("keeps the window of an inserter on the belt open long enough for a pickup that starts late or fills slowly", () => {
+            for (const id of ["inserter:9", "inserter:10"]) {
+                expect(windows[id]).toEqual([{ start: 0, end: 16 }, { start: 30, end: 46 }, { start: 60, end: 76 }]);
+            }
+        });
+
+        it("leaves the inserters between the machines always enabled", () => {
+            expect(windows["inserter:7"]).toBeUndefined();
+            expect(windows["inserter:8"]).toBeUndefined();
         });
     });
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { fraction } from "fractionability";
 import { parseConfigFromObject } from "../../../config/config-browser";
 import { Belt, Entity, EntityId, EntityRegistry, InserterFactory, Machine } from "../../../entities";
-import { EntityTransferCountMap } from "./swing-counts";
+import { EntityTransferCountMap, outputInsertersOf } from "./swing-counts";
 import { loadConfigFromFile } from "../../../config/loader";
 import { ConfigPaths } from "../../../config/config-paths";
 import { SimulationContext } from "../simulation-context";
@@ -159,5 +159,35 @@ describe("an item needed at two levels of a chain", () => {
             .map(it => it.total_transfer_count.toString());
         // 80 inserters take 80 plates: 5 hands over two inserters
         expect(plates_into_inserter_machine).toEqual(["5/2", "5/2"]);
+    });
+});
+
+// Two iron bacteria cultivation biochambers [1], [2]. Each has two inserters to a chest (1 and 3, 4 and 6) and one
+// to the other biochamber (8 and 7), which brings the bacteria its crafts start from.
+describe("output machines with several inserters taking from them", async () => {
+    const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION)).entity_registry;
+    const machines = registry.getAll().filter(Entity.isMachine);
+    const ids = (machine: Machine) => outputInsertersOf(machine, registry).map(it => Number(it.entity_id.id.replace("inserter:", ""))).sort((a, b) => a - b);
+    // 3 hands of bacteria a machine a cycle
+    const swings = EntityTransferCountMap.create(machines, registry, fraction(3), 16);
+    const transfers = (inserter_id: number) => Object.fromEntries(
+        Array.from(swings.values()).find(it => it.entity.entity_id.id === EntityId.forInserter(inserter_id).id)!
+            .item_transfers.map(it => [it.item_name, it.transfer_count.toString()]));
+
+    it("counts the inserters that take the product out of the build, not the one that hands it to another machine", () => {
+        expect(ids(machines.find(it => it.entity_id.id === "machine:1")!)).toEqual([1, 3]);
+        expect(ids(machines.find(it => it.entity_id.id === "machine:2")!)).toEqual([4, 6]);
+    });
+
+    it("splits the output swings of a machine among them", () => {
+        for (const id of [1, 3, 4, 6]) {
+            expect(transfers(id)).toEqual({ "iron-bacteria": "3/2" });
+        }
+    });
+
+    it("gives the inserter to the other machine what that machine crafts from", () => {
+        // a craft makes 10 from 1: 48 out and 5.33 to the other machine are 5.33 crafts, a third of a hand
+        expect(transfers(7)).toEqual({ "iron-bacteria": "1/3" });
+        expect(transfers(8)).toEqual({ "iron-bacteria": "1/3" });
     });
 });

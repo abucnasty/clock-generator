@@ -2,7 +2,7 @@ import assert from "../../../common/assert";
 import Fraction, { fraction } from "fractionability";
 import { Duration } from "../../../data-types/duration";
 import { TargetProductionRate } from "../../target-production-rate";
-import { EntityTransferCountMap } from "./swing-counts";
+import { EntityTransferCountMap, outputInsertersOf } from "./swing-counts";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
@@ -63,10 +63,7 @@ function createPlan(
 
     // Find output inserters for each output machine
     const output_inserters = output_machines.map(machine => {
-        const inserter = entity_registry
-            .getAll()
-            .filter(Entity.isInserter)
-            .find(inserter => inserter.source.entity_id.id === machine.entity_id.id);
+        const inserter = outputInsertersOf(machine, entity_registry)[0];
         assert(
             inserter !== undefined, 
             `No inserter found that takes output from machine ${machine.entity_id.id}`
