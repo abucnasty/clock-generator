@@ -3,6 +3,7 @@ import assert from "../../../common/assert";
 import { ItemName } from "../../../data";
 import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { InserterMode } from "./inserter-mode";
+import { TickProvider } from "../../current-tick-provider";
 
 export class InserterPickupMode implements InserterMode {
 
@@ -10,11 +11,14 @@ export class InserterPickupMode implements InserterMode {
         inserterState: InserterState,
         sourceState: EntityState,
         sinkState: EntityState,
+        /** With it, inserters waiting on the same machine take turns at what it makes */
+        tick_provider?: TickProvider,
     }): InserterPickupMode {
         return new InserterPickupMode(
             args.inserterState,
             args.sourceState,
             args.sinkState,
+            args.tick_provider,
         );
     }
 
@@ -26,6 +30,7 @@ export class InserterPickupMode implements InserterMode {
         private readonly inserterState: InserterState,
         private readonly sourceEntityState: EntityState,
         private readonly sinkEntityState: EntityState,
+        private readonly tick_provider?: TickProvider,
     ) { }
 
     public onEnter(fromMode: InserterMode): void {
@@ -38,6 +43,7 @@ export class InserterPickupMode implements InserterMode {
 
     public executeForTick(): void {
         if (!canPickupFromEntity(this.inserterState, this.sourceEntityState)) {
+            this.waitForMachineOutput();
             // cannot pickup, go idle
             this.inserterState.status = InserterStatus.IDLE;
             return;
@@ -58,6 +64,21 @@ export class InserterPickupMode implements InserterMode {
 
         if (this.isHandFull()) {
             return;
+        }
+    }
+
+    /** Waiting on a machine with nothing to take yet: the other inserters waiting on it take turns with this one */
+    private waitForMachineOutput(): void {
+        const source = this.sourceEntityState;
+        if (!this.tick_provider || !EntityState.isMachine(source)) {
+            return;
+        }
+        const held_item_name = this.inserterState.held_item?.item_name;
+        const items = held_item_name !== undefined ? [held_item_name] : Array.from(this.inserterState.inserter.filtered_items);
+        for (const item_name of items) {
+            if (this.canPickupItemForSink(item_name)) {
+                MachineState.waitsForOutput(source, item_name, this.inserterState.inserter.entity_id.id, this.tick_provider.getCurrentTick());
+            }
         }
     }
 
@@ -119,6 +140,11 @@ export class InserterPickupMode implements InserterMode {
             return;
         }
         const output_quantity = source.inventoryState.getQuantity(output_item_name);
+        const room_in_hand = handSizeFor(state.inserter, output_item_name) - (state.held_item?.quantity ?? 0);
+        if (this.tick_provider && !MachineState.takesTurnForOutput(
+            source, output_item_name, state.inserter.entity_id.id, this.tick_provider.getCurrentTick(), room_in_hand)) {
+            return;
+        }
 
         const held_item = state.held_item ?? { item_name: output_item_name, quantity: 0 }
 

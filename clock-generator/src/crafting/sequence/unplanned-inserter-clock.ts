@@ -33,6 +33,56 @@ export function fuelOnlyInserters(entity_registry: ReadableEntityRegistry): Inse
 }
 
 /**
+ * Inserters between machines that feed each other in a loop, like two pentapod egg biochambers that give each other
+ * eggs. A hand of such an inserter fills as slowly as the loop makes its item, and the loop stops for good if it ever
+ * runs dry, so these inserters are left always enabled: they take what there is whenever their machine has room.
+ */
+export function loopInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
+    const inserters = entity_registry.getAll().filter(Entity.isInserter);
+    const machine_ids = new Set(entity_registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
+    const isMachine = (id: string) => machine_ids.has(id);
+    const between_machines = inserters.filter(it => isMachine(it.source.entity_id.id) && isMachine(it.sink.entity_id.id));
+    // machines reached from a machine by following inserters from machine to machine
+    const reaches = (from: string, to: string): boolean => {
+        const seen = new Set<string>();
+        const queue = [from];
+        while (queue.length > 0) {
+            const current = queue.pop()!;
+            if (current === to) {
+                return true;
+            }
+            if (seen.has(current)) {
+                continue;
+            }
+            seen.add(current);
+            between_machines.filter(it => it.source.entity_id.id === current).forEach(it => queue.push(it.sink.entity_id.id));
+        }
+        return false;
+    };
+    return between_machines.filter(it => reaches(it.sink.entity_id.id, it.source.entity_id.id));
+}
+
+/**
+ * Inserters that are left always enabled, with no clock windows: in a build with a loop of machines, every inserter
+ * from one machine to another.
+ *
+ * The loop runs free, since it stops for good if it ever runs dry, so when its products arrive does not repeat with
+ * the clock, and neither does when the machines around it want their ingredients. Windows taken from one simulated
+ * run fitted in game only by luck: an inserter whose window closed on a partly filled hand of pentapod eggs left the
+ * science biochamber waiting for them, and inserters bringing nutrients to the egg biochambers fell behind by a hand
+ * every few periods. Left enabled, these inserters move what their machines have room for, and the clock holds the
+ * build to its rate at its two ends: what comes off the belts and what leaves the last machine.
+ */
+export function alwaysEnabledInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
+    if (loopInserters(entity_registry).length === 0) {
+        return [];
+    }
+    const machine_ids = new Set(entity_registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
+    return entity_registry.getAll().filter(Entity.isInserter)
+        .filter(inserter => machine_ids.has(inserter.source.entity_id.id) && machine_ids.has(inserter.sink.entity_id.id));
+}
+
+/**
  * An inserter that only takes by-products no machine in the config uses just clears them out of the machine,
  * whatever it puts them on. Nothing in the chain depends on its rate, so it is not part of the plan.
  */

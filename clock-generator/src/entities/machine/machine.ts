@@ -36,7 +36,12 @@ export class Machine implements Entity {
         public readonly insertion_duration: InsertionDuration,
         public readonly fuel_consumption?: FuelConsumption,
         public readonly fuel_slot?: FuelSlot,
-    ) {}
+    ) {
+        this.self_ingredients = new Set(outputs.map(it => it.item_name).filter(it => inputs.has(it)));
+    }
+
+    /** Ingredients the recipe also makes, like the pentapod egg: the machine keeps those it is given apart from those it makes */
+    public readonly self_ingredients: ReadonlySet<string>;
 
     /** The input an inserter fills for an item: the ingredient, or the fuel a burner machine burns */
     public getInsertableInput(item_name: string): MachineInput | undefined {
@@ -57,7 +62,10 @@ export class Machine implements Entity {
     /** Every input an inserter can fill: the ingredients, and the fuel of a burner machine */
     public getInsertableInputs(): MachineInput[] {
         const fuel_input = this.fuel_input;
-        return fuel_input ? [...this.inputs.values(), fuel_input] : Array.from(this.inputs.values());
+        // a fuel that is also an ingredient is one input, which fills the fuel slot along the way
+        return fuel_input && !this.inputs.has(fuel_input.item_name)
+            ? [...this.inputs.values(), fuel_input]
+            : Array.from(this.inputs.values());
     }
 
     public getInsertableInputOrThrow(item_name: string): MachineInput {
@@ -132,14 +140,18 @@ function createMachine(
         recipe.energy_required
     );
 
+    // productivity multiplies the amount except for the part the recipe ignores for it: 1 of the 2 pentapod eggs
+    const ignored_by_productivity = amountIgnoredByProductivity(recipe.output);
+    const amount_per_craft = fraction(recipe.output.amount - ignored_by_productivity)
+        .multiply(fraction(1).add(fraction(metadata.productivity).divide(100)))
+        .add(fraction(ignored_by_productivity));
+
     const machineOutput: MachineOutput = {
         item_name: recipe.output.name,
-        amount_per_craft: fraction(recipe.output.amount).multiply(fraction(1).add(fraction(metadata.productivity).divide(100))),
-        production_rate: ProductionRate.fromCraftingRate(
-            recipe.output.name,
-            craftingRate,
-            new Percentage(metadata.productivity),
-        ),
+        amount_per_craft,
+        production_rate: ignored_by_productivity === 0
+            ? ProductionRate.fromCraftingRate(recipe.output.name, craftingRate, new Percentage(metadata.productivity))
+            : ProductionRate.perTick(recipe.output.name, amount_per_craft.multiply(fraction(craftingRate.crafts_per_tick))),
         ingredient: recipe.output,
         outputBlock: OutputBlock.fromRecipe(metadata.type, recipe, overload_multiplier)
     };
@@ -191,12 +203,6 @@ function createFuel(metadata: MachineMetadata): [FuelConsumption?, FuelSlot?] {
         return [];
     }
     const fuel = BurnerEnergySource.selectFuel(source, metadata.fuel);
-    if (metadata.recipe.inputsPerCraft.has(fuel.item_name)) {
-        throw new Error(
-            `Recipe ${metadata.recipe.name} uses ${fuel.item_name} as an ingredient, which is also the fuel of a ${metadata.type}. ` +
-            `A machine with the same item as ingredient and fuel is not supported yet.`
-        );
-    }
     const consumption = FuelConsumption.fromCraftingSpeed(
         source,
         fuel,

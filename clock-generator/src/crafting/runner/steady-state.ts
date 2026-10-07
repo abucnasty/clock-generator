@@ -12,6 +12,8 @@ function entityStateKey(state: EntityState, tick: number): string {
     return [
         objectStateKey(state, tick, COUNTER_FIELDS),
         JSON.stringify(inventory),
+        JSON.stringify((state as { selfIngredients?: { export(): unknown } }).selfIngredients?.export() ?? null),
+        JSON.stringify(Array.from((state as { lastOutputTaker?: Map<string, string> }).lastOutputTaker ?? [])),
         JSON.stringify((state as { held_item?: unknown }).held_item ?? null),
         progress.craftingProgress?.progress,
         progress.bonusProgress?.progress,

@@ -355,8 +355,65 @@ describe("Machine State Machine with a fuel slot", () => {
         expect(MachineState.machineAcceptsItem(machine_state, "coal")).toBe(false)
     })
 
-    test("rejects a recipe that uses the fuel as an ingredient", () => {
-        expect(() => createMachine("biochamber", { type: MachineType.BIOCHAMBER })).toThrow(/fuel/)
+})
+
+// as recorded in Factorio 2.1.21 on a pentapod egg biochamber at crafting speed 64.5 with +150% productivity and
+// +1020% energy consumption: fuel slot filled up to 9 nutrients, ingredients up to 210 nutrients and 7 eggs
+describe("Machine State Machine with a pentapod egg recipe", () => {
+    const createEggState = () => MachineState.forMachine(createMachine("pentapod-egg", {
+        type: MachineType.BIOCHAMBER, crafting_speed: 64.5, productivity: 150, energy_consumption_bonus: 1020,
+    }))
+    const eggsGiven = (machine_state: MachineState) => MachineState.ingredientQuantity(machine_state, "pentapod-egg")
+    const eggsMade = (machine_state: MachineState) => machine_state.inventoryState.getQuantity("pentapod-egg")
+    const nutrientsToCraft = (machine_state: MachineState) => MachineState.ingredientQuantity(machine_state, "nutrients")
+    const nutrientsToBurn = (machine_state: MachineState) => machine_state.fuelInventory.getQuantity("nutrients")
+
+    test("a hand of nutrients goes whole to the fuel slot while that is below its limit, and to the ingredients otherwise", () => {
+        const machine_state = createEggState()
+        expect(machine_state.machine.fuel_slot!.automated_insertion_limit).toBe(9)
+        machine_state.fuelInventory.addQuantity("nutrients", 8)
+        MachineState.insertItem(machine_state, "nutrients", 16)
+        expect([nutrientsToBurn(machine_state), nutrientsToCraft(machine_state)]).toEqual([24, 0])
+        MachineState.insertItem(machine_state, "nutrients", 16)
+        expect([nutrientsToBurn(machine_state), nutrientsToCraft(machine_state)]).toEqual([24, 16])
+    })
+
+    test("takes nutrients for a low fuel slot even when the ingredient is at its insertion limit", () => {
+        const machine_state = createEggState()
+        machine_state.fuelInventory.addQuantity("nutrients", 9)
+        machine_state.inventoryState.addQuantity("nutrients", 209)
+        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(false)
+        machine_state.inventoryState.addQuantity("nutrients", 1)
+        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(true)
+        machine_state.fuelInventory.removeQuantity("nutrients", 1)
+        expect(MachineState.machineInputIsBlocked(machine_state, "nutrients")).toBe(false)
+    })
+
+    test("starts with the eggs it is filled up to, since the recipe cannot start without one, and then takes no more", () => {
+        const machine_state = createEggState()
+        expect(eggsGiven(machine_state)).toBe(7)
+        expect(MachineState.machineInputIsBlocked(machine_state, "pentapod-egg")).toBe(true)
+        machine_state.selfIngredients.removeQuantity("pentapod-egg", 1)
+        expect(MachineState.machineInputIsBlocked(machine_state, "pentapod-egg")).toBe(false)
+    })
+
+    test("a craft makes 2 eggs and a full productivity bar 1, and the eggs it makes are not the eggs it crafts from", () => {
+        const machine_state = createEggState()
+        machine_state.fuelInventory.addQuantity("nutrients", 20)
+        machine_state.inventoryState.addQuantity("nutrients", 60)
+        machine_state.selfIngredients.setQuantity("pentapod-egg", 2)
+        const state_machine = MachineStateMachine.create({ machine_state })
+        // two crafts of 14 ticks each fill the bar 3 times
+        executeControlLogicForTicks(state_machine, 40)
+        expect(machine_state.craftCount).toBe(2)
+        expect(eggsMade(machine_state)).toBe(2 * 2 + 3)
+        expect(eggsGiven(machine_state)).toBe(0)
+        expect(nutrientsToCraft(machine_state)).toBe(0)
+        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+    })
+
+    test("makes 3.5 eggs a craft on average", () => {
+        expect(createEggState().machine.output.amount_per_craft.toDecimal()).toBe(3.5)
     })
 })
 
@@ -411,5 +468,41 @@ describe("Machine State Machine with several outputs", () => {
         machine_state.inventoryState.setQuantity("jellynut-seed", 0)
         executeControlLogicForTicks(state_machine, 10)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
+    })
+})
+
+// as recorded on a pentapod egg biochamber with two stack inserters waiting for eggs: each batch of eggs went to
+// one of them in turn
+describe("inserters waiting for the product of one machine", () => {
+    const createState = () => {
+        const machine_state = MachineState.forMachine(createMachine("iron-gear-wheel"))
+        machine_state.inventoryState.setQuantity("iron-gear-wheel", 3)
+        return machine_state
+    }
+
+    test("take turns at less than a hand", () => {
+        const machine_state = createState()
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 10, 16)).toBe(true)
+        MachineState.waitsForOutput(machine_state, "iron-gear-wheel", "inserter:2", 10)
+        // the one that took last is passed over while the other waits
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 11, 13)).toBe(false)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:2", 11, 16)).toBe(true)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:2", 12, 13)).toBe(false)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 12, 13)).toBe(true)
+    })
+
+    test("do not wait for one that stopped asking", () => {
+        const machine_state = createState()
+        MachineState.waitsForOutput(machine_state, "iron-gear-wheel", "inserter:2", 10)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 11, 16)).toBe(true)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 13, 13)).toBe(true)
+    })
+
+    test("all take from a machine that has a hand for the one asking", () => {
+        const machine_state = createState()
+        machine_state.inventoryState.setQuantity("iron-gear-wheel", 40)
+        MachineState.waitsForOutput(machine_state, "iron-gear-wheel", "inserter:2", 10)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 10, 16)).toBe(true)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 11, 16)).toBe(true)
     })
 })

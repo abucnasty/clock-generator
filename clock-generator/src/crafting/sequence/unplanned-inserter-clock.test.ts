@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";
-import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, largestDivisorAtMost, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
+import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, largestDivisorAtMost, loopInserters, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
 import { Entity, Machine } from "../../entities";
 import { SimulationContext } from "./simulation-context";
 
@@ -184,5 +184,24 @@ describe("sharedFuelClockTicks", () => {
     it("is null without fuel clocks or for a period that is not a whole number of ticks", () => {
         expect(sharedFuelClockTicks(128, [])).toBeNull();
         expect(sharedFuelClockTicks(128.5, fuelClocks(95))).toBeNull();
+    });
+});
+
+describe("inserters of a loop of machines", () => {
+    it("are the ones between machines that feed each other", async () => {
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
+        expect(loopInserters(registry).map(inserter => inserter.entity_id.id).sort()).toEqual(["inserter:5", "inserter:8"]);
+    });
+
+    it("leave every inserter between machines always enabled: only those on a belt or a chest keep windows", async () => {
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
+        expect(alwaysEnabledInserters(registry).map(inserter => Number(inserter.entity_id.id.replace("inserter:", ""))).sort((a, b) => a - b))
+            .toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
+    });
+
+    it("are none in a build without a loop", async () => {
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL)).entity_registry;
+        expect(alwaysEnabledInserters(registry)).toEqual([]);
+        expect(loopInserters(registry)).toEqual([]);
     });
 });

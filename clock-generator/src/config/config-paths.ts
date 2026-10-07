@@ -53,6 +53,7 @@ export const ConfigPaths = {
     GLEBA_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba-rocket-fuel-1', 'clock-config-rocket-fuel-jelly-stack-16.json'),
     GLEBA_ROCKET_FUEL_JELLY_STACK_15: path.join(CONFIG_SAMPLES_DIR, 'gleba-rocket-fuel-2', 'clock-config-rocket-fuel-jelly-stack-15.json'),
     JELLYNUT_PROCESSING_ROCKET_FUEL: path.join(CONFIG_SAMPLES_DIR, 'multi-output', 'jellynut-processing-rocket-fuel.json'),
+    AGRICULTURAL_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'agriculture-science', 'clock-config-agricultural-science-pack-1791340756079.json'),
     BIOCHAMBER_FUEL: path.join(CONFIG_SAMPLES_DIR, 'biochamber-fuel', 'nutrients-from-yumako-mash-fuel-bonus.json'),
     JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS: path.join(CONFIG_SAMPLES_DIR, 'multi-output', 'jellynut-processing-rocket-fuel-biochambers.json'),
 } as const;

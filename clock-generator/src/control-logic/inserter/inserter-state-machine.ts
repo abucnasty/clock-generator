@@ -60,6 +60,7 @@ function createInserterStateMachine(args: {
         inserterState: inserter_state,
         sourceState: source_state,
         sinkState: sink_state,
+        tick_provider,
     })
     const swing_mode = new InserterSwingMode();
     const drop_mode = new InserterDropMode(inserter_state, sink_state);

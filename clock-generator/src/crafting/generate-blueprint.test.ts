@@ -320,6 +320,63 @@ describe("generateClockForConfig", () => {
         });
     });
 
+    // Two nutrient biochambers [1], [2] feed two pentapod egg biochambers [3], [4], which give each other the egg a
+    // craft starts from and send the rest to the science biochamber [5]. Bioflux and nutrients come off one belt on
+    // inserters 1, 2 and 11; inserter 12 takes the science away. Recorded in Factorio 2.1.21 for 36000 ticks a clock:
+    // with 1 output swing per cycle one module made exactly 53 a second (400 packs in each of 106 periods) and, at a
+    // target of 250, exactly 50; with 5 output swings per cycle it made 50.3 and 49.9.
+    describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+        const { alternatives, selected_index } = generateClockAlternatives(config);
+        const selected = alternatives[selected_index];
+        const windows = selected.result.clock_windows;
+
+        it("holds the target of 265 a second with one output swing per cycle, on a clock of the exact period", () => {
+            expect(selected.label).toBe("1 output swing per cycle, subtick clock");
+            expect(selected.is_stable).toBe(true);
+            expect(selected.items_per_second).toBeCloseTo(265, 6);
+        });
+
+        it("does not call a clock with 5 output swings per cycle stable, which fell short in game", () => {
+            const five_swings = alternatives.filter(a => a.label.startsWith("5 output swings per cycle"));
+            expect(five_swings.length).toBeGreaterThan(0);
+            expect(five_swings.every(a => !a.is_stable)).toBe(true);
+        });
+
+        it("leaves every inserter between machines always enabled", () => {
+            const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
+            expect(clocked).toEqual([1, 2, 11, 12]);
+        });
+
+        it("opens the output window at the start of every cycle, for one pickup", () => {
+            // 16 packs every 18.11 ticks: 25 hands in a period of 452.83 ticks
+            const output_windows = windows["inserter:12"];
+            expect(output_windows).toHaveLength(25);
+            expect(output_windows.slice(0, 3)).toEqual([{ start: 0, end: 4 }, { start: 18, end: 22 }, { start: 36, end: 40 }]);
+        });
+
+        it("opens a window for the bioflux and the fuel of the science biochamber with every output window", () => {
+            expect(windows["inserter:11"]).toHaveLength(25);
+            expect(windows["inserter:11"].map(it => it.start)).toEqual(windows["inserter:12"].map(it => it.start));
+        });
+
+        it("spreads the hands of the nutrient biochambers evenly over the period, fuel included and rounded up", () => {
+            // 400 packs take 160 eggs from 64 crafts: 1920 nutrients and 42 burned, from 98 bioflux: 3.1 hands a machine,
+            // and a hand of nutrients every few periods
+            for (const id of ["inserter:1", "inserter:2"]) {
+                expect(windows[id]).toHaveLength(5);
+                expect(windows[id].map(it => it.start)).toEqual([0, 90, 181, 271, 362]);
+            }
+        });
+
+        it("says that the egg recipe loops and that the machines start with eggs inside", () => {
+            const insight = selected.insights.find(it => it.id === "looping-recipe")!;
+            expect(insight.scope).toBe("build");
+            expect(insight.what).toContain("starts each of these machines with 7 pentapod-egg already inside");
+            expect(insight.table?.rows.map(row => row[0])).toHaveLength(2);
+        });
+    });
+
     /** What the rocket fuel samples have in common: two rocket fuel biochambers fed jelly by one jellynut biochamber */
     const rocketFuelSample = async (path: string) => {
         const config = await loadConfigFromFile(path);
