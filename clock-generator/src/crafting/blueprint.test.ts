@@ -263,3 +263,41 @@ describe("the clock of a blueprint with fuel inserters", () => {
         expect(blueprint.entities.some(entity => behavior(entity).includes('"name":"signal-T"'))).toBe(false);
     });
 });
+
+describe("the target rate in a blueprint", async () => {
+    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+    const blueprintOf = async (path: string) => generateClockForConfig(await loadConfigFromFile(path), { logger: quiet }).blueprint;
+    const clockDescription = (blueprint: Awaited<ReturnType<typeof blueprintOf>>) =>
+        (blueprint.entities ?? []).map(entity => entity.player_description ?? "").find(text => text.startsWith("Clock for"))!;
+
+    it("is in the description of the blueprint, with the clock period", async () => {
+        const blueprint = await blueprintOf(ConfigPaths.GLEBA_ROCKET_FUEL);
+        expect(blueprint.description).toBe("Target: 60 [item=rocket-fuel] per second\nClock period: 128 ticks");
+    });
+
+    it("is on the clock combinator", async () => {
+        const blueprint = await blueprintOf(ConfigPaths.GLEBA_ROCKET_FUEL);
+        expect(clockDescription(blueprint).split("\n").slice(0, 2)).toEqual([
+            "Clock for [item=rocket-fuel]:",
+            "- Target: 60 [item=rocket-fuel] per second",
+        ]);
+    });
+
+    it("says on each modulo of the clock what reads it", async () => {
+        const blueprint = await blueprintOf(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const modulo_descriptions = (blueprint.entities ?? [])
+            .filter(entity => entity.name === "arithmetic-combinator")
+            .map(entity => entity.player_description ?? "");
+        expect(modulo_descriptions).toEqual([
+            "[virtual-signal=signal-clock] counts 0 to 127, 21 times in the 2688 ticks the clock counts\n- The clock period: every combinator of the swing counts reads it",
+            "[virtual-signal=signal-B] counts 0 to 191, 14 times in the 2688 ticks the clock counts\n- Fuel clock: inserters 10, 13 may fill a fuel slot once every 192 ticks",
+            "[virtual-signal=signal-C] counts 0 to 223, 12 times in the 2688 ticks the clock counts\n- Fuel clock: inserter 12 may fill a fuel slot once every 224 ticks",
+        ]);
+    });
+
+    it("gives the rate of all copies and of one", async () => {
+        const blueprint = await blueprintOf(ConfigPaths.AGRICULTURAL_SCIENCE);
+        expect(blueprint.description?.split("\n")[0])
+            .toBe("Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)");
+    });
+});
