@@ -1,10 +1,12 @@
 -- Clock Generator Recorder - Main Control Script
 
 local recorder = require("scripts.recorder")
+local harness = require("scripts.harness")
 
 local function on_tick_while_recording()
+    harness.on_tick()
     recorder.on_tick()
-    if not recorder.is_active() then
+    if not recorder.is_active() and not harness.is_waiting() then
         script.on_event(defines.events.on_tick, nil)
     end
 end
@@ -34,7 +36,7 @@ script.on_event(defines.events.on_player_alt_selected_area, on_player_alt_select
 
 -- on_tick is only registered while recording; restore it after a save/load mid-recording
 script.on_load(function()
-    if storage.recording then
+    if storage.recording or harness.is_waiting() then
         script.on_event(defines.events.on_tick, on_tick_while_recording)
     end
 end)
@@ -55,5 +57,29 @@ remote.add_interface("clock-generator-recorder", {
     stop_recording = function()
         recorder.finish("stopped by remote call")
         script.on_event(defines.events.on_tick, nil)
+    end,
+
+    -- The recording harness (scripts/harness.lua), for a headless game driven over RCON. Jobs and reports are JSON.
+    ---@param job_json string
+    ---@return string
+    harness_build = function(job_json)
+        local report = harness.build(helpers.json_to_table(job_json))
+        script.on_event(defines.events.on_tick, on_tick_while_recording)
+        return helpers.table_to_json(report)
+    end,
+    ---@return string
+    harness_describe = function()
+        return helpers.table_to_json(harness.describe())
+    end,
+    ---@param job_json string
+    ---@return string
+    harness_start = function(job_json)
+        local report = harness.start(helpers.json_to_table(job_json))
+        script.on_event(defines.events.on_tick, on_tick_while_recording)
+        return helpers.table_to_json(report)
+    end,
+    ---@return string
+    harness_status = function()
+        return helpers.table_to_json(harness.status())
     end,
 })

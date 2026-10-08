@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.5.0
+Date: 2026-10-07
+  Features:
+    - Remote interface for recording without a player (harness_build, harness_describe, harness_start, harness_status): builds a blueprint string, removes or replaces its clock and wires the new one, seeds items, and records a number of ticks
+---------------------------------------------------------------------------------------------------
 Version: 0.4.0
 Date: 2026-10-06
   Features:
