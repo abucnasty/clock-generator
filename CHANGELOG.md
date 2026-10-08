@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An item can be both an ingredient and the fuel of a machine, like nutrients in a pentapod egg biochamber. Fuel that arrives on an ingredient inserter is planned.
 - Validation reports a missing fuel inserter.
 - Combinator descriptions name the recipes their inserter or drill works with, as recipe icons.
+- Blueprints record the target rate they were made for, in the blueprint's description and on the clock combinator: `Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)`.
+- The combinators that take a modulo of the clock, and those of a subtick clock, say what they are for: the signal they put out, how often it repeats, and which inserters read it.
 - Potential clocks show their output swings per cycle and the rate they achieved, not the target.
 - Pasting from an older sidecar mod says what that version does not export and asks once to update it.
 - Verifying a recording covers fuel, fuel inserters and by-product inserters. Recordings can be longer and include mining drills (recorder mod 0.3.0 and 0.4.0).
