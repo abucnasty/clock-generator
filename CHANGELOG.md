@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `npm run record` records a build in a headless Factorio without a player: it builds a blueprint in a copy of a save, can swap in a generated clock and wire it, seeds items, and writes a recording for `npm run verify` (recorder mod 0.5.0). `--watch` opens the game with graphics to watch the run.
+
 ## [0.6.0] - 2026-10-07
 
 ### Added

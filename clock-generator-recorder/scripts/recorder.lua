@@ -341,6 +341,18 @@ function recorder.is_active()
     return storage.recording ~= nil
 end
 
+---How far the running recording is and where the last finished one was written, for a script that waits for it
+---@return table
+function recorder.status()
+    local recording = storage.recording
+    return {
+        active = recording ~= nil,
+        phase = recording and recording.phase or nil,
+        sample_count = recording and recording.sample_count or nil,
+        last_recording = storage.last_recording,
+    }
+end
+
 ---Write the recording to script-output and clear it
 ---@param reason string
 function recorder.finish(reason)
@@ -371,15 +383,35 @@ function recorder.finish(reason)
 
     local filename = "clock-generator-recorder/recording-" .. recording.start_game_tick .. ".json"
     helpers.write_file(filename, helpers.table_to_json(output), false, recording.player_index)
+    -- where a script that started the recording finds it
+    storage.last_recording = { filename = filename, sample_count = recording.sample_count, stop_reason = reason }
     notify(recording.player_index, "Recorded " .. recording.sample_count .. " ticks (" .. reason .. "). Saved to script-output/" .. filename)
+end
+
+---What a recording of these entities would track, without samples: the config and the id of each inserter and machine
+---@param force LuaForce
+---@param entities LuaEntity[]
+---@return table
+function recorder.describe(force, entities)
+    local result = extraction.extract_all_entities(entities, force)
+    local inserters, machines, drills = build_tracks(result)
+    local function infos(tracks)
+        local out = {}
+        for _, track in ipairs(tracks) do
+            table.insert(out, track.info)
+        end
+        return out
+    end
+    return { config = export.to_table(result), inserters = infos(inserters), machines = infos(machines), drills = infos(drills) }
 end
 
 ---Start a recording for the selected entities
 ---@param force LuaForce
 ---@param entities LuaEntity[]
 ---@param player_index uint|nil Player to notify and to write the file for; nil writes on the server
+---@param options {periods: number?, minimum_ticks: number?, ticks_without_clock: number?, ignore_clock: boolean?}|nil Used in place of the mod settings
 ---@return boolean started
-function recorder.start(force, entities, player_index)
+function recorder.start(force, entities, player_index, options)
     if storage.recording then
         notify(player_index, "A recording is already running. Alt-select with the recorder to stop it.")
         return false
@@ -391,17 +423,19 @@ function recorder.start(force, entities, player_index)
         notify(player_index, "No machines or inserters found in selection.")
         return false
     end
+    storage.last_recording = nil
 
+    options = options or {}
     local settings_table = settings.global
-    local clock = find_clock(entities)
+    local clock = not options.ignore_clock and find_clock(entities) or nil
 
     storage.recording = {
         player_index = player_index,
         clock = clock,
         clock_values = {},
-        periods = settings_table["clock-generator-recorder-periods"].value,
-        minimum_ticks = settings_table["clock-generator-recorder-minimum-ticks"].value,
-        fallback_ticks = settings_table["clock-generator-recorder-ticks-without-clock"].value,
+        periods = options.periods or settings_table["clock-generator-recorder-periods"].value,
+        minimum_ticks = options.minimum_ticks or settings_table["clock-generator-recorder-minimum-ticks"].value,
+        fallback_ticks = options.ticks_without_clock or settings_table["clock-generator-recorder-ticks-without-clock"].value,
         phase = clock and "waiting" or "recording",
         waited_ticks = 0,
         wraps = 0,

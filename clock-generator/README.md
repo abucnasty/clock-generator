@@ -370,6 +370,26 @@ resources/
 npm test
 ```
 
+### Recording a Build in Factorio
+
+`npm run record` starts a headless Factorio on a copy of a save, builds a blueprint in it, records it with the recorder mod of this repository and writes a recording that `npm run verify` reads. No game window and no player are needed.
+
+```bash
+export FACTORIO_PATH=~/Games/factorio          # executable or install folder, or --factorio=
+export FACTORIO_HARNESS_SAVE=~/saves/test.zip  # or --save=
+npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warmup=300 \
+    --seed='[{"target":{"recipe":"pentapod-egg"},"item":"pentapod-egg","count":200}]' \
+    --clock=clock-blueprint.txt --config=config.json
+```
+
+- `--seed` adds items right before the recording starts. `target` picks the built entities by `name`, `type`, `recipe` or `unit_number`; `inventory` is `input`, `output`, `fuel`, `modules` or `chest`, and by default wherever the entity takes the item. `count` is per entity, and per lane for belts.
+- `--clock` replaces the clock the build came with: its combinators are built below the build and wired to the inserters their descriptions name. The inserters are found by matching the build to `--config`, the config the clock was generated from. Belt inserters are matched by what lies on their belt, so give belts a `--warmup` to fill.
+- `--unclocked` removes the build's clock and lets its inserters run freely. Without either, the build is recorded as it is.
+- `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
+- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed.
+
+The save is never written to; Factorio gets a temporary write-data folder (`--work-dir` keeps it). The save needs a place where the blueprint can be built and powered, such as an editor map with a global electric network. Run `npm run record` without arguments for all options.
+
 ### Configuration Validation
 
 Configurations are validated at runtime using [Zod](https://zod.dev/) schemas. If you provide an invalid configuration, you'll get detailed error messages:

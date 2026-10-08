@@ -21,6 +21,7 @@
     "dev": "nodemon",
     "build": "tsc",
     "verify": "tsc && node dist/verify-recording.js",
+    "record": "tsc && node dist/record-in-factorio.js",
     "test": "vitest run"
   },
   "keywords": [
