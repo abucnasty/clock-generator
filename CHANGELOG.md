@@ -20,11 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fuel tab in the results: burn rates, the fuel clocks, and the fuel each machine held over the run.
 - Recipes with more than one result, such as `jellynut-processing`. An inserter that only takes a by-product away gets a clock of its own.
 - Recipes that make their own ingredient, such as `pentapod-egg`, and builds where machines feed each other in a loop. The results warn that the loop must already hold the item and that the clock cannot restart it.
-- In a build with a loop, inserters between machines are always enabled and the clock holds only the output inserters and the inserters on belts. Such a build is checked over ten minutes of game time.
+- In a build with a loop, the inserters of the loop and those taking from its machines are always enabled; every other inserter is clocked with windows made from the plan. Such a build is checked over ten minutes of game time.
 - An item can be both an ingredient and the fuel of a machine, like nutrients in a pentapod egg biochamber. Fuel that arrives on an ingredient inserter is planned.
 - Validation reports a missing fuel inserter.
+- Insight for builds with a loop: how many hands an output inserter can take back to back from the stock its machine is sure to have, which is its output block. A clock that asks for more is told so.
 - Combinator descriptions name the recipes their inserter or drill works with, as recipe icons.
-- Blueprints record the target rate they were made for, in the blueprint's description and on the clock combinator: `Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)`.
+- Blueprints record the target rate they were made for, in the blueprint's description and on the clock combinator: `Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)`.
 - The combinators that take a modulo of the clock, and those of a subtick clock, say what they are for: the signal they put out, how often it repeats, and which inserters read it.
 - Potential clocks show their output swings per cycle and the rate they achieved, not the target.
 - Pasting from an older sidecar mod says what that version does not export and asks once to update it.

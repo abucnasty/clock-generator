@@ -1,7 +1,7 @@
 {
   "target_output": {
     "recipe": "agricultural-science-pack",
-    "items_per_second": 265,
+    "items_per_second": 250,
     "copies": 5
   },
   "machines": [

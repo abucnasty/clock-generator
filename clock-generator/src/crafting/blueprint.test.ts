@@ -298,6 +298,6 @@ describe("the target rate in a blueprint", async () => {
     it("gives the rate of all copies and of one", async () => {
         const blueprint = await blueprintOf(ConfigPaths.AGRICULTURAL_SCIENCE);
         expect(blueprint.description?.split("\n")[0])
-            .toBe("Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)");
+            .toBe("Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
     });
 });

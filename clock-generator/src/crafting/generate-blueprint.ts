@@ -1078,6 +1078,9 @@ function clipBeltFillerWindows(
     })));
 }
 
+/** Ticks added to the window of an inserter taking from a machine, for a pickup that starts a few ticks into it */
+const MACHINE_PICKUP_SLACK_TICKS = 4;
+
 /** Ticks an output window stays on after its last planned pickup can start, well short of the next one */
 const OUTPUT_WINDOW_LAST_PICKUP_TICKS = 4;
 
@@ -1092,6 +1095,8 @@ const OUTPUT_WINDOW_LAST_PICKUP_TICKS = 4;
  *   swings every `animation.total` ticks, and a pickup it cannot start it does not make up for later, so the build
  *   makes at most its target, and the target while the machines keep up. A window as long as the swings took in the
  *   run, waits for the machine included, fits one swing more when the machine has product to spare.
+ * - an inserter between machines that is not left always enabled (nutrients from a machine outside the loop): its
+ *   planned hands a period, fuel included and rounded up, and one more, as windows of one hand spread evenly.
  * - an inserter taking from a belt: its planned hands, fuel included and rounded up. Into the output machine they
  *   come in one window a cycle that opens with the output window; into any other machine as windows of one hand
  *   spread evenly over the period. A hand its machine has no room for is not taken.
@@ -1102,7 +1107,8 @@ function windowsOfThePlanWhereInsertersRunFree(
     crafting_cycle_plan: CraftingCyclePlan,
     period_ticks: number,
 ): InventoryTransferHistory {
-    if (alwaysEnabledInserters(entity_registry).length === 0) {
+    const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
+    if (always_enabled.size === 0) {
         return history;
     }
     const target_item = crafting_cycle_plan.production_rate.machine_production_rate.item;
@@ -1128,6 +1134,20 @@ function windowsOfThePlanWhereInsertersRunFree(
             for (let cycle = 0; Math.floor(cycle * cycle_ticks) + window_ticks < period_ticks; cycle++) {
                 const start = Math.floor(cycle * cycle_ticks);
                 windows.push({ item_name: target_item, tick_range: OpenRange.from(start, start + window_ticks), amount: swings * planned.stack_size });
+            }
+            result.set(keyFor(inserter.entity_id), windows);
+        } else if (Entity.isMachine(source) && EntityId.isMachine(inserter.sink.entity_id) && !always_enabled.has(inserter.entity_id.id)) {
+            // One hand a window, spread evenly over the period, and a window to spare: a hand the machine has no room
+            // for is not taken, so what matters is that there are never too few.
+            const hands = Math.ceil(planned.total_transfer_count.toDecimal() * period_ticks / cycle_ticks - 1e-9) + 1;
+            const window_ticks = Math.min(
+                inserter.animation.pickup.ticks + inserter.animation.rotation.ticks + inserter.animation.drop.ticks + MACHINE_PICKUP_SLACK_TICKS,
+                Math.max(1, Math.floor(period_ticks / hands) - 1),
+            );
+            const windows: InventoryTransfer[] = [];
+            for (let hand = 0; hand < hands; hand++) {
+                const start = Math.floor(hand * period_ticks / hands);
+                windows.push({ item_name, tick_range: OpenRange.from(start, Math.min(start + window_ticks, Math.floor(period_ticks) - 1)), amount: planned.stack_size });
             }
             result.set(keyFor(inserter.entity_id), windows);
         } else if (Entity.isBelt(source) && EntityId.isMachine(inserter.sink.entity_id)) {

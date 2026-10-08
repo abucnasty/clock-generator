@@ -193,10 +193,18 @@ describe("inserters of a loop of machines", () => {
         expect(loopInserters(registry).map(inserter => inserter.entity_id.id).sort()).toEqual(["inserter:5", "inserter:8"]);
     });
 
-    it("leave every inserter between machines always enabled: only those on a belt or a chest keep windows", async () => {
+    it("are left always enabled, as are the inserters taking eggs from the loop to the science machine", async () => {
         const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
         expect(alwaysEnabledInserters(registry).map(inserter => Number(inserter.entity_id.id.replace("inserter:", ""))).sort((a, b) => a - b))
-            .toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
+            .toEqual([5, 8, 9, 10]);
+    });
+
+    it("leave the clock of an inserter that takes from a machine outside the loop: nutrients for the egg machines", async () => {
+        const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
+        const always_enabled = alwaysEnabledInserters(registry).map(inserter => inserter.entity_id.id);
+        for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
+            expect(always_enabled).not.toContain(id);
+        }
     });
 
     it("are none in a build without a loop", async () => {

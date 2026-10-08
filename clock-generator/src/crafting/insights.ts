@@ -1,5 +1,6 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
+import { Entity, EntityId } from "../entities";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
 
@@ -170,6 +171,91 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Seria
     };
 }
 
+/** Most hands back to back that the output burst insight lists */
+const MOST_BURST_HANDS_LISTED = 8;
+
+/** Ticks after its window opens that an output inserter starts its first pickup */
+const FIRST_PICKUP_TICKS = 2;
+
+/**
+ * How many hands an output inserter can take back to back from what its machine is sure to have in stock. Shown
+ * for a build with inserters left always enabled: nothing times what its machines hold, so a burst can only count on
+ * the stock the output block guarantees.
+ *
+ * An inserter swings faster than its machine makes a hand, so a burst comes mostly from stock: N hands, one every
+ * `swing` ticks, need N hands less what the machine makes while they are taken. Inserters stop feeding the machine
+ * once its output reaches its output block, so that is the stock it is sure to reach. Recorded on agricultural
+ * science: with a block of 28 packs, 2 hands back to back need 23 and held, 5 need 46 and came up a hand short every
+ * dozen periods.
+ */
+function outputBurstInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+    const planned_inserters = result.crafting_cycle_plan.entity_transfer_map.values_array().map(it => it.entity).filter(Entity.isInserter);
+    const runs_free = planned_inserters.some(it => result.clock_windows[it.entity_id.id] === undefined);
+    if (!runs_free) {
+        return null;
+    }
+    const target_item = result.crafting_cycle_plan.production_rate.machine_production_rate.item;
+    const rows: { machine: string; inserters: string; hand: number; swing_ticks: number; ticks_per_hand: number; block: number;
+        needs: (hands: number) => number; sure_of: number; planned: number }[] = [];
+    for (const machine of result.machine_facts.filter(it => it.facts.output_item === target_item)) {
+        const output_inserters = planned_inserters
+            .filter(it => it.source.entity_id.id === machine.entity_id && !EntityId.isMachine(it.sink.entity_id));
+        if (output_inserters.length === 0 || machine.facts.ticks_per_craft <= 0) {
+            continue;
+        }
+        const planned = result.crafting_cycle_plan.entity_transfer_map.values_array().find(it => it.entity === output_inserters[0])!;
+        const hand = planned.stack_size;
+        const swing_ticks = output_inserters[0].animation.total.ticks;
+        const made_per_tick = machine.facts.output_per_craft / machine.facts.ticks_per_craft;
+        // the inserters of a machine swing together: N hands each, less what the machine makes until the last pickup
+        const needs = (hands: number) =>
+            Math.max(0, output_inserters.length * hands * hand - made_per_tick * (swing_ticks * (hands - 1) + FIRST_PICKUP_TICKS));
+        let sure_of = 0;
+        while (sure_of < 1000 && needs(sure_of + 1) <= machine.facts.output_block_size) {
+            sure_of++;
+        }
+        rows.push({
+            machine: entities.find(it => it.entity_id === machine.entity_id)?.label ?? machine.entity_id,
+            inserters: output_inserters.map(it => entities.find(e => e.entity_id === it.entity_id.id)?.label ?? it.entity_id.id).join(", "),
+            hand, swing_ticks, ticks_per_hand: hand * output_inserters.length / made_per_tick,
+            block: machine.facts.output_block_size, needs, sure_of,
+            planned: planned.total_transfer_count.toDecimal(),
+        });
+    }
+    if (rows.length === 0) {
+        return null;
+    }
+    const tightest = rows.reduce((a, b) => b.sure_of < a.sure_of ? b : a);
+    if (tightest.sure_of >= 1000) {
+        // the machine makes hands as fast as they are taken: a burst needs no stock
+        return null;
+    }
+    const listed = Array.from({ length: Math.min(MOST_BURST_HANDS_LISTED, Math.max(tightest.sure_of + 2, Math.ceil(tightest.planned))) }, (_, index) => index + 1);
+    const over = tightest.planned > tightest.sure_of;
+    const hands = (count: number) => `${count} hand${count === 1 ? "" : "s"}`;
+    const several = tightest.inserters.includes(", ");
+    return {
+        id: "output-burst",
+        scope: "build",
+        title: `${tightest.machine} is sure to have ${tightest.block} ${target_item} in stock: enough for ${hands(tightest.sure_of)} back to back`,
+        what: `${tightest.inserters} can ${several ? "each " : ""}take a hand of ${tightest.hand} every ${round(tightest.swing_ticks)} ticks, and ${tightest.machine} makes `
+            + `${several ? "a hand for each" : "one"} every ${round(tightest.ticks_per_hand)} ticks. Hands taken back to back come mostly from stock: `
+            + `${hands(tightest.sure_of)} need${tightest.sure_of === 1 ? "s" : ""} ${round(tightest.needs(tightest.sure_of))} ${target_item}, `
+            + `${hands(tightest.sure_of + 1)} need ${round(tightest.needs(tightest.sure_of + 1))}.`
+            + (over ? ` This clock takes ${hands(round(tightest.planned, 2))} back to back, which needs ${round(tightest.needs(tightest.planned))}.` : ""),
+        why: `Inserters stop bringing ingredients once a machine's output reaches its output block, ${tightest.block} ${target_item} here. `
+            + "That is the stock the machine is sure to reach. It makes more only from the ingredients that were inside at that moment, "
+            + "and in a build with inserters left always enabled that differs from one cycle to the next.",
+        explanation: `A clock with up to ${hands(tightest.sure_of)} per output inserter and cycle can rely on the stock. One with more `
+            + "holds while the machine happens to have enough ingredients inside and comes up a hand short when it does not, which can "
+            + "take thousands of ticks to show. Swings spread over the cycle, which is what 1 output swing per cycle gives, need no stock.",
+        table: {
+            columns: ["Hands back to back", `${target_item} needed in stock`, `Covered by the output block of ${tightest.block}`],
+            rows: listed.map(count => [`${count}`, `${round(tightest.needs(count))}`, tightest.needs(count) <= tightest.block ? "yes" : "no"]),
+        },
+    };
+}
+
 /** How long a machine takes to make a full hand for the inserter that empties it */
 function outputHandInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
     const rows: { machine: string; item: string; inserter: string; hand: number; per_craft: number; crafts: number; ticks: number }[] = [];
@@ -286,6 +372,7 @@ export function clockInsights(result: BlueprintGenerationResult, is_stable: bool
         is_stable ? spareTimeInsight(result, run) : null,
         insertionLimitsInsight(result, entities),
         outputHandInsight(result, entities),
+        outputBurstInsight(result, entities),
         is_stable ? null : unstableInsight(result),
         is_stable ? planVersusClockInsight(result) : null,
     ];

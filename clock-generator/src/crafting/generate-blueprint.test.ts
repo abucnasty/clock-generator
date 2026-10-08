@@ -322,36 +322,46 @@ describe("generateClockForConfig", () => {
 
     // Two nutrient biochambers [1], [2] feed two pentapod egg biochambers [3], [4], which give each other the egg a
     // craft starts from and send the rest to the science biochamber [5]. Bioflux and nutrients come off one belt on
-    // inserters 1, 2 and 11; inserter 12 takes the science away. Recorded in Factorio 2.1.21 for 36000 ticks a clock:
-    // with 1 output swing per cycle one module made exactly 53 a second (400 packs in each of 106 periods) and, at a
-    // target of 250, exactly 50. With 5 output swings per cycle it made 50.3 and 49.9 while its belt inserters had
-    // windows of one hand, too short for a pickup that starts late; that clock has not been recorded since.
+    // inserters 1, 2 and 11; inserters 3, 4, 6 and 7 bring nutrients to the egg biochambers; 12 takes the science away.
+    // The target is 250 a second over 5 modules, 93% of what the egg biochambers can make. Recorded in Factorio 2.1.21
+    // for 36000 ticks with 1 output swing per cycle, one module made exactly 50 a second (400 packs in each of 75
+    // periods), and exactly 53 at a target of 265. Those recordings were made with inserters 3, 4, 6 and 7 always
+    // enabled; with the windows they have now the clock has not been recorded.
     describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
-        const { alternatives } = generateClockAlternatives(config);
-        const one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
+        const { alternatives, selected_index } = generateClockAlternatives(config);
+        const one_swing = alternatives.find(a => a.label === "1 output swing per cycle")!;
         const windows = one_swing.result.clock_windows;
 
-        it("holds the target of 265 a second with one output swing per cycle, on a clock of the exact period", () => {
+        it("holds the target of 250 a second with one output swing per cycle, on a clock of 480 ticks", () => {
+            expect(alternatives[selected_index]).toBe(one_swing);
             expect(one_swing.is_stable).toBe(true);
-            expect(one_swing.items_per_second).toBeCloseTo(265, 6);
+            expect(one_swing.items_per_second).toBeCloseTo(250, 6);
+            expect(one_swing.result.simulation_duration.ticks).toBe(480);
         });
 
-        it("leaves every inserter between machines always enabled", () => {
+        it("leaves the inserters that take eggs from the egg biochambers always enabled, and clocks the rest", () => {
             const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 11, 12]);
+            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
+        });
+
+        it("gives the inserters bringing nutrients to the egg biochambers a window for every planned hand and one to spare", () => {
+            // 30 nutrients a craft and what the biochamber burns: 7/5 of a hand an inserter a cycle, 35 hands in 25 cycles
+            for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
+                expect(windows[id]).toHaveLength(36);
+                expect(windows[id].slice(0, 3)).toEqual([{ start: 0, end: 9 }, { start: 13, end: 22 }, { start: 26, end: 35 }]);
+            }
         });
 
         it("opens the output window at the start of every cycle, for one pickup", () => {
-            // 16 packs every 18.11 ticks: 25 hands in a period of 452.83 ticks
+            // 16 packs every 19.2 ticks: 25 hands in a period of 480 ticks
             const output_windows = windows["inserter:12"];
             expect(output_windows).toHaveLength(25);
-            expect(output_windows.slice(0, 3)).toEqual([{ start: 0, end: 4 }, { start: 18, end: 22 }, { start: 36, end: 40 }]);
+            expect(output_windows.slice(0, 3)).toEqual([{ start: 0, end: 4 }, { start: 19, end: 23 }, { start: 38, end: 42 }]);
         });
 
-        it("opens a window for the bioflux and the fuel of the science biochamber with every output window", () => {
-            expect(windows["inserter:11"]).toHaveLength(25);
-            expect(windows["inserter:11"].map(it => it.start)).toEqual(windows["inserter:12"].map(it => it.start));
+        it("keeps the inserter of the science biochamber enabled: a window as long as a late pickup needs is longer than the cycle", () => {
+            expect(windows["inserter:11"]).toEqual([{ start: 0, end: 479 }]);
         });
 
         it("spreads the hands of the nutrient biochambers evenly over the period, fuel included and rounded up", () => {
@@ -359,8 +369,25 @@ describe("generateClockForConfig", () => {
             // and a hand of nutrients every few periods
             for (const id of ["inserter:1", "inserter:2"]) {
                 expect(windows[id]).toHaveLength(5);
-                expect(windows[id].map(it => it.start)).toEqual([0, 90, 181, 271, 362]);
+                expect(windows[id].map(it => it.start)).toEqual([0, 96, 192, 288, 384]);
             }
+        });
+
+        it("says how many hands back to back the stock of the science biochamber is sure to cover", () => {
+            const insight = one_swing.insights.find(it => it.id === "output-burst")!;
+            expect(insight.scope).toBe("build");
+            // a hand of 16 every 8 ticks from a machine that makes one every 17: the output block of 28 covers 2 hands
+            expect(insight.title).toBe("Machine 5 (agricultural-science-pack) is sure to have 28 agricultural-science-pack in stock: enough for 2 hands back to back");
+            expect(insight.table?.rows.slice(0, 3)).toEqual([["1", "14.1", "yes"], ["2", "22.6", "yes"], ["3", "31.1", "no"]]);
+            expect(insight.what).not.toContain("This clock takes");
+        });
+
+        it("says of a clock with 5 output swings that it asks for more than that stock, and does not call it stable", () => {
+            // recorded for 36000 ticks, a clock with 5 output swings a cycle made 29920 of 30000 packs
+            const five_swings = alternatives.find(a => a.label === "5 output swings per cycle")!;
+            expect(five_swings.is_stable).toBe(false);
+            expect(five_swings.insights.find(it => it.id === "output-burst")!.what)
+                .toContain("This clock takes 5 hands back to back, which needs 48.");
         });
 
         it("says that the egg recipe loops and that the machines start with eggs inside", () => {
@@ -416,6 +443,14 @@ describe("generateClockForConfig", () => {
             for (const id of ["inserter:9", "inserter:10"]) {
                 expect(windows[id]).toEqual([{ start: 0, end: 16 }, { start: 30, end: 46 }, { start: 60, end: 76 }]);
             }
+        });
+
+        it("says that the stock of a biochamber covers the 3 hands each of its output inserters takes", () => {
+            const insight = selected.insights.find(it => it.id === "output-burst")!;
+            // two inserters take 32 every 8 ticks from a machine that makes 30: a burst hardly draws on the stock of 50
+            expect(insight.title).toContain("is sure to have 50 iron-bacteria in stock: enough for 14 hands back to back");
+            expect(insight.what).toContain("can each take a hand of 16 every 8 ticks");
+            expect(insight.what).not.toContain("This clock takes");
         });
 
         it("leaves the inserters between the machines always enabled", () => {
