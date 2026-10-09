@@ -67,6 +67,14 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 2400,
     },
+    "iron bacteria cultivation": {
+        scaffold: path.join(SAMPLES, "gleba", "iron-bacteria-cultivation", "iron-bacteria-cultivation-scaffold.txt"),
+        config: ConfigPaths.IRON_BACTERIA_CULTIVATION,
+        // the machines make bacteria from bacteria, so they are given some to begin with
+        seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }],
+        warmup_ticks: 300,
+        settle_ticks: 3600,
+    },
 };
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -93,9 +101,13 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(selected.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
                 .toBe(config.target_output.items_per_second);
 
-            const period = selected.result.simulation_duration.ticks;
+            // A fractional period is built as a subtick clock, which counts the whole ticks after which the period
+            // repeats (1728 for 19 periods of 90.947): that is the period the recording is cut into, and what it has
+            // to move is what that many ticks ask for.
+            const subtick = selected.result.subtick;
+            const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
             const expected = config.target_output.items_per_second / config.target_output.copies * period / 60;
-            const clock = encodeBlueprintFile({ blueprint: selected.result.subtick?.blueprint ?? selected.result.blueprint });
+            const clock = encodeBlueprintFile({ blueprint: subtick?.blueprint ?? selected.result.blueprint });
             const result = await recordInFactorio({
                 factorio: FACTORIO!,
                 save: SAVE!,

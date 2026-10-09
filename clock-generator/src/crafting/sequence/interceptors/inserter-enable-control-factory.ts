@@ -565,7 +565,7 @@ export class EnableControlFactory {
         const swings_per_cycle = this.transferCountOf(inserter_state.inserter).total_transfer_count;
         const hand_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
         const items_per_span = swings_per_cycle.getNumerator * hand_size;
-        const span_ticks = this.crafting_cycle_plan.total_duration.ticks * swings_per_cycle.getDenominator;
+        const span_ticks = CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, swings_per_cycle.getDenominator);
 
         let span: number | null = null;
         let allowed = 0;
@@ -1121,9 +1121,7 @@ export class EnableControlFactory {
      */
     private getExtendedPeriodDuration(): Duration {
         if (this.crafting_cycle_plan.fractional_swings_enabled && this.crafting_cycle_plan.cycle_multiplier) {
-            return Duration.ofTicks(
-                this.crafting_cycle_plan.total_duration.ticks * this.crafting_cycle_plan.cycle_multiplier
-            );
+            return Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, this.crafting_cycle_plan.cycle_multiplier));
         }
         return this.crafting_cycle_plan.total_duration;
     }
@@ -1150,7 +1148,7 @@ export class EnableControlFactory {
         }
 
         const clocked_control = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(cycle_ticks * cycles),
+            periodDuration: Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, cycles)),
             enabledRanges: enabled_ranges,
             tickProvider: this.tick_provider,
         });

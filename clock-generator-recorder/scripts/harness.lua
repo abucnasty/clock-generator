@@ -397,14 +397,54 @@ function harness.build(job)
     }
 end
 
----What a recording of the build would track: the exported config and the unit number of each inserter and machine
+---@param entity LuaEntity|nil
+---@return table|nil
+local function end_of(entity)
+    if not entity or not entity.valid then
+        return nil
+    end
+    return { unit_number = entity.unit_number, type = entity.type, name = entity.name }
+end
+
+---Every inserter and loader of the build with the entities at its ends, whatever they are. A recording leaves out an
+---inserter whose other end it has no type for (a heating tower, a wagon, the ground), and a loader is no inserter,
+---but each moves items that no clock holds.
+---@param entities LuaEntity[]
+---@return table
+local function movers(entities)
+    local found = { inserters = {}, loaders = {} }
+    for _, entity in pairs(entities) do
+        if entity.valid and entity.type == "inserter" then
+            table.insert(found.inserters, {
+                unit_number = entity.unit_number,
+                name = entity.name,
+                pickup = end_of(entity.pickup_target),
+                drop = end_of(entity.drop_target),
+            })
+        elseif entity.valid and (entity.type == "loader" or entity.type == "loader-1x1") then
+            local ok, container = pcall(function() return entity.loader_container end)
+            table.insert(found.loaders, {
+                unit_number = entity.unit_number,
+                name = entity.name,
+                loader_type = entity.loader_type,
+                container = ok and end_of(container) or nil,
+            })
+        end
+    end
+    return found
+end
+
+---What a recording of the build would track: the exported config and the unit number of each inserter and machine.
+---Next to it, for the caller's own checks and in no recording: every inserter and loader with what is at its ends.
 ---@return table
 function harness.describe()
     local state = storage.harness
     if not state then
         error("no build: call harness_build first")
     end
-    return recorder.describe(game.forces[state.force_name], state.entities)
+    local described = recorder.describe(game.forces[state.force_name], state.entities)
+    described.movers = movers(state.entities)
+    return described
 end
 
 ---@param state table

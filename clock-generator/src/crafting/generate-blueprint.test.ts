@@ -333,6 +333,17 @@ describe("generateClockForConfig", () => {
         const one_swing = alternatives.find(a => a.label === "1 output swing per cycle")!;
         const windows = one_swing.result.clock_windows;
 
+        // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and
+        // 1439.9999999999998, were taken for fractional periods and offered as subtick and "rounded to 2879" clocks
+        it("makes clocks of whole ticks for 6 and 3 output swings per cycle: 2880 and 1440", () => {
+            const period = (swings: number) => validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: swings } }).period_ticks;
+            expect(period(6)).toBe(2880);
+            expect(period(3)).toBe(1440);
+            expect(alternatives.find(a => a.label === "6 output swings per cycle")!.result.simulation_duration.ticks).toBe(2880);
+            expect(alternatives.find(a => a.label === "3 output swings per cycle")!.result.simulation_duration.ticks).toBe(1440);
+            expect(alternatives.filter(a => /subtick|rounded/.test(a.label)).map(a => a.label)).toEqual([]);
+        });
+
         // Recorded in Factorio 2.1.21 on 2026-10-08: the planned 5-swing clock and the 1-swing clock both hold 250 a
         // second without a miss over 300 periods; the generator selects the planned one
         it("holds the target of 250 a second on a clock of 480 ticks, with the planned 5 output swings per cycle", () => {
@@ -407,11 +418,11 @@ describe("generateClockForConfig", () => {
     // Recorded in Factorio 2.1.21 for 36000 ticks a clock: 576 bacteria in each of 399 periods on the subtick clock,
     // exactly 380 a second, and in each of 400 periods on the clock rounded to 90 ticks, 384 a second. With belt
     // windows of 8 ticks the subtick clock made 373: a fifth of them closed on a partly filled hand.
-    // Skipped on 2026-10-08: with the belt pickup rules recorded from the game (a hand waits while the machine takes no
-    // more, a tick to decide after a wait) no alternative of this build holds its rate in a long run any more; the
-    // nutrient inserters' windows come out a tick tight. There is no recording of this build to say which side is
-    // right. Revisit with a one-copy scaffold and the planner follow-up for belt-fed windows.
-    describe.skip("iron bacteria from two biochambers, each with two output inserters", async () => {
+    // Recorded again on 2026-10-09 on the scaffold in the samples, for 72,576 ticks: 10,944 in each of the 42 repeats
+    // of 1728 ticks the subtick clock counts, which cut into their 19 periods are 576 in each of 798. These tests
+    // were skipped for a day because the long run counted a period of 90.947 ticks in bins of 90, which hold 570 of
+    // the 576; the clock and the belt pickup rules were never at fault.
+    describe("iron bacteria from two biochambers, each with two output inserters", async () => {
         const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
         const validation = validateConfig(config);
         const { alternatives, selected_index } = generateClockAlternatives(config);
@@ -456,6 +467,28 @@ describe("generateClockForConfig", () => {
         it("leaves the inserters between the machines always enabled", () => {
             expect(windows["inserter:7"]).toBeUndefined();
             expect(windows["inserter:8"]).toBeUndefined();
+        });
+    });
+
+    // Metallurgic science, by the simulator alone: the build has no scaffold, so nothing of this is recorded in the
+    // game. It is pinned because the long run decides it. The planned 1-swing clock, period 106.667 ticks, was
+    // selected only while a fractional period was under-counted: counted over its repeat (320 ticks, 3 periods) it
+    // moves 32 too many in the periods judged, the tail of a start-up surplus, and the full-hand clock is selected.
+    describe("metallurgic science, which only the simulator vouches for", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
+        const { alternatives, selected_index } = generateClockAlternatives(config);
+        const selected = alternatives[selected_index];
+
+        it("selects the full-hand subtick clock, stable at the target of 45 a second", () => {
+            expect(selected.label).toBe("Full-hand output swings: 1 output swing per cycle, subtick clock");
+            expect(selected.is_stable).toBe(true);
+            expect(selected.items_per_second).toBeCloseTo(45, 6);
+            expect(selected.result.simulation_duration.ticks).toBeCloseTo(320 / 3, 6);
+        });
+
+        it("does not call the plain 1-swing clock of the same period stable", () => {
+            const one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
+            expect(one_swing.is_stable).toBe(false);
         });
     });
 

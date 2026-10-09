@@ -27,7 +27,7 @@ function usage(): never {
         "Usage: npm run record -- --blueprint=<file or string> --save=<save.zip> --out=<recording.json> [options]",
         "  --factorio=<path>     Factorio executable or install folder (default: $FACTORIO_PATH)",
         "  --save=<save.zip>     save to build in, with the recorder mod's dependencies (default: $FACTORIO_HARNESS_SAVE); it is copied, never changed",
-        "  --ticks=<n>           ticks to record (default 600); with a clock, whole clock periods until at least this many",
+        "  --ticks=<n>           ticks to record (default 600, at most 72000); with a clock, whole clock periods until at least this many",
         "  --warmup=<n>          ticks the build runs before it is seeded and recorded, so belts fill (default 0; it always runs one)",
         "  --settle=<ticks>      ticks the build runs on its clock and seeds before it is recorded (default 0)",
         "  --seed=<json or file> items to add right before recording, e.g.",

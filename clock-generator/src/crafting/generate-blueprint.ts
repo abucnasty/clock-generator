@@ -30,6 +30,7 @@ import { RunnerStepType } from "./runner/steps/runner-step";
 import { Logger, defaultLogger } from "../common/logger";
 import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "./fuel-view";
 import { StockRecorder, StockRecording } from "./machine-stock";
+import { judgeLongRun, longRunPeriods } from "./long-run";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
 import { ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
@@ -40,6 +41,10 @@ import { DrillStateTransitionTrackerPlugin } from "../control-logic/drill/plugin
 import { FactorioStatePlugin } from "../control-logic/plugins/factorio-state-plugin";
 import { factorioDrillState, factorioInserterState, factorioMachineState } from "../state/factorio-entity-state";
 
+/**
+ * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
+ * but deadlocks something in the simulator, or that it cannot simulate at all, must not keep it running for ever.
+ */
 const MAX_SIMULATION_TICKS = 500_000;
 
 /**
@@ -469,7 +474,7 @@ export function generateClockForConfig(
     // from what a run of the exported clock burns, once its windows are known: see fuelClocksAndViewFor.
     let inserter_clocks = unplannedInserterClocks(
         simulation_context.entity_registry,
-        crafting_cycle_plan.total_duration.ticks * recipe_lcm,
+        CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm),
         crafting_shares,
     );
 
@@ -504,7 +509,7 @@ export function generateClockForConfig(
         }
     });
 
-    const duration: Duration = Duration.ofTicks(crafting_cycle_plan.total_duration.ticks * recipe_lcm);
+    const duration: Duration = Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
     assert(duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
     // long periods (large ingredient LCMs) get fewer warmup periods to stay under the tick budget
@@ -1055,7 +1060,7 @@ export function validateConfig(config: Config, options: { logger?: Logger } = {}
         used_lcm: recipe_lcm,
         output_swings_per_cycle,
         cycle_ticks,
-        period_ticks: cycle_ticks * recipe_lcm,
+        period_ticks: CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm),
     };
 }
 
@@ -1924,17 +1929,22 @@ function busyDeciderRanges(
  * with the whole clock shifted to other start offsets relative to the machines' initial state.
  * Fractional periods are only checked unshifted.
  */
-/** Ticks a build with inserters left always enabled is run on its clock to see that it keeps up */
+/** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
 const FREE_RUNNING_CHECK_TICKS = 36000;
-/** The long run stops at this many periods: a drift shows within a hundred, and short periods would run thousands */
+/**
+ * The long run stops at this many periods: a drift shows within a hundred, and short periods would run thousands.
+ * A fractional period is run for more of them where it takes more for the judged part to hold one whole repeat of
+ * the period, up to LONG_RUN_MAX_TICKS (see longRunPeriods).
+ */
 const LONG_RUN_MAX_PERIODS = 120;
-/** The first 1/n of the long run carries its start-up and is not judged */
-const LONG_RUN_SETTLE_SHARE = 3;
 
 /**
- * A build with inserters left always enabled does not repeat with its clock, so one period says little about it: in
- * game such builds held their rate for thousands of ticks before a period came up a hand or two short. Its clock is
- * run for ten minutes instead, and has to move all but a hand of what that many periods ask for.
+ * A build does not always repeat with its clock, so one period says little about it: in game builds with inserters
+ * left always enabled held their rate for thousands of ticks before a period came up a hand or two short, and a
+ * machine with spare speed can drift for dozens of periods. The clock is run for ten minutes of game time or 120
+ * periods instead, longer for a fractional period whose repeat needs it, and judged on what follows the first third:
+ * in bins of whole ticks (a period, or the repeat of a fractional one), none more than a hand off what it expects
+ * and all of them together within a hand.
  */
 function longRunOfFreeRunningBuild(
     config: Config,
@@ -1945,7 +1955,10 @@ function longRunOfFreeRunningBuild(
 ): { keeps_up: boolean; output_items_per_period: number } | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
-    const periods = Math.min(LONG_RUN_MAX_PERIODS, Math.ceil(FREE_RUNNING_CHECK_TICKS / period), Math.floor((MAX_SIMULATION_TICKS - 1) / period));
+    const max_periods = Math.floor((MAX_SIMULATION_TICKS - 1) / period);
+    // a fractional period repeats in whole ticks only every few periods, as its subtick clock counts them
+    const repeat = subtickClockForPeriod(period);
+    const periods = longRunPeriods(period, repeat, Math.min(LONG_RUN_MAX_PERIODS, Math.ceil(FREE_RUNNING_CHECK_TICKS / period), max_periods), max_periods);
     if (periods <= 1) {
         return null;
     }
@@ -1954,34 +1967,22 @@ function longRunOfFreeRunningBuild(
     if (!stock) {
         return null;
     }
-    // what the output inserters drop in each period, counted as the recordings of a build are
+    // what the output inserters drop, counted as the recordings of a build are: by whole periods of the clock that
+    // is built, which for a fractional period is the subtick clock and its repeat (see long-run.ts)
     const makers = new Set(registry.getAll().filter(Entity.isMachine)
         .filter(machine => machine.output.item_name === config.target_output.recipe).map(machine => machine.entity_id.id));
-    const output_ids = new Set(registry.getAll().filter(Entity.isInserter)
-        .filter(it => makers.has(it.source.entity_id.id) && !EntityId.isMachine(it.sink.entity_id)).map(it => it.entity_id.id));
-    const hands = stock.inserters.filter(it => output_ids.has(it.inserter_id));
-    const whole_period = Math.floor(period);
-    const recorded_periods = Math.floor(stock.ticks / whole_period);
-    const per_period = new Array<number>(recorded_periods).fill(0);
-    for (const hand of hands) {
-        for (let t = 1; t < recorded_periods * whole_period; t++) {
-            if (hand.held[t] < hand.held[t - 1]) {
-                per_period[Math.floor(t / whole_period)] += hand.held[t - 1] - hand.held[t];
-            }
-        }
-    }
-    const expected = one_period.stability_check.expected_output_items;
+    const output_inserters = registry.getAll().filter(Entity.isInserter)
+        .filter(it => makers.has(it.source.entity_id.id) && !EntityId.isMachine(it.sink.entity_id));
+    const output_ids = new Set(output_inserters.map(it => it.entity_id.id));
+    const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
     // the first third of the run carries its start-up, which a loop can take a dozen periods to work out of, as a
-    // build does in game before a recording is settled; a build is judged by the periods after
-    const judged = per_period.slice(Math.min(Math.floor(recorded_periods / LONG_RUN_SETTLE_SHARE), Math.max(0, recorded_periods - 1)));
-    // a fractional period moves the windows by a tick between periods, so a period can be a hand up or down while
-    // the rate holds: the span as a whole has to come out within a hand, and no period further off than a hand
-    const hand = Math.max(1, ...registry.getAll().filter(Entity.isInserter).filter(it => output_ids.has(it.entity_id.id)).map(it => it.metadata.stack_size));
-    const off_periods = judged.map((items, index) => [index + per_period.length - judged.length, items] as const).filter(([, items]) => Math.abs(items - expected) > hand);
-    const total = judged.reduce((sum, items) => sum + items, 0);
-    const span_off = Math.abs(total - expected * judged.length) > hand;
-    logger.log(`Free running build over ${judged.length} periods: moved ${total} of ${expected * judged.length}, ${off_periods.length} period(s) more than a hand off the expected ${expected} (${off_periods.map(([index, items]) => `period ${index}: ${items}`).join(", ") || "none"})`);
-    return { keeps_up: off_periods.length === 0 && !span_off, output_items_per_period: judged.length > 0 ? Math.round(total / judged.length) : expected };
+    // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
+    // to come out within a hand, and no bin further off than a hand
+    const verdict = judgeLongRun(stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held),
+        stock.ticks, period, repeat, one_period.stability_check.expected_output_items, hand);
+    const bins = verdict.bin_ticks === null ? "span(s)" : verdict.periods_per_bin === 1 ? "periods" : `repeats of ${verdict.periods_per_bin} periods (${verdict.bin_ticks} ticks)`;
+    logger.log(`Free running build over ${verdict.judged.length} ${bins}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
+    return { keeps_up: verdict.keeps_up, output_items_per_period: verdict.output_items_per_period };
 }
 
 /**

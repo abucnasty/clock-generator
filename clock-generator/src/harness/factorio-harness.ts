@@ -16,6 +16,48 @@ const REPOSITORY_ROOT = path.resolve(__dirname, "..", "..", "..");
 const RCON_READY = "Starting RCON interface";
 const POLL_INTERVAL_MS = 100;
 
+/**
+ * The most ticks one run in Factorio may record: 20 minutes of game time. It keeps the game-backed tests and
+ * recordings from running excessively long; a longer recording is refused up front, not shortened. The ticks a build
+ * warms up and settles for before it is recorded are not counted: a build takes what it takes to fill its belts and
+ * settle.
+ */
+export const MAX_RECORDED_TICKS = 72_000;
+
+/**
+ * Ticks a recording of the requested length will hold. Without a clock, the ticks asked for. With one, the recorder
+ * records whole periods of the clock until it has at least the ticks asked for, so the next multiple of the period.
+ */
+export function recordedTicks(requested_ticks: number, clock_period_ticks: number | null): number {
+    return clock_period_ticks === null ? requested_ticks : Math.ceil(requested_ticks / clock_period_ticks) * clock_period_ticks;
+}
+
+/**
+ * Throws when the request is no whole positive number of ticks, or when what it would record is over
+ * MAX_RECORDED_TICKS. `clock_period_ticks` is the period the clock of the build counts, null when it has none or
+ * the period is not known before the run; the request alone is limited then.
+ */
+export function assertRecordableTicks(requested_ticks: number, clock_period_ticks: number | null = null): void {
+    if (!Number.isInteger(requested_ticks) || requested_ticks <= 0) {
+        throw new Error(`Ticks to record must be a whole number above 0, not ${requested_ticks}`);
+    }
+    const limit = `the limit of ${MAX_RECORDED_TICKS} ticks (${MAX_RECORDED_TICKS / 3600} minutes of game time) for one run in Factorio`;
+    if (clock_period_ticks === null) {
+        if (requested_ticks > MAX_RECORDED_TICKS) {
+            throw new Error(`A recording of ${requested_ticks} ticks is over ${limit}. Record fewer ticks; warm-up and settle ticks do not count.`);
+        }
+        return;
+    }
+    const recorded = recordedTicks(requested_ticks, clock_period_ticks);
+    if (recorded > MAX_RECORDED_TICKS) {
+        const fits = Math.floor(MAX_RECORDED_TICKS / clock_period_ticks) * clock_period_ticks;
+        throw new Error(`A request for ${requested_ticks} ticks records ${recorded}: whole periods of the clock, which counts ${clock_period_ticks} ticks. `
+            + `That is over ${limit}. `
+            + (fits > 0 ? `The most that fits is ${fits} ticks (${fits / clock_period_ticks} periods).` : "Not one period of this clock fits.")
+            + " Warm-up and settle ticks do not count.");
+    }
+}
+
 /** Items put into the build right before the recording starts */
 export interface Seed {
     /** Which built entities get the items; every entity that can take them when absent */
@@ -205,11 +247,8 @@ export function clockInserterIds(clock_blueprint: string): number[] {
     return Array.from(new Set(ids)).sort((a, b) => a - b);
 }
 
-/**
- * Unit number of the built inserter behind each config inserter id. The recorder numbers the build its own way,
- * so the build is matched to the config by structure, as a recording is.
- */
-export function matchBuiltInserters(described: any, config: Config): Map<number, number> {
+/** The build as a recording without samples, matched to the config by structure, as a recording is */
+function matchBuild(described: any, config: Config) {
     const as_recording = parseRecording({
         format: "clock-generator-recording",
         version: 1,
@@ -225,7 +264,41 @@ export function matchBuiltInserters(described: any, config: Config): Map<number,
             samples: { status: [], crafting_progress: [], bonus_progress: [], products_finished: [], inputs: {}, outputs: {} },
         })),
     });
-    const match = matchRecordingToConfig(as_recording, config);
+    return { as_recording, match: matchRecordingToConfig(as_recording, config) };
+}
+
+/**
+ * Ticks the clock of a blueprint counts before it starts over, which is what the recorder cuts a recording into; null
+ * when the blueprint has no clock the generator made or its counter is not one this reads. The clock is the decider
+ * described as "Clock for ...", which counts while its signal is under a constant: from 1 when something adds the 1
+ * for it (a constant combinator next to it, or an else output), from 0 as clocks made before 0.6.0 did.
+ */
+export function clockPeriodTicks(blueprint: string): number | null {
+    let entities: any[];
+    try {
+        entities = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    } catch {
+        return null;
+    }
+    const clock = entities.find(entity => entity.name === "decider-combinator" && /^Clock for/.test(entity.player_description ?? ""));
+    const conditions = clock?.control_behavior?.decider_conditions;
+    const counted = conditions?.conditions?.[0];
+    if (!counted || (counted.comparator ?? "<") !== "<" || typeof counted.constant !== "number") {
+        return null;
+    }
+    // the game keeps whole numbers: a constant of 90.947 is read as 90
+    const limit = Math.trunc(counted.constant);
+    const counts_from_one = entities.some(entity => entity.name === "constant-combinator") || (conditions.else_outputs ?? []).length > 0;
+    const period = counts_from_one ? limit : limit + 1;
+    return period > 0 ? period : null;
+}
+
+/**
+ * Unit number of the built inserter behind each config inserter id. The recorder numbers the build its own way,
+ * so the build is matched to the config by structure, as a recording is.
+ */
+export function matchBuiltInserters(described: any, config: Config): Map<number, number> {
+    const { as_recording, match } = matchBuild(described, config);
     const unit_numbers = new Map<number, number>();
     for (const inserter of as_recording.inserters) {
         const config_id = match.inserters.get(inserter.id);
@@ -234,6 +307,112 @@ export function matchBuiltInserters(described: any, config: Config): Map<number,
         }
     }
     return unit_numbers;
+}
+
+/** Something of the build that moves items of a machine of the config and that the config does not have */
+export interface BuildPartMissingFromConfig {
+    kind: "inserter" | "machine" | "loader";
+    /** For an error message */
+    description: string;
+    /** An inserter that takes from a belt: it is matched by what lay on its belt, so it may be an inserter of the config after all */
+    takes_from_belt: boolean;
+}
+
+const BELT_ENTITY_TYPES = new Set(["transport-belt", "underground-belt", "splitter", "loader", "loader-1x1", "lane-splitter", "linked-belt"]);
+
+/**
+ * What the build has on the machines of the config that the config does not have. A clock made from the config knows
+ * nothing of these, so the recording would not be of the clock:
+ * - an inserter that takes from or drops into a machine of the config and is no inserter of the config, whatever is at
+ *   its other end (a chest, a machine outside the config, a heating tower, the ground): wired to no clock it runs
+ *   free, and a third output inserter that does empties the machine the clock means to hold back;
+ * - a machine with a recipe of the config beyond the machines the config has of it;
+ * - a loader on a machine of the config, which moves items like an inserter that is always enabled.
+ * Inserters between belts and chests only, such as the ones that feed a scaffold's belt, and machines with other
+ * recipes are the scaffold's own and not the config's business.
+ */
+export function buildPartsMissingFromConfig(described: any, config: Config): BuildPartMissingFromConfig[] {
+    if (described.movers === undefined) {
+        throw new Error("The recorder mod did not list the build's inserters and loaders (movers): it is older than this harness");
+    }
+    const { as_recording, match } = matchBuild(described, config);
+    const recipeOf = (config_id: number | undefined) => config.machines.find(machine => machine.id === config_id)?.recipe;
+    /** unit number of a built machine -> the config machine it is */
+    const config_machines = new Map<number, number>();
+    /** unit number of a built machine that is no machine of the config -> its recipe */
+    const other_machines = new Map<number, string>();
+    for (const machine of as_recording.machines) {
+        if (machine.unit_number === undefined) {
+            continue;
+        }
+        const config_id = match.machines.get(machine.id);
+        if (config_id !== undefined) {
+            config_machines.set(machine.unit_number, config_id);
+        } else {
+            other_machines.set(machine.unit_number, machine.recipe);
+        }
+    }
+    const unit = (unit_number: number | undefined) => unit_number !== undefined ? ` (unit ${unit_number})` : "";
+    type End = { unit_number?: number; type?: string; name?: string } | undefined;
+    const onConfigMachine = (end: End) => end?.unit_number !== undefined && config_machines.has(end.unit_number);
+    const endText = (end: End): string => {
+        if (!end) {
+            return "nothing (the ground)";
+        }
+        if (onConfigMachine(end)) {
+            const config_id = config_machines.get(end.unit_number!);
+            return `machine ${config_id} (${recipeOf(config_id)})`;
+        }
+        const recipe = end.unit_number !== undefined ? other_machines.get(end.unit_number) : undefined;
+        return recipe !== undefined ? `${end.name} making ${recipe}, which is no machine of the config` : `${end.name ?? end.type ?? "an entity"}`;
+    };
+
+    const missing: BuildPartMissingFromConfig[] = [];
+    const config_recipes = new Set(config.machines.map(machine => machine.recipe));
+    for (const machine of as_recording.machines) {
+        if (!match.machines.has(machine.id) && config_recipes.has(machine.recipe)) {
+            const configured = config.machines.filter(it => it.recipe === machine.recipe).length;
+            missing.push({
+                kind: "machine",
+                description: `${machine.name} making ${machine.recipe}${unit(machine.unit_number)}, beyond the ${configured} the config has of that recipe`,
+                takes_from_belt: false,
+            });
+        }
+    }
+
+    const matched_inserters = new Set(as_recording.inserters
+        .filter(inserter => match.inserters.has(inserter.id) && inserter.unit_number !== undefined)
+        .map(inserter => inserter.unit_number));
+    for (const inserter of Object.values<any>(described.movers.inserters ?? {})) {
+        if ((onConfigMachine(inserter.pickup) || onConfigMachine(inserter.drop)) && !matched_inserters.has(inserter.unit_number)) {
+            missing.push({
+                kind: "inserter",
+                description: `${inserter.name} ${endText(inserter.pickup)} -> ${endText(inserter.drop)}${unit(inserter.unit_number)}`,
+                takes_from_belt: BELT_ENTITY_TYPES.has(inserter.pickup?.type),
+            });
+        }
+    }
+    for (const loader of Object.values<any>(described.movers.loaders ?? {})) {
+        if (onConfigMachine(loader.container)) {
+            missing.push({
+                kind: "loader",
+                description: `${loader.name} ${loader.loader_type === "output" ? "emptying" : "filling"} ${endText(loader.container)}${unit(loader.unit_number)}`,
+                takes_from_belt: false,
+            });
+        }
+    }
+    return missing;
+}
+
+/** The error for a build with parts the config does not have */
+export function missingFromConfigMessage(missing: BuildPartMissingFromConfig[]): string {
+    return `The build has ${missing.length} part(s) on machines of the config that the config does not have: `
+        + `${missing.map(it => it.description).join("; ")}. No clock made from the config holds them, so the recording would not be of the clock. `
+        + "Add them to the config or take them out of the build."
+        + (missing.some(it => it.takes_from_belt)
+            ? " An inserter that takes from a belt is matched by what lies on its belt when the build is matched: if it is an inserter of the "
+            + "config, a lane was empty or held something else then, and a longer warm-up may help."
+            : "");
 }
 
 class FactorioServer {
@@ -328,6 +507,8 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
+    // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
+    assertRecordableTicks(options.ticks, options.unclocked ? null : clockPeriodTicks(options.clock ?? options.blueprint));
     const executable = await resolveFactorioExecutable(options.factorio);
     const work_dir = path.resolve(options.work_dir ?? await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-harness-")));
     await fs.mkdir(work_dir, { recursive: true });
@@ -412,11 +593,16 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
 
         let clock: { blueprint: string; inserters: Record<string, number> } | undefined;
         if (options.clock && options.config) {
-            const unit_numbers = matchBuiltInserters(await call("harness_describe"), options.config);
+            const described = await call("harness_describe");
+            const unit_numbers = matchBuiltInserters(described, options.config);
             const missing = clockInserterIds(options.clock).filter(id => !unit_numbers.has(id));
             if (missing.length > 0) {
                 throw new Error(`The clock names inserters ${missing.join(", ")} of the config, which match no inserter of the build. `
                     + "Belt inserters are matched by what lies on their belt, so a longer warm-up may help.");
+            }
+            const not_in_config = buildPartsMissingFromConfig(described, options.config);
+            if (not_in_config.length > 0) {
+                throw new Error(missingFromConfigMessage(not_in_config));
             }
             clock = { blueprint: options.clock, inserters: Object.fromEntries(unit_numbers) };
         }

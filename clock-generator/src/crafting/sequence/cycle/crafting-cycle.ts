@@ -10,6 +10,11 @@ import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
     readonly total_duration: Duration;
+    /**
+     * The same duration in ticks as the fraction it is: a hand over the rate, times the swings of a cycle. A whole
+     * number of cycles is multiplied from this (see ticksOfCycles), not from the rounded `total_duration`.
+     */
+    readonly total_duration_ticks: Fraction;
     /** Map of entity IDs to their transfer counts per base cycle */
     readonly entity_transfer_map: EntityTransferCountMap;
     /** Target production rate configuration */
@@ -42,6 +47,16 @@ export interface CraftingCyclePlan {
 export const CraftingCyclePlan = {
     create: createPlan,
     print: print,
+    ticksOfCycles: ticksOfCycles,
+}
+
+/**
+ * Ticks that a whole number of base cycles last, which is how a clock period is made (the cycles of the ingredient
+ * LCM). Multiplied as a fraction: 25 cycles of 115.2 ticks are 2880 ticks, where 19.2 * 6 * 25 in floating point is
+ * 2879.9999999999995, which is no whole number of ticks to anything that asks.
+ */
+function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cycles: number): number {
+    return plan.total_duration_ticks.multiply(cycles).toDecimal();
 }
 
 function createPlan(
@@ -92,11 +107,7 @@ function createPlan(
     const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick
         .divide(num_output_machines);
     
-    const single_swing_period_duration = Duration.ofTicks(
-        fraction(output_stack_size)
-            .divide(per_machine_rate)
-            .toDecimal()
-    )
+    const single_swing_period_ticks = fraction(output_stack_size).divide(per_machine_rate);
 
     const use_fractional_swings = config_overrides.use_fractional_swings ?? false;
     
@@ -130,7 +141,9 @@ function createPlan(
         swings_per_cycle = fraction(swings_per_single_cycle);
     }
 
-    const final_period_duration = Duration.ofTicks(single_swing_period_duration.ticks * swings_per_cycle.toDecimal())
+    // kept as a fraction: the product of the two as floating point numbers can miss a whole number of ticks
+    const final_period_ticks = single_swing_period_ticks.multiply(swings_per_cycle);
+    const final_period_duration = Duration.ofTicks(final_period_ticks.toDecimal())
 
     // Compute swing counts for all output machines
     // Each output machine handles the same swing count per machine
@@ -156,6 +169,7 @@ function createPlan(
 
             return {
                 total_duration: final_period_duration,
+                total_duration_ticks: final_period_ticks,
                 entity_transfer_map: swing_counts.clone(),
                 production_rate: target_production_rate,
                 fractional_swings_enabled: true,
@@ -168,6 +182,7 @@ function createPlan(
 
     return {
         total_duration: final_period_duration,
+        total_duration_ticks: final_period_ticks,
         entity_transfer_map: swing_counts.clone(),
         production_rate: target_production_rate,
         fractional_swings_enabled: false,
