@@ -43,6 +43,8 @@ export interface HarnessOptions {
     ticks: number;
     /** Ticks the build runs before seeding and recording, so belts are full */
     warmup_ticks: number;
+    /** Ticks the build runs on its new clock and seeds before it is recorded, so its start-up is not in the recording */
+    settle_ticks?: number;
     seed: Seed[];
     /** Blueprint string of a generated clock that replaces the clock of the build; needs config */
     clock?: string;
@@ -424,6 +426,7 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
             unclocked: options.unclocked,
             seed: options.seed,
             lua: options.lua,
+            settle_ticks: options.settle_ticks,
             record: { ticks: options.ticks },
         });
         if (start.clock) {
@@ -434,7 +437,7 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
         }
         options.log(`Recording from tick ${start.tick}`);
 
-        const finished = await waitFor("the recording", status => !status.active);
+        const finished = await waitFor("the recording", status => !status.settling && !status.active);
         if (!finished.last_recording) {
             throw new Error(`The recorder stopped without writing a recording. End of the game's log:\n${server.logTail()}`);
         }

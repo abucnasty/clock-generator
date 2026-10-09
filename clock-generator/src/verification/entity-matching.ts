@@ -112,6 +112,19 @@ export function matchRecordingToConfig(recording: Recording, config: Config): En
                 assigned.set(ins.id, match.id);
             }
         }
+        // a build's inserter often has no filters set where the config names what it takes: with no filtered
+        // inserter on the same endpoints left to take, it is that config inserter
+        for (const ins of recording.inserters) {
+            if (assigned.has(ins.id)) continue;
+            const recorded_filters = recording.config.inserters[ins.id - 1]?.filters ?? [];
+            if (recorded_filters.length > 0) continue;
+            const endpoints = recordedEndpoints(ins, mapping);
+            const match = config_keys.find(c => c.has_filters && c.unfiltered_key === endpoints && !used.has(c.id));
+            if (match) {
+                used.add(match.id);
+                assigned.set(ins.id, match.id);
+            }
+        }
         return assigned;
     };
 

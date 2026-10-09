@@ -5,6 +5,7 @@ Date: 2026-10-05
     - biochambers are exported with the type "biochamber" and their energy consumption bonus (energy_consumption_bonus, in percent) so the clock generator can work out how many nutrients they burn
     - the version of the mod is exported as sidecar_version so the clock generator can ask for an update when it is older than the version that exports a setting it can use
   Bugfixes:
+    - belt pieces joined to each other, through undergrounds and splitters as well, are exported as one belt, with lanes read from all of its pieces. A lane that had run dry under one inserter used to split a belt in two, and an inserter over an empty piece was put on the first belt
     - inserters are exported with only the filters set on the inserter. Filters were guessed from the source machine's recipe or the source belt's lanes, which listed items the sink does not accept and made the config invalid; the clock generator works out what an inserter moves itself
 ---------------------------------------------------------------------------------------------------
 Version: 0.3.0
