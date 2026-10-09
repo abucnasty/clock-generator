@@ -76,7 +76,8 @@ async function recordFuelBiochamber(options: { swing_offset?: number; later_swin
             version: 1,
             start_game_tick: 0,
             sample_count,
-            clock: { values: Array.from({ length: sample_count }, (_, i) => i % period) },
+            // recorded as the game shows it, counting 1 to the period
+            clock: { values: Array.from({ length: sample_count }, (_, i) => i % period + 1) },
             config: {
                 inserters: [
                     { source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } },

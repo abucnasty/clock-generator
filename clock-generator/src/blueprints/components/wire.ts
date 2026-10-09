@@ -26,6 +26,11 @@ function output(entity: Entity): WireEndpoint {
     return { entity, side: "output" };
 }
 
+/** The one connector of an entity without sides, such as a constant combinator: it has the ids of a combinator's input */
+function circuit(entity: Entity): WireEndpoint {
+    return { entity, side: "input" };
+}
+
 // combinator connectors: red/green input are 1/2, red/green output are 3/4
 function connectorId(color: WireColor, side: CircuitSide): number {
     return (side === "input" ? 1 : 3) + (color === "green" ? 1 : 0);
@@ -52,6 +57,7 @@ function toBlueprintWire(connection: WireConnection, entityNumber: (entity: Enti
 export const Wire = {
     input,
     output,
+    circuit,
     red: (from: WireEndpoint, to: WireEndpoint) => connect("red", from, to),
     green: (from: WireEndpoint, to: WireEndpoint) => connect("green", from, to),
     redChain: (endpoints: WireEndpoint[]) => chain("red", endpoints),

@@ -21,7 +21,8 @@ export interface ArithmeticConditions {
 export interface ControlBehavior {
     readonly decider_conditions?: DeciderConditions
     readonly arithmetic_conditions?: ArithmeticConditions
-    readonly sections?: ConstantCombinatorSection[]
+    /** The logistic sections of a constant combinator, nested as a blueprint stores them */
+    readonly sections?: { readonly sections: ConstantCombinatorSection[] }
 }
 
 export class ControlBehaviorBuilder {
@@ -46,10 +47,10 @@ export class ControlBehaviorBuilder {
 
     public build(): ControlBehavior {
 
-        // for decider combinators
+        // for constant combinators
         if (this.sections) {
             return {
-                sections: this.sections,
+                sections: { sections: this.sections },
             }
         }
 
@@ -66,7 +67,6 @@ export class ControlBehaviorBuilder {
                 conditions: this.deciderConditions,
                 outputs: this.outputs,
             },
-            sections: this.sections,
         };
     }
 }

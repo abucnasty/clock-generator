@@ -3,6 +3,7 @@ import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
 import { Direction, Position, SignalId, Wire } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
 import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
+import { ConstantCombinatorEntity } from "../blueprints/entity/constant-combinator";
 import { Duration, OpenRange } from "../data-types";
 import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities";
 import { InventoryTransfer } from "./sequence/inventory-transfer";
@@ -20,8 +21,6 @@ function createDeciderCombinatorForTransfers(
     mapRanges: (ranges: OpenRange[]) => OpenRange[] = ranges => ranges,
     modulo?: { split: ModuloRanges; signal: SignalId },
     inserter_clock?: InserterClock,
-    /** The ranges a decider reads a modulo of the clock in, for windows on the clock modulo `modulus` */
-    moduloRanges: (ranges: OpenRange[], modulus: number) => OpenRange[] = moduloSignalRanges,
     /** The entities with the same windows, which are wired to this combinator too */
     merged_entity_ids: EntityId[] = [],
 ): DeciderCombinatorEntity {
@@ -68,10 +67,10 @@ function createDeciderCombinatorForTransfers(
 
     const deciderCombinator = (modulo
         ? DeciderCombinatorEntity.fromSignalRanges([
-            { signal: modulo.signal, ranges: moduloRanges(modulo.split.repeating, modulo.split.modulus) },
-            { signal: SignalId.clock, ranges: modulo.split.remaining },
+            { signal: modulo.signal, ranges: clockValueRanges(modulo.split.repeating) },
+            { signal: SignalId.clock, ranges: clockValueRanges(modulo.split.remaining) },
         ], outputs)
-        : DeciderCombinatorEntity.fromRanges(SignalId.clock, ranges, outputs))
+        : DeciderCombinatorEntity.fromRanges(SignalId.clock, clockValueRanges(ranges), outputs))
         .setPosition(position)
         .setMultiLinePlayerDescription(modulo
             ? description_lines.concat(`Repeats every ${modulo.split.modulus} ticks: ${SignalId.toDescriptionString(modulo.signal)} is the clock modulo ${modulo.split.modulus}`)
@@ -230,7 +229,7 @@ function generateClockDescriptionLines(
 
 
 /**
- * A clock for a fractional period p/q ticks: a normal clock counts 0..p-1 ticks, and two arithmetic
+ * A clock for a fractional period p/q ticks: a normal clock counts p ticks, and two arithmetic
  * combinators turn that into (clock * q) % p, the position in the period in 1/q-tick units.
  * The pattern wraps seamlessly because the clock period p times q is a multiple of p.
  */
@@ -243,6 +242,29 @@ export interface SubtickClock {
 
 /** Ticks added between the clock and the deciders by the multiply and modulo combinators */
 const SUBTICK_CLOCK_EXTRA_LATENCY_TICKS = 2;
+
+/**
+ * Every clock counts from 1, not 0: a decider reads an absent signal as 0, so a window from 0 would still enable
+ * its inserter with the clock switched off. A constant combinator on the clock's network adds this to the count,
+ * and to each modulo of it and the subtick clock, which are a tick behind the count: that tick makes up for the
+ * one the constant adds, so each is its position in its modulus plus 1 and nothing has to be shifted.
+ * The windows stay 0-based positions in the period; only the constants of the deciders are this much more.
+ */
+const CLOCK_FIRST_VALUE = 1;
+
+/** Windows of 0-based positions as the values of the clock, or of a modulo of it, they are open for */
+function clockValueRanges(ranges: OpenRange[]): OpenRange[] {
+    return ranges.map(range => OpenRange.from(range.start_inclusive + CLOCK_FIRST_VALUE, range.end_inclusive + CLOCK_FIRST_VALUE));
+}
+
+/** The constant combinator that adds the first value to every signal a clock's network counts on */
+function clockStepCombinator(signals: SignalId[], position: Position, description: string[]): ConstantCombinatorEntity {
+    return ConstantCombinatorEntity.withSignals({
+        signals: signals.map(signal => ({ signal, count: CLOCK_FIRST_VALUE })),
+        position,
+        description,
+    });
+}
 
 /** Decider constants are whole numbers; fractional bounds (from a fractional period's wrap) are rounded inward */
 function wholeRanges(ranges: OpenRange[]): OpenRange[] {
@@ -353,29 +375,17 @@ function wrapRangesIntoPeriod(ranges: OpenRange[], period: number): OpenRange[] 
         : [OpenRange.from(range.start_inclusive, period - 1), OpenRange.from(0, range.end_inclusive - period)]));
 }
 
-/** The modulo combinator adds a tick, so its output is (clock - 1) % modulus when the deciders read it */
-export function moduloSignalRanges(repeating: OpenRange[], modulus: number): OpenRange[] {
-    const shifted: OpenRange[] = [];
-    for (const range of repeating) {
-        if (range.start_inclusive === 0) {
-            shifted.push(OpenRange.from(modulus - 1, modulus - 1));
-            if (range.end_inclusive > 0) {
-                shifted.push(OpenRange.from(0, range.end_inclusive - 1));
-            }
-        } else {
-            shifted.push(OpenRange.from(range.start_inclusive - 1, range.end_inclusive - 1));
-        }
-    }
-    return OpenRange.reduceRanges(shifted);
-}
-
-/** Windows in ticks of the p/q period, as subtick-clock values shifted back by the extra combinator latency */
+/**
+ * Windows in ticks of the p/q period, as 0-based positions of the subtick clock shifted back by the extra combinator
+ * latency. The count is its position plus the first value, a tick ahead, which makes up for one tick of the latency.
+ */
 function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
     const { period_ticks: p, scale: q } = clock;
+    const latency_ticks = SUBTICK_CLOCK_EXTRA_LATENCY_TICKS - CLOCK_FIRST_VALUE;
     const scaled: OpenRange[] = [];
     for (const range of ranges) {
-        const start = range.start_inclusive * q - SUBTICK_CLOCK_EXTRA_LATENCY_TICKS * q;
-        const end = range.end_inclusive * q - SUBTICK_CLOCK_EXTRA_LATENCY_TICKS * q;
+        const start = range.start_inclusive * q - latency_ticks * q;
+        const end = range.end_inclusive * q - latency_ticks * q;
         const wrapped_start = ((start % p) + p) % p;
         const wrapped_end = wrapped_start + (end - start);
         if (wrapped_end >= p) {
@@ -417,9 +427,10 @@ export function createSignalPerInserterBlueprint(
     // the clock of the period is a modulo of the one clock, unless every fuel clock already fits the period
     const period_modulus = merged_clock_ticks !== null && merged_clock_ticks !== total_duration.ticks ? total_duration.ticks : null;
     const counted_signal = period_modulus === null ? SignalId.clock : MERGED_CLOCK_SIGNAL;
+    const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.period_ticks : total_duration.ticks);
 
     const clock = DeciderCombinatorEntity
-        .clock(merged_clock_ticks ?? (subtick_clock ? subtick_clock.period_ticks : total_duration.ticks), 1, counted_signal)
+        .clock(counted_ticks, counted_signal)
         .setPosition(Position.fromXY(x, 0))
         .setDirection(Direction.SOUTH)
         .setMultiLinePlayerDescription(
@@ -435,7 +446,10 @@ export function createSignalPerInserterBlueprint(
                     `- Counts ${merged_clock_ticks} ticks on ${SignalId.toDescriptionString(counted_signal)}: ${merged_clock_ticks! / total_duration.ticks} times the total duration, so the fuel clocks of ${fuel_moduli.join(" and ")} ticks fit it too`,
                     `- ${SignalId.toDescriptionString(SignalId.clock)} is that count modulo ${total_duration.ticks}`,
                 ]
-                : [])
+                : []
+            ).concat([
+                `- Counts ${CLOCK_FIRST_VALUE} to ${counted_ticks}, never 0: the constant combinator below adds the ${CLOCK_FIRST_VALUE}, so with the clock switched off every combinator reads 0 and enables nothing`,
+            ])
         )
         .build();
 
@@ -483,9 +497,6 @@ export function createSignalPerInserterBlueprint(
         // the clock of the period is on the clock signal, where everything that reads the clock expects it
         modulus === period_modulus ? SignalId.clock : SignalId.virtual(`signal-${modulo_letters[index % modulo_letters.length]}`),
     ] as const));
-    // Every modulo of the one clock is a tick behind its count, the clock of the period too, so they agree with each
-    // other. Without the one clock the deciders read the count itself, which a modulo is a tick behind.
-    const moduloRanges = period_modulus === null ? moduloSignalRanges : (ranges: OpenRange[]) => ranges;
     const fuel_clocks_by_modulus = new Map<number, InserterClock[]>();
     fuel_inserter_clocks.forEach(inserter_clock =>
         fuel_clocks_by_modulus.set(inserter_clock.modulus, (fuel_clocks_by_modulus.get(inserter_clock.modulus) ?? []).concat(inserter_clock)));
@@ -499,10 +510,9 @@ export function createSignalPerInserterBlueprint(
             drills.length > 0 ? `drill${drills.length > 1 ? "s" : ""} ${drills.join(", ")}` : "",
         ].filter(Boolean).join(" and ");
     };
-    const counted_ticks = merged_clock_ticks ?? total_duration.ticks;
     const moduloDescription = (modulus: number): string[] => {
         const signal = SignalId.toDescriptionString(modulo_signals.get(modulus)!);
-        const lines = [`${signal} counts 0 to ${modulus - 1}, ${counted_ticks / modulus} times in the ${counted_ticks} ticks the clock counts`];
+        const lines = [`${signal} counts ${CLOCK_FIRST_VALUE} to ${modulus}, ${counted_ticks / modulus} times in the ${counted_ticks} ticks the clock counts`];
         if (modulus === period_modulus) {
             lines.push(`- The clock period: every combinator of the swing counts reads it`);
         }
@@ -527,6 +537,26 @@ export function createSignalPerInserterBlueprint(
         description: moduloDescription(modulus),
     }));
 
+    // The clock's network carries the count and every modulo of it; the subtick clock is on a network of its own
+    const clock_step = clockStepCombinator(
+        [counted_signal, ...modulo_signals.values()],
+        Position.fromXY(clock.position.x, 1.5),
+        [
+            `Clock step: adds ${CLOCK_FIRST_VALUE} to the count of the clock${moduli.length > 0 ? " and to each modulo of it" : ""}`,
+            `- So each counts from ${CLOCK_FIRST_VALUE}, never 0, which is what a combinator reads with the clock switched off`,
+        ],
+    );
+    const subtick_step = subtick_clock
+        ? [clockStepCombinator(
+            [SignalId.clock],
+            Position.fromXY(subtick_combinators[1].position.x, 1.5),
+            [
+                `Clock step: adds ${CLOCK_FIRST_VALUE} to the subtick clock`,
+                `- So it counts from ${CLOCK_FIRST_VALUE}, never 0, which is what a combinator reads with the clock switched off`,
+            ],
+        )]
+        : [];
+
     sortedEntityIds.forEach(entityId => {
         const transfers = inventory_transfers.get(entityId)!;
         const split = splits.get(entityId);
@@ -542,7 +572,6 @@ export function createSignalPerInserterBlueprint(
                 subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInPeriod,
                 split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
                 inserter_clocks.get(entityId.id),
-                moduloRanges,
                 history.merged_entities.get(entityId.id),
             )
         )
@@ -551,7 +580,7 @@ export function createSignalPerInserterBlueprint(
     // A decider per fuel clock and window, which the fuel inserters with that window share. It reads the modulo of
     // the one clock when there is one, else a fuel clock of its own on a network of its own.
     const fuel_clocks = fuel_clocks_by_modulus;
-    const fuel_combinators: DeciderCombinatorEntity[] = [];
+    const fuel_combinators: (DeciderCombinatorEntity | ConstantCombinatorEntity)[] = [];
     const fuel_wires: ReturnType<typeof Wire.green>[] = [];
     fuel_moduli.forEach(modulus => {
         const fuel_clock_signal = merged_clock_ticks === null ? undefined : modulo_signals.get(modulus)!;
@@ -574,7 +603,7 @@ export function createSignalPerInserterBlueprint(
             window_deciders.push(DeciderCombinatorEntity
                 .fromRanges(
                     fuel_clock_signal ?? SignalId.clock,
-                    fuel_clock_signal ? moduloRanges(window, modulus) : window,
+                    clockValueRanges(window),
                     Array.from(items).map(item_name => SignalId.item(item_name)),
                 )
                 .setPosition(Position.fromXY(x += 1, 0))
@@ -587,34 +616,40 @@ export function createSignalPerInserterBlueprint(
             return;
         }
         const fuel_clock = DeciderCombinatorEntity
-            .clock(modulus, 1)
+            .clock(modulus)
             .setPosition(Position.fromXY(x += 1, 0))
             .setDirection(Direction.SOUTH)
             .setMultiLinePlayerDescription([
-                `Fuel clock: counts ${modulus} ticks`,
+                `Fuel clock: counts ${CLOCK_FIRST_VALUE} to ${modulus}`,
                 "- for the inserters that fill fuel slots, which are not part of the swing counts",
                 "- a clock of its own, so a fuel slot is looked at no more often than it has to be",
             ])
             .build();
-        fuel_combinators.push(fuel_clock, ...window_deciders);
+        const fuel_clock_step = clockStepCombinator([SignalId.clock], Position.fromXY(x, 1.5), [
+            `Clock step: adds ${CLOCK_FIRST_VALUE} to the count of the fuel clock`,
+            `- So it counts from ${CLOCK_FIRST_VALUE}, never 0, which is what a combinator reads with the clock switched off`,
+        ]);
+        fuel_combinators.push(fuel_clock, fuel_clock_step, ...window_deciders);
         fuel_wires.push(
             Wire.green(Wire.input(fuel_clock), Wire.output(fuel_clock)),
+            Wire.green(Wire.circuit(fuel_clock_step), Wire.input(fuel_clock)),
             ...Wire.greenChain([Wire.output(fuel_clock), ...window_deciders.map(Wire.input)]),
         );
     });
 
-    // all green: clock self loop; with a subtick clock: clock -> multiply, multiply -> modulo,
-    // and modulo output chained through every decider input, since deciders must not read the raw clock;
+    // all green: clock self loop with its step; with a subtick clock: clock -> multiply, multiply -> modulo,
+    // and modulo output with its step chained through every decider input, since deciders must not read the raw clock;
     // with modulo combinators: clock and every modulo input and output on one network chained through the decider inputs;
     // otherwise: clock output chained through the decider inputs
-    const { input, output } = Wire;
-    const wires = [Wire.green(input(clock), output(clock))];
+    const { input, output, circuit } = Wire;
+    const wires = [Wire.green(input(clock), output(clock)), Wire.green(circuit(clock_step), input(clock))];
     const decider_inputs = deciderCombinatorEntities.map(input);
     if (subtick_clock) {
         const [multiply, modulo] = subtick_combinators;
         wires.push(
             Wire.green(output(clock), input(multiply)),
             Wire.green(output(multiply), input(modulo)),
+            Wire.green(circuit(subtick_step[0]), output(modulo)),
             ...Wire.greenChain([output(modulo), ...decider_inputs]),
         );
     } else if (modulo_combinators.length > 0 && decider_inputs.length > 0) {
@@ -638,7 +673,9 @@ export function createSignalPerInserterBlueprint(
         .setDescription(`${targetRateDescription(cycle)}\nClock period: ${formatRate(total_duration.ticks)} ticks`)
         .setEntities([
             clock,
+            clock_step,
             ...subtick_combinators,
+            ...subtick_step,
             ...modulo_combinators,
             ...deciderCombinatorEntities,
             ...fuel_combinators,

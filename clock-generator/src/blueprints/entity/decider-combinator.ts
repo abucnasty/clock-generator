@@ -69,27 +69,27 @@ export class DeciderCombinatorEntityBuilder {
 
 
 
+/**
+ * The counter of a clock that counts 1 to `period` on the clock signal, with a constant combinator putting 1 on its
+ * network (see ConstantCombinatorEntity): the decider copies the count back while it is below the period and the
+ * constant adds 1 to it; at the period it copies nothing, and the count is 1 again. So the count is never 0, which
+ * is what a decider reads with the clock switched off.
+ */
 function clock(
-    threshold: number,
-    step: number = 1,
+    period: number,
     /** The signal the clock counts on */
     clockSignalId: SignalId = SignalId.clock,
 ): DeciderCombinatorEntityBuilder {
 
     const condition = new DeciderCombinatorConditionBuilder(clockSignalId)
         .setComparator(ComparatorString.LESS_THAN)
-        .setConstant(threshold - 1)
+        .setConstant(period)
         .build()
 
     const outputs = [
         new DeciderCombinatorOutputBuilder(clockSignalId)
             .setCopyCountFromInput(true)
-            .setConstant(step)
             .setNetworks(CircuitNetworkSelection.BOTH)
-            .build(),
-        new DeciderCombinatorOutputBuilder(clockSignalId)
-            .setConstant(1)
-            .setCopyCountFromInput(false)
             .build(),
     ]
 

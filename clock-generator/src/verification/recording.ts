@@ -82,6 +82,24 @@ const RecordedConfigSchema = z.object({
     }).passthrough()),
 }).passthrough();
 
+/**
+ * The clock counts 1 to its period, never 0 (see the clock in crafting/blueprint.ts), and the recorder samples it as
+ * it is. Here the values become 0-based positions in the period, as the windows of the generator are: the period
+ * starts where the clock is 1, and the period is the largest position plus one. A recorded 0 is not a position: the
+ * clock signal was absent, or the clock counted from 0, as clocks made before the count started at 1 did.
+ */
+const RecordedClockSchema = z.object({ values: luaArray(z.number()) }).superRefine((clock, context) => {
+    const index = clock.values.indexOf(0);
+    if (index >= 0) {
+        context.addIssue({
+            code: "custom",
+            path: ["values", index],
+            message: "Recorded clock value 0: a clock counts 1 to its period, so the clock signal was absent, "
+                + "or the clock was made before clocks counted from 1 and has to be generated again",
+        });
+    }
+}).transform(clock => ({ values: clock.values.map(value => value - 1) }));
+
 export const RecordingSchema = z.object({
     format: z.literal("clock-generator-recording"),
     version: z.literal(1),
@@ -89,7 +107,7 @@ export const RecordingSchema = z.object({
     start_game_tick: z.number(),
     sample_count: z.number().int(),
     stop_reason: z.string().optional(),
-    clock: z.object({ values: luaArray(z.number()) }).optional(),
+    clock: RecordedClockSchema.optional(),
     config: RecordedConfigSchema,
     inserters: luaArray(RecordedInserterSchema),
     machines: luaArray(RecordedMachineSchema),

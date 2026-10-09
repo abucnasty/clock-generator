@@ -1,4 +1,14 @@
-import { ControlBehavior, Entity, EntityType, fitPlayerDescription, Position } from "../components";
+import {
+    ConstantCombinatorFilterBuilder,
+    ConstantCombinatorSectionBuilder,
+    ControlBehavior,
+    ControlBehaviorBuilder,
+    Entity,
+    EntityType,
+    fitPlayerDescription,
+    Position,
+    SignalId,
+} from "../components";
 
 export interface ConstantCombinatorEntity extends Entity {
     readonly name: EntityType;
@@ -38,3 +48,25 @@ export class ConstantCombinatorEntityBuilder {
         };
     }
 }
+
+/** A constant combinator that puts out each of the signals with its count */
+function withSignals(args: {
+    signals: { signal: SignalId; count: number }[];
+    position: Position;
+    description?: string[];
+}): ConstantCombinatorEntity {
+    const section = new ConstantCombinatorSectionBuilder(1);
+    args.signals.forEach(({ signal, count }, index) =>
+        section.addFilter(new ConstantCombinatorFilterBuilder(index + 1).withSignal(signal).withCount(count).build()));
+    const builder = new ConstantCombinatorEntityBuilder()
+        .setPosition(args.position)
+        .setControlBehavior(new ControlBehaviorBuilder().setSections([section.build()]).build());
+    if (args.description) {
+        builder.setPlayerDescription(args.description.join("\n"));
+    }
+    return builder.build();
+}
+
+export const ConstantCombinatorEntity = {
+    withSignals,
+};
