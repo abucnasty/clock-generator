@@ -6,15 +6,15 @@ The Factorio mods keep their own `changelog.txt`.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 `clock-generator/package.json`, `clock-generator-ui/package.json` and the sidecar mod (`clock-generator-sidecar/info.json`) share the same version; see Versioning in the README.
+From 0.6.0 on, each release lists what people generating clocks will notice under "User facing" and what only matters to working on the generator, such as the recorder, the harness and the samples, under "Development tooling".
 
 ## [Unreleased]
 
-### Added
-- `npm run record` records a build in a headless Factorio without a player: it builds a blueprint in a copy of a save, can swap in a generated clock and wire it, seeds items, and writes a recording for `npm run verify` (recorder mod 0.5.0). `--watch` opens the game with graphics to watch the run.
+## [0.6.0] - 2026-10-08
 
-## [0.6.0] - 2026-10-07
+### User facing
 
-### Added
+#### Added
 - Biochamber machine type, the first machine that burns fuel. It has a fuel slot, burns nutrients only while it crafts, and shows its fuel use in the machine facts. Machine config gains an optional `energy_consumption_bonus` and `fuel`.
 - Fuel inserters run on a clock of their own, outside the transfer plan. Its length comes from how fast the machine burned fuel in a simulated run, so the inserter is enabled as seldom as is safe. Where possible the fuel clocks and the clock period count on one merged clock.
 - Fuel tab in the results: burn rates, the fuel clocks, and the fuel each machine held over the run.
@@ -23,19 +23,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In a build with a loop, the inserters of the loop and those taking from its machines are always enabled; every other inserter is clocked with windows made from the plan. Such a build is checked over ten minutes of game time.
 - An item can be both an ingredient and the fuel of a machine, like nutrients in a pentapod egg biochamber. Fuel that arrives on an ingredient inserter is planned.
 - Validation reports a missing fuel inserter.
-- Insight for builds with a loop: how many hands an output inserter can take back to back from the stock its machine is sure to have, which is its output block. A clock that asks for more is told so.
 - Combinator descriptions name the recipes their inserter or drill works with, as recipe icons.
 - Blueprints record the target rate they were made for, in the blueprint's description and on the clock combinator: `Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)`.
 - The combinators that take a modulo of the clock, and those of a subtick clock, say what they are for: the signal they put out, how often it repeats, and which inserters read it.
 - Potential clocks show their output swings per cycle and the rate they achieved, not the target.
+- Inserter status "waiting for sink": a hand filling from a belt that the machine cannot take any more of for now keeps what it holds and waits, as the game does ("waiting for space in destination").
+- Burner machines out of fuel have a status of their own, "no fuel", in the simulator and when a recording is verified; it takes precedence over ingredient shortage and full output, as in the game.
+- Every inserter, machine and drill carries the state it would show in Factorio, named as the game names it (working, waiting for source items, waiting for space in destination, item ingredient shortage, full output, no fuel, disabled by control behavior), next to the simulator's own phases. The timeline shows it under each row, and verify compares it with the recorded status tick by tick.
+- The timeline shows, under each row, the state the entity would show in Factorio, with the game's own names.
 - Pasting from an older sidecar mod says what that version does not export and asks once to update it.
-- Verifying a recording covers fuel, fuel inserters and by-product inserters. Recordings can be longer and include mining drills (recorder mod 0.3.0 and 0.4.0).
-- Sample configs `gleba-rocket-fuel-1`, `gleba-rocket-fuel-2`, `stone-bricks`, `agriculture-science` and `iron-bacteria-cultivation`. Clocks of the last three ran at exactly their target rate in game.
 
-### Changed
+#### Changed
 - Generating a clock names the inserter that is missing from the transfer plan, with its source, sink and items, instead of failing with `No value found for key`.
+- The clock counts 1 to its period instead of 0 to the period minus 1, and so does every modulo of it, the subtick clock and the fuel clocks: a constant combinator under each clock adds the 1. A combinator reads an absent signal as 0, so a window that started at 0 kept its inserter enabled with the clock switched off; now no window includes 0 and a switched-off clock enables nothing. Recordings of a clock made before this count from 0 and are rejected by `npm run verify`; generate the clock again.
+- A belt inserter filling a hand into a machine stops at every stack while the machine takes no more of the item (output at its block, or the ingredient at its insertion limit), goes on once it does, and spends a tick deciding before the first stack after any wait. Recorded on the agricultural science build: with these rules the simulator holds the 5-swing clock the game holds (2,099 of 2,099 periods, where it lost about 1 in 100 before) and agrees with the game on the automation science build's clocks period for period. Planned windows for belt-fed inserters end a tick later where the hand started after a wait.
+- Every clock alternative is confirmed with a long run, ten minutes of game time and at most 120 periods, judged on the periods after the first third: the span has to come out within a hand of the expected output and no period more than a hand off. A machine with spare speed over its plan can drift for dozens of periods before it shows, which a one-period check never saw: on the automation science build the game and the simulator both moved an extra hand in one period out of five with the clock that used to be selected.
+- Full-hand output swings are ranked ahead of the other stable alternatives when a machine making the target can make at least 5% more in a period than its plan asks of it: short output windows leave the surplus inside the machine, where the output block stops it, instead of letting it drain the ingredient stock.
 
-### Fixed
+#### Fixed
 - A burner machine spends fuel as it does in game: it works from a small buffer of energy, its first tick after a stop is slow, and its fuel slot is filled to 5 items or more the faster it burns.
 - A craft starts whatever the output holds. Products that do not fit are held by the machine, which stops until there is room.
 - A machine's output block no longer stops a machine that has its ingredients; it only stops inserters bringing more.
@@ -50,6 +55,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An inserter filtered to a by-product picks it up.
 - Combinator descriptions are cut to the 500 bytes Factorio keeps.
 - The diagram view lays out machines that feed each other in a loop.
+
+#### Removed
+- HOCON support. Configurations are JSON.
+
+### Development tooling
+
+#### Added
+- Verifying a recording covers fuel, fuel inserters and by-product inserters. Recordings can be longer and include mining drills (recorder mod 0.3.0 and 0.4.0).
+- Sample configs `gleba/rocket-fuel` (two jelly stack sizes), `smelting/stone-bricks`, `science/agriculture-science` and `gleba/iron-bacteria-cultivation`. Clocks of the last three ran at exactly their target rate in game.
+- The simulator can run a clock on its own for a number of periods and report what every machine and inserter holds after each tick (`simulateClockOnly`), to lay against a recording of the same clock.
+- `npm run record` records a build in a headless Factorio without a player: it builds a blueprint in a copy of a save, can swap in a generated clock and wire it, seeds items, and writes a recording for `npm run verify` (recorder mod 0.5.0). `--watch` opens the game with graphics to watch the run, and `--settle` leaves a build's start-up out of the recording.
+- A build whose inserters carry no filters is matched to a config whose inserters name their items, so a scaffold needs no filters set to be recorded.
+- Game-backed tests, `npm run test:game`: with `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE` set, the agricultural science, automation science and belted buffer scaffold builds are recorded in a headless Factorio and the selected clock must move the expected output in every clock period. They are not part of `npm test`.
+- Recorder mod 0.6.0: belt pieces joined to each other, through undergrounds and splitters too, are described as one belt. A lane that had run dry under one inserter used to split a belt, and an inserter over an empty piece was put on the first belt.
+
+#### Changed
+- Sample configurations are grouped by what they make (`science`, `intermediates`, `gleba`, `smelting`), one folder per build named after it, holding its configs and its scaffold. Timestamps and "config-vs-actual" are gone from file names, and the recordings that were checked in are removed.
+- The agricultural science scaffold without belt gaps is the one named `agriculture-science-scaffold.txt`; a build in Factorio ran it for 300 periods without a miss on the selected clock and on the 5-swing one.
+
+#### Removed
+- The two-foundry low density structure sample: the four-foundry build at 240 a second is the one that is built and recorded.
+- The "input inserter always on" automation science sample: the plain config covers the multi-ingredient case and its deadlock test.
 
 ## [0.5.0] - 2026-10-05
 
