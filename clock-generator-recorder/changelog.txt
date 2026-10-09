@@ -3,6 +3,7 @@ Version: 0.6.0
 Date: 2026-10-08
   Changes:
     - The harness removes a build's constant combinators with its clock, since a generated clock now has a lock switch, a constant combinator wired to it
+    - harness_describe also lists every inserter and loader of the build with the entity at each end, so the harness can refuse a build that holds one the config does not describe
     - Belt pieces joined to each other, through undergrounds and splitters as well, are described as one belt, with lanes read from all of its pieces. A lane that had run dry under one inserter used to split a belt in two, and an inserter over an empty piece was put on the first belt
 ---------------------------------------------------------------------------------------------------
 Version: 0.5.0
