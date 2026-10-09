@@ -9,6 +9,8 @@ import { SignalId } from "./signal";
 export interface DeciderConditions {
     readonly conditions?: DeciderCombinatorCondition[],
     readonly outputs?: DeciderCombinatorOutput[],
+    /** What the combinator outputs while the conditions do not hold (Factorio 2.1); an empty list outputs nothing */
+    readonly else_outputs?: DeciderCombinatorOutput[],
 }
 
 export interface ArithmeticConditions {
@@ -23,12 +25,16 @@ export interface ControlBehavior {
     readonly arithmetic_conditions?: ArithmeticConditions
     /** The logistic sections of a constant combinator, nested as a blueprint stores them */
     readonly sections?: { readonly sections: ConstantCombinatorSection[] }
+    /** Whether a constant combinator puts its signals out; on unless stated */
+    readonly is_on?: boolean
 }
 
 export class ControlBehaviorBuilder {
     private deciderConditions?: DeciderCombinatorCondition[] = undefined;
     private sections?: ConstantCombinatorSection[] = undefined;
     private outputs?: DeciderCombinatorOutput[] = undefined;
+    private elseOutputs?: DeciderCombinatorOutput[] = undefined;
+    private isOn?: boolean = undefined;
 
     public setDeciderConditions(conditions: DeciderCombinatorCondition[]): ControlBehaviorBuilder {
         this.deciderConditions = conditions;
@@ -37,6 +43,16 @@ export class ControlBehaviorBuilder {
 
     public setOutputs(outputs: DeciderCombinatorOutput[]): ControlBehaviorBuilder {
         this.outputs = outputs;
+        return this;
+    }
+
+    public setElseOutputs(outputs: DeciderCombinatorOutput[]): ControlBehaviorBuilder {
+        this.elseOutputs = outputs;
+        return this;
+    }
+
+    public setIsOn(isOn: boolean): ControlBehaviorBuilder {
+        this.isOn = isOn;
         return this;
     }
 
@@ -51,6 +67,7 @@ export class ControlBehaviorBuilder {
         if (this.sections) {
             return {
                 sections: { sections: this.sections },
+                ...(this.isOn !== undefined ? { is_on: this.isOn } : {}),
             }
         }
 
@@ -66,6 +83,7 @@ export class ControlBehaviorBuilder {
             decider_conditions: {
                 conditions: this.deciderConditions,
                 outputs: this.outputs,
+                ...(this.elseOutputs !== undefined ? { else_outputs: this.elseOutputs } : {}),
             },
         };
     }

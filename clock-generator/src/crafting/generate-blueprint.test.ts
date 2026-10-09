@@ -828,8 +828,11 @@ describe("generateClockForConfig", () => {
                 const counted_to = Number(/"constant":(\d+)/.exec(behavior(clocks[0]))![1]);
                 [period, ...fuel_moduli].forEach(ticks => expect(counted_to % ticks).toBe(0));
                 // on a signal of its own, which leaves the clock signal for the clock of the period
-                expect(behavior(clocks[0])).toContain('"name":"signal-T"');
-                expect(behavior(clocks[0])).not.toContain('"name":"signal-clock"');
+                const { conditions, outputs } = (clocks[0].control_behavior as { decider_conditions: { conditions: { first_signal: { name: string } }[]; outputs: { signal: { name: string }; copy_count_from_input: boolean }[] } }).decider_conditions;
+                expect(conditions[0].first_signal.name).toBe("signal-T");
+                expect(outputs.filter(output => output.copy_count_from_input).map(output => output.signal.name)).toEqual(["signal-T"]);
+                // the clock signal is only the clock of the period starting at 1, like every modulo: a constant row
+                expect(outputs.filter(output => output.signal.name === "signal-clock").map(output => output.copy_count_from_input)).toEqual([false]);
             });
 
             it("gives the clock of the period and each fuel clock as a modulo of the one clock", () => {
@@ -860,7 +863,9 @@ describe("generateClockForConfig", () => {
 
             it("leaves the other combinators reading the clock signal", () => {
                 const planned_deciders = entities.filter(entity =>
-                    entity.name === "decider-combinator" && !clocks.includes(entity) && !behavior(entity).includes('"name":"nutrients"'));
+                    entity.name === "decider-combinator" && !clocks.includes(entity) && !behavior(entity).includes('"name":"nutrients"')
+                    // the lock filter passes every signal on, it does not read the clock signal
+                    && !behavior(entity).includes('"name":"signal-lock"'));
                 expect(planned_deciders.length).toBeGreaterThan(0);
                 planned_deciders.forEach(decider => expect(behavior(decider)).toContain('"name":"signal-clock"'));
             });

@@ -1,6 +1,6 @@
 import Fraction from "fractionability";
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
-import { Direction, Position, SignalId, Wire } from "../blueprints/components";
+import { Direction, Entity as CircuitEntity, Position, SignalId, Wire, WireConnection } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
 import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
 import { ConstantCombinatorEntity } from "../blueprints/entity/constant-combinator";
@@ -245,9 +245,10 @@ const SUBTICK_CLOCK_EXTRA_LATENCY_TICKS = 2;
 
 /**
  * Every clock counts from 1, not 0: a decider reads an absent signal as 0, so a window from 0 would still enable
- * its inserter with the clock switched off. A constant combinator on the clock's network adds this to the count,
- * and to each modulo of it and the subtick clock, which are a tick behind the count: that tick makes up for the
- * one the constant adds, so each is its position in its modulus plus 1 and nothing has to be shifted.
+ * its inserter with the clock switched off. The decider that counts a clock outputs 1 where the count starts over
+ * and adds 1 to each modulo of the count (see DeciderCombinatorEntity.clock), and the filter after the subtick clock
+ * adds 1 to it. Each modulo and the subtick clock is a tick behind the count: that tick makes up for the one the
+ * decider adds, so each is its position in its modulus plus 1 and nothing has to be shifted.
  * The windows stay 0-based positions in the period; only the constants of the deciders are this much more.
  */
 const CLOCK_FIRST_VALUE = 1;
@@ -257,13 +258,49 @@ function clockValueRanges(ranges: OpenRange[]): OpenRange[] {
     return ranges.map(range => OpenRange.from(range.start_inclusive + CLOCK_FIRST_VALUE, range.end_inclusive + CLOCK_FIRST_VALUE));
 }
 
-/** The constant combinator that adds the first value to every signal a clock's network counts on */
-function clockStepCombinator(signals: SignalId[], position: Position, description: string[]): ConstantCombinatorEntity {
-    return ConstantCombinatorEntity.withSignals({
-        signals: signals.map(signal => ({ signal, count: CLOCK_FIRST_VALUE })),
-        position,
-        description,
-    });
+/** How far a wire reaches between two combinators, in tiles, with some margin under the 9 of a copper wire */
+export const WIRE_REACH_TILES = 8;
+
+/**
+ * Red wires from the lock to each of the receivers, in order along the row of combinators. A wire does not reach
+ * further than WIRE_REACH_TILES, so the lock passes by the combinators between two receivers that are further apart:
+ * the lock signal reaches their inputs too, where nothing reads it.
+ */
+export function lockWires(lock: ConstantCombinatorEntity, receivers: CircuitEntity[], row: CircuitEntity[]): WireConnection[] {
+    const distance = (a: CircuitEntity, b: CircuitEntity) => Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y);
+    const wires: WireConnection[] = [];
+    let last: CircuitEntity = lock;
+    const connect = (to: CircuitEntity) => {
+        wires.push(Wire.red(last === lock ? Wire.circuit(lock) : Wire.input(last), Wire.input(to)));
+        last = to;
+    };
+    for (const receiver of receivers.slice().sort((a, b) => a.position.x - b.position.x)) {
+        while (distance(last, receiver) > WIRE_REACH_TILES) {
+            // the furthest combinator on the way that this wire reaches
+            const hop = row
+                .filter(entity => entity.position.x > last.position.x && distance(last, entity) <= WIRE_REACH_TILES)
+                .sort((a, b) => b.position.x - a.position.x)[0];
+            if (hop === undefined || hop === last) {
+                throw new Error(`The lock does not reach the combinator at (${receiver.position.x}, ${receiver.position.y})`);
+            }
+            connect(hop);
+        }
+        connect(receiver);
+    }
+    return wires;
+}
+
+/**
+ * The lines of the description of a lock filter. The combinators after it see the clock a tick after it counts;
+ * every window is read through exactly one filter, so all of them are a tick later and none is out of step.
+ */
+function lockFilterDescription(clock_name: string, extra_lines: string[] = []): string[] {
+    return [
+        `Clock lock filter: disables the clock when ${SignalId.toDescriptionString(SignalId.lock)} is active`,
+        `- Passes the ${clock_name} to the combinators beside it only while the lock is off, and outputs nothing while it is on`,
+        `- The combinators beside it see the ${clock_name} one tick after it counts`,
+        ...extra_lines,
+    ];
 }
 
 /** Decider constants are whole numbers; fractional bounds (from a fractional period's wrap) are rounded inward */
@@ -429,29 +466,7 @@ export function createSignalPerInserterBlueprint(
     const counted_signal = period_modulus === null ? SignalId.clock : MERGED_CLOCK_SIGNAL;
     const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.period_ticks : total_duration.ticks);
 
-    const clock = DeciderCombinatorEntity
-        .clock(counted_ticks, counted_signal)
-        .setPosition(Position.fromXY(x, 0))
-        .setDirection(Direction.SOUTH)
-        .setMultiLinePlayerDescription(
-            generateClockDescriptionLines(
-                final_output_item_name,
-                cycle,
-                total_duration
-            ).concat(subtick_clock
-                ? [`- Subtick clock: counts ${subtick_clock.period_ticks} ticks; the next two combinators give the position in 1/${subtick_clock.scale} ticks`]
-                : []
-            ).concat(period_modulus !== null
-                ? [
-                    `- Counts ${merged_clock_ticks} ticks on ${SignalId.toDescriptionString(counted_signal)}: ${merged_clock_ticks! / total_duration.ticks} times the total duration, so the fuel clocks of ${fuel_moduli.join(" and ")} ticks fit it too`,
-                    `- ${SignalId.toDescriptionString(SignalId.clock)} is that count modulo ${total_duration.ticks}`,
-                ]
-                : []
-            ).concat([
-                `- Counts ${CLOCK_FIRST_VALUE} to ${counted_ticks}, never 0: the constant combinator below adds the ${CLOCK_FIRST_VALUE}, so with the clock switched off every combinator reads 0 and enables nothing`,
-            ])
-        )
-        .build();
+    const clock_x = x;
 
     const subtick_combinators = subtick_clock ? [
         ArithmeticCombinatorEntity.withConstant({
@@ -537,25 +552,48 @@ export function createSignalPerInserterBlueprint(
         description: moduloDescription(modulus),
     }));
 
-    // The clock's network carries the count and every modulo of it; the subtick clock is on a network of its own
-    const clock_step = clockStepCombinator(
-        [counted_signal, ...modulo_signals.values()],
-        Position.fromXY(clock.position.x, 1.5),
-        [
-            `Clock step: adds ${CLOCK_FIRST_VALUE} to the count of the clock${moduli.length > 0 ? " and to each modulo of it" : ""}`,
-            `- So each counts from ${CLOCK_FIRST_VALUE}, never 0, which is what a combinator reads with the clock switched off`,
+    // The clock's network carries the count and every modulo of it, which count from 1 as well; the subtick clock is
+    // on a network of its own
+    const clock = DeciderCombinatorEntity
+        .clock(counted_ticks, counted_signal, Array.from(modulo_signals.values()))
+        .setPosition(Position.fromXY(clock_x, 0))
+        .setDirection(Direction.SOUTH)
+        .setMultiLinePlayerDescription(
+            generateClockDescriptionLines(
+                final_output_item_name,
+                cycle,
+                total_duration
+            ).concat(subtick_clock
+                ? [`- Subtick clock: counts ${subtick_clock.period_ticks} ticks; the next two combinators give the position in 1/${subtick_clock.scale} ticks`]
+                : []
+            ).concat(period_modulus !== null
+                ? [
+                    `- Counts ${merged_clock_ticks} ticks on ${SignalId.toDescriptionString(counted_signal)}: ${merged_clock_ticks! / total_duration.ticks} times the total duration, so the fuel clocks of ${fuel_moduli.join(" and ")} ticks fit it too`,
+                    `- ${SignalId.toDescriptionString(SignalId.clock)} is that count modulo ${total_duration.ticks}`,
+                ]
+                : []
+            ).concat([
+                `- Counts ${CLOCK_FIRST_VALUE} to ${counted_ticks}, never 0; stops at ${CLOCK_FIRST_VALUE} while ${SignalId.toDescriptionString(SignalId.lock)} is on`,
+            ])
+        )
+        .build();
+
+    // One lock for every clock, under the clock: switched on, it stops them and the filters pass nothing
+    const lock = ConstantCombinatorEntity.lock({
+        position: Position.fromXY(clock.position.x, 1.5),
+        description: [
+            "Clock lock: switch on to stop every clock; no inserter is enabled while it is on. Off by default. Switching off starts the clocks again from the beginning, and the first period after may be a tick off",
         ],
-    );
-    const subtick_step = subtick_clock
-        ? [clockStepCombinator(
-            [SignalId.clock],
-            Position.fromXY(subtick_combinators[1].position.x, 1.5),
-            [
-                `Clock step: adds ${CLOCK_FIRST_VALUE} to the subtick clock`,
-                `- So it counts from ${CLOCK_FIRST_VALUE}, never 0, which is what a combinator reads with the clock switched off`,
-            ],
-        )]
-        : [];
+    });
+
+    // Every combinator that reads the clock does so through a filter after its network, so the lock reaches them all
+    const main_filter = DeciderCombinatorEntity
+        .lockFilter(subtick_clock ? [SignalId.clock] : [])
+        .setPosition(Position.fromXY(x += 1, 0))
+        .setMultiLinePlayerDescription(lockFilterDescription("clock", subtick_clock
+            ? [`- Adds ${CLOCK_FIRST_VALUE} to the subtick clock, which counts from ${CLOCK_FIRST_VALUE} like the other clocks`]
+            : []))
+        .build();
 
     sortedEntityIds.forEach(entityId => {
         const transfers = inventory_transfers.get(entityId)!;
@@ -580,7 +618,9 @@ export function createSignalPerInserterBlueprint(
     // A decider per fuel clock and window, which the fuel inserters with that window share. It reads the modulo of
     // the one clock when there is one, else a fuel clock of its own on a network of its own.
     const fuel_clocks = fuel_clocks_by_modulus;
-    const fuel_combinators: (DeciderCombinatorEntity | ConstantCombinatorEntity)[] = [];
+    const fuel_combinators: DeciderCombinatorEntity[] = [];
+    // the combinators the lock reaches: every clock and the filter after it
+    const lock_receivers: CircuitEntity[] = [clock, main_filter];
     const fuel_wires: ReturnType<typeof Wire.green>[] = [];
     fuel_moduli.forEach(modulus => {
         const fuel_clock_signal = merged_clock_ticks === null ? undefined : modulo_signals.get(modulus)!;
@@ -625,44 +665,50 @@ export function createSignalPerInserterBlueprint(
                 "- a clock of its own, so a fuel slot is looked at no more often than it has to be",
             ])
             .build();
-        const fuel_clock_step = clockStepCombinator([SignalId.clock], Position.fromXY(x, 1.5), [
-            `Clock step: adds ${CLOCK_FIRST_VALUE} to the count of the fuel clock`,
-            `- So it counts from ${CLOCK_FIRST_VALUE}, never 0, which is what a combinator reads with the clock switched off`,
-        ]);
-        fuel_combinators.push(fuel_clock, fuel_clock_step, ...window_deciders);
+        const fuel_filter = DeciderCombinatorEntity
+            .lockFilter()
+            .setPosition(Position.fromXY(x += 1, 0))
+            .setMultiLinePlayerDescription(lockFilterDescription("fuel clock"))
+            .build();
+        fuel_combinators.push(fuel_clock, fuel_filter, ...window_deciders);
         fuel_wires.push(
             Wire.green(Wire.input(fuel_clock), Wire.output(fuel_clock)),
-            Wire.green(Wire.circuit(fuel_clock_step), Wire.input(fuel_clock)),
-            ...Wire.greenChain([Wire.output(fuel_clock), ...window_deciders.map(Wire.input)]),
+            Wire.green(Wire.output(fuel_clock), Wire.input(fuel_filter)),
+            // the window deciders sit before the fuel clock, so the nearest one comes first
+            ...Wire.greenChain([Wire.output(fuel_filter), ...window_deciders.slice().reverse().map(Wire.input)]),
         );
+        lock_receivers.push(fuel_clock, fuel_filter);
     });
 
-    // all green: clock self loop with its step; with a subtick clock: clock -> multiply, multiply -> modulo,
-    // and modulo output with its step chained through every decider input, since deciders must not read the raw clock;
-    // with modulo combinators: clock and every modulo input and output on one network chained through the decider inputs;
-    // otherwise: clock output chained through the decider inputs
-    const { input, output, circuit } = Wire;
-    const wires = [Wire.green(input(clock), output(clock)), Wire.green(circuit(clock_step), input(clock))];
-    const decider_inputs = deciderCombinatorEntities.map(input);
+    // all green: clock self loop; with a subtick clock: clock -> multiply, multiply -> modulo;
+    // with modulo combinators: clock and every modulo input and output on one network;
+    // then the output of the last of them -> the filter, and the filter output chained through every decider input,
+    // since deciders must not read the clock itself.
+    // all red: the lock into the clock and every filter
+    const { input, output } = Wire;
+    const wires = [Wire.green(input(clock), output(clock))];
+    let clock_network_output = output(clock);
     if (subtick_clock) {
         const [multiply, modulo] = subtick_combinators;
         wires.push(
             Wire.green(output(clock), input(multiply)),
             Wire.green(output(multiply), input(modulo)),
-            Wire.green(circuit(subtick_step[0]), output(modulo)),
-            ...Wire.greenChain([output(modulo), ...decider_inputs]),
         );
-    } else if (modulo_combinators.length > 0 && decider_inputs.length > 0) {
+        clock_network_output = output(modulo);
+    } else if (modulo_combinators.length > 0) {
         wires.push(
             Wire.green(input(clock), output(modulo_combinators[0])),
             Wire.green(output(clock), input(modulo_combinators[0])),
             ...Wire.greenChain(modulo_combinators.map(input)),
             ...Wire.greenChain(modulo_combinators.map(output)),
-            ...Wire.greenChain([output(modulo_combinators[modulo_combinators.length - 1]), ...decider_inputs]),
         );
-    } else if (decider_inputs.length > 0) {
-        wires.push(...Wire.greenChain([output(clock), ...decider_inputs]));
+        clock_network_output = output(modulo_combinators[modulo_combinators.length - 1]);
     }
+    wires.push(
+        Wire.green(clock_network_output, input(main_filter)),
+        ...Wire.greenChain([output(main_filter), ...deciderCombinatorEntities.map(input)]),
+        ...lockWires(lock, lock_receivers, [clock, ...subtick_combinators, ...modulo_combinators, main_filter, ...deciderCombinatorEntities, ...fuel_combinators]),
+    );
 
     if (split_moduli.length > 0) {
         blueprint_label += " (modulo clock)";
@@ -673,10 +719,10 @@ export function createSignalPerInserterBlueprint(
         .setDescription(`${targetRateDescription(cycle)}\nClock period: ${formatRate(total_duration.ticks)} ticks`)
         .setEntities([
             clock,
-            clock_step,
+            lock,
             ...subtick_combinators,
-            ...subtick_step,
             ...modulo_combinators,
+            main_filter,
             ...deciderCombinatorEntities,
             ...fuel_combinators,
         ])

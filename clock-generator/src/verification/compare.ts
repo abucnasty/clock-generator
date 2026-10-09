@@ -3,7 +3,7 @@ import { BlueprintGenerationResult } from "../crafting/generate-blueprint";
 import { EntityId, Machine } from "../entities";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, RecordedMachine, Recording, recordedClockPeriod } from "./recording";
-import { clockValues, extractTransfers, RecordedTransfer } from "./recording-history";
+import { clockValues, extractTransfers, RecordedTransfer, windowPositions } from "./recording-history";
 
 export interface CompareOptions {
     /** Allowed spread (ticks) of an inserter's start offsets around its own median before a window is flagged */
@@ -66,7 +66,7 @@ export interface ClockedInserterComparison {
     modulus: number;
     window: { start: number; end: number };
     swings: number;
-    /** Recorded swings that started outside every window, with the clock tick they started at */
+    /** Recorded swings that started outside every window, with the position in the period (the windows') they started at */
     outside: { item_name: string; clock: number }[];
     /** Distinct amounts the swings moved */
     amounts: number[];
@@ -371,8 +371,9 @@ export function compareRecording(
         issues.push(`In-game clock period is ${game_period} ticks but the simulation period is ${sim_period} ticks; the blueprint may not match this config.`);
     }
     const period = game_period ?? clock_period;
-    const clock = clockValues(recording);
-    const periods_of_sample = periodIndices(clock);
+    // periods are where the clock wraps, positions are those of the windows, which are a tick behind it
+    const periods_of_sample = periodIndices(clockValues(recording));
+    const clock = windowPositions(recording);
     const recorded_periods = (periods_of_sample[periods_of_sample.length - 1] ?? 0) + 1;
 
     const inserters: InserterComparison[] = [];
@@ -537,7 +538,7 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
     lines.push(`  machines:  ${Array.from(report.match.machines).map(([r, c]) => `${r}->${c}`).join(", ")}`);
     lines.push(`  inserters: ${Array.from(report.match.inserters).map(([r, c]) => `${r}->${c}`).join(", ")}`);
     lines.push("");
-    lines.push("Inserters (config id), offsets are game clock minus simulated window start:");
+    lines.push("Inserters (config id), offsets are the swing's position in the period, as the windows have it, minus the simulated window start:");
     for (const ins of report.inserters) {
         const flagged = ins.windows.filter(w => w.game_swings === 0
             || (w.game_amount !== w.sim_amount && ins.amount_mismatch_periods.includes(w.period))
@@ -548,7 +549,7 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
             const game = w.game_swings === 0 ? "no swing" : `${w.game_swings} swing(s) x${w.game_amount} @+${w.first_offset}`;
             lines.push(`         period ${w.period} ${w.item_name} sim [${w.sim_start}-${w.sim_end}] x${w.sim_amount} -> game ${game}`);
         }
-        for (const e of ins.extra) lines.push(`         period ${e.period} EXTRA ${e.item_name} game @${e.start} x${e.amount}`);
+        for (const e of ins.extra) lines.push(`         period ${e.period} EXTRA ${e.item_name} game @position ${e.start} x${e.amount}`);
     }
     if (report.clocked_inserters.length > 0) {
         lines.push("");
@@ -557,7 +558,7 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
             const ok = ins.outside.length === 0;
             lines.push(`  ${ok ? "OK  " : "DIFF"} inserter ${ins.config_id} (recorded ${ins.recorded_id}, ${ins.kind}): ${ins.swings} swing(s) of ${ins.items.join("|") || "nothing"} `
                 + `x${ins.amounts.join("/") || "-"}, window ticks ${ins.window.start}-${ins.window.end} every ${ins.modulus}, ${ins.outside.length} outside${ins.truncated ? `, ${ins.truncated} truncated` : ""}`);
-            for (const o of ins.outside.slice(0, 5)) lines.push(`         ${o.item_name} swing at clock ${o.clock} (${o.clock % ins.modulus} of ${ins.modulus})`);
+            for (const o of ins.outside.slice(0, 5)) lines.push(`         ${o.item_name} swing at position ${o.clock} (${o.clock % ins.modulus} of ${ins.modulus})`);
         }
     }
     if (report.fuel.length > 0) {
@@ -574,7 +575,7 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
     for (const m of report.machines) {
         lines.push(`  machine ${m.config_id} (recorded ${m.recorded_id}, ${m.label}): ${(m.agreement * 100).toFixed(1)}%`);
         for (const mm of m.mismatches.slice(0, 5)) {
-            lines.push(`         clock ${mm.start}-${mm.end}: sim ${mm.sim}, game ${mm.game}`);
+            lines.push(`         position ${mm.start}-${mm.end}: sim ${mm.sim}, game ${mm.game}`);
         }
         if (m.mismatches.length > 5) lines.push(`         ... ${m.mismatches.length - 5} more`);
     }
@@ -583,7 +584,7 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
     for (const i of report.inserter_states) {
         lines.push(`  inserter ${i.config_id} (recorded ${i.recorded_id}, ${i.label}): ${(i.agreement * 100).toFixed(1)}%`);
         for (const mm of i.mismatches.slice(0, 5)) {
-            lines.push(`         clock ${mm.start}-${mm.end}: sim ${mm.sim}, game ${mm.game}`);
+            lines.push(`         position ${mm.start}-${mm.end}: sim ${mm.sim}, game ${mm.game}`);
         }
         if (i.mismatches.length > 5) lines.push(`         ... ${i.mismatches.length - 5} more`);
     }

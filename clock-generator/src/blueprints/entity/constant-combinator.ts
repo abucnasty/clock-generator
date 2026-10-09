@@ -54,19 +54,39 @@ function withSignals(args: {
     signals: { signal: SignalId; count: number }[];
     position: Position;
     description?: string[];
+    /** Whether it puts the signals out; on unless stated */
+    is_on?: boolean;
 }): ConstantCombinatorEntity {
     const section = new ConstantCombinatorSectionBuilder(1);
     args.signals.forEach(({ signal, count }, index) =>
         section.addFilter(new ConstantCombinatorFilterBuilder(index + 1).withSignal(signal).withCount(count).build()));
+    const control_behavior = new ControlBehaviorBuilder().setSections([section.build()]);
+    if (args.is_on !== undefined) {
+        control_behavior.setIsOn(args.is_on);
+    }
     const builder = new ConstantCombinatorEntityBuilder()
         .setPosition(args.position)
-        .setControlBehavior(new ControlBehaviorBuilder().setSections([section.build()]).build());
+        .setControlBehavior(control_behavior.build());
     if (args.description) {
         builder.setPlayerDescription(args.description.join("\n"));
     }
     return builder.build();
 }
 
+/** The switch that stops every clock of a blueprint: it puts out the lock signal, and is off until someone switches it on */
+function lock(args: {
+    position: Position;
+    description?: string[];
+}): ConstantCombinatorEntity {
+    return withSignals({
+        signals: [{ signal: SignalId.lock, count: 1 }],
+        position: args.position,
+        description: args.description,
+        is_on: false,
+    });
+}
+
 export const ConstantCombinatorEntity = {
     withSignals,
+    lock,
 };

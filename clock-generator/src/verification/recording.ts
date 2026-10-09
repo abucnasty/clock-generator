@@ -83,10 +83,20 @@ const RecordedConfigSchema = z.object({
 }).passthrough();
 
 /**
+ * Ticks between the clock counting a value and the combinators that enable the inserters seeing it: they read the
+ * clock through the lock filter (see lockFilter in blueprints/entity/decider-combinator.ts), a combinator of its own,
+ * which takes a tick. The generator leaves the windows where they are, so every window opens this many ticks after
+ * the position the recorder sampled, and a recorded swing is compared with the windows this many ticks earlier.
+ */
+export const CLOCK_TO_WINDOW_TICKS = 1;
+
+/**
  * The clock counts 1 to its period, never 0 (see the clock in crafting/blueprint.ts), and the recorder samples it as
- * it is. Here the values become 0-based positions in the period, as the windows of the generator are: the period
+ * it is, where it counts. Here the values become 0-based positions in the period, as the windows of the generator are: the period
  * starts where the clock is 1, and the period is the largest position plus one. A recorded 0 is not a position: the
  * clock signal was absent, or the clock counted from 0, as clocks made before the count started at 1 did.
+ * The windows are CLOCK_TO_WINDOW_TICKS later than these positions (see windowPositions in recording-history.ts);
+ * the periods stay where the recorder cut them, which is where the clock wraps.
  */
 const RecordedClockSchema = z.object({ values: luaArray(z.number()) }).superRefine((clock, context) => {
     const index = clock.values.indexOf(0);

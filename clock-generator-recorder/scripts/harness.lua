@@ -11,7 +11,7 @@ local COMBINATOR_TYPES = {
     ["decider-combinator"] = true,
     ["arithmetic-combinator"] = true,
     ["selector-combinator"] = true,
-    -- the constant combinator that makes a generated clock count from 1
+    -- the lock switch of a generated clock, which is wired to it
     ["constant-combinator"] = true,
 }
 local BELT_TYPES = {

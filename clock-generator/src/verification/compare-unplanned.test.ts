@@ -4,9 +4,9 @@ import { loadConfigFromFile } from "../config/loader";
 import { generateClockForConfig } from "../crafting/generate-blueprint";
 import { FactorioDataService } from "../data";
 import { Machine } from "../entities";
-import { compareRecording, formatReport } from "./compare";
+import { compareRecording, DEFAULT_COMPARE_OPTIONS, formatReport } from "./compare";
 import { matchRecordingToConfig } from "./entity-matching";
-import { parseRecording } from "./recording";
+import { CLOCK_TO_WINDOW_TICKS, parseRecording } from "./recording";
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
 
@@ -174,5 +174,54 @@ describe("comparing the fuel a recording burned", () => {
         const lines = formatReport(await compare()).join("\n");
         expect(lines).toContain("Inserters outside the plan (fuel, by-products), checked against their clock windows:");
         expect(lines).toContain("Fuel burned by burner machines, against the configured energy consumption:");
+    });
+});
+
+/**
+ * The combinators of the windows read the clock through the lock filter, a tick after it counts, so a recording is laid
+ * against the windows one tick earlier than the clock it holds (CLOCK_TO_WINDOW_TICKS): a swing the game starts at
+ * clock position p is one the windows opened for at p - 1.
+ */
+describe("comparing a recording of a clock with a lock filter", () => {
+    it("lays the offset of a swing in a planned window against the window one tick earlier than the clock", async () => {
+        const { config, result, recording, period } = await recordFuelBiochamber();
+        const match = matchRecordingToConfig(recording, config);
+        const unswung = compareRecording(recording, config, result, match);
+        const window = unswung.inserters.find(inserter => inserter.config_id === 1)!.windows[0];
+
+        // inserter 1 (recorded 1) picks up 3 ticks after the clock reaches the start of its first window, every period
+        const held_count: number[] = new Array(recording.sample_count).fill(0);
+        for (let start = window.sim_start + 3; start + 4 < recording.sample_count; start += period) {
+            for (let h = 0; h < 4; h++) held_count[start + h] = 16;
+        }
+        const swinging = {
+            ...recording,
+            inserters: recording.inserters.map(inserter => inserter.id === 1
+                ? { ...inserter, samples: { ...inserter.samples, held_count, held_item: [[0, window.item_name]] as [number, string][] } }
+                : inserter),
+        };
+        const report = compareRecording(swinging, config, result, match);
+        const compared = report.inserters.find(inserter => inserter.config_id === 1)!.windows.filter(it => it.sim_start === window.sim_start && it.game_swings > 0);
+        expect(compared.length).toBeGreaterThan(0);
+        expect(compared.map(it => it.first_offset)).toEqual(compared.map(() => 3 - CLOCK_TO_WINDOW_TICKS));
+    });
+
+    it("compares the Factorio state of an inserter with the simulated state of the window position, not of the clock", async () => {
+        const { config, result, recording, period } = await recordFuelBiochamber();
+        const history = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
+        const entity = history.entities.find(it => it.entity_id === "inserter:1")!;
+        const changes = [...entity.factorio_states].sort((a, b) => a.tick - b.tick);
+        const state_at = (tick: number) => changes.filter(change => change.tick <= tick).reduce((_, change) => change.state, entity.initial_factorio_state);
+        expect(new Set(Array.from({ length: period }, (_, tick) => state_at(tick))).size).toBeGreaterThan(1);
+
+        // the game shows, at clock position p, the state of the simulation one tick earlier in the period
+        const shown = Array.from({ length: recording.sample_count }, (_, i) => state_at(((i % period) - CLOCK_TO_WINDOW_TICKS + period) % period));
+        const status: [number, string][] = [];
+        shown.forEach((state, i) => { if (i === 0 || state !== shown[i - 1]) status.push([i, state]); });
+        const shifted = { ...recording, inserters: recording.inserters.map(inserter => inserter.id === 1 ? { ...inserter, samples: { ...inserter.samples, status } } : inserter) };
+        const report = compareRecording(shifted, config, result, matchRecordingToConfig(shifted, config));
+        const compared = report.inserter_states.find(it => it.config_id === 1)!;
+        expect(compared.agreement).toBe(1);
+        expect(compared.mismatches).toEqual([]);
     });
 });

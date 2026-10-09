@@ -1,7 +1,8 @@
 import { BlueprintWire, Entity, EntityWithId, Icon, Wire, WireConnection } from "./components";
 import { entityWithId } from "./entity/entity-with-id";
 
-const FACTORIO_VERSION: number = 562949958139904;
+/** Factorio 2.1.0: the else outputs of a decider combinator, which clocks need, come with 2.1 */
+const FACTORIO_VERSION: number = 562954248388608;
 
 export type FactorioBlueprint = {
     item: "blueprint";
