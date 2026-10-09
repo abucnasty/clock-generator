@@ -37,7 +37,7 @@ export type ValueReference =
     | { type: 'CRAFTING_PROGRESS'; entity: EntityReference }
     | { type: 'BONUS_PROGRESS'; entity: EntityReference }
     | { type: 'HAND_QUANTITY'; item_name?: string }
-    | { type: 'MACHINE_STATUS'; entity: EntityReference; status: 'INGREDIENT_SHORTAGE' | 'WORKING' | 'OUTPUT_FULL' }
+    | { type: 'MACHINE_STATUS'; entity: EntityReference; status: 'INGREDIENT_SHORTAGE' | 'WORKING' | 'OUTPUT_FULL' | 'NO_FUEL' }
     | { type: 'INSERTER_STACK_SIZE' };
 
 export interface Condition {

@@ -35,7 +35,20 @@ export class InserterPickupMode implements InserterMode {
 
     public onEnter(fromMode: InserterMode): void {
         this.current_tick = 0;
+        // a hand that starts right after a swing back lands its first stack on the usual schedule
+        this.belt_grab_decided = !(
+            (fromMode.status === InserterStatus.IDLE && this.inserterState.waits_for_sink)
+            || fromMode.status === InserterStatus.WAITING_FOR_SINK
+        );
+        this.inserterState.waits_for_sink = false;
     }
+
+    /**
+     * As recorded in the game, a belt inserter that waited for its machine spends a tick deciding before the first
+     * stack lands in its hand, both when the hand starts after an idle wait and when it goes on after a pause in
+     * the middle; the stacks after that come a tick apart. True once that tick has passed.
+     */
+    private belt_grab_decided: boolean = true;
 
     public onExit(toMode: InserterMode): void {
         // No action needed on exit
@@ -103,6 +116,15 @@ export class InserterPickupMode implements InserterMode {
         const held_item = inserter_state.held_item
 
         if (held_item) {
+            // As in the game, a hand filling from a belt stops at every grab while the machine cannot take its item
+            // (output at the block, or the ingredient at its insertion limit), and goes on once it can again
+            if (!this.canPickupItemForSink(held_item.item_name)) {
+                return;
+            }
+            if (!this.belt_grab_decided) {
+                this.belt_grab_decided = true;
+                return;
+            }
             const lane = source.belt.lanes.find(lane => lane.ingredient_name === held_item.item_name);
             assert(lane, `No belt lane found for item ${held_item.item_name}`);
             // Pick up at most lane.stack_size items, but cap at remaining capacity
@@ -122,6 +144,10 @@ export class InserterPickupMode implements InserterMode {
 
         for (const item_name of inserter_state.inserter.filtered_items) {
             if (this.canPickupItemForSink(item_name)) {
+                if (!this.belt_grab_decided) {
+                    this.belt_grab_decided = true;
+                    return;
+                }
                 const lane = source.belt.lanes.find(lane => lane.ingredient_name === item_name);
                 assert(lane, `No belt lane found for item ${item_name}`);
                 // Pick up at most lane.stack_size items, but cap at inserter stack size

@@ -1,24 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { OpenRange } from "../data-types";
-import { entityDescriptionHeaderLines, mergedClockTicks, moduloSignalRanges, splitRepeatingRanges } from "./blueprint";
+import { entityDescriptionHeaderLines, mergedClockTicks, splitRepeatingRanges } from "./blueprint";
 import { EntityId, ReadableEntityRegistry } from "../entities";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { generateClockForConfig } from "./generate-blueprint";
 
-/** Replays the circuit: the clock reads `tick % period`, the modulo combinator one tick later */
+/**
+ * Replays the circuit in positions, without the 1 every signal counts from: the clock reads the tick's position in
+ * the period, and a modulo of it reads that position modulo the modulus
+ */
 function enabledTicksMatch(ranges: OpenRange[], period: number): boolean {
     const split = splitRepeatingRanges(ranges, period);
     if (!split) {
         return true;
     }
-    const modulo_ranges = moduloSignalRanges(split.repeating, split.modulus);
     const inAny = (rs: OpenRange[], value: number) => rs.some(r => r.contains(value));
     for (let tick = period; tick < 3 * period; tick++) {
         const clock = tick % period;
-        const modulo = ((tick - 1) % period) % split.modulus;
+        const modulo = clock % split.modulus;
         const expected = inAny(ranges, clock);
-        const actual = inAny(modulo_ranges, modulo) || inAny(split.remaining, clock);
+        const actual = inAny(split.repeating, modulo) || inAny(split.remaining, clock);
         if (expected !== actual) {
             return false;
         }
@@ -177,10 +179,13 @@ describe("the clock of a blueprint with fuel inserters", () => {
     const behavior = (entity: Blueprint["entities"][number]) => JSON.stringify(entity.control_behavior ?? {});
     const constantOf = (entity: Blueprint["entities"][number]) => Number(/"constant":(\d+)/.exec(behavior(entity))![1]);
 
-    /** Replays the circuit of a blueprint with one clock: the tick's count, and every modulo of it a tick later */
+    /**
+     * Replays the circuit of a blueprint with one clock: the tick's count, from 1, and every modulo of it, which is
+     * a tick behind the count and 1 more than the count modulo the modulus
+     */
     const enabledTicks = (blueprint: Blueprint, item_name: string, ticks: number): number[] => {
         const clock = blueprint.entities.find(entity => (entity.player_description ?? "").startsWith("Clock for"))!;
-        const counted_to = constantOf(clock) + 1;
+        const counted_to = constantOf(clock);
         const modulos = blueprint.entities.filter(entity => entity.name === "arithmetic-combinator").map(entity => {
             const conditions = (entity.control_behavior as { arithmetic_conditions: { second_constant: number; output_signal: { name: string } } }).arithmetic_conditions;
             return { signal: conditions.output_signal.name, modulus: conditions.second_constant };
@@ -191,7 +196,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
         const conditions = (decider.control_behavior as { decider_conditions: { conditions: Condition[] } }).decider_conditions.conditions;
         const enabled: number[] = [];
         for (let tick = 1; tick <= ticks; tick++) {
-            const signals = new Map(modulos.map(modulo => [modulo.signal, ((tick - 1) % counted_to) % modulo.modulus]));
+            const signals = new Map(modulos.map(modulo => [modulo.signal, ((tick - 1) % counted_to) % modulo.modulus + 1]));
             // the conditions come in pairs, at least and at most, and any pair enables
             let any = false;
             for (let index = 0; index < conditions.length; index += 2) {
@@ -258,7 +263,7 @@ describe("the clock of a blueprint with fuel inserters", () => {
             .filter(clock => clock.own_clock).map(clock => clock.modulus)));
         const fuel_clocks = blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith("Fuel clock"));
         expect(fuel_clocks).toHaveLength(fuel_moduli.length);
-        expect(fuel_clocks.map(clock => constantOf(clock) + 1).sort()).toEqual([...fuel_moduli].sort());
+        expect(fuel_clocks.map(clock => constantOf(clock)).sort()).toEqual([...fuel_moduli].sort());
         // nothing counts on the signal of the one clock
         expect(blueprint.entities.some(entity => behavior(entity).includes('"name":"signal-T"'))).toBe(false);
     });
@@ -289,15 +294,60 @@ describe("the target rate in a blueprint", async () => {
             .filter(entity => entity.name === "arithmetic-combinator")
             .map(entity => entity.player_description ?? "");
         expect(modulo_descriptions).toEqual([
-            "[virtual-signal=signal-clock] counts 0 to 127, 21 times in the 2688 ticks the clock counts\n- The clock period: every combinator of the swing counts reads it",
-            "[virtual-signal=signal-B] counts 0 to 191, 14 times in the 2688 ticks the clock counts\n- Fuel clock: inserters 10, 13 may fill a fuel slot once every 192 ticks",
-            "[virtual-signal=signal-C] counts 0 to 223, 12 times in the 2688 ticks the clock counts\n- Fuel clock: inserter 12 may fill a fuel slot once every 224 ticks",
+            "[virtual-signal=signal-clock] counts 1 to 128, 21 times in the 2688 ticks the clock counts\n- The clock period: every combinator of the swing counts reads it",
+            "[virtual-signal=signal-B] counts 1 to 192, 14 times in the 2688 ticks the clock counts\n- Fuel clock: inserters 10, 13 may fill a fuel slot once every 192 ticks",
+            "[virtual-signal=signal-C] counts 1 to 224, 12 times in the 2688 ticks the clock counts\n- Fuel clock: inserter 12 may fill a fuel slot once every 224 ticks",
         ]);
     });
 
     it("gives the rate of all copies and of one", async () => {
         const blueprint = await blueprintOf(ConfigPaths.AGRICULTURAL_SCIENCE);
         expect(blueprint.description?.split("\n")[0])
-            .toBe("Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)");
+            .toBe("Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
+    });
+});
+
+describe("the count of a clock", async () => {
+    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+    type Blueprint = ReturnType<typeof generateClockForConfig>["blueprint"];
+    type Condition = { first_signal: { name: string }; comparator: string; constant: number };
+    const conditionsOf = (blueprint: Blueprint): Condition[] => blueprint.entities
+        .filter(entity => entity.name === "decider-combinator")
+        .flatMap(entity => (entity.control_behavior as { decider_conditions?: { conditions?: Condition[] } }).decider_conditions?.conditions ?? []);
+    const stepsOf = (blueprint: Blueprint) => blueprint.entities
+        .filter(entity => entity.name === "constant-combinator")
+        .map(entity => (entity.control_behavior as { sections: { sections: { filters: { name: string; count: number }[] }[] } }).sections.sections
+            .flatMap(section => section.filters));
+
+    const rocket_fuel = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    const blueprints: [string, Blueprint][] = [
+        ["agricultural science", generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE), { logger: quiet }).blueprint],
+        ["rocket fuel, one clock with the fuel clocks", generateClockForConfig(rocket_fuel, { logger: quiet, fuel_consumption_view: false }).blueprint],
+        ["rocket fuel, subtick clock and fuel clocks of their own", generateClockForConfig(
+            { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
+            { logger: quiet, fuel_consumption_view: false },
+        ).subtick!.blueprint],
+    ];
+
+    it.each(blueprints)("starts at 1 for every window (%s), so a switched-off clock, which reads as 0, enables nothing", (_, blueprint) => {
+        const lower_bounds = conditionsOf(blueprint).filter(condition => condition.comparator === "≥");
+        expect(lower_bounds.length).toBeGreaterThan(0);
+        expect(lower_bounds.every(condition => condition.constant >= 1)).toBe(true);
+    });
+
+    it.each(blueprints)("is 1 more than the position, added by a constant combinator on every signal read as a clock (%s)", (_, blueprint) => {
+        const read_as_clock = new Set(conditionsOf(blueprint).map(condition => condition.first_signal.name));
+        const stepped = new Set(stepsOf(blueprint).flat().map(filter => filter.name));
+        expect(stepsOf(blueprint).flat().every(filter => filter.count === 1)).toBe(true);
+        expect(Array.from(read_as_clock).sort()).toEqual(Array.from(stepped).sort());
+    });
+
+    it("ends at the period, where the clock starts over", () => {
+        const [, blueprint] = blueprints[0];
+        const period = Number(/Clock period: (\d+) ticks/.exec(blueprint.description ?? "")![1]);
+        const clock = blueprint.entities.find(entity => (entity.player_description ?? "").startsWith("Clock for"))!;
+        const [condition] = (clock.control_behavior as { decider_conditions: { conditions: Condition[] } }).decider_conditions.conditions;
+        expect(condition).toMatchObject({ first_signal: { name: "signal-clock" }, comparator: "<", constant: period });
+        expect(Math.max(...conditionsOf(blueprint).map(condition => condition.constant))).toBe(period);
     });
 });

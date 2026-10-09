@@ -1,8 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.6.0
+Date: 2026-10-08
+  Changes:
+    - The harness removes a build's constant combinators with its clock, since a generated clock now counts from 1 with one
+    - Belt pieces joined to each other, through undergrounds and splitters as well, are described as one belt, with lanes read from all of its pieces. A lane that had run dry under one inserter used to split a belt in two, and an inserter over an empty piece was put on the first belt
+---------------------------------------------------------------------------------------------------
 Version: 0.5.0
 Date: 2026-10-07
   Features:
-    - Remote interface for recording without a player (harness_build, harness_describe, harness_start, harness_status): builds a blueprint string, removes or replaces its clock and wires the new one, seeds items, and records a number of ticks
+    - Remote interface for recording without a player (harness_build, harness_describe, harness_start, harness_status): builds a blueprint string, removes or replaces its clock and wires the new one, seeds items, lets the build settle, and records a number of ticks
 ---------------------------------------------------------------------------------------------------
 Version: 0.4.0
 Date: 2026-10-06

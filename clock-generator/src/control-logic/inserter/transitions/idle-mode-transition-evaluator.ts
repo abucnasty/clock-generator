@@ -57,10 +57,12 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
             return ModeTransition.NONE;
         }
         if (!this.enable_control.isEnabled()) {
+            this.inserter_state.waits_for_sink = false;
             return ModeTransition.transition(this.disabled_mode, "inserter disabled");
         }
 
         if (!this.sinkAcceptsItems()) {
+            this.inserter_state.waits_for_sink = true;
             return ModeTransition.NONE;
         }
 

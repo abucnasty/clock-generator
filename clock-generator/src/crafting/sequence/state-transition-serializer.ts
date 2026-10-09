@@ -39,6 +39,16 @@ export interface SerializableEntityStateTransitions {
     initial_status: string;
     /** All state transitions for this entity */
     transitions: SerializableStateTransition[];
+    /** The state the entity would show in Factorio at the start of the run */
+    initial_factorio_state: string;
+    /** The state the entity would show in Factorio, each time it changes, with how long it lasts */
+    factorio_states: SerializableFactorioState[];
+}
+
+export interface SerializableFactorioState {
+    tick: number;
+    state: string;
+    duration_ticks: number;
 }
 
 /**
@@ -134,6 +144,16 @@ export function serializeStateTransitionHistory(
             ? String(transitions[0].from_status)
             : 'UNKNOWN';
 
+        const factorio_states = entityTransitions.factorio_states ?? [];
+        const serializedFactorioStates: SerializableFactorioState[] = factorio_states.map((change, index) => {
+            const next = factorio_states[index + 1];
+            return {
+                tick: change.tick,
+                state: change.state,
+                duration_ticks: Math.max(0, (next ? next.tick : total_duration_ticks) - change.tick),
+            };
+        });
+
         entities.push({
             entity_id: entityId.id,
             entity_type: entityTransitions.entity_type,
@@ -143,6 +163,8 @@ export function serializeStateTransitionHistory(
             items,
             initial_status,
             transitions: serializedTransitions,
+            initial_factorio_state: factorio_states.length > 0 ? factorio_states[0].state : "unknown",
+            factorio_states: serializedFactorioStates,
         });
     });
 

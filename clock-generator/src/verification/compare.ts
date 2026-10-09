@@ -3,7 +3,7 @@ import { BlueprintGenerationResult } from "../crafting/generate-blueprint";
 import { EntityId, Machine } from "../entities";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, RecordedMachine, Recording, recordedClockPeriod } from "./recording";
-import { clockValues, extractTransfers, machineStatuses, RecordedTransfer } from "./recording-history";
+import { clockValues, extractTransfers, RecordedTransfer } from "./recording-history";
 
 export interface CompareOptions {
     /** Allowed spread (ticks) of an inserter's start offsets around its own median before a window is flagged */
@@ -96,20 +96,26 @@ export interface FuelComparison {
     slot_max: number;
 }
 
-export interface MachineComparison {
+/** The state an entity shows in Factorio, simulated against recorded, per tick */
+export interface StateComparison {
     config_id: number;
     recorded_id: number;
-    recipe: string;
+    /** The machine's recipe, or the inserter's ends */
+    label: string;
     agreement: number;
     mismatches: { start: number; end: number; sim: string; game: string }[];
 }
+
+/** @deprecated the machines are StateComparison entries now */
+export type MachineComparison = StateComparison;
 
 export interface ComparisonReport {
     sim_period: number;
     game_period: number | null;
     recorded_periods: number;
     inserters: InserterComparison[];
-    machines: MachineComparison[];
+    machines: StateComparison[];
+    inserter_states: StateComparison[];
     clocked_inserters: ClockedInserterComparison[];
     fuel: FuelComparison[];
     output_items: { sim_per_period: number; game_per_period: number[] };
@@ -301,24 +307,47 @@ function compareFuel(recorded: RecordedMachine, config_id: number, config: Confi
     };
 }
 
-function simMachineStatusPerTick(result: BlueprintGenerationResult, config_id: number, period: number): string[] | null {
-    const key = EntityId.forMachine(config_id).id;
+/** The state the simulator says an entity shows in Factorio, per tick of the period, in the game's own names */
+function simFactorioStatePerTick(result: BlueprintGenerationResult, key: string, period: number): string[] | null {
     // the exported clock's run when there is one, like the inserters
     const history = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     const entity = history.entities.find(e => e.entity_id === key);
     if (!entity) return null;
-    const statuses: string[] = new Array(period);
-    const transitions = [...entity.transitions].sort((a, b) => a.tick - b.tick);
-    let current = entity.initial_status;
+    const states: string[] = new Array(period);
+    const changes = [...entity.factorio_states].sort((a, b) => a.tick - b.tick);
+    let current = entity.initial_factorio_state;
     let next = 0;
     for (let t = 0; t < period; t++) {
-        while (next < transitions.length && transitions[next].tick <= t) {
-            current = transitions[next].to_status;
+        while (next < changes.length && changes[next].tick <= t) {
+            current = changes[next].state;
             next++;
         }
-        statuses[t] = current;
+        states[t] = current;
     }
-    return statuses;
+    return states;
+}
+
+/** Agreement per tick between the simulator's Factorio state and the recorded status, with the runs that differ */
+function compareStates(sim_states: string[], game_statuses: string[], clock: number[], period: number): Pick<StateComparison, "agreement" | "mismatches"> {
+    let agree = 0;
+    const mismatches: { start: number; end: number; sim: string; game: string }[] = [];
+    for (let i = 0; i < game_statuses.length; i++) {
+        const sim_status = sim_states[((clock[i] % period) + period) % period];
+        if (sim_status === game_statuses[i]) {
+            agree++;
+            continue;
+        }
+        const last = mismatches[mismatches.length - 1];
+        if (last && last.end === i - 1 && last.sim === sim_status && last.game === game_statuses[i]) {
+            last.end = i;
+        } else {
+            mismatches.push({ start: i, end: i, sim: sim_status, game: game_statuses[i] });
+        }
+    }
+    return {
+        agreement: game_statuses.length > 0 ? agree / game_statuses.length : 1,
+        mismatches: mismatches.map(m => ({ ...m, start: clock[m.start], end: clock[m.end] })),
+    };
 }
 
 export function compareRecording(
@@ -337,7 +366,7 @@ export function compareRecording(
         issues.push(`Simulation period is fractional (${sim_period.toFixed(3)} ticks); the in-game clock runs it as ${clock_period} ticks.`);
     }
     if (game_period === null) {
-        issues.push("Recording has no clock values; swings are compared by sample index, which is only meaningful if the recording started at clock 0.");
+        issues.push("Recording has no clock values; swings are compared by sample index, which is only meaningful if the recording started at the start of a period.");
     } else if (game_period !== clock_period) {
         issues.push(`In-game clock period is ${game_period} ticks but the simulation period is ${sim_period} ticks; the blueprint may not match this config.`);
     }
@@ -409,38 +438,27 @@ export function compareRecording(
         if (drift.length > 0) issues.push(`Inserter ${ins.config_id}: ${drift.length} window(s) started more than ${options.tolerance_ticks} ticks away from its usual ${ins.median_offset}-tick offset.`);
     }
 
-    const machines: MachineComparison[] = [];
+    const machines: StateComparison[] = [];
     for (const recorded of recording.machines) {
         const config_id = match.machines.get(recorded.id);
         if (config_id === undefined) continue;
-        const sim_statuses = simMachineStatusPerTick(result, config_id, period);
-        if (!sim_statuses) continue;
-        const game_statuses = machineStatuses(recorded, recording.sample_count);
-
-        let agree = 0;
-        const mismatches: { start: number; end: number; sim: string; game: string }[] = [];
-        for (let i = 0; i < game_statuses.length; i++) {
-            const sim_status = sim_statuses[((clock[i] % period) + period) % period];
-            if (sim_status === game_statuses[i]) {
-                agree++;
-                continue;
-            }
-            const last = mismatches[mismatches.length - 1];
-            if (last && last.end === i - 1 && last.sim === sim_status && last.game === game_statuses[i]) {
-                last.end = i;
-            } else {
-                mismatches.push({ start: i, end: i, sim: sim_status, game: game_statuses[i] });
-            }
-        }
-        machines.push({
-            config_id,
-            recorded_id: recorded.id,
-            recipe: recorded.recipe,
-            agreement: game_statuses.length > 0 ? agree / game_statuses.length : 1,
-            mismatches: mismatches.map(m => ({ ...m, start: clock[m.start], end: clock[m.end] })),
-        });
+        const sim_states = simFactorioStatePerTick(result, EntityId.forMachine(config_id).id, period);
+        if (!sim_states) continue;
+        const game_statuses = expandChangeList(recorded.samples.status, recording.sample_count, "none");
+        machines.push({ config_id, recorded_id: recorded.id, label: recorded.recipe, ...compareStates(sim_states, game_statuses, clock, period) });
     }
     machines.sort((a, b) => a.config_id - b.config_id);
+
+    const inserter_states: StateComparison[] = [];
+    for (const recorded of recording.inserters) {
+        const config_id = match.inserters.get(recorded.id);
+        if (config_id === undefined) continue;
+        const sim_states = simFactorioStatePerTick(result, EntityId.forInserter(config_id).id, period);
+        if (!sim_states) continue;
+        const game_statuses = expandChangeList(recorded.samples.status, recording.sample_count, "none");
+        inserter_states.push({ config_id, recorded_id: recorded.id, label: `${recorded.source.type} ${recorded.source.id} -> ${recorded.sink.type} ${recorded.sink.id}`, ...compareStates(sim_states, game_statuses, clock, period) });
+    }
+    inserter_states.sort((a, b) => a.config_id - b.config_id);
 
     const fuel: FuelComparison[] = [];
     for (const recorded of recording.machines) {
@@ -502,6 +520,7 @@ export function compareRecording(
         recorded_periods,
         inserters,
         machines,
+        inserter_states,
         clocked_inserters,
         fuel,
         output_items: { sim_per_period, game_per_period },
@@ -551,13 +570,22 @@ export function formatReport(report: ComparisonReport, options: CompareOptions =
         }
     }
     lines.push("");
-    lines.push("Machines (config id): status agreement per tick");
+    lines.push("Machines (config id): Factorio state agreement per tick");
     for (const m of report.machines) {
-        lines.push(`  machine ${m.config_id} (recorded ${m.recorded_id}, ${m.recipe}): ${(m.agreement * 100).toFixed(1)}%`);
+        lines.push(`  machine ${m.config_id} (recorded ${m.recorded_id}, ${m.label}): ${(m.agreement * 100).toFixed(1)}%`);
         for (const mm of m.mismatches.slice(0, 5)) {
             lines.push(`         clock ${mm.start}-${mm.end}: sim ${mm.sim}, game ${mm.game}`);
         }
         if (m.mismatches.length > 5) lines.push(`         ... ${m.mismatches.length - 5} more`);
+    }
+    lines.push("");
+    lines.push("Inserters (config id): Factorio state agreement per tick");
+    for (const i of report.inserter_states) {
+        lines.push(`  inserter ${i.config_id} (recorded ${i.recorded_id}, ${i.label}): ${(i.agreement * 100).toFixed(1)}%`);
+        for (const mm of i.mismatches.slice(0, 5)) {
+            lines.push(`         clock ${mm.start}-${mm.end}: sim ${mm.sim}, game ${mm.game}`);
+        }
+        if (i.mismatches.length > 5) lines.push(`         ... ${i.mismatches.length - 5} more`);
     }
     lines.push("");
     lines.push(`Output items per period: sim ${report.output_items.sim_per_period}, game [${report.output_items.game_per_period.join(", ")}]`);

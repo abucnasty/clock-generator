@@ -11,6 +11,8 @@ local COMBINATOR_TYPES = {
     ["decider-combinator"] = true,
     ["arithmetic-combinator"] = true,
     ["selector-combinator"] = true,
+    -- the constant combinator that makes a generated clock count from 1
+    ["constant-combinator"] = true,
 }
 local BELT_TYPES = {
     ["transport-belt"] = true,
@@ -405,8 +407,17 @@ function harness.describe()
     return recorder.describe(game.forces[state.force_name], state.entities)
 end
 
+---@param state table
+local function start_recording(state)
+    state.record_tick = nil
+    local started = recorder.start(game.forces[state.force_name], state.entities, nil, state.record_options)
+    if not started then
+        error("the recorder did not start: no machines or inserters in the build")
+    end
+end
+
 ---Wire a clock, seed the build, start recording and let the game run
----@param job {clock: table?, unclocked: boolean?, seed: table[]?, lua: string?, record: {ticks: number?, periods: number?}?}
+---@param job {clock: table?, unclocked: boolean?, seed: table[]?, lua: string?, settle_ticks: number?, record: {ticks: number?, periods: number?}?}
 ---@return table report
 function harness.start(job)
     local state = storage.harness
@@ -438,19 +449,22 @@ function harness.start(job)
     end
 
     local record = job.record or {}
-    local started = recorder.start(game.forces[state.force_name], state.entities, nil, {
+    state.record_options = {
         -- with a clock: whole periods until the ticks are covered; without: exactly the ticks
         periods = record.periods or 1,
         minimum_ticks = record.ticks or 0,
         ticks_without_clock = record.ticks or 600,
         ignore_clock = job.unclocked,
-    })
-    if not started then
-        error("the recorder did not start: no machines or inserters in the build")
+    }
+    state.ready = false
+    if (job.settle_ticks or 0) > 0 then
+        -- the build runs on its new clock and seeds for a while first, so its start-up is not in the recording
+        state.record_tick = game.tick + job.settle_ticks
+    else
+        start_recording(state)
     end
     report.recording = recorder.status()
-    report.tick = game.tick
-    state.ready = false
+    report.tick = state.record_tick or game.tick
     game.tick_paused = false
     return report
 end
@@ -462,21 +476,25 @@ function harness.status()
     status.tick = game.tick
     status.paused = game.tick_paused
     status.ready = state ~= nil and state.ready
+    status.settling = state ~= nil and state.record_tick ~= nil
     return status
 end
 
 ---@return boolean
 function harness.is_waiting()
-    return storage.harness ~= nil and storage.harness.pause_tick ~= nil
+    return storage.harness ~= nil and (storage.harness.pause_tick ~= nil or storage.harness.record_tick ~= nil)
 end
 
----Per-tick handler during the warm-up: pauses the game once it is over
+---Per-tick handler during the warm-up, which pauses the game once it is over, and while a build settles before it is recorded
 function harness.on_tick()
     local state = storage.harness
     if state and state.pause_tick and game.tick >= state.pause_tick then
         state.pause_tick = nil
         state.ready = true
         game.tick_paused = true
+    end
+    if state and state.record_tick and game.tick >= state.record_tick then
+        start_recording(state)
     end
 end
 

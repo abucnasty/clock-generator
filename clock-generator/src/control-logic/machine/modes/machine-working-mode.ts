@@ -131,6 +131,26 @@ export class MachineWorkingMode implements MachineMode {
         return this.availableFuelEnergy() > PROGRESS_EPSILON || this.state.machine.fuel_slot === undefined;
     }
 
+    /**
+     * A burner is out of fuel when it has nothing to burn and holds less energy than a tick of work takes: the 1/15 of
+     * a tick a stopped machine keeps is not enough to count on. A craft underway spends what is left before the machine
+     * reports it, so a partly filled buffer is used up, not thrown away. The game reports this ahead of a shortage of
+     * ingredients and a full output.
+     */
+    public isOutOfFuel(): boolean {
+        if (!this.state.machine.fuel_slot) {
+            return false;
+        }
+        if (this.fuelEnergy() > PROGRESS_EPSILON) {
+            return false;
+        }
+        const buffer = this.energyBuffer();
+        if (this.isCraftInProgress() && buffer > PROGRESS_EPSILON) {
+            return false;
+        }
+        return buffer < this.energyPerTick() - PROGRESS_EPSILON;
+    }
+
     /** Energy the machine holds to work with, plus the burning item and the items waiting in the fuel slot, in MJ */
     private availableFuelEnergy(): number {
         const slot = this.state.machine.fuel_slot;

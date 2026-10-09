@@ -3,9 +3,10 @@ import { EntityId } from "../../entities";
 import { EntityState, MachineState, MachineStatus, ReadableEntityStateRegistry } from "../../state";
 import { TickProvider } from "../current-tick-provider";
 import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator } from "../mode";
-import { MachineIngredientShortageMode, MachineMode, MachineOutputFullMode, MachineWorkingMode } from "./modes";
+import { MachineIngredientShortageMode, MachineMode, MachineNoFuelMode, MachineOutputFullMode, MachineWorkingMode } from "./modes";
 import { CraftEventListener, CraftEventListenerPlugin, MachineStatusPlugin } from "./plugins";
 import { IngredientShortageModeTransitionEvaluator } from "./transitions/ingredient-shortage-mode-evaluator";
+import { NoFuelModeTransitionEvaluator } from "./transitions/no-fuel-mode-evaluator";
 import { OutputFullModeTransitionEvaluator } from "./transitions/output-full-mode-evaluator";
 import { WorkingModeTransitionEvaluator } from "./transitions/working-mode-evaluator";
 
@@ -40,6 +41,7 @@ function create(args: {
     const working_mode = new MachineWorkingMode(machine_state);
     const ingredient_shortage_mode = new MachineIngredientShortageMode();
     const output_full_mode = new MachineOutputFullMode();
+    const no_fuel_mode = new MachineNoFuelMode();
 
     const graph = new Map<MachineMode, ModeTransitionEvaluator<MachineMode>>([
         [working_mode, new WorkingModeTransitionEvaluator(
@@ -47,16 +49,24 @@ function create(args: {
             output_full_mode,
             working_mode,
             machine_state,
+            no_fuel_mode,
         )],
         [ingredient_shortage_mode, new IngredientShortageModeTransitionEvaluator(
             machine_state,
             working_mode,
             output_full_mode,
+            no_fuel_mode,
         )],
         [output_full_mode, new OutputFullModeTransitionEvaluator(
             machine_state,
             working_mode,
             ingredient_shortage_mode,
+            no_fuel_mode,
+        )],
+        [no_fuel_mode, new NoFuelModeTransitionEvaluator(
+            working_mode,
+            ingredient_shortage_mode,
+            output_full_mode,
         )],
     ]);
 

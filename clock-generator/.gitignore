@@ -43,3 +43,5 @@ test/*.js
 dist
 
 *.csv
+# the staging save the harness records in: a local copy, never committed
+resources/clock_generator_staging.zip

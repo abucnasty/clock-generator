@@ -3,13 +3,14 @@ import { ControlLogic } from "../control-logic";
 import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator } from "../mode";
 import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode, InserterSwingMode } from "./modes";
 import { InserterTargetFullMode } from "./modes/target-full-mode";
+import { InserterWaitForSinkMode } from "./modes/wait-for-sink-mode";
 import { EntityId } from "../../entities";
 import { EntityState, InserterState, ReadableEntityStateRegistry } from "../../state";
 import { TickProvider } from "../current-tick-provider";
 import { EnableControl } from "../enable-control";
 import { InserterDisabledMode } from "./modes/disabled-mode";
 import { InserterStatusPlugin } from "./plugins";
-import { IdleModeTransitionEvaluator, InserterSwingModeTransitionEvaluator, DropModeTransitionEvaluator, PickupModeTransitionEvaluator, DisabledModeTransitionEvaluator, TargetFullModeTransitionEvaluator } from "./transitions";
+import { IdleModeTransitionEvaluator, InserterSwingModeTransitionEvaluator, DropModeTransitionEvaluator, PickupModeTransitionEvaluator, DisabledModeTransitionEvaluator, TargetFullModeTransitionEvaluator, WaitForSinkModeTransitionEvaluator } from "./transitions";
 
 export class InserterStateMachine extends ModeStateMachine<InserterMode> {
     public entity_id: EntityId;
@@ -66,6 +67,7 @@ function createInserterStateMachine(args: {
     const drop_mode = new InserterDropMode(inserter_state, sink_state);
     const disabled_mode = new InserterDisabledMode();
     const target_full_mode = new InserterTargetFullMode(drop_mode);
+    const wait_for_sink_mode = new InserterWaitForSinkMode();
 
     const idle_mode_evaluator = IdleModeTransitionEvaluator.create({
         inserter_state: inserter_state,
@@ -104,6 +106,16 @@ function createInserterStateMachine(args: {
         disabled_mode,
         idle_mode,
         enable_control,
+        wait_for_sink_mode,
+        source_state,
+    );
+
+    const wait_for_sink_mode_evaluator = new WaitForSinkModeTransitionEvaluator(
+        inserter_state,
+        sink_state,
+        pickup_mode,
+        disabled_mode,
+        enable_control,
     );
 
     const disabled_mode_evaluator = new DisabledModeTransitionEvaluator(
@@ -118,6 +130,7 @@ function createInserterStateMachine(args: {
         [pickup_mode,      pickup_mode_evaluator],
         [disabled_mode,    disabled_mode_evaluator],
         [target_full_mode, target_full_mode_evaluator],
+        [wait_for_sink_mode, wait_for_sink_mode_evaluator],
     ]);
 
     const initial_mode = idle_mode;

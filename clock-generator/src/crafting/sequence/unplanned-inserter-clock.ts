@@ -63,23 +63,22 @@ export function loopInserters(entity_registry: Pick<ReadableEntityRegistry, "get
 }
 
 /**
- * Inserters that are left always enabled, with no clock windows: in a build with a loop of machines, every inserter
- * from one machine to another.
+ * Inserters that are left always enabled, with no clock windows: those of a loop of machines, and those that take
+ * the product of a machine of the loop to another machine.
  *
- * The loop runs free, since it stops for good if it ever runs dry, so when its products arrive does not repeat with
- * the clock, and neither does when the machines around it want their ingredients. Windows taken from one simulated
- * run fitted in game only by luck: an inserter whose window closed on a partly filled hand of pentapod eggs left the
- * science biochamber waiting for them, and inserters bringing nutrients to the egg biochambers fell behind by a hand
- * every few periods. Left enabled, these inserters move what their machines have room for, and the clock holds the
- * build to its rate at its two ends: what comes off the belts and what leaves the last machine.
+ * The loop runs free, since it stops for good if it ever runs dry, and a machine of it makes a hand slowly, shared
+ * between the inserters taking from it. When a hand is full does not repeat with the clock: in game an inserter
+ * whose window closed on a partly filled hand of pentapod eggs left the science biochamber waiting for them.
+ *
+ * An inserter between machines that takes from a machine outside the loop (nutrients for the egg biochambers) keeps
+ * its clock: that machine has a hand ready whenever the window opens.
  */
 export function alwaysEnabledInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
-    if (loopInserters(entity_registry).length === 0) {
-        return [];
-    }
+    const in_a_loop = loopInserters(entity_registry);
+    const loop_machine_ids = new Set(in_a_loop.flatMap(it => [it.source.entity_id.id, it.sink.entity_id.id]));
     const machine_ids = new Set(entity_registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
     return entity_registry.getAll().filter(Entity.isInserter)
-        .filter(inserter => machine_ids.has(inserter.source.entity_id.id) && machine_ids.has(inserter.sink.entity_id.id));
+        .filter(inserter => loop_machine_ids.has(inserter.source.entity_id.id) && machine_ids.has(inserter.sink.entity_id.id));
 }
 
 /**

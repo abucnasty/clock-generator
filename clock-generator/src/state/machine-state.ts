@@ -8,6 +8,8 @@ export const MachineStatus = {
     INGREDIENT_SHORTAGE: 'INGREDIENT_SHORTAGE',
     WORKING: 'WORKING',
     OUTPUT_FULL: 'OUTPUT_FULL',
+    /** A burner machine with nothing to burn, whatever its ingredients and output hold */
+    NO_FUEL: 'NO_FUEL',
 } as const;
 
 export type MachineStatus = typeof MachineStatus[keyof typeof MachineStatus];

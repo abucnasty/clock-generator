@@ -168,6 +168,7 @@ const ValueReferenceMachineStatusSchema = z.object({
         MachineStatus.INGREDIENT_SHORTAGE,
         MachineStatus.WORKING,
         MachineStatus.OUTPUT_FULL,
+        MachineStatus.NO_FUEL,
     ])
 });
 

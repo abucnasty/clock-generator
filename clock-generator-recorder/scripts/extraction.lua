@@ -50,72 +50,6 @@ local function extract_mining_drill_data(entity)
     return data
 end
 
----Extract data from a transport belt
----@param entity LuaEntity
----@return BeltData|nil
-local function extract_belt_data(entity)
-    if not entity or not entity.valid then
-        return nil
-    end
-
-    -- Only accept transport-belt entity type (covers all belt tiers)
-    if entity.prototype.subgroup.name ~= "belt" then
-        return nil
-    end
-
-    local default_belt_stack_size = helpers.get_default_belt_stack_size(entity.force)
-
-    local lanes = {}
-
-    -- Transport belts have 2 lines: 1 = right lane, 2 = left lane
-    local max_lines = entity.get_max_transport_line_index()
-
-    -- Extract lane 1 (right lane) first
-    local transport_line_1 = entity.get_transport_line(1)
-    local ingredient_1, stack_size_1 = helpers.get_lane_info(transport_line_1, default_belt_stack_size)
-
-    -- Extract lane 2 (left lane)
-    local transport_line_2 = max_lines >= 2 and entity.get_transport_line(2) or nil
-    local ingredient_2, stack_size_2 = nil, nil
-    if transport_line_2 then
-        ingredient_2, stack_size_2 = helpers.get_lane_info(transport_line_2, default_belt_stack_size)
-    end
-
-    -- Skip belts with no items on either lane
-    if not ingredient_1 and not ingredient_2 then
-        return nil
-    end
-
-    -- If only lane 2 has items, use it as lane 1 (single lane belt)
-    if not ingredient_1 and ingredient_2 then
-        table.insert(lanes, {
-            ingredient = ingredient_2,
-            stack_size = stack_size_2
-        })
-    else
-        -- Lane 1 has items - add it
-        table.insert(lanes, {
-            ingredient = ingredient_1,
-            stack_size = stack_size_1
-        })
-
-        -- Add second lane (may be empty)
-        table.insert(lanes, {
-            ingredient = ingredient_2,
-            stack_size = stack_size_2 or default_belt_stack_size
-        })
-    end
-
-    ---@type BeltData
-    local data = {
-        belt_type = helpers.normalize_belt_type(entity.name),
-        unit_number = entity.unit_number,
-        lanes = lanes
-    }
-
-    return data
-end
-
 ---Check if an entity is a chest type we care about
 ---@param entity LuaEntity
 ---@return boolean
@@ -407,46 +341,167 @@ function extraction.extract_all_entities(entities, force)
         end
     end
 
-    -- Second pass: extract belts and build belt unit_number -> id mapping
-    -- Consolidate belts by their ingredient set (belts with same ingredients are treated as one)
+    -- Second pass: belts. Pieces joined to each other, through undergrounds and splitters as well, are one belt
+    -- whatever lies on each piece at this instant: a lane that has run dry under one inserter still belongs to the
+    -- belt it is part of, and a piece that is empty is still the belt its inserter drops on. Belts that carry the
+    -- same items are then treated as one, as before.
     local belt_id = 0
     local ingredient_signature_to_belt = {} -- Maps "ingredient1|ingredient2" to {belt_id, data}
 
+    local pieces = {} -- unit_number -> belt piece
+    local parent = {} -- union-find over unit numbers
     for _, entity in pairs(entities) do
-        local belt_data = extract_belt_data(entity)
-        if belt_data then
-            -- Create a signature based on the unique set of ingredients (sorted for consistency)
-            local ingredient_set = {}
-            for _, lane in ipairs(belt_data.lanes) do
-                if lane.ingredient and lane.ingredient ~= "" then
-                    ingredient_set[lane.ingredient] = true
+        if entity.valid and entity.unit_number and entity.prototype.subgroup and entity.prototype.subgroup.name == "belt" then
+            pieces[entity.unit_number] = entity
+            parent[entity.unit_number] = entity.unit_number
+        end
+    end
+    local function find(unit_number)
+        while parent[unit_number] ~= unit_number do
+            parent[unit_number] = parent[parent[unit_number]]
+            unit_number = parent[unit_number]
+        end
+        return unit_number
+    end
+    local function join(a, b)
+        local root_a, root_b = find(a), find(b)
+        if root_a ~= root_b then
+            parent[root_a] = root_b
+        end
+    end
+    local function join_with(unit_number, other)
+        local ok, valid = pcall(function() return other.valid and other.unit_number end)
+        if ok and valid and parent[valid] then
+            join(unit_number, valid)
+        end
+    end
+    -- the other end of an underground belt: the nearest one of its kind that faces the same way, within reach
+    local direction_offsets = {
+        [defines.direction.north] = { 0, -1 },
+        [defines.direction.east] = { 1, 0 },
+        [defines.direction.south] = { 0, 1 },
+        [defines.direction.west] = { -1, 0 },
+    }
+    local function underground_partner(entity)
+        if entity.belt_to_ground_type ~= "input" then
+            return nil
+        end
+        local offset = direction_offsets[entity.direction]
+        if not offset then
+            return nil
+        end
+        local reach = entity.prototype.max_underground_distance or 0
+        for distance = 1, reach + 1 do
+            local x = entity.position.x + offset[1] * distance
+            local y = entity.position.y + offset[2] * distance
+            for _, other in pairs(pieces) do
+                if other.type == "underground-belt" and other.name == entity.name and other.belt_to_ground_type == "output"
+                    and other.direction == entity.direction
+                    and math.abs(other.position.x - x) < 0.01 and math.abs(other.position.y - y) < 0.01 then
+                    return other
                 end
             end
-            -- Convert set to sorted array
-            local ingredients = {}
-            for ingredient, _ in pairs(ingredient_set) do
-                table.insert(ingredients, ingredient)
+        end
+        return nil
+    end
+    for unit_number, entity in pairs(pieces) do
+        local ok, neighbours = pcall(function() return entity.belt_neighbours end)
+        if ok and type(neighbours) == "table" then
+            for _, list in pairs(neighbours) do
+                for _, other in pairs(list) do
+                    join_with(unit_number, other)
+                end
             end
-            table.sort(ingredients)
-            local signature = table.concat(ingredients, "|")
+        end
+        if entity.type == "underground-belt" then
+            join_with(unit_number, underground_partner(entity))
+        elseif entity.type == "linked-belt" then
+            local ok_other, other = pcall(function() return entity.linked_belt_neighbour end)
+            if ok_other then
+                join_with(unit_number, other)
+            end
+        end
+    end
 
-            local existing = ingredient_signature_to_belt[signature]
-            if existing then
-                -- Map this belt to the existing belt with same ingredients
-                if entity.unit_number then
-                    result.belt_unit_number_to_id[entity.unit_number] = existing.belt_id
+    -- the pieces of each belt, in a fixed order so the lanes read the same every time
+    local unit_numbers = {}
+    for unit_number in pairs(pieces) do
+        table.insert(unit_numbers, unit_number)
+    end
+    table.sort(unit_numbers)
+    local belts_pieces = {} -- root unit_number -> ordered list of pieces
+    local roots = {}
+    for _, unit_number in ipairs(unit_numbers) do
+        local root = find(unit_number)
+        if not belts_pieces[root] then
+            belts_pieces[root] = {}
+            table.insert(roots, root)
+        end
+        table.insert(belts_pieces[root], pieces[unit_number])
+    end
+
+    for _, root in ipairs(roots) do
+        local belt_pieces = belts_pieces[root]
+        local default_belt_stack_size = helpers.get_default_belt_stack_size(belt_pieces[1].force)
+        -- lanes 1 and 2 as the first piece that carries something on them says; every line counts for the items
+        local lane_ingredient = { nil, nil }
+        local lane_stack_size = { default_belt_stack_size, default_belt_stack_size }
+        local ingredient_set = {}
+        for _, piece in ipairs(belt_pieces) do
+            local max_lines = piece.get_max_transport_line_index()
+            for line_index = 1, max_lines do
+                local ingredient, stack_size = helpers.get_lane_info(piece.get_transport_line(line_index), default_belt_stack_size)
+                if ingredient then
+                    ingredient_set[ingredient] = true
+                    local lane = (line_index % 2 == 1) and 1 or 2
+                    if piece.type == "transport-belt" or piece.type == "underground-belt" then
+                        if not lane_ingredient[lane] then
+                            lane_ingredient[lane] = ingredient
+                        end
+                        lane_stack_size[lane] = math.max(lane_stack_size[lane], stack_size)
+                    end
                 end
+            end
+        end
+
+        local ingredients = {}
+        for ingredient, _ in pairs(ingredient_set) do
+            table.insert(ingredients, ingredient)
+        end
+        table.sort(ingredients)
+        -- a belt with nothing on it is not described, as before; its inserters are matched by their other end
+        if #ingredients > 0 then
+            local lanes = {}
+            if not lane_ingredient[1] and not lane_ingredient[2] then
+                -- items only on the lines of a splitter or loader: one lane per item
+                for _, ingredient in ipairs(ingredients) do
+                    table.insert(lanes, { ingredient = ingredient, stack_size = default_belt_stack_size })
+                end
+            elseif not lane_ingredient[1] then
+                table.insert(lanes, { ingredient = lane_ingredient[2], stack_size = lane_stack_size[2] })
             else
-                -- New unique belt line
+                table.insert(lanes, { ingredient = lane_ingredient[1], stack_size = lane_stack_size[1] })
+                table.insert(lanes, { ingredient = lane_ingredient[2], stack_size = lane_stack_size[2] })
+            end
+            local signature = table.concat(ingredients, "|")
+            local existing = ingredient_signature_to_belt[signature]
+            local id
+            if existing then
+                id = existing.belt_id
+            else
                 belt_id = belt_id + 1
-                ingredient_signature_to_belt[signature] = {
-                    belt_id = belt_id,
-                    data = belt_data
+                id = belt_id
+                ---@type BeltData
+                local data = {
+                    belt_type = helpers.normalize_belt_type(belt_pieces[1].name),
+                    unit_number = belt_pieces[1].unit_number,
+                    lanes = lanes
                 }
-                table.insert(result.belts, belt_data)
-                if entity.unit_number then
-                    result.belt_unit_number_to_id[entity.unit_number] = belt_id
-                end
+                ingredient_signature_to_belt[signature] = { belt_id = id, data = data }
+                table.insert(result.belts, data)
+            end
+            for _, piece in ipairs(belt_pieces) do
+                result.belt_unit_number_to_id[piece.unit_number] = id
             end
         end
     end
