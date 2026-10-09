@@ -12,11 +12,30 @@ export interface IngredientRatio {
 export interface RecipeMetadata {
     readonly name: string;
     readonly energy_required: number;
+    /** The main product: the result with the largest expected amount per craft */
     readonly output: EnrichedIngredient;
+    /** Every item result, with the main product first */
+    readonly outputs: readonly EnrichedIngredient[];
     readonly inputToOutputRatios: MapExtended<ItemName, IngredientRatio>;
     readonly outputToInputRatios: MapExtended<ItemName, IngredientRatio>;
     readonly inputsPerCraft: MapExtended<ItemName, EnrichedIngredient>;
     readonly raw: EnrichedRecipe;
+}
+
+type ResultExtras = { probability?: number, ignored_by_productivity?: number };
+
+/** The amount a result yields per craft on average, before productivity */
+export function expectedAmount(result: Ingredient): number {
+    return result.amount * ((result as Ingredient & ResultExtras).probability ?? 1);
+}
+
+/** How much of the amount productivity does not multiply */
+export function amountIgnoredByProductivity(result: Ingredient): number {
+    return (result as Ingredient & ResultExtras).ignored_by_productivity ?? 0;
+}
+
+function toOutput(result: EnrichedIngredient): EnrichedIngredient {
+    return { ...result };
 }
 
 function fromRecipe(recipe: EnrichedRecipe): RecipeMetadata {
@@ -28,16 +47,16 @@ function fromRecipe(recipe: EnrichedRecipe): RecipeMetadata {
     } = recipe;
 
 
-    assert(results.length === 1, `Only single-output recipes are supported. Recipe ${name} has ${results.length} outputs.`);
+    assert(results.length >= 1, `Recipe ${name} has no item outputs.`);
 
-    const output = results[0];
+    const main_product_index = results.reduce(
+        (best, result, index) => expectedAmount(result) > expectedAmount(results[best]) ? index : best,
+        0,
+    );
+    const output = results[main_product_index];
+    const outputs = [output, ...results.filter((_, index) => index !== main_product_index)].map(toOutput);
 
-    const output_item: EnrichedIngredient = {
-        name: output.name,
-        amount: output.amount,
-        type: output.type,
-        item: output.item,
-    };
+    const output_item = outputs[0];
 
     const inputToOutputRatios: MapExtended<ItemName, IngredientRatio> = new MapExtended();
     const outputToInputRatios: MapExtended<ItemName, IngredientRatio> = new MapExtended();
@@ -78,6 +97,7 @@ function fromRecipe(recipe: EnrichedRecipe): RecipeMetadata {
         name,
         energy_required,
         output: output_item,
+        outputs,
         inputToOutputRatios,
         outputToInputRatios,
         inputsPerCraft,

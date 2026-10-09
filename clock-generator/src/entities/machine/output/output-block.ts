@@ -1,4 +1,4 @@
-import { ItemName } from "../../../data";
+import { EnrichedIngredient, ItemName } from "../../../data";
 import { MachineType } from "../machine-metadata";
 import { RecipeMetadata } from "../recipe";
 import { OverloadMultiplier } from "../traits/overload-multiplier";
@@ -15,7 +15,7 @@ function fromRecipe(machine_type: MachineType, recipe: RecipeMetadata, overloadM
         return forFurnace(recipe);
     }
 
-    if (machine_type === MachineType.MACHINE) {
+    if (machine_type === MachineType.MACHINE || machine_type === MachineType.BIOCHAMBER) {
         return forMachine(recipe, overloadMultiplier);
     }
 
@@ -49,6 +49,17 @@ function itemStackSize(recipe: RecipeMetadata): OutputBlock {
     };
 }
 
+/** A by-product only blocks the machine once its stack is full. */
+function forByProduct(output: EnrichedIngredient): OutputBlock {
+    const stack_size = output.item.stack_size;
+    return {
+        item_name: output.name,
+        quantity: stack_size,
+        max_stack_size: stack_size,
+    };
+}
+
 export const OutputBlock = {
-    fromRecipe: fromRecipe
+    fromRecipe: fromRecipe,
+    forByProduct: forByProduct,
 };

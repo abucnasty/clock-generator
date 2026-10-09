@@ -1,0 +1,174 @@
+{
+  "belts": [
+    {
+      "id": 1,
+      "lanes": [
+        {
+          "ingredient": "engine-unit",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    },
+    {
+      "id": 2,
+      "lanes": [
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "iron-gear-wheel",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    },
+    {
+      "id": 3,
+      "lanes": [
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    }
+  ],
+  "inserters": [
+    {
+      "sink": {
+        "id": 1,
+        "type": "belt"
+      },
+      "source": {
+        "id": 1,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "sink": {
+        "id": 1,
+        "type": "belt"
+      },
+      "source": {
+        "id": 4,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "pipe"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "machine"
+      },
+      "source": {
+        "id": 2,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "pipe"
+      ],
+      "sink": {
+        "id": 4,
+        "type": "machine"
+      },
+      "source": {
+        "id": 2,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "sink": {
+        "id": 2,
+        "type": "machine"
+      },
+      "source": {
+        "id": 3,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "sink": {
+        "id": 3,
+        "type": "machine"
+      },
+      "source": {
+        "id": 3,
+        "type": "belt"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "steel-plate",
+        "iron-gear-wheel"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "machine"
+      },
+      "source": {
+        "id": 2,
+        "type": "belt"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "steel-plate",
+        "iron-gear-wheel"
+      ],
+      "sink": {
+        "id": 4,
+        "type": "machine"
+      },
+      "source": {
+        "id": 2,
+        "type": "belt"
+      },
+      "stack_size": 16
+    }
+  ],
+  "machines": [
+    {
+      "crafting_speed": 62.999999523163,
+      "id": 1,
+      "productivity": 100,
+      "recipe": "engine-unit"
+    },
+    {
+      "crafting_speed": 62.999999523163,
+      "id": 4,
+      "productivity": 100,
+      "recipe": "engine-unit"
+    },
+    {
+      "crafting_speed": 52.562499046326,
+      "id": 2,
+      "productivity": 0,
+      "recipe": "pipe"
+    },
+    {
+      "crafting_speed": 57.600002288818,
+      "id": 3,
+      "productivity": 50,
+      "recipe": "iron-plate",
+      "type": "furnace"
+    }
+  ],
+  "target_output": {
+    "copies": 5,
+    "items_per_second": 60,
+    "recipe": "engine-unit"
+  }
+}

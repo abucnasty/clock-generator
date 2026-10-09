@@ -1,5 +1,5 @@
 import { MachineStatus } from "../state";
-import { expandChangeList, RecordedInserter, RecordedMachine, Recording } from "./recording";
+import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, RecordedMachine, Recording, recordedClockPeriod } from "./recording";
 
 export interface RecordedTransfer {
     item_name: string;
@@ -22,6 +22,20 @@ export interface RecordedTransfer {
 /** Clock value per sample, or the sample index itself without a clock */
 export function clockValues(recording: Recording): number[] {
     return recording.clock?.values ?? Array.from({ length: recording.sample_count }, (_, i) => i);
+}
+
+/**
+ * Position per sample in the period of the windows of the generator: the clock position of the sample less the ticks
+ * the combinators of the windows are behind the clock (CLOCK_TO_WINDOW_TICKS), around the period. A swing at the
+ * position a window opens in is at the tick that window enables its inserter. The sample index without a clock.
+ */
+export function windowPositions(recording: Recording): number[] {
+    const positions = clockValues(recording);
+    const period = recordedClockPeriod(recording);
+    if (period === null) {
+        return positions;
+    }
+    return positions.map(position => ((position - CLOCK_TO_WINDOW_TICKS) % period + period) % period);
 }
 
 /** Max ticks between hand count increases that still belong to the same pickup (belt pickups fill over several ticks) */
@@ -83,16 +97,3 @@ export function extractTransfers(inserter: RecordedInserter, clock: number[]): R
     return transfers;
 }
 
-const FACTORIO_TO_SIM_MACHINE_STATUS: Record<string, MachineStatus> = {
-    working: MachineStatus.WORKING,
-    item_ingredient_shortage: MachineStatus.INGREDIENT_SHORTAGE,
-    fluid_ingredient_shortage: MachineStatus.INGREDIENT_SHORTAGE,
-    no_ingredients: MachineStatus.INGREDIENT_SHORTAGE,
-    full_output: MachineStatus.OUTPUT_FULL,
-};
-
-/** Simulator machine status per sample; unmapped Factorio statuses are kept as-is */
-export function machineStatuses(machine: RecordedMachine, sample_count: number): string[] {
-    return expandChangeList(machine.samples.status, sample_count, "none")
-        .map(status => FACTORIO_TO_SIM_MACHINE_STATUS[status] ?? status);
-}

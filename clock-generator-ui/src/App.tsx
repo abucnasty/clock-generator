@@ -72,18 +72,6 @@ const darkTheme = createTheme({
 });
 
 
-// Simple HOCON parsing fallback - in real scenario use the browser config loader
-async function parseConfig(content: string): Promise<Config> {
-    // Try JSON first
-    try {
-        return JSON.parse(content);
-    } catch {
-        // For HOCON, we'd need to use the createBrowserConfigLoader
-        // For now, just throw an error suggesting JSON
-        throw new Error('HOCON parsing not yet implemented in browser. Please use JSON format.');
-    }
-}
-
 function App() {
     const {
         isInitialized,
@@ -98,6 +86,7 @@ function App() {
         stateTransitionHistory,
         clockOnlyTransferHistory,
         clockOnlyStateTransitionHistory,
+        fuelView,
         clockWindows,
         shiftOptions,
         simulationDurationTicks,
@@ -268,7 +257,6 @@ function App() {
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
-                            parseConfig={parseConfig}
                         />
                     </Toolbar>
                 </AppBar>
@@ -474,6 +462,7 @@ function App() {
                                 stateTransitionHistory={stateTransitionHistory}
                                 clockOnlyTransferHistory={clockOnlyTransferHistory}
                                 clockOnlyStateTransitionHistory={clockOnlyStateTransitionHistory}
+                                fuelView={fuelView}
                                 clockWindows={clockWindows}
                                 shiftOptions={shiftOptions}
                                 swingBackoffReport={swingBackoffReport}

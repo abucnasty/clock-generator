@@ -1,7 +1,7 @@
 import { CompositeControlLogic, EnableControl, TickControlLogic } from "../../control-logic";
 import { Duration } from "../../data-types";
 import { EntityId } from "../../entities";
-import { DrillStatus, MachineStatus } from "../../state";
+import { DrillStatus, MachineState, MachineStatus } from "../../state";
 import { InserterInterceptor } from "./interceptors/inserter-interceptor";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "./simulation-context";
 
@@ -93,7 +93,7 @@ export function simulateUntilAllMachinesAreOutputBlocked(
             machines_not_output_full.forEach(it => {
                 console.error(`Machine ${it.machine_state.machine.entity_id} status: ${it.machine_state.status}`);
                 it.machine_state.machine.inputs.forEach(input => {
-                    if(it.machine_state.inventoryState.getItemOrThrow(input.item_name).quantity < 1) {
+                    if(MachineState.ingredientQuantity(it.machine_state, input.item_name) < 1) {
                         console.error(`  Missing input: ${input.item_name}`);
                     }
                 })

@@ -5,6 +5,7 @@ import { InserterPickupMode } from "../modes/pickup-mode";
 import { EnableControl } from "../../enable-control";
 import { InserterDisabledMode } from "../modes/disabled-mode";
 import { TickProvider } from "../../current-tick-provider";
+import { handSizeFor } from "../../../entities";
 
 export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<InserterMode> {
 
@@ -56,10 +57,12 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
             return ModeTransition.NONE;
         }
         if (!this.enable_control.isEnabled()) {
+            this.inserter_state.waits_for_sink = false;
             return ModeTransition.transition(this.disabled_mode, "inserter disabled");
         }
 
         if (!this.sinkAcceptsItems()) {
+            this.inserter_state.waits_for_sink = true;
             return ModeTransition.NONE;
         }
 
@@ -108,9 +111,14 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
             items = [state.held_item.item_name];
         }
 
+        const inserter_id = state.inserter.entity_id.id;
+        const current_tick = this.tick_provider.getCurrentTick();
         for (const item_name of items) {
             const quantity = source.inventoryState.getQuantity(item_name);
-            if (quantity >= pickup_amount_condition) {
+            // asked even when there is nothing to take, so the inserters waiting on a machine know of each other
+            const room_in_hand = handSizeFor(state.inserter, item_name) - (state.held_item?.quantity ?? 0);
+            const its_turn = MachineState.takesTurnForOutput(source, item_name, inserter_id, current_tick, room_in_hand);
+            if (quantity >= pickup_amount_condition && its_turn) {
                 return ModeTransition.transition(this.pickup_mode, `machine has ${quantity} of ${item_name} to pickup`);
             }
         }

@@ -4,3 +4,4 @@ export * from "./inserter-mode";
 export * from "./drop-mode";
 export * from "./swing-mode";
 export * from "./target-full-mode";
+export * from "./wait-for-sink-mode";

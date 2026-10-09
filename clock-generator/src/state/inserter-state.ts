@@ -14,7 +14,12 @@ export const InserterStatus = {
      * Inserter is waiting because its sink (chest) is full and it still has items in hand.
      * The inserter will retry dropping until space becomes available.
      */
-    TARGET_FULL: "TARGET_FULL"
+    TARGET_FULL: "TARGET_FULL",
+    /**
+     * A hand filling from a belt that the machine cannot take any more of for now (output at its block, or the
+     * ingredient at its insertion limit): the inserter keeps what it holds and waits at the belt.
+     */
+    WAITING_FOR_SINK: "WAITING_FOR_SINK",
 } as const;
 
 export type InserterStatus = typeof InserterStatus[keyof typeof InserterStatus];
@@ -44,6 +49,12 @@ export const InserterHandContents = {
 export interface InserterState extends EntityState, InserterStatusState {
     inserter: Inserter;
     held_item: InserterHandContents | null;
+    /** Items the inserter has picked up so far */
+    items_picked_up: number;
+    /** Items the inserter has dropped so far */
+    items_dropped: number;
+    /** Set while the inserter sits idle and enabled because its sink takes nothing it could bring */
+    waits_for_sink: boolean;
 }
 
 function createIdleInserterState(inserter: Inserter): InserterState {
@@ -54,6 +65,9 @@ function createIdleInserterState(inserter: Inserter): InserterState {
         status: InserterStatus.IDLE,
         tick: 0,
         held_item: null,
+        items_picked_up: 0,
+        items_dropped: 0,
+        waits_for_sink: false,
     };
 }
 
@@ -65,6 +79,9 @@ function clone(state: InserterState): InserterState {
         status: state.status,
         tick: state.tick,
         held_item: state.held_item ? { ...state.held_item } : null,
+        items_picked_up: state.items_picked_up,
+        items_dropped: state.items_dropped,
+        waits_for_sink: state.waits_for_sink,
     };
 }
 

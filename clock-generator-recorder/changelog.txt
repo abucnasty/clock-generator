@@ -1,4 +1,36 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.6.0
+Date: 2026-10-08
+  Changes:
+    - The harness removes a build's constant combinators with its clock, since a generated clock now has a lock switch, a constant combinator wired to it
+    - harness_describe also lists every inserter and loader of the build with the entity at each end, so the harness can refuse a build that holds one the config does not describe
+    - Belt pieces joined to each other, through undergrounds and splitters as well, are described as one belt, with lanes read from all of its pieces. A lane that had run dry under one inserter used to split a belt in two, and an inserter over an empty piece was put on the first belt
+---------------------------------------------------------------------------------------------------
+Version: 0.5.0
+Date: 2026-10-07
+  Features:
+    - Remote interface for recording without a player (harness_build, harness_describe, harness_start, harness_status): builds a blueprint string, removes or replaces its clock and wires the new one, seeds items, lets the build settle, and records a number of ticks
+---------------------------------------------------------------------------------------------------
+Version: 0.4.0
+Date: 2026-10-06
+  Features:
+    - Record mining drills that drop into a machine: their status, mining progress and bonus mining progress every tick
+---------------------------------------------------------------------------------------------------
+Version: 0.3.0
+Date: 2026-10-06
+  Features:
+    - Setting "Minimum ticks to record": keeps recording whole clock periods until at least that many ticks are recorded, for a longer look at slow things like fuel
+    - Up to 100000 clock periods can be recorded, where 100 was the most
+---------------------------------------------------------------------------------------------------
+Version: 0.2.0
+Date: 2026-10-05
+  Features:
+    - Record the fuel slot of burner machines (biochambers) every tick, the energy left in the fuel item being burned, and which fuel item is burning
+    - Biochambers are exported with the type "biochamber" and their energy consumption bonus (energy_consumption_bonus, in percent)
+  Bugfixes:
+    - Inserters are exported with only the filters set on the inserter, not filters guessed from the source machine's recipe or the source belt's lanes
+    - Starting a recording of a burner machine no longer fails on a Factorio version without the item prototype attribute fuel_category: the fuel items are found with the prototype filter, the attribute, the burner's contents or the biochamber's nutrients, and a burner attribute that is missing while recording records zero instead of an error
+---------------------------------------------------------------------------------------------------
 Version: 0.1.0
 Date: 2026-10-02
   Features:

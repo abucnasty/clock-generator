@@ -28,7 +28,9 @@ export const MachineConfigurationSchema = z.object({
     recipe: z.string(),
     productivity: z.number().min(0),
     crafting_speed: z.number().positive(),
-    type: z.enum(Object.values(MachineType)).optional()
+    type: z.enum(Object.values(MachineType)).optional(),
+    energy_consumption_bonus: z.number().min(-80).optional(),
+    fuel: z.string().optional(),
 });
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -166,6 +168,7 @@ const ValueReferenceMachineStatusSchema = z.object({
         MachineStatus.INGREDIENT_SHORTAGE,
         MachineStatus.WORKING,
         MachineStatus.OUTPUT_FULL,
+        MachineStatus.NO_FUEL,
     ])
 });
 

@@ -79,4 +79,8 @@ export const SignalId = {
     virtual: virtual,
     clock: clock,
     each: virtual("signal-each"),
+    /** On a constant combinator, it stops every clock while it is on */
+    lock: virtual("signal-lock"),
+    /** An output that passes every signal on the input */
+    everything: virtual("signal-everything"),
 }

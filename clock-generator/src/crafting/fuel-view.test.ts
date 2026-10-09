@@ -1,0 +1,292 @@
+import { describe, expect, it } from "vitest";
+import { ConfigPaths } from "../config/config-paths";
+import { loadConfigFromFile } from "../config/loader";
+import { Machine, MachineType, RecipeMetadata } from "../entities";
+import { MachineState } from "../state";
+import { fewestTicksToBurn, FuelLevelRecorder, fuelPlan } from "./fuel-view";
+import { generateClockAlternatives, generateClockForConfig } from "./generate-blueprint";
+import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
+
+const quiet = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
+
+describe("the fuel plan", () => {
+    it("is absent when no inserter only fills a fuel slot", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
+        expect(generateClockForConfig(config, { logger: quiet }).fuel_plan).toBeUndefined();
+    });
+
+    describe("rocket fuel biochambers on a 128 tick clock", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const result = generateClockForConfig(config, { logger: quiet });
+        const plan = result.fuel_plan!;
+
+        it("gives what each burner machine uses at its planned crafting share", () => {
+            expect(plan.period_ticks).toBe(128);
+            expect(plan.machines.map(machine => machine.machine_id)).toEqual(["machine:1", "machine:2", "machine:3"]);
+            for (const machine of plan.machines) {
+                expect(machine.fuel_item).toBe("nutrients");
+                expect(machine.crafting_share).toBeGreaterThan(0.5);
+                expect(machine.crafting_share).toBeLessThan(1);
+                expect(machine.effective_burn_rate_per_second).toBeCloseTo(machine.burn_rate_per_second * machine.crafting_share);
+                expect(machine.burned_per_period).toBeCloseTo(machine.effective_burn_rate_per_second * 128 / 60);
+                // what the machine burns in 192 ticks at its full energy consumption, rounded up: 11 and 9 nutrients
+                expect(machine.insertion_limit).toBe(machine.machine_id === "machine:2" ? 9 : 11);
+                expect(machine.insertion_limit_lasts_ticks).toBeCloseTo(machine.insertion_limit / machine.effective_burn_rate_per_second * 60);
+                expect(machine.energy_consumption_bonus).toBeGreaterThan(0);
+            }
+        });
+
+        it("gives the exported fuel clock of each fuel inserter and how often it should swing on it", () => {
+            expect(plan.inserters.map(inserter => [inserter.inserter_id, inserter.machine_id, inserter.modulus])).toEqual([
+                ["inserter:10", "machine:1", 192],
+                ["inserter:12", "machine:2", 224],
+                ["inserter:13", "machine:3", 192],
+            ]);
+            for (const inserter of plan.inserters) {
+                const exported = result.unplanned_inserter_clocks![inserter.inserter_id];
+                expect(inserter.modulus).toBe(exported.modulus);
+                expect(inserter.window).toEqual(exported.window);
+                expect(inserter.hand_size).toBe(16);
+                expect(inserter.enables_per_minute).toBeCloseTo(3600 / inserter.modulus);
+                expect(inserter.expected_swings_per_minute).toBeCloseTo(3600 / inserter.hand_lasts_ticks);
+                // the window repeats while the insertion limit lasts, a hand of 16 lasts about half as long again
+                expect(inserter.swing_share).toBeCloseTo(inserter.modulus / inserter.hand_lasts_ticks);
+                expect(inserter.swing_share).toBeGreaterThan(0.45);
+                expect(inserter.swing_share).toBeLessThan(0.7);
+            }
+        });
+
+        it("counts the period and every fuel clock on one merged clock", () => {
+            // lcm(128, 192, 224): the fuel clocks are divisors of 21 periods, a little shorter than the ticks the fuel
+            // was sure to last in a run of the exported clock, less what a hand takes to arrive
+            expect(plan.merged_clock_ticks).toBe(2688);
+            expect(plan.separate_clocks_reason).toBeUndefined();
+        });
+
+        it("says why the fuel clocks are counted apart when there is no merged clock", () => {
+            const registry = createEntityRegistryFromConfig(config);
+            const fractional = fuelPlan(registry, unplannedInserterClocks(registry, 128), new Map(), 128.5)!;
+            expect(fractional.merged_clock_ticks).toBeNull();
+            expect(fractional.separate_clocks_reason).toBe("fractional_period");
+
+            // fuel clocks that share no factor with a long period
+            const long_period = 2 ** 31 - 1;
+            const too_long = fuelPlan(registry, unplannedInserterClocks(registry, 128), new Map(), long_period)!;
+            expect(too_long.merged_clock_ticks).toBeNull();
+            expect(too_long.separate_clocks_reason).toBe("merged_clock_too_long");
+        });
+
+        describe("the fuel consumption view", () => {
+            const view = result.fuel_consumption_view!;
+
+            it("covers a few hands of fuel for every machine", () => {
+                const longest_hand = Math.max(...plan.inserters.map(inserter => inserter.hand_lasts_ticks));
+                expect(view.duration_ticks).toBeGreaterThanOrEqual(3 * longest_hand);
+                for (const inserter of plan.inserters) {
+                    const swings = view.transfer_history.entities.find(entity => entity.entity_id === inserter.inserter_id)!.transfers;
+                    expect(swings.length).toBeGreaterThanOrEqual(3);
+                    // the view runs the exported fuel clock: every swing starts inside one of its windows, give or
+                    // take the tick the recorded transfers are moved by
+                    for (const swing of swings) {
+                        const clock_tick = (swing.start_tick + 1) % inserter.modulus;
+                        expect(clock_tick).toBeGreaterThanOrEqual(inserter.window.start);
+                        expect(clock_tick).toBeLessThanOrEqual(inserter.window.end + 2);
+                    }
+                }
+            });
+
+            it("has the fuel each burner machine held, cut down to a few hundred samples", () => {
+                expect(view.fuel_levels.map(levels => levels.machine_id)).toEqual(["machine:1", "machine:2", "machine:3"]);
+                for (const levels of view.fuel_levels) {
+                    expect(levels.min.length).toBe(levels.max.length);
+                    expect(levels.min.length).toBeLessThanOrEqual(480);
+                    expect(levels.min.length).toBe(Math.ceil(view.duration_ticks / levels.ticks_per_sample));
+                    levels.min.forEach((min, index) => expect(min).toBeLessThanOrEqual(levels.max[index]));
+                    expect(Math.min(...levels.min)).toBe(levels.min_level);
+                    expect(Math.max(...levels.max)).toBe(levels.max_level);
+                }
+            });
+
+            it("counts the fuel inserted and burned by each machine", () => {
+                for (const levels of view.fuel_levels) {
+                    const inserted = view.transfer_history.entities
+                        .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id) && entity.sink?.entity_id === levels.machine_id)
+                        .flatMap(entity => entity.transfers)
+                        .reduce((sum, transfer) => sum + transfer.amount, 0);
+                    expect(levels.inserted).toBe(inserted);
+                    // the machines burn what the plan says: their crafting share of the burn rate
+                    const machine = plan.machines.find(it => it.machine_id === levels.machine_id)!;
+                    const planned = machine.effective_burn_rate_per_second * view.duration_ticks / 60;
+                    expect(levels.burned).toBeGreaterThan(planned * 0.95);
+                    expect(levels.burned).toBeLessThan(planned * 1.05);
+                }
+            });
+
+            it("says no machine ran out of fuel", () => {
+                expect(view.ran_out_of_fuel).toBe(false);
+                for (const levels of view.fuel_levels) {
+                    expect(levels.empty_ticks).toBe(0);
+                    expect(levels.first_empty_tick).toBeNull();
+                    expect(levels.min_level).toBeGreaterThan(0);
+                }
+            });
+        });
+
+        it("records no fuel levels for the clock itself", () => {
+            expect(result.fuel_levels).toBeUndefined();
+        });
+    });
+});
+
+describe("FuelLevelRecorder", () => {
+    // a nutrient is 2 MJ
+    const biochamberState = (nutrients: number) => {
+        const state = MachineState.forMachine(Machine.createMachine(1, {
+            crafting_speed: 2,
+            productivity: 0,
+            recipe: RecipeMetadata.fromRecipeName("nutrients-from-yumako-mash"),
+            type: MachineType.BIOCHAMBER,
+        }));
+        state.fuelInventory.addQuantity("nutrients", nutrients);
+        return state;
+    };
+
+    it("counts the item being burned as the part of it that is left", () => {
+        const state = biochamberState(2);
+        state.fuelProgress.energy_remaining_mj = 0.5;
+        const recorder = new FuelLevelRecorder([state]);
+        expect(recorder.series()[0].start_level).toBe(2.25);
+    });
+
+    it("skips machines without a fuel slot", () => {
+        const assembler = MachineState.forMachine(Machine.createMachine(2, {
+            crafting_speed: 1,
+            productivity: 0,
+            recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
+            type: "machine",
+        }));
+        expect(new FuelLevelRecorder([assembler]).series()).toEqual([]);
+    });
+
+    it("reports the ticks a machine had no fuel at all, and the hands dropped in", () => {
+        const state = biochamberState(1);
+        const recorder = new FuelLevelRecorder([state]);
+        const burn = (mj: number) => {
+            if (state.fuelProgress.energy_remaining_mj <= 0 && state.fuelInventory.getQuantity("nutrients") > 0) {
+                state.fuelInventory.removeQuantity("nutrients", 1);
+                state.fuelProgress.energy_remaining_mj = 2;
+            }
+            state.fuelProgress.energy_remaining_mj = Math.max(0, state.fuelProgress.energy_remaining_mj - mj);
+            recorder.record();
+        };
+        // one nutrient lasts 4 ticks at 0.5 MJ a tick, then two ticks with nothing, then a hand of 4
+        for (let tick = 0; tick < 6; tick++) {
+            burn(0.5);
+        }
+        state.fuelInventory.addQuantity("nutrients", 4);
+        burn(0.5);
+
+        const [levels] = recorder.series();
+        expect(levels.ticks_per_sample).toBe(1);
+        expect(levels.min).toEqual([0.75, 0.5, 0.25, 0, 0, 0, 0]);
+        expect(levels.max).toEqual([1, 0.75, 0.5, 0.25, 0, 0, 3.75]);
+        expect(levels.empty_ticks).toBe(3);
+        expect(levels.first_empty_tick).toBe(3);
+        expect(levels.inserted).toBe(4);
+        expect(levels.burned).toBeCloseTo(1.25);
+        expect(levels.min_level).toBe(0);
+        expect(levels.max_level).toBe(3.75);
+    });
+
+    it("cuts a long run down to at most 480 samples that keep the lowest and highest fuel", () => {
+        const state = biochamberState(20);
+        const recorder = new FuelLevelRecorder([state]);
+        for (let tick = 0; tick < 1000; tick++) {
+            state.fuelInventory.setQuantity("nutrients", tick === 500 ? 0 : 20);
+            recorder.record();
+        }
+        const [levels] = recorder.series();
+        expect(levels.ticks_per_sample).toBe(3);
+        expect(levels.min.length).toBe(334);
+        expect(levels.min[166]).toBe(0);
+        expect(levels.max[166]).toBe(20);
+        expect(levels.empty_ticks).toBe(1);
+        expect(levels.first_empty_tick).toBe(500);
+    });
+});
+
+describe("the fuel consumption view of every clock alternative", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    const { alternatives } = generateClockAlternatives(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } });
+
+    // the observed windows are run as they are for the view, not observed again
+    it.each(alternatives.map(alternative => [alternative.id, alternative] as const))("%s has the fuel every burner machine held", (_id, alternative) => {
+        const view = alternative.result.fuel_consumption_view!;
+        expect(view.fuel_levels.map(levels => levels.machine_id)).toEqual(["machine:1", "machine:2", "machine:3"]);
+        view.fuel_levels.forEach(levels => expect(Number.isFinite(levels.min_level)).toBe(true));
+    });
+});
+
+describe("fewestTicksToBurn", () => {
+    it("is how long the fuel lasts from the tick that burns it soonest", () => {
+        // a machine that burns 1 a tick for 4 ticks and then rests for 4: 3 items last 3 ticks from where it starts
+        // to burn, though at its average rate they would last 6
+        const burned = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
+        expect(fewestTicksToBurn(burned, 3)).toBe(3);
+        // 4 items are burned in the 4 ticks, and last through the rest after them
+        expect(fewestTicksToBurn(burned, 4)).toBe(8);
+    });
+
+    it("is at the steady rate for a machine that never stops", () => {
+        expect(fewestTicksToBurn(new Array(100).fill(0.05), 1)).toBe(20);
+    });
+
+    it("is null when the run never burned that much", () => {
+        expect(fewestTicksToBurn([0.1, 0.1, 0.1], 5)).toBeNull();
+        expect(fewestTicksToBurn([], 5)).toBeNull();
+    });
+});
+
+describe("fuel clocks made from a run of the exported clock", async () => {
+    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+    const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    const result = generateClockForConfig(config, { logger: quiet });
+    const view = result.fuel_consumption_view!;
+    const plan = result.fuel_plan!;
+
+    it("measures how long the fuel slot's limit lasted each machine at the least", () => {
+        for (const levels of view.fuel_levels) {
+            expect(levels.limit_lasts_ticks).not.toBeNull();
+            const machine = plan.machines.find(it => it.machine_id === levels.machine_id)!;
+            expect(machine.insertion_limit_lasted_at_least_ticks).toBe(levels.limit_lasts_ticks);
+            // a machine burns in bursts: the limit never lasts longer than at the rate it burns over a whole period
+            expect(levels.limit_lasts_ticks!).toBeLessThanOrEqual(machine.insertion_limit_lasts_ticks * 1.02);
+            // and no shorter than while it crafts without a stop, which also burns a little extra as it starts
+            expect(levels.limit_lasts_ticks!).toBeGreaterThanOrEqual(Math.floor(machine.insertion_limit / machine.burn_rate_per_second * 60 * 0.9));
+        }
+    });
+
+    it("enables each fuel inserter within the ticks its machine's fuel was sure to last", () => {
+        for (const inserter of plan.inserters) {
+            const lasted = view.fuel_levels.find(it => it.machine_id === inserter.machine_id)!.limit_lasts_ticks!;
+            // with room for the hand a window starts to arrive: 4 ticks to fill it from the belt and 4 of slack, 3 to
+            // swing, 1 to drop and 2 spare
+            expect(inserter.modulus).toBeLessThanOrEqual(lasted - 14);
+            expect(result.unplanned_inserter_clocks![inserter.inserter_id].modulus).toBe(inserter.modulus);
+        }
+    });
+
+    it("keeps every machine fuelled on those clocks, over two rounds of the one clock that holds them", () => {
+        expect(view.duration_ticks).toBeGreaterThanOrEqual(2 * plan.merged_clock_ticks!);
+        expect(view.ran_out_of_fuel).toBe(false);
+        view.fuel_levels.forEach(levels => expect(levels.empty_ticks).toBe(0));
+    });
+
+    it("keeps the fuel clocks of the plan when no run is made", () => {
+        const without_run = generateClockForConfig(config, { logger: quiet, fuel_consumption_view: false });
+        expect(without_run.fuel_consumption_view).toBeUndefined();
+        expect(Object.values(without_run.unplanned_inserter_clocks!).filter(clock => clock.kind === "fuel")).toHaveLength(3);
+        without_run.fuel_plan!.machines.forEach(machine => expect(machine.insertion_limit_lasted_at_least_ticks).toBeUndefined());
+    });
+});

@@ -29,6 +29,14 @@ export interface EntityStateTransitions {
     entity_id: EntityId;
     entity_type: StateTransitionEntityType;
     transitions: StateTransition[];
+    /** The state the entity would show in Factorio, each time it changes */
+    factorio_states: FactorioStateChange[];
+}
+
+/** A change of the state an entity would show in Factorio */
+export interface FactorioStateChange {
+    tick: number;
+    state: string;
 }
 
 /**
@@ -57,14 +65,28 @@ export class StateTransitionHistory extends MapExtended<EntityId, EntityStateTra
         }
         let entity_transitions = this.get(entity_id);
         if (!entity_transitions) {
-            entity_transitions = {
-                entity_id,
-                entity_type,
-                transitions: [],
-            };
-            this.set(entity_id, entity_transitions);
+            entity_transitions = this.entryFor(entity_id, entity_type);
         }
         entity_transitions.transitions.push(transition);
+    }
+
+    private entryFor(entity_id: EntityId, entity_type: StateTransitionEntityType): EntityStateTransitions {
+        const entry: EntityStateTransitions = { entity_id, entity_type, transitions: [], factorio_states: [] };
+        this.set(entity_id, entry);
+        return entry;
+    }
+
+    /** Record the state an entity would show in Factorio from this tick on */
+    public recordFactorioState(entity_id: EntityId, entity_type: StateTransitionEntityType, change: FactorioStateChange): void {
+        if (!this.recording) {
+            return;
+        }
+        const entity_transitions = this.get(entity_id) ?? this.entryFor(entity_id, entity_type);
+        entity_transitions.factorio_states.push(change);
+    }
+
+    public createFactorioStateCallback(entity_type: StateTransitionEntityType): (change: { entity_id: EntityId; tick: number; state: string }) => void {
+        return (change) => this.recordFactorioState(change.entity_id, entity_type, { tick: change.tick, state: change.state });
     }
 
     /**

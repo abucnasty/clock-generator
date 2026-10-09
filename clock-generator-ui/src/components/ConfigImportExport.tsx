@@ -2,7 +2,7 @@ import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons
 import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
-import { MachineConfigurationSchema, MiningDrillConfigSchema, InserterConfigSchema, BeltConfigSchema, ChestConfigSchema } from 'clock-generator/browser';
+import { checkSidecarImport, Option, MachineConfigurationSchema, MiningDrillConfigSchema, InserterConfigSchema, BeltConfigSchema, ChestConfigSchema } from 'clock-generator/browser';
 import type { z } from 'zod';
 
 type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -18,6 +18,8 @@ interface PendingImport {
     belts: BeltConfiguration[];
     chests: ChestConfiguration[];
     miningProductivityLevel?: number;
+    /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
+    guidance?: Option<string>;
 }
 
 interface ImportSelections {
@@ -38,7 +40,6 @@ interface ConfigImportExportProps {
     onReplaceChests: (chests: ChestConfiguration[]) => void;
     onUpdateMiningProductivityLevel: (level: number) => void;
     onReset: () => void;
-    parseConfig: (content: string) => Promise<Config>;
 }
 
 export function ConfigImportExport({
@@ -51,7 +52,6 @@ export function ConfigImportExport({
     onReplaceChests,
     onUpdateMiningProductivityLevel,
     onReset,
-    parseConfig,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [snackbar, setSnackbar] = useState<{
@@ -105,14 +105,7 @@ export function ConfigImportExport({
             try {
                 const content = await file.text();
                 
-                // Try to parse as JSON first
-                let parsedConfig: Config;
-                try {
-                    parsedConfig = JSON.parse(content) as Config;
-                } catch {
-                    // If JSON parse fails, try as HOCON
-                    parsedConfig = await parseConfig(content);
-                }
+                const parsedConfig = JSON.parse(content) as Config;
 
                 onImport(parsedConfig);
                 setSnackbar({
@@ -132,7 +125,7 @@ export function ConfigImportExport({
             // Reset the input so the same file can be imported again
             event.target.value = '';
         },
-        [onImport, parseConfig]
+        [onImport]
     );
 
     const handleSnackbarClose = useCallback(() => {
@@ -159,6 +152,7 @@ export function ConfigImportExport({
                     inserters?: unknown[]; 
                     belts?: unknown[];
                     chests?: unknown[];
+                    sidecar_version?: unknown;
                 };
                 
                 const machineCount = Array.isArray(data.machines) ? data.machines.length : 0;
@@ -252,6 +246,7 @@ export function ConfigImportExport({
                     belts: validatedBelts,
                     chests: validatedChests,
                     miningProductivityLevel,
+                    guidance: checkSidecarImport(data.sidecar_version, validatedMachines),
                 });
                 // Reset selections to include all available items
                 setImportSelections({
@@ -292,6 +287,7 @@ export function ConfigImportExport({
                 inserters: [],
                 belts: [],
                 chests: [],
+                guidance: checkSidecarImport(undefined, validatedMachines),
             });
             setImportSelections({
                 machines: true,
@@ -445,7 +441,7 @@ export function ConfigImportExport({
             <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json,.conf"
+                accept=".json"
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
             />
@@ -469,6 +465,11 @@ export function ConfigImportExport({
                         Select which items you want to import. Existing items of each selected type will be replaced.
                     </Typography>
                     
+                    {pendingImport?.guidance && Option.match(pendingImport.guidance, {
+                        none: () => null,
+                        some: (message) => <Alert severity="warning" sx={{ mb: 2 }}>{message}</Alert>,
+                    })}
+
                     {pendingImport && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <FormControlLabel

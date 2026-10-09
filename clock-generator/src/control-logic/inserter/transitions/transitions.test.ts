@@ -6,7 +6,7 @@ import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
 import { InserterAnimationOverrideConfig } from "../../../config/config"
-import { InserterPickupMode } from "../modes"
+import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";
 
@@ -207,6 +207,58 @@ describe("transitions (belt to machine)", () => {
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(12);
             expect(inserterState.held_item?.quantity).toBeLessThanOrEqual(stack_size);
+        })
+
+        test("holds a partly filled hand while the machine's output is at the block, and goes on once it is under", () => {
+            const mockSource: BeltState = mock<BeltState>({
+                entity_id: EntityId.forBelt(-1),
+                belt: {
+                    lanes: [
+                        { ingredient_name: "iron-plate", stack_size: 4 }
+                    ]
+                }
+            });
+
+            const mockSink: MachineState = MachineState.forMachine(
+                createMachine("iron-gear-wheel")
+            );
+
+            const inserterState = InserterState.createIdle(createInserter({
+                source: {
+                    entity_id: mockSource.entity_id,
+                    item_names: new Set(["iron-plate"])
+                },
+                sink: {
+                    entity_id: mockSink.entity_id,
+                    item_names: new Set(["iron-plate"])
+                },
+                stack_size: InserterStackSize.SIZE_16,
+                filters: ["iron-plate"]
+            }));
+
+            const pickup_mode = InserterPickupMode.create({
+                inserterState: inserterState,
+                sourceState: mockSource,
+                sinkState: mockSink,
+            });
+
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(4);
+
+            // the machine's output reaches the block: the hand waits with what it holds
+            const block = mockSink.machine.output.outputBlock;
+            mockSink.inventoryState.addQuantity(block.item_name, block.quantity);
+            pickup_mode.executeForTick();
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(4);
+
+            // the output drops under the block and the inserter comes back from waiting: one tick to decide, then the next stack
+            mockSink.inventoryState.removeQuantity(block.item_name, 1);
+            pickup_mode.onEnter(new InserterWaitForSinkMode());
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(4);
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(8);
         })
 
         test("caps pickup quantity when remaining capacity is less than lane stack size", () => {

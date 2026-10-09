@@ -1,7 +1,6 @@
 import Fraction, { fraction } from "fractionability";
-import { Belt, Chest, Entity, EntityId, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
+import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
-import { MachineIngredientRatios } from "./machine-ratios";
 import * as math from "mathjs"
 import { MapExtended } from "../../../data-types";
 import { Logger, defaultLogger } from "../../../common/logger";
@@ -61,6 +60,13 @@ export class EntityTransferCountMap extends MapExtended<EntityId, EntityTransfer
     }
 }
 
+/** Items per cycle asked of machines while the transfers downstream of them are worked out, by machine id */
+type MachineDemand = Map<string, Fraction>;
+
+function addDemand(demand: MachineDemand, machine: Machine, items: Fraction): void {
+    demand.set(machine.entity_id.id, (demand.get(machine.entity_id.id) ?? fraction(0)).add(items));
+}
+
 /**
  * Computes swing counts for multiple output machines producing the same item.
  * Each output machine is assumed to handle an equal share of the total production.
@@ -80,10 +86,13 @@ function computeInserterSwingCountsForMultipleMachines(
     output_stack_size: number,
     cycle_ticks?: number
 ): EntityTransferCountMap {
-    const result = computeOutputSwingCounts(output_machines, entity_registry, output_swing_count_per_machine, output_stack_size);
+    const result = new EntityTransferCountMap();
+    const asked_directly: MachineDemand = new Map();
+    planOutputInserters(output_machines, entity_registry, output_swing_count_per_machine, output_stack_size, result, asked_directly);
     if (cycle_ticks !== undefined) {
-        addBeltLaneConsumption(entity_registry, cycle_ticks, new Set(output_machines.map(it => it.entity_id.id)), result);
+        addBeltLaneConsumption(entity_registry, cycle_ticks, new Set(output_machines.map(it => it.entity_id.id)), result, asked_directly);
     }
+    planMachines(entity_registry, asked_directly, result);
     return result;
 }
 
@@ -95,7 +104,8 @@ function addBeltLaneConsumption(
     entity_registry: ReadableEntityRegistry,
     cycle_ticks: number,
     output_machine_ids: Set<string>,
-    result: EntityTransferCountMap
+    result: EntityTransferCountMap,
+    demand: MachineDemand
 ): void {
     for (const belt of entity_registry.getAll().filter(Entity.isBelt)) {
         const consumed: ItemTransfer[] = belt.lanes
@@ -106,32 +116,40 @@ function addBeltLaneConsumption(
             }));
         if (consumed.length > 0) {
             // the target output inserters are already planned
-            computeSwingCountsThroughBelt(belt, entity_registry, 1, consumed, result,
+            computeSwingCountsThroughBelt(belt, entity_registry, () => 1, consumed, result, demand,
                 filler => !output_machine_ids.has(filler.source.entity_id.id));
         }
     }
 }
 
-function computeOutputSwingCounts(
+/**
+ * The inserters that take a machine's product out of the build: onto a belt or into a chest. One that hands it to
+ * another machine is planned by what that machine uses. When every inserter hands it to a machine, they all count.
+ */
+export function outputInsertersOf(machine: Machine, entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
+    const machine_ids = new Set(entity_registry.getAll().filter(Entity.isMachine).map(it => it.entity_id.id));
+    const taking_from_it = entity_registry.getAll()
+        .filter(Entity.isInserter)
+        .filter(inserter => inserter.source.entity_id.id === machine.entity_id.id);
+    const out_of_the_build = taking_from_it
+        .filter(inserter => !machine_ids.has(inserter.sink.entity_id.id))
+        .filter(inserter => inserter.filtered_items.size === 0 || inserter.filtered_items.has(machine.output.item_name));
+    return out_of_the_build.length > 0 ? out_of_the_build : taking_from_it;
+}
+
+/** The inserters that take the target output: each machine's swings are split among the inserters taking it out of the build */
+function planOutputInserters(
     output_machines: Machine[],
     entity_registry: ReadableEntityRegistry,
     output_swing_count_per_machine: Fraction,
-    output_stack_size: number
-): EntityTransferCountMap {
+    output_stack_size: number,
+    result: EntityTransferCountMap,
+    demand: MachineDemand
+): void {
     assert(output_machines.length > 0, "At least one output machine is required");
 
-    // Find all output inserters for each machine
-    const output_inserters_by_machine = new Map<string, Inserter[]>();
     for (const machine of output_machines) {
-        const inserters = entity_registry.getAll()
-            .filter(Entity.isInserter)
-            .filter(inserter => inserter.source.entity_id.id === machine.entity_id.id);
-        output_inserters_by_machine.set(machine.entity_id.id, inserters);
-    }
-
-    // Validate each machine has at least one output inserter and all have the same stack size
-    for (const machine of output_machines) {
-        const inserters = output_inserters_by_machine.get(machine.entity_id.id) ?? [];
+        const inserters = outputInsertersOf(machine, entity_registry);
         assert(
             inserters.length >= 1,
             `Output machine ${machine.entity_id.id} must have at least one dedicated output inserter, ` +
@@ -139,56 +157,28 @@ function computeOutputSwingCounts(
         );
 
         // Validate all output inserters have the same stack size
-        const first_stack_size = inserters[0].metadata.stack_size;
+        const first_stack_size = handSizeFor(inserters[0], machine.output.item_name);
         for (const inserter of inserters) {
+            const hand_size = handSizeFor(inserter, machine.output.item_name);
             assert(
-                inserter.metadata.stack_size === first_stack_size,
+                hand_size === first_stack_size,
                 `All output inserters from machine ${machine.entity_id.id} must have the same stack size. ` +
-                `Found ${inserter.metadata.stack_size} but expected ${first_stack_size}.`
+                `Found ${hand_size} but expected ${first_stack_size}.`
             );
         }
-    }
-
-    // If only one output machine with one inserter, use the original function directly
-    const first_machine_inserters = output_inserters_by_machine.get(output_machines[0].entity_id.id) ?? [];
-    if (output_machines.length === 1 && first_machine_inserters.length === 1) {
-        return computeInserterSwingCounts(
-            output_machines[0],
-            entity_registry,
-            output_swing_count_per_machine,
-            output_stack_size
-        );
-    }
-
-    // For multiple output machines (or multiple inserters), compute swing counts for each and merge
-    const combined_result = new EntityTransferCountMap();
-
-    for (const machine of output_machines) {
-        const inserters = output_inserters_by_machine.get(machine.entity_id.id) ?? [];
-        const num_output_inserters = inserters.length;
 
         // Divide the swing count among multiple output inserters (they should work in parallel)
-        const swing_count_per_inserter = output_swing_count_per_machine.divide(num_output_inserters);
-
-        // Compute swing counts for each output inserter
+        const swing_count_per_inserter = output_swing_count_per_machine.divide(inserters.length);
         for (const output_inserter of inserters) {
-            const machine_swing_counts = computeInserterSwingCounts(
-                machine,
-                entity_registry,
-                swing_count_per_inserter,
-                output_stack_size,
-                new EntityTransferCountMap(),
-                output_inserter
-            );
-
-            // Merge into combined result
-            for (const transfer_count of machine_swing_counts.values()) {
-                addTransfers(combined_result, transfer_count);
-            }
+            addTransfers(result, {
+                entity: output_inserter,
+                item_transfers: [{ item_name: machine.output.item_name, transfer_count: swing_count_per_inserter }],
+                total_transfer_count: swing_count_per_inserter,
+                stack_size: handSizeFor(output_inserter, machine.output.item_name)
+            });
         }
+        addDemand(demand, machine, output_swing_count_per_machine.multiply(output_stack_size));
     }
-
-    return combined_result;
 }
 
 /** Adds to an entity's transfers, since a machine reached through several inserter paths must supply all of them */
@@ -217,25 +207,15 @@ function addTransfers(result: EntityTransferCountMap, transfer_count: EntityTran
 }
 
 /**
- * Computes the number of swings required per inserter based on the recursive ratios
- * of ingredients needed by the target machine and the inserter's stack size.
- * 
- * For each inserter feeding into a machine, this calculates how many swings are needed
- * to deliver the correct ratio of items per production cycle.
- * 
- * If multiple inserters feed the same item to the machine, the swing count is divided
- * equally among them.
- * 
- * For daisy-chained machines (where the source of an inserter is another machine),
- * this function recursively computes swing counts for all upstream machines.
- * 
+ * Computes the number of swings required per inserter for a machine whose output inserter swings
+ * `output_swing_count` times a cycle, and for every machine upstream of it.
+ *
  * @param machine - The target machine receiving items
  * @param entity_registry - Registry containing all entities
  * @param output_swing_count - The number of swings for the output inserter
  * @param output_stack_size - The stack size of the output inserter
- * @param existing_results - Accumulated results from recursive calls (used internally)
- * @param known_output_inserter - Optional: the specific output inserter to use (for recursive calls 
- *                                where we already know which inserter triggered the recursion)
+ * @param existing_results - Results to add to
+ * @param known_output_inserter - Optional: the specific output inserter to use
  * @returns Map of inserter entity IDs to their swing count information
  */
 function computeInserterSwingCounts(
@@ -248,16 +228,11 @@ function computeInserterSwingCounts(
 ): EntityTransferCountMap {
     const result: EntityTransferCountMap = existing_results;
 
-    const base_production_amount: Fraction = output_swing_count.multiply(output_stack_size);
-
     // Use the known output inserter if provided, otherwise find the first one
-    const output_inserter = known_output_inserter ?? entity_registry.getAll()
-        .filter(Entity.isInserter)
-        .find(inserter => inserter.source.entity_id.id === machine.entity_id.id);
+    const output_inserter = known_output_inserter ?? outputInsertersOf(machine, entity_registry)[0];
 
     assert(output_inserter !== undefined, `No inserter found that takes output from machine ${machine.entity_id}`);
 
-    // in recursive calls the caller has already recorded (and accumulated) the output inserter
     if (!result.has(output_inserter.entity_id)) {
         result.set(output_inserter.entity_id, {
             entity: output_inserter,
@@ -266,12 +241,165 @@ function computeInserterSwingCounts(
                 transfer_count: output_swing_count
             }],
             total_transfer_count: output_swing_count,
-            stack_size: output_inserter.metadata.stack_size
+            stack_size: handSizeFor(output_inserter, machine.output.item_name)
         })
     }
 
-    // Get the recursive ratios for this machine
-    const ratios = MachineIngredientRatios.forMachine(machine, entity_registry);
+    const asked_directly: MachineDemand = new Map();
+    addDemand(asked_directly, machine, output_swing_count.multiply(output_stack_size));
+    planMachines(entity_registry, asked_directly, result);
+    return result;
+}
+
+/**
+ * Plans the inserters that load every machine, given the items a cycle asked of some machines directly.
+ *
+ * What a machine is asked for it asks of the machines its ingredients come from, following the inserters that
+ * connect them. Machines can feed each other in a loop (a pentapod egg biochamber crafts from the eggs of its
+ * neighbour and gives eggs back), so the items each machine makes in a cycle are solved for together: a machine
+ * makes what is asked of it directly plus what the machines downstream of it ask for.
+ */
+function planMachines(
+    entity_registry: ReadableEntityRegistry,
+    asked_directly: MachineDemand,
+    result: EntityTransferCountMap
+): void {
+    const without_fuel = new EntityTransferCountMap();
+    planMachinesFor(entity_registry, asked_directly, without_fuel, false);
+    const with_fuel = new EntityTransferCountMap();
+    planMachinesFor(entity_registry, asked_directly, with_fuel, true);
+
+    for (const planned of with_fuel.values()) {
+        addTransfers(result, withFuelRoundedUp(planned, without_fuel.get(planned.entity.entity_id)));
+    }
+}
+
+/**
+ * Fuel is burned at a rate that has nothing to do with the hands of the plan, so counted exactly it would stretch
+ * the clock period to fit it. What an inserter carries on top of its ingredients is rounded up to the fractions of
+ * a hand its ingredients already come in: a little more room than the fuel needs, in a period that stays the same.
+ */
+function withFuelRoundedUp(with_fuel: EntityTransferCount, without_fuel: EntityTransferCount | undefined): EntityTransferCount {
+    const cycles = without_fuel?.total_transfer_count.getDenominator ?? 1;
+    const item_transfers = with_fuel.item_transfers.map(transfer => {
+        const exact = without_fuel?.item_transfers.find(it => it.item_name === transfer.item_name)?.transfer_count ?? fraction(0);
+        const for_fuel = transfer.transfer_count.toDecimal() - exact.toDecimal();
+        if (for_fuel <= 1e-9) {
+            return { item_name: transfer.item_name, transfer_count: exact };
+        }
+        const parts = Math.max(cycles, exact.getDenominator);
+        return { item_name: transfer.item_name, transfer_count: exact.add(fraction(Math.ceil(for_fuel * parts - 1e-9), parts)) };
+    }).filter(it => it.transfer_count.toDecimal() > 0);
+    return {
+        entity: with_fuel.entity,
+        item_transfers,
+        total_transfer_count: item_transfers.reduce((sum, it) => sum.add(it.transfer_count), fraction(0)),
+        stack_size: with_fuel.stack_size,
+    };
+}
+
+function planMachinesFor(
+    entity_registry: ReadableEntityRegistry,
+    asked_directly: MachineDemand,
+    result: EntityTransferCountMap,
+    include_fuel: boolean
+): void {
+    const machines = entity_registry.getAll().filter(Entity.isMachine);
+
+    // what one item asked of a machine asks of the machines upstream of it
+    const asked_upstream_per_item = new Map<string, MachineDemand>();
+    for (const machine of machines) {
+        const asked_upstream: MachineDemand = new Map();
+        planMachineLoaders(machine, entity_registry, fraction(1), new EntityTransferCountMap(), asked_upstream, include_fuel);
+        asked_upstream_per_item.set(machine.entity_id.id, asked_upstream);
+    }
+
+    const made_per_cycle = solveItemsMadePerCycle(machines.map(it => it.entity_id.id), asked_directly, asked_upstream_per_item);
+
+    // downstream machines first, so the transfers are listed from the output back to the inputs
+    const planned = new Set<string>();
+    const plan = (machine_id: string): void => {
+        if (planned.has(machine_id)) {
+            return;
+        }
+        planned.add(machine_id);
+        const machine = machines.find(it => it.entity_id.id === machine_id)!;
+        const items = made_per_cycle.get(machine_id) ?? fraction(0);
+        if (items.toDecimal() <= 0) {
+            return;
+        }
+        planMachineLoaders(machine, entity_registry, items, result, new Map(), include_fuel);
+        Array.from(asked_upstream_per_item.get(machine_id)!.keys()).forEach(plan);
+    };
+    Array.from(asked_directly.keys()).forEach(plan);
+}
+
+/**
+ * Solves `made = asked directly + what the machines downstream ask for` for every machine at once, by Gaussian
+ * elimination on exact fractions.
+ */
+function solveItemsMadePerCycle(
+    machine_ids: string[],
+    asked_directly: MachineDemand,
+    asked_upstream_per_item: Map<string, MachineDemand>
+): MachineDemand {
+    const n = machine_ids.length;
+    const isZero = (value: Fraction) => value.toDecimal() === 0;
+    // row i: made[i] - sum over j of (what an item of j asks of i) * made[j] = asked directly of i
+    const rows: Fraction[][] = machine_ids.map((row_id, i) => [
+        ...machine_ids.map((column_id, j) =>
+            fraction(i === j ? 1 : 0).subtract(asked_upstream_per_item.get(column_id)?.get(row_id) ?? fraction(0))),
+        asked_directly.get(row_id) ?? fraction(0),
+    ]);
+    for (let column = 0; column < n; column++) {
+        const pivot = rows.findIndex((row, index) => index >= column && !isZero(row[column]));
+        assert(pivot !== -1,
+            `Machine ${machine_ids[column]} is in a loop of machines that uses up everything it makes, so no amount of crafting meets the target.`);
+        [rows[column], rows[pivot]] = [rows[pivot], rows[column]];
+        const pivot_row = rows[column].map(value => value.divide(rows[column][column]));
+        rows[column] = pivot_row;
+        for (let index = 0; index < n; index++) {
+            if (index !== column && !isZero(rows[index][column])) {
+                const factor = rows[index][column];
+                rows[index] = rows[index].map((value, k) => value.subtract(pivot_row[k].multiply(factor)));
+            }
+        }
+    }
+    return new Map(machine_ids.map((id, i) => [id, rows[i][n]]));
+}
+
+/** Fuel burned per craft is counted in parts of an item this small, rounded up, to keep its fraction simple */
+const FUEL_PARTS_PER_ITEM = 1000;
+
+function hasFuelOnlyInserter(machine: Machine, entity_registry: ReadableEntityRegistry): boolean {
+    return entity_registry.getAll().filter(Entity.isInserter)
+        .some(inserter => inserter.sink.entity_id.id === machine.entity_id.id && machine.isFuelOnly(inserter.filtered_items));
+}
+
+/**
+ * Plans the inserters and drills that load one machine making `output_items` a cycle, and the inserters filling
+ * the chests and belts they take from. If multiple inserters feed the same item to the machine, it is divided
+ * equally among them. What they take from other machines is added to `demand`.
+ */
+function planMachineLoaders(
+    machine: Machine,
+    entity_registry: ReadableEntityRegistry,
+    output_items: Fraction,
+    result: EntityTransferCountMap,
+    demand: MachineDemand,
+    include_fuel: boolean = false
+): void {
+    // the ratio of each ingredient to the output, productivity included: 3 of A for 6 made is 1/2
+    const ratios = new Map<string, Fraction>();
+    for (const input of machine.inputs.values()) {
+        ratios.set(input.item_name, fraction(input.ingredient.amount).divide(machine.output.amount_per_craft));
+    }
+    // fuel that comes on the inserters of the plan is one more thing they carry; a fuel-only inserter has a clock of its own
+    const fuel_item = machine.fuel_slot?.fuel.item_name;
+    if (include_fuel && fuel_item !== undefined && machine.fuel_consumption && !hasFuelOnlyInserter(machine, entity_registry)) {
+        const fuel_per_craft = fraction(Math.ceil(machine.fuel_consumption.amount_per_craft * FUEL_PARTS_PER_ITEM), FUEL_PARTS_PER_ITEM);
+        ratios.set(fuel_item, (ratios.get(fuel_item) ?? fraction(0)).add(fuel_per_craft.divide(machine.output.amount_per_craft)));
+    }
 
     // Find all inserters that feed into this machine
     const loader_entities = entity_registry.getAll()
@@ -311,11 +439,11 @@ function computeInserterSwingCounts(
 
         // Determine which items this inserter transfers
         for (const item_name of inserter.filtered_items) {
-            const ratio = ratios[item_name];
+            const ratio = ratios.get(item_name);
 
             if (ratio) {
                 // Calculate the amount of this item needed per production cycle
-                const amount_needed = ratio.multiply(base_production_amount);
+                const amount_needed = ratio.multiply(output_items);
 
                 // Divide by the number of inserters feeding this item type
                 const num_inserters = inserters_per_item.get(item_name)?.length ?? 1;
@@ -323,7 +451,7 @@ function computeInserterSwingCounts(
 
                 // Calculate the number of swings needed to deliver this amount
                 // swing_count = amount_per_inserter / stack_size
-                const swing_count = amount_per_inserter.divide(inserter.metadata.stack_size);
+                const swing_count = amount_per_inserter.divide(handSizeFor(inserter, item_name));
 
                 item_transfers.push({
                     item_name,
@@ -340,20 +468,20 @@ function computeInserterSwingCounts(
                 entity: inserter,
                 item_transfers,
                 total_transfer_count,
-                stack_size: inserter.metadata.stack_size
+                stack_size: handSizeFor(inserter, item_transfers[0].item_name)
             });
-            computeUpstreamOfFiller(inserter, total_transfer_count, item_transfers, entity_registry, result);
+            computeUpstreamOfFiller(inserter, total_transfer_count, item_transfers, entity_registry, result, demand);
         }
     }
 
     // For each drill, calculate the swing count based on the item ratios and stack size
     for (const drill of loader_entities.filter(Entity.isDrill)) {
         const item_name = drill.item.name;
-        const ratio = ratios[item_name];
+        const ratio = ratios.get(item_name);
 
         if (ratio) {
             // Calculate the amount of this item needed per production cycle
-            const amount_needed = ratio.multiply(base_production_amount);
+            const amount_needed = ratio.multiply(output_items);
 
             // Divide by the number of drills mining this item type
             const num_drills = drill_per_item.get(item_name)?.length ?? 1;
@@ -363,7 +491,7 @@ function computeInserterSwingCounts(
             const drill_stack_size = InserterStackSize.SIZE_16
             const swing_count = amount_per_drill.divide(drill_stack_size);
 
-            result.set(drill.entity_id, {
+            addTransfers(result, {
                 entity: drill,
                 item_transfers: [{
                     item_name,
@@ -374,8 +502,6 @@ function computeInserterSwingCounts(
             });
         }
     }
-
-    return result;
 }
 
 /**
@@ -390,7 +516,7 @@ function computeInserterSwingCounts(
  * @param chest - The chest being used as a buffer
  * @param entity_registry - Registry containing all entities
  * @param downstream_transfer_count - The total transfer count from the downstream inserter
- * @param downstream_stack_size - The stack size of the downstream inserter
+ * @param downstream_hand_size - Items per hand of the downstream inserter, for an item
  * @param downstream_item_transfers - The item transfers from the downstream inserter
  * @param result - Accumulated results to add to
  */
@@ -398,9 +524,10 @@ function computeSwingCountsThroughChest(
     chest: Chest,
     entity_registry: ReadableEntityRegistry,
     downstream_transfer_count: Fraction,
-    downstream_stack_size: number,
+    downstream_hand_size: (item_name: string) => number,
     downstream_item_transfers: ItemTransfer[],
-    result: EntityTransferCountMap
+    result: EntityTransferCountMap,
+    demand: MachineDemand
 ): void {
     // Find all inserters that fill this chest (sink is this chest)
     const chest_filling_inserters = entity_registry.getAll()
@@ -431,7 +558,7 @@ function computeSwingCountsThroughChest(
                 
                 // Adjust for stack size differences between filler and downstream inserters
                 // If filler has different stack size, it needs proportionally different swings
-                const stack_size_ratio = downstream_stack_size / filler_inserter.metadata.stack_size;
+                const stack_size_ratio = downstream_hand_size(downstream_transfer.item_name) / handSizeFor(filler_inserter, downstream_transfer.item_name);
                 const adjusted_transfer = transfer_per_filler.multiply(stack_size_ratio);
 
                 filler_item_transfers.push({
@@ -447,49 +574,49 @@ function computeSwingCountsThroughChest(
                 entity: filler_inserter,
                 item_transfers: filler_item_transfers,
                 total_transfer_count: filler_total_transfer_count,
-                stack_size: filler_inserter.metadata.stack_size
+                stack_size: handSizeFor(filler_inserter, filler_item_transfers[0].item_name)
             });
-            computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result);
+            computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result, demand);
         }
     }
 }
 
-/** Continues the recursion from an inserter filling a buffer (chest or belt) to whatever it takes from */
+/**
+ * Continues from an inserter to whatever it takes from: the inserters filling a chest or a belt, or a machine,
+ * which is asked for the items and planned once everything asked of it is known
+ */
 function computeUpstreamOfFiller(
     filler_inserter: Inserter,
     filler_total_transfer_count: Fraction,
     filler_item_transfers: ItemTransfer[],
     entity_registry: ReadableEntityRegistry,
-    result: EntityTransferCountMap
+    result: EntityTransferCountMap,
+    demand: MachineDemand
 ): void {
     const filler_source = entity_registry.getAll()
         .find(e => e.entity_id.id === filler_inserter.source.entity_id.id);
 
     if (filler_source && Entity.isMachine(filler_source)) {
-        computeInserterSwingCounts(
-            filler_source,
-            entity_registry,
-            filler_total_transfer_count,
-            filler_inserter.metadata.stack_size,
-            result,
-            filler_inserter  // Pass the filler inserter as the known output inserter
-        );
+        addDemand(demand, filler_source,
+            filler_total_transfer_count.multiply(handSizeFor(filler_inserter, filler_item_transfers[0].item_name)));
     } else if (filler_source && Entity.isChest(filler_source)) {
         computeSwingCountsThroughChest(
             filler_source,
             entity_registry,
             filler_total_transfer_count,
-            filler_inserter.metadata.stack_size,
+            item_name => handSizeFor(filler_inserter, item_name),
             filler_item_transfers,
-            result
+            result,
+            demand
         );
     } else if (filler_source && Entity.isBelt(filler_source)) {
         computeSwingCountsThroughBelt(
             filler_source,
             entity_registry,
-            filler_inserter.metadata.stack_size,
+            item_name => handSizeFor(filler_inserter, item_name),
             filler_item_transfers,
-            result
+            result,
+            demand
         );
     }
 }
@@ -502,9 +629,10 @@ function computeUpstreamOfFiller(
 function computeSwingCountsThroughBelt(
     belt: Belt,
     entity_registry: ReadableEntityRegistry,
-    downstream_stack_size: number,
+    downstream_hand_size: (item_name: string) => number,
     downstream_item_transfers: ItemTransfer[],
     result: EntityTransferCountMap,
+    demand: MachineDemand,
     include_filler: (filler: Inserter) => boolean = () => true
 ): void {
     const fillers = entity_registry.getAll()
@@ -523,8 +651,8 @@ function computeSwingCountsThroughBelt(
             const fillers_for_item = fillers.filter(it => it.filtered_items.has(downstream_transfer.item_name)).length;
             const transfer_count = downstream_transfer.transfer_count
                 .divide(fillers_for_item)
-                .multiply(downstream_stack_size)
-                .divide(filler_inserter.metadata.stack_size);
+                .multiply(downstream_hand_size(downstream_transfer.item_name))
+                .divide(handSizeFor(filler_inserter, downstream_transfer.item_name));
             filler_item_transfers.push({ item_name: downstream_transfer.item_name, transfer_count });
             filler_total_transfer_count = filler_total_transfer_count.add(transfer_count);
         }
@@ -534,9 +662,9 @@ function computeSwingCountsThroughBelt(
                 entity: filler_inserter,
                 item_transfers: filler_item_transfers,
                 total_transfer_count: filler_total_transfer_count,
-                stack_size: filler_inserter.metadata.stack_size
+                stack_size: handSizeFor(filler_inserter, filler_item_transfers[0].item_name)
             });
-            computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result);
+            computeUpstreamOfFiller(filler_inserter, filler_total_transfer_count, filler_item_transfers, entity_registry, result, demand);
         }
     }
 }

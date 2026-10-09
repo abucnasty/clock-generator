@@ -12,7 +12,9 @@ export interface MachineFormData {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace';
+    type?: 'machine' | 'furnace' | 'biochamber';
+    /** Energy consumption effect in percent; only used by biochambers. */
+    energy_consumption_bonus?: number;
 }
 
 // Enable control override types
@@ -35,7 +37,7 @@ export type ValueReference =
     | { type: 'CRAFTING_PROGRESS'; entity: EntityReference }
     | { type: 'BONUS_PROGRESS'; entity: EntityReference }
     | { type: 'HAND_QUANTITY'; item_name?: string }
-    | { type: 'MACHINE_STATUS'; entity: EntityReference; status: 'INGREDIENT_SHORTAGE' | 'WORKING' | 'OUTPUT_FULL' }
+    | { type: 'MACHINE_STATUS'; entity: EntityReference; status: 'INGREDIENT_SHORTAGE' | 'WORKING' | 'OUTPUT_FULL' | 'NO_FUEL' }
     | { type: 'INSERTER_STACK_SIZE' };
 
 export interface Condition {
@@ -879,6 +881,7 @@ export function useConfigForm(): UseConfigFormResult {
                 productivity: m.productivity,
                 crafting_speed: m.crafting_speed,
                 type: m.type,
+                energy_consumption_bonus: m.energy_consumption_bonus,
             })),
             inserters: imported.inserters.map((ins, index) => ({
                 id: ins.id ?? (index + 1),

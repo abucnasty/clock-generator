@@ -1,0 +1,239 @@
+{
+  "target_output": {
+    "recipe": "rocket-fuel",
+    "items_per_second": 60,
+    "copies": 1
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "rocket-fuel-from-jelly",
+      "productivity": 300,
+      "crafting_speed": 84.6655,
+      "type": "biochamber",
+      "energy_consumption_bonus": 1245.8600000000001
+    },
+    {
+      "id": 2,
+      "recipe": "jellynut-processing",
+      "productivity": 150,
+      "crafting_speed": 56.122,
+      "type": "biochamber",
+      "energy_consumption_bonus": 926.17
+    },
+    {
+      "id": 3,
+      "recipe": "rocket-fuel-from-jelly",
+      "productivity": 300,
+      "crafting_speed": 84.6655,
+      "type": "biochamber",
+      "energy_consumption_bonus": 1245.8600000000001
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "id": 8
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "id": 9
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 10
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "jellynut-seed"
+      ],
+      "id": 11
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "id": 12
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "id": 13
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "bioflux",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "jellynut",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "rocket-fuel",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

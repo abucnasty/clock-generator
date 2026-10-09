@@ -1,5 +1,6 @@
 import { Config, BeltConfig, ChestConfig, InserterConfig, MachineConfiguration, MiningDrillConfig } from './schema';
 import { FactorioDataService } from '../data/factorio-data-service';
+import { BurnerEnergySource, MachineType } from '../entities';
 import { InserterCoverageError, InserterCoverageIssue, InserterFixOption } from './errors';
 
 // ============================================================================
@@ -87,7 +88,7 @@ function inserterCoversOutputItem(
 // ============================================================================
 
 /**
- * Validates that every machine ingredient and output item in the config has at
+ * Validates that every machine ingredient, burner fuel and output item in the config has at
  * least one inserter covering it.
  *
  * Each missing ingredient/output produces a separate `InserterCoverageIssue`
@@ -117,8 +118,13 @@ export function validateInserterCoverage(config: Config): InserterCoverageIssue[
 
         // ── Input ingredients ────────────────────────────────────────────────
         const drills = config.drills?.configs ?? [];
-        for (const ingredient of recipe.ingredients) {
-            const itemName = ingredient.name;
+        // A burner machine also needs its fuel inserted
+        const burner = BurnerEnergySource.forMachineType(machine.type ?? MachineType.MACHINE);
+        const inputItemNames = recipe.ingredients.map((ingredient) => ingredient.name);
+        if (burner) {
+            inputItemNames.push(BurnerEnergySource.selectFuel(burner, machine.fuel).item_name);
+        }
+        for (const itemName of inputItemNames) {
             const covered =
                 config.inserters.some((ins) =>
                     inserterCoversInputItem(ins, machine.id, itemName, belts, chests, machines),

@@ -3,7 +3,8 @@
 ---@field recipe string Recipe name (for machines/furnaces)
 ---@field crafting_speed number Effective crafting speed with bonuses (for machines/furnaces)
 ---@field productivity number Productivity bonus as percentage (0-100+)
----@field type "machine"|"furnace"|"mining-drill" Entity type category
+---@field type "machine"|"furnace"|"biochamber"|"mining-drill" Entity type category
+---@field energy_consumption_bonus number|nil Energy consumption effect as a percentage (biochambers only)
 
 ---@class DrillData
 ---@field drill_type string The specific drill type (e.g., "electric-mining-drill")
@@ -24,10 +25,6 @@
 ---@class InserterTargetRef
 ---@field type "machine"|"belt"|"chest" The target type
 ---@field unit_number number The unit number of the target entity
-
----@class InserterBeltLaneInfo
----@field lane number The lane index (1 = right, 2 = left)
----@field ingredient string The item on this lane
 
 ---@class InfinityFilterData
 ---@field item_name string The item name
@@ -52,8 +49,6 @@
 ---@field filters string[] Item filters set on the inserter
 ---@field source InserterTargetRef|nil The pickup target
 ---@field sink InserterTargetRef|nil The drop target
----@field source_recipe_outputs string[]|nil Recipe outputs from source machine
----@field source_belt_lanes InserterBeltLaneInfo[]|nil Belt lane contents from source belt
 
 ---@class PlayerData
 ---@field machines MachineData[] Extracted machine data

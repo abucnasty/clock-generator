@@ -27,7 +27,7 @@ npm install
 
 ### Basic Usage
 
-1. Choose or create a configuration file in `resources/config-samples/` (HOCON format)
+1. Choose or create a configuration file in `resources/config-samples/` (JSON)
 2. Update `src/multi-machine-poc.ts` to use your desired config:
 
 ```typescript
@@ -38,7 +38,7 @@ import { generateClockForConfig } from './crafting/generate-blueprint';
 import { encodeBlueprintFile } from "./blueprints/serde";
 
 async function main() {
-    // Load configuration from HOCON file
+    // Load a configuration file
     const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
 
     const debug = DebugSettingsProvider.mutable();
@@ -62,94 +62,117 @@ npm run dev
 4. Copy the output blueprint string and import it into Factorio
 
 ### Configuration Format
-Multiple formats are supports:
-1. HOCON (.conf)
-2. JSON (.json)
 
-Built with [hocon](https://github.com/lightbend/config/blob/main/HOCON.md) configuration in mind but is backwards compatible with normal JSON files.
+Configuration files are JSON. The samples live in `resources/config-samples/`, grouped by what they make, one folder per
+build, each holding the config(s) of that build and, where one exists, its scaffold: a blueprint of one copy of the
+build without a clock, for recording it in the game.
 
-Available sample configs in `resources/config-samples/`:
-- `utility-science.conf` - Utility science pack production
-- `logistic-science.conf` - Logistic science pack production
-- `logistic-science-shared-inserter.conf` - Logistic science with shared inserters
-- `chemical-science.conf` - Chemical science pack production
-- `production-science.conf` - Production science pack production
-- `advanced-circuit.conf` - Advanced circuit production chain
-- `productivity-module.conf` - Productivity module production
-- `electric-furnace.conf` - Electric furnace with direct insertion mining
-- And more...
+- `science/`: automation, logistic, chemical, production, utility, agriculture, metallurgic, electromagnetic and military science
+- `intermediates/`: advanced circuit, processing units, flying robot frame, lithium plates, electric engine unit, productivity module, low density structure, accumulator
+- `gleba/`: rocket fuel from jelly, jellynut processing, biochamber fuel, iron bacteria cultivation
+- `smelting/`: stone bricks, electric furnace
 
-### Configuration Example (HOCON)
+`src/config/config-paths.ts` names every sample.
 
-Here's a complete configuration for a utility science pack setup:
+### Configuration Example (JSON)
 
-```conf
-# Utility Science Pack Configuration
+Here is a complete configuration for a utility science pack setup. Recipe names are Factorio recipe names; a machine's crafting speed comes from hovering it in Factorio and running `/c game.print(game.player.selected.crafting_speed)`, or from the sidecar mod.
 
-target_output {
-    recipe = "utility-science-pack"
-    items_per_second = 120        # Target production rate
-    machines = 7                  # Number of machines in your build
-    overrides {
-        output_swings = 3
+```json
+{
+  "belts": [
+    {
+      "id": 1,
+      "lanes": [
+        {
+          "ingredient": "low-density-structure",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "processing-unit",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    },
+    {
+      "id": 2,
+      "lanes": [
+        {
+          "ingredient": "low-density-structure",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "flying-robot-frame",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
     }
+  ],
+  "inserters": [
+    {
+      "filters": [
+        "low-density-structure",
+        "processing-unit"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "machine"
+      },
+      "source": {
+        "id": 1,
+        "type": "belt"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "low-density-structure",
+        "flying-robot-frame"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "machine"
+      },
+      "source": {
+        "id": 2,
+        "type": "belt"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "utility-science-pack"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "belt"
+      },
+      "source": {
+        "id": 1,
+        "type": "machine"
+      },
+      "stack_size": 16
+    }
+  ],
+  "machines": [
+    {
+      "crafting_speed": 68.90625,
+      "id": 1,
+      "productivity": 100,
+      "recipe": "utility-science-pack"
+    }
+  ],
+  "target_output": {
+    "items_per_second": 120,
+    "machines": 7,
+    "overrides": {
+      "output_swings": 3
+    },
+    "recipe": "utility-science-pack"
+  }
 }
-
-machines = [
-    {
-        id = 1
-
-        # recipe names must match the factorio recipe name
-        recipe = "utility-science-pack"
-        
-        # Productivity bonus percentage
-        productivity = 100
-        
-        # Hover over machine in Factorio and execute:
-        # /c game.print(game.player.selected.crafting_speed)
-        crafting_speed = 68.90625
-    }
-]
-
-inserters = [
-    {
-        source { type = "belt", id = 1 }
-        sink { type = "machine", id = 1 }
-        filters = ["low-density-structure", "processing-unit"]
-        stack_size = 16             # Stack inserter capacity bonus
-    },
-    {
-        source { type = "belt", id = 2 }
-        sink { type = "machine", id = 1 }
-        stack_size = 16
-        filters = ["low-density-structure", "flying-robot-frame"]
-    },
-    {
-        source { type = "machine", id = 1 }
-        sink { type = "belt", id = 1 }
-        filters = ["utility-science-pack"]
-        stack_size = 16
-    }
-]
-
-belts = [
-    {
-        id = 1
-        type = "turbo-transport-belt"
-        lanes = [
-            { ingredient = "low-density-structure", stack_size = 4 },
-            { ingredient = "processing-unit", stack_size = 4 }
-        ]
-    },
-    {
-        id = 2
-        type = "turbo-transport-belt"
-        lanes = [
-            { ingredient = "low-density-structure", stack_size = 4 },
-            { ingredient = "flying-robot-frame", stack_size = 4 }
-        ]
-    }
-]
 ```
 
 ## How It Works
@@ -349,7 +372,7 @@ src/
 ├── common/           # Shared constants (entity types)
 ├── config/           # Configuration loading and validation
 │   ├── schema.ts     # Zod schemas for config validation
-│   ├── loader.ts     # HOCON config file loader
+│   ├── loader.ts     # config file loader
 │   ├── config-paths.ts # Path constants for sample configs
 │   └── examples.ts   # Legacy TypeScript config examples
 ├── crafting/         # Core simulation and blueprint generation
@@ -361,7 +384,7 @@ src/
 └── types/            # Custom type declarations
 
 resources/
-└── config-samples/   # HOCON configuration files
+└── config-samples/   # sample configurations and scaffolds, by build
 ```
 
 ### Running Tests
@@ -369,6 +392,29 @@ resources/
 ```bash
 npm test
 ```
+
+### Recording a Build in Factorio
+
+`npm run record` starts a headless Factorio on a copy of a save, builds a blueprint in it, records it with the recorder mod of this repository and writes a recording that `npm run verify` reads. No game window and no player are needed.
+
+```bash
+export FACTORIO_PATH=~/Games/factorio          # executable or install folder, or --factorio=
+export FACTORIO_HARNESS_SAVE=~/saves/test.zip  # or --save=
+npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warmup=300 \
+    --seed='[{"target":{"recipe":"pentapod-egg"},"item":"pentapod-egg","count":200}]' \
+    --clock=clock-blueprint.txt --config=config.json
+```
+
+- `--seed` adds items right before the recording starts. `target` picks the built entities by `name`, `type`, `recipe` or `unit_number`; `inventory` is `input`, `output`, `fuel`, `modules` or `chest`, and by default wherever the entity takes the item. `count` is per entity, and per lane for belts.
+- `--clock` replaces the clock the build came with: its combinators are built below the build and wired to the inserters their descriptions name. The inserters are found by matching the build to `--config`, the config the clock was generated from. Belt inserters are matched by what lies on their belt, so give belts a `--warmup` to fill.
+- `--unclocked` removes the build's clock and lets its inserters run freely. Without either, the build is recorded as it is.
+- `--settle` runs the build for a number of ticks on its new clock and seeds before the recording starts, so its start-up is not counted.
+
+`npm run test:game` records the scaffold builds under `resources/config-samples` the same way and checks that the clock the generator selects moves the expected output in every clock period of ten minutes of game time (`src/harness/scaffold-recordings.game.test.ts`). It needs `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE`, skips with the reason when they are missing, and is not part of `npm test`, since each recording takes about ten seconds in a game of its own.
+- `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
+- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed.
+
+The save is never written to; Factorio gets a temporary write-data folder (`--work-dir` keeps it). The save needs a place where the blueprint can be built and powered, such as an editor map with a global electric network. Run `npm run record` without arguments for all options.
 
 ### Configuration Validation
 
@@ -378,7 +424,7 @@ Configurations are validated at runtime using [Zod](https://zod.dev/) schemas. I
 import { parseConfig } from './config/loader';
 
 try {
-    const config = await parseConfig(hoconString);
+    const config = await parseConfig(jsonString);
 } catch (error) {
     if (error instanceof ConfigValidationError) {
         console.error(error.getFormattedIssues());
@@ -402,7 +448,6 @@ const loader = createBrowserConfigLoader(async (url) => {
 const config = await loader.loadFromUrl('/api/config');
 ```
 
-Note: HOCON `include` directives are disabled in browser mode for security.
 
 ## License
 

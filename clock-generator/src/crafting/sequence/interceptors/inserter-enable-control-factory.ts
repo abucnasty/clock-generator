@@ -1,6 +1,6 @@
 import assert from "../../../common/assert";
-import { EntityId, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
-import { EntityTransferCountMap } from "../cycle/swing-counts";
+import { Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
+import { EntityTransferCountMap, outputInsertersOf } from "../cycle/swing-counts";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { ItemName } from "../../../data";
@@ -8,6 +8,7 @@ import { computeSimulationMode, SimulationMode, simulationModeForInput } from ".
 import { CraftingCyclePlan } from "../cycle/crafting-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { SwingDistribution } from "../cycle/swing-distribution";
+import { InserterClock, alwaysEnabledInserters } from "../unplanned-inserter-clock";
 import { Logger } from "../../../common/logger";
 
 export class EnableControlFactory {
@@ -22,13 +23,28 @@ export class EnableControlFactory {
         private readonly crafting_cycle_plan: CraftingCyclePlan,
         private readonly tick_provider: TickProvider,
         private readonly resettable_registry: ResettableRegistry,
-        private readonly logger: Logger
+        private readonly logger: Logger,
+        /** The clocks of the inserters that only fill a fuel slot or take a by-product away, which are not part of the plan */
+        private readonly inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
     ) {
         this.target_output_item_name = this.crafting_cycle_plan.production_rate.machine_production_rate.item;
         this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
+        for (const state of this.entity_state_registry.getAllStates()) {
+            if (EntityState.isInserter(state)) {
+                this.entities.push(state.inserter);
+            } else if (EntityState.isMachine(state)) {
+                this.entities.push(state.machine);
+            }
+        }
         this.terminal_machine_states = this.findFinalMachines();
         this.terminal_inserter_states = this.findFinalInserters();
+        this.always_enabled_ids = new Set(alwaysEnabledInserters({ getAll: () => this.entities }).map(it => it.entity_id.id));
     }
+
+    /** The inserters and machines of the build */
+    private readonly entities: Entity[] = [];
+
+    private readonly always_enabled_ids: ReadonlySet<string>;
 
     public createForEntityId(entity_id: EntityId): EnableControl {
 
@@ -48,10 +64,29 @@ export class EnableControlFactory {
         if (this.terminal_inserter_states.has(entity_state)) {
             // Find the corresponding terminal machine for this inserter
             const terminal_machine = this.findTerminalMachineForInserter(entity_state);
-            return this.transferCountFromMachine(
+            const by_clock = this.transferCountFromMachine(
                 entity_state,
                 terminal_machine,
             );
+            if (this.crafting_cycle_plan.fractional_swings_enabled) {
+                return by_clock;
+            }
+            return EnableControl.all([this.plannedItemsAndNoMore(entity_state, terminal_machine), by_clock]);
+        }
+
+        // an inserter that only fills a fuel slot, or only takes by-products off a machine, is not part of the plan: it
+        // is enabled by a window that repeats every `modulus` ticks and ignores the machine's inventory the rest of the
+        // time. The limit of a fuel slot skips a window when it is full, and a by-product inserter takes what is ready.
+        if (this.inserter_clocks.has(entity_id.id)
+            || (EntityState.isMachine(sink_state) && sink_state.machine.isFuelOnly(entity_state.inserter.filtered_items))) {
+            return this.unplannedInserterClocked(entity_id);
+        }
+
+        // In a build with a loop of machines the inserters between machines are not held to windows or to what their
+        // machines hold: they move what there is whenever their sink has room, as they do in game, and the output
+        // inserter holds the build to its rate.
+        if (this.always_enabled_ids.has(entity_id.id)) {
+            return AlwaysEnabledControl;
         }
 
         const additional_enable_controls: EnableControl[] = [];
@@ -141,31 +176,60 @@ export class EnableControlFactory {
         const mode: SimulationMode = computeSimulationMode(
             sink_state.machine,
             inserter,
-            this.entity_transfer_map.getOrThrow(inserter.entity_id),
+            this.transferCountOf(inserter),
         );
 
         if (mode === SimulationMode.LOW_INSERTION_LIMITS) {
             return AlwaysEnabledControl
         }
 
+        const inserter_state = this.entity_state_registry.getStateByEntityIdOrThrow(inserter.entity_id);
+        assertIsInserterState(inserter_state);
+        const item_transfers = this.transferCountOf(inserter).item_transfers;
+
+        // hands of each item dropped so far, counted when the hand empties
+        const hands_dropped = new Map<ItemName, number>();
+        let held_item_name: ItemName | null = null;
+        const countDroppedHands = () => {
+            const now_held = inserter_state.held_item?.item_name ?? null;
+            if (held_item_name !== null && now_held !== held_item_name) {
+                hands_dropped.set(held_item_name, (hands_dropped.get(held_item_name) ?? 0) + 1);
+            }
+            held_item_name = now_held;
+        };
+
         const enable_control = EnableControl.any(
             transferred_items.map(source_item_name => {
-                const sink_input = sink_state.machine.inputs.getOrThrow(source_item_name);
+                const sink_input = sink_state.machine.getInsertableInputOrThrow(source_item_name);
                 const minimum_required = sink_input.consumption_rate.amount_per_craft
                 const automated_insertion_limit = sink_input.automated_insertion_limit.quantity;
                 const sink_consumption_per_tick = sink_input.consumption_rate.rate_per_tick;
+                // The planned swings of a whole number of cycles, e.g. 3 for 3/2 swings per cycle. Refilling by exactly
+                // that many, rather than up to the insertion limit, makes the refills repeat with the clock period: a
+                // refill up to the limit takes as many swings as the limit has room for, which has nothing to do with
+                // the period, so one period of the simulation would see more or fewer swings than every period needs.
+                const planned_swings = item_transfers.find(it => it.item_name === source_item_name)?.transfer_count.getNumerator
+                    ?? Number.POSITIVE_INFINITY;
 
-                return EnableControl.latched({
-                    base: EnableControl.lambda(() => {
-                        const sink_quantity = sink_state.inventoryState.getItemOrThrow(source_item_name).quantity;
-                        const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer);
-                        return sink_quantity_after_transfer < minimum_required * buffer_multiplier
-                    }),
-                    release: EnableControl.lambda(() => {
-                        const sink_quantity = sink_state.inventoryState.getItemOrThrow(source_item_name).quantity;
-                        return sink_quantity >= automated_insertion_limit
-                    })
-                })
+                let refilling = false;
+                let hands_dropped_before_refill = 0;
+                return EnableControl.lambda(() => {
+                    countDroppedHands();
+                    const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
+                    const dropped = hands_dropped.get(source_item_name) ?? 0;
+                    if (refilling) {
+                        if (sink_quantity >= automated_insertion_limit || dropped - hands_dropped_before_refill >= planned_swings) {
+                            refilling = false;
+                        }
+                        return refilling;
+                    }
+                    const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer);
+                    if (sink_quantity_after_transfer < minimum_required * buffer_multiplier) {
+                        refilling = true;
+                        hands_dropped_before_refill = dropped;
+                    }
+                    return refilling;
+                });
             })
         )
         return enable_control;
@@ -186,7 +250,7 @@ export class EnableControlFactory {
         sink_state: ChestState,
     ): EnableControl {
         const source_item_name = source_state.machine.output.item_name;
-        const stack_size = inserter.metadata.stack_size;
+        const stack_size = handSizeFor(inserter, source_item_name);
 
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
@@ -275,7 +339,7 @@ export class EnableControlFactory {
         const per_item_controls: EnableControl[] = [];
 
         for (const item_name of item_filters) {
-            if (!sink_state.machine.inputs.has(item_name)) {
+            if (!sink_state.machine.getInsertableInput(item_name)) {
                 continue;
             }
             if (!inserter.filtered_items.has(item_name)) {
@@ -301,7 +365,7 @@ export class EnableControlFactory {
     ): EnableControl {
         const buffer_multiplier = 2;
 
-        const sink_input = sink_state.machine.inputs.get(item_name);
+        const sink_input = sink_state.machine.getInsertableInput(item_name);
         if (!sink_input) {
             return EnableControl.never;
         }
@@ -312,13 +376,13 @@ export class EnableControlFactory {
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
                 // Enable when sink needs items (below buffer threshold) AND chest has items
-                const sink_quantity = sink_state.inventoryState.getQuantity(item_name);
+                const sink_quantity = MachineState.insertableQuantity(sink_state, item_name);
                 const chest_has_items = source_state.getCurrentQuantity(item_name) > 0;
                 return chest_has_items && sink_quantity < minimum_required * buffer_multiplier;
             }),
             release: EnableControl.lambda(() => {
                 // Release when sink is at insertion limit OR chest is empty (for buffer chests)
-                const sink_quantity = sink_state.inventoryState.getQuantity(item_name);
+                const sink_quantity = MachineState.insertableQuantity(sink_state, item_name);
                 const chest_is_empty = source_state.isEmpty();
                 return sink_quantity >= automated_insertion_limit || chest_is_empty;
             })
@@ -336,7 +400,7 @@ export class EnableControlFactory {
         const mode: SimulationMode = computeSimulationMode(
             sink_state.machine,
             inserter,
-            this.entity_transfer_map.getOrThrow(inserter.entity_id),
+            this.transferCountOf(inserter),
         );
 
         // For fractional swings, use clocked control to schedule inserters at end of subcycle
@@ -354,7 +418,7 @@ export class EnableControlFactory {
                 clocked_control,
                 this.sourceIsGreaterThanStackSize(
                     source_state,
-                    inserter.metadata.stack_size,
+                    handSizeFor(inserter, source_item_name),
                 ),
                 this.latchedUntilLessThanMinimum(
                     sink_state,
@@ -365,7 +429,7 @@ export class EnableControlFactory {
         }
 
         if (mode === SimulationMode.LOW_INSERTION_LIMITS) {
-            if (sink_state.machine.output.outputBlock.quantity < inserter.metadata.stack_size) {
+            if (sink_state.machine.output.outputBlock.quantity < handSizeFor(inserter, source_item_name)) {
                 return EnableControl.always
             }
             return this.latchedUntilLessThanMinimum(
@@ -375,7 +439,7 @@ export class EnableControlFactory {
             )
         }
 
-        if (source_state.machine.output.outputBlock.quantity < inserter.metadata.stack_size) {
+        if (source_state.machine.output.outputBlock.quantity < handSizeFor(inserter, source_item_name)) {
             return EnableControl.all([
                 this.latchedUntilLessThanMinimum(
                     sink_state,
@@ -389,7 +453,7 @@ export class EnableControlFactory {
             [
                 this.sourceIsGreaterThanStackSize(
                     source_state,
-                    inserter.metadata.stack_size,
+                    handSizeFor(inserter, source_item_name),
                 ),
                 this.latchedUntilLessThanMinimum(
                     sink_state,
@@ -409,7 +473,7 @@ export class EnableControlFactory {
         const sink_machine = sink_state.machine
         const source_item = drill.item
         const source_item_name = source_item.name;
-        const sink_input = sink_machine.inputs.getOrThrow(source_item_name);
+        const sink_input = sink_machine.getInsertableInputOrThrow(source_item_name);
         const minimum_required = sink_input.consumption_rate.amount_per_craft
         const sink_consumption_per_tick = sink_input.consumption_rate.rate_per_tick;
         const drill_output_per_tick = drill.production_rate.amount_per_tick.toDecimal();
@@ -426,13 +490,13 @@ export class EnableControlFactory {
                 base: EnableControl.any([
                     ensure_at_least_once_per_cycle,
                     EnableControl.lambda(() => {
-                        const sink_quantity = sink_state.inventoryState.getItemOrThrow(source_item_name).quantity;
+                        const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
                         const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer_minimum_amount);
                         return sink_quantity_after_transfer < minimum_required * 4
                     })
                 ]),
                 release: EnableControl.lambda(() => {
-                    const sink_quantity = sink_state.inventoryState.getItemOrThrow(source_item_name).quantity;
+                    const sink_quantity = MachineState.insertableQuantity(sink_state, source_item_name);
                     return sink_quantity >= max_insertion_amount
                 })
             })
@@ -447,7 +511,7 @@ export class EnableControlFactory {
      */
     private shouldUseClockedControlForInputs(inserter: Inserter, machine: Machine): boolean {
         const insertion_duration = machine.insertion_duration.tick_duration.toDecimal();
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter);
         const total_transfer_duration = inserter.animation.total.ticks * Math.ceil(transfer_count.total_transfer_count.toDecimal());
 
         const ratios_are_all_equal = new Set(transfer_count.item_transfers.map(it => it.transfer_count.toDecimal())).size === 1;
@@ -489,6 +553,36 @@ export class EnableControlFactory {
         return AlwaysEnabledControl;
     }
 
+    /**
+     * Holds the output inserter to what its planned swings move: every span of cycles (2 cycles for 5/2 swings per
+     * cycle) allows it that many hands more, and it is enabled while it has picked up less than a hand over what it
+     * was allowed so far. The output inserter is what holds the whole build to its rate: everything before it runs
+     * until its machine is full. Its window alone does not, since a window still on when the inserter is back lets it
+     * take what the machine made since, and a build with product to spare then makes more than was asked for. The
+     * hand of slack lets it start on its next hand early, as it does in game, without getting ahead by more.
+     */
+    private plannedItemsAndNoMore(inserter_state: InserterState, source_state: MachineState): EnableControl {
+        const swings_per_cycle = this.transferCountOf(inserter_state.inserter).total_transfer_count;
+        const hand_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
+        const items_per_span = swings_per_cycle.getNumerator * hand_size;
+        const span_ticks = CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, swings_per_cycle.getDenominator);
+
+        let span: number | null = null;
+        let allowed = 0;
+        return EnableControl.lambda(() => {
+            const picked_up = inserter_state.items_picked_up;
+            const current_span = Math.floor(this.tick_provider.getCurrentTick() / span_ticks);
+            if (span === null || current_span !== span) {
+                // the ticks start over between the warm up and the run that is recorded: one span more, as any other
+                const spans_passed = span !== null && current_span > span ? current_span - span : 1;
+                // what was not picked up is not saved up for later
+                allowed = Math.min(allowed + spans_passed * items_per_span, picked_up + items_per_span);
+                span = current_span;
+            }
+            return picked_up < allowed + hand_size - 1;
+        });
+    }
+
     private transferCountFromMachine(
         inserter_state: InserterState,
         source_state: MachineState,
@@ -497,7 +591,7 @@ export class EnableControlFactory {
         const mode = computeSimulationMode(
             source_state.machine,
             inserter_state.inserter,
-            this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id),
+            this.transferCountOf(inserter_state.inserter),
         );
 
         // For fractional swings, use simple clocked ranges at the BEGINNING of each sub-cycle
@@ -525,7 +619,7 @@ export class EnableControlFactory {
                     clocked_control,
                     this.sourceIsGreaterThanStackSize(
                         source_state,
-                        inserter_state.inserter.metadata.stack_size,
+                        handSizeFor(inserter_state.inserter, source_state.machine.output.item_name),
                     )
                 ]
             )
@@ -638,7 +732,7 @@ export class EnableControlFactory {
         inserter_state: InserterState,
         sink_state: MachineState,
     ): OpenRange[] {
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter_state.inserter);
         const animation = inserter_state.inserter.animation;
         const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
 
@@ -704,7 +798,7 @@ export class EnableControlFactory {
         inserter_state: InserterState,
         sink_state: MachineState,
     ): OpenRange[] {
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter_state.inserter);
         const animation = inserter_state.inserter.animation;
         const total_transfer_duration = Duration.ofTicks(
             animation.total.ticks * Math.ceil(transfer_count.total_transfer_count.toDecimal())
@@ -886,7 +980,7 @@ export class EnableControlFactory {
         inserter: Inserter,
         total_transfer_count: number,
     ): boolean {
-        const stack_size = inserter.metadata.stack_size;
+        const stack_size = handSizeFor(inserter, source_machine.output.item_name);
         const ticks_to_stack = this.ticksToProduceStack(source_machine, stack_size);
         const cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
 
@@ -937,14 +1031,14 @@ export class EnableControlFactory {
         inserter_state: InserterState,
         source_state: MachineState,
     ): OpenRange {
-        const transfer_count = this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id);
+        const transfer_count = this.transferCountOf(inserter_state.inserter);
         const total_transfer_count = Math.ceil(transfer_count.total_transfer_count.toDecimal());
         const animation = inserter_state.inserter.animation;
 
         const mode = computeSimulationMode(
             source_state.machine,
             inserter_state.inserter,
-            this.entity_transfer_map.getOrThrow(inserter_state.inserter.entity_id),
+            this.transferCountOf(inserter_state.inserter),
         );
 
         if (mode === SimulationMode.LOW_INSERTION_LIMITS) {
@@ -968,7 +1062,7 @@ export class EnableControlFactory {
             // The enable window may wrap around the cycle boundary.
             if (this.isSlowMachine(source_state.machine, inserter_state.inserter, total_transfer_count)) {
                 const cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
-                const stack_size = inserter_state.inserter.metadata.stack_size;
+                const stack_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
                 const ticks_to_stack = this.ticksToProduceStack(source_state.machine, stack_size);
 
                 // Calculate when the inserter should start (when first stack is ready)
@@ -1027,9 +1121,7 @@ export class EnableControlFactory {
      */
     private getExtendedPeriodDuration(): Duration {
         if (this.crafting_cycle_plan.fractional_swings_enabled && this.crafting_cycle_plan.cycle_multiplier) {
-            return Duration.ofTicks(
-                this.crafting_cycle_plan.total_duration.ticks * this.crafting_cycle_plan.cycle_multiplier
-            );
+            return Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, this.crafting_cycle_plan.cycle_multiplier));
         }
         return this.crafting_cycle_plan.total_duration;
     }
@@ -1040,7 +1132,7 @@ export class EnableControlFactory {
      * spreads over as many cycles as its denominator, e.g. 5/2 swings is 2 then 3.
      */
     private plannedSwingsOntoBelt(inserter: Inserter): EnableControl {
-        const swings_per_cycle = this.entity_transfer_map.getOrThrow(inserter.entity_id).total_transfer_count;
+        const swings_per_cycle = this.transferCountOf(inserter).total_transfer_count;
         const numerator = swings_per_cycle.getNumerator;
         const cycles = swings_per_cycle.getDenominator;
         const cycle_ticks = this.crafting_cycle_plan.total_duration.ticks;
@@ -1056,8 +1148,22 @@ export class EnableControlFactory {
         }
 
         const clocked_control = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(cycle_ticks * cycles),
+            periodDuration: Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, cycles)),
             enabledRanges: enabled_ranges,
+            tickProvider: this.tick_provider,
+        });
+        this.resettable_registry.register(clocked_control);
+        return clocked_control;
+    }
+
+    private unplannedInserterClocked(entity_id: EntityId): EnableControl {
+        const inserter_clock = this.inserter_clocks.get(entity_id.id);
+        if (!inserter_clock) {
+            return AlwaysEnabledControl;
+        }
+        const clocked_control = EnableControl.clocked({
+            periodDuration: Duration.ofTicks(inserter_clock.modulus),
+            enabledRanges: [inserter_clock.window],
             tickProvider: this.tick_provider,
         });
         this.resettable_registry.register(clocked_control);
@@ -1078,7 +1184,7 @@ export class EnableControlFactory {
 
     private sourceIsGreaterThanStackSize(
         source: MachineState,
-        stack_size: InserterStackSize
+        stack_size: number
     ): EnableControl {
         return this.sourceIsGreaterThan(source, stack_size);
     }
@@ -1108,16 +1214,16 @@ export class EnableControlFactory {
         sink_input_item_name: ItemName,
         buffer_multiplier: number = 2
     ): EnableControl {
-        const sink_input = sink.machine.inputs.getOrThrow(sink_input_item_name);
+        const sink_input = sink.machine.getInsertableInputOrThrow(sink_input_item_name);
         const minimum_required = sink_input.consumption_rate.amount_per_craft
         const automated_insertion_limit = sink_input.automated_insertion_limit.quantity;
         return EnableControl.latched({
             base: EnableControl.lambda(() => {
-                const sink_quantity = sink.inventoryState.getItemOrThrow(sink_input_item_name).quantity;
+                const sink_quantity = MachineState.insertableQuantity(sink, sink_input_item_name);
                 return sink_quantity <= minimum_required * buffer_multiplier
             }),
             release: EnableControl.lambda(() => {
-                const sink_quantity = sink.inventoryState.getItemOrThrow(sink_input_item_name).quantity;
+                const sink_quantity = MachineState.insertableQuantity(sink, sink_input_item_name);
                 return sink_quantity >= automated_insertion_limit
             })
         })
@@ -1128,6 +1234,19 @@ export class EnableControlFactory {
      * integer. This detects cases like copper=1/2 + gear=1/2 = 1 total that arise when
      * the user sets terminal_swing_count below the natural maximum value.
      */
+    /** The planned transfers of an inserter, which clock windows are made from */
+    private transferCountOf(inserter: Inserter) {
+        const transfer_count = this.entity_transfer_map.get(inserter.entity_id);
+        if (!transfer_count) {
+            const items = Array.from(inserter.filtered_items).join(", ");
+            throw new Error(
+                `Inserter ${inserter.entity_id.id.replace("inserter:", "")} (${inserter.source.entity_id.id} to ${inserter.sink.entity_id.id}, carrying ${items}) `
+                + `is missing from the transfer plan, so no clock windows can be made for it.`
+            );
+        }
+        return transfer_count;
+    }
+
     private hasFractionalPerItemTransfers(inserter: Inserter): boolean {
         const transfer_count = this.entity_transfer_map.get(inserter.entity_id);
         if (!transfer_count || transfer_count.item_transfers.length <= 1) {
@@ -1158,10 +1277,11 @@ export class EnableControlFactory {
     private findFinalInserters(): Set<InserterState> {
         const final_inserters = new Set<InserterState>();
         for (const terminal_machine of this.terminal_machine_states) {
+            const output_ids = new Set(outputInsertersOf(terminal_machine.machine, { getAll: () => this.entities }).map(it => it.entity_id.id));
             const inserters = this.entity_state_registry
                 .getAllStates()
                 .filter(EntityState.isInserter)
-                .filter(s => s.inserter.source.entity_id.id === terminal_machine.entity_id.id);
+                .filter(s => output_ids.has(s.entity_id.id));
             assert(
                 inserters.length >= 1,
                 `No inserter found taking output from terminal machine ${terminal_machine.entity_id.id}`

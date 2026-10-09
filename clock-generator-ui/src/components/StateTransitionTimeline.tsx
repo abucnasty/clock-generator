@@ -22,6 +22,7 @@ import type {
     SerializableClockWindows,
     SerializableStateTransitionHistory,
     SerializableEntityStateTransitions,
+    SerializableFactorioState,
     SerializableStateTransition,
     StatusCategory,
 } from 'clock-generator/browser';
@@ -31,6 +32,8 @@ import {
     getStatusColor,
     getCategoryColor,
     getStatusLabel,
+    getFactorioStateColor,
+    getFactorioStateLabel,
     getCategoryLabel,
     formatTransitionReason,
     CATEGORY_COLORS,
@@ -48,6 +51,9 @@ interface StateTransitionTimelineProps {
 
 const CLOCK_WINDOW_COLOR = '#ffffff';
 const CLOCK_WINDOW_LABEL = 'Clock window (decider on; the inserter reacts 2 ticks later)';
+
+/** The thin strip under each row that shows the state the entity would show in Factorio */
+const FACTORIO_STATE_STRIP_HEIGHT = 6;
 
 type ViewMode = 'detailed' | 'simplified';
 type SortMode = 'byType' | 'byRelationship';
@@ -193,6 +199,82 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
     );
 }
 
+interface FactorioStateStripProps {
+    states: SerializableFactorioState[];
+    totalDuration: number;
+    height: number;
+}
+
+/** The state the entity would show in Factorio, under the simulator's phases: the shared language with a recording */
+function FactorioStateStrip({ states, totalDuration, height }: FactorioStateStripProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [width, setWidth] = useState(0);
+    const [hovered, setHovered] = useState<SerializableFactorioState | null>(null);
+    const sorted = useMemo(() => [...states].sort((a, b) => a.tick - b.tick), [states]);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) {
+            return;
+        }
+        const observer = new ResizeObserver(([entry]) => setWidth(Math.floor(entry.contentRect.width)));
+        observer.observe(canvas);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const context = canvas?.getContext('2d');
+        if (!canvas || !context || width === 0) {
+            return;
+        }
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        context.clearRect(0, 0, width, height);
+        for (const state of sorted) {
+            const x = (state.tick / totalDuration) * width;
+            const w = Math.max((state.duration_ticks / totalDuration) * width, 1);
+            context.fillStyle = getFactorioStateColor(state.state);
+            context.fillRect(x, 0, w, height);
+        }
+    }, [sorted, totalDuration, width, height]);
+
+    const stateAt = useCallback((clientX: number): SerializableFactorioState | null => {
+        const canvas = canvasRef.current;
+        if (!canvas || width === 0) {
+            return null;
+        }
+        const tick = ((clientX - canvas.getBoundingClientRect().left) / width) * totalDuration;
+        let current: SerializableFactorioState | null = null;
+        for (const state of sorted) {
+            if (state.tick <= tick) {
+                current = state;
+            } else {
+                break;
+            }
+        }
+        return current;
+    }, [sorted, totalDuration, width]);
+
+    return (
+        <Tooltip
+            open={hovered !== null}
+            title={hovered ? `Factorio: ${getFactorioStateLabel(hovered.state)}, tick ${hovered.tick} for ${hovered.duration_ticks} ticks` : ''}
+            placement="bottom"
+            arrow
+        >
+            <canvas
+                ref={canvasRef}
+                style={{ width: '100%', height, display: 'block' }}
+                onMouseMove={event => setHovered(stateAt(event.clientX))}
+                onMouseLeave={() => setHovered(null)}
+            />
+        </Tooltip>
+    );
+}
+
 interface EntityRowProps {
     entity: SerializableEntityStateTransitions;
     totalDuration: number;
@@ -317,10 +399,15 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                 <TimelineBar
                     transitions={entity.transitions}
                     totalDuration={totalDuration}
-                    height={rowHeight - 4}
+                    height={rowHeight - 4 - FACTORIO_STATE_STRIP_HEIGHT}
                     entityType={entity.entity_type}
                     viewMode={viewMode}
                     isFiltered={isTransitionFiltered}
+                />
+                <FactorioStateStrip
+                    states={entity.factorio_states ?? []}
+                    totalDuration={totalDuration}
+                    height={FACTORIO_STATE_STRIP_HEIGHT}
                 />
                 {clockWindows.map(window => (
                     <Box
@@ -446,7 +533,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
     const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
     const [statusFilterAnchorEl, setStatusFilterAnchorEl] = useState<null | HTMLElement>(null);
 
-    const rowHeight = 24;
+    const rowHeight = 30;
     const totalDuration = stateTransitionHistory.total_duration_ticks;
 
     // Filter entities

@@ -2,14 +2,19 @@ import assert from "../../../common/assert";
 import Fraction, { fraction } from "fractionability";
 import { Duration } from "../../../data-types/duration";
 import { TargetProductionRate } from "../../target-production-rate";
-import { EntityTransferCountMap } from "./swing-counts";
-import { Entity, ReadableEntityRegistry } from "../../../entities";
+import { EntityTransferCountMap, outputInsertersOf } from "./swing-counts";
+import { Entity, handSizeFor, ReadableEntityRegistry } from "../../../entities";
 import { ConfigOverrides } from "../../../config";
 import { SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 
 export interface CraftingCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
     readonly total_duration: Duration;
+    /**
+     * The same duration in ticks as the fraction it is: a hand over the rate, times the swings of a cycle. A whole
+     * number of cycles is multiplied from this (see ticksOfCycles), not from the rounded `total_duration`.
+     */
+    readonly total_duration_ticks: Fraction;
     /** Map of entity IDs to their transfer counts per base cycle */
     readonly entity_transfer_map: EntityTransferCountMap;
     /** Target production rate configuration */
@@ -42,6 +47,16 @@ export interface CraftingCyclePlan {
 export const CraftingCyclePlan = {
     create: createPlan,
     print: print,
+    ticksOfCycles: ticksOfCycles,
+}
+
+/**
+ * Ticks that a whole number of base cycles last, which is how a clock period is made (the cycles of the ingredient
+ * LCM). Multiplied as a fraction: 25 cycles of 115.2 ticks are 2880 ticks, where 19.2 * 6 * 25 in floating point is
+ * 2879.9999999999995, which is no whole number of ticks to anything that asks.
+ */
+function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cycles: number): number {
+    return plan.total_duration_ticks.multiply(cycles).toDecimal();
 }
 
 function createPlan(
@@ -63,10 +78,7 @@ function createPlan(
 
     // Find output inserters for each output machine
     const output_inserters = output_machines.map(machine => {
-        const inserter = entity_registry
-            .getAll()
-            .filter(Entity.isInserter)
-            .find(inserter => inserter.source.entity_id.id === machine.entity_id.id);
+        const inserter = outputInsertersOf(machine, entity_registry)[0];
         assert(
             inserter !== undefined, 
             `No inserter found that takes output from machine ${machine.entity_id.id}`
@@ -75,12 +87,13 @@ function createPlan(
     });
 
     // All output inserters should have the same stack size for consistent cycle timing
-    const output_stack_size = output_inserters[0].metadata.stack_size;
+    const output_item = target_production_rate.machine_production_rate.item;
+    const output_stack_size = handSizeFor(output_inserters[0], output_item);
     for (const inserter of output_inserters) {
         assert(
-            inserter.metadata.stack_size === output_stack_size,
+            handSizeFor(inserter, output_item) === output_stack_size,
             `All output inserters must have the same stack size. ` +
-            `Expected ${output_stack_size} but found ${inserter.metadata.stack_size} on inserter for machine ${inserter.source.entity_id.id}`
+            `Expected ${output_stack_size} but found ${handSizeFor(inserter, output_item)} on inserter for machine ${inserter.source.entity_id.id}`
         );
     }
 
@@ -94,11 +107,7 @@ function createPlan(
     const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick
         .divide(num_output_machines);
     
-    const single_swing_period_duration = Duration.ofTicks(
-        fraction(output_stack_size)
-            .divide(per_machine_rate)
-            .toDecimal()
-    )
+    const single_swing_period_ticks = fraction(output_stack_size).divide(per_machine_rate);
 
     const use_fractional_swings = config_overrides.use_fractional_swings ?? false;
     
@@ -132,7 +141,9 @@ function createPlan(
         swings_per_cycle = fraction(swings_per_single_cycle);
     }
 
-    const final_period_duration = Duration.ofTicks(single_swing_period_duration.ticks * swings_per_cycle.toDecimal())
+    // kept as a fraction: the product of the two as floating point numbers can miss a whole number of ticks
+    const final_period_ticks = single_swing_period_ticks.multiply(swings_per_cycle);
+    const final_period_duration = Duration.ofTicks(final_period_ticks.toDecimal())
 
     // Compute swing counts for all output machines
     // Each output machine handles the same swing count per machine
@@ -158,6 +169,7 @@ function createPlan(
 
             return {
                 total_duration: final_period_duration,
+                total_duration_ticks: final_period_ticks,
                 entity_transfer_map: swing_counts.clone(),
                 production_rate: target_production_rate,
                 fractional_swings_enabled: true,
@@ -170,6 +182,7 @@ function createPlan(
 
     return {
         total_duration: final_period_duration,
+        total_duration_ticks: final_period_ticks,
         entity_transfer_map: swing_counts.clone(),
         production_rate: target_production_rate,
         fractional_swings_enabled: false,

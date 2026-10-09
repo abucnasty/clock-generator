@@ -1,11 +1,14 @@
 import { BlueprintWire, Entity, EntityWithId, Icon, Wire, WireConnection } from "./components";
 import { entityWithId } from "./entity/entity-with-id";
 
-const FACTORIO_VERSION: number = 562949958139904;
+/** Factorio 2.1.0: the else outputs of a decider combinator, which clocks need, come with 2.1 */
+const FACTORIO_VERSION: number = 562954248388608;
 
 export type FactorioBlueprint = {
     item: "blueprint";
     label: string;
+    /** Shown under the label in the blueprint library; rich text such as [item=iron-plate] is rendered */
+    description?: string;
     entities: EntityWithId[];
     icons: Icon[];
     wires: BlueprintWire[];
@@ -60,6 +63,11 @@ export class BlueprintBuilder {
         return this;
     }
 
+    public setDescription(description: string): BlueprintBuilder {
+        this.blueprint.description = description;
+        return this;
+    }
+
     public setEntities(entities: Entity[]): BlueprintBuilder {
         this.entityNumbers = new Map(entities.map((it, index) => [it, index + 1]));
         this.blueprint.entities = entities.map((it, index) => entityWithId(it, index + 1));
@@ -88,6 +96,7 @@ export class BlueprintBuilder {
         return {
             item: "blueprint",
             label: this.blueprint.label || "Blueprint",
+            ...(this.blueprint.description ? { description: this.blueprint.description } : {}),
             entities: this.blueprint.entities || [],
             icons: this.blueprint.icons || [],
             wires: this.wires.map(wire => Wire.toBlueprintWire(wire, entityNumber)),
