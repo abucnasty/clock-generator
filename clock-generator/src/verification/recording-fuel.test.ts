@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseRecording } from "./recording";
-import { machineStatuses } from "./recording-history";
+import { expandChangeList } from "./recording";
+import { FactorioMachineState, MachineStatus } from "../state";
+import { factorioMachineState } from "../state/factorio-entity-state";
 
 const recording = (machine_samples: object) => ({
     format: "clock-generator-recording",
@@ -41,8 +43,9 @@ describe("recordings of burner machines", () => {
         expect(parsed.machines[0].samples.fuel).toBeUndefined();
     });
 
-    it("counts a machine out of fuel as waiting, like the simulator", () => {
+    it("names a machine out of fuel as the game does, so a recording compares directly", () => {
         const parsed = parseRecording(recording({}));
-        expect(machineStatuses(parsed.machines[0], 4)).toEqual(["WORKING", "WORKING", "INGREDIENT_SHORTAGE", "INGREDIENT_SHORTAGE"]);
+        expect(expandChangeList(parsed.machines[0].samples.status, 4, "none")).toEqual(["working", "working", "no_fuel", "no_fuel"]);
+        expect(factorioMachineState({ status: MachineStatus.NO_FUEL } as never)).toBe(FactorioMachineState.NO_FUEL);
     });
 });

@@ -313,7 +313,7 @@ describe("Machine State Machine with a fuel slot", () => {
     test("does not start a craft, or consume its ingredients, without fuel", () => {
         const { machine_state, state_machine } = createBiochamberState(8, 0)
         run(machine_state, state_machine, 300)
-        expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+        expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         expect(machine_state.craftCount).toBe(0)
         expect(machine_state.inventoryState.getQuantity("yumako-mash")).toBe(8)
     })
@@ -323,7 +323,43 @@ describe("Machine State Machine with a fuel slot", () => {
         run(machine_state, state_machine, 600)
         expect(machine_state.craftCount).toBe(2)
         expect(machine_state.fuelInventory.getQuantity("nutrients")).toBe(0)
+        expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
+    })
+
+    test("a machine with ingredients and no fuel is out of fuel, not short of ingredients", () => {
+        const { machine_state, state_machine } = createBiochamberState(8, 0)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
+    })
+
+    test("works on the tick after an inserter drops fuel in", () => {
+        const { machine_state, state_machine } = createBiochamberState(8, 0)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
+        MachineState.insertItem(machine_state, "nutrients", 1)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.WORKING)
+        // a craft started once the machine had fuel to burn
+        run(machine_state, state_machine, 120)
+        expect(machine_state.craftCount).toBe(1)
+    })
+
+    test("a machine with fuel and no ingredients is short of ingredients, not out of fuel", () => {
+        const { machine_state, state_machine } = createBiochamberState(0, 1)
+        executeControlLogicForTicks(state_machine, 1)
         expect(machine_state.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+    })
+
+    test("is out of fuel before it is output full", () => {
+        // an idle machine with its output at the block shows full output, unless it has no fuel
+        const { machine_state, state_machine } = createBiochamberState(0, 0)
+        machine_state.inventoryState.setQuantity("nutrients", machine_state.machine.output.outputBlock.quantity)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
+        // with fuel, the full output is what stops it
+        MachineState.insertItem(machine_state, "nutrients", 1)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.status).toBe(MachineStatus.OUTPUT_FULL)
     })
 
     test("a craft in progress waits for fuel and resumes where it stopped", () => {

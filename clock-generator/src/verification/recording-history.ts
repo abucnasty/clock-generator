@@ -83,18 +83,3 @@ export function extractTransfers(inserter: RecordedInserter, clock: number[]): R
     return transfers;
 }
 
-const FACTORIO_TO_SIM_MACHINE_STATUS: Record<string, MachineStatus> = {
-    working: MachineStatus.WORKING,
-    item_ingredient_shortage: MachineStatus.INGREDIENT_SHORTAGE,
-    fluid_ingredient_shortage: MachineStatus.INGREDIENT_SHORTAGE,
-    no_ingredients: MachineStatus.INGREDIENT_SHORTAGE,
-    // the simulator has no separate status for a burner machine out of fuel
-    no_fuel: MachineStatus.INGREDIENT_SHORTAGE,
-    full_output: MachineStatus.OUTPUT_FULL,
-};
-
-/** Simulator machine status per sample; unmapped Factorio statuses are kept as-is */
-export function machineStatuses(machine: RecordedMachine, sample_count: number): string[] {
-    return expandChangeList(machine.samples.status, sample_count, "none")
-        .map(status => FACTORIO_TO_SIM_MACHINE_STATUS[status] ?? status);
-}

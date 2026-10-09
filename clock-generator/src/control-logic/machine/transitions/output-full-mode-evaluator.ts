@@ -1,6 +1,6 @@
 import { MachineState } from "../../../state";
 import { ModeTransitionEvaluator, ModeTransition } from "../../mode";
-import { MachineIngredientShortageMode, MachineMode, MachineWorkingMode } from "../modes";
+import { MachineIngredientShortageMode, MachineMode, MachineNoFuelMode, MachineWorkingMode } from "../modes";
 
 /**
  * Full output is only the status of a machine that cannot craft: it works again as soon as a craft can start,
@@ -12,6 +12,7 @@ export class OutputFullModeTransitionEvaluator implements ModeTransitionEvaluato
         private readonly machine_state: MachineState,
         private readonly working_mode: MachineWorkingMode,
         private readonly ingredient_shortage_mode: MachineIngredientShortageMode,
+        private readonly no_fuel_mode: MachineNoFuelMode,
     ) {}
 
     public onEnter(fromMode: MachineMode): void {}
@@ -19,6 +20,10 @@ export class OutputFullModeTransitionEvaluator implements ModeTransitionEvaluato
     public onExit(toMode: MachineMode): void {}
 
     public evaluateTransition(): ModeTransition<MachineMode> {
+        // a burner with nothing to burn is out of fuel before its output is full, as in the game
+        if (this.working_mode.isOutOfFuel()) {
+            return ModeTransition.transition(this.no_fuel_mode, "machine has no fuel to burn");
+        }
         if (this.working_mode.hasEnoughInputsForCraft()) {
             return ModeTransition.transition(this.working_mode, "machine has enough inputs and room for a craft");
         }
