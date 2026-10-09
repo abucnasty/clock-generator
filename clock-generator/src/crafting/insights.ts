@@ -26,6 +26,14 @@ export interface ClockInsight {
     explanation: string;
     /** The numbers behind the text */
     table?: { columns: string[]; rows: string[][] };
+    /** Drop ticks of the plan and of the exported clock per inserter, for drawing them against each other */
+    swing_comparison?: SwingComparison;
+}
+
+export interface SwingComparison {
+    /** Length of the compared run in ticks */
+    period: number;
+    inserters: { label: string; planned: number[]; clocked: number[] }[];
 }
 
 /** Drop ticks further apart than this between the plan and the clock-only run count as a different swing */
@@ -247,6 +255,10 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
         table: {
             columns: ["Inserter", "Plan drops at", "Exported clock drops at"],
             rows: differing.map(it => [it.label, ticksList(it.planned), ticksList(it.clocked)]),
+        },
+        swing_comparison: {
+            period: Math.max(plan.total_duration_ticks, clock_only.total_duration_ticks),
+            inserters: differing.map(({ label, planned, clocked }) => ({ label, planned, clocked })),
         },
     };
 }
