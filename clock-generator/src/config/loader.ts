@@ -1,4 +1,3 @@
-import { parse as parseHocon, HoconParseOptions } from "@pushcorn/hocon-parser";
 import { ZodError } from "zod";
 import { ChestType } from "../common/entity-types";
 import { Config, ConfigSchema } from "./schema";
@@ -11,11 +10,11 @@ import * as path from "path";
 // ============================================================================
 
 /**
- * Options for parsing HOCON configuration.
+ * Options for parsing JSON configuration.
  */
 export interface ConfigLoaderOptions {
     /**
-     * Whether to allow HOCON include directives.
+     * Whether to allow JSON include directives.
      * 
      * - `true` (default for Node.js): Enables include directives for splitting
      *   large configs across multiple files.
@@ -75,70 +74,45 @@ export const NodeFileReader: ConfigFileReader = {
 // ============================================================================
 
 /**
- * Parse a HOCON string and validate it against the Config schema.
- * 
- * @param hoconString - The HOCON configuration as a string
- * @param options - Optional parsing options
+ * Parse a JSON string and validate it against the Config schema.
+ *
+ * @param jsonString - The configuration as a JSON string
+ * @param options - Loader options (kept for callers; nothing to configure for JSON)
  * @returns The validated Config object
- * @throws {ConfigValidationError} If the configuration is invalid
- * @throws {Error} If HOCON parsing fails
- * 
- * @example
- * ```typescript
- * const config = await parseConfig(`
- *   target_output {
- *     recipe = "electronic-circuit"
- *     items_per_second = 1.5
- *     machines = 2
- *   }
- *   machines = []
- *   inserters = []
- *   belts = []
- * `);
- * ```
+ * @throws {ConfigValidationError} If the configuration does not match the schema
+ * @throws {Error} If the string is not JSON
  */
 export async function parseConfig(
-    hoconString: string,
+    jsonString: string,
     options: ConfigLoaderOptions = {}
 ): Promise<Config> {
-    const { allowIncludes = true } = options;
-
-    // Build HOCON parser options
-    const hoconOptions: HoconParseOptions = {
-        text: hoconString
-    };
-
-    // Note: The @pushcorn/hocon-parser uses the `url` option for resolving includes.
-    // When parsing from text without includes, we don't need to set it.
-    // If includes are needed, the caller should use loadConfigFromFile which
-    // handles the file reading and include resolution.
-
-    // Parse HOCON to plain object
-    const parsed = await parseHocon(hoconOptions);
-
+    void options;
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(jsonString);
+    } catch (error) {
+        throw new Error(`Config is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
     // Normalize config for backwards compatibility
     const normalized = normalizeConfig(parsed);
 
-    // Validate against schema
     const result = ConfigSchema.safeParse(normalized);
-
     if (!result.success) {
         throw new ConfigValidationError(result.error);
     }
-
     return result.data;
 }
 
 /**
- * Parse a HOCON string and return a result object instead of throwing.
+ * Parse a JSON string and return a result object instead of throwing.
  * 
- * @param hoconString - The HOCON configuration as a string
+ * @param jsonString - The JSON configuration as a string
  * @param options - Optional parsing options
  * @returns A result object indicating success or failure
  * 
  * @example
  * ```typescript
- * const result = await parseConfigSafe(hoconString);
+ * const result = await parseConfigSafe(jsonString);
  * if (result.success) {
  *   console.log(result.config);
  * } else {
@@ -147,17 +121,17 @@ export async function parseConfig(
  * ```
  */
 export async function parseConfigSafe(
-    hoconString: string,
+    jsonString: string,
     options: ConfigLoaderOptions = {}
 ): Promise<ConfigParseResult> {
     try {
-        const config = await parseConfig(hoconString, options);
+        const config = await parseConfig(jsonString, options);
         return { success: true, config };
     } catch (error) {
         if (error instanceof ConfigValidationError) {
             return { success: false, error };
         }
-        // Re-wrap other errors (HOCON parse errors) as validation errors
+        // Re-wrap other errors (JSON parse errors) as validation errors
         if (error instanceof ZodError) {
             return { success: false, error: new ConfigValidationError(error) };
         }
@@ -170,18 +144,18 @@ export async function parseConfigSafe(
 // ============================================================================
 
 /**
- * Load and parse a HOCON configuration file.
+ * Load and parse a JSON configuration file.
  * 
- * @param filePath - Absolute or relative path to the HOCON file
+ * @param filePath - Absolute or relative path to the JSON file
  * @param options - Optional parsing options
  * @param fileReader - Optional custom file reader (defaults to Node.js fs)
  * @returns The validated Config object
  * @throws {ConfigValidationError} If the configuration is invalid
- * @throws {Error} If file reading or HOCON parsing fails
+ * @throws {Error} If file reading or JSON parsing fails
  * 
  * @example
  * ```typescript
- * const config = await loadConfigFromFile("./config/production.conf");
+ * const config = await loadConfigFromFile("./config/production.json");
  * ```
  */
 export async function loadConfigFromFile(
@@ -199,9 +173,9 @@ export async function loadConfigFromFile(
 }
 
 /**
- * Load and parse a HOCON configuration file, returning a result object.
+ * Load and parse a JSON configuration file, returning a result object.
  * 
- * @param filePath - Path to the HOCON file
+ * @param filePath - Path to the JSON file
  * @param options - Optional parsing options
  * @param fileReader - Optional custom file reader
  * @returns A result object indicating success or failure
@@ -247,17 +221,17 @@ export function createBrowserConfigLoader(
 ) {
     return {
         /**
-         * Parse a HOCON string. Includes are disabled by default in browser.
+         * Parse a JSON string. Includes are disabled by default in browser.
          */
-        async parse(hoconString: string): Promise<Config> {
-            return parseConfig(hoconString, { allowIncludes: false });
+        async parse(jsonString: string): Promise<Config> {
+            return parseConfig(jsonString, { allowIncludes: false });
         },
 
         /**
-         * Parse a HOCON string, returning a result object.
+         * Parse a JSON string, returning a result object.
          */
-        async parseSafe(hoconString: string): Promise<ConfigParseResult> {
-            return parseConfigSafe(hoconString, { allowIncludes: false });
+        async parseSafe(jsonString: string): Promise<ConfigParseResult> {
+            return parseConfigSafe(jsonString, { allowIncludes: false });
         },
 
         /**

@@ -40,7 +40,6 @@ interface ConfigImportExportProps {
     onReplaceChests: (chests: ChestConfiguration[]) => void;
     onUpdateMiningProductivityLevel: (level: number) => void;
     onReset: () => void;
-    parseConfig: (content: string) => Promise<Config>;
 }
 
 export function ConfigImportExport({
@@ -53,7 +52,6 @@ export function ConfigImportExport({
     onReplaceChests,
     onUpdateMiningProductivityLevel,
     onReset,
-    parseConfig,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [snackbar, setSnackbar] = useState<{
@@ -107,14 +105,7 @@ export function ConfigImportExport({
             try {
                 const content = await file.text();
                 
-                // Try to parse as JSON first
-                let parsedConfig: Config;
-                try {
-                    parsedConfig = JSON.parse(content) as Config;
-                } catch {
-                    // If JSON parse fails, try as HOCON
-                    parsedConfig = await parseConfig(content);
-                }
+                const parsedConfig = JSON.parse(content) as Config;
 
                 onImport(parsedConfig);
                 setSnackbar({
@@ -134,7 +125,7 @@ export function ConfigImportExport({
             // Reset the input so the same file can be imported again
             event.target.value = '';
         },
-        [onImport, parseConfig]
+        [onImport]
     );
 
     const handleSnackbarClose = useCallback(() => {
@@ -450,7 +441,7 @@ export function ConfigImportExport({
             <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json,.conf"
+                accept=".json"
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
             />

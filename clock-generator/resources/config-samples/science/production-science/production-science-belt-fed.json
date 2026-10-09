@@ -1,0 +1,141 @@
+{
+  "belts": [
+    {
+      "id": 1,
+      "lanes": [
+        {
+          "ingredient": "productivity-module",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "electric-furnace",
+          "stack_size": 4
+        }
+      ],
+      "type": "turbo-transport-belt"
+    }
+  ],
+  "drills": {
+    "configs": [
+      {
+        "id": 1,
+        "mined_item_name": "stone",
+        "speed_bonus": 8.84,
+        "target": {
+          "id": 2,
+          "type": "machine"
+        },
+        "type": "electric-mining-drill"
+      }
+    ],
+    "mining_productivity_level": 8000
+  },
+  "inserters": [
+    {
+      "filters": [
+        "production-science-pack"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "belt"
+      },
+      "source": {
+        "id": 1,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "productivity-module"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "machine"
+      },
+      "source": {
+        "id": 1,
+        "type": "belt"
+      },
+      "stack_size": 16
+    },
+    {
+      "filters": [
+        "electric-furnace"
+      ],
+      "sink": {
+        "id": 1,
+        "type": "machine"
+      },
+      "source": {
+        "id": 1,
+        "type": "belt"
+      },
+      "stack_size": 16
+    },
+    {
+      "sink": {
+        "id": 1,
+        "type": "machine"
+      },
+      "source": {
+        "id": 2,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "sink": {
+        "id": 2,
+        "type": "machine"
+      },
+      "source": {
+        "id": 3,
+        "type": "machine"
+      },
+      "stack_size": 16
+    },
+    {
+      "sink": {
+        "id": 2,
+        "type": "machine"
+      },
+      "source": {
+        "id": 4,
+        "type": "machine"
+      },
+      "stack_size": 16
+    }
+  ],
+  "machines": [
+    {
+      "crafting_speed": 63,
+      "id": 1,
+      "productivity": 100,
+      "recipe": "production-science-pack"
+    },
+    {
+      "crafting_speed": 46.375,
+      "id": 2,
+      "productivity": 0,
+      "recipe": "rail"
+    },
+    {
+      "crafting_speed": 122.5,
+      "id": 3,
+      "productivity": 300,
+      "recipe": "casting-steel"
+    },
+    {
+      "crafting_speed": 66.5,
+      "id": 4,
+      "productivity": 150,
+      "recipe": "casting-iron-stick"
+    }
+  ],
+  "target_output": {
+    "copies": 7,
+    "items_per_second": 120,
+    "recipe": "production-science-pack"
+  }
+}
