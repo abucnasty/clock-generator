@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json`, `clock-generator-ui/package.json` and the sidecar mod (`clock-generator-sidecar/info.json`) share the same version; see Versioning in the README.
 From 0.6.0 on, each release lists what people generating clocks will notice under "User facing" and what only matters to working on the generator, such as the recorder, the harness and the samples, under "Development tooling".
 
-## [Unreleased]
-
 ## [0.6.0] - 2026-10-08
 
 ### User facing
