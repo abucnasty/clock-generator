@@ -73,6 +73,8 @@ export interface ClockAlternativeView {
     description: string;
     inserterWindowCount: number;
     isStable: boolean;
+    /** Ranked ahead of the other stable alternatives (full-hand output swings where a machine has spare speed) */
+    rankFirst: boolean;
     itemsPerSecond: number;
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;

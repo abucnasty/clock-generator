@@ -104,6 +104,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         description: alternative.description,
         inserterWindowCount: alternative.inserter_window_count,
         isStable: alternative.is_stable,
+        rankFirst: alternative.rank_first,
         itemsPerSecond: alternative.items_per_second,
         asBuilt: result.stability_check.as_built ?? null,
         expectedOutputItems: result.stability_check.expected_output_items,

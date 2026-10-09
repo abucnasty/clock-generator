@@ -212,6 +212,7 @@ export {
 export {
     SerializableStateTransitionHistory,
     SerializableEntityStateTransitions,
+    SerializableFactorioState,
     SerializableStateTransition,
     serializeStateTransitionHistory,
 } from './crafting/sequence/state-transition-serializer';

@@ -156,7 +156,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore]);
 
     const publishAlternatives = useCallback((generation: Generation) => {
-        const combined = combineClockAlternativeRuns!(generation.runs, it => it.isStable, it => it.inserterWindowCount);
+        const combined = combineClockAlternativeRuns!(generation.runs, it => it.isStable, it => it.inserterWindowCount, it => it.rankFirst);
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
