@@ -6,7 +6,7 @@ import { encodeBlueprintFile } from "../blueprints/serde";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { generateClockAlternatives } from "../crafting/generate-blueprint";
-import { recordInFactorio, Seed } from "./factorio-harness";
+import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "./factorio-harness";
 import { outputPerPeriod, recipesMaking } from "./recording-output";
 
 /**
@@ -15,10 +15,12 @@ import { outputPerPeriod, recipesMaking } from "./recording-output";
  */
 const FACTORIO = process.env.FACTORIO_PATH;
 const SAVE = process.env.FACTORIO_HARNESS_SAVE;
-/** Open each run with graphics, joined as a spectator, at a speed fast enough to move quickly but still easy to follow; set by `npm run test:game:watch` */
+/** Also open the game with graphics, joined as a spectator, and run the builds in it at a speed that can be followed; set by `npm run test:game:watch` */
 const WATCH = !!process.env.FACTORIO_HARNESS_WATCH;
-/** Capped well under the 1000 headless runs at: remote play can't keep up with the game rendering that fast */
-const WATCH_SPEED = 64;
+/** As fast as the machine allows */
+const UNWATCHED_SPEED = 1000;
+/** Well under that: remote play can't keep up with the game rendering that fast */
+const WATCH_SPEED = 1;
 const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executable or install folder"
     : !SAVE ? "FACTORIO_HARNESS_SAVE is not set to a save with a place to build in"
     : !fs.existsSync(SAVE) ? `the save FACTORIO_HARNESS_SAVE names does not exist: ${SAVE}`
@@ -84,14 +86,41 @@ const BUILDS: Record<string, ScaffoldBuild> = {
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 let scratch: string | null = null;
+/** The one game the builds are watched in, each built in the place of the one before it */
+let session: HarnessSession | null = null;
 
-afterAll(() => {
+/**
+ * Records a build. Unwatched, in a game of its own, so it starts from the save as it is. Watched, in one game for
+ * all builds, so there is one window to look at and the game with graphics is started once.
+ */
+async function record(options: HarnessOptions): Promise<HarnessResult> {
+    if (!WATCH) {
+        return recordInFactorio(options);
+    }
+    const first = session === null;
+    session ??= await HarnessSession.start(options);
+    try {
+        // The first build sets the speed to watch at; the next ones leave it as whoever watches has set it since. Once
+        // the window is closed nobody is looking, and the builds left go as fast as they do unwatched.
+        const game_speed = !session.watched ? UNWATCHED_SPEED : first ? WATCH_SPEED : undefined;
+        return await session.record({ ...options, game_speed });
+    } catch (error) {
+        // a game that failed a build is in no state to take the next one, which starts a game of its own
+        await session.close(true);
+        session = null;
+        throw error;
+    }
+}
+
+// the game with graphics takes a few seconds to close
+afterAll(async () => {
+    await session?.close();
     if (scratch) {
         fs.rmSync(scratch, { recursive: true, force: true });
     }
-});
+}, 60_000);
 
-// one Factorio at a time: each test waits for its own recording before the next starts
+// one build at a time: each test waits for its own recording before the next starts
 describe.sequential("the selected clock holds the target rate in Factorio", () => {
     for (const [name, build] of Object.entries(BUILDS)) {
         test(`one copy of the ${name} build moves the expected output every clock period`, async context => {
@@ -112,7 +141,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
             const expected = config.target_output.items_per_second / config.target_output.copies * period / 60;
             const clock = encodeBlueprintFile({ blueprint: subtick?.blueprint ?? selected.result.blueprint });
-            const result = await recordInFactorio({
+            const result = await record({
                 factorio: FACTORIO!,
                 save: SAVE!,
                 blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
@@ -124,7 +153,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 clock,
                 config,
                 unclocked: false,
-                game_speed: WATCH ? WATCH_SPEED : 1000,
+                game_speed: UNWATCHED_SPEED,
                 watch: WATCH,
                 timeout_seconds: WATCH ? 3600 : 900,
                 log: () => { },

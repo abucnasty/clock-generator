@@ -71,6 +71,8 @@ From 0.6.0 on, each release lists what people generating clocks will notice unde
 - A build whose inserters carry no filters is matched to a config whose inserters name their items, so a scaffold needs no filters set to be recorded.
 - Game-backed tests, `npm run test:game`: with `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE` set, the agricultural science, automation science and belted buffer scaffold builds are recorded in a headless Factorio and the selected clock must move the expected output in every clock period. They are not part of `npm test`.
 - Recorder mod 0.6.0: belt pieces joined to each other, through undergrounds and splitters too, are described as one belt. A lane that had run dry under one inserter used to split a belt, and an inserter over an empty piece was put on the first belt.
+- `npm run test:game` reads `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE` from `clock-generator/.env` (see `.env.example`); the save it builds in is committed as `resources/clock_generator_staging.zip`.
+- `npm run test:game:watch` runs the game-backed tests with the game open to watch them: all builds in one game, each built in the place of the one before it (recorder mod `harness_clear`), at a speed that can be followed. Whoever watches a run is an admin of the game, so they can set its speed or open the editor, has alt mode on, and always sees the FPS/UPS counter and the wake-up lists.
 
 #### Changed
 - Verify lays a recorded swing against the windows one tick earlier than the clock it was recorded at, the tick the lock filter between the clock and the inserters' combinators takes.

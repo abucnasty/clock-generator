@@ -68,6 +68,10 @@ remote.add_interface("clock-generator-recorder", {
         return helpers.table_to_json(report)
     end,
     ---@return string
+    harness_clear = function()
+        return helpers.table_to_json(harness.clear())
+    end,
+    ---@return string
     harness_describe = function()
         return helpers.table_to_json(harness.describe())
     end,
