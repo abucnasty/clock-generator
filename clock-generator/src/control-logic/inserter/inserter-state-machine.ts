@@ -50,11 +50,12 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
      */
     private shownEnabled(): boolean {
         const control = this.enable_control;
-        if (control === undefined) {
-            return true;
+        // an inserter in its disabled mode was asked this tick and stayed there
+        if (this.inserter_state.status === InserterStatus.DISABLED) {
+            return false;
         }
-        if (control.isEnabledIn === undefined) {
-            return this.inserter_state.status !== InserterStatus.DISABLED;
+        if (control?.isEnabledIn === undefined) {
+            return true;
         }
         return control.isEnabledIn(0) && control.isEnabledIn(1);
     }

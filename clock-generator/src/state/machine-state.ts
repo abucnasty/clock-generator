@@ -233,11 +233,20 @@ function machineInputIsBlocked(machineState: MachineState, ingredientName: strin
  */
 function takesNothing(machineState: MachineState): boolean {
     const machine = machineState.machine;
-    const items = Array.from(machine.inputs.values(), input => input.item_name);
-    if (machine.fuel_slot) {
-        items.push(machine.fuel_slot.fuel.item_name);
+    // asked for every waiting inserter every tick: the same answer as machineInputIsBlocked for each item it takes,
+    // without asking item by item
+    if (machine.fuel_slot && fuelIsBelowLimit(machineState)) {
+        return false;
     }
-    return items.every(item_name => machineInputIsBlocked(machineState, item_name));
+    if (machineIsOutputBlocked(machineState)) {
+        return true;
+    }
+    for (const input of machine.inputs.values()) {
+        if (ingredientQuantity(machineState, input.ingredient.name) < input.automated_insertion_limit.quantity) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function machineIsOutputBlocked(machineState: MachineState): boolean {

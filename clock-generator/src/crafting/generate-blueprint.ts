@@ -347,6 +347,11 @@ export interface GenerateClockOptions {
     fuel_levels?: boolean;
     /** Record what every machine and inserter holds after each tick of the run (default false) */
     machine_stock?: boolean;
+    /**
+     * Record the state the game would show for every entity over the run, for its timelines (default true). A check
+     * run whose histories nobody reads leaves it out: working the state out for every entity every tick takes time.
+     */
+    factorio_states?: boolean;
     /** Also build the modulo-clock blueprint (default true; internal check runs never export it) */
     modulo_blueprint?: boolean;
     /** Called as generateClockAlternatives moves through its alternatives and their sub-steps */
@@ -407,7 +412,7 @@ export function generateClockForConfig(
     // Configure plugins
     configureDebugPlugins(simulation_context, relative_tick_provider, debug);
     const inventory_transfer_history = configureInventoryTransferPlugins(simulation_context, relative_tick_provider);
-    const state_transition_history = configureStateTransitionPlugins(simulation_context, relative_tick_provider);
+    const state_transition_history = configureStateTransitionPlugins(simulation_context, relative_tick_provider, options.factorio_states ?? true);
     inventory_transfer_history.recording = false;
     state_transition_history.recording = false;
 
@@ -2157,7 +2162,8 @@ function longRunOfFreeRunningBuild(
     if (periods <= 1) {
         return null;
     }
-    const run = generateClockForConfig(buildAsBuiltConfig(config, decider_windows, period), { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods, machine_stock: true });
+    // only its stock is read, which names the state of every inserter itself
+    const run = generateClockForConfig(buildAsBuiltConfig(config, decider_windows, period), { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods, machine_stock: true, factorio_states: false });
     const stock = run.machine_stock;
     if (!stock) {
         return null;
@@ -2250,7 +2256,8 @@ function runAsBuiltCheck(
 
     for (let offset = step; offset < period && check.start_phases_checked < start_phases; offset += step) {
         const rotated = new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const));
-        const shifted = generateClockForConfig(buildAsBuiltConfig(config, rotated, period), NESTED_RUN_OPTIONS(logger));
+        // only its output count is read
+        const shifted = generateClockForConfig(buildAsBuiltConfig(config, rotated, period), { ...NESTED_RUN_OPTIONS(logger), factorio_states: false });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
         if (!shifted.stability_check.is_stable) {
@@ -3626,7 +3633,8 @@ function configureInventoryTransferPlugins(
  */
 function configureStateTransitionPlugins(
     simulation_context: SimulationContext,
-    relative_tick_provider: TickProvider
+    relative_tick_provider: TickProvider,
+    factorio_states: boolean,
 ): StateTransitionHistory {
     const state_transition_history = new StateTransitionHistory();
     const inserter_transition_callback = state_transition_history.createInserterCallback();
@@ -3640,12 +3648,14 @@ function configureStateTransitionPlugins(
             relative_tick_provider,
             inserter_transition_callback
         ));
-        it.addPlugin(new FactorioStatePlugin(
-            it.inserter_state.entity_id,
-            relative_tick_provider,
-            () => factorioInserterState(it.inserter_state, it.sink_state),
-            state_transition_history.createFactorioStateCallback("inserter"),
-        ));
+        if (factorio_states) {
+            it.addPlugin(new FactorioStatePlugin(
+                it.inserter_state.entity_id,
+                relative_tick_provider,
+                () => factorioInserterState(it.inserter_state, it.sink_state),
+                state_transition_history.createFactorioStateCallback("inserter"),
+            ));
+        }
     });
 
     // Add machine state transition plugins
@@ -3655,12 +3665,14 @@ function configureStateTransitionPlugins(
             relative_tick_provider,
             machine_transition_callback
         ));
-        it.addPlugin(new FactorioStatePlugin(
-            it.machine_state.entity_id,
-            relative_tick_provider,
-            () => factorioMachineState(it.machine_state),
-            state_transition_history.createFactorioStateCallback("machine"),
-        ));
+        if (factorio_states) {
+            it.addPlugin(new FactorioStatePlugin(
+                it.machine_state.entity_id,
+                relative_tick_provider,
+                () => factorioMachineState(it.machine_state),
+                state_transition_history.createFactorioStateCallback("machine"),
+            ));
+        }
     });
 
     // Add drill state transition plugins
@@ -3670,12 +3682,14 @@ function configureStateTransitionPlugins(
             relative_tick_provider,
             drill_transition_callback
         ));
-        it.addPlugin(new FactorioStatePlugin(
-            it.drill_state.entity_id,
-            relative_tick_provider,
-            () => factorioDrillState(it.drill_state),
-            state_transition_history.createFactorioStateCallback("drill"),
-        ));
+        if (factorio_states) {
+            it.addPlugin(new FactorioStatePlugin(
+                it.drill_state.entity_id,
+                relative_tick_provider,
+                () => factorioDrillState(it.drill_state),
+                state_transition_history.createFactorioStateCallback("drill"),
+            ));
+        }
     });
 
     return state_transition_history;

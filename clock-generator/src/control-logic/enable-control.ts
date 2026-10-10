@@ -31,6 +31,32 @@ const NeverEnabledControl: EnableControl = {
     toString: () => "NeverEnabledControl",
 };
 
+/**
+ * The answers of a clock for the last two ticks it was asked about. An inserter asks about this tick and the next,
+ * every tick, so all but one of its questions were answered the tick before.
+ */
+class LastTwoTicks {
+    private tick_a = NaN;
+    private value_a = false;
+    private tick_b = NaN;
+    private value_b = false;
+
+    public get(tick: number, compute: (tick: number) => boolean): boolean {
+        if (tick === this.tick_a) {
+            return this.value_a;
+        }
+        if (tick === this.tick_b) {
+            return this.value_b;
+        }
+        const value = compute(tick);
+        this.tick_b = this.tick_a;
+        this.value_b = this.value_a;
+        this.tick_a = tick;
+        this.value_a = value;
+        return value;
+    }
+}
+
 /** Position of a tick in a (possibly fractional) clock period; float error is snapped as the game's integer clock would be */
 function clockPosition(tick: number, period: number): number {
     const position = tick % period;
@@ -95,6 +121,8 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     private offset = 0;
     private readonly offset_tick_provider: OffsetTickProvider;
     private readonly inRange: (position: number) => boolean;
+    private readonly asked = new LastTwoTicks();
+    private readonly enabledAt = (tick: number) => this.inRange(clockPosition(tick, this.periodDuration.ticks));
 
     constructor(
         public readonly periodDuration: Duration,
@@ -113,8 +141,7 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     }
 
     public isEnabledIn(ticks: number): boolean {
-        const tick = this.offset_tick_provider.getCurrentTick() + ticks;
-        return this.inRange(clockPosition(tick, this.periodDuration.ticks));
+        return this.asked.get(this.offset_tick_provider.getCurrentTick() + ticks, this.enabledAt);
     }
 
     public getOffset(): number {
@@ -128,6 +155,8 @@ export class ClockedEnableControl implements EnableControl, Resettable {
 
 class PeriodicEnableControl implements EnableControl {
     private readonly inRange: (position: number) => boolean;
+    private readonly asked = new LastTwoTicks();
+    private readonly enabledAt = (tick: number) => this.inRange(clockPosition(tick, this.periodDuration.ticks));
 
     constructor(
         public readonly periodDuration: Duration,
@@ -142,8 +171,7 @@ class PeriodicEnableControl implements EnableControl {
     }
 
     public isEnabledIn(ticks: number): boolean {
-        const tick = this.tickProvider.getCurrentTick() + ticks;
-        return this.inRange(clockPosition(tick, this.periodDuration.ticks));
+        return this.asked.get(this.tickProvider.getCurrentTick() + ticks, this.enabledAt);
     }
 }
 
