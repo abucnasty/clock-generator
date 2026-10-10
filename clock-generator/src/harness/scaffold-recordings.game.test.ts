@@ -15,6 +15,8 @@ import { outputPerPeriod, recipesMaking } from "./recording-output";
  */
 const FACTORIO = process.env.FACTORIO_PATH;
 const SAVE = process.env.FACTORIO_HARNESS_SAVE;
+/** Open each run with graphics, joined as a spectator, and run it at speed 1 so it can be watched; set by `npm run test:game:watch` */
+const WATCH = !!process.env.FACTORIO_HARNESS_WATCH;
 const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executable or install folder"
     : !SAVE ? "FACTORIO_HARNESS_SAVE is not set to a save with a place to build in"
     : !fs.existsSync(SAVE) ? `the save FACTORIO_HARNESS_SAVE names does not exist: ${SAVE}`
@@ -24,7 +26,7 @@ const SAMPLES = path.resolve(__dirname, "..", "..", "resources", "config-samples
 /** Ticks to record: ten minutes of game time, as a build with a loop is checked for in the simulator */
 const RECORDED_TICKS = 36_000;
 /** Starting the game, building, warming up and recording take well under two minutes; the harness's own timeout is 900 seconds */
-const TEST_TIMEOUT_MS = 960_000;
+const TEST_TIMEOUT_MS = WATCH ? 3600_000 : 960_000;
 
 interface ScaffoldBuild {
     /** One copy of the build without a clock, as a blueprint string */
@@ -120,8 +122,9 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 clock,
                 config,
                 unclocked: false,
-                game_speed: 1000,
-                timeout_seconds: 900,
+                game_speed: WATCH ? 1 : 1000,
+                watch: WATCH,
+                timeout_seconds: WATCH ? 3600 : 900,
                 log: () => { },
             });
 
