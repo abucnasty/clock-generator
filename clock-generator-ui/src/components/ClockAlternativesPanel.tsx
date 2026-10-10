@@ -66,8 +66,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                 starting the clock at several points. The one selected for you has the fewest wake-ups among
                 those that hold the target rate; a clock that leaves belt pickup slack out for a non-moving
                 belt is only selected when no clock for a moving belt holds it. With "Belts do not move" on
-                it is the other way round: a clock that kept the slack is only selected when no clock
-                without it holds the target rate. Fewer windows means more batched swings.
+                every clock is made without the slack. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
                 {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                     <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>

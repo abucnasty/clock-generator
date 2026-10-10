@@ -23,6 +23,9 @@ over-produces.
 Conventions:
 - `<build>.json` is the config; variants get a suffix that says what differs (`-chain-always-on`, `-belt-fed`).
 - `<build>-scaffold.txt` is the one-copy scaffold; `-scaffold-full-build.txt` is kept only for reference.
+- Every scaffold but one has belts that are closed at the end and stand still once full, which is the belt the
+  simulator has. Iron bacteria's creeps (below). A scaffold whose belt moves as the belt of a row of copies does is
+  still to be made: a clock for a moving belt, with belt pickup slack, has never been recorded on one (GOALS.md).
 - The clocked inserters see a steadily supplied belt: full of whole stacks at the rate the build takes them, whenever
   they reach for it. How is the scaffold's business. Enough stack inserters from infinity chests and a closed end do
   it; so does an end that lets a little through on a timer, as the iron bacteria scaffold has to keep its nutrients
@@ -138,6 +141,7 @@ Open:
 - Batched swings on the plain build has three steady states at 192 a period, with 10.7, 26.8 and 32.1 wake-ups a
   minute by where the clock starts. The generator's run counts 10.7; the game settled into 26.8. The potential clocks
   list the figure of the generator's own run.
-- With 2 and with 1 output swings per cycle the plain build only holds its rate with belt pickup slack, so with
-  "Belts do not move" on these two clocks still fall back to it. They are the only clocks of any sample that do, and
-  neither is selected. The 2-swing one was recorded with the slack at 192 in each of 53 periods.
+- With 2 and with 1 output swings per cycle the plain build only holds its rate with belt pickup slack (the 2-swing
+  clock was recorded with it at 192 in each of 53 periods). With "Belts do not move" on they are listed as unstable:
+  they were the last two clocks of any sample that were made again with the slack there, neither was selected, and
+  that fallback was removed on 2026-10-10.

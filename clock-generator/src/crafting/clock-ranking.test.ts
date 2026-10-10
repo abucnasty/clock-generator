@@ -44,14 +44,6 @@ describe("combineClockAlternativeRuns", () => {
         ])).toBe("no-slack");
     });
 
-    // with belts that do not move it is the clock that kept the slack that is not made for the belt asked for
-    it("selects a clock made for the belt the config asks for over one with fewer wake-ups that is not", () => {
-        expect(selectedOf([
-            clock("kept-slack", { wake_ups_per_minute: 30, matches_belt_choice: false }),
-            clock("no-slack", { wake_ups_per_minute: 80 }),
-        ])).toBe("no-slack");
-    });
-
     it("selects a clock that is ranked first whatever its wake-ups", () => {
         expect(selectedOf([
             clock("fewest", { wake_ups_per_minute: 30 }),

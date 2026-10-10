@@ -107,9 +107,9 @@ describe("the belt a clock is made for", () => {
 
     // Two belt inserters that each take two ingredients off a belt split between them, each from the lane nearest to
     // it first. Batched swings holds the target rate without the slack: recorded on the scaffold on 2026-10-10, 192 in
-    // every period. With 2 and with 1 output swings per cycle a clock only holds with the slack. (Before the
-    // simulator took from the nearest lane first, batched swings ran at half the rate from some starts of the clock
-    // without the slack, and was the clock that fell back.)
+    // every period. With 2 and with 1 output swings per cycle a clock only holds with the slack, and with belts that
+    // do not move it is offered without and listed as unstable: until 2026-10-10 such a clock was made again with the
+    // slack and listed as a clock for a moving belt.
     describe("utility science, with belts that do not move", () => {
         let alternatives: ClockAlternative[];
         let selected: ClockAlternative;
@@ -122,27 +122,19 @@ describe("the belt a clock is made for", () => {
             selected = alternatives[generated.selected_index];
         }, 60_000);
 
-        it("falls back to the clock for a moving belt where a clock only holds with the slack", () => {
+        it("makes every clock without the slack, also one that only holds with it", () => {
+            expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "non_moving" })));
+            expect(alternatives.every(a => a.matches_belt_choice)).toBe(true);
             const two_swings = alternative("swings-2");
-            expect(two_swings.is_stable).toBe(true);
-            expect(two_swings.belt).toEqual({ kind: "moving", slack_ticks: [4] });
-            expect(two_swings.result.belt_pickup_slack_ticks).toEqual({ "inserter:1": 4, "inserter:2": 4 });
-            expect(two_swings.description).toContain("this clock did not hold the expected output without the slack");
+            expect(two_swings.is_stable).toBe(false);
+            expect(two_swings.result.belt_pickup_slack_ticks).toEqual({});
         });
 
-        it("keeps a clock without the slack when it does not hold with it either", () => {
-            const four_swings = alternative("swings-4");
-            expect(four_swings.is_stable).toBe(false);
-            expect(four_swings.belt).toEqual({ kind: "non_moving" });
-            expect(four_swings.matches_belt_choice).toBe(true);
-        });
-
-        it("selects a clock without the slack over the ones that kept it", () => {
-            expect(alternatives.filter(a => !a.matches_belt_choice).map(a => a.id)).toEqual(["swings-2", "swings-1"]);
-            expect(alternative("swings-2").meets_target_rate).toBe(true);
+        it("selects batched swings, which holds the target rate without the slack", () => {
             expect(selected.id).toBe("planned-belt-slack");
             expect(selected.belt).toEqual({ kind: "non_moving" });
             expect(selected.meets_target_rate).toBe(true);
+            expect(selected.wake_ups_per_minute).toBe(0);
         });
     });
 
