@@ -43,3 +43,6 @@ test/*.js
 dist
 
 *.csv
+
+# sweeps, recordings and worktrees of the scripts in scripts/
+.scratch
