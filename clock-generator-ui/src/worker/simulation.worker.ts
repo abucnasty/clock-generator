@@ -105,6 +105,8 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         inserterWindowCount: alternative.inserter_window_count,
         rankingWindowCount: alternative.ranking_window_count,
         isStable: alternative.is_stable,
+        meetsTargetRate: alternative.meets_target_rate,
+        keepsBeltPickupSlack: alternative.keeps_belt_pickup_slack,
         rankFirst: alternative.rank_first,
         itemsPerSecond: alternative.items_per_second,
         asBuilt: result.stability_check.as_built ?? null,

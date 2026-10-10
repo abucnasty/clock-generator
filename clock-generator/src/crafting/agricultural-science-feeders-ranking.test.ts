@@ -14,16 +14,21 @@ describe("generateClockForConfig", () => {
     describe("agricultural science: windows for the inserters feeding the output machine", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
 
-        it("selects the same alternative with hands of 12 as without the windows of the feeders: they are not ranked by", () => {
-            // 354 windows with the feeders', 324 without: the 3-swing clock has 336 and used to be selected
+        it("selects the clock with the fewest wake-ups with hands of 12, though the windows of the feeders give it more windows", () => {
+            // 354 windows with the feeders', 324 without: the 3-swing clock has 336 and was selected while the fewest
+            // windows were, before the windows of the feeders were left out of the count. Wake-ups decide now, which the
+            // windows of the feeders bring down, and the windows only between clocks with the same wake-ups.
             const config: Config = { ...sample, inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it) };
             const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
             const selected = alternatives[selected_index];
+            const three_swings = alternatives.find(it => it.id === "swings-3")!;
             expect(selected.id).toBe("planned-belt-slack");
             expect(selected.inserter_window_count).toBe(354);
             expect(selected.ranking_window_count).toBe(324);
             expect(Object.keys(selected.result.clock_windows)).toContain("inserter:9");
-            expect(alternatives.find(it => it.id === "swings-3")!.ranking_window_count).toBe(336);
+            expect(three_swings.ranking_window_count).toBe(336);
+            expect(three_swings.meets_target_rate).toBe(true);
+            expect(selected.wake_ups_per_minute!).toBeLessThan(three_swings.wake_ups_per_minute!);
         }, 240_000);
     });
 });

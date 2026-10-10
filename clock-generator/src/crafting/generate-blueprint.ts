@@ -241,6 +241,8 @@ export interface BlueprintGenerationResult {
     clock_windows: SerializableClockWindows;
     /** Ticks of belt pickup slack added to each belt-fed inserter's windows; empty when none was applied */
     belt_pickup_slack_ticks: Record<string, number>;
+    /** The windows of a belt-fed inserter go without the slack that would have lengthened them */
+    belt_pickup_slack_left_out: boolean;
     /** For a fractional period: the same windows on a subtick clock that runs the exact period instead of rounding it */
     subtick?: { clock: SubtickClock; blueprint: FactorioBlueprint };
     /** The same windows with repeating parts checked against the clock modulo a divisor of the period; absent when that saves nothing */
@@ -683,6 +685,8 @@ export function generateClockForConfig(
     const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (belt_pickup_slack_mode === "auto"
         && beltPickupSlackHelps(config, unslacked_windows, full_belt_pickup_slack, duration.ticks, total_expected_output, logger));
     const belt_pickup_slack = use_belt_pickup_slack ? full_belt_pickup_slack : new Map<string, number>();
+    const belt_pickup_slack_left_out = !use_belt_pickup_slack && Number.isInteger(duration.ticks)
+        && Array.from(unslacked_windows).some(([key, ranges]) => ranges.length > 0 && (full_belt_pickup_slack.get(key) ?? 0) > 0);
     let planned_windows = withBeltPickupSlack(unslacked_windows, belt_pickup_slack, duration.ticks);
     if (options.full_hand_output) {
         // waiting for a full hand past the output block would refuse input drops every cycle
@@ -938,6 +942,7 @@ export function generateClockForConfig(
                 subtick: subtickClockFor(windows),
                 clock_windows: serializeClockWindows(withInserterClocks(windows, inserter_clocks, duration.ticks)),
                 belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
+                belt_pickup_slack_left_out,
                 crafting_cycle_plan,
                 fuel_consumption_view,
                 unplanned_inserter_clocks: serializeInserterClocks(inserter_clocks),
@@ -1000,6 +1005,7 @@ export function generateClockForConfig(
             subtick: subtickClockFor(planned_windows),
             clock_windows: serializeClockWindows(withInserterClocks(planned_windows, inserter_clocks, duration.ticks)),
             belt_pickup_slack_ticks: Object.fromEntries(belt_pickup_slack),
+            belt_pickup_slack_left_out,
             crafting_cycle_plan,
             simulation_duration: duration,
             output_feeders,
@@ -2968,25 +2974,35 @@ export interface ClockAlternative {
     description: string;
     /** Total decider windows across inserters, as exported; fewer means more batched swings */
     inserter_window_count: number;
-    /** The windows the selection compares: `inserter_window_count` without the windows of the output feeders */
+    /** The windows the selection compares last: `inserter_window_count` without the windows of the output feeders */
     ranking_window_count: number;
     /** The clock-only check (the build driven only by the exported clock windows) reaches the expected output */
     is_stable: boolean;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
+    /** Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not */
+    meets_target_rate: boolean;
+    /**
+     * False when the windows of a belt-fed inserter go without belt pickup slack. Such a clock is only selected when
+     * no clock with the slack meets the target rate: the simulator's belts have no gaps, so it looks better there
+     * than it is in a factory.
+     */
+    keeps_belt_pickup_slack: boolean;
     /**
      * Wake-ups a minute, summed over the inserters of one copy of the build in the long run of the clock (see
      * wake-ups.ts); null when the clock had no long run. Fewer is better: each one is a machine waking an inserter
-     * that a narrower window would have left disabled.
+     * that a narrower window would have left disabled. Among the clocks that meet the target rate, the one with the
+     * fewest is selected.
      */
     wake_ups_per_minute: number | null;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
     /**
-     * Ranked ahead of the other stable alternatives: full-hand output swings where a machine can make more in a
-     * period than its plan. Such a machine crafts ahead from its stock whenever an output window lets the surplus
-     * out, its ingredient stock drains, and in the end an extra ingredient hand fits and the build over-produces;
-     * short output windows that only ever take a full hand leave the surplus inside, where the output block stops it.
+     * Ranked ahead of the other alternatives that meet the target rate, whatever their wake-ups: full-hand output
+     * swings where a machine can make more in a period than its plan. Such a machine crafts ahead from its stock
+     * whenever an output window lets the surplus out, its ingredient stock drains, and in the end an extra ingredient
+     * hand fits and the build over-produces; short output windows that only ever take a full hand leave the surplus
+     * inside, where the output block stops it.
      */
     rank_first: boolean;
     result: BlueprintGenerationResult;
@@ -2994,8 +3010,28 @@ export interface ClockAlternative {
 
 export interface ClockAlternativesResult {
     alternatives: ClockAlternative[];
-    /** The stable alternative with the fewest inserter windows, or 0 when none is stable */
+    /** The best alternative by `ClockRanking`: the one with the fewest wake-ups among those that meet the target rate */
     selected_index: number;
+}
+
+/** What the selection compares between two alternatives, in this order; see `combineClockAlternativeRuns` */
+export interface ClockRanking {
+    meets_target_rate: boolean;
+    keeps_belt_pickup_slack: boolean;
+    rank_first: boolean;
+    /** Null when they were not counted, which ranks after any count */
+    wake_ups_per_minute: number | null;
+    window_count: number;
+}
+
+export function clockRankingOf(alternative: ClockAlternative): ClockRanking {
+    return {
+        meets_target_rate: alternative.meets_target_rate,
+        keeps_belt_pickup_slack: alternative.keeps_belt_pickup_slack,
+        rank_first: alternative.rank_first,
+        wake_ups_per_minute: alternative.wake_ups_per_minute,
+        window_count: alternative.ranking_window_count,
+    };
 }
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
@@ -3045,6 +3081,9 @@ function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (d
         on_progress_detail: report,
     };
 }
+
+/** Items per second an alternative may be off the target rate by and still meet it */
+const TARGET_RATE_TOLERANCE = 1e-6;
 
 /** How much more a machine could make in a period than its plan asks of it before it counts as having spare speed */
 const SPARE_SPEED_MARGIN = 1.05;
@@ -3121,7 +3160,9 @@ function alternativeDefinitions(
             label: "Planned",
             description: "The swing schedule the generator plans for the target rate. The build is simulated with each inserter waiting on "
                 + "its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are grouped into "
-                + "batches that match the crafting cycle.",
+                + "batches that match the crafting cycle. Without belt pickup slack, so it is only selected for you when no "
+                + "clock with the slack holds the target rate: on a belt with gaps, an inserter can be switched off holding a "
+                + "partial hand.",
             run: () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }),
         },
         {
@@ -3241,9 +3282,9 @@ function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_outp
 }
 
 /**
- * The windows an alternative is ranked by: those it has without the windows of its output feeders, which only reduce
- * idle checks and must never decide which clock is selected, so an alternative ranks as it would with its feeders
- * always enabled.
+ * The windows an alternative is ranked by, between clocks with the same wake-ups: those it has without the windows of
+ * its output feeders, which only reduce idle checks and must never count against a clock, so its windows rank as they
+ * would with its feeders always enabled.
  */
 export function rankingWindowCount(
     inserter_window_count: number,
@@ -3288,7 +3329,11 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
         : ` The swings planned in clock ticks ${shifted.planned_ticks.start}–${shifted.planned_ticks.end} (`
         + shifted.moved.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
         + `) start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
-    const description = definition.description + moved_note + shifted_note + planning_note + asBuiltNotes(as_built, expected_output_items);
+    // the planned alternative says so itself: it is the one made without the slack on purpose
+    const slack_note = !result.belt_pickup_slack_left_out || id === "planned" ? ""
+        : " Its belt inserters go without belt pickup slack, which this clock did not hold the expected output with, so it "
+        + "is only selected for you when no clock with the slack holds the target rate.";
+    const description = definition.description + moved_note + shifted_note + slack_note + planning_note + asBuiltNotes(as_built, expected_output_items);
     logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items}`);
     const insights = clockInsights(result, is_stable);
     const period = result.simulation_duration.ticks;
@@ -3297,8 +3342,11 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const rateAt = (clock_period: number) => achieved_output_items * 60 / clock_period * copies;
     const rank_first = id === "full-hand" && machineHasSpareSpeed(config, result);
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
+    const meetsTargetRate = (clock_period: number) =>
+        is_stable && Math.abs(rateAt(clock_period) - config.target_output.items_per_second) <= TARGET_RATE_TOLERANCE;
+    const keeps_belt_pickup_slack = !result.belt_pickup_slack_left_out;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), wake_ups_per_minute, insights, rank_first, result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), keeps_belt_pickup_slack, wake_ups_per_minute, insights, rank_first, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -3317,6 +3365,8 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 ranking_window_count,
                 is_stable,
                 items_per_second: rateAt(period),
+                meets_target_rate: meetsTargetRate(period),
+                keeps_belt_pickup_slack,
                 wake_ups_per_minute,
                 insights,
                 rank_first,
@@ -3332,6 +3382,8 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 ranking_window_count,
                 is_stable,
                 items_per_second: rateAt(rounded),
+                meets_target_rate: meetsTargetRate(rounded),
+                keeps_belt_pickup_slack,
                 wake_ups_per_minute,
                 insights,
                 rank_first,
@@ -3382,12 +3434,15 @@ export function runClockAlternativeTask(
     return runAlternative(definition, config, logger);
 }
 
-/** Lists runs in order, skipping duplicates, and selects the stable alternative with the fewest windows */
+/**
+ * Lists runs in order, skipping duplicates, and selects one. The alternatives that meet the target rate (goal 1) come
+ * first; among them those that keep belt pickup slack, so that the count of wake-ups never drops the slack on its
+ * own; among those the ones ranked first; then the fewest wake-ups a minute (goal 2); then the fewest windows. Of
+ * equals the first listed is selected.
+ */
 export function combineClockAlternativeRuns<T>(
     runs: (ClockAlternativeRun<T> | null)[],
-    is_stable: (alternative: T) => boolean,
-    window_count: (alternative: T) => number,
-    rank_first: (alternative: T) => boolean = () => false,
+    rankingOf: (alternative: T) => ClockRanking,
 ): { alternatives: T[]; selected_index: number } {
     const seen = new Set<string>();
     const alternatives: T[] = [];
@@ -3397,9 +3452,17 @@ export function combineClockAlternativeRuns<T>(
             alternatives.push(...run.alternatives);
         }
     }
-    // stable first; among the stable, the ones ranked first; among those, the fewest windows
-    const rank = (alternative: T): [number, number, number] =>
-        [is_stable(alternative) ? 0 : 1, rank_first(alternative) ? 0 : 1, window_count(alternative)];
+    const rank = (alternative: T): number[] => {
+        const ranking = rankingOf(alternative);
+        return [
+            ranking.meets_target_rate ? 0 : 1,
+            ranking.keeps_belt_pickup_slack ? 0 : 1,
+            ranking.rank_first ? 0 : 1,
+            // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
+            ranking.wake_ups_per_minute === null ? Infinity : Math.round(ranking.wake_ups_per_minute * 1000),
+            ranking.window_count,
+        ];
+    };
     const beats = (a: T, b: T): boolean => {
         const [ra, rb] = [rank(a), rank(b)];
         for (let i = 0; i < ra.length; i++) {
@@ -3455,7 +3518,7 @@ export function generateClockAlternatives(
 
     current_step = "Done";
     report();
-    return combineClockAlternativeRuns(runs, it => it.is_stable, it => it.ranking_window_count, it => it.rank_first);
+    return combineClockAlternativeRuns(runs, clockRankingOf);
 }
 
 /** A book with the modulo-clock and the full-window blueprint when both exist, otherwise the single blueprint */

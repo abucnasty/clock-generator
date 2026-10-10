@@ -63,7 +63,9 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
             <Typography variant="h6">Potential Clocks</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Each potential clock was checked by simulating the build driven only by the clock windows,
-                starting the clock at several points. Fewer windows means more batched swings.
+                starting the clock at several points. The one selected for you has the fewest wake-ups among
+                those that hold the target rate; a clock without belt pickup slack is only selected when no
+                other holds it. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
                 {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                     <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>

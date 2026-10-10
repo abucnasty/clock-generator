@@ -72,10 +72,14 @@ export interface ClockAlternativeView {
     label: string;
     description: string;
     inserterWindowCount: number;
-    /** The windows the selection compares: the count without the windows of the output feeders */
+    /** The windows the selection compares last: the count without the windows of the output feeders */
     rankingWindowCount: number;
     isStable: boolean;
-    /** Ranked ahead of the other stable alternatives (full-hand output swings where a machine has spare speed) */
+    /** Stable and at the target rate, which a clock with a rounded period is not */
+    meetsTargetRate: boolean;
+    /** False when the windows of a belt-fed inserter go without belt pickup slack */
+    keepsBeltPickupSlack: boolean;
+    /** Ranked ahead of the others that meet the target rate (full-hand output swings where a machine has spare speed) */
     rankFirst: boolean;
     itemsPerSecond: number;
     asBuilt: AsBuiltStabilityCheck | null;

@@ -156,7 +156,13 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore]);
 
     const publishAlternatives = useCallback((generation: Generation) => {
-        const combined = combineClockAlternativeRuns!(generation.runs, it => it.isStable, it => it.rankingWindowCount, it => it.rankFirst);
+        const combined = combineClockAlternativeRuns!(generation.runs, it => ({
+            meets_target_rate: it.meetsTargetRate,
+            keeps_belt_pickup_slack: it.keepsBeltPickupSlack,
+            rank_first: it.rankFirst,
+            wake_ups_per_minute: it.asBuilt?.wake_ups?.wake_ups_per_minute ?? null,
+            window_count: it.rankingWindowCount,
+        }));
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);

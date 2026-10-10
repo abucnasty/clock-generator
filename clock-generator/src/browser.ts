@@ -86,6 +86,7 @@ export {
     ClockAlternative,
     ClockAlternativesResult,
     ClockAlternativeRun,
+    ClockRanking,
     ClockAlternativeContext,
     ClockAlternativeTask,
     ClockAlternativesPlan,
