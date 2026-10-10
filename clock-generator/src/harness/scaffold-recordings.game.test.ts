@@ -15,8 +15,10 @@ import { outputPerPeriod, recipesMaking } from "./recording-output";
  */
 const FACTORIO = process.env.FACTORIO_PATH;
 const SAVE = process.env.FACTORIO_HARNESS_SAVE;
-/** Open each run with graphics, joined as a spectator, at the same max speed the run uses headless; set by `npm run test:game:watch` */
+/** Open each run with graphics, joined as a spectator, at a speed fast enough to move quickly but still easy to follow; set by `npm run test:game:watch` */
 const WATCH = !!process.env.FACTORIO_HARNESS_WATCH;
+/** Capped well under the 1000 headless runs at: remote play can't keep up with the game rendering that fast */
+const WATCH_SPEED = 64;
 const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executable or install folder"
     : !SAVE ? "FACTORIO_HARNESS_SAVE is not set to a save with a place to build in"
     : !fs.existsSync(SAVE) ? `the save FACTORIO_HARNESS_SAVE names does not exist: ${SAVE}`
@@ -122,7 +124,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 clock,
                 config,
                 unclocked: false,
-                game_speed: 1000,
+                game_speed: WATCH ? WATCH_SPEED : 1000,
                 watch: WATCH,
                 timeout_seconds: WATCH ? 3600 : 900,
                 log: () => { },
