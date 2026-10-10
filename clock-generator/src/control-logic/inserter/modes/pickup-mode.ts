@@ -130,6 +130,10 @@ export class InserterPickupMode implements InserterMode {
             if (!this.canPickupItemForSink(held_item.item_name)) {
                 return;
             }
+            // the item has stopped arriving (a run that cuts a supply): the hand keeps what it holds
+            if (source.supply.withheld.has(held_item.item_name)) {
+                return;
+            }
             if (!this.belt_grab_decided) {
                 this.belt_grab_decided = true;
                 return;
@@ -152,7 +156,7 @@ export class InserterPickupMode implements InserterMode {
         }
 
         for (const item_name of inserter_state.inserter.filtered_items) {
-            if (this.canPickupItemForSink(item_name)) {
+            if (this.canPickupItemForSink(item_name) && !source.supply.withheld.has(item_name)) {
                 if (!this.belt_grab_decided) {
                     this.belt_grab_decided = true;
                     return;

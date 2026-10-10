@@ -22,6 +22,12 @@ export class InserterDropMode implements InserterMode {
 
     public executeForTick(): void {
         if (EntityState.isBelt(this.sink_entity_state)) {
+            // the belt is full of what the hand holds (a run in which the output is not taken away): the hand waits
+            // over it, and goes on as a hand that has just arrived once there is room
+            const held_item_name = this.inserter_state.held_item?.item_name;
+            if (held_item_name !== undefined && this.sink_entity_state.supply.refused.has(held_item_name)) {
+                return;
+            }
             this.dropOffToBelt(this.sink_entity_state, this.inserter_state);
         }
 

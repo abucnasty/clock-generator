@@ -33,6 +33,7 @@ import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "./fuel-v
 import { StockRecorder, StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
+import { BackpressureLossOptions, BackpressureLossReport, backpressureLossesOf, LossOutcome, reportOf, runLossTrials } from "./backpressure-loss";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
 import { ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
@@ -286,6 +287,8 @@ export interface BlueprintGenerationResult {
     fuel_levels?: FuelLevelSeries[];
     /** With the machine_stock option: what every machine and inserter held after each tick of the recorded run */
     machine_stock?: StockRecording;
+    /** With the backpressure_loss option: what the build made after each trial of the loss */
+    backpressure_loss?: LossOutcome;
     /**
      * The exported clock run for several periods, when a machine burns fuel: a fuel inserter swings once in a few
      * periods, so one period seldom shows it inserting. Extended only to show the fuel being consumed; the clock
@@ -364,6 +367,11 @@ export interface GenerateClockOptions {
      * see what the simulator makes of it (see simulateClockOnly).
      */
     start_stock?: Record<string, MachineStartStock>;
+    /**
+     * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
+     * once it is back (see backpressure-loss.ts). For a run on clock windows alone; nothing is cut in any other run.
+     */
+    backpressure_loss?: BackpressureLossOptions;
     /** Warmup length in simulation periods (default 10) */
     warmup_periods?: number;
     /**
@@ -741,6 +749,22 @@ export function generateClockForConfig(
     };
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.is_stable} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
+    let backpressure_loss: LossOutcome | undefined;
+    if (options.backpressure_loss) {
+        // the run above is over: the trials go on from where it ended, and nothing of them goes into its histories
+        inventory_transfer_history.recording = false;
+        state_transition_history.recording = false;
+        const loss_period = options.backpressure_loss.period_ticks;
+        const repeat = subtickClockForPeriod(loss_period);
+        const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
+            : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
+        assert(bin !== null, `A clock of ${loss_period} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
+        const own_clock_ticks = Array.from(inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
+        backpressure_loss = runLossTrials(new_simulation_context, output_inserter_states, options.backpressure_loss, bin,
+            Math.max(bin.ticks, ...own_clock_ticks), isClockedThroughout(config, loss_period));
+        logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
+    }
+
     const unslacked_windows = windowsFromHistory(final_history, simulation_context.entity_registry, always_enabled_by_config);
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
     // on belts that do not move a clock is made without the slack, whatever the alternative asks for
@@ -1108,6 +1132,7 @@ export function generateClockForConfig(
             fuel_plan,
             fuel_levels,
             machine_stock: stock_recorder?.recording(),
+            backpressure_loss,
             used_lcm: recipe_lcm,
             used_terminal_swing_count,
             stability_check,
@@ -1541,9 +1566,11 @@ function exportedLanesShortOfConsumption(
  * check, so the simulation is deterministic with that period and a repeated state repeats forever.
  */
 function isPurelyClocked(config: Config, period: number): boolean {
-    if (!Number.isInteger(period)) {
-        return false;
-    }
+    return Number.isInteger(period) && isClockedThroughout(config, period);
+}
+
+/** Every inserter and drill is always or never enabled, or on windows of a clock of this period, whole ticks or not */
+function isClockedThroughout(config: Config, period: number): boolean {
     const fixed = (control: EnableControlOverrideConfig | undefined) => control !== undefined && (
         control.mode === "ALWAYS" || control.mode === "NEVER"
         || (control.mode === "CLOCKED" && control.period_duration_ticks === period)
@@ -2344,6 +2371,35 @@ export function clockFromWindows(
     assert(result.simulation_duration.ticks === period_ticks,
         `The windows are of a clock of ${period_ticks} ticks, and the config is planned on one of ${result.simulation_duration.ticks}`);
     return result;
+}
+
+/**
+ * Whether a clock survives backpressure loss (GOALS.md): the build is run on the windows alone, as its blueprint runs
+ * it, once undisturbed and once for every loss it can have (each item that comes off a belt or out of a chest stops
+ * arriving, each item it puts on a belt or in a chest is not taken away), and has to be back at exactly its expected
+ * output a period after each. See backpressure-loss.ts for how a loss is run and judged.
+ *
+ * The config has to be the one the clock was planned on, as for clockFromWindows: the plan gives a fuel inserter its
+ * clock. `expected_output_items` is what the output inserters drop in a period of the clock when it holds.
+ */
+export function backpressureLossOf(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period_ticks: number,
+    expected_output_items: number,
+    logger: Logger = defaultLogger,
+    options: Omit<BackpressureLossOptions, "loss" | "period_ticks" | "expected_output_items"> = {},
+): BackpressureLossReport {
+    const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
+    const outcomeOf = (loss: BackpressureLossOptions["loss"]): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
+        factorio_states: false,
+        backpressure_loss: { ...options, loss, period_ticks, expected_output_items },
+    }).backpressure_loss!;
+    const losses = backpressureLossesOf(createEntityRegistryFromConfig(config), config.target_output.recipe);
+    return reportOf(period_ticks, expected_output_items, outcomeOf({ kind: "none" }), losses.map(outcomeOf));
 }
 
 /** The machines at the ends of every inserter of the config */

@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from "vitest"
 import { mock } from 'vitest-mock-extended';
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
-import { BeltState, ChestState, EntityState, InserterState, MachineState } from "../../../state"
+import { BeltState, ChestState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineMetadata, MachineType, RecipeMetadata } from "../../../entities"
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
@@ -10,6 +10,13 @@ import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";
 
+
+/** A belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
+function withSupplyGate(belt: BeltState): BeltState {
+    // assigned after the mock is made, which would wrap the sets of the gate otherwise
+    belt.supply = new SupplyGate();
+    return belt;
+}
 
 describe("transitions (belt to machine)", () => {
 
@@ -62,9 +69,9 @@ describe("transitions (belt to machine)", () => {
     }
 
     const createTestContext = (): TestContext => {
-        const mockSource: BeltState = mock<BeltState>({
+        const mockSource: BeltState = withSupplyGate(mock<BeltState>({
             entity_id: EntityId.forBelt(-1),
-        });
+        }));
 
         const mockSink: MachineState = MachineState.forMachine(
             createMachine("iron-gear-wheel")
@@ -240,7 +247,7 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("leaves an inserter that takes from a belt to its pickup mode, which lands the first stack a tick later", () => {
-            const belt: BeltState = mock<BeltState>({ entity_id: EntityId.forBelt(-1) });
+            const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
             const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(belt);
             endTickAtTheBlock(false);
             expect(look()).toBe(ModeTransition.NONE);
@@ -252,14 +259,14 @@ describe("transitions (belt to machine)", () => {
     describe("InserterPickupMode (belt to machine)", () => {
 
         test("stops picking up from belt once stack size is reached", () => {
-            const mockSource: BeltState = mock<BeltState>({
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
                 }
-            });
+            }));
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -304,14 +311,14 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("holds a partly filled hand while the machine's output is at the block, and goes on once it is under", () => {
-            const mockSource: BeltState = mock<BeltState>({
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
                 }
-            });
+            }));
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -369,14 +376,14 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("caps pickup quantity when remaining capacity is less than lane stack size", () => {
-            const mockSource: BeltState = mock<BeltState>({
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
                 }
-            });
+            }));
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -417,7 +424,7 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("skips blocked belt item and picks next available unblocked item", () => {
-            const mockSource: BeltState = mock<BeltState>({
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 inventoryState: mock<any>(),
                 belt: {
@@ -426,7 +433,7 @@ describe("transitions (belt to machine)", () => {
                         { ingredient_name: "copper-cable", stack_size: 4 },
                     ]
                 }
-            });
+            }));
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("electronic-circuit")
