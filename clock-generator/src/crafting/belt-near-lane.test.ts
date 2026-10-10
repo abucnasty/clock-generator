@@ -3,6 +3,7 @@ import { simulateClockOnly, type SerializableClockWindows } from "./generate-blu
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
+import { simulatedWakeUpsByStart } from "../verification/simulated-recording";
 
 // Utility science: inserter 1 takes flying robot frames and low density structures off belt 1, inserter 2 takes
 // processing units and low density structures off belt 2, inserter 3 takes the packs away. Recorded in Factorio
@@ -72,5 +73,28 @@ describe("an inserter that picks up from a belt with two items", () => {
     it("takes its items in the order of its filters when it is not told which lane is nearest", async () => {
         const config = await build(["low-density-structure", "processing-unit"]);
         expect(run(config).first_items).toEqual(["processing-unit"]);
+    });
+});
+
+// Batched swings with belt pickup slack on the utility science sample, the clock selected for it. Recorded in
+// Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 periods at 26.8 wake-ups a minute, where the long run of
+// the generator, which starts the clock at its beginning, counts 10.7.
+describe("a clock with more than one steady state", () => {
+    const windows: SerializableClockWindows = {
+        "inserter:3": [{ start: 1, end: 49 }, { start: 169, end: 193 }, { start: 337, end: 385 }, { start: 505, end: 529 }],
+        "inserter:1": [{ start: 37, end: 53 }, { start: 181, end: 197 }, { start: 373, end: 389 }, { start: 517, end: 533 }],
+        "inserter:2": [{ start: 37, end: 64 }, { start: 181, end: 208 }, { start: 373, end: 400 }, { start: 517, end: 544 }],
+    };
+
+    it("counts the wake-ups of each, by where in its period the clock starts", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
+        const figures = simulatedWakeUpsByStart(config, windows, 672, 24).map(figure => figure.toFixed(1));
+        expect(figures[0]).toBe("10.7");
+        expect(Array.from(new Set(figures)).sort()).toEqual(["10.7", "26.8", "32.1"]);
+    });
+
+    it("has none for a period that is not a whole number of ticks", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
+        expect(simulatedWakeUpsByStart(config, windows, 672.5, 24)).toEqual([]);
     });
 });

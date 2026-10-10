@@ -28,6 +28,10 @@ Conventions:
   it; so does an end that lets a little through on a timer, as the iron bacteria scaffold has to keep its nutrients
   fresh (32 items in every 61 ticks, and every hand there still fills a stack a tick). An end that drains freely
   does not: it leaves gaps that confound the inserter timing, which the first agricultural scaffold showed.
+- The scaffold is the build its config describes, inserter for inserter. Every recording is checked for it: the stack
+  size of each inserter, and which of two items on its belt an inserter takes first (`near_lane` in the config, the
+  lane nearest to it in the build). A config that differs is reported before anything else, since a clock made for
+  it is not a clock for the build.
 - Crafting speeds and productivity come from the sidecar mod in the Factorio version the scaffold is for (2.1 rounds
   beacon bonuses differently from 2.0).
 
@@ -39,9 +43,9 @@ Conventions:
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | intermediates/low-density-structure | yes | selected clock exact | in `test:game` |
-| science/utility-science | yes | 144 of 192 a period, every period | simulator says stable: open divergence, see below |
-| science/utility-science, belted blue and LDS | yes | 64 or 80 of 96 | same family |
-| science/utility-science, direct-insert LDS | yes | 32 or 160 of 192; simulator finds no stable clock | same family |
+| science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; see below |
+| science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods | in `test:game`, both ways |
+| science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
 | intermediates/advanced-circuit | yes | not recorded since the config folders were reorganised | |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | everything else | no | | |
@@ -100,10 +104,34 @@ Open, fitted: `MACHINE_HANDS_SURPLUS` (1.43, the windows of an inserter between 
 game on the agricultural science build on 2026-10-09; the simulator passes 1.30, which starved two of its clocks in the
 game. To be replaced by a value derived per build, or by a setting the user controls. Neither is done.
 
-## Open divergence: utility science
+## Utility science
 
-All three utility science builds under-produce in the game under clocks the simulator calls stable, by a constant
-amount every period, with the machine idling in ingredient shortage in between. The config's speed and productivity
-match the sidecar, so the cause is in how the clock's windows drive the two inserters that each take two items from a
-shared belt. It needs the tick-by-tick comparison that found the agricultural rules: hands per period and their
-timing in the recording against the simulator's stock export (`simulateClockOnly`). Deferred on 2026-10-08.
+Closed on 2026-10-10. The three builds had been recorded short of their target under clocks the simulator calls
+stable (144 of 192 a period, 64 or 80 of 96, 32 or 160 of 192), which read as a rule of the game the simulator was
+missing. There were two causes, and one of them was not in the simulator:
+
+- The scaffolds were not the builds the configs describe. In both belt-fed scaffolds the inserter that brings
+  processing units and low density structures was set to a stack size of 12, and the configs say 16. With 12 in the
+  config the simulator made what the game made (80 and 64 in turn on the belted build), and with 16 in the scaffold the
+  belted build made its 96 in every period. The scaffolds now have 16. With 12 the generator finds no clock for the
+  plain build at all.
+- An inserter takes from the lane of its belt nearest to it first (GOALS.md, "What an inserter takes off a belt
+  first"). The simulator took the first of its filters, which on the plain build was the processing units where the
+  game takes the low density structures. Under batched swings with slack both made 192 a period, with 64 and 128
+  items through the two inserters in the game and 96 and 96 in the simulator; under the clock that was selected for
+  belts that do not move the game made 96 where the simulator made 192. With the lanes of that belt swapped in a copy
+  of the scaffold the game took the processing units first, and the simulator matched it as it was. The configs of
+  every scaffolded build now name the nearest lane.
+
+With both, the selected clocks of the plain and the belted build hold their rate in the game with "Belts do not
+move" off and on, and the simulator moves what the game moved through every inserter.
+
+Open:
+- **Direct-insert LDS** has no clock that holds 240 a second: the selected one alternates 32 and 160 of 192 a period
+  in the game and in the simulator alike. The simulator is right about it; a clock for the build is still to be found.
+- Batched swings on the plain build has three steady states at 192 a period, with 10.7, 26.8 and 32.1 wake-ups a
+  minute by where the clock starts. The generator's run counts 10.7; the game settled into 26.8. The potential clocks
+  list the figure of the generator's own run.
+- With 2 and with 1 output swings per cycle the plain build only holds its rate with belt pickup slack, so with
+  "Belts do not move" on these two clocks still fall back to it. They are the only clocks of any sample that do, and
+  neither is selected. The 2-swing one was recorded with the slack at 192 in each of 53 periods.

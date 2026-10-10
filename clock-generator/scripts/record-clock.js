@@ -4,11 +4,15 @@
 // against the game entity by entity. <on|off> is "Belts do not move". A recording that is already in the directory is
 // read instead of made again.
 //
+// To try a variant without touching the samples: SCAFFOLD=<blueprint file> records on that scaffold, CONFIG=<config
+// json> generates for that config, and TAG=<word> goes into the name of the recording so that it is kept apart.
+//
 // Needs FACTORIO_PATH and FACTORIO_HARNESS_SAVE (`set -a; . ./.env; set +a`), and the harness runs one game at a
 // time: `flock /tmp/claude-1000/factorio-harness.lock node scripts/record-clock.js ...`. A minute a build.
 const path = require("path"), fs = require("fs");
 const [out_arg, name, belts, alternative_id] = process.argv.slice(2);
 const out_dir = path.resolve(out_arg);
+const scaffold_arg = process.env.SCAFFOLD && path.resolve(process.env.SCAFFOLD);
 const { ROOT, dist, quiet, loadSample } = require("./lib");
 const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
@@ -27,6 +31,9 @@ const BUILDS = {
     "automation-science": { scaffold: "science/automation-science/automation-science-scaffold.txt", config: "AUTOMATION_SCIENCE", seed: [], warmup_ticks: 3600, settle_ticks: 1200 },
     "automation-science-belted-buffer": { scaffold: "science/automation-science/automation-science-belted-buffer-scaffold.txt", config: "AUTOMATION_SCIENCE_BELTED_BUFFER", seed: [], warmup_ticks: 3600, settle_ticks: 1200 },
     "low-density-structure": { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", config: "LOW_DENSITY_STRUCTURE", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
+    "utility-science": { scaffold: "science/utility-science/utility-science-scaffold.txt", config: "UTILITY_SCIENCE", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
+    "utility-science-belted-blue-and-lds": { scaffold: "science/utility-science/utility-science-belted-combined-blue-and-lds-scaffold.txt", config: "UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
+    "utility-science-direct-insert-lds": { scaffold: "science/utility-science/utility-science-direct-insert-lds-scaffold.txt", config: "UTILITY_SCIENCE_DIRECT_INSERT_LDS", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
     "iron-bacteria": { scaffold: "gleba/iron-bacteria-cultivation/iron-bacteria-cultivation-scaffold.txt", config: "IRON_BACTERIA_CULTIVATION", seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }], warmup_ticks: 300, settle_ticks: 3600 },
 };
 const RECORDED_TICKS = 36000;
@@ -36,7 +43,8 @@ const RECORDED_TICKS = 36000;
     if (build === undefined || (belts !== "on" && belts !== "off")) {
         throw new Error(`usage: record-clock.js <recordings dir> <${Object.keys(BUILDS).join("|")}> <on|off> [alternative id]`);
     }
-    const config = await loadSample(build.config, belts === "on");
+    const scaffold = scaffold_arg || path.join(SAMPLES, build.scaffold);
+    const config = await loadSample(process.env.CONFIG ?? build.config, belts === "on");
     const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
     const selected = alternative_id ? alternatives.find(a => a.id === alternative_id) : alternatives[selected_index];
     if (selected === undefined) {
@@ -49,7 +57,8 @@ const RECORDED_TICKS = 36000;
     console.log(`${name} (belts do not move: ${belts}): ${selected.id} "${selected.label}", belt ${selected.belt ? clockBeltLabel(selected.belt) : "-"}, `
         + `stable in the simulator ${selected.is_stable}, period ${period}, clock counts ${clock_ticks}`);
 
-    const file = path.join(out_dir, `${name}-${selected.id}-${belts}.json`);
+    const tag = process.env.TAG ? `-${process.env.TAG}` : "";
+    const file = path.join(out_dir, `${name}${tag}-${selected.id}-${belts}.json`);
     let recording;
     if (fs.existsSync(file)) {
         recording = parseRecording(JSON.parse(fs.readFileSync(file, "utf-8")));
@@ -57,7 +66,7 @@ const RECORDED_TICKS = 36000;
         fs.mkdirSync(out_dir, { recursive: true });
         recording = (await recordInFactorio({
             factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE,
-            blueprint: fs.readFileSync(path.join(SAMPLES, build.scaffold), "utf-8").trim(), out: file,
+            blueprint: fs.readFileSync(scaffold, "utf-8").trim(), out: file,
             ticks: RECORDED_TICKS, warmup_ticks: build.warmup_ticks, settle_ticks: build.settle_ticks, seed: build.seed,
             clock: encodeBlueprintFile({ blueprint: result.subtick?.blueprint ?? result.blueprint }), config,
             unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { },

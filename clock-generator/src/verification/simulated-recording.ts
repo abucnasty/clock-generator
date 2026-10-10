@@ -6,6 +6,7 @@ import { FACTORIO_MACHINE_STATE } from "../state/factorio-entity-state";
 import { MachineStatus } from "../state";
 import { EntityMatch } from "./entity-matching";
 import { Recording } from "./recording";
+import { wakeUpsOfRecording } from "./recording-wake-ups";
 
 /**
  * Ticks from a tick of a simulated run to the sample of a recording that reads the same clock position: tick `i` of
@@ -118,4 +119,37 @@ export function simulateRecording(
     const quiet = { log() { }, warn() { }, error: console.error, debug() { } };
     const stock = simulateClockOnly(config, clock_windows, period_ticks, Math.ceil(ticks / period_ticks), quiet);
     return recordingOfStock(stock, config, clock_ticks);
+}
+
+/**
+ * The wake-ups a minute a clock counts in the simulator from each of `starts` places in its period to start it at,
+ * the first of them where the generator starts it. A clock can settle into more than one steady state with the same
+ * output, depending on where it starts, and each has wake-ups of its own: batched swings on utility science makes
+ * 192 a period at 10.7, 26.8 or 32.1 wake-ups a minute. The game settles into one of them, which need not be the
+ * one the generator's own run does. Empty for a period that is not a whole number of ticks.
+ */
+export function simulatedWakeUpsByStart(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period_ticks: number,
+    starts: number,
+    periods: number = 60,
+): number[] {
+    if (!Number.isInteger(period_ticks)) {
+        return [];
+    }
+    const quiet = { log() { }, warn() { }, error: console.error, debug() { } };
+    const figures: number[] = [];
+    for (let start = 0; start < starts; start++) {
+        const offset = Math.floor(period_ticks * start / starts);
+        // a window that runs over the end of the period goes on at its beginning
+        const shifted = Object.fromEntries(Object.entries(clock_windows).map(([entity_id, ranges]) => [entity_id, ranges.flatMap(range => {
+            const from = (range.start + offset) % period_ticks;
+            const to = from + range.end - range.start;
+            return to < period_ticks ? [{ start: from, end: to }] : [{ start: 0, end: to - period_ticks }, { start: from, end: period_ticks - 1 }];
+        }).sort((a, b) => a.start - b.start)]));
+        const recording = recordingOfStock(simulateClockOnly(config, shifted, period_ticks, periods, quiet), config, period_ticks);
+        figures.push(wakeUpsOfRecording(recording, matchOfSimulatedRecording(recording), Math.floor(recording.sample_count / 3)).wake_ups_per_minute);
+    }
+    return figures;
 }
