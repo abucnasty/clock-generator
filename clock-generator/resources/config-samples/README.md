@@ -46,7 +46,7 @@ Conventions:
 | science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; see below |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
-| intermediates/advanced-circuit | yes | not recorded since the config folders were reorganised | |
+| intermediates/advanced-circuit | not one copy | refused by the harness on 2026-10-10: the blueprint is the whole build, three copies with electronic circuit machines on the same foundries, where the config describes one copy | needs a one-copy scaffold; the generator finds no clock that holds its 230 a second (the nearest runs at 217.3 in the simulator) |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | everything else | no | | |
 
