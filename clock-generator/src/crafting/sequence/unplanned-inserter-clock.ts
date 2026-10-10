@@ -346,6 +346,8 @@ export function unplannedInserterClocks(
     period_ticks: number,
     crafting_shares: ReadonlyMap<string, number> = new Map(),
     measured_fuel_intervals: ReadonlyMap<string, number> = new Map(),
+    /** Ids of the inserters the config sets to always enabled, which are on no clock */
+    always_enabled_ids: ReadonlySet<string> = new Set(),
 ): Map<string, InserterClock> {
     const clocks = new Map<string, InserterClock>();
     const used_per_machine = new Map<string, number>();
@@ -355,7 +357,7 @@ export function unplannedInserterClocks(
         return index;
     };
 
-    const fuel_inserters = fuelOnlyInserters(entity_registry).flatMap(inserter => {
+    const fuel_inserters = fuelOnlyInserters(entity_registry).filter(inserter => !always_enabled_ids.has(inserter.entity_id.id)).flatMap(inserter => {
         const machine = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
         return Entity.isMachine(machine) ? [{ inserter, machine, crafting_share: crafting_shares.get(machine.entity_id.id) ?? 1 }] : [];
     });
@@ -379,7 +381,7 @@ export function unplannedInserterClocks(
     }
     for (const inserter of byProductOnlyInserters(entity_registry)) {
         const machine = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id);
-        if (Entity.isMachine(machine)) {
+        if (Entity.isMachine(machine) && !always_enabled_ids.has(inserter.entity_id.id)) {
             clocks.set(inserter.entity_id.id, byProductClockFor(inserter, machine, entity_registry, period_ticks, nextIndex(machine)));
         }
     }

@@ -493,10 +493,13 @@ export function generateClockForConfig(
     const crafting_shares = plannedCraftingShares(simulation_context.entity_registry, crafting_cycle_plan);
     // The fuel clocks of the planning run are made from the crafting share of the plan. The exported ones are made
     // from what a run of the exported clock burns, once its windows are known: see fuelClocksAndViewFor.
+    const always_enabled_by_config = alwaysEnabledByConfig(config);
     let inserter_clocks = unplannedInserterClocks(
         simulation_context.entity_registry,
         CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm),
         crafting_shares,
+        undefined,
+        always_enabled_by_config,
     );
 
     // Create automatic enable control factory
@@ -679,7 +682,7 @@ export function generateClockForConfig(
     };
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.is_stable} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
-    const unslacked_windows = windowsFromHistory(final_history, simulation_context.entity_registry);
+    const unslacked_windows = windowsFromHistory(final_history, simulation_context.entity_registry, always_enabled_by_config);
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
     const belt_pickup_slack_mode = options.belt_pickup_slack ?? "auto";
     const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (belt_pickup_slack_mode === "auto"
@@ -796,7 +799,7 @@ export function generateClockForConfig(
         const measured_intervals = limit_lasted;
         let measured_clocks: Map<string, InserterClock>;
         try {
-            measured_clocks = unplannedInserterClocks(simulation_context.entity_registry, duration.ticks, crafting_shares, measured_intervals);
+            measured_clocks = unplannedInserterClocks(simulation_context.entity_registry, duration.ticks, crafting_shares, measured_intervals, always_enabled_by_config);
         } catch (error) {
             logger.log(`Fuel clocks: kept from the plan, the measured ones cannot be made (${error instanceof Error ? error.message : error})`);
             return planned_view;
@@ -1350,7 +1353,9 @@ function windowsOfInsertersFeedingTheOutputMachine(
         return result;
     }
     const registry = createEntityRegistryFromConfig(config);
-    const feeders = feedersOfOutputMachines(alwaysEnabledInserters(registry), output_machine_ids);
+    const always_enabled_by_config = alwaysEnabledByConfig(config);
+    const feeders = feedersOfOutputMachines(alwaysEnabledInserters(registry), output_machine_ids)
+        .filter(it => !always_enabled_by_config.has(it.entity_id.id));
     for (const sink_id of new Set(feeders.map(it => it.sink.entity_id.id))) {
         const sink = registry.getEntityByIdOrThrow(feeders.find(it => it.sink.entity_id.id === sink_id)!.sink.entity_id);
         if (!Entity.isMachine(sink)) {
@@ -1505,7 +1510,7 @@ function deriveClockWindows(
     as_built: AsBuiltStabilityCheck | null;
 } {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config));
+    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     // drills only report WORKING/DISABLED, so their activity gives no useful window to derive
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
@@ -1553,9 +1558,10 @@ function deriveWithOutputWindows(
         return { windows: null, end_padding_ticks: null, verification: derivation, as_built: null, even_output_windows };
     }
 
+    const always_enabled_by_config = alwaysEnabledByConfig(base_config);
     const busy_windows = new Map<string, OpenRange[]>();
     for (const entity of derivation.serializable_state_transition_history.entities) {
-        if (entity.entity_type !== "inserter" || output_inserter_ids.has(entity.entity_id)) {
+        if (entity.entity_type !== "inserter" || output_inserter_ids.has(entity.entity_id) || always_enabled_by_config.has(entity.entity_id)) {
             continue;
         }
         const ranges = busyDeciderRanges(entity.initial_status, entity.transitions, period);
@@ -1974,7 +1980,7 @@ function deriveUnevenOutputClockWindows(
     moved_output_swing: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 } | null {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config));
+    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
 
@@ -2688,12 +2694,29 @@ function withInserterClocks(
     return result;
 }
 
-/** The windows the planned transfers ran in. Inserters that are left always enabled get none. */
-function windowsFromHistory(history: InventoryTransferHistory, entity_registry: ReadableEntityRegistry): Map<string, OpenRange[]> {
+/**
+ * The inserters and drills the config sets to always enabled. They get no clock windows, so no combinator in the
+ * blueprint, and the checks of a clock run them always enabled.
+ */
+function alwaysEnabledByConfig(config: Config): Set<string> {
+    return new Set(Array.from(buildEnableControlOverrideMap(config))
+        .filter(([, override]) => override.mode === "ALWAYS")
+        .map(([entity_id]) => entity_id));
+}
+
+/**
+ * The windows the planned transfers ran in. Inserters that are left always enabled get none, nor does what the config
+ * sets to always enabled.
+ */
+function windowsFromHistory(
+    history: InventoryTransferHistory,
+    entity_registry: ReadableEntityRegistry,
+    always_enabled_by_config: ReadonlySet<string>,
+): Map<string, OpenRange[]> {
     const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
     const windows = new Map<string, OpenRange[]>();
     for (const [entity_id, transfers] of history.entries()) {
-        if (!always_enabled.has(entity_id.id)) {
+        if (!always_enabled.has(entity_id.id) && !always_enabled_by_config.has(entity_id.id)) {
             windows.set(entity_id.id, OpenRange.reduceRanges(transfers.map(t => t.tick_range)));
         }
     }
@@ -2789,7 +2812,7 @@ function buildAsBuiltConfig(
 ): Config {
     const windows = new Map<string, EnableControlRange[]>();
     // inserters outside the plan swing on clocks that do not come from the windows of the plan
-    const inserter_clocks = unplannedInserterClocks(createEntityRegistryFromConfig(config), period);
+    const inserter_clocks = unplannedInserterClocks(createEntityRegistryFromConfig(config), period, undefined, undefined, alwaysEnabledByConfig(config));
     for (const [key, ranges] of withInserterClocks(decider_windows, inserter_clocks, period)) {
         windows.set(key, shiftRangesForCircuitLatency(ranges, period));
     }
