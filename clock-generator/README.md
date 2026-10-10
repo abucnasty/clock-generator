@@ -340,9 +340,21 @@ drills {
 overrides: {
     output_swings: 3,           // Force specific output inserter swing count
     terminal_swing_count: 4,    // Override calculated max swings
-    lcm: 12                     // Override LCM calculation for cycle length
+    lcm: 12,                    // Override LCM calculation for cycle length
+    non_moving_belts: true      // The belts the inserters pick up from do not move (default false)
 }
 ```
+
+#### The belt a clock is made for
+
+The simulator's belts are always full and do not move. An inserter changes its tick timing when the items on the belt are moving, and more so when the belt has gaps, so a clock that is exact on a non-moving belt can switch an inserter off holding a partial hand on a moving one.
+
+Every potential clock names the belt it is made for:
+
+- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt pickup slack. It is a rule of thumb, not a simulated moving belt: it may work on one build and not on another.
+- **non-moving belt**: the belt inserters get only the windows they need on a full belt that does not move. "Batched swings, non-moving belt" is made this way on purpose; other clocks drop the slack when they do not hold the expected output with it. A clock with a period that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
+
+By default a non-moving belt clock is only selected for you when no clock for a moving belt holds the target rate. Set `non_moving_belts: true` ("Belts do not move" in the UI) when your belts are backed up and standing still: no clock gets the slack, and the clock with the fewest wake-ups is selected. Check that the selected clock is still stable: some builds only hold the target rate with the slack, also on a belt that does not move. Of the samples, automation science has no stable clock without it, and agricultural science loses its 5-swing clock.
 
 ## Troubleshooting
 

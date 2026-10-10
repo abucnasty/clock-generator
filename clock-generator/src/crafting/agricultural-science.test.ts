@@ -45,7 +45,7 @@ describe("generateClockForConfig", () => {
         // second without a miss over 300 periods; the generator selects the planned one
         it("holds the target of 250 a second on a clock of 480 ticks, with the planned 5 output swings per cycle", () => {
             const selected = alternatives[selected_index];
-            expect(selected.label).toBe("Planned + belt pickup slack (+4 ticks): 5 output swings per cycle");
+            expect(selected.label).toBe("Batched swings: 5 output swings per cycle");
             expect(selected.is_stable).toBe(true);
             expect(selected.items_per_second).toBeCloseTo(250, 6);
             expect(selected.result.simulation_duration.ticks).toBe(480);

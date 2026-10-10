@@ -79,6 +79,8 @@ export interface ClockAlternativeView {
     meetsTargetRate: boolean;
     /** False when the windows of a belt-fed inserter go without belt pickup slack */
     keepsBeltPickupSlack: boolean;
+    /** The belt the clock is made for: "moving (+4 ticks)" or "non-moving"; empty when no clocked inserter picks up from a belt */
+    beltLabel: string;
     /** Ranked ahead of the others that meet the target rate (full-hand output swings where a machine has spare speed) */
     rankFirst: boolean;
     itemsPerSecond: number;

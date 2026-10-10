@@ -107,6 +107,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         isStable: alternative.is_stable,
         meetsTargetRate: alternative.meets_target_rate,
         keepsBeltPickupSlack: alternative.keeps_belt_pickup_slack,
+        beltLabel: clockGenerator.clockBeltLabel(alternative.belt),
         rankFirst: alternative.rank_first,
         itemsPerSecond: alternative.items_per_second,
         asBuilt: result.stability_check.as_built ?? null,

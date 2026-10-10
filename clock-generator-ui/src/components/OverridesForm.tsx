@@ -15,13 +15,15 @@ interface OverridesFormProps {
     lcm?: number;
     terminalSwingCount?: number;
     useFractionalSwings?: boolean;
-    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings', value: number | boolean | undefined) => void;
+    nonMovingBelts?: boolean;
+    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'non_moving_belts', value: number | boolean | undefined) => void;
 }
 
 export function OverridesForm({
     lcm,
     terminalSwingCount,
     useFractionalSwings,
+    nonMovingBelts,
     onUpdate,
 }: OverridesFormProps) {
     return (
@@ -95,6 +97,28 @@ export function OverridesForm({
                                 />
                             }
                             label="Enable Fractional Swings"
+                            sx={{ ml: 1 }}
+                        />
+                    </Tooltip>
+                    <Tooltip
+                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each window of an inserter that picks up from a belt stays open a few ticks longer (belt pickup slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, no clock gets the slack and the clock with the fewest wake-ups is selected. Some builds only hold the target rate with the slack, so check that the selected clock is still stable."
+                        arrow
+                        placement="top"
+                    >
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={nonMovingBelts ?? false}
+                                    color="primary"
+                                    onChange={(e) =>
+                                        onUpdate(
+                                            'non_moving_belts',
+                                            e.target.checked ? true : undefined
+                                        )
+                                    }
+                                />
+                            }
+                            label="Belts do not move"
                             sx={{ ml: 1 }}
                         />
                     </Tooltip>

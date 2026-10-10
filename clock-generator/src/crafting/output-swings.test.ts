@@ -183,7 +183,7 @@ describe("generateClockForConfig", () => {
                     expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
                 });
 
-                it("planned + belt pickup slack adds 4 ticks to the belt input inserters", () => {
+                it("batched swings for a moving belt add 4 ticks to the belt input inserters", () => {
                     expect(windowsOf("planned-belt-slack")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
                         "inserter:3": [{ start: 13, end: 40 }, { start: 181, end: 208 }, { start: 214, end: 230 }],

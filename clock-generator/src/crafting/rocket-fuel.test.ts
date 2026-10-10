@@ -31,7 +31,7 @@ describe("generateClockForConfig", () => {
             expect(alternative(id).items_per_second).toBe(60);
         });
 
-        it("selects the planned clock with belt pickup slack", () => {
+        it("selects batched swings for a moving belt", () => {
             expect(sample.alternatives[0].id).toBe("planned-belt-slack");
             expect(sample.alternatives[0].is_stable).toBe(true);
         });

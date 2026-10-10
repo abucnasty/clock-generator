@@ -431,6 +431,7 @@ function App() {
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
+                                    nonMovingBelts={config.overrides?.non_moving_belts}
                                     onUpdate={updateOverrides}
                                 />
                             </Box>

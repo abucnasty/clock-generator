@@ -64,8 +64,9 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Each potential clock was checked by simulating the build driven only by the clock windows,
                 starting the clock at several points. The one selected for you has the fewest wake-ups among
-                those that hold the target rate; a clock without belt pickup slack is only selected when no
-                other holds it. Fewer windows means more batched swings.
+                those that hold the target rate; a clock that leaves belt pickup slack out for a non-moving
+                belt is only selected when no clock for a moving belt holds it, unless "Belts do not move" is
+                on. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
                 {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                     <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>
@@ -77,6 +78,14 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                         <TableRow>
                             <TableCell padding="checkbox" />
                             <TableCell>Clock</TableCell>
+                            <TableCell>
+                                <Tooltip
+                                    title="The belt the clock is made for. Moving: each window of an inserter that picks up from a belt stays open the ticks shown longer (belt pickup slack), so a pickup that comes late on a moving belt can finish; a rule of thumb, not a simulated belt. Non-moving belt: the windows fit a belt that is full and does not move, which is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A subtick clock is always made for a non-moving belt, and is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt."
+                                    arrow
+                                >
+                                    <span>Belt</span>
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="right">
                                 <Tooltip
                                     title="Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of cycles (the clock period)."
@@ -129,6 +138,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                         </Tooltip>
                                     </Box>
                                 </TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{alternative.beltLabel}</TableCell>
                                 <TableCell align="right">
                                     {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
                                 </TableCell>
@@ -162,7 +172,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                 <TableCell padding="checkbox">
                                     <CircularProgress size={16} sx={{ ml: 1.5 }} />
                                 </TableCell>
-                                <TableCell colSpan={7} sx={{ color: 'text.secondary' }}>
+                                <TableCell colSpan={9} sx={{ color: 'text.secondary' }}>
                                     {label}: computing…
                                 </TableCell>
                             </TableRow>

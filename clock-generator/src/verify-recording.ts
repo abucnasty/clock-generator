@@ -20,7 +20,7 @@ async function main() {
     const recording_path = argValue("recording");
     if (!config_path || !recording_path) {
         console.error("Usage: npm run verify -- --config=<config.json> --recording=<recording.json> [--alternative=<id, label or index>] [--overrides='{\"terminal_swing_count\":2}'] [--items-tolerance=0.5] [--state-agreement=0.95]");
-        console.error("  --alternative: the clock that was built, as listed by the UI (default: the one it selects), e.g. planned-belt-slack or 'Planned + belt pickup slack (+4 ticks)'");
+        console.error("  --alternative: the clock that was built, as listed by the UI (default: the one it selects), e.g. planned-belt-slack or 'Batched swings: 5 output swings per cycle'");
         console.error("  --items-tolerance: items a period an inserter or machine may differ by between the game and the simulator");
         console.error("  --state-agreement: share of the time an entity has to show the same state in both not to be marked DIFF");
         process.exit(2);

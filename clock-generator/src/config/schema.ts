@@ -488,6 +488,16 @@ export const ConfigOverridesSchema = z.object({
      */
     use_fractional_swings: z.boolean().optional(),
     /**
+     * The belts the inserters pick up from do not move: they are full and backed up, as the simulator models them.
+     *
+     * A clock is made for a moving belt by default: each window of an inserter that picks up from a belt stays open
+     * a few ticks longer (belt pickup slack), and a clock without it is only selected when no clock with it holds the
+     * target rate. When enabled, no clock gets the slack and the clock with the fewest wake-ups is selected.
+     *
+     * @default false
+     */
+    non_moving_belts: z.boolean().optional(),
+    /**
      * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
      * offered as potential clocks.
      */
