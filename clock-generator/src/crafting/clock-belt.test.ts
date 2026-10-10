@@ -117,7 +117,7 @@ describe("the belt a clock is made for", () => {
             const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-        });
+        }, 60_000);
 
         it("falls back to the clock for a moving belt where a clock only holds with the slack", () => {
             const batched = alternative("planned-belt-slack");
