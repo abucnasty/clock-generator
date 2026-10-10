@@ -411,6 +411,8 @@ npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warm
 - `--settle` runs the build for a number of ticks on its new clock and seeds before the recording starts, so its start-up is not counted.
 
 `npm run test:game` records the scaffold builds under `resources/config-samples` the same way and checks that the clock the generator selects moves the expected output in every clock period of ten minutes of game time (`src/harness/scaffold-recordings.game.test.ts`). It needs `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE`, skips with the reason when they are missing, and is not part of `npm test`, since each recording takes about ten seconds in a game of its own.
+
+Copy `.env.example` to `.env` and set `FACTORIO_PATH` to your Factorio executable or install folder; `vitest.game.config.ts` loads it automatically, so `npm run test:game` picks it up without exporting anything by hand. `FACTORIO_HARNESS_SAVE` already defaults to the staging save committed at `resources/clock_generator_staging.zip`. `.env` is not read by `npm run record` or `npm run verify`, which still take `FACTORIO_PATH`/`FACTORIO_HARNESS_SAVE` from the shell environment or `--factorio=`/`--save=`.
 - `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
 - `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed.
 
