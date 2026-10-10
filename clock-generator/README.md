@@ -165,11 +165,8 @@ Here is a complete configuration for a utility science pack setup. Recipe names 
     }
   ],
   "target_output": {
+    "copies": 7,
     "items_per_second": 120,
-    "machines": 7,
-    "overrides": {
-      "output_swings": 3
-    },
     "recipe": "utility-science-pack"
   }
 }
@@ -357,8 +354,7 @@ drills {
 
 ```typescript
 overrides: {
-    output_swings: 3,           // Force specific output inserter swing count
-    terminal_swing_count: 4,    // Override calculated max swings
+    terminal_swing_count: 4,    // Force the output swings per cycle, instead of the count the plan works out
     lcm: 12,                    // Override LCM calculation for cycle length
     non_moving_belts: true      // The belts the inserters pick up from do not move (default false)
 }

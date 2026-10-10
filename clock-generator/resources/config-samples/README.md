@@ -76,6 +76,12 @@ In the order they would settle the most:
 
 The `accumulator-bad-config.json` sample is a deliberately invalid config for the validator and needs no scaffold.
 
+`intermediates/productivity-module` is not a whole config yet: it has no belts, though its output inserter drops on
+belt 1, and no inserters bring iron plates and copper cables to its electronic circuit machine, coal to its plastic
+machine or copper plates to its cable machine. Validating it stops at "Entity with ID belt:1 does not exist", and
+with the belt added at the four missing inserters. It needs the build it was exported from before it can be
+generated, let alone recorded.
+
 ## Iron bacteria
 
 Recorded on 2026-10-09 in Factorio 2.1.21, with 50 bacteria seeded into each machine (the recipe makes bacteria from
