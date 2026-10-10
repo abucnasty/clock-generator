@@ -3138,12 +3138,14 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
 
 /** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
 const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
-/** Output swing counts above the planned one offered as alternatives */
+/** Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count */
 const EXTENDED_SWING_COUNTS = 3;
 
 /** What the remaining alternatives need from the first (batched swings) run */
 export interface ClockAlternativeContext {
     swings: number;
+    /** The output swings per cycle the plan started with: more than `swings` when it backed off to a lower count */
+    planned_swings?: number;
     primary_stable: boolean;
     /** Clock period of the primary alternative */
     period_ticks: number;
@@ -3335,7 +3337,7 @@ function alternativeDefinitionsFor(
     // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
     // output inserter takes hands, so longer cycles can work too
     const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
-        : Array.from({ length: EXTENDED_SWING_COUNTS }, (_, i) => swings + 1 + i);
+        : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
 
     return [
         // with belts that do not move the first run is already made without the slack, unless it only holds with it
@@ -3581,6 +3583,7 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
     const result = definition.run();
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
+        planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: alternativeIsStable(result),
         period_ticks: result.simulation_duration.ticks,
     };
