@@ -100,6 +100,7 @@ From 0.6.0 on, each release lists what people generating clocks will notice unde
 - `npm run record` and `npm run test:game` fail when the build has something on a machine of the config that the config does not have, naming it: an inserter whatever is at its other end, a further machine of a recipe of the config, or a loader. Held by no clock it runs free and the recording is not of the clock. `test:game` checks a subtick clock by the ticks it counts, and records the iron bacteria build.
 - One run in Factorio records at most 72,000 ticks, 20 minutes of game time, so game-backed tests and recordings cannot run excessively long. A clocked recording is whole periods of its clock, so `npm run record` refuses a `--ticks` whose whole periods pass the limit and names the most that fits (70,848 on a clock of 1728). Warm-up and settle ticks do not count.
 - The agricultural science scaffold without belt gaps is the one named `agriculture-science-scaffold.txt`; a build in Factorio ran it for 300 periods without a miss on the selected clock and on the 5-swing one.
+- The two belt-fed utility science scaffolds have the inserter that brings processing units and low density structures at a stack size of 16, as their configs say. It was 12 in the blueprints, with which the generator finds no clock for the plain build at all.
 
 #### Removed
 - The two-foundry low density structure sample: the four-foundry build at 240 a second is the one that is built and recorded.
