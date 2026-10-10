@@ -85,6 +85,14 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                             </TableCell>
                             <TableCell align="right">Clock period</TableCell>
                             <TableCell align="right">Inserter windows</TableCell>
+                            <TableCell align="right">
+                                <Tooltip
+                                    title="How often a machine wakes an inserter that is enabled and waiting on it, per minute, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a check that moves little or nothing; fewer is better. Shown for clocks that were run long enough to count them."
+                                    arrow
+                                >
+                                    <span>Wake-ups (per min)</span>
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="right">Rate achieved (items/s)</TableCell>
                             <TableCell align="right">Clock-only output</TableCell>
                             <TableCell>Status</TableCell>
@@ -124,6 +132,11 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                 </TableCell>
                                 <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
                                 <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
+                                <TableCell align="right">
+                                    {alternative.asBuilt?.wake_ups
+                                        ? Math.round(alternative.asBuilt.wake_ups.wake_ups_per_minute)
+                                        : '—'}
+                                </TableCell>
                                 <TableCell align="right">{alternative.itemsPerSecond.toFixed(2)}</TableCell>
                                 <TableCell align="right">
                                     {alternative.asBuilt
@@ -147,7 +160,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                 <TableCell padding="checkbox">
                                     <CircularProgress size={16} sx={{ ml: 1.5 }} />
                                 </TableCell>
-                                <TableCell colSpan={6} sx={{ color: 'text.secondary' }}>
+                                <TableCell colSpan={7} sx={{ color: 'text.secondary' }}>
                                     {label}: computing…
                                 </TableCell>
                             </TableRow>

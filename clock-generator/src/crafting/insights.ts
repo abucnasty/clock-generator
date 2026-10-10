@@ -263,6 +263,48 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
     };
 }
 
+/** Inserters enabled for at least this share of the long run are named as (nearly) always enabled */
+const MOSTLY_ENABLED_SHARE = 0.8;
+
+/** How often the machines wake the inserters under this clock (goal 2 of GOALS.md), and which inserters most */
+function wakeUpsInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+    const wake_ups = result.stability_check.as_built?.wake_ups;
+    if (wake_ups === undefined || wake_ups.inserters.length === 0) {
+        return null;
+    }
+    const percent = (share: number) => `${round(share * 100)}%`;
+    const rows = wake_ups.inserters.map(it => {
+        const entity = entities.find(entity => entity.entity_id === it.inserter_id);
+        const ends = entity?.source && entity.sink ? `${entity.source.label} to ${entity.sink.label}` : "";
+        return { ...it, label: entity?.label ?? it.inserter_id, ends };
+    }).sort((a, b) => b.wake_ups_per_minute - a.wake_ups_per_minute);
+    const most = rows[0];
+    const mostly_enabled = rows.filter(it => it.enabled_share >= MOSTLY_ENABLED_SHARE && it.alarms_per_minute > 0);
+    return {
+        id: "wake-ups",
+        scope: "clock",
+        title: `Machines wake the inserters ${round(wake_ups.wake_ups_per_minute)} times a minute`,
+        what: `In a long run of this clock the machines of one copy of the build woke its inserters ${round(wake_ups.wake_ups_per_minute)} `
+            + `times a minute. ${most.label} is woken most, ${round(most.wake_ups_per_minute)} times a minute: it is enabled `
+            + `${percent(most.enabled_share)} of the time and spends ${percent(most.waiting_share)} of the time waiting.`
+            + (mostly_enabled.length === 0 ? "" : ` Enabled ${percent(MOSTLY_ENABLED_SHARE)} of the time or more: `
+                + `${mostly_enabled.map(it => `${it.label} (${percent(it.enabled_share)})`).join(", ")}.`),
+        why: "An enabled inserter with nothing to move sleeps on the wake-up list of the machine it waits on, and that machine "
+            + "wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a "
+            + "hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug "
+            + "option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+        explanation: "Each wake-up is a check that moves little or nothing, so among clocks that hold the target the one with the "
+            + "fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts "
+            + "of the machine it waits on, whether its windows are long, it is left always enabled in a loop of machines, or "
+            + "the config sets it to always enabled.",
+        table: {
+            columns: ["Inserter", "Between", "Wake-ups a minute", "Machine wakes a minute", "Enabled", "Enabled and waiting"],
+            rows: rows.map(it => [it.label, it.ends, `${round(it.wake_ups_per_minute)}`, `${round(it.alarms_per_minute)}`,
+                percent(it.enabled_share), percent(it.waiting_share)]),
+        },
+    };
+}
+
 /** Why a clock that misses the expected output is listed as unstable */
 function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     const check = result.stability_check;
@@ -300,6 +342,7 @@ export function clockInsights(result: BlueprintGenerationResult, is_stable: bool
         outputHandInsight(result, entities),
         is_stable ? null : unstableInsight(result),
         is_stable ? planVersusClockInsight(result) : null,
+        wakeUpsInsight(result, entities),
     ];
     return insights.filter((it): it is ClockInsight => it !== null);
 }
