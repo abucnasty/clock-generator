@@ -53,6 +53,8 @@ interface ScaffoldBuild {
     warmup_ticks: number;
     /** Ticks the build runs on the generated clock before the recording starts, so its start-up is left out */
     settle_ticks: number;
+    /** The clock is made for belts that do not move (`overrides.non_moving_belts`), which is what a scaffold has */
+    non_moving_belts?: boolean;
 }
 
 const BUILDS: Record<string, ScaffoldBuild> = {
@@ -70,6 +72,15 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 1200,
+    },
+    // its selected clock has no belt pickup slack: full-hand output swings, which the simulator holds stable without it
+    "automation science (belts do not move)": {
+        scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),
+        config: ConfigPaths.AUTOMATION_SCIENCE,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 1200,
+        non_moving_belts: true,
     },
     "automation science with a belted buffer": {
         scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-belted-buffer-scaffold.txt"),
@@ -139,9 +150,13 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
             scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "scaffold-recordings-"));
 
-            const config = await loadConfigFromFile(build.config);
+            const loaded = await loadConfigFromFile(build.config);
+            const config = build.non_moving_belts ? { ...loaded, overrides: { ...loaded.overrides, non_moving_belts: true } } : loaded;
             const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
             const selected = alternatives[selected_index];
+            if (build.non_moving_belts) {
+                expect(selected.belt, `the selected clock (${selected.label}) is made without belt pickup slack`).toEqual({ kind: "non_moving" });
+            }
             expect(selected.is_stable, `the selected clock (${selected.label}) is stable in the simulator`).toBe(true);
             expect(selected.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
                 .toBe(config.target_output.items_per_second);

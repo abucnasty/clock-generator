@@ -142,6 +142,38 @@ describe("the belt a clock is made for", () => {
         });
     });
 
+    // One belt inserter that takes two ingredients off a belt split between them. Batched swings moves more than the
+    // expected output, with the slack and without it; full-hand output swings holds it, also without the slack.
+    describe("automation science, with belts that do not move", () => {
+        let alternatives: ClockAlternative[];
+        let selected: ClockAlternative;
+
+        beforeAll(async () => {
+            const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
+            const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
+            alternatives = generated.alternatives;
+            selected = alternatives[generated.selected_index];
+        });
+
+        it("makes full-hand output swings from batched swings that move more than the expected output", () => {
+            const batched = alternatives.find(a => a.id === "planned-belt-slack")!;
+            expect(batched.is_stable).toBe(false);
+            expect(batched.result.stability_check.as_built?.actual_output_items).toBe(48);
+            expect(batched.result.stability_check.expected_output_items).toBe(32);
+            expect(alternatives.map(a => a.id)).toEqual(["planned-belt-slack", "full-hand"]);
+        });
+
+        it("selects full-hand output swings without the slack", () => {
+            expect(selected.id).toBe("full-hand");
+            expect(selected.meets_target_rate).toBe(true);
+            expect(selected.belt).toEqual({ kind: "non_moving" });
+            expect(selected.result.clock_windows).toEqual({
+                "inserter:1": [{ start: 1, end: 23 }],
+                "inserter:2": [{ start: 0, end: 3 }, { start: 36, end: 39 }],
+            });
+        });
+    });
+
     // belt pickup slack is not given to a period that is not a whole number of ticks
     describe("iron bacteria, on a clock of 90.947 ticks", () => {
         let alternatives: ClockAlternative[];

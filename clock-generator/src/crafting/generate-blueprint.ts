@@ -2348,8 +2348,12 @@ const FULL_HAND_MIN_EXTRA_GRABS_PER_HAND = 0.25;
 /** Spare output capacity: every n-th window is lengthened so a second grab can drain a surplus */
 const FULL_HAND_SPARE_EVERY = [3, 2];
 const FULL_HAND_SPARE_TICKS = Array.from({ length: 13 }, (_, i) => i + 4);
-/** Warmup periods after which a run started with full output machines must be back at the expected output */
-const FULL_HAND_RECOVERY_PERIODS = [1, 2];
+/**
+ * Warmup periods after which a run started with full output machines must be back at the expected output. On its way
+ * back a build can lose a hand of ingredients and with it a period of output: automation science without belt pickup
+ * slack does in its second period, and holds the expected output from the third on.
+ */
+const FULL_HAND_RECOVERY_PERIODS = [3, 4];
 
 type SpareWindows = { every: number; ticks: number };
 
@@ -2363,7 +2367,8 @@ type SpareWindows = { every: number; ticks: number };
  * belt) never drains and keeps the input drops blocked. The timing must recover from full output machines; if it
  * does not, every n-th window is lengthened for a second grab, preferring the fewest pickups that wait for items.
  * The result is confirmed from several clock start phases. Skipped when the planned windows already fill most hands
- * in one grab (and, with count_waits, when most pickups do not wait at the machine either).
+ * in one grab (and, with count_waits, when most pickups do not wait at the machine either), unless the build moves
+ * more than the expected output under them.
  */
 function fullHandOutputWindows(
     config: Config,
@@ -2443,11 +2448,16 @@ function fullHandOutputWindows(
         return ticks;
     };
 
-    const planned = pickupStats(runClockOnBuild(config, windows, period, logger));
+    const planned_run = runClockOnBuild(config, windows, period, logger);
+    const planned = pickupStats(planned_run);
     const extra_grabs = (planned.pickups - planned.swings) / Math.max(1, planned.swings);
     const waits = planned.slow / Math.max(1, planned.swings);
-    logger.log(`Full-hand output: current windows take ${planned.pickups} grabs for ${planned.swings} hands, ${planned.slow} waited for items`);
-    if (extra_grabs < FULL_HAND_MIN_EXTRA_GRABS_PER_HAND && !(count_waits && waits >= FULL_HAND_MIN_EXTRA_GRABS_PER_HAND)) {
+    // a machine with a surplus fills every hand in one grab, which says nothing about its windows: they let the surplus out
+    const { actual_output_items, expected_output_items } = planned_run.stability_check;
+    const over_produces = actual_output_items > expected_output_items + LCM_STABILITY_TOLERANCE;
+    logger.log(`Full-hand output: current windows take ${planned.pickups} grabs for ${planned.swings} hands, ${planned.slow} waited for items`
+        + (over_produces ? `, and move ${actual_output_items} of ${expected_output_items} items` : ""));
+    if (!over_produces && extra_grabs < FULL_HAND_MIN_EXTRA_GRABS_PER_HAND && !(count_waits && waits >= FULL_HAND_MIN_EXTRA_GRABS_PER_HAND)) {
         return null;
     }
 
