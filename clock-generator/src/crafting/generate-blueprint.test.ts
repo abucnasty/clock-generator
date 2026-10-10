@@ -366,6 +366,9 @@ describe("generateClockForConfig", () => {
     // of 1728 ticks the subtick clock counts, which cut into their 19 periods are 576 in each of 798. These tests
     // were skipped for a day because the long run counted a period of 90.947 ticks in bins of 90, which hold 570 of
     // the 576; the clock and the belt pickup rules were never at fault.
+    // Recorded on 2026-10-10 on that scaffold, 36,000 ticks each: batched swings at 2 output swings a cycle and
+    // observed windows move 10,944 in each of 20 repeats too. The simulator had batched swings at 2 swings at 338 a
+    // second for as long as it opened every window a tick early.
     describe("iron bacteria from two biochambers, each with two output inserters", async () => {
         const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
         let validation: ConfigValidation;
@@ -419,6 +422,20 @@ describe("generateClockForConfig", () => {
         it("leaves the inserters between the machines always enabled", () => {
             expect(windows["inserter:7"]).toBeUndefined();
             expect(windows["inserter:8"]).toBeUndefined();
+        });
+
+        it("leaves them always enabled in observed windows too", () => {
+            const observed = alternatives.find(a => a.id === "derived-subtick")!;
+            expect(observed.is_stable).toBe(true);
+            expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
+            expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
+        });
+
+        it("holds the target with batched swings at 2 output swings a cycle too, as it does in the game", () => {
+            const batched = alternatives.find(a => a.id === "planned-belt-slack-subtick")!;
+            expect(batched.label).toBe("Batched swings: 2 output swings per cycle, subtick clock");
+            expect(batched.is_stable).toBe(true);
+            expect(batched.items_per_second).toBeCloseTo(380, 6);
         });
     });
 

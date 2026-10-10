@@ -65,11 +65,13 @@ function sinkTakesNothing(sink: EntityState): boolean {
  * The rule for a waiting inserter names the recorded state of every waiting sample but 188 of 328,042.
  */
 export function factorioInserterState(state: InserterState, sink: EntityState): FactorioInserterState {
-    if (!state.enabled || state.status === InserterStatus.DISABLED) {
+    if (!state.enabled) {
         return FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
     }
     const held = state.held_item;
-    const waits = state.status === InserterStatus.IDLE || state.status === InserterStatus.WAITING_FOR_SINK;
+    // on a clock of the game an inserter shows as enabled the tick before it can act, and waits in that tick
+    const waits = state.status === InserterStatus.IDLE || state.status === InserterStatus.WAITING_FOR_SINK
+        || state.status === InserterStatus.DISABLED;
     if (held === null) {
         if (sinkTakesNothing(sink)) {
             return FactorioInserterState.WAITING_FOR_SPACE_IN_DESTINATION;

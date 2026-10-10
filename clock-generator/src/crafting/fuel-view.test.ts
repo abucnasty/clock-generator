@@ -86,12 +86,12 @@ describe("the fuel plan", () => {
                 for (const inserter of plan.inserters) {
                     const swings = view.transfer_history.entities.find(entity => entity.entity_id === inserter.inserter_id)!.transfers;
                     expect(swings.length).toBeGreaterThanOrEqual(3);
-                    // the view runs the exported fuel clock: every swing starts inside one of its windows, give or
-                    // take the tick the recorded transfers are moved by
+                    // the view runs the exported fuel clock: every swing starts inside one of its windows. The recorded
+                    // transfers are two ticks behind the clock.
                     for (const swing of swings) {
-                        const clock_tick = (swing.start_tick + 1) % inserter.modulus;
+                        const clock_tick = (swing.start_tick + 2) % inserter.modulus;
                         expect(clock_tick).toBeGreaterThanOrEqual(inserter.window.start);
-                        expect(clock_tick).toBeLessThanOrEqual(inserter.window.end + 2);
+                        expect(clock_tick).toBeLessThanOrEqual(inserter.window.end);
                     }
                 }
             });

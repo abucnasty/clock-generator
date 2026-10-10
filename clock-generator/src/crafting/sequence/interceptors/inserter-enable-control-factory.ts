@@ -1165,6 +1165,7 @@ export class EnableControlFactory {
             periodDuration: Duration.ofTicks(inserter_clock.modulus),
             enabledRanges: [inserter_clock.window],
             tickProvider: this.tick_provider,
+            is_game_clock: true,
         });
         this.resettable_registry.register(clocked_control);
         return clocked_control;

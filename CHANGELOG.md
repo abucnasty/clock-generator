@@ -66,6 +66,7 @@ From 0.6.0 on, each release lists what people generating clocks will notice unde
 - An inserter filtered to a by-product picks it up.
 - Combinator descriptions are cut to the 500 bytes Factorio keeps.
 - The diagram view lays out machines that feed each other in a loop.
+- A clocked inserter is enabled in the simulator for the ticks it is in the game: every tick of its window, and it acts in the first of them. The simulator opened each window a tick early and had the inserter spend that tick waking. An inserter whose swing back ended in that tick took its next hand a tick sooner than in the game, a mining drill mined a tick longer than its window, and a fuel inserter had a tick less than its fuel clock gives it. Recorded on seven runs of five builds: a hand never grows in the first tick an inserter shows as enabled (49,382 windows), and it does in the first tick it shows as disabled (795 times), never after that. On the iron bacteria sample batched swings now hold the target rate at 2 output swings per cycle, as they do in the game, where the simulator had them at 338 of 380 a second, and observed windows are offered; its selected clock is the same. No sample with a clock that holds its target rate selects another.
 - Observed windows leave the inserters of a loop always enabled, as every other clock does. They gave them windows like any other inserter. No build with a loop showed it: none had observed windows that passed the clock-only check.
 
 #### Removed

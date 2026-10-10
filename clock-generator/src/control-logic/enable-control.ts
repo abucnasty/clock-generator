@@ -10,6 +10,13 @@ export interface EnableControl {
      */
     isEnabledIn?(ticks: number): boolean;
     /**
+     * True for a clock as the game has it: the windows of an exported clock, or a fuel or by-product clock. An
+     * inserter acts in every tick such a clock enables it, the first one included, as recorded in the game. On any
+     * other control, which only the planning run has, an inserter wakes in the first tick and acts from the next:
+     * the plan counts its ticks on that.
+     */
+    readonly is_game_clock?: boolean;
+    /**
      * Used for debugging purposes to identify the control in logs.
      */
     toString?(): string;
@@ -110,12 +117,14 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     public static create(args: {
         periodDuration: Duration,
         enabledRanges: ReadonlyArray<OpenRange>,
-        tickProvider: TickProvider
+        tickProvider: TickProvider,
+        is_game_clock?: boolean,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
             args.periodDuration,
             args.enabledRanges,
-            args.tickProvider
+            args.tickProvider,
+            args.is_game_clock ?? false,
         );
     }
     private offset = 0;
@@ -127,7 +136,8 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     constructor(
         public readonly periodDuration: Duration,
         public readonly enabledRanges: ReadonlyArray<OpenRange>,
-        public readonly tickProvider: TickProvider
+        public readonly tickProvider: TickProvider,
+        public readonly is_game_clock: boolean = false,
     ) {
         this.offset_tick_provider = TickProvider.offset({
             base: tickProvider,

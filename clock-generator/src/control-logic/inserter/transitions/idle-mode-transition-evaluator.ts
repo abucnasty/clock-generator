@@ -39,23 +39,12 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         private readonly enable_control: EnableControl,
     ) {}
 
-    private next_evaluation_tick: number = 0;
-
-    public onEnter(fromMode: InserterMode): void {
-        // schedules evaluation on the next tick after being disabled to simulate the delay in circuits
-        if (fromMode.status === InserterStatus.DISABLED){
-            this.next_evaluation_tick = this.tick_provider.getCurrentTick() + 1;
-        }
-    }
+    public onEnter(fromMode: InserterMode): void {}
 
     public onExit(toMode: InserterMode): void {}
 
     public evaluateTransition(): ModeTransition<InserterMode> {
 
-        const current_tick = this.tick_provider.getCurrentTick();
-        if (current_tick < this.next_evaluation_tick) {
-            return ModeTransition.NONE;
-        }
         if (!this.enable_control.isEnabled()) {
             this.inserter_state.waits_for_sink = false;
             return ModeTransition.transition(this.disabled_mode, "inserter disabled");

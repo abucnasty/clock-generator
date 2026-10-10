@@ -59,10 +59,11 @@ const MAX_SIMULATION_TICKS = 500_000;
  */
 const LCM_STABILITY_TOLERANCE = 1;
 
-/** Ticks between the clock reaching a value and an inserter acting on its decider (combinator output, then inserter wake-up) */
+/**
+ * Ticks between the clock reaching a value and an inserter acting on its decider (combinator output, then the
+ * inserter reading it). An inserter acts in every tick of its window this much later, the first one included.
+ */
 const CIRCUIT_LATENCY_TICKS = 2;
-/** Inserters already wait one tick after being re-enabled in the simulation, so window starts need one tick less */
-const SIMULATED_WAKE_DELAY_TICKS = 1;
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -1780,7 +1781,7 @@ function shiftEdgeNotes(
     };
     // ticks an inserter is enabled for a decider window
     const enabledSpan = (window: { start: number; end: number }) => ({
-        start: window.start + CIRCUIT_LATENCY_TICKS - SIMULATED_WAKE_DELAY_TICKS,
+        start: window.start + CIRCUIT_LATENCY_TICKS,
         end: window.end + CIRCUIT_LATENCY_TICKS + 1,
     });
 
@@ -2904,7 +2905,7 @@ function buildAsBuiltConfig(
 function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number): EnableControlRange[] {
     const shifted: EnableControlRange[] = [];
     for (const range of ranges) {
-        let start = range.start_inclusive + CIRCUIT_LATENCY_TICKS - SIMULATED_WAKE_DELAY_TICKS;
+        let start = range.start_inclusive + CIRCUIT_LATENCY_TICKS;
         let end = range.end_inclusive + CIRCUIT_LATENCY_TICKS;
         if (start >= period) {
             start -= period;
