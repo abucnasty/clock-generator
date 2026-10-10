@@ -1478,6 +1478,24 @@ const NESTED_RUN_OPTIONS = (logger: Logger): GenerateClockOptions => ({
     fuel_consumption_view: false,
 });
 
+/**
+ * Runs a build on clock windows alone, as its blueprint runs it in the game: what has windows is enabled by them, a
+ * tick of the circuit network later, a fuel inserter by its fuel clock, and everything else is always enabled (see
+ * `buildAsBuiltConfig`). Such a run plans nothing and checks nothing of its own; `options` say what it records and
+ * how long it runs.
+ */
+function runClockOnBuild(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    period: number,
+    logger: Logger,
+    options: GenerateClockOptions = {},
+    /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
+    fuel_clocks?: ReadonlyMap<string, InserterClock>,
+): BlueprintGenerationResult {
+    return generateClockForConfig(buildAsBuiltConfig(config, windows, period, fuel_clocks), { ...NESTED_RUN_OPTIONS(logger), ...options });
+}
+
 /** End padding candidates tried in order; a candidate is only used when the next one also passes, for margin */
 const DERIVED_WINDOW_END_PADDING_CANDIDATES = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16];
 
@@ -1548,10 +1566,7 @@ function deriveWithOutputWindows(
 } {
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} windows)`);
-    const derivation = generateClockForConfig(
-        buildAsBuiltConfig(base_config, fixed_windows, period),
-        NESTED_RUN_OPTIONS(logger)
-    );
+    const derivation = runClockOnBuild(base_config, fixed_windows, period, logger);
     logger.log(`Derived clock windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
     const even_output_windows = evenlySpacedOutputWindows(output_windows, derivation, period);
     if (!derivation.stability_check.is_stable) {
@@ -2175,7 +2190,7 @@ function longRunOfFreeRunningBuild(
         return null;
     }
     // only its stock is read, which names the state of every inserter itself
-    const run = generateClockForConfig(buildAsBuiltConfig(config, decider_windows, period), { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods, machine_stock: true, factorio_states: false });
+    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false });
     const stock = run.machine_stock;
     if (!stock) {
         return null;
@@ -2211,9 +2226,9 @@ export function simulateClockOnly(
 ): StockRecording {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    const run = generateClockForConfig(
-        buildAsBuiltConfig({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period_ticks),
-        { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods, machine_stock: true },
+    const run = runClockOnBuild(
+        { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period_ticks, logger,
+        { simulate_periods: periods, machine_stock: true },
     );
     return run.machine_stock!;
 }
@@ -2239,7 +2254,7 @@ function runAsBuiltCheck(
 ): { result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; /** The long run of the check, when it made one */ stock?: StockRecording } {
     const step = Math.max(1, Math.floor(period / start_phases));
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
-    const result = generateClockForConfig(buildAsBuiltConfig(config, decider_windows, period), NESTED_RUN_OPTIONS(logger));
+    const result = runClockOnBuild(config, decider_windows, period, logger);
     const check: AsBuiltStabilityCheck = {
         is_stable: result.stability_check.is_stable,
         actual_output_items: result.stability_check.actual_output_items,
@@ -2269,7 +2284,7 @@ function runAsBuiltCheck(
     for (let offset = step; offset < period && check.start_phases_checked < start_phases; offset += step) {
         const rotated = new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const));
         // only its output count is read
-        const shifted = generateClockForConfig(buildAsBuiltConfig(config, rotated, period), { ...NESTED_RUN_OPTIONS(logger), factorio_states: false });
+        const shifted = runClockOnBuild(config, rotated, period, logger, { factorio_states: false });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
         if (!shifted.stability_check.is_stable) {
@@ -2408,7 +2423,7 @@ function fullHandOutputWindows(
         return ticks;
     };
 
-    const planned = pickupStats(generateClockForConfig(buildAsBuiltConfig(config, windows, period), NESTED_RUN_OPTIONS(logger)));
+    const planned = pickupStats(runClockOnBuild(config, windows, period, logger));
     const extra_grabs = (planned.pickups - planned.swings) / Math.max(1, planned.swings);
     const waits = planned.slow / Math.max(1, planned.swings);
     logger.log(`Full-hand output: current windows take ${planned.pickups} grabs for ${planned.swings} hands, ${planned.slow} waited for items`);
@@ -2418,8 +2433,7 @@ function fullHandOutputWindows(
 
     type Candidate = { offset: number; length: number; output_full: number; slow: number };
     const recovers = (candidate_windows: Map<string, OpenRange[]>) => FULL_HAND_RECOVERY_PERIODS.every(warmup_periods =>
-        generateClockForConfig(buildAsBuiltConfig(config, candidate_windows, period),
-            { ...NESTED_RUN_OPTIONS(logger), keep_output_buffers: true, warmup_periods }).stability_check.is_stable);
+        runClockOnBuild(config, candidate_windows, period, logger, { keep_output_buffers: true, warmup_periods }).stability_check.is_stable);
     // shortest spare first: longer windows let more grabs wait for items
     const recoveringTiming = (candidate: Candidate, label: string) => {
         if (recovers(build(candidate.offset, candidate.length))) {
@@ -2430,7 +2444,7 @@ function fullHandOutputWindows(
                 report?.(`Searching spare output capacity (${label}, every ${every} windows +${ticks} ticks)`);
                 const spare = { every, ticks };
                 const spare_windows = build(candidate.offset, candidate.length, spare);
-                const result = generateClockForConfig(buildAsBuiltConfig(config, spare_windows, period), NESTED_RUN_OPTIONS(logger));
+                const result = runClockOnBuild(config, spare_windows, period, logger);
                 if (result.stability_check.is_stable && recovers(spare_windows)) {
                     return { spare, output_full: outputFullTicks(result), slow: slowPickups(result) };
                 }
@@ -2474,7 +2488,7 @@ function fullHandOutputWindows(
         let length_attempts = 0;
         for (let offset = 0; offset < spacing; offset += FULL_HAND_OFFSET_STEP) {
             report?.(`Searching full-hand output timing (${++searched}/${total})`);
-            const result = generateClockForConfig(buildAsBuiltConfig(config, build(offset, length), period), NESTED_RUN_OPTIONS(logger));
+            const result = runClockOnBuild(config, build(offset, length), period, logger);
             if (!result.stability_check.is_stable) {
                 continue;
             }
@@ -2613,12 +2627,10 @@ function fuelConsumptionView(
     let periods = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / period), Math.ceil(min_ticks / period)), max_periods);
     while (true) {
         // the windows are run as they are: observing them again would return that run instead, without the fuel levels
-        const run = generateClockForConfig(
-            buildAsBuiltConfig(
-                { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period,
-                on_these_fuel_clocks ? inserter_clocks : undefined,
-            ),
-            { ...NESTED_RUN_OPTIONS(logger), simulate_periods: periods, fuel_levels: true },
+        const run = runClockOnBuild(
+            { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period, logger,
+            { simulate_periods: periods, fuel_levels: true },
+            on_these_fuel_clocks ? inserter_clocks : undefined,
         );
         const swung = run.serializable_transfer_history.entities
             .some(entity => fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
