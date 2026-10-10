@@ -414,7 +414,7 @@ npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warm
 
 Copy `.env.example` to `.env` and set `FACTORIO_PATH` to your Factorio executable or install folder; `vitest.game.config.ts` loads it automatically, so `npm run test:game` picks it up without exporting anything by hand. `FACTORIO_HARNESS_SAVE` already defaults to the staging save committed at `resources/clock_generator_staging.zip`. `.env` is not read by `npm run record` or `npm run verify`, which still take `FACTORIO_PATH`/`FACTORIO_HARNESS_SAVE` from the shell environment or `--factorio=`/`--save=`.
 
-`npm run test:game:watch` runs the same tests with the game open with graphics, joined to each run as a spectator, at speed 1 instead of running headless as fast as the machine allows. Each build waits for its window to be closed before the next one starts; narrow it to one build with `npm run test:game:watch -- -t "automation science"`.
+`npm run test:game:watch` runs the same tests with the game also open with graphics, joined to each run as a spectator, at the same max speed as headless. Each build waits for its window to be closed before the next one starts; narrow it to one build with `npm run test:game:watch -- -t "automation science"`.
 - `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
 - `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed.
 
