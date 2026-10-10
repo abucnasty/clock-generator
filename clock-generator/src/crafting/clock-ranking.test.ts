@@ -6,6 +6,7 @@ type Ranked = ClockRanking & { id: string };
 const clock = (id: string, ranking: Partial<ClockRanking> = {}): Ranked => ({
     id,
     meets_target_rate: true,
+    rate_off_target: 0,
     matches_belt_choice: true,
     rank_first: false,
     wake_ups_per_minute: 100,
@@ -78,6 +79,30 @@ describe("combineClockAlternativeRuns", () => {
             clock("first", { meets_target_rate: false }),
             clock("second", { meets_target_rate: false }),
         ])).toBe("first");
+    });
+
+    // the processing unit sample with a belt export: no clock holds 40 a second, and the one with the fewest windows
+    // made 18.4 where another made 34.3
+    it("selects the clock nearest to the target rate when none meets it, whatever its windows and its belt", () => {
+        expect(selectedOf([
+            clock("fewest-windows", { meets_target_rate: false, rate_off_target: -21.64, window_count: 5 }),
+            clock("nearest", { meets_target_rate: false, rate_off_target: -5.69, window_count: 40, matches_belt_choice: false }),
+            clock("between", { meets_target_rate: false, rate_off_target: -8.57, window_count: 60 }),
+        ])).toBe("nearest");
+    });
+
+    it("counts a rate above the target as far off as one below it", () => {
+        expect(selectedOf([
+            clock("over", { meets_target_rate: false, rate_off_target: 3 }),
+            clock("under", { meets_target_rate: false, rate_off_target: -2 }),
+        ])).toBe("under");
+    });
+
+    it("does not look at how near a clock is to the target rate while one meets it", () => {
+        expect(selectedOf([
+            clock("meets", { wake_ups_per_minute: 500 }),
+            clock("near", { meets_target_rate: false, rate_off_target: 0.01, wake_ups_per_minute: 0 }),
+        ])).toBe("meets");
     });
 
     it("lists runs with the same windows once", () => {

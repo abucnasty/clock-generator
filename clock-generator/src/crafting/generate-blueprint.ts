@@ -3127,6 +3127,11 @@ export interface ClockAlternative {
     /** Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not */
     meets_target_rate: boolean;
     /**
+     * Items per second `items_per_second` is above the target rate; negative when it is short of it. Where no clock
+     * meets the target rate, the one nearest to it is selected.
+     */
+    rate_off_target: number;
+    /**
      * False when the clock is not made for the belt the config asks for; such a clock is only selected when no other
      * meets the target rate. By default that is a clock whose belt-fed inserters go without belt pickup slack: the
      * simulator's belts do not move, so it looks better there than it is on a moving belt. When the config says the
@@ -3159,13 +3164,18 @@ export interface ClockAlternative {
 
 export interface ClockAlternativesResult {
     alternatives: ClockAlternative[];
-    /** The best alternative by `ClockRanking`: the one with the fewest wake-ups among those that meet the target rate */
+    /**
+     * The best alternative by `ClockRanking`: the one with the fewest wake-ups among those that meet the target rate,
+     * or the one nearest to the target rate when none meets it
+     */
     selected_index: number;
 }
 
 /** What the selection compares between two alternatives, in this order; see `combineClockAlternativeRuns` */
 export interface ClockRanking {
     meets_target_rate: boolean;
+    /** Items per second the clock is above the target rate, or below it when negative; compared between clocks that do not meet it */
+    rate_off_target: number;
     matches_belt_choice: boolean;
     rank_first: boolean;
     /** Null when they were not counted, which ranks after any count */
@@ -3176,6 +3186,7 @@ export interface ClockRanking {
 export function clockRankingOf(alternative: ClockAlternative): ClockRanking {
     return {
         meets_target_rate: alternative.meets_target_rate,
+        rate_off_target: alternative.rate_off_target,
         matches_belt_choice: alternative.matches_belt_choice,
         rank_first: alternative.rank_first,
         wake_ups_per_minute: alternative.wake_ups_per_minute,
@@ -3605,11 +3616,11 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const rateAt = (clock_period: number) => achieved_output_items * 60 / clock_period * copies;
     const rank_first = id === "full-hand" && machineHasSpareSpeed(config, result);
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
-    const meetsTargetRate = (clock_period: number) =>
-        is_stable && Math.abs(rateAt(clock_period) - config.target_output.items_per_second) <= TARGET_RATE_TOLERANCE;
+    const rateOffTarget = (clock_period: number) => rateAt(clock_period) - config.target_output.items_per_second;
+    const meetsTargetRate = (clock_period: number) => is_stable && Math.abs(rateOffTarget(clock_period)) <= TARGET_RATE_TOLERANCE;
     const matches_belt_choice = config.overrides?.non_moving_belts === true ? belt?.kind !== "moving" : !result.belt_pickup_slack_left_out;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), rate_off_target: rateOffTarget(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -3629,6 +3640,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 is_stable,
                 items_per_second: rateAt(period),
                 meets_target_rate: meetsTargetRate(period),
+                rate_off_target: rateOffTarget(period),
                 matches_belt_choice,
                 belt,
                 wake_ups_per_minute,
@@ -3647,6 +3659,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 is_stable,
                 items_per_second: rateAt(rounded),
                 meets_target_rate: meetsTargetRate(rounded),
+                rate_off_target: rateOffTarget(rounded),
                 matches_belt_choice,
                 belt,
                 wake_ups_per_minute,
@@ -3706,6 +3719,10 @@ export function runClockAlternativeTask(
  * pickup slack on its own, and a clock that needs the slack on belts that do not move comes after those that do not;
  * among those the ones ranked first; then the fewest wake-ups a minute (goal 2); then the fewest windows. Of equals
  * the first listed is selected.
+ *
+ * Where none meets the target rate, the one whose rate is nearest to it comes first, above or below, whatever belt
+ * it is made for: the build then runs as near to what was asked as any clock on offer gets it. The rest of the order
+ * only parts clocks at the same rate.
  */
 export function combineClockAlternativeRuns<T>(
     runs: (ClockAlternativeRun<T> | null)[],
@@ -3723,6 +3740,8 @@ export function combineClockAlternativeRuns<T>(
         const ranking = rankingOf(alternative);
         return [
             ranking.meets_target_rate ? 0 : 1,
+            // to a thousandth of an item a second, as the wake-ups below
+            ranking.meets_target_rate ? 0 : Math.round(Math.abs(ranking.rate_off_target) * 1000),
             ranking.matches_belt_choice ? 0 : 1,
             ranking.rank_first ? 0 : 1,
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks

@@ -1,5 +1,6 @@
 import { ContentCopy, Check } from '@mui/icons-material';
 import {
+    Alert,
     Box,
     IconButton,
     LinearProgress,
@@ -13,10 +14,12 @@ import { useGenerationProgress, type GenerationProgressStore } from '../hooks/us
 interface BlueprintOutputProps {
     blueprintString: string | null;
     simulationDurationTicks?: number;
+    /** Shown over the blueprint: the selected clock does not hold the target rate. Null when it does */
+    rateWarning?: string | null;
 }
 
 /** The selected potential clock's blueprint string, for reading or copying by hand */
-export function BlueprintOutput({ blueprintString, simulationDurationTicks }: BlueprintOutputProps) {
+export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning }: BlueprintOutputProps) {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = useCallback(async () => {
@@ -42,6 +45,9 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks }: Bl
                     Simulation duration: {simulationDurationTicks} ticks (
                     {(simulationDurationTicks / 60).toFixed(2)} seconds)
                 </Typography>
+            )}
+            {rateWarning && (
+                <Alert severity="warning" sx={{ mb: 1 }}>{rateWarning}</Alert>
             )}
             <Box sx={{ position: 'relative' }}>
                 <TextField

@@ -19,6 +19,7 @@ import { ShiftRangePanel } from './ShiftRangePanel';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
+import { rateWarningOf } from '../utils/rateWarning';
 
 type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
@@ -162,6 +163,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
                 <TabBody shown={shownTab === 'blueprint'}>
                     <BlueprintOutput
+                        rateWarning={rateWarningOf(props.alternatives[props.selectedIndex])}
                         blueprintString={props.blueprintString}
                         simulationDurationTicks={props.simulationDurationTicks ?? undefined}
                     />

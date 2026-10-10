@@ -77,6 +77,8 @@ export interface ClockAlternativeView {
     isStable: boolean;
     /** Stable and at the target rate, which a clock with a rounded period is not */
     meetsTargetRate: boolean;
+    /** Items per second the clock is above the target rate, or below it when negative */
+    rateOffTarget: number;
     /** False when the clock is not made for the belt the config asks for: without belt pickup slack, or with it when the belts do not move */
     matchesBeltChoice: boolean;
     /** The belt the clock is made for: "moving (+4 ticks)" or "non-moving"; empty when no clocked inserter picks up from a belt */

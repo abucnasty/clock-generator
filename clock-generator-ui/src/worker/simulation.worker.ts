@@ -106,6 +106,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         rankingWindowCount: alternative.ranking_window_count,
         isStable: alternative.is_stable,
         meetsTargetRate: alternative.meets_target_rate,
+        rateOffTarget: alternative.rate_off_target,
         matchesBeltChoice: alternative.matches_belt_choice,
         beltLabel: clockGenerator.clockBeltLabel(alternative.belt),
         rankFirst: alternative.rank_first,

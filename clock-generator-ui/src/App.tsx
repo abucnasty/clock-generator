@@ -38,6 +38,7 @@ import { ChangelogDialog } from './components/ChangelogDialog';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
+import { rateWarningOf } from './utils/rateWarning';
 
 const darkTheme = createTheme({
     palette: {
@@ -276,6 +277,7 @@ function App() {
                         validationStatus={validationStatus}
                         blueprintString={blueprintString}
                         selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
+                        rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
                     />
                 )}
 
