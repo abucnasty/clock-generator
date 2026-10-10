@@ -4,6 +4,10 @@
 // against the game entity by entity. <on|off> is "Belts do not move". A recording that is already in the directory is
 // read instead of made again.
 //
+// To record windows of your own, such as a clock tightened by hand: WINDOWS=<json file> holding
+// {"period": 528, "output_swings": 2, "windows": {"inserter:1": [{"start": 1, "end": 6}, ...], ...}}. They are built as
+// they are; output_swings is the output swings per cycle of the plan whose period they are of.
+//
 // To try a variant without touching the samples: SCAFFOLD=<blueprint file> records on that scaffold, CONFIG=<config
 // json> generates for that config, and TAG=<word> goes into the name of the recording so that it is kept apart.
 //
@@ -13,8 +17,9 @@ const path = require("path"), fs = require("fs");
 const [out_arg, name, belts, alternative_id] = process.argv.slice(2);
 const out_dir = path.resolve(out_arg);
 const scaffold_arg = process.env.SCAFFOLD && path.resolve(process.env.SCAFFOLD);
+const given_windows = process.env.WINDOWS && path.resolve(process.env.WINDOWS);
 const { ROOT, dist, quiet, loadSample } = require("./lib");
-const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-blueprint.js");
+const { generateClockAlternatives, clockBeltLabel, clockFromWindows } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
 const { recordInFactorio } = dist("harness/factorio-harness.js");
 const { outputPerPeriod, recipesMaking } = dist("harness/recording-output.js");
@@ -31,6 +36,7 @@ const BUILDS = {
     "automation-science": { scaffold: "science/automation-science/automation-science-scaffold.txt", config: "AUTOMATION_SCIENCE", seed: [], warmup_ticks: 3600, settle_ticks: 1200 },
     "automation-science-belted-buffer": { scaffold: "science/automation-science/automation-science-belted-buffer-scaffold.txt", config: "AUTOMATION_SCIENCE_BELTED_BUFFER", seed: [], warmup_ticks: 3600, settle_ticks: 1200 },
     "low-density-structure": { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", config: "LOW_DENSITY_STRUCTURE", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
+    "advanced-circuit": { scaffold: "intermediates/advanced-circuit/advanced-circuit-scaffold.txt", config: "ADVANCED_CIRCUIT", seed: [], warmup_ticks: 3600, settle_ticks: 4800 },
     "utility-science": { scaffold: "science/utility-science/utility-science-scaffold.txt", config: "UTILITY_SCIENCE", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
     "utility-science-belted-blue-and-lds": { scaffold: "science/utility-science/utility-science-belted-combined-blue-and-lds-scaffold.txt", config: "UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
     "utility-science-direct-insert-lds": { scaffold: "science/utility-science/utility-science-direct-insert-lds-scaffold.txt", config: "UTILITY_SCIENCE_DIRECT_INSERT_LDS", seed: [], warmup_ticks: 3600, settle_ticks: 2400 },
@@ -45,10 +51,20 @@ const RECORDED_TICKS = 36000;
     }
     const scaffold = scaffold_arg || path.join(SAMPLES, build.scaffold);
     const config = await loadSample(process.env.CONFIG ?? build.config, belts === "on");
-    const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-    const selected = alternative_id ? alternatives.find(a => a.id === alternative_id) : alternatives[selected_index];
-    if (selected === undefined) {
-        throw new Error(`No potential clock ${alternative_id}. There are: ${alternatives.map(a => a.id).join(", ")}`);
+    let selected;
+    if (given_windows) {
+        const given = JSON.parse(fs.readFileSync(given_windows, "utf-8"));
+        if (given.output_swings) {
+            config.overrides = { ...config.overrides, terminal_swing_count: given.output_swings };
+        }
+        const made = clockFromWindows(config, given.windows, given.period, quiet);
+        selected = { id: process.env.TAG || "given-windows", label: `the windows of ${path.basename(given_windows)}`, belt: made.belt, is_stable: made.stability_check.is_stable, result: made };
+    } else {
+        const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
+        selected = alternative_id ? alternatives.find(a => a.id === alternative_id) : alternatives[selected_index];
+        if (selected === undefined) {
+            throw new Error(`No potential clock ${alternative_id}. There are: ${alternatives.map(a => a.id).join(", ")}`);
+        }
     }
     const result = selected.result;
     const period = result.simulation_duration.ticks;

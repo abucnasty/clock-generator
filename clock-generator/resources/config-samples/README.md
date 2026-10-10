@@ -49,7 +49,7 @@ Conventions:
 | science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; see below |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
-| intermediates/advanced-circuit | not one copy | refused by the harness on 2026-10-10: the blueprint is the whole build, three copies with electronic circuit machines on the same foundries, where the config describes one copy | needs a one-copy scaffold; the generator finds no clock that holds its 230 a second (the nearest runs at 217.3 in the simulator) |
+| intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Belts do not move" on | in `test:game` with the switch off; see below |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | everything else | no | | |
 
@@ -145,3 +145,32 @@ Open:
   clock was recorded with it at 192 in each of 53 periods). With "Belts do not move" on they are listed as unstable:
   they were the last two clocks of any sample that were made again with the slack there, neither was selected, and
   that fallback was removed on 2026-10-10.
+
+## Advanced circuit
+
+The build of [issue 98](https://github.com/abucnasty/clock-generator/issues/98), 240 a second over three copies. The
+sample is the copy whose plastic plant is reached by 4 beacons (crafting speed 61.5), as two of the three copies of
+the design are; the third has 5 (68.875), which is what the config attached to the issue says. The whole design is
+kept as `advanced-circuit-scaffold-full-design.txt`. Until 2026-10-10 the sample was an older state of the build with
+a target of 230 a second, for which no clock holds.
+
+Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
+
+| Clock | Output | Game | Simulator |
+|---|---|---|---|
+| The reporter's, tightened by hand | 704 in each of 68 periods | 355 | 368 (355 to 368 by where the clock starts) |
+| Made by version 0.5.0 | 704 in each of 68 | 464 | 702 (682 to 1,193) |
+| Selected now, batched swings with 3 output swings | 1056 in each of 45 | 455 | 524 |
+| Selected with "Belts do not move" on, 2 output swings | 704 in each of 68 | 396 | 648 (525 to 716) |
+
+The clock tightened by hand is the one to beat: no clock the generator offers comes near it. Its gains in the game
+are the coal inserter, 95 wake-ups a minute down to none with windows of one hand (6 ticks), and the two output
+inserters, 48 each down to 14 and 20 with two short windows in every crafting cycle that take what has piled up.
+`clockFromWindows` builds and checks a clock from windows like these, and `scripts/record-clock.js` records one
+(`WINDOWS=`); the windows are in `src/crafting/clock-from-windows.test.ts`.
+
+Open: the simulator counts far more wake-ups than the game on the output inserters of every clock here but the
+tightened one (191 a minute each against 48 under the 0.5.0 clock), from every start of the clock, and so ranks the
+two selected clocks the wrong way round. One difference is found: with part of a hand carried over from the window
+before, the game shows the inserter as working in its first enabled tick and the simulator as waiting for more
+items. It does not account for all of it.

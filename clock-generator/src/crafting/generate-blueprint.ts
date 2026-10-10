@@ -334,6 +334,11 @@ export interface GenerateClockOptions {
     logger?: Logger;
     /** Re-simulate with only the exported clock windows and require that to be stable too (default false) */
     verify_as_built?: boolean;
+    /**
+     * Windows to build the clock with in place of the planned ones, by entity id, as they are: nothing is added to
+     * them. For a clock that the generator did not make, such as one tightened by hand (see clockFromWindows).
+     */
+    given_windows?: SerializableClockWindows;
     /** Belt pickup slack on belt-fed windows: "auto" keeps it unless a clock-only check gets worse (default "auto") */
     belt_pickup_slack?: "auto" | "always" | "never";
     /**
@@ -723,7 +728,9 @@ export function generateClockForConfig(
     const slack_ticks = Array.from(new Set(Object.values(applied_belt_pickup_slack))).sort((a, b) => a - b);
     const belt: ClockBelt | null = belt_fed_with_windows.length === 0 ? null
         : slack_ticks.length > 0 ? { kind: "moving", slack_ticks } : { kind: "non_moving" };
-    let planned_windows = withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
+    let planned_windows = options.given_windows === undefined
+        ? withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks)
+        : new Map(Object.entries(options.given_windows).map(([entity_id, ranges]) => [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))]));
     if (options.full_hand_output) {
         // waiting for a full hand past the output block would refuse input drops every cycle
         const full_hand_fits = output_inserters.every((os, index) =>
@@ -2264,14 +2271,40 @@ export function simulateClockOnly(
     period_ticks: number,
     periods: number,
     logger: Logger = defaultLogger,
+    /**
+     * How the build is when the clock starts. `keep_output_buffers` leaves the machines the output is taken from as
+     * full as they get when nothing takes it; by default they are emptied first. Some clocks settle differently from
+     * the two, and neither is how a scaffold starts: that runs without a clock first, and then gets one.
+     */
+    start: Pick<GenerateClockOptions, "keep_output_buffers" | "warmup_periods"> = {},
 ): StockRecording {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const run = runClockOnBuild(
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period_ticks, logger,
-        { simulate_periods: periods, machine_stock: true },
+        { ...start, simulate_periods: periods, machine_stock: true },
     );
     return run.machine_stock!;
+}
+
+/**
+ * The clock with the windows given, built as they are, and checked as the generator checks its own: for a clock that
+ * it did not make, such as one tightened by hand, or one of its own with windows changed. The windows have to be of
+ * the period the config is planned on (`overrides.terminal_swing_count` sets the output swings per cycle it has).
+ */
+export function clockFromWindows(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period_ticks: number,
+    logger: Logger = defaultLogger,
+): BlueprintGenerationResult {
+    const result = generateClockForConfig(
+        { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
+        { logger, verify_as_built: true, belt_pickup_slack: "never", given_windows: clock_windows },
+    );
+    assert(result.simulation_duration.ticks === period_ticks,
+        `The windows are of a clock of ${period_ticks} ticks, and the config is planned on one of ${result.simulation_duration.ticks}`);
+    return result;
 }
 
 /** The machines at the ends of every inserter of the config */

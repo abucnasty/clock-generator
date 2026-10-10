@@ -105,6 +105,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 1200,
     },
+    // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
+    // copies. Its clock of 792 ticks takes two periods more than the others to settle. With belts that do not move
+    // the selected clock holds its rate too (704 in each of 68 periods), but the simulator counts 648 wake-ups a
+    // minute where the game shows 396, mostly on the output inserters, so that one is not held here yet.
+    "advanced circuit": {
+        scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit-scaffold.txt"),
+        config: ConfigPaths.ADVANCED_CIRCUIT,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 4800,
+    },
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
     "utility science": {
