@@ -31,7 +31,8 @@ import { RunnerStepType } from "./runner/steps/runner-step";
 import { Logger, defaultLogger } from "../common/logger";
 import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "./fuel-view";
 import { StockRecorder, StockRecording } from "./machine-stock";
-import { judgeLongRun, longRunPeriods } from "./long-run";
+import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
+import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
 import { ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
@@ -169,6 +170,12 @@ export interface AsBuiltStabilityCheck {
     repeat_periods?: number;
     /** Output items of the reported run over its repeat_periods periods; set when repeat_periods is more than 1 */
     repeat_output_items?: number;
+    /**
+     * How often the machines woke the inserters asleep on their wake-up lists (goal 2 of GOALS.md, see wake-ups.ts),
+     * for one copy of the build over the judged part of the long run of the unshifted clock. Absent when the check
+     * made no long run: the clock already failed its one-period check, or its period is too long for one.
+     */
+    wake_ups?: WakeUps;
 }
 
 export interface SimulationStabilityCheck {
@@ -574,7 +581,7 @@ export function generateClockForConfig(
         .filter(state => all_output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
     const dropped_before_run = output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0);
     const stock_recorder = options.machine_stock
-        ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => it.inserter_state))
+        ? new StockRecorder(new_simulation_context.machines.map(it => it.machine_state), new_simulation_context.inserters.map(it => ({ state: it.inserter_state, sink: it.sink_state })))
         : undefined;
     const simulate_step = new SimulateStep(new_simulation_context, recorded_duration,
         (fuel_level_recorder || stock_recorder) && (() => { fuel_level_recorder?.record(); stock_recorder?.record(); }));
@@ -2193,6 +2200,16 @@ export function simulateClockOnly(
     return run.machine_stock!;
 }
 
+/** The machines at the ends of every inserter of the config */
+function inserterEnds(config: Config): InserterEnds[] {
+    const machineId = (entity_id: EntityId) => EntityId.isMachine(entity_id) ? entity_id.id : null;
+    return createEntityRegistryFromConfig(config).getAll().filter(Entity.isInserter).map(inserter => ({
+        inserter_id: inserter.entity_id.id,
+        source_machine_id: machineId(inserter.source.entity_id),
+        sink_machine_id: machineId(inserter.sink.entity_id),
+    }));
+}
+
 function runAsBuiltCheck(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
@@ -2217,6 +2234,10 @@ function runAsBuiltCheck(
     if (check.is_stable) {
         const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, result, logger, long_run_ticks);
         stock = long_run?.stock;
+        if (stock) {
+            // judged as the long run is: what follows its start-up
+            check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+        }
         if (long_run && !long_run.keeps_up) {
             check.is_stable = false;
             check.actual_output_items = long_run.output_items_per_period;
@@ -2946,6 +2967,12 @@ export interface ClockAlternative {
     is_stable: boolean;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
+    /**
+     * Wake-ups a minute, summed over the inserters of one copy of the build in the long run of the clock (see
+     * wake-ups.ts); null when the clock had no long run. Fewer is better: each one is a machine waking an inserter
+     * that a narrower window would have left disabled.
+     */
+    wake_ups_per_minute: number | null;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
     /**
@@ -3262,8 +3289,9 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const achieved_output_items = as_built?.actual_output_items ?? actual_output_items;
     const rateAt = (clock_period: number) => achieved_output_items * 60 / clock_period * copies;
     const rank_first = id === "full-hand" && machineHasSpareSpeed(config, result);
+    const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), insights, rank_first, result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), wake_ups_per_minute, insights, rank_first, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -3282,6 +3310,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 ranking_window_count,
                 is_stable,
                 items_per_second: rateAt(period),
+                wake_ups_per_minute,
                 insights,
                 rank_first,
                 result: { ...result, blueprint: result.subtick.blueprint },
@@ -3296,6 +3325,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 ranking_window_count,
                 is_stable,
                 items_per_second: rateAt(rounded),
+                wake_ups_per_minute,
                 insights,
                 rank_first,
                 result,
@@ -3613,7 +3643,7 @@ function configureStateTransitionPlugins(
         it.addPlugin(new FactorioStatePlugin(
             it.inserter_state.entity_id,
             relative_tick_provider,
-            () => factorioInserterState(it.inserter_state),
+            () => factorioInserterState(it.inserter_state, it.sink_state),
             state_transition_history.createFactorioStateCallback("inserter"),
         ));
     });

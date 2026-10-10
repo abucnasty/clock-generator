@@ -52,6 +52,7 @@ export class MachineWorkingMode implements MachineMode {
                 this.releaseHeldProducts();
                 this.addByProducts();
                 this.state.craftCount += 1;
+                this.state.productsFinished += 1;
                 progress = 0;
             }
             this.state.craftingProgress.progress = progress;
@@ -93,6 +94,7 @@ export class MachineWorkingMode implements MachineMode {
         const amount_per_bonus = output.amount - amountIgnoredByProductivity(output);
         while (this.state.bonusProgress.progress >= 1 - PROGRESS_EPSILON) {
             this.state.pendingOutput += amount_per_bonus;
+            this.state.productsFinished += 1;
             this.state.bonusProgress.progress = Math.max(0, this.state.bonusProgress.progress - 1);
         }
         while (this.state.pendingOutput > 0 && this.hasOutputSpaceFor(this.nextHeldAmount())) {

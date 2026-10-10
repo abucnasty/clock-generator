@@ -8,6 +8,8 @@ import { loadConfigFromFile } from "../config/loader";
 import { generateClockAlternatives } from "../crafting/generate-blueprint";
 import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "./factorio-harness";
 import { outputPerPeriod, recipesMaking } from "./recording-output";
+import { matchRecordingToConfig } from "../verification/entity-matching";
+import { wakeUpsOfRecording } from "../verification/recording-wake-ups";
 
 /**
  * These tests run a headless Factorio through the harness, so they need the game and a save to build in, both named
@@ -29,6 +31,14 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
 const SAMPLES = path.resolve(__dirname, "..", "..", "resources", "config-samples");
 /** Ticks to record: ten minutes of game time, as a build with a loop is checked for in the simulator */
 const RECORDED_TICKS = 36_000;
+/**
+ * How far the simulator's wake-ups a minute may be off the game's (GOALS.md, goal 2), as a share of the game's. On
+ * 2026-10-10 the simulator counted what the game did on automation science and 7 to 21% fewer on the other four
+ * builds: the states of the inserters agree, what is left is when the machines finish their crafts within a window.
+ * To be tightened as that is found; before the game's rule for a waiting inserter was in the simulator it was off by
+ * up to 47%.
+ */
+const WAKE_UPS_TOLERANCE = 0.25;
 /** Starting the game, building, warming up and recording take well under two minutes; the harness's own timeout is 900 seconds */
 const TEST_TIMEOUT_MS = WATCH ? 3600_000 : 960_000;
 
@@ -167,6 +177,13 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${period} ticks, as the generated clock does`).toEqual([]);
             const short = checked.filter(it => it.items !== expected);
             expect(short, `every one of the ${checked.length} periods checked moves ${expected} items of ${config.target_output.recipe}`).toEqual([]);
+
+            // goal 2: the long run of the selected clock counts the wake-ups the game shows
+            const simulated = selected.result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+            const recorded = wakeUpsOfRecording(result.recording, matchRecordingToConfig(result.recording, config)).wake_ups_per_minute;
+            expect(simulated, `the long run of the selected clock (${selected.label}) counted its wake-ups`).toBeDefined();
+            expect(Math.abs(simulated! - recorded), `the simulator counts ${simulated!.toFixed(1)} wake-ups a minute where the game shows ${recorded.toFixed(1)}`)
+                .toBeLessThanOrEqual(WAKE_UPS_TOLERANCE * recorded);
         }, TEST_TIMEOUT_MS);
     }
 });

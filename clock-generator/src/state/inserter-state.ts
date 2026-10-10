@@ -55,6 +55,11 @@ export interface InserterState extends EntityState, InserterStatusState {
     items_dropped: number;
     /** Set while the inserter sits idle and enabled because its sink takes nothing it could bring */
     waits_for_sink: boolean;
+    /**
+     * Whether the game would show it as enabled after this tick. An inserter that is switched off mid-swing finishes
+     * the swing and the drop, so its status goes on as SWING and DROP while this is already false.
+     */
+    enabled: boolean;
 }
 
 function createIdleInserterState(inserter: Inserter): InserterState {
@@ -68,6 +73,7 @@ function createIdleInserterState(inserter: Inserter): InserterState {
         items_picked_up: 0,
         items_dropped: 0,
         waits_for_sink: false,
+        enabled: true,
     };
 }
 
@@ -82,6 +88,7 @@ function clone(state: InserterState): InserterState {
         items_picked_up: state.items_picked_up,
         items_dropped: state.items_dropped,
         waits_for_sink: state.waits_for_sink,
+        enabled: state.enabled,
     };
 }
 

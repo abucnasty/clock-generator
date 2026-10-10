@@ -5,6 +5,11 @@ import { Resettable } from "./resettable";
 export interface EnableControl {
     isEnabled(): boolean;
     /**
+     * Whether it is enabled this many ticks from now. Only a control that answers from the clock alone has it: asking
+     * such a control changes nothing, where one that latches answers differently the more often it is asked.
+     */
+    isEnabledIn?(ticks: number): boolean;
+    /**
      * Used for debugging purposes to identify the control in logs.
      */
     toString?(): string;
@@ -14,14 +19,16 @@ export const AlwaysEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return true;
     },
-    toString: () => "AlwaysEnabledControl"
+    isEnabledIn: () => true,
+    toString: () => "AlwaysEnabledControl",
 };
 
 const NeverEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return false;
     },
-    toString: () => "NeverEnabledControl"
+    isEnabledIn: () => false,
+    toString: () => "NeverEnabledControl",
 };
 
 /** Position of a tick in a (possibly fractional) clock period; float error is snapped as the game's integer clock would be */
@@ -102,9 +109,12 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     }
 
     public isEnabled(): boolean {
-        const currentTick = this.offset_tick_provider.getCurrentTick()
-        const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
-        return this.inRange(adjustedTick);
+        return this.isEnabledIn(0);
+    }
+
+    public isEnabledIn(ticks: number): boolean {
+        const tick = this.offset_tick_provider.getCurrentTick() + ticks;
+        return this.inRange(clockPosition(tick, this.periodDuration.ticks));
     }
 
     public getOffset(): number {
@@ -128,9 +138,12 @@ class PeriodicEnableControl implements EnableControl {
     }
 
     public isEnabled(): boolean {
-        const currentTick = this.tickProvider.getCurrentTick()
-        const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
-        return this.inRange(adjustedTick);
+        return this.isEnabledIn(0);
+    }
+
+    public isEnabledIn(ticks: number): boolean {
+        const tick = this.tickProvider.getCurrentTick() + ticks;
+        return this.inRange(clockPosition(tick, this.periodDuration.ticks));
     }
 }
 
