@@ -14,6 +14,12 @@ export interface EntityTransferCount {
     entity: Inserter | MiningDrill;
     item_transfers: ItemTransfer[];
     total_transfer_count: Fraction;
+    /**
+     * Hands a cycle the machine needs, ingredients and fuel together, before the fuel is rounded up to the fractions of a
+     * hand the ingredients come in. Set on every inserter that loads a machine (it equals `total_transfer_count` where no
+     * fuel is rounded); absent on the inserters that take the target output.
+     */
+    needed_transfer_count?: Fraction;
     stack_size: number;
 }
 
@@ -202,6 +208,8 @@ function addTransfers(result: EntityTransferCountMap, transfer_count: EntityTran
         entity: existing.entity,
         item_transfers,
         total_transfer_count: existing.total_transfer_count.add(transfer_count.total_transfer_count),
+        needed_transfer_count: existing.needed_transfer_count === undefined && transfer_count.needed_transfer_count === undefined ? undefined
+            : (existing.needed_transfer_count ?? existing.total_transfer_count).add(transfer_count.needed_transfer_count ?? transfer_count.total_transfer_count),
         stack_size: existing.stack_size
     });
 }
@@ -294,6 +302,7 @@ function withFuelRoundedUp(with_fuel: EntityTransferCount, without_fuel: EntityT
         entity: with_fuel.entity,
         item_transfers,
         total_transfer_count: item_transfers.reduce((sum, it) => sum.add(it.transfer_count), fraction(0)),
+        needed_transfer_count: with_fuel.total_transfer_count,
         stack_size: with_fuel.stack_size,
     };
 }
@@ -683,6 +692,7 @@ function divideTransfers(
                     transfer_count: it.transfer_count.divide(crafting_cycles)
                 })),
                 total_transfer_count: value.total_transfer_count.divide(crafting_cycles),
+                needed_transfer_count: value.needed_transfer_count?.divide(crafting_cycles),
                 stack_size: value.stack_size
             }
         })

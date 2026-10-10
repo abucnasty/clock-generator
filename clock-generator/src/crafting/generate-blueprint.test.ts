@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, simulateClockOnly, validateConfig, BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, simulateClockOnly, validateConfig, BlueprintGenerationResult, OUTPUT_FEEDER_CHECK_TICKS, rankingWindowCount, feedersOfOutputMachines, anyFeederCarriesFuel, hasPlannedWindowsNotHands } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { EntityId } from "../entities";
+import { EntityId, type Inserter } from "../entities";
 import { OpenRange } from "../data-types";
 
 describe("generateClockForConfig", () => {
@@ -326,12 +326,13 @@ describe("generateClockForConfig", () => {
     // The target is 250 a second over 5 modules, 93% of what the egg biochambers can make. Recorded in Factorio 2.1.21
     // for 144000 ticks after 4800 to settle: with 1 output swing per cycle one module made 400 packs in each of 300
     // periods, and so it did with 5 output swings per cycle; with 2 it came up a hand short in 3 of 150 periods and
-    // with 4 in 12 of 75. The simulator calls 1 and 2 stable and 5 not, so only the clock both agree on is asserted.
+    // with 4 in 12 of 75 (before the idle-window rules of 2026-10-09; recorded again with them, 2 made the same in each of 75 periods). The simulator calls the 5-swing clock stable too, and it is the one selected.
     describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const { alternatives, selected_index } = generateClockAlternatives(config);
         const one_swing = alternatives.find(a => a.label === "1 output swing per cycle")!;
         const windows = one_swing.result.clock_windows;
+        const selected_windows = alternatives[selected_index].result.clock_windows;
 
         // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and
         // 1439.9999999999998, were taken for fractional periods and offered as subtick and "rounded to 2879" clocks
@@ -359,17 +360,51 @@ describe("generateClockForConfig", () => {
             expect(one_swing.items_per_second).toBeCloseTo(250, 6);
         });
 
-        it("leaves the inserters that take eggs from the egg biochambers always enabled, and clocks the rest", () => {
+        it("leaves the inserters that take eggs from the egg biochambers into the science biochamber always enabled on the 1-swing clock, and clocks the rest", () => {
             const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
             expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
         });
 
-        it("gives the inserters bringing nutrients to the egg biochambers a window for every planned hand and one to spare", () => {
-            // 30 nutrients a craft and what the biochamber burns: 7/5 of a hand an inserter a cycle, 35 hands in 25 cycles
-            for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
-                expect(windows[id]).toHaveLength(36);
-                expect(windows[id].slice(0, 3)).toEqual([{ start: 0, end: 9 }, { start: 13, end: 22 }, { start: 26, end: 35 }]);
+        it("leaves inserters 9 and 10 always enabled on the 2-swing clock too, where the science biochamber is at its block at the end of most output windows", () => {
+            const two_swings = alternatives.find(a => a.label === "2 output swings per cycle")!;
+            expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:9");
+            expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:10");
+        });
+
+        it("clocks the inserters that take eggs into the science biochamber on the selected clock, with a combinator of their own", () => {
+            const clocked = Object.keys(selected_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
+            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
+            expect(selected_windows["inserter:10"]).toEqual(selected_windows["inserter:9"]);
+        });
+
+        // The output of the science biochamber is back at 28 packs up to 30 ticks after an output window ends in the
+        // simulator, and 27 to 28 in the game; two ticks more are the margin. Each of the 5 windows of 37 ticks a
+        // period of 96 ticks leaves them enabled for 37 + 31 ticks (0 to 67) and disabled for the 28 that follow, until the next opens.
+        it("disables inserters 9 and 10 for the 28 ticks before each output window, 32 ticks after the last one closed", () => {
+            expect(selected_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
+            for (const id of ["inserter:9", "inserter:10"]) {
+                expect(selected_windows[id]).toHaveLength(5);
+                expect(selected_windows[id].slice(0, 2)).toEqual([{ start: 0, end: 67 }, { start: 96, end: 163 }]);
             }
+        });
+
+        it("gives the inserters bringing nutrients to the egg biochambers windows of two hands, 44 hands for the 35 planned a period", () => {
+            // 7/5 of a hand an inserter a cycle: 35 hands in 25 cycles, 44 allowed, in 22 windows of 10 ticks
+            for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
+                expect(selected_windows[id]).toHaveLength(22);
+                expect(selected_windows[id].slice(0, 3)).toEqual([{ start: 0, end: 9 }, { start: 21, end: 30 }, { start: 43, end: 52 }]);
+                expect(selected_windows[id].every(it => it.end - it.start === 9)).toBe(true);
+            }
+            // all four share one combinator
+            expect(new Set(["inserter:3", "inserter:4", "inserter:6", "inserter:7"].map(id => JSON.stringify(selected_windows[id]))).size).toBe(1);
+        });
+
+        // The machine needs 30.65 hands an inserter in 480 ticks on every clock (the plans round the fuel up to 35 in 480 on
+        // the 5- and 1-swing clocks, 65 in 960 on the 2-swing), and 1.43 times that is 44 hands in 480 ticks: 22 windows
+        it("gives them 44 windows in 960 ticks on the 2-swing clock, as many for the time as on the others", () => {
+            const two_swings = alternatives.find(a => a.label === "2 output swings per cycle")!;
+            expect(two_swings.result.clock_windows["inserter:3"]).toHaveLength(44);
+            expect(windows["inserter:3"]).toHaveLength(22);
         });
 
         it("opens the output window at the start of every cycle, for one pickup", () => {
@@ -1419,6 +1454,151 @@ describe("generateClockForConfig", () => {
                 expect(result.stability_check.repeat_output_items).toBe(32);
                 expect(result.stability_check.is_stable).toBe(false);
             });
+        });
+    });
+
+    // The windows of the inserters that bring eggs to the science biochamber are an optimisation: kept only when the clock
+    // passes the as-built check with them as it did without. Variations of the agricultural science sample, 5 output swings.
+    describe("agricultural science: windows for the inserters feeding the output machine", async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+        const quiet = { log() { }, warn() { }, error() { }, debug() { } };
+        const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
+        const feeders = ["inserter:9", "inserter:10"];
+
+        it("generates a build with a dedicated fuel inserter in bounded time (under a minute), and stable", () => {
+            // inserter 11 brings bioflux only and a new one nutrients, which the science biochamber burns
+            const config: Config = {
+                ...sample,
+                inserters: [
+                    ...sample.inserters.map(it => it.id === 11 ? { ...it, filters: ["bioflux"] } : it),
+                    { id: 13, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 5 }, stack_size: 16, filters: ["nutrients"] },
+                ],
+            };
+            const started = Date.now();
+            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
+            expect(Date.now() - started).toBeLessThan(60_000);
+            expect(result.stability_check.is_stable).toBe(true);
+        }, 120_000);
+
+        it("plans the nutrient inserters 30.652 hands needed per 480 ticks on every clock, 61.304 per 960 on the 2-swing clock", () => {
+            for (const [swings, period] of [[5, 480], [1, 480], [2, 960]] as const) {
+                const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: swings } }, { logger: quiet });
+                const plan = result.crafting_cycle_plan;
+                const planned = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:3")!;
+                expect(result.simulation_duration.ticks).toBe(period);
+                expect(planned.needed_transfer_count!.toDecimal() * period / plan.total_duration.ticks).toBeCloseTo(30.652 * period / 480, 6);
+                // the output inserter has none
+                const output = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:12")!;
+                expect(output.needed_transfer_count).toBeUndefined();
+            }
+        }, 120_000);
+
+        it("keeps the feeders always enabled where the clock with their windows does not pass, as without the rule", () => {
+            // egg biochambers at speed 80 and hands of 12 into the science biochamber: with the windows the long run comes up short
+            const config: Config = {
+                ...sample,
+                machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 80 } : it),
+                inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
+            };
+            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
+            expect(result.stability_check.is_stable).toBe(true);
+            for (const id of feeders) {
+                expect(Object.keys(result.clock_windows)).not.toContain(id);
+            }
+        }, 120_000);
+
+        it("does not clock the feeders when the as-built check is off: nothing would have run them", () => {
+            const result = generateClockForConfig(five_swings(sample), { verify_as_built: false, logger: quiet });
+            for (const id of feeders) {
+                expect(Object.keys(result.clock_windows)).not.toContain(id);
+            }
+        }, 120_000);
+
+        it("clocks them when the as-built check is on and passes with them", () => {
+            const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, logger: quiet });
+            expect(result.stability_check.as_built?.is_stable).toBe(true);
+            for (const id of feeders) {
+                expect(Object.keys(result.clock_windows)).toContain(id);
+            }
+        }, 120_000);
+
+        it("verifies the clock with feeder windows over a longer run than the standard check: at least 72,000 ticks", () => {
+            expect(OUTPUT_FEEDER_CHECK_TICKS).toBeGreaterThanOrEqual(72_000);
+        });
+
+        it("drops feeder windows that pass the standard check but come up a hand short in two periods of 200 (egg biochambers at speed 72, hands of 12)", () => {
+            const config: Config = {
+                ...sample,
+                machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 72 } : it),
+                inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
+            };
+            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
+            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.output_feeders).toBeUndefined();
+            for (const id of feeders) {
+                expect(Object.keys(result.clock_windows)).not.toContain(id);
+            }
+        }, 120_000);
+
+        it("takes feeder windows on the prefer-planned path of the derive flow too", () => {
+            const config: Config = { ...sample, overrides: { ...sample.overrides, derive_clock_windows: true } };
+            const result = generateClockForConfig(five_swings(config), { logger: quiet });
+            expect(result.derived_clock_windows?.kept_planned_windows).toBe(true);
+            expect(result.output_feeders?.inserter_ids).toEqual(feeders);
+            for (const id of feeders) {
+                expect(Object.keys(result.clock_windows)).toContain(id);
+            }
+        }, 180_000);
+
+        it("selects the same alternative with hands of 12 as without the windows of the feeders: they are not ranked by", () => {
+            // 354 windows with the feeders', 324 without: the 3-swing clock has 336 and used to be selected
+            const config: Config = { ...sample, inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it) };
+            const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
+            const selected = alternatives[selected_index];
+            expect(selected.id).toBe("planned-belt-slack");
+            expect(selected.inserter_window_count).toBe(354);
+            expect(selected.ranking_window_count).toBe(324);
+            expect(Object.keys(selected.result.clock_windows)).toContain("inserter:9");
+            expect(alternatives.find(it => it.id === "swings-3")!.ranking_window_count).toBe(336);
+        }, 240_000);
+    });
+
+    describe("the pieces of the output feeder rule", () => {
+        const inserter = (id: number, source: string, sink: string, filtered: string[] = []) => ({
+            entity_id: { id: `inserter:${id}` },
+            source: { entity_id: { id: source, type: source.split(":")[0] } },
+            sink: { entity_id: { id: sink, type: sink.split(":")[0] } },
+            filtered_items: new Set(filtered),
+        }) as unknown as Inserter;
+
+        it("counts the windows of the feeders as they are without their windows when it ranks", () => {
+            const windows = { "inserter:1": [{ start: 0, end: 1 }], "inserter:9": [1, 2, 3, 4, 5].map(it => ({ start: it, end: it })) } as never;
+            expect(rankingWindowCount(6, windows, undefined)).toBe(6);
+            expect(rankingWindowCount(6, windows, { inserter_ids: ["inserter:9"], window_count_without_feeder_windows: 0 })).toBe(1);
+            expect(rankingWindowCount(6, windows, { inserter_ids: ["inserter:9"], window_count_without_feeder_windows: 2 })).toBe(3);
+        });
+
+        it("limits the feeders to the inserters from a machine into an output machine", () => {
+            const into_output = inserter(1, "machine:3", "machine:5");
+            const into_other = inserter(2, "machine:3", "machine:4");
+            const from_belt = inserter(3, "belt:1", "machine:5");
+            const to_belt = inserter(4, "machine:5", "belt:2");
+            expect(feedersOfOutputMachines([into_output, into_other, from_belt, to_belt], new Set(["machine:5"]))).toEqual([into_output]);
+            expect(feedersOfOutputMachines([into_output, into_other], new Set(["machine:4", "machine:5"]))).toEqual([into_output, into_other]);
+        });
+
+        it("leaves every feeder of a sink alone when any of them can carry its fuel", () => {
+            const eggs = inserter(1, "machine:3", "machine:5", ["pentapod-egg"]);
+            const nutrients = inserter(2, "machine:3", "machine:5", ["nutrients", "pentapod-egg"]);
+            expect(anyFeederCarriesFuel([eggs], "nutrients")).toBe(false);
+            expect(anyFeederCarriesFuel([eggs, nutrients], "nutrients")).toBe(true);
+            expect(anyFeederCarriesFuel([nutrients], undefined)).toBe(false);
+        });
+
+        it("skips an inserter whose windows are the plan's only in a build with always-enabled inserters", () => {
+            expect(hasPlannedWindowsNotHands(new Set(["inserter:9"]), "inserter:3")).toBe(true);
+            expect(hasPlannedWindowsNotHands(new Set(["inserter:9"]), "inserter:9")).toBe(false);
+            expect(hasPlannedWindowsNotHands(new Set(), "inserter:3")).toBe(false);
         });
     });
 });
