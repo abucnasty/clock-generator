@@ -17,6 +17,8 @@ const luaRecord = <T extends z.ZodTypeAny>(value: T) => z.preprocess(
 const TargetRefSchema = z.object({
     type: z.enum(["machine", "belt", "chest"]),
     id: z.number().int(),
+    /** Of a belt an inserter picks up from: the lane nearest to the inserter, 1 or 2. Absent in older recordings */
+    near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
 });
 
 const RecordedInserterSchema = z.object({

@@ -22,7 +22,7 @@
 ---@class BeltData
 ---@field belt_type string The belt type (e.g., "transport-belt", "express-transport-belt")
 ---@field unit_number number The unit number of the belt entity
----@field lanes BeltLaneData[] Data for each lane (1 = right, 2 = left)
+---@field lanes BeltLaneData[] Data for each lane (1 = left, 2 = right, as get_transport_line numbers them)
 
 ---@class InserterTargetRef
 ---@field type "machine"|"belt"|"chest" The target type

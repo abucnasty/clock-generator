@@ -3,6 +3,7 @@ Version: 0.6.0
 Date: 2026-10-08
   Features:
     - harness_clear removes the build the harness made, with the clock wired to it and the items it left on the ground, so one game can record several builds one after another
+    - A recording names the lane nearest to each inserter that picks up from a straight piece of belt (near_lane on its source), so a config that has the inserter take the other item first is told apart from the build
   Changes:
     - harness_build leaves the game's speed as it is when the job names none; it used to set it to 1
     - The harness removes a build's constant combinators with its clock, since a generated clock now has a lock switch, a constant combinator wired to it

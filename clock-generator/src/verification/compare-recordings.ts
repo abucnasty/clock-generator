@@ -1,4 +1,6 @@
 import { Config } from "../config";
+import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
+import { Entity, EntityId } from "../entities";
 import { clockPeriods, outputPerPeriod, PeriodRange, recipesMaking } from "../harness/recording-output";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording, recordedClockPeriod } from "./recording";
@@ -242,6 +244,46 @@ function compareStates(game_states: string[], game: Side, sim_states: string[], 
 }
 
 /**
+ * Where the build that was recorded is not the build the config describes: the stack size of an inserter, and which
+ * of the two items on its belt it takes first. A clock made for the config is not a clock for that build, and the
+ * simulator laid against it differs in ways that look like a rule of the game it is missing. The utility science
+ * scaffolds had one inserter at a stack size of 12 where the config said 16, which read as an open divergence for
+ * two days.
+ */
+export function buildDifferences(recording: Recording, match: EntityMatch, config: Config): string[] {
+    const differences: string[] = [];
+    // on a copy: making the entities has been seen to write into the config it is given
+    const registry = createEntityRegistryFromConfig(structuredClone(config));
+    const configured = new Map(config.inserters.map((inserter, index) => [inserter.id ?? index + 1, inserter]));
+    for (const recorded of recording.inserters) {
+        const config_id = match.inserters.get(recorded.id);
+        const inserter = config_id === undefined ? undefined : configured.get(config_id);
+        if (config_id === undefined || inserter === undefined) {
+            continue;
+        }
+        const label = `Inserter ${config_id} (${inserter.source.type} ${inserter.source.id} -> ${inserter.sink.type} ${inserter.sink.id})`;
+        if (recorded.stack_size !== inserter.stack_size) {
+            differences.push(`${label} has a stack size of ${recorded.stack_size} in the recorded build and ${inserter.stack_size} in the config.`);
+        }
+        const near_lane = recorded.source.near_lane;
+        if (near_lane === undefined) {
+            continue;
+        }
+        const lanes = recording.config.belts.find(belt => belt.id === recorded.source.id)?.lanes ?? [];
+        const near_item = lanes[near_lane - 1]?.ingredient;
+        const far_item = lanes[2 - near_lane]?.ingredient;
+        const entity = registry.getEntityByIdOrThrow(EntityId.forInserter(config_id));
+        const taken = Entity.isInserter(entity) ? Array.from(entity.filtered_items) : [];
+        if (near_item && far_item && near_item !== far_item && taken.includes(near_item) && taken.indexOf(far_item) >= 0
+            && taken.indexOf(far_item) < taken.indexOf(near_item)) {
+            differences.push(`${label} is nearest to the lane of ${near_item} in the recorded build and takes it before ${far_item}; `
+                + `the config has it take ${far_item} first. Set near_lane on its source to the lane of ${near_item}.`);
+        }
+    }
+    return differences;
+}
+
+/**
  * Lays a recording of the game against a run of the simulator in the same format (see simulated-recording.ts): what
  * every inserter moved and every machine finished in a clock period, the state each showed at each position of the
  * clock, and the wake-ups. Both are read the same way, so a difference is one between the game and the simulator
@@ -259,7 +301,8 @@ export function compareRecordings(
     const { expected_output_per_period, free_running_inserter_ids, items_tolerance, state_agreement } = { ...DEFAULT_COMPARE_RECORDINGS_OPTIONS, ...options };
     const game = sideOf(game_recording);
     const sim = sideOf(sim_recording);
-    const issues: string[] = [];
+    const issues: string[] = buildDifferences(game.recording, game.match, config)
+        .map(difference => `The config does not describe the recorded build. ${difference}`);
     const notes: string[] = [];
     // a hand, or a craft, more or less over the periods compared
     const periods_compared = Math.max(1, Math.min(game.periods.length, sim.periods.length));
