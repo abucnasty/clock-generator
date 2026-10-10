@@ -142,6 +142,38 @@ describe("the belt a clock is made for", () => {
         });
     });
 
+    // Three inserters take bioflux off a belt for their biochambers, and the nutrients the biochambers burn. Without
+    // room for a hand of nutrients the windows of batched swings close on partly filled hands of bioflux: recorded on
+    // the scaffold, 377 of 400 a period. With it the clock is the one that has belt pickup slack with belts that move,
+    // which the game tests record at 400 in every period.
+    describe("agricultural science, with belts that do not move", () => {
+        let selected: ClockAlternative;
+
+        beforeAll(async () => {
+            const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
+            const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
+            selected = generated.alternatives[generated.selected_index];
+        }, 240_000);
+
+        it("selects batched swings with room for a hand of fuel, as a clock for a belt that does not move", () => {
+            expect(selected.id).toBe("planned-belt-slack");
+            expect(selected.label).toBe("Batched swings: 5 output swings per cycle");
+            expect(selected.meets_target_rate).toBe(true);
+            expect(selected.belt).toEqual({ kind: "non_moving" });
+            expect(selected.matches_belt_choice).toBe(true);
+            expect(selected.result.belt_pickup_slack_ticks).toEqual({});
+            expect(selected.result.fuel_hand_room_ticks).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });
+            expect(selected.description).toContain("Inserters 1, 2 and 11 take fuel off the belt as well as an ingredient and stay enabled 4 more ticks");
+        });
+
+        it("lengthens every window of those inserters by the fill of a hand of nutrients", () => {
+            const windows = selected.result.clock_windows;
+            expect(windows["inserter:11"]).toEqual([0, 96, 192, 288, 384].map(start => ({ start, end: start + 42 })));
+            expect(windows["inserter:1"]).toEqual([0, 96, 192, 288, 384].map(start => ({ start, end: start + 20 })));
+            expect(windows["inserter:2"]).toEqual(windows["inserter:1"]);
+        });
+    });
+
     // One belt inserter that takes two ingredients off a belt split between them. Batched swings moves more than the
     // expected output, with the slack and without it; full-hand output swings holds it, also without the slack.
     describe("automation science, with belts that do not move", () => {

@@ -247,6 +247,11 @@ export interface BlueprintGenerationResult {
      * says the belts do not move (`overrides.non_moving_belts`): then a clock is meant to go without it.
      */
     belt_pickup_slack_left_out: boolean;
+    /**
+     * Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient, so that a hand of
+     * fuel fits ahead of the hands the window is planned for (see fuelHandRoomTicks); empty when the clock has none.
+     */
+    fuel_hand_room_ticks: Record<string, number>;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
     /** For a fractional period: the same windows on a subtick clock that runs the exact period instead of rounding it */
@@ -331,6 +336,12 @@ export interface GenerateClockOptions {
     verify_as_built?: boolean;
     /** Belt pickup slack on belt-fed windows: "auto" keeps it unless a clock-only check gets worse (default "auto") */
     belt_pickup_slack?: "auto" | "always" | "never";
+    /**
+     * Lengthen the windows of an inserter that takes fuel off a belt as well as an ingredient by the fill of a hand of
+     * fuel (see fuelHandRoomTicks), where the clock goes without belt pickup slack. Asked for when a clock for belts
+     * that do not move does not hold the expected output without it (see fallingBackToSlack).
+     */
+    fuel_hand_room?: boolean;
     /**
      * With derive_clock_windows: "prefer_planned" keeps planned windows that pass the as-built check (default), "always"
      * derives anyway, "uneven_output" derives with one output swing moved off its planned start
@@ -704,12 +715,16 @@ export function generateClockForConfig(
     const applied_belt_pickup_slack = Object.fromEntries(Number.isInteger(duration.ticks)
         ? belt_fed_with_windows.filter(key => belt_pickup_slack.has(key)).map(key => [key, belt_pickup_slack.get(key)!])
         : []);
+    // the slack is as long as the room for a hand of fuel, so a clock with the slack has the room
+    const fuel_hand_room = options.fuel_hand_room && !use_belt_pickup_slack && Number.isInteger(duration.ticks)
+        ? new Map(Array.from(fuelHandRoomTicks(simulation_context.entity_registry)).filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0))
+        : new Map<string, number>();
     const belt_pickup_slack_left_out = !non_moving_belts && !use_belt_pickup_slack && Number.isInteger(duration.ticks)
         && belt_fed_with_windows.length > 0;
     const slack_ticks = Array.from(new Set(Object.values(applied_belt_pickup_slack))).sort((a, b) => a - b);
     const belt: ClockBelt | null = belt_fed_with_windows.length === 0 ? null
         : slack_ticks.length > 0 ? { kind: "moving", slack_ticks } : { kind: "non_moving" };
-    let planned_windows = withBeltPickupSlack(unslacked_windows, belt_pickup_slack, duration.ticks);
+    let planned_windows = withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks);
     if (options.full_hand_output) {
         // waiting for a full hand past the output block would refuse input drops every cycle
         const full_hand_fits = output_inserters.every((os, index) =>
@@ -965,6 +980,8 @@ export function generateClockForConfig(
                 clock_windows: serializeClockWindows(withInserterClocks(windows, inserter_clocks, duration.ticks)),
                 belt_pickup_slack_ticks: applied_belt_pickup_slack,
                 belt_pickup_slack_left_out,
+                // observed windows are what the inserters did, fuel hands included
+                fuel_hand_room_ticks: {},
                 belt,
                 crafting_cycle_plan,
                 fuel_consumption_view,
@@ -1029,6 +1046,7 @@ export function generateClockForConfig(
             clock_windows: serializeClockWindows(withInserterClocks(planned_windows, inserter_clocks, duration.ticks)),
             belt_pickup_slack_ticks: applied_belt_pickup_slack,
             belt_pickup_slack_left_out,
+            fuel_hand_room_ticks: Object.fromEntries(fuel_hand_room),
             belt,
             crafting_cycle_plan,
             simulation_duration: duration,
@@ -2770,6 +2788,41 @@ function windowsFromHistory(
 }
 
 /**
+ * Ticks added to the end of each window of an inserter that takes fuel for its machine off a belt as well as an
+ * ingredient: the ticks a hand of fuel takes to fill, at one belt stack a tick.
+ *
+ * When the fuel slot takes a hand does not repeat with the clock: it falls below its limit at any tick of any window,
+ * and the inserter takes fuel before it takes what the window is planned for. A window ends where the last planned
+ * hand is back from its drop. A hand of fuel ahead of it takes its fill, its swing, its drop and its swing back, so the
+ * last planned hand is full that much later: later than the window ends by the fill of the fuel hand. Without the
+ * room the window closes on a partly filled hand, and an inserter that holds an ingredient takes no fuel
+ * (agricultural science in the game: 377 of 400 a period).
+ *
+ * It is not given to every such inserter: the ticks can also let a hand in that the plan does not have. A clock gets
+ * it when it does not hold the expected output without (see fallingBackToSlack). Belt pickup slack is as long.
+ */
+function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+    const room = new Map<string, number>();
+    for (const entity of entity_registry.getAll()) {
+        if (!Entity.isInserter(entity)) {
+            continue;
+        }
+        const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
+        const sink = entity_registry.getEntityById(entity.sink.entity_id);
+        if (!Entity.isBelt(source) || sink === null || !Entity.isMachine(sink)) {
+            continue;
+        }
+        const fuel_item = sink.fuel_slot?.fuel.item_name;
+        const lane = source.lanes.find(it => it.ingredient_name === fuel_item);
+        if (fuel_item === undefined || lane === undefined || !entity.filtered_items.has(fuel_item) || sink.isFuelOnly(entity.filtered_items)) {
+            continue;
+        }
+        room.set(entity.entity_id.id, Math.ceil(handSizeFor(entity, fuel_item) / lane.stack_size));
+    }
+    return room;
+}
+
+/**
  * Ticks added to the end of each belt-fed inserter's window. In game, a grab from a full belt can stall while a
  * gap left by an upstream inserter passes the pickup point, so the window must outlast a late pickup or the
  * inserter is disabled holding a partial hand. Sized as one more full-hand pickup (one lane stack per tick).
@@ -3222,24 +3275,43 @@ const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for t
     + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
     + "grouped into batches that match the crafting cycle.";
 
+/** True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient */
+function takesFuelOffABelt(config: Config): boolean {
+    return fuelHandRoomTicks(createEntityRegistryFromConfig(config)).size > 0;
+}
+
 /** The same config for belts that move, so that a clock gets the belt pickup slack its alternative asks for */
 function withMovingBelts(config: Config): Config {
     return { ...config, overrides: { ...config.overrides, non_moving_belts: false } };
 }
 
 /**
- * For a config whose belts do not move. A clock is then made without belt pickup slack, and some clocks only hold the
- * expected output with it, also on the simulator's belt. Such a clock is made again as it is for a moving belt, and
- * that one is kept when it holds. An alternative that could not be made at all without the slack is not tried with it.
+ * For a config whose belts do not move. A clock is then made without belt pickup slack, and some clocks do not hold
+ * the expected output that way, also on the simulator's belt.
+ *
+ * Such a clock is first made again with room for a hand of fuel in the windows of the inserters that take fuel off a
+ * belt as well as an ingredient (`withFuelHandRoom`, which gives nothing for a build without one). That is still a clock for a belt
+ * that does not move: the room is what the fuel needs there. When it does not hold either, the clock is made as it
+ * is for a moving belt, and that one is kept when it holds. An alternative that could not be made at all without the
+ * slack is not tried with it.
  */
 function fallingBackToSlack(
     withoutSlack: () => BlueprintGenerationResult,
     withSlack: () => BlueprintGenerationResult,
+    withFuelHandRoom?: () => BlueprintGenerationResult | undefined,
 ): BlueprintGenerationResult {
     const result = withoutSlack();
     // the slack changes nothing where no clocked inserter picks up from a belt, or in a period of part ticks
     if (alternativeIsStable(result) || result.belt?.kind !== "non_moving" || !Number.isInteger(result.simulation_duration.ticks)) {
         return result;
+    }
+    try {
+        const with_room = withFuelHandRoom?.();
+        if (with_room !== undefined && Object.keys(with_room.fuel_hand_room_ticks).length > 0 && alternativeIsStable(with_room)) {
+            return with_room;
+        }
+    } catch {
+        // as below: the clock is tried for a moving belt
     }
     try {
         const with_slack = withSlack();
@@ -3250,11 +3322,12 @@ function fallingBackToSlack(
 }
 
 function primaryDefinition(config: Config, options: GenerateClockOptions, report?: (detail: string) => void): AlternativeDefinition {
-    const generate = (belt_config: Config) => generateClockWithSwingBackoff(
+    const generate = (belt_config: Config, fuel_hand_room: boolean = false) => generateClockWithSwingBackoff(
         { ...belt_config, overrides: { ...belt_config.overrides, derive_clock_windows: false } },
-        { ...options, verify_as_built: true, belt_pickup_slack: "always", on_progress_detail: report });
+        { ...options, verify_as_built: true, belt_pickup_slack: "always", fuel_hand_room, on_progress_detail: report });
     const result = config.overrides?.non_moving_belts === true
-        ? fallingBackToSlack(() => generate(config), () => generate(withMovingBelts(config)))
+        ? fallingBackToSlack(() => generate(config), () => generate(withMovingBelts(config)),
+            () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
         : generate(config);
     return {
         id: "planned-belt-slack",
@@ -3287,7 +3360,14 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
     const non_moving = " Made for a non-moving belt: its belt inserters get only the windows they need on a belt that is full and "
         + "does not move, without belt pickup slack. On a moving belt an inserter can be switched off holding a partial hand.";
     if (config.overrides?.non_moving_belts === true) {
-        return `${non_moving} The config says the belts do not move, so it goes without the slack.`;
+        const room = Object.entries(result.fuel_hand_room_ticks);
+        const ids = room.map(([key]) => key.slice(key.indexOf(":") + 1));
+        const fuel = room.length === 0 ? ""
+            : ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
+            + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each window, the ticks a hand of fuel takes to fill: `
+            + "the fuel slot asks for a hand in any window, ahead of the hands the window is planned for, and this clock did not hold "
+            + "the expected output without the room for it.";
+        return `${non_moving} The config says the belts do not move, so it goes without the slack.${fuel}`;
     }
     if (!Number.isInteger(result.simulation_duration.ticks)) {
         return `${non_moving} The slack is not given to a clock whose period is not a whole number of ticks.`;
@@ -3313,10 +3393,12 @@ function alternativeDefinitions(
         return definitions;
     }
     const for_moving_belts = alternativeDefinitionsFor(withMovingBelts(config), context, quiet, known_stable);
+    const with_fuel_hand_room = !takesFuelOffABelt(config) ? []
+        : alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
     return definitions.map(definition => {
         const with_slack = for_moving_belts.find(it => it.id === definition.id);
         return with_slack === undefined ? definition
-            : { ...definition, run: () => fallingBackToSlack(definition.run, with_slack.run) };
+            : { ...definition, run: () => fallingBackToSlack(definition.run, with_slack.run, with_fuel_hand_room.find(it => it.id === definition.id)?.run) };
     });
 }
 

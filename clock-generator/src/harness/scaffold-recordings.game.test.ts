@@ -66,6 +66,16 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         settle_ticks: 4800,
     },
+    // its selected clock has no belt pickup slack: batched swings with room for a hand of fuel in the windows of the
+    // three inserters that take nutrients off the belt with their bioflux, without which they do not hold
+    "agricultural science (belts do not move)": {
+        scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
+        config: ConfigPaths.AGRICULTURAL_SCIENCE,
+        seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
+        warmup_ticks: 300,
+        settle_ticks: 4800,
+        non_moving_belts: true,
+    },
     "automation science": {
         scaffold: path.join(SAMPLES, "science", "automation-science", "automation-science-scaffold.txt"),
         config: ConfigPaths.AUTOMATION_SCIENCE,
