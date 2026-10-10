@@ -43,15 +43,26 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
 
     public onExit(toMode: InserterMode): void {}
 
+    /** Whether the inserter found its sink taking nothing it brings when it last looked, and has not acted since */
+    private saw_sink_blocked: boolean = false;
+
     public evaluateTransition(): ModeTransition<InserterMode> {
 
         if (!this.enable_control.isEnabled()) {
             this.inserter_state.waits_for_sink = false;
+            this.saw_sink_blocked = false;
             return ModeTransition.transition(this.disabled_mode, "inserter disabled");
         }
 
         if (!this.sinkAcceptsItems()) {
             this.inserter_state.waits_for_sink = true;
+            this.saw_sink_blocked = true;
+            return ModeTransition.NONE;
+        }
+
+        const woken_this_tick = this.saw_sink_blocked && this.outputBlockWasLiftedThisTick();
+        this.saw_sink_blocked = false;
+        if (woken_this_tick) {
             return ModeTransition.NONE;
         }
 
@@ -69,6 +80,27 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         
         return null;
     }    
+
+    /**
+     * An inserter that waits for space in a machine is asleep, and acts in the tick after the one that wakes it. When
+     * another inserter takes the machine's products down below the output block, that wakes it: it takes its first
+     * items a tick later. A machine that finished a craft in the tick before had woken it already, and then it takes
+     * them in the tick the block is lifted. Recorded in Factorio 2.1.21 on inserters that take from a machine or a
+     * chest and had been waiting for 6 ticks or more: a tick later in 5,777 cases of 5,777 without a craft finished
+     * the tick before, in the same tick in 3,756 of 3,756 with one. An inserter that takes from a belt lands its first
+     * stack a tick later in both cases, which the pickup mode has (belt_grab_decided).
+     *
+     * Inserters are updated before machines, and those that take from a machine before those that put into it. So
+     * a machine that was at its block when its last tick was done, and is not now, has had its products taken in
+     * this tick.
+     */
+    private outputBlockWasLiftedThisTick(): boolean {
+        const sink = this.sink_state;
+        if (!EntityState.isMachine(sink) || EntityState.isBelt(this.source_state)) {
+            return false;
+        }
+        return sink.outputBlockedAfterLastTick && !sink.finishedCraftInLastTick && !MachineState.machineIsOutputBlocked(sink);
+    }
 
     private sinkAcceptsItems(): boolean {
         if (EntityState.isBelt(this.sink_state)) {

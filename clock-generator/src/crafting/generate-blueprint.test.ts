@@ -4,6 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
+import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("generateClockForConfig", () => {
 
@@ -562,6 +563,12 @@ describe("generateClockForConfig", () => {
 
     // Recorded in game: the planned windows ran at 48/96 because the furnace/module window
     // landed before the output inserter cleared the machine; the derived windows ran stable.
+    //
+    // That recording was of one start of the clock. An inserter that waits for a machine at its output block takes
+    // its items a tick after the output inserter has cleared it (see IdleModeTransitionEvaluator), and with that tick
+    // the simulator finds a start of the clock from which every set of derived windows makes 92 of 96 a period:
+    // they pass from 12 starts and fail the check of them all. Whether the game has that state is not recorded; there
+    // is no scaffold of this build.
     describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
         const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
 
@@ -570,14 +577,17 @@ describe("generateClockForConfig", () => {
             expect(result.stability_check.as_built?.is_stable).toBe(false);
         });
 
-        it("derived windows pass the clock-only check", () => {
+        it("no derived windows pass the clock-only check from every start", () => {
+            const logs: string[] = [];
             const result = generateClockForConfig({
                 ...config,
                 overrides: { ...config.overrides, derive_clock_windows: true },
-            });
-            expect(result.derived_clock_windows?.succeeded).toBe(true);
-            expect(result.stability_check.as_built?.actual_output_items).toBe(result.stability_check.expected_output_items);
-            expect(result.stability_check.is_stable).toBe(true);
+            }, { logger: { ...quiet, log: message => logs.push(message) } });
+            expect(result.derived_clock_windows?.succeeded).toBe(false);
+            expect(result.stability_check.is_stable).toBe(false);
+            // from the 12 starts of the first check they hold the 96, and one of the starts of the full check makes 92
+            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding 2 -> actual=96 stable=true \(12 start phases\)/.test(line))).toBe(true);
+            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding \d+ full check -> actual=92 stable=false/.test(line))).toBe(true);
         }, 60_000);
     });
 

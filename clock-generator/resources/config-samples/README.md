@@ -158,10 +158,26 @@ Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
 
 | Clock | Output | Game | Simulator |
 |---|---|---|---|
-| The reporter's, tightened by hand | 704 in each of 68 periods | 355 | 368 (355 to 368 by where the clock starts) |
-| Made by version 0.5.0 | 704 in each of 68 | 464 | 702 (682 to 1,193) |
-| Selected now, batched swings with 3 output swings | 1056 in each of 45 | 455 | 524 |
-| Selected with "Belts do not move" on, 2 output swings | 704 in each of 68 | 396 | 648 (525 to 716) |
+| The reporter's, tightened by hand | 704 in each of 68 periods | 355 | 395 (355 or 395 by where the clock starts) |
+| Made by version 0.5.0 | 704 in each of 68 | 464 | 757 (757 to 1,268) |
+| Selected now, batched swings with 3 output swings | 1056 in each of 45 | 400 | 510 |
+| Selected with "Belts do not move" on, 2 output swings | 704 in each of 68 | 389 | 627 |
+| Evenly spaced windows of one hand (4 ticks) for the belt inserters | 608 and 624 in turn, of 704 | - | 704, at 545 |
+
+The two selected clocks are those the generator makes since the simulator has the tick an inserter takes to wake
+(GOALS.md, "When a waiting inserter acts"): their windows moved by a few ticks, and they were recorded again. With
+510 against 400 the build is over the quarter the game tests allow, so its wake-ups are not held there yet
+(`wake_ups_open` in the test); what it moves is.
+
+The last row is the clock that rule was read from (`src/crafting/wake-after-output-block.test.ts`). One plant made its
+352 a period and the other 264, from the first period the clock ran on the build. That plant held 14 advanced circuits
+when the clock started and 9 after its first output window, so it was over its output block of 21 before every
+output window from then on, and no window of that clock takes more than is made. The simulator has that state: a run
+started in it holds what the game held, tick for tick, as it does for the clock tightened by hand and, with
+`.scratch/belt-first-stack-after-a-limit-lifts.patch`, for the 0.5.0 clock and the clock selected before. Started as
+the generator starts a clock, the plants filled with ingredients and emptied of products, it holds 704, and so the
+generator takes the clock for one that holds. `.scratch/tools/sim-from-recording.js` starts the simulator in the
+state of a recording and names the first tick where the two part.
 
 The clock tightened by hand is the one to beat: no clock the generator offers comes near it. Its gains in the game
 are the coal inserter, 95 wake-ups a minute down to none with windows of one hand (6 ticks), and the two output
@@ -169,8 +185,21 @@ inserters, 48 each down to 14 and 20 with two short windows in every crafting cy
 `clockFromWindows` builds and checks a clock from windows like these, and `scripts/record-clock.js` records one
 (`WINDOWS=`); the windows are in `src/crafting/clock-from-windows.test.ts`.
 
-Open: the simulator counts far more wake-ups than the game on the output inserters of every clock here but the
-tightened one (191 a minute each against 48 under the 0.5.0 clock), from every start of the clock, and so ranks the
-two selected clocks the wrong way round. One difference is found: with part of a hand carried over from the window
-before, the game shows the inserter as working in its first enabled tick and the simulator as waiting for more
-items. It does not account for all of it.
+Open:
+- A clock is only checked from the start the generator gives it, and a build that gets its clock while it runs
+  starts elsewhere: with ingredients below their limits and products in the plants. The evenly spaced clock is the
+  case. In the simulator the clock selected now also ends up short (495 of 528 products a plant) when the plants
+  start with 10 to 26 plastic, which the game was not seen to do.
+- The simulator counts far more wake-ups than the game on the output inserters (50 a minute each against 4.5 under
+  the clock selected now), from every start of the clock, also in a run that holds what the game held. It is in the
+  status shown, not in what the inserters do. Two differences are found. An inserter that holds part of a hand from a
+  machine shows as working, not as waiting for more items, in a tick in which that machine finishes a product (18,871
+  cases of 18,871 over the recordings); with that the 50 would be 36. And with part of a hand carried over from the
+  window before, the game shows the inserter as working in its first enabled tick. They do not account for all of it.
+- An inserter that takes off a belt for a machine at its insertion limit lands its first stack in the tick after the
+  craft that takes the ingredient down (844 cases of 844 on five builds), and a tick later in the simulator. The
+  patch named above has it; it moves the windows of several samples by a tick and is not applied.
+- On the other scaffolds a run started in the state of a recording parts from the game within 100 to 550 ticks, as
+  it did before the rule above. On the utility science builds it is the first stack of a belt inserter whose window
+  opens on a machine at its output block: it lands in the tick the output inserter takes the products in some cases
+  and a tick later in others, and the simulator has the first for all.

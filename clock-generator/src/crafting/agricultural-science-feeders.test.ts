@@ -78,7 +78,12 @@ describe("generateClockForConfig", () => {
             expect(OUTPUT_FEEDER_CHECK_TICKS).toBeGreaterThanOrEqual(72_000);
         });
 
-        it("drops feeder windows that pass the standard check but come up a hand short in two periods of 200 (egg biochambers at speed 72, hands of 12)", () => {
+        // Until the simulator had the tick an inserter takes to wake when the output inserter clears its machine (see
+        // IdleModeTransitionEvaluator), this variant passed the standard check with feeder windows and came up a hand
+        // short in two periods of 200 of the longer run, so that they were dropped. With that tick it holds through the
+        // longer run. No variant tried since drops them (speeds 68 to 76, hands of 10 to 14, 4 to 6 swings): the ones
+        // that hold keep them, the others hold with nothing.
+        it("keeps feeder windows through the longer run with egg biochambers at speed 72 and hands of 12", () => {
             const config: Config = {
                 ...sample,
                 machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 72 } : it),
@@ -86,9 +91,9 @@ describe("generateClockForConfig", () => {
             };
             const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
             expect(result.stability_check.is_stable).toBe(true);
-            expect(result.output_feeders).toBeUndefined();
+            expect(result.output_feeders?.inserter_ids).toEqual(feeders);
             for (const id of feeders) {
-                expect(Object.keys(result.clock_windows)).not.toContain(id);
+                expect(Object.keys(result.clock_windows)).toContain(id);
             }
         }, 120_000);
 

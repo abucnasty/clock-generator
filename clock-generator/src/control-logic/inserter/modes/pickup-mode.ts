@@ -40,6 +40,15 @@ export class InserterPickupMode implements InserterMode {
             (fromMode.status === InserterStatus.IDLE && this.inserterState.waits_for_sink)
             || fromMode.status === InserterStatus.WAITING_FOR_SINK
         );
+        // A hand that stopped part way because the machine was at its output block goes on in the tick another
+        // inserter takes the products down, when the machine finished a craft in the tick before: that craft had
+        // woken the inserter already (see IdleModeTransitionEvaluator). Recorded in Factorio 2.1.21: 248 hands of 248
+        // went on in that tick, and 843 of 843 a tick later where no craft was finished the tick before.
+        const sink = this.sinkEntityState;
+        if (fromMode.status === InserterStatus.WAITING_FOR_SINK && EntityState.isMachine(sink)
+            && sink.outputBlockedAfterLastTick && sink.finishedCraftInLastTick) {
+            this.belt_grab_decided = true;
+        }
         this.inserterState.waits_for_sink = false;
     }
 

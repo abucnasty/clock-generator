@@ -59,6 +59,16 @@ export class MachineState implements EntityState {
     public productsFinished: number = 0;
 
     /**
+     * Whether the main product was at the output block when the machine's last tick was done. Inserters are updated
+     * before machines, so an inserter that finds this set and the block gone knows that another inserter took the
+     * products down in the tick it is in.
+     */
+    public outputBlockedAfterLastTick: boolean = false;
+
+    /** Whether the machine finished a craft in its last tick, which wakes the inserters that wait on it */
+    public finishedCraftInLastTick: boolean = false;
+
+    /**
      * Ingredients that are also a product of the recipe (a pentapod egg makes pentapod eggs). The machine keeps what
      * it is given apart from what it makes, and never crafts from its own products.
      */
@@ -121,6 +131,8 @@ function clone(machineState: MachineState): MachineState {
     );
     cloned.pendingOutput = machineState.pendingOutput;
     cloned.productsFinished = machineState.productsFinished;
+    cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
+    cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.selfIngredients = machineState.selfIngredients.clone();
     machineState.outputWaiters.forEach((waiters, item_name) => cloned.outputWaiters.set(item_name, new Map(waiters)));
     machineState.lastOutputTaker.forEach((inserter_id, item_name) => cloned.lastOutputTaker.set(item_name, inserter_id));
@@ -255,7 +267,7 @@ function machineIsOutputBlocked(machineState: MachineState): boolean {
     const outputBlock = machine.output.outputBlock;
     const currentQuantity = machineState.inventoryState.getQuantity(outputBlock.item_name);
 
-    return currentQuantity >= outputBlock.quantity
+    return currentQuantity >= outputBlock.ingredients_blocked_at
 }
 
 

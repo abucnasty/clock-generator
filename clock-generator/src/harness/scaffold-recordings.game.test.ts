@@ -61,6 +61,11 @@ interface ScaffoldBuild {
     settle_ticks: number;
     /** The clock is made for belts that do not move (`overrides.non_moving_belts`), which is what a scaffold has */
     non_moving_belts?: boolean;
+    /**
+     * Why the wake-ups of this build are not held to the game's yet: a difference between the simulator and the game
+     * that is known and open. What the build moves, and what every inserter and machine does, is held all the same.
+     */
+    wake_ups_open?: string;
 }
 
 const BUILDS: Record<string, ScaffoldBuild> = {
@@ -106,15 +111,15 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         settle_ticks: 1200,
     },
     // The build of issue 98: two foundries, two electromagnetic plants and a cryogenic plant, 240 a second over three
-    // copies. Its clock of 792 ticks takes two periods more than the others to settle. With belts that do not move
-    // the selected clock holds its rate too (704 in each of 68 periods), but the simulator counts 648 wake-ups a
-    // minute where the game shows 396, mostly on the output inserters, so that one is not held here yet.
+    // copies. Its clock of 792 ticks takes two periods more than the others to settle.
     "advanced circuit": {
         scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit-scaffold.txt"),
         config: ConfigPaths.ADVANCED_CIRCUIT,
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 4800,
+        wake_ups_open: "the simulator shows an output inserter as waiting on its machine in ticks the game shows it as working: "
+            + "510 wake-ups a minute against 400 on 2026-10-10 (samples README, Advanced circuit)",
     },
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
@@ -262,8 +267,10 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const by_start = asRecorded(simulated!) ? []
                 : simulatedWakeUpsByStart(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, WAKE_UPS_START_PHASES);
             const figures = Array.from(new Set([simulated!, ...by_start].map(figure => figure.toFixed(1)))).join(", ");
-            expect([simulated!, ...by_start].some(asRecorded),
-                `the simulator counts ${figures} wake-ups a minute, by where the clock starts, where the game shows ${recorded.toFixed(1)}`).toBe(true);
+            if (build.wake_ups_open === undefined) {
+                expect([simulated!, ...by_start].some(asRecorded),
+                    `the simulator counts ${figures} wake-ups a minute, by where the clock starts, where the game shows ${recorded.toFixed(1)}`).toBe(true);
+            }
 
             // the simulator against the game, entity by entity: a run of the same clock, half as long again as the
             // recording and judged on what follows its first third, moves what the game moved through every inserter

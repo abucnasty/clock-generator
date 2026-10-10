@@ -358,6 +358,12 @@ export interface GenerateClockOptions {
     shifted_cycle?: boolean;
     /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
     keep_output_buffers?: boolean;
+    /**
+     * What machines hold when the clock starts, by entity id ("machine:4"), in place of what filling them left; every
+     * inserter then starts with an empty hand. For starting a run in a state read off a recording of the game, to
+     * see what the simulator makes of it (see simulateClockOnly).
+     */
+    start_stock?: Record<string, MachineStartStock>;
     /** Warmup length in simulation periods (default 10) */
     warmup_periods?: number;
     /**
@@ -382,6 +388,16 @@ export interface GenerateClockOptions {
     on_progress?: (progress: GenerationProgress) => void;
     /** Called with a short description of the current sub-step (clock-only checks, observed window derivation) */
     on_progress_detail?: (detail: string) => void;
+}
+
+/** What a machine holds when a run starts: see GenerateClockOptions.start_stock */
+export interface MachineStartStock {
+    /** Ingredients and products by item name; an item that is not named keeps what filling the machine left */
+    items: Record<string, number>;
+    /** The crafting bar, 0 to 1: the part of a craft that is done (default: as filling the machine left it) */
+    crafting_progress?: number;
+    /** The productivity bar, with what it holds over 1 and has not paid out yet (default: as filling the machine left it) */
+    bonus_progress?: number;
 }
 
 export interface GenerationProgress {
@@ -474,6 +490,27 @@ export function generateClockForConfig(
             machine_state.inventoryState.setQuantity(output_item, 0);
         }
     });
+
+    if (options.start_stock) {
+        for (const { machine_state } of simulation_context.machines) {
+            const start = options.start_stock[machine_state.machine.entity_id.id];
+            if (start === undefined) {
+                continue;
+            }
+            for (const [item_name, quantity] of Object.entries(start.items)) {
+                MachineState.ingredientInventory(machine_state, item_name).setQuantity(item_name, quantity);
+            }
+            machine_state.craftingProgress.progress = start.crafting_progress ?? machine_state.craftingProgress.progress;
+            machine_state.bonusProgress.progress = start.bonus_progress ?? machine_state.bonusProgress.progress;
+            machine_state.pendingOutput = 0;
+        }
+        for (const { inserter_state } of simulation_context.inserters) {
+            if (inserter_state.held_item !== null) {
+                inserter_state.inventoryState.removeQuantity(inserter_state.held_item.item_name, inserter_state.held_item.quantity);
+                inserter_state.held_item = null;
+            }
+        }
+    }
 
     logger.log("All machines are output blocked.");
     simulation_context.machines.forEach(it => {
@@ -2274,9 +2311,11 @@ export function simulateClockOnly(
     /**
      * How the build is when the clock starts. `keep_output_buffers` leaves the machines the output is taken from as
      * full as they get when nothing takes it; by default they are emptied first. Some clocks settle differently from
-     * the two, and neither is how a scaffold starts: that runs without a clock first, and then gets one.
+     * the two, and neither is how a scaffold starts: that runs without a clock first, and then gets one. `start_stock`
+     * names what machines hold instead, to start in a state the game was recorded in: with `warmup_periods: 0` the
+     * first tick of the run is the first tick after that state.
      */
-    start: Pick<GenerateClockOptions, "keep_output_buffers" | "warmup_periods"> = {},
+    start: Pick<GenerateClockOptions, "keep_output_buffers" | "warmup_periods" | "start_stock"> = {},
 ): StockRecording {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
