@@ -49,6 +49,8 @@ The game does not expose its wake-up lists to mods, so they cannot be recorded d
 
 Which list an inserter sleeps on follows its status: the machine it takes from while it is waiting for source items or for more items, and the machine it puts into while it is waiting for space in the destination. Whether a waiting inserter is also on the list of the machine at its other end has not been confirmed yet.
 
+A clock can settle into more than one steady state with the same output, depending on what the machines hold when it starts, and each has wake-ups of its own. Batched swings on the utility science sample makes 192 a period in each of three, at 10.7, 26.8 and 32.1 wake-ups a minute; in the game it settled into the second. The generator counts the wake-ups of the state its own run settles into, so its figure for such a clock is one of several. A scaffold test looks for the game's figure among those the simulator counts from other starts of the clock.
+
 Belts and chests are left out of this measure. An inserter that works with a moving belt tracks the position of the item it is going to pick up, which costs more than a wake-up. Belts that do not move are cheaper and are what the simulator models, for simplicity.
 
 ## Crafting Constraints
@@ -99,3 +101,11 @@ The status the game shows for an inserter is decided by its sink before the inse
 - With an empty hand and a sink that still takes something, it is working while it swings back, and waiting for source items once there is nothing for it to take. This is also what it shows when the sink is full of the one item this inserter brings.
 - With a hand it is still filling, it is waiting for more items between pickups.
 - A full hand is working, until it cannot be dropped in one go. A hand goes onto a belt one stack at a time and shows as waiting for space in the destination in between.
+
+### What an inserter takes off a belt first
+
+An inserter that takes two items off one belt, one from each lane, takes from the lane nearest to it first whenever its sink takes both, and from the far lane only when the sink takes nothing more of the item on the near one. The order of its filters has no say in it. Recorded on the utility science scaffold in Factorio 2.1.21: the inserter that brings processing units and low density structures took the low density structures first while they were on its near lane, and the processing units first once the two lanes were swapped, with the same filters both times.
+
+Which item comes first decides how an ingredient is split between two inserters that both bring it, and with it whether a clock holds. Under one clock for that build the simulator made 192 of 192 a period with the processing units taken first, where the game, taking the low density structures first, made 96.
+
+The config names the nearest lane with `near_lane` on the belt an inserter picks up from, and the sidecar exports it for an inserter beside a straight piece of belt. Without it the simulator takes the items in the order of the inserter's filters, or of the sink's ingredients, which is a guess. A scaffold test fails when the config and the recorded build disagree on which item comes first, or on the stack size of an inserter.
