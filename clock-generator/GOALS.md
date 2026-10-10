@@ -5,6 +5,16 @@
 
 The goals above are listed in priority order.
 
+## Backpressure Loss
+
+A clock must always recover. When any item of a build stops arriving for a while, or its output stops being taken, the machines run dry or fill up, and when the item comes back the build has to return to its target rate under the same clock by itself. Nobody should have to restart a build because one input ran out.
+
+A clock that does this survives backpressure loss, and one that does not cannot survive backpressure loss. This is what "stable" has meant in this project: a stable clock is one that survives backpressure loss. A clock that only makes its target rate from a clean start, with every machine full of ingredients and emptied of products, does not meet goal 1.
+
+Builds are classified the same way. Some builds cannot survive backpressure loss whatever the clock, such as a loop of machines that does not start again once it has run dry. That is a limit of the build, and it is fine to say so and to give such a build the clocks it can have, as long as they are named for what they are.
+
+Decided on 2026-10-10, after a clock for the advanced circuit build that makes its 704 a period from a clean start made 608 and 624 in the game: one of its two plants held products when the clock started, and never caught up.
+
 ## Active Inserter Windows
 
 An active inserter window is defined as a period where an inserter receives a signal from a decider combinator telling it to be enabled. During that window it has the ability to actively do work and transfer materials from a source to a sink.
