@@ -260,6 +260,25 @@ inserters = [
 ]
 ```
 
+### Nearest Belt Lane
+
+An inserter that takes two items off one belt takes from the lane nearest to it first, whenever its machine takes
+both. Which item that is can decide whether a clock holds: on the utility science sample it sets how the low density
+structures are split between the two inserters that bring them. Name the lane with `near_lane` on the inserter's
+source, 1 or 2 by its place in the belt's `lanes`:
+
+```json
+{
+  "source": { "type": "belt", "id": 2, "near_lane": 1 },
+  "sink": { "type": "machine", "id": 1 },
+  "stack_size": 16
+}
+```
+
+The sidecar mod exports it for an inserter beside a straight piece of belt, and the inserter's panel in the UI has a
+field for it. Without it the items are taken in the order of the inserter's `filters`, or of the machine's
+ingredients when it has none.
+
 ### Enable Control Overrides
 
 You can override the automatic enable control logic for individual inserters and drills. This is useful when you want to manually specify when an entity should be enabled during the crafting cycle.

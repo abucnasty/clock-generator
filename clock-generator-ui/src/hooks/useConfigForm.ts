@@ -73,7 +73,8 @@ export interface InserterFormData {
     id: number;
     /** Internal UUID — see MachineFormData._uuid. */
     _uuid: string;
-    source: { type: 'machine' | 'belt' | 'chest'; id: number };
+    /** `near_lane`: of a belt, the lane nearest to the inserter (1 or 2, by its place in the belt's lanes), which it takes from first */
+    source: { type: 'machine' | 'belt' | 'chest'; id: number; near_lane?: 1 | 2 };
     sink: { type: 'machine' | 'belt' | 'chest'; id: number };
     stack_size: number;
     filters?: string[];

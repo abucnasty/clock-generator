@@ -2,6 +2,7 @@ import {
     Autocomplete,
     Box,
     Chip,
+    MenuItem,
     Tab,
     Tabs,
     TextField,
@@ -91,6 +92,13 @@ function InserterEditSection({
         [inserter, machines, belts, chests, getRecipeInfo],
     );
 
+    // the two lanes of the belt this inserter picks up from, when they carry different items it could choose between
+    const sourceLanes = useMemo<string[] | null>(() => {
+        if (inserter.source.type !== TargetType.BELT) return null;
+        const lanes = belts.find(b => b.id === inserter.source.id)?.lanes.map(l => l.ingredient) ?? [];
+        return lanes.length === 2 && lanes[0] && lanes[1] && lanes[0] !== lanes[1] ? lanes : null;
+    }, [inserter.source, belts]);
+
     const handleFilterChange = (slotIndex: number, item: string) => {
         const filters = [...(inserter.filters || [])];
         filters[slotIndex] = item;
@@ -154,6 +162,32 @@ function InserterEditSection({
                 autoHighlight
                 disableClearable
             />
+
+            {sourceLanes && (
+                <TextField
+                    select
+                    size="small"
+                    fullWidth
+                    label="Nearest lane of the belt"
+                    helperText="An inserter takes from the lane nearest to it first when its machine takes both items. The sidecar mod exports it; not set, the order of the filters is used."
+                    value={inserter.source.near_lane ?? 0}
+                    onChange={(e) => {
+                        const lane = Number(e.target.value);
+                        const { near_lane: _unset, ...source } = inserter.source;
+                        onUpdate(entityIndex, { source: lane === 1 || lane === 2 ? { ...source, near_lane: lane } : source });
+                    }}
+                >
+                    <MenuItem value={0}>Not set</MenuItem>
+                    {sourceLanes.map((item, i) => (
+                        <MenuItem key={i} value={i + 1}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <FactorioIcon name={item} size={18} />
+                                Lane {i + 1}: {item}
+                            </Box>
+                        </MenuItem>
+                    ))}
+                </TextField>
+            )}
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <FactorioIcon name="stack-inserter" size={22} />

@@ -316,14 +316,14 @@ function gui.create(player, player_data, result)
                 belt_table.add({ type = "label", caption = tostring(i) })
                 belt_table.add({ type = "label", caption = belt.belt_type })
                 
-                -- Lane 1 (right lane)
+                -- Lane 1 (left lane)
                 local lane1_text = "(empty)"
                 if belt.lanes[1] and belt.lanes[1].ingredient then
                     lane1_text = belt.lanes[1].ingredient
                 end
                 belt_table.add({ type = "label", caption = lane1_text })
                 
-                -- Lane 2 (left lane)
+                -- Lane 2 (right lane)
                 local lane2_text = "(empty)"
                 if belt.lanes[2] and belt.lanes[2].ingredient then
                     lane2_text = belt.lanes[2].ingredient

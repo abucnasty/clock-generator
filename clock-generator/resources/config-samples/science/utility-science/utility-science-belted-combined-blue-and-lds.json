@@ -49,7 +49,8 @@
       "id": 3,
       "source": {
         "type": "belt",
-        "id": 3
+        "id": 3,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
