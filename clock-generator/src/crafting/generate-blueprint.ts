@@ -1594,9 +1594,12 @@ function deriveWithOutputWindows(
     }
 
     const always_enabled_by_config = alwaysEnabledByConfig(base_config);
+    // the inserters of a loop stay always enabled, as the plan leaves them (see alwaysEnabledInserters)
+    const always_enabled = new Set(alwaysEnabledInserters(createEntityRegistryFromConfig(base_config)).map(it => it.entity_id.id));
     const busy_windows = new Map<string, OpenRange[]>();
     for (const entity of derivation.serializable_state_transition_history.entities) {
-        if (entity.entity_type !== "inserter" || output_inserter_ids.has(entity.entity_id) || always_enabled_by_config.has(entity.entity_id)) {
+        if (entity.entity_type !== "inserter" || output_inserter_ids.has(entity.entity_id)
+            || always_enabled_by_config.has(entity.entity_id) || always_enabled.has(entity.entity_id)) {
             continue;
         }
         const ranges = busyDeciderRanges(entity.initial_status, entity.transitions, period);

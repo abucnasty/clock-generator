@@ -65,6 +65,7 @@ From 0.6.0 on, each release lists what people generating clocks will notice unde
 - An inserter filtered to a by-product picks it up.
 - Combinator descriptions are cut to the 500 bytes Factorio keeps.
 - The diagram view lays out machines that feed each other in a loop.
+- Observed windows leave the inserters of a loop always enabled, as every other clock does. They gave them windows like any other inserter. No build with a loop showed it: none had observed windows that passed the clock-only check.
 
 #### Removed
 - HOCON support. Configurations are JSON.
