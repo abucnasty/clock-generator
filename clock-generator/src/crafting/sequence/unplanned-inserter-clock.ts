@@ -72,6 +72,11 @@ export function loopInserters(entity_registry: Pick<ReadableEntityRegistry, "get
  *
  * An inserter between machines that takes from a machine outside the loop (nutrients for the egg biochambers) keeps
  * its clock: that machine has a hand ready whenever the window opens.
+ *
+ * "Always enabled" is where the plan leaves them. An inserter that puts into the machine the build's output is taken
+ * from (the eggs for the science biochamber), unless it can carry that machine's fuel, is given windows by `windowsOfInsertersFeedingTheOutputMachine` when
+ * the clock leaves that machine blocked for a stretch of every cycle and the build passes the as-built check with them,
+ * and stays always enabled otherwise.
  */
 export function alwaysEnabledInserters(entity_registry: Pick<ReadableEntityRegistry, "getAll">): Inserter[] {
     const in_a_loop = loopInserters(entity_registry);

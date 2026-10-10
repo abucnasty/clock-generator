@@ -191,3 +191,27 @@ describe("output machines with several inserters taking from them", async () => 
         expect(transfers(8)).toEqual({ "iron-bacteria": "1/3" });
     });
 });
+
+describe("EntityTransferCountMap.divide", () => {
+    it("divides the hands a machine needs along with the hands planned", () => {
+        const config = {
+            target_output: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
+            machines: [{ id: 1, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" }],
+            belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 4 }] }],
+            inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 }],
+        };
+        const inserter = Array.from(registryFor(config).getAll()).find(Entity.isInserter)!;
+        const map = EntityTransferCountMap.fromEntries([[inserter.entity_id, {
+            entity: inserter,
+            item_transfers: [{ item_name: "iron-plate", transfer_count: fraction(8, 3) }],
+            total_transfer_count: fraction(8, 3),
+            needed_transfer_count: fraction(5, 2),
+            stack_size: 16,
+        }]]);
+        const divided = EntityTransferCountMap.divide(map, fraction(2)).get(inserter.entity_id)!;
+        expect(divided.total_transfer_count.toDecimal()).toBeCloseTo(4 / 3, 9);
+        expect(divided.needed_transfer_count!.toDecimal()).toBeCloseTo(1.25, 9);
+        const without = EntityTransferCountMap.divide(EntityTransferCountMap.fromEntries([[inserter.entity_id, { ...map.get(inserter.entity_id)!, needed_transfer_count: undefined }]]), fraction(2));
+        expect(without.get(inserter.entity_id)!.needed_transfer_count).toBeUndefined();
+    });
+});

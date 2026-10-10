@@ -72,6 +72,8 @@ export interface ClockAlternativeView {
     label: string;
     description: string;
     inserterWindowCount: number;
+    /** The windows the selection compares: the count without the windows of the output feeders */
+    rankingWindowCount: number;
     isStable: boolean;
     /** Ranked ahead of the other stable alternatives (full-hand output swings where a machine has spare speed) */
     rankFirst: boolean;

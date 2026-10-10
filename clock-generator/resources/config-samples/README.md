@@ -35,7 +35,7 @@ Conventions:
 
 | Build | Scaffold | Recorded | Note |
 |---|---|---|---|
-| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods | in `test:game` |
+| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice) | in `test:game` |
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | intermediates/low-density-structure | yes | selected clock exact | in `test:game` |
@@ -95,6 +95,10 @@ Open in the long run itself, reached by no sample: a fractional period whose rep
 periods (41 to 79 of them in the usual run) is judged as that one repeat; and where not even one repeat fits, the
 judged periods are compared as one span, which can pass a clock that is short by just under two hands of every
 output inserter over it.
+
+Open, fitted: `MACHINE_HANDS_SURPLUS` (1.43, the windows of an inserter between machines) is a number found with the
+game on the agricultural science build on 2026-10-09; the simulator passes 1.30, which starved two of its clocks in the
+game. To be replaced by a value derived per build, or by a setting the user controls. Neither is done.
 
 ## Open divergence: utility science
 
