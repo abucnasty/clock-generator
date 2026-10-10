@@ -1,0 +1,119 @@
+name: Clock problem
+description: A clock that will not generate, is not stable, or does not run in the game the way the generator shows it.
+title: "Clock: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One build per issue, please. The exported config is the one thing that cannot be left out: with it the build can be simulated again exactly as you had it.
+
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What went wrong?
+      options:
+        - Validation fails, or reports something that looks wrong
+        - Generating fails with an error
+        - No stable clock is offered
+        - The clock never reaches the target rate in the game
+        - The clock works in the game for a while, then stalls or falls behind
+        - The blueprint cannot be pasted or is wired wrong
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Clock generator version
+      description: Reload the page first so you are on the latest version, then read it from the bottom of the page.
+      placeholder: v0.5.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: Press **Export Config** at the top of the page and drag the downloaded `clock-config-….json` file into this field.
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What you expected and what happened
+      description: The rate you asked for and the rate you get. For a clock that fails in the game, also how long it runs before it goes wrong, which inserter or machine is stuck, and the status it shows.
+      placeholder: The target is 10 electric engine units per second and the build makes about 5. After a few minutes the output inserter of the second machine holds 12 items and shows "waiting for source items".
+    validations:
+      required: true
+
+  - type: input
+    id: clock
+    attributes:
+      label: Potential clock
+      description: The name of the clock you used, from the Clock column of the Potential Clocks table. Leave empty if generating did not get that far.
+      placeholder: Uneven output swings
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Error message or log
+      description: If validating or generating failed, the error it showed. For a failed generation, the content of the Log tab under Results helps too.
+      render: text
+
+  - type: dropdown
+    id: config-source
+    attributes:
+      label: How was the config made?
+      options:
+        - Pasted from Factorio with the Clock Generator Sidecar mod
+        - Pasted from the sidecar mod, then changed by hand
+        - Entered by hand
+        - Imported from someone else's config file
+
+  - type: markdown
+    attributes:
+      value: |
+        ## In the game
+
+        Skip this part if the problem is in the generator and you never got to the game.
+
+  - type: textarea
+    id: blueprint
+    attributes:
+      label: Blueprint of the build
+      description: A blueprint string of the build as it stands in the game, with the clock. Save a long string in a `.txt` file and drag the file in.
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: The build in the game with Alt mode on, at the moment it goes wrong. A screenshot of the Timelines tab helps when the game does something else than the timeline shows.
+
+  - type: input
+    id: factorio-version
+    attributes:
+      label: Factorio version
+      placeholder: 2.1.21, Space Age
+
+  - type: input
+    id: mods
+    attributes:
+      label: Mods
+      description: Mods that change machines, inserters, recipes or belts, and the version of the Clock Generator Sidecar if you used it.
+      placeholder: Clock Generator Sidecar 0.3.0, no others
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Checked in the game
+      description: The usual reasons a clock that is stable in the generator is not stable in the game. Tick the ones you have checked.
+      options:
+        - label: Every inserter in the build is a legendary stack inserter, the only inserter the generator supports
+        - label: The crafting speed and productivity of every machine in the config are what the machine shows in the game
+        - label: The stack size of every inserter in the config is what the inserter is set to in the game
+        - label: The build has full power
+        - label: The belts and chests the inserters take from never run empty
+        - label: The combinators and wires are as the blueprint pasted them
