@@ -78,6 +78,7 @@ From 0.6.0 on, each release lists what people generating clocks will notice unde
 - Recorder mod 0.6.0: belt pieces joined to each other, through undergrounds and splitters too, are described as one belt. A lane that had run dry under one inserter used to split a belt, and an inserter over an empty piece was put on the first belt.
 - `npm run test:game` reads `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE` from `clock-generator/.env` (see `.env.example`); the save it builds in is committed as `resources/clock_generator_staging.zip`.
 - `npm run test:game:watch` runs the game-backed tests with the game open to watch them: all builds in one game, each built in the place of the one before it (recorder mod `harness_clear`), at a speed that can be followed. Whoever watches a run is an admin of the game, so they can set its speed or open the editor, has alt mode on, and always sees the FPS/UPS counter and the wake-up lists.
+- Pull requests run the unit tests of the generator and build the UI (`.github/workflows/test.yml`). The game-backed tests are not part of it: they need a Factorio install.
 
 #### Changed
 - The generator's tests are split over seven files that run side by side and generate their clocks in `beforeAll`: `npm test` takes about 80 seconds where it took 260, and one test picked with `-t` no longer waits for every clock of its file.
