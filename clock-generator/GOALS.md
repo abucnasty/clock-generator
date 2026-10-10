@@ -15,6 +15,16 @@ Builds are classified the same way. Some builds cannot survive backpressure loss
 
 Decided on 2026-10-10, after a clock for the advanced circuit build that makes its 704 a period from a clean start made 608 and 624 in the game: one of its two plants held products when the clock started, and never caught up.
 
+## Working Rules
+
+Decided on 2026-10-10, after a day in which each recording of the game led to another rule for the simulator and the work on goal 2 did not start.
+
+1. The simulator is the judge of a clock, because it is the only judge that ships with the generator. The game is what the simulator is calibrated against.
+2. A difference between the simulator and the game is chased only when it changes whether a clock is stable, or which clock is selected, on some sample. Any other difference gets a line in `resources/config-samples/README.md` and is left.
+3. Margin comes before precision. A clock has to recover from losses and hold with its windows a tick off, so that a modelling error of one tick does not decide whether it works.
+4. Scaffold tests are a regression check. They do not decide whether a change ships.
+5. The generator is built from general patterns. A sample, a scaffold or a clock someone made by hand is evidence and a benchmark, never the target. A build the generator cannot clock is a gap to record, not a reason to change the build.
+
 ## Active Inserter Windows
 
 An active inserter window is defined as a period where an inserter receives a signal from a decider combinator telling it to be enabled. During that window it has the ability to actively do work and transfer materials from a source to a sink.
