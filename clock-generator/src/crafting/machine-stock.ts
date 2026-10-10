@@ -20,6 +20,8 @@ export interface MachineStockSeries {
 export interface InserterHandSeries {
     inserter_id: string;
     held: number[];
+    /** The item in the hand per tick, "" while it is empty */
+    held_item: string[];
     status: string[];
     /** The state the game would show for it, per tick, as the recorder writes it */
     factorio_state: string[];
@@ -52,7 +54,7 @@ export class StockRecorder {
                 products_finished: [],
             },
         }));
-        this.inserters = inserters.map(({ state, sink }) => ({ state, sink, series: { inserter_id: state.entity_id.id, held: [], status: [], factorio_state: [] } }));
+        this.inserters = inserters.map(({ state, sink }) => ({ state, sink, series: { inserter_id: state.entity_id.id, held: [], held_item: [], status: [], factorio_state: [] } }));
     }
 
     public record(): void {
@@ -70,6 +72,7 @@ export class StockRecorder {
         }
         for (const { state, sink, series } of this.inserters) {
             series.held.push(state.held_item?.quantity ?? 0);
+            series.held_item.push(state.held_item?.item_name ?? "");
             series.status.push(state.status);
             series.factorio_state.push(factorioInserterState(state, sink));
         }

@@ -23,8 +23,9 @@ export function clockPeriods(values: number[]): PeriodRange[] {
     if (values.length === 0) {
         return [];
     }
-    const lowest = Math.min(...values);
-    const highest = Math.max(...values);
+    // not Math.min(...values): a long recording has more samples than a call takes arguments
+    const lowest = values.reduce((least, value) => Math.min(least, value), Infinity);
+    const highest = values.reduce((most, value) => Math.max(most, value), -Infinity);
     const starts: number[] = values[0] === lowest ? [0] : [];
     for (let i = 1; i < values.length; i++) {
         if (values[i] < values[i - 1]) {

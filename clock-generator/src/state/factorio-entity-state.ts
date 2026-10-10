@@ -87,17 +87,16 @@ export function factorioInserterState(state: InserterState, sink: EntityState): 
         : FactorioInserterState.WORKING;
 }
 
+/** The state the game shows for a machine, by the status the simulator keeps for it */
+export const FACTORIO_MACHINE_STATE: Readonly<Record<MachineStatus, FactorioMachineState>> = {
+    [MachineStatus.WORKING]: FactorioMachineState.WORKING,
+    [MachineStatus.OUTPUT_FULL]: FactorioMachineState.FULL_OUTPUT,
+    [MachineStatus.NO_FUEL]: FactorioMachineState.NO_FUEL,
+    [MachineStatus.INGREDIENT_SHORTAGE]: FactorioMachineState.ITEM_INGREDIENT_SHORTAGE,
+};
+
 export function factorioMachineState(state: MachineState): FactorioMachineState {
-    switch (state.status) {
-        case MachineStatus.WORKING:
-            return FactorioMachineState.WORKING;
-        case MachineStatus.OUTPUT_FULL:
-            return FactorioMachineState.FULL_OUTPUT;
-        case MachineStatus.NO_FUEL:
-            return FactorioMachineState.NO_FUEL;
-        case MachineStatus.INGREDIENT_SHORTAGE:
-            return FactorioMachineState.ITEM_INGREDIENT_SHORTAGE;
-    }
+    return FACTORIO_MACHINE_STATE[state.status];
 }
 
 export function factorioDrillState(state: DrillState): FactorioDrillState {

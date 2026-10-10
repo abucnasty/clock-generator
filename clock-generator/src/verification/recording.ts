@@ -154,5 +154,6 @@ export function recordedClockPeriod(recording: Recording): number | null {
     if (!values || values.length === 0) {
         return null;
     }
-    return Math.max(...values) + 1;
+    // not Math.max(...values): a long recording has more samples than a call takes arguments
+    return values.reduce((most, value) => Math.max(most, value), -Infinity) + 1;
 }

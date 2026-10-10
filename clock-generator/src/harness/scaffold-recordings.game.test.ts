@@ -10,6 +10,8 @@ import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed }
 import { outputPerPeriod, recipesMaking } from "./recording-output";
 import { matchRecordingToConfig } from "../verification/entity-matching";
 import { wakeUpsOfRecording } from "../verification/recording-wake-ups";
+import { compareRecordings } from "../verification/compare-recordings";
+import { matchOfSimulatedRecording, simulateRecording } from "../verification/simulated-recording";
 
 /**
  * These tests run a headless Factorio through the harness, so they need the game and a save to build in, both named
@@ -184,6 +186,18 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(simulated, `the long run of the selected clock (${selected.label}) counted its wake-ups`).toBeDefined();
             expect(Math.abs(simulated! - recorded), `the simulator counts ${simulated!.toFixed(1)} wake-ups a minute where the game shows ${recorded.toFixed(1)}`)
                 .toBeLessThanOrEqual(WAKE_UPS_TOLERANCE * recorded);
+
+            // the simulator against the game, entity by entity: a run of the same clock, half as long again as the
+            // recording and judged on what follows its first third, moves what the game moved through every inserter
+            // and finishes what it finished in every machine
+            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, RECORDED_TICKS * 1.5, period);
+            const compared = compareRecordings(
+                { recording: result.recording, match: matchRecordingToConfig(result.recording, config) },
+                { recording: simulated_run, match: matchOfSimulatedRecording(simulated_run), from_sample: Math.floor(simulated_run.sample_count / 3) },
+                config,
+                { expected_output_per_period: expected },
+            );
+            expect(compared.issues, "the simulator moves what the game moved, through every inserter and machine").toEqual([]);
         }, TEST_TIMEOUT_MS);
     }
 });

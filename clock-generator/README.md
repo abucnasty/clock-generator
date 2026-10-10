@@ -420,6 +420,22 @@ Copy `.env.example` to `.env` and set `FACTORIO_PATH` to your Factorio executabl
 
 The save is never written to; Factorio gets a temporary write-data folder (`--work-dir` keeps it). The save needs a place where the blueprint can be built and powered, such as an editor map with a global electric network. Run `npm run record` without arguments for all options.
 
+### Verifying a Recording
+
+`npm run verify` lays a recording against the simulator. It generates the clocks of the config, runs the one that was built on its own in the simulator, as its blueprint runs it in the game, and compares that run with the recording. The run is written in the format of the recorder, so both are read by the same functions (`src/verification/compare-recordings.ts`).
+
+```bash
+npm run verify -- --config=config.json --recording=recording.json [--alternative=planned-belt-slack]
+```
+
+- `--alternative` names the clock that was recorded, by its id, label or index in the list of potential clocks. Without it, the clock the generator selects is taken.
+- The report gives, game against simulator: the output of every clock period, the wake-ups a minute, what every inserter moved and every machine finished in a period, and how much of the time each showed the same state at the same place in the period. A build that takes several periods to repeat, or a loop of machines the clock does not hold to a place in the period, shows other states at the same place without being any different, so that figure comes with how alike the two are wherever in the period.
+- It exits with 1 when the two moved something else: a clock period off the expected output, an inserter or a machine that moves another amount in a period, or a recorded clock that is not the clock of the config. States that differ are listed and do not fail it.
+- A build with fuel is also checked for the fuel its machines burned against the energy consumption of the config, and its fuel inserters against their fuel clocks.
+
+`npm run test:game` makes the same comparison for every scaffold it records.
+
+
 ### Configuration Validation
 
 Configurations are validated at runtime using [Zod](https://zod.dev/) schemas. If you provide an invalid configuration, you'll get detailed error messages:
