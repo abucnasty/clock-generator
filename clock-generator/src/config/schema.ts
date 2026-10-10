@@ -492,7 +492,9 @@ export const ConfigOverridesSchema = z.object({
      *
      * A clock is made for a moving belt by default: each window of an inserter that picks up from a belt stays open
      * a few ticks longer (belt pickup slack), and a clock without it is only selected when no clock with it holds the
-     * target rate. When enabled, no clock gets the slack and the clock with the fewest wake-ups is selected.
+     * target rate. When enabled, a clock is made without the slack and the one with the fewest wake-ups is selected.
+     * A clock that does not hold the expected output without the slack keeps it, and is only selected when no clock
+     * without it holds the target rate.
      *
      * @default false
      */

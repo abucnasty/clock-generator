@@ -243,7 +243,7 @@ export interface BlueprintGenerationResult {
     belt_pickup_slack_ticks: Record<string, number>;
     /**
      * The windows of a belt-fed inserter go without the slack that would have lengthened them. False when the config
-     * says the belts do not move (`overrides.non_moving_belts`): then no clock is held to the slack.
+     * says the belts do not move (`overrides.non_moving_belts`): then a clock is meant to go without it.
      */
     belt_pickup_slack_left_out: boolean;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
@@ -689,7 +689,8 @@ export function generateClockForConfig(
 
     const unslacked_windows = windowsFromHistory(final_history, simulation_context.entity_registry, always_enabled_by_config);
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
-    // on belts that do not move no clock gets the slack, whatever the alternative asks for
+    // on belts that do not move a clock is made without the slack, whatever the alternative asks for; one that does
+    // not hold that way is made again for a moving belt (see fallingBackToSlack)
     const non_moving_belts = config.overrides?.non_moving_belts === true;
     const belt_pickup_slack_mode = non_moving_belts ? "never" : options.belt_pickup_slack ?? "auto";
     const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (belt_pickup_slack_mode === "auto"
@@ -3059,12 +3060,14 @@ export interface ClockAlternative {
     /** Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not */
     meets_target_rate: boolean;
     /**
-     * False when the windows of a belt-fed inserter go without belt pickup slack. Such a clock is only selected when
-     * no clock with the slack meets the target rate: the simulator's belts do not move, so it looks better there
-     * than it is on a moving belt. True for every clock when the config says the belts do not move, and for a clock
-     * with a period that is not a whole number of ticks, which never gets the slack.
+     * False when the clock is not made for the belt the config asks for; such a clock is only selected when no other
+     * meets the target rate. By default that is a clock whose belt-fed inserters go without belt pickup slack: the
+     * simulator's belts do not move, so it looks better there than it is on a moving belt. When the config says the
+     * belts do not move (`overrides.non_moving_belts`) it is a clock that kept the slack, because it does not hold the
+     * expected output without it. True for a clock with a period that is not a whole number of ticks, which never gets
+     * the slack.
      */
-    keeps_belt_pickup_slack: boolean;
+    matches_belt_choice: boolean;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
     /**
@@ -3096,7 +3099,7 @@ export interface ClockAlternativesResult {
 /** What the selection compares between two alternatives, in this order; see `combineClockAlternativeRuns` */
 export interface ClockRanking {
     meets_target_rate: boolean;
-    keeps_belt_pickup_slack: boolean;
+    matches_belt_choice: boolean;
     rank_first: boolean;
     /** Null when they were not counted, which ranks after any count */
     wake_ups_per_minute: number | null;
@@ -3106,7 +3109,7 @@ export interface ClockRanking {
 export function clockRankingOf(alternative: ClockAlternative): ClockRanking {
     return {
         meets_target_rate: alternative.meets_target_rate,
-        keeps_belt_pickup_slack: alternative.keeps_belt_pickup_slack,
+        matches_belt_choice: alternative.matches_belt_choice,
         rank_first: alternative.rank_first,
         wake_ups_per_minute: alternative.wake_ups_per_minute,
         window_count: alternative.ranking_window_count,
@@ -3203,9 +3206,40 @@ const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for t
     + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
     + "grouped into batches that match the crafting cycle.";
 
+/** The same config for belts that move, so that a clock gets the belt pickup slack its alternative asks for */
+function withMovingBelts(config: Config): Config {
+    return { ...config, overrides: { ...config.overrides, non_moving_belts: false } };
+}
+
+/**
+ * For a config whose belts do not move. A clock is then made without belt pickup slack, and some clocks only hold the
+ * expected output with it, also on the simulator's belt. Such a clock is made again as it is for a moving belt, and
+ * that one is kept when it holds. An alternative that could not be made at all without the slack is not tried with it.
+ */
+function fallingBackToSlack(
+    withoutSlack: () => BlueprintGenerationResult,
+    withSlack: () => BlueprintGenerationResult,
+): BlueprintGenerationResult {
+    const result = withoutSlack();
+    // the slack changes nothing where no clocked inserter picks up from a belt, or in a period of part ticks
+    if (alternativeIsStable(result) || result.belt?.kind !== "non_moving" || !Number.isInteger(result.simulation_duration.ticks)) {
+        return result;
+    }
+    try {
+        const with_slack = withSlack();
+        return with_slack.belt?.kind === "moving" && alternativeIsStable(with_slack) ? with_slack : result;
+    } catch {
+        return result;
+    }
+}
+
 function primaryDefinition(config: Config, options: GenerateClockOptions, report?: (detail: string) => void): AlternativeDefinition {
-    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const result = generateClockWithSwingBackoff(base_config, { ...options, verify_as_built: true, belt_pickup_slack: "always", on_progress_detail: report });
+    const generate = (belt_config: Config) => generateClockWithSwingBackoff(
+        { ...belt_config, overrides: { ...belt_config.overrides, derive_clock_windows: false } },
+        { ...options, verify_as_built: true, belt_pickup_slack: "always", on_progress_detail: report });
+    const result = config.overrides?.non_moving_belts === true
+        ? fallingBackToSlack(() => generate(config), () => generate(withMovingBelts(config)))
+        : generate(config);
     return {
         id: "planned-belt-slack",
         label: BATCHED_SWINGS_LABEL,
@@ -3226,15 +3260,18 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
     if (belt.kind === "moving") {
         const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
         const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
-        return ` Made for a moving belt: every inserter that picks up from a belt stays enabled ${ticks} after each window `
+        const moving = ` Made for a moving belt: every inserter that picks up from a belt stays enabled ${ticks} after each window `
             + "(belt pickup slack), long enough for one more full hand at one belt stack a tick. On a moving belt, and more so on "
             + "one with gaps, a pickup can come late; the extra ticks let it finish instead of the inserter being switched off "
             + "holding a partial hand. This is a rule of thumb, not a simulated belt: it may work on one build and not on another.";
+        return config.overrides?.non_moving_belts !== true ? moving
+            : `${moving} The config says the belts do not move, but this clock did not hold the expected output without the `
+            + "slack, so it keeps it and is only selected for you when no clock without the slack holds the target rate.";
     }
     const non_moving = " Made for a non-moving belt: its belt inserters get only the windows they need on a belt that is full and "
         + "does not move, without belt pickup slack. On a moving belt an inserter can be switched off holding a partial hand.";
     if (config.overrides?.non_moving_belts === true) {
-        return `${non_moving} The config says the belts do not move, so no clock gets the slack.`;
+        return `${non_moving} The config says the belts do not move, so it goes without the slack.`;
     }
     if (!Number.isInteger(result.simulation_duration.ticks)) {
         return `${non_moving} The slack is not given to a clock whose period is not a whole number of ticks.`;
@@ -3246,13 +3283,33 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
 
 /**
  * Every alternative after the primary one. `known_stable` answers from runs that already finished, so the full-hand
- * alternative only re-simulates a planned run when it was not generated yet (e.g. in another worker).
+ * alternative only re-simulates a planned run when it was not generated yet (e.g. in another worker). With belts that
+ * do not move, each falls back to the clock it is for a moving belt when it does not hold without the slack.
  */
 function alternativeDefinitions(
     config: Config,
     context: ClockAlternativeContext,
     quiet: GenerateClockOptions,
     known_stable: (id: string) => boolean | undefined = () => undefined,
+): AlternativeDefinition[] {
+    const definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
+    if (config.overrides?.non_moving_belts !== true) {
+        return definitions;
+    }
+    const for_moving_belts = alternativeDefinitionsFor(withMovingBelts(config), context, quiet, known_stable);
+    return definitions.map(definition => {
+        const with_slack = for_moving_belts.find(it => it.id === definition.id);
+        return with_slack === undefined ? definition
+            : { ...definition, run: () => fallingBackToSlack(definition.run, with_slack.run) };
+    });
+}
+
+/** The alternatives as the config asks for them, each made once */
+function alternativeDefinitionsFor(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+    known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const fractional = config.overrides?.use_fractional_swings === true;
@@ -3268,7 +3325,7 @@ function alternativeDefinitions(
         : Array.from({ length: EXTENDED_SWING_COUNTS }, (_, i) => swings + 1 + i);
 
     return [
-        // with belts that do not move the first run is already made without the slack
+        // with belts that do not move the first run is already made without the slack, unless it only holds with it
         ...(config.overrides?.non_moving_belts === true ? [] : [{
             id: WITHOUT_BELT_PICKUP_SLACK_ID,
             label: `${BATCHED_SWINGS_LABEL}, non-moving belt`,
@@ -3452,9 +3509,9 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
     const meetsTargetRate = (clock_period: number) =>
         is_stable && Math.abs(rateAt(clock_period) - config.target_output.items_per_second) <= TARGET_RATE_TOLERANCE;
-    const keeps_belt_pickup_slack = !result.belt_pickup_slack_left_out;
+    const matches_belt_choice = config.overrides?.non_moving_belts === true ? belt?.kind !== "moving" : !result.belt_pickup_slack_left_out;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), keeps_belt_pickup_slack, belt, wake_ups_per_minute, insights, rank_first, result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -3474,7 +3531,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 is_stable,
                 items_per_second: rateAt(period),
                 meets_target_rate: meetsTargetRate(period),
-                keeps_belt_pickup_slack,
+                matches_belt_choice,
                 belt,
                 wake_ups_per_minute,
                 insights,
@@ -3492,7 +3549,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 is_stable,
                 items_per_second: rateAt(rounded),
                 meets_target_rate: meetsTargetRate(rounded),
-                keeps_belt_pickup_slack,
+                matches_belt_choice,
                 belt,
                 wake_ups_per_minute,
                 insights,
@@ -3546,9 +3603,10 @@ export function runClockAlternativeTask(
 
 /**
  * Lists runs in order, skipping duplicates, and selects one. The alternatives that meet the target rate (goal 1) come
- * first; among them those that keep belt pickup slack, so that the count of wake-ups never drops the slack on its
- * own; among those the ones ranked first; then the fewest wake-ups a minute (goal 2); then the fewest windows. Of
- * equals the first listed is selected.
+ * first; among them those made for the belt the config asks for, so that the count of wake-ups never drops belt
+ * pickup slack on its own, and a clock that needs the slack on belts that do not move comes after those that do not;
+ * among those the ones ranked first; then the fewest wake-ups a minute (goal 2); then the fewest windows. Of equals
+ * the first listed is selected.
  */
 export function combineClockAlternativeRuns<T>(
     runs: (ClockAlternativeRun<T> | null)[],
@@ -3566,7 +3624,7 @@ export function combineClockAlternativeRuns<T>(
         const ranking = rankingOf(alternative);
         return [
             ranking.meets_target_rate ? 0 : 1,
-            ranking.keeps_belt_pickup_slack ? 0 : 1,
+            ranking.matches_belt_choice ? 0 : 1,
             ranking.rank_first ? 0 : 1,
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
             ranking.wake_ups_per_minute === null ? Infinity : Math.round(ranking.wake_ups_per_minute * 1000),

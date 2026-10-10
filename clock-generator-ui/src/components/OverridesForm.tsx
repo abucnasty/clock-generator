@@ -101,7 +101,7 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each window of an inserter that picks up from a belt stays open a few ticks longer (belt pickup slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, no clock gets the slack and the clock with the fewest wake-ups is selected. Some builds only hold the target rate with the slack, so check that the selected clock is still stable."
+                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each window of an inserter that picks up from a belt stays open a few ticks longer (belt pickup slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, a clock is made without the slack and the one with the fewest wake-ups is selected. A clock that does not hold the target rate without the slack keeps it, is listed as made for a moving belt, and is only selected when no clock without the slack holds the target rate."
                         arrow
                         placement="top"
                     >

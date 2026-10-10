@@ -6,7 +6,7 @@ type Ranked = ClockRanking & { id: string };
 const clock = (id: string, ranking: Partial<ClockRanking> = {}): Ranked => ({
     id,
     meets_target_rate: true,
-    keeps_belt_pickup_slack: true,
+    matches_belt_choice: true,
     rank_first: false,
     wake_ups_per_minute: 100,
     window_count: 10,
@@ -32,14 +32,22 @@ describe("combineClockAlternativeRuns", () => {
     it("selects a clock that keeps belt pickup slack over one with fewer wake-ups that leaves it out", () => {
         expect(selectedOf([
             clock("slack", { wake_ups_per_minute: 80 }),
-            clock("no-slack", { wake_ups_per_minute: 30, keeps_belt_pickup_slack: false }),
+            clock("no-slack", { wake_ups_per_minute: 30, matches_belt_choice: false }),
         ])).toBe("slack");
     });
 
     it("selects a clock without belt pickup slack when no clock with it meets the target rate", () => {
         expect(selectedOf([
             clock("slack", { meets_target_rate: false }),
-            clock("no-slack", { keeps_belt_pickup_slack: false }),
+            clock("no-slack", { matches_belt_choice: false }),
+        ])).toBe("no-slack");
+    });
+
+    // with belts that do not move it is the clock that kept the slack that is not made for the belt asked for
+    it("selects a clock made for the belt the config asks for over one with fewer wake-ups that is not", () => {
+        expect(selectedOf([
+            clock("kept-slack", { wake_ups_per_minute: 30, matches_belt_choice: false }),
+            clock("no-slack", { wake_ups_per_minute: 80 }),
         ])).toBe("no-slack");
     });
 

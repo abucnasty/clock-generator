@@ -158,7 +158,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const publishAlternatives = useCallback((generation: Generation) => {
         const combined = combineClockAlternativeRuns!(generation.runs, it => ({
             meets_target_rate: it.meetsTargetRate,
-            keeps_belt_pickup_slack: it.keepsBeltPickupSlack,
+            matches_belt_choice: it.matchesBeltChoice,
             rank_first: it.rankFirst,
             wake_ups_per_minute: it.asBuilt?.wake_ups?.wake_ups_per_minute ?? null,
             window_count: it.rankingWindowCount,

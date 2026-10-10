@@ -77,8 +77,8 @@ export interface ClockAlternativeView {
     isStable: boolean;
     /** Stable and at the target rate, which a clock with a rounded period is not */
     meetsTargetRate: boolean;
-    /** False when the windows of a belt-fed inserter go without belt pickup slack */
-    keepsBeltPickupSlack: boolean;
+    /** False when the clock is not made for the belt the config asks for: without belt pickup slack, or with it when the belts do not move */
+    matchesBeltChoice: boolean;
     /** The belt the clock is made for: "moving (+4 ticks)" or "non-moving"; empty when no clocked inserter picks up from a belt */
     beltLabel: string;
     /** Ranked ahead of the others that meet the target rate (full-hand output swings where a machine has spare speed) */
