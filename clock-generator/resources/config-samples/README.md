@@ -219,7 +219,11 @@ The build of [issue 98](https://github.com/abucnasty/clock-generator/issues/98),
 sample is the copy whose plastic plant is reached by 4 beacons (crafting speed 61.5), as two of the three copies of
 the design are; the third has 5 (68.875), which is what the config attached to the issue says. The whole design is
 kept as `advanced-circuit-scaffold-full-design.txt`. Until 2026-10-10 the sample was an older state of the build with
-a target of 230 a second, for which no clock holds. 
+a target of 230 a second, for which no clock holds. That one is kept as a second sample, `advanced-circuit-230.json`
+(`ADVANCED_CIRCUIT_230`), with the subtick clock that was exported for it then: a build the generator cannot clock,
+and one whose clock period is not a whole number of ticks. The nearest of its clocks makes 217.3 of 230 a second on
+a clock rounded to 550 ticks. It has no scaffold of one copy.
+
 Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
 
 | Clock | Output | Game | Simulator |
