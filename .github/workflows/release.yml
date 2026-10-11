@@ -3,7 +3,8 @@ name: Release
 # A release of the clock generator and its UI, and the deployment of the site. The sidecar mod has a version of its
 # own and is published by publish-sidecar.yml, only when the mod changes.
 #
-# Vercel does not deploy master by itself (vercel.json switches that off); this workflow does:
+# Vercel deploys nothing by itself, not master and not a pull request (vercel.json switches that off); this
+# workflow does:
 # - The site players use is deployed when a version is released, from the commit of its tag, after its GitHub
 #   release exists. A merge that does not change the version releases nothing and does not reach players.
 # - Every merge to master is deployed as a preview, with an address of its own in the run's summary, to try what is
@@ -12,7 +13,7 @@ name: Release
 # failed part way.
 #
 # The deployments need three secrets: VERCEL_TOKEN (a token of the Vercel account), VERCEL_ORG_ID and
-# VERCEL_PROJECT_ID (both in .vercel/project.json after `vercel link`). See "Versioning" in the README.
+# VERCEL_PROJECT_ID (both in .vercel/repo.json or .vercel/project.json after `vercel link`). See "Versioning" in the README.
 on:
   push:
     branches:

@@ -4,8 +4,6 @@
   "outputDirectory": "clock-generator-ui/dist",
   "framework": null,
   "git": {
-    "deploymentEnabled": {
-      "master": false
-    }
+    "deploymentEnabled": false
   }
 }
