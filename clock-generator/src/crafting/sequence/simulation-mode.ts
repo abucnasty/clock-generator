@@ -1,5 +1,4 @@
 import assert from "../../common/assert";
-import { Duration } from "../../data-types";
 import { handSizeFor, Inserter, InserterStackSize, Machine } from "../../entities";
 import { EntityTransferCount } from "./cycle/swing-counts";
 
@@ -95,17 +94,3 @@ export function computeSimulationMode(
     throw new Error(`Inserter ${inserter.entity_id} is not connected to machine ${machine.entity_id}`);
 }
 
-export function computeLastSwingOffsetDuration(
-    source_machine: Machine,
-    inserter: Inserter,
-    entity_transfer_count: EntityTransferCount
-): Duration {
-    const mode = computeSimulationMode(source_machine, inserter, entity_transfer_count);
-    if (mode === SimulationMode.NORMAL) {
-        const animation = inserter.animation
-        return Duration.ofTicks(
-            animation.rotation.ticks + animation.drop.ticks
-        );
-    }
-    return Duration.zero;
-}

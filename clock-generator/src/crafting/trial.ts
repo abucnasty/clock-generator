@@ -1,0 +1,401 @@
+import assert from "../common/assert";
+import { Config } from "../config";
+import { EnableControlOverrideConfig, EnableControlRange } from "../config/schema";
+import { InserterClock, unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
+import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { OpenRange } from "../data-types";
+import { Entity, EntityId } from "../entities";
+import { Logger, defaultLogger } from "../common/logger";
+import { StockRecording } from "./machine-stock";
+import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
+import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
+import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
+import { BlueprintGenerationResult, GenerateClockOptions, MAX_SIMULATION_TICKS, SimulationStabilityCheck, alwaysEnabledByConfig, generateClockForConfig, withInserterClocks } from "./plan/plan-run";
+
+/**
+ * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
+ * machines when it starts, a factory can settle into different steady states (seen in game: 64/32 instead of 96).
+ */
+export const AS_BUILT_START_PHASES = 12;
+
+/** Start phases for the confirming check; failing phases can be a narrow band that the quick check skips */
+export const FULL_CHECK_START_PHASES = 112;
+
+
+export interface AsBuiltStabilityCheck {
+    /** Whether the blueprint's clock windows alone, without the simulator's inventory conditions, produce the expected output from every start phase tried */
+    is_stable: boolean;
+    /** Output of the first failing start phase, or of the unshifted clock when all pass */
+    actual_output_items: number;
+    /** Number of clock start phases simulated (stops at the first failure) */
+    start_phases_checked: number;
+    /** Clock offset of the first failing start phase */
+    failed_start_offset?: number;
+    /** Periods after which the reported run repeats, when the simulation found the repeat; see SimulationStabilityCheck */
+    repeat_periods?: number;
+    /** Output items of the reported run over its repeat_periods periods; set when repeat_periods is more than 1 */
+    repeat_output_items?: number;
+    /**
+     * How often the machines woke the inserters asleep on their wake-up lists (goal 2 of GOALS.md, see wake-ups.ts),
+     * for one copy of the build over the judged part of the long run of the unshifted clock. Absent when the check
+     * made no long run: the clock already failed its one-period check, or its period is too long for one.
+     */
+    wake_ups?: WakeUps;
+}
+
+
+const NESTED_RUN_OPTIONS = (logger: Logger): GenerateClockOptions => ({
+    belt_pickup_slack: "never",
+    modulo_blueprint: false,
+    logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
+    verify_as_built: false,
+    fuel_consumption_view: false,
+});
+
+/**
+ * Runs a build on clock windows alone, as its blueprint runs it in the game: what has windows is enabled by them, a
+ * tick of the circuit network later, a fuel inserter by its fuel clock, and everything else is always enabled (see
+ * `buildAsBuiltConfig`). Such a run plans nothing and checks nothing of its own; `options` say what it records and
+ * how long it runs.
+ */
+export function runClockOnBuild(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    period: number,
+    logger: Logger,
+    options: GenerateClockOptions = {},
+    /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
+    fuel_clocks?: ReadonlyMap<string, InserterClock>,
+): BlueprintGenerationResult {
+    return generateClockForConfig(buildAsBuiltConfig(config, windows, period, fuel_clocks), { ...NESTED_RUN_OPTIONS(logger), ...options });
+}
+
+/** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
+const FREE_RUNNING_CHECK_TICKS = 36000;
+
+/**
+ * Ticks the long run lasts when it verifies a clock WITH output feeder windows: twice the standard check, the length
+ * of one game recording. The windows are an optimisation, so they have to clear a longer run than the clock they are
+ * added to: with the standard length a variant of the agricultural science sample (egg biochambers at speed 72, stack
+ * size 12 on the feeders) kept windows that came up a hand or more short in two periods of 200. A longer run is
+ * still not a proof, only a smaller chance of keeping windows that drift.
+ */
+export const OUTPUT_FEEDER_CHECK_TICKS = 2 * FREE_RUNNING_CHECK_TICKS;
+
+/**
+ * The long run stops at this many periods: a drift shows within a hundred, and short periods would run thousands.
+ * A fractional period is run for more of them where it takes more for the judged part to hold one whole repeat of
+ * the period, up to LONG_RUN_MAX_TICKS (see longRunPeriods).
+ */
+const LONG_RUN_MAX_PERIODS = 120;
+
+/**
+ * A build does not always repeat with its clock, so one period says little about it: in game builds with inserters
+ * left always enabled held their rate for thousands of ticks before a period came up a hand or two short, and a
+ * machine with spare speed can drift for dozens of periods. The clock is run for ten minutes of game time or 120
+ * periods instead, longer for a fractional period whose repeat needs it, and judged on what follows the first third:
+ * in bins of whole ticks (a period, or the repeat of a fractional one), none more than a hand off what it expects
+ * and all of them together within a hand.
+ */
+function longRunOfFreeRunningBuild(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    period: number,
+    one_period: BlueprintGenerationResult,
+    logger: Logger,
+    check_ticks: number = FREE_RUNNING_CHECK_TICKS,
+): { keeps_up: boolean; output_items_per_period: number; stock: StockRecording } | null {
+    // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
+    const registry = createEntityRegistryFromConfig(config);
+    const max_periods = Math.floor((MAX_SIMULATION_TICKS - 1) / period);
+    // a fractional period repeats in whole ticks only every few periods, as its subtick clock counts them
+    const repeat = subtickClockForPeriod(period);
+    // a longer check than the standard one is not cut short by the cap on periods, which short periods would hit first
+    const wanted_periods = Math.ceil(check_ticks / period);
+    const periods = longRunPeriods(period, repeat, Math.min(check_ticks > FREE_RUNNING_CHECK_TICKS ? wanted_periods : Math.min(LONG_RUN_MAX_PERIODS, wanted_periods), max_periods), max_periods);
+    if (periods <= 1) {
+        return null;
+    }
+    // only its stock is read, which names the state of every inserter itself
+    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false });
+    const stock = run.machine_stock;
+    if (!stock) {
+        return null;
+    }
+    // what the output inserters drop, counted as the recordings of a build are: by whole periods of the clock that
+    // is built, which for a fractional period is the subtick clock and its repeat (see long-run.ts)
+    const makers = new Set(registry.getAll().filter(Entity.isMachine)
+        .filter(machine => machine.output.item_name === config.target_output.recipe).map(machine => machine.entity_id.id));
+    const output_inserters = registry.getAll().filter(Entity.isInserter)
+        .filter(it => makers.has(it.source.entity_id.id) && !EntityId.isMachine(it.sink.entity_id));
+    const output_ids = new Set(output_inserters.map(it => it.entity_id.id));
+    const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
+    // the first third of the run carries its start-up, which a loop can take a dozen periods to work out of, as a
+    // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
+    // to come out within a hand, and no bin further off than a hand
+    const verdict = judgeLongRun(stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held),
+        stock.ticks, period, repeat, one_period.stability_check.expected_output_items, hand);
+    const bins = verdict.bin_ticks === null ? "span(s)" : verdict.periods_per_bin === 1 ? "periods" : `repeats of ${verdict.periods_per_bin} periods (${verdict.bin_ticks} ticks)`;
+    logger.log(`Free running build over ${verdict.judged.length} ${bins}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
+    return { keeps_up: verdict.keeps_up, output_items_per_period: verdict.output_items_per_period, stock };
+}
+
+/**
+ * Runs a build driven only by clock windows, as its blueprint does in game, for a number of periods, and returns what
+ * every machine and inserter held after each tick. For laying the simulator against a recording of the same clock.
+ */
+export function simulateClockOnly(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period_ticks: number,
+    periods: number,
+    logger: Logger = defaultLogger,
+    /**
+     * How the build is when the clock starts. `keep_output_buffers` leaves the machines the output is taken from as
+     * full as they get when nothing takes it; by default they are emptied first. Some clocks settle differently from
+     * the two, and neither is how a scaffold starts: that runs without a clock first, and then gets one. `start_stock`
+     * names what machines hold instead, to start in a state the game was recorded in: with `warmup_periods: 0` the
+     * first tick of the run is the first tick after that state.
+     */
+    start: Pick<GenerateClockOptions, "keep_output_buffers" | "warmup_periods" | "start_stock"> = {},
+): StockRecording {
+    const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const run = runClockOnBuild(
+        { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period_ticks, logger,
+        { ...start, simulate_periods: periods, machine_stock: true },
+    );
+    return run.machine_stock!;
+}
+
+/**
+ * The clock with the windows given, built as they are, and checked as the generator checks its own: for a clock that
+ * it did not make, such as one tightened by hand, or one of its own with windows changed. The windows have to be of
+ * the period the config is planned on (`overrides.terminal_swing_count` sets the output swings per cycle it has).
+ */
+export function clockFromWindows(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period_ticks: number,
+    logger: Logger = defaultLogger,
+): BlueprintGenerationResult {
+    const result = generateClockForConfig(
+        { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
+        { logger, verify_as_built: true, belt_pickup_slack: "never", given_windows: clock_windows },
+    );
+    assert(result.simulation_duration.ticks === period_ticks,
+        `The windows are of a clock of ${period_ticks} ticks, and the config is planned on one of ${result.simulation_duration.ticks}`);
+    return result;
+}
+
+/**
+ * Whether a clock survives backpressure loss (GOALS.md): the build is run on the windows alone, as its blueprint runs
+ * it, once undisturbed and once for every loss it can have (each item that comes off a belt or out of a chest stops
+ * arriving, each item it puts on a belt or in a chest is not taken away), and has to be back at exactly its expected
+ * output a period after each. See backpressure-loss.ts for how a loss is run and judged.
+ *
+ * The config has to be the one the clock was planned on, as for clockFromWindows: the plan gives a fuel inserter its
+ * clock. `expected_output_items` is what the output inserters drop in a period of the clock when it holds.
+ */
+export function backpressureLossOf(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period_ticks: number,
+    expected_output_items: number,
+    logger: Logger = defaultLogger,
+    options: Omit<BackpressureLossOptions, "loss" | "period_ticks" | "expected_output_items"> = {},
+    /** Called before the run of each loss, the one with nothing cut included */
+    on_loss?: (loss: BackpressureLoss, index: number, total: number) => void,
+): BackpressureLossReport {
+    const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
+    const outcomeOf = (loss: BackpressureLossOptions["loss"]): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
+        factorio_states: false,
+        backpressure_loss: { ...options, loss, period_ticks, expected_output_items },
+    }).backpressure_loss!;
+    const losses = backpressureLossesOf(createEntityRegistryFromConfig(config), config.target_output.recipe);
+    const tried = (loss: BackpressureLoss, index: number): LossOutcome => {
+        on_loss?.(loss, index, losses.length + 1);
+        return outcomeOf(loss);
+    };
+    return reportOf(period_ticks, expected_output_items, tried({ kind: "none" }, 0), losses.map((loss, index) => tried(loss, index + 1)));
+}
+
+/** The machines at the ends of every inserter of the config */
+function inserterEnds(config: Config): InserterEnds[] {
+    const machineId = (entity_id: EntityId) => EntityId.isMachine(entity_id) ? entity_id.id : null;
+    return createEntityRegistryFromConfig(config).getAll().filter(Entity.isInserter).map(inserter => ({
+        inserter_id: inserter.entity_id.id,
+        source_machine_id: machineId(inserter.source.entity_id),
+        sink_machine_id: machineId(inserter.sink.entity_id),
+    }));
+}
+
+
+export function runAsBuiltCheck(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    period: number,
+    logger: Logger,
+    start_phases: number = AS_BUILT_START_PHASES,
+    report?: (checked: number, total: number) => void,
+    long_run_ticks: number = FREE_RUNNING_CHECK_TICKS,
+): { result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; /** The long run of the check, when it made one */ stock?: StockRecording } {
+    const step = Math.max(1, Math.floor(period / start_phases));
+    const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
+    const result = runClockOnBuild(config, decider_windows, period, logger);
+    const check: AsBuiltStabilityCheck = {
+        is_stable: result.stability_check.is_stable,
+        actual_output_items: result.stability_check.actual_output_items,
+        start_phases_checked: 1,
+        repeat_periods: result.stability_check.repeat_periods,
+        repeat_output_items: result.stability_check.repeat_output_items,
+    };
+    report?.(1, total);
+    let stock: StockRecording | undefined;
+    if (check.is_stable) {
+        const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, result, logger, long_run_ticks);
+        stock = long_run?.stock;
+        if (stock) {
+            // judged as the long run is: what follows its start-up
+            check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+        }
+        if (long_run && !long_run.keeps_up) {
+            check.is_stable = false;
+            check.actual_output_items = long_run.output_items_per_period;
+        }
+    }
+    if (!check.is_stable) {
+        check.failed_start_offset = 0;
+        return { result, check, stock };
+    }
+
+    for (let offset = step; offset < period && check.start_phases_checked < start_phases; offset += step) {
+        const rotated = new Map(Array.from(decider_windows, ([key, ranges]) => [key, rotateRanges(ranges, offset, period)] as const));
+        // only its output count is read
+        const shifted = runClockOnBuild(config, rotated, period, logger, { factorio_states: false });
+        check.start_phases_checked++;
+        report?.(check.start_phases_checked, total);
+        if (!shifted.stability_check.is_stable) {
+            check.is_stable = false;
+            check.actual_output_items = shifted.stability_check.actual_output_items;
+            check.failed_start_offset = offset;
+            check.repeat_periods = shifted.stability_check.repeat_periods;
+            check.repeat_output_items = shifted.stability_check.repeat_output_items;
+            break;
+        }
+    }
+    return { result, check, stock };
+}
+
+/**
+ * Slack lets a belt-fed inserter finish a late pickup, but in a short period it can also leave time for an
+ * extra swing when the machine is not at its insertion limit. False only when the clock-only check passes
+ * without the slack but not with it, or lands further from the expected output with it.
+ */
+export function beltPickupSlackHelps(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    slack: Map<string, number>,
+    period: number,
+    expected_output: number,
+    logger: Logger,
+): boolean {
+    if (Array.from(slack.values()).every(ticks => ticks === 0) || !Number.isInteger(period)) {
+        return true;
+    }
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const with_slack = runAsBuiltCheck(base_config, withBeltPickupSlack(windows, slack, period), period, logger).check;
+    if (with_slack.is_stable) {
+        return true;
+    }
+    const without_slack = runAsBuiltCheck(base_config, windows, period, logger).check;
+    logger.log(`Belt pickup slack: clock-only actual with=${with_slack.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
+    if (without_slack.is_stable) {
+        return false;
+    }
+    return Math.abs(with_slack.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
+}
+
+/**
+ * Rewrites the config so every inserter and drill is controlled the way the generated blueprint
+ * controls it in game: entities with a decider window get a CLOCKED window shifted by the circuit latency,
+ * everything else is left unwired (ALWAYS), except explicit NEVER overrides.
+ */
+function buildAsBuiltConfig(
+    config: Config,
+    decider_windows: Map<string, OpenRange[]>,
+    period: number,
+    /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
+    fuel_clocks?: ReadonlyMap<string, InserterClock>,
+): Config {
+    const windows = new Map<string, EnableControlRange[]>();
+    // inserters outside the plan swing on clocks that do not come from the windows of the plan
+    const inserter_clocks = unplannedInserterClocks(createEntityRegistryFromConfig(config), period, undefined, undefined, alwaysEnabledByConfig(config));
+    for (const [key, ranges] of withInserterClocks(decider_windows, inserter_clocks, period)) {
+        windows.set(key, shiftRangesForCircuitLatency(ranges, period));
+    }
+
+    const asBuiltControl = (entity_key: string, current: EnableControlOverrideConfig | undefined): EnableControlOverrideConfig => {
+        // a fuel inserter is on a clock of its own, which the run makes for it from the plan like the blueprint does
+        if (inserter_clocks.get(entity_key)?.own_clock) {
+            const fuel_clock = fuel_clocks?.get(entity_key);
+            return fuel_clock === undefined ? { mode: "AUTO" } : {
+                mode: "CLOCKED",
+                ranges: [{ start: fuel_clock.window.start_inclusive, end: fuel_clock.window.end_inclusive }],
+                period_duration_ticks: fuel_clock.modulus,
+            };
+        }
+        const ranges = windows.get(entity_key);
+        if (ranges && ranges.length > 0) {
+            return { mode: "CLOCKED", ranges, period_duration_ticks: period };
+        }
+        return current?.mode === "NEVER" ? current : { mode: "ALWAYS" };
+    };
+
+    return {
+        ...config,
+        inserters: config.inserters.map((inserter, index) => ({
+            ...inserter,
+            overrides: {
+                ...inserter.overrides,
+                enable_control: asBuiltControl(`inserter:${inserter.id ?? index + 1}`, inserter.overrides?.enable_control),
+            },
+        })),
+        drills: config.drills === undefined ? undefined : {
+            ...config.drills,
+            configs: config.drills.configs.map(drill => ({
+                ...drill,
+                overrides: {
+                    ...drill.overrides,
+                    enable_control: asBuiltControl(`drill:${drill.id}`, drill.overrides?.enable_control),
+                },
+            })),
+        },
+    };
+}
+
+/**
+ * Tries a clock that holds its expected output for backpressure loss. Null when the trials cannot be run on it, which
+ * is logged: such a clock is taken by what it holds.
+ */
+export function backpressureLossVerdictOf(
+    planned_on: Config,
+    result: BlueprintGenerationResult,
+    logger: Logger,
+    report?: (detail: string) => void,
+): BackpressureLossVerdict | null {
+    // the config the clock was planned on has its output swings per cycle
+    const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
+    const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
+    try {
+        return verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items,
+            quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`)));
+    } catch (error) {
+        logger.log(`Backpressure loss could not be tried: ${error instanceof Error ? error.message : error}`);
+        return null;
+    }
+}
