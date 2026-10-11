@@ -29,8 +29,6 @@ export interface Tried<C, Q extends QuickTrial> {
     candidate: C;
     index: number;
     quick: Q;
-    /** True when the confirmation passed, false when it failed, undefined while it was not tried */
-    confirmed?: boolean;
 }
 
 /** What the quick trial of a candidate found: at least whether the clock holds its expected output from the generator's start */
@@ -40,16 +38,16 @@ export interface QuickTrial {
 
 export interface Search<C, Q extends QuickTrial, R> {
     candidates: readonly C[];
-    /** The quick trial of a candidate (see `quickTrial`) */
+    /** The quick trial of a candidate: `quickTrial`, or a search of its own whose pick is the candidate's windows */
     quick: (candidate: C, index: number) => Q;
-    /** Whether two candidates next to each other in the list are neighbours in the sense of the neighbourhood: the same row of settings */
+    /** Whether two candidates of the list belong to the same row of settings, so that one next to the other is its neighbour */
     neighbours: (a: C, b: C) => boolean;
-    /** Whether a candidate may be picked; one that may not still counts as a passing neighbour (default: every one) */
+    /** Whether a candidate may be picked (default: every one); whether it counts as a neighbour is for `neighbours` to say */
     eligible?: (candidate: C) => boolean;
     /** The search's own order between candidates of the same margin: negative when `a` comes first */
     tieBreak: (a: Tried<C, Q>, b: Tried<C, Q>) => number;
     /** The confirming trial (see `confirm`); null when the candidate does not pass it */
-    confirm: (pick: Tried<C, Q>, tried: readonly Tried<C, Q>[]) => R | null;
+    confirm: (pick: Tried<C, Q>) => R | null;
 }
 
 export interface SearchResult<C, Q extends QuickTrial, R> {
@@ -57,7 +55,7 @@ export interface SearchResult<C, Q extends QuickTrial, R> {
     picked: R | null;
     /** The candidate that was picked, when one was */
     pick: Tried<C, Q> | null;
-    /** Every candidate tried, in the order tried, with the outcome of its confirmation where one was tried */
+    /** Every candidate with its quick trial, in the order of the candidate list */
     tried: Tried<C, Q>[];
 }
 
@@ -84,8 +82,7 @@ export function search<C, Q extends QuickTrial, R>(it: Search<C, Q, R>): SearchR
     const ranked = tried.filter(t => t.quick.holds && (it.eligible?.(t.candidate) ?? true))
         .sort((a, b) => rank(b) - rank(a) || it.tieBreak(a, b));
     for (const pick of ranked.slice(0, MAX_CONFIRMATIONS)) {
-        const result = it.confirm(pick, tried);
-        pick.confirmed = result !== null;
+        const result = it.confirm(pick);
         if (result !== null) {
             return { picked: result, pick, tried };
         }

@@ -86,9 +86,9 @@ function checkOfRun(run: TrialRun): AsBuiltStabilityCheck {
 /**
  * The build run free under the output windows given, each other inserter's busy ticks read off the run as its windows,
  * and the padding of their ends searched (see search.ts): every padding gets the quick trial, and of those that pass
- * the one with the most passing paddings on either side is confirmed first, the smallest of equals. Without
- * `confirm_pick` the pick is taken on its quick trial, for a caller that confirms its own pick. When no padding passes,
- * the one that moved the most is reported.
+ * one whose neighbours pass too is confirmed before one whose do not, the smallest of those. Without `confirm_pick`
+ * the pick is taken on its quick trial, for a caller that confirms its own pick. When no padding is confirmed, the
+ * quick trial that moved the most is reported, as one run from the generator's start.
  */
 export function deriveWithOutputWindows(
     base_config: Config,
@@ -199,9 +199,9 @@ export function observedWindowsClock(
         }
         return fed;
     };
-    const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: DerivedClockWindowsReport, search?: SearchReport): BlueprintGenerationResult =>
+    const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: DerivedClockWindowsReport, report?: SearchReport): BlueprintGenerationResult =>
         exportClock(plan, clock, fed?.windows ?? planned_windows, options,
-            { clock_only_run, output_feeders: fed?.output_feeders, item_names: fed?.item_names, derived_clock_windows, search });
+            { clock_only_run, output_feeders: fed?.output_feeders, item_names: fed?.item_names, derived_clock_windows, search: report });
     if (planned_stable && planned_check.holds && mode === "prefer_planned") {
         // planned windows keep the plan's batched swings, which derived windows would break into per-craft swings
         const fed = feedPlanned();

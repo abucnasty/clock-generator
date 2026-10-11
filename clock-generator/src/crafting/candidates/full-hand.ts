@@ -58,10 +58,10 @@ export interface FullHandWindows {
 /**
  * Output windows with one swing each, evenly spaced so each grab finds a full hand already in the machine
  * instead of picking up a few items at a time while the machine crafts. The start offset and window length are
- * searched (see search.ts): every timing gets the quick trial, and of those that keep the expected output the one with
- * the most passing offsets on either side is confirmed first; of equals, the one whose output machines sit output full
- * the least (at the input block, a delayed input drop in game starves the machine), then the fewest output pickups
- * that waited for items, then the shortest windows.
+ * searched (see search.ts): every timing gets the quick trial, and of those that keep the expected output one whose
+ * neighbouring offsets pass too is confirmed before one whose do not; of those, the one whose output machines sit
+ * output full the least (at the input block, a delayed input drop in game starves the machine), then the fewest output
+ * pickups that waited for items, then the shortest windows.
  * One grab per window only keeps up with production, so a surplus left by a disturbance (a slow drop onto a busy
  * belt) never drains and keeps the input drops blocked. The timing must recover from full output machines; if it
  * does not, every n-th window is lengthened for a second grab, preferring the fewest pickups that wait for items.

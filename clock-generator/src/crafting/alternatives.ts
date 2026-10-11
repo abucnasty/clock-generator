@@ -294,9 +294,9 @@ function alternativeDefinitionsFor(
             description: "Observed windows with one output swing moved off its planned start, so the output swings are not evenly "
                 + "spaced. A machine only has to make up for what the output inserter takes over the whole clock period, so it can "
                 + "craft more between one pair of swings than the next and carry the difference in its output slot. The swing is "
-                + "tried at positions a craft apart and every other inserter's windows are observed again for each; the position "
-                + "with the most working positions on either side is used. Only offered when the period has more than one output "
-                + "swing and a moved swing passes the clock-only check.",
+                + "tried at positions a craft apart and every other inserter's windows are observed again for each; a position "
+                + "whose neighbours work too is used, the smallest move of those. Only offered when the period has more than one "
+                + "output swing and a moved swing passes the clock-only check.",
             run: () => {
                 // one search at the planned swing count; backing off would repeat it for every lower count
                 const result = observedWindowsClock(base_config, quiet, "uneven_output");
@@ -312,9 +312,9 @@ function alternativeDefinitionsFor(
                 + "machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before "
                 + "it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within "
                 + "those limits a round can run earlier or later. Window lengths and their spacing within the round are kept, so "
-                + "swings stay as batched as planned. Every shift is checked with the clock-only simulation and the one with the "
-                + "most working shifts on either side is used. Only offered when the clock period has more than one round and a "
-                + "shift passes.",
+                + "swings stay as batched as planned. Every shift is checked with the clock-only simulation and a shift whose "
+                + "neighbours work too is used, the smallest of those. Only offered when the clock period has more than one round "
+                + "and a shift passes.",
             run: () => {
                 // one search at the planned swing count, like uneven output swings
                 const result = shiftedSwingsClock(base_config, { ...quiet, belt_pickup_slack: "always" });

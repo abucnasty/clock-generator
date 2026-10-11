@@ -7,7 +7,7 @@ import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock
 import { Confirmed, QuickTrial, SearchRangeEdge, SearchReport, confirm, quickTrial, search } from "./search";
 import { cycleOfWindow, withCycleShifted } from "./transforms";
 
-/** Positions tried for a shifted crafting cycle */
+/** Positions tried for a shifted crafting cycle, each a quick trial */
 const MAX_SHIFTED_CYCLE_CANDIDATES = 48;
 
 /** Smallest shift tried, as a fraction of the crafting cycle; anything closer to the plan is barely a different clock */
@@ -195,8 +195,8 @@ function shiftEdgeNotes(
  * Finds a place for one crafting cycle's planned windows other than where the plan put them. The plan repeats the
  * same cycle evenly over the clock period, but the build only has to balance over the whole period, so a cycle can
  * run earlier or later while the machines' buffers carry the difference. Every shift gets the quick trial; of those
- * that pass, the one with the most passing shifts on either side (in the same direction from the planned position) is
- * confirmed first, the smallest shift of equals (see search.ts). The report carries the ends of the range that works
+ * that pass, one whose neighbours (in the same direction from the planned position) pass too is confirmed before one
+ * whose do not, the smallest shift of those (see search.ts). The report carries the ends of the range that works
  * around the pick, with what limits them. Null when no shift passes.
  */
 export function shiftedCycleWindows(
@@ -271,9 +271,9 @@ export function shiftedSwingsClock(config: Config, options: GenerateClockOptions
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
         clock.windows, plan.run.crafting_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
     );
-    const search = shifted === null ? undefined : {
+    const report = shifted === null ? undefined : {
         ...shifted.search,
         moved: shifted.search.moved!.map(it => ({ ...it, item_names: (plan.item_names.get(it.entity_id) ?? "").split(",").filter(Boolean) })),
     };
-    return checkedClock(plan, clock, shifted?.windows ?? clock.windows, options, { search });
+    return checkedClock(plan, clock, shifted?.windows ?? clock.windows, options, { search: report });
 }

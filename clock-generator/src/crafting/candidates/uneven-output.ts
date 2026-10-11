@@ -71,9 +71,9 @@ function unevenOutputCandidates(
 /**
  * Like deriveClockWindows, but with one output swing moved off its planned start: a machine only has to make up for
  * its output over the whole period, so it can craft more between one pair of swings than the next. Every candidate
- * position gets its own observed windows, which is its quick trial; of those that pass, the one with the most passing
- * positions on either side is confirmed first, the smallest move of equals (see search.ts). Null when there is
- * nothing to move or no position passes.
+ * position gets its own observed windows, which is its quick trial; of those that pass, one whose neighbouring
+ * positions pass too is confirmed before one whose do not, the smallest move of those (see search.ts). Null when there
+ * is nothing to move or no position passes.
  */
 export function deriveUnevenOutputClockWindows(
     config: Config,
