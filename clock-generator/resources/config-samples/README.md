@@ -73,8 +73,9 @@ In the order they would settle the most:
    recording more than any other. Changed once more on 2026-10-11, when the ranking stopped putting full-hand output
    swings first where a machine has spare speed: the two clocks tie at 45 a second and neither meets goal 1, so the
    fewest wake-ups decide, and the planned 1-swing subtick clock (1,368 a minute) is selected over the full-hand one
-   (1,716). The selected clock is now one the long run calls unstable, where the full-hand one holds its output and
-   has no recovery: the ranking does not part the two by verdict once neither meets goal 1.
+   (1,716). That selected a clock the long run calls unstable over one that holds its output and has no recovery, so
+   the ranking now parts two clocks equally near the target by whether they hold (GOALS.md, "Wake-ups"), and the
+   full-hand subtick clock is selected again, from the same day.
 5. **intermediates/processing-units** (belt export): rates moved slightly.
 6. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
 7. **science/electromagnetic-science**, **science/military-science**, **intermediates/flying-robot-frame**,

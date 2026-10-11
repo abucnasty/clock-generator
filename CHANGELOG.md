@@ -11,7 +11,8 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.7.0]
 
 ### Changed
-- Full-hand output swings are no longer ranked above every other clock on a machine with spare speed. Among the clocks that meet the target rate the one with the fewest wake-ups is selected, as for every other kind of clock. On the low density structure sample this selects batched swings with 6 output swings per cycle, 703 wake-ups a minute where full-hand output swings has 1,528; it holds its rate in the game. On the metallurgic science sample, where no clock meets the target rate, the 1-swing subtick clock is selected over the full-hand one at the same rate.
+- Full-hand output swings are no longer ranked above every other clock on a machine with spare speed. Among the clocks that meet the target rate the one with the fewest wake-ups is selected, as for every other kind of clock. On the low density structure sample this selects batched swings with 6 output swings per cycle, 703 wake-ups a minute where full-hand output swings has 1,528; it holds its rate in the game.
+- Where no clock meets the target rate and two are equally near it, the one that holds its expected output from a clean start is selected before one that does not. On the metallurgic science sample this keeps the full-hand subtick clock, which does not get back from a loss of tungsten ore, ahead of the 1-swing clock at the same rate, which drifts.
 
 ## [0.6.1] - 2026-10-11
 
