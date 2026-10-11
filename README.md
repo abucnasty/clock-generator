@@ -9,13 +9,13 @@ The clock generator and its UI (`clock-generator`, `clock-generator-ui`) share o
 section for the new version in `CHANGELOG.md`. Merging a new version to `master` creates the GitHub release
 (`.github/workflows/release.yml`); a merge that does not change the version releases nothing.
 
-The same workflow deploys the site. Vercel does not deploy `master` by itself: `vercel.json` switches that off, and
-pull requests still get their previews from Vercel. The site players use is deployed when a version is released, from
+The same workflow deploys the site. Vercel deploys nothing by itself, not `master` and not a pull request:
+`vercel.json` switches that off. The site players use is deployed when a version is released, from
 the commit of its tag and after its GitHub release exists, so `master` can run ahead of what players have. A fix
 reaches them with a version bump: a patch version and its changelog section in the same pull request as the fix.
 Every merge to `master` is also deployed as a preview, with its address in the summary of the workflow run. The
 deployments need the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`; the two ids are in
-`.vercel/project.json` after `vercel link`. Starting the workflow by hand deploys the current version again.
+`.vercel/repo.json` (or `.vercel/project.json`) after `vercel link`. Starting the workflow by hand deploys the current version again.
 
 The `clock-generator-sidecar` mod has a version of its own and is only released when the mod changes. Bump its
 `info.json`, add the version to its `changelog.txt`, and set `LATEST_SIDECAR_VERSION` in
