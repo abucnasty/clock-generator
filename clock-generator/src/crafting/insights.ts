@@ -1,6 +1,7 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
 import type { BackpressureLossVerdict } from "./backpressure-loss";
+import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
 
@@ -351,6 +352,26 @@ export function backpressureLossInsight(verdict: BackpressureLossVerdict, expect
         explanation: "Such a build has to be restarted by hand after an input ran out or the output backed up. Use a potential "
             + "clock marked Stable. Where no clock of a build is, the build may not be able to survive a loss whatever the clock, "
             + "and its clocks are offered for what they are.",
+    };
+}
+
+/** That the build can deadlock whatever its clock is, and which inserters it is about */
+export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): ClockInsight {
+    return {
+        id: "deadlock-risk",
+        scope: "build",
+        title: "This build has a deadlock risk: two inserters bring the same item",
+        what: risks.map(describeSharedItem).join(" "),
+        why: "An inserter that starts picking an item up after the other has already put it in finds the item at its insertion "
+            + "limit by the time its hand is ready, and holds the hand until the machine has used enough for it to drop. While it "
+            + "holds it, it takes nothing else off the belt. If the machine then runs out of what only that inserter brings while "
+            + "the shared item is still at its limit, the machine cannot craft, the item never goes down, and the inserter never "
+            + "lets go.",
+        explanation: "The build then stops for good, whatever the clock does afterwards, and has to be cleared by hand. Whether it "
+            + "happens depends on the timing of the two inserters against each other. The trials for backpressure loss do not see "
+            + "it, so on this build they do not decide which clock is selected: the clocks that hold the target rate are ranked "
+            + "by their wake-ups. A build is free of the risk when each item is brought to a machine by one inserter only, or "
+            + "when an inserter that shares an item brings nothing else.",
     };
 }
 

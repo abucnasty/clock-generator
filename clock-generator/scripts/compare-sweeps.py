@@ -33,6 +33,8 @@ for key in sorted(set(before) | set(after)):
         lines.append(f"  error: {x.get('error')} -> {y.get('error')}")
     xa = {alt["id"]: alt for alt in x.get("alternatives", [])}
     ya = {alt["id"]: alt for alt in y.get("alternatives", [])}
+    if x.get("deadlock_risks", []) != y.get("deadlock_risks", []):
+        lines.append(f"  deadlock risk: {' '.join(x.get('deadlock_risks', [])) or 'none'} -> {' '.join(y.get('deadlock_risks', [])) or 'none'}")
     if x.get("selected") != y.get("selected"):
         lines.append(f"  selected: {x.get('selected')} -> {y.get('selected')}")
     for alt_id in sorted(set(xa) | set(ya)):

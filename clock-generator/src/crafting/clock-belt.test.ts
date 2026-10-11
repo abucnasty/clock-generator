@@ -137,14 +137,20 @@ describe("the belt a clock is made for", () => {
             expect(batched.wake_ups_per_minute).toBe(0);
         });
 
-        // It was the clock selected until a clock had to get back from a backpressure loss as well (GOALS.md)
-        it("does not select it: the build does not get back to its rate under it once the packs have not been taken away for a while", () => {
+        // The build has a deadlock risk (GOALS.md, "Two inserters that bring the same item"), which the trials for
+        // backpressure loss do not see: uneven output swings gets back from every loss in the simulator and made 0 of
+        // 192 a period in the game, where batched swings made 192. So on this build the verdict does not decide.
+        it("selects it though the build does not get back to its rate under it once the packs have not been taken away for a while", () => {
             const batched = alternative("planned-belt-slack");
             expect(batched.backpressure_loss).toMatchObject({ survives: false, broken_by: ["utility-science-pack is not taken away"] });
-            expect(batched.meets_target_rate).toBe(false);
-            expect(selected.id).toBe("uneven-output");
-            expect(selected.belt).toEqual({ kind: "non_moving" });
-            expect(selected.meets_target_rate).toBe(true);
+            expect(batched.is_stable).toBe(false);
+            expect(batched.deadlock_risks).toHaveLength(1);
+            expect(batched.meets_target_rate).toBe(true);
+            expect(selected.id).toBe("planned-belt-slack");
+            // the clocks that do get back hold the rate at more wake-ups
+            const uneven = alternative("uneven-output");
+            expect(uneven.is_stable).toBe(true);
+            expect(uneven.wake_ups_per_minute!).toBeGreaterThan(0);
         });
     });
 

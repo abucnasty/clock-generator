@@ -81,7 +81,15 @@ export interface ClockAlternativeView {
     holdsExpectedOutput: boolean;
     /** The losses the clock does not get back from; null when none was tried */
     backpressureLoss: BackpressureLossVerdict | null;
-    /** Stable and at the target rate, which a clock with a rounded period is not */
+    /**
+     * What to say of a build with a deadlock risk, the same for every clock of it: which two inserters bring the same
+     * item to a machine, and what can come of it. Null for a build without one.
+     */
+    deadlockRisk: string | null;
+    /**
+     * Stable and at the target rate, which a clock with a rounded period is not. On a build with a deadlock risk a
+     * clock that holds the target rate meets it whether it gets back from every backpressure loss or not.
+     */
     meetsTargetRate: boolean;
     /** Items per second the clock is above the target rate, or below it when negative */
     rateOffTarget: number;

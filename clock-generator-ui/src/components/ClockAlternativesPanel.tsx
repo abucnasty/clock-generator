@@ -1,5 +1,6 @@
 import { InfoOutlined } from '@mui/icons-material';
 import {
+    Alert,
     Box,
     Button,
     Chip,
@@ -67,6 +68,8 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
         .filter(({ alternative, index }) => !hidesUnstable || alternative.isStable || index === selectedIndex);
     const hiddenCount = alternatives.length - rows.length;
     const anyHolds = alternatives.some(alternative => alternative.holdsExpectedOutput);
+    // of the build, so every clock has the same
+    const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
@@ -88,6 +91,12 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                     <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>
                 ))}
             </Typography>
+            {deadlockRisk !== null && (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                    {deadlockRisk} The trials for backpressure loss do not see this, so on this build they do not decide
+                    which clock is selected for you: the clocks that hold the target rate are ranked by their wake-ups.
+                </Alert>
+            )}
             <TableContainer>
                 <Table size="small">
                     <TableHead>

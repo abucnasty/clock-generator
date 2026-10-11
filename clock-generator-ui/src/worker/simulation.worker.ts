@@ -107,6 +107,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         isStable: alternative.is_stable,
         holdsExpectedOutput: alternative.holds_expected_output,
         backpressureLoss: alternative.backpressure_loss,
+        deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
         meetsTargetRate: alternative.meets_target_rate,
         rateOffTarget: alternative.rate_off_target,
         matchesBeltChoice: alternative.matches_belt_choice,

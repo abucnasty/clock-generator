@@ -6,21 +6,32 @@ export function lossesOf(alternative: Pick<ClockAlternativeView, 'backpressureLo
 }
 
 /**
- * What to tell whoever copies the blueprint of a clock that does not hold the target rate, as happens when no
- * potential clock does and the one nearest to it is selected, or of one that holds it and does not survive
- * backpressure loss; null for a clock that is stable at the target rate.
+ * What to tell whoever copies the blueprint of a clock: that it does not hold the target rate, as happens when no
+ * potential clock does and the one nearest to it is selected; that it holds it and does not survive backpressure
+ * loss; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
+ * at the target rate on a build without the risk.
  */
 export function rateWarningOf(
-    alternative: Pick<ClockAlternativeView, 'meetsTargetRate' | 'itemsPerSecond' | 'rateOffTarget' | 'holdsExpectedOutput' | 'backpressureLoss'> | undefined,
+    alternative: Pick<ClockAlternativeView, 'meetsTargetRate' | 'itemsPerSecond' | 'rateOffTarget' | 'holdsExpectedOutput' | 'backpressureLoss' | 'deadlockRisk'> | undefined,
 ): string | null {
-    if (!alternative || alternative.meetsTargetRate) {
+    if (!alternative) {
         return null;
     }
+    const of_the_clock = clockWarningOf(alternative);
+    return [of_the_clock, alternative.deadlockRisk].filter(part => part !== null).join(' ') || null;
+}
+
+function clockWarningOf(
+    alternative: Pick<ClockAlternativeView, 'meetsTargetRate' | 'itemsPerSecond' | 'rateOffTarget' | 'holdsExpectedOutput' | 'backpressureLoss'>,
+): string | null {
     if (alternative.holdsExpectedOutput && alternative.backpressureLoss?.survives === false) {
         const losses = lossesOf(alternative);
         return 'This clock does not survive backpressure loss: '
             + (losses ? `after ${losses} for a while, the build does not get back to its rate by itself` : 'it was off its rate in the run the losses are tried on')
             + ' in the simulator, and has to be restarted.';
+    }
+    if (alternative.meetsTargetRate) {
+        return null;
     }
     const figure = (rate: number) => Number(rate.toFixed(2)).toString();
     return `This clock does not hold the target rate: it runs at ${figure(alternative.itemsPerSecond)} of `

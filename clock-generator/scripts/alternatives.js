@@ -4,6 +4,7 @@
 const [key, belts = "off", swings] = process.argv.slice(2);
 const { dist, quiet, loadSample } = require("./lib");
 const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-blueprint.js");
+const { deadlockRiskNote } = dist("crafting/deadlock-risk.js");
 
 (async () => {
     const config = await loadSample(key, belts === "on");
@@ -15,4 +16,8 @@ const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-bl
         index === selected_index ? "*" : " ", a.id.padEnd(28), a.is_stable ? "stable     " : a.holds_expected_output ? "NO RECOVERY" : "UNSTABLE   ", `${a.items_per_second.toFixed(2)}/s`.padEnd(10),
         `wake ${a.wake_ups_per_minute?.toFixed(1) ?? "-"}`.padEnd(13), (a.belt ? clockBeltLabel(a.belt) : "-").padEnd(18), a.label,
         a.backpressure_loss?.survives === false ? `(${a.backpressure_loss.broken_by.join(", ") || "off with nothing cut"})` : ""));
+    const risk = deadlockRiskNote(alternatives[0]?.deadlock_risks ?? []);
+    if (risk !== null) {
+        console.log(`${risk} The recovery verdict does not decide the selection on this build.`);
+    }
 })().catch(e => { console.error(e); process.exit(1); });

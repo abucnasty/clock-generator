@@ -6,6 +6,7 @@ const out = path.resolve(process.argv[2]);
 const key = process.argv[3];
 const { dist, quiet, loadSample } = require("./lib");
 const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-blueprint.js");
+const { describeSharedItem } = dist("crafting/deadlock-risk.js");
 
 (async () => {
     const started = Date.now();
@@ -14,6 +15,8 @@ const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-bl
         const config = await loadSample(key, process.env.NON_MOVING === "1");
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         row.selected = alternatives[selected_index]?.id;
+        // of the build, the same for every clock: two inserters that bring the same item to a machine
+        row.deadlock_risks = (alternatives[0]?.deadlock_risks ?? []).map(describeSharedItem);
         row.alternatives = alternatives.map(a => ({
             id: a.id, label: a.label, is_stable: a.is_stable, holds_expected_output: a.holds_expected_output,
             broken_by: a.backpressure_loss?.broken_by ?? null, meets_target_rate: a.meets_target_rate,

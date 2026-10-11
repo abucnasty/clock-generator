@@ -36,7 +36,8 @@ import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run"
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LOSS_PLACES, LossOutcome, reportOf, runLossTrials, verdictOf } from "./backpressure-loss";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
-import { backpressureLossInsight, ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
+import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
+import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight, MachineFactsEntry } from "./insights";
 import { SerializableStateTransitionHistory, serializeStateTransitionHistory } from "./sequence/state-transition-serializer";
 import { InserterStateTransitionTrackerPlugin } from "../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
@@ -3305,9 +3306,19 @@ export interface ClockAlternative {
      * to begin with, or the trials could not be run on it.
      */
     backpressure_loss: BackpressureLossVerdict | null;
+    /**
+     * The deadlock risks of the build, the same for every clock of it (see deadlock-risk.ts): two inserters that bring
+     * the same item to a machine, one of which brings another item too. Empty for a build without one.
+     */
+    deadlock_risks: SharedItemDeadlockRisk[];
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
-    /** Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not */
+    /**
+     * Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not.
+     * On a build with a deadlock risk a clock that holds its expected output at the target rate meets it, whether it
+     * gets back from every backpressure loss or not: the trials do not see the deadlock, so what they say of the
+     * clocks of such a build does not decide which is selected (GOALS.md, "Two inserters that bring the same item").
+     */
     meets_target_rate: boolean;
     /**
      * Items per second `items_per_second` is above the target rate; negative when it is short of it. Where no clock
@@ -3794,6 +3805,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const holds_expected_output = alternativeIsStable(result);
     const backpressure_loss = holds_expected_output ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
     const is_stable = holds_expected_output && backpressure_loss?.survives !== false;
+    const deadlock_risks = sharedItemDeadlockRisks(createEntityRegistryFromConfig(config));
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
@@ -3814,6 +3826,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const insights = [
         ...clockInsights(result, holds_expected_output),
         ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
+        ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
     ];
     const period = result.simulation_duration.ticks;
     // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
@@ -3822,11 +3835,13 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const rank_first = id === "full-hand" && machineHasSpareSpeed(config, result);
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
     const rateOffTarget = (clock_period: number) => rateAt(clock_period) - config.target_output.items_per_second;
-    const meetsTargetRate = (clock_period: number) => is_stable && Math.abs(rateOffTarget(clock_period)) <= TARGET_RATE_TOLERANCE;
+    // on a build with a deadlock risk the recovery verdict does not decide: see `meets_target_rate`
+    const counts_as_holding = deadlock_risks.length > 0 ? holds_expected_output : is_stable;
+    const meetsTargetRate = (clock_period: number) => counts_as_holding && Math.abs(rateOffTarget(clock_period)) <= TARGET_RATE_TOLERANCE;
     // with belts that do not move every clock goes without the slack, which is the choice
     const matches_belt_choice = config.overrides?.non_moving_belts === true || !result.belt_pickup_slack_left_out;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, holds_expected_output, backpressure_loss, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), rate_off_target: rateOffTarget(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, holds_expected_output, backpressure_loss, deadlock_risks, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), rate_off_target: rateOffTarget(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -3846,6 +3861,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 is_stable,
                 holds_expected_output,
                 backpressure_loss,
+                deadlock_risks,
                 items_per_second: rateAt(period),
                 meets_target_rate: meetsTargetRate(period),
                 rate_off_target: rateOffTarget(period),
@@ -3867,6 +3883,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 is_stable,
                 holds_expected_output,
                 backpressure_loss,
+                deadlock_risks,
                 items_per_second: rateAt(rounded),
                 meets_target_rate: meetsTargetRate(rounded),
                 rate_off_target: rateOffTarget(rounded),

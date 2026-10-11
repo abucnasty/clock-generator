@@ -270,3 +270,5 @@ export {
 } from './entities/machine';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
 export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
+export { deadlockRiskNote } from './crafting/deadlock-risk';
+export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
