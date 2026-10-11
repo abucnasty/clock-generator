@@ -42,11 +42,11 @@ Conventions:
 
 | Build | Scaffold | Recorded | Note |
 |---|---|---|---|
-| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice) | in `test:game` |
+| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock is the one selected since 2026-10-10 | in `test:game`, both ways; with "Belts do not move" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | intermediates/low-density-structure | yes | selected clock exact | in `test:game` |
-| science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; see below |
+| science/utility-science | yes | selected clock exact with "Belts do not move" off: 192 in each of 53 periods. With it on, the clock selected since 2026-10-10 moves nothing: 0 in each of 53 | in `test:game`, both ways, and failing with the switch on; see "Backpressure loss" |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
 | intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Belts do not move" on | in `test:game` with the switch off; see below |
@@ -84,6 +84,50 @@ belt 1, and no inserters bring iron plates and copper cables to its electronic c
 machine or copper plates to its cable machine. Validating it stops at "Entity with ID belt:1 does not exist", and
 with the belt added at the four missing inserters. It needs the build it was exported from before it can be
 generated, let alone recorded.
+
+## Backpressure loss
+
+Since 2026-10-10 a clock is stable when it holds its expected output and gets back to it after every backpressure
+loss of its build (GOALS.md, "Backpressure Loss"). Every clock that holds is tried for it, in the simulator only.
+`scripts/sweep.sh` writes the verdict of every clock, and `scripts/backpressure-sweep.sh` every trial.
+
+What it changed on the samples, against the sweep before it (`gates-off` and `gates-on`):
+
+| Sample | Before | Now |
+|---|---|---|
+| Military science | full-hand output swings, 67.5 wake-ups a minute | batched swings without belt pickup slack, 0 wake-ups: the only clock of seven that gets back from a loss of coal. With "Belts do not move" on, batched swings too |
+| Agricultural science | batched swings, 5 output swings per cycle, 2,543 wake-ups a minute | 2 output swings per cycle, 3,950 (4,127 with the switch on): the 5-swing clock does not get back from a loss of nutrients; the 2- and the 1-swing clock do |
+| Utility science, "Belts do not move" on | batched swings, 0 wake-ups | uneven output swings, 5.4: batched swings does not get back once its packs have not been taken away for a while |
+| Metallurgic science | full-hand output swings on a subtick clock | the same clock, as one with no recovery: it does not get back from a loss of tungsten ore, and it is the only clock of the build that holds |
+
+Clocks that were not selected and are no longer stable: observed windows on jellynut processing with rocket fuel
+(bioflux), observed windows and uneven output swings on shared production science (packs not taken away), and
+observed windows (low density structures) and batched swings without the slack (packs not taken away) on utility
+science. No other sample changes: 33 of 39 are the same both ways. Generating all samples took 6% longer with the
+switch off and 23% longer with it on, on a machine that was busy with other work.
+
+Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
+
+- **Utility science with "Belts do not move" on moves nothing under its new clock**: 0 of 192 in each of 53 periods,
+  where the simulator has it stable at 192 from every start and back from every loss. When the recording starts the
+  machine holds 16 processing units, 16 low density structures and no flying robot frames, and the inserter that
+  brings the frames holds 12 low density structures and waits for more: it cannot put them into a machine that is
+  full of them, and it brings no frame while it holds them. Started in that state the simulator stays in it for the
+  2,016 ticks tried, as the game does, so the simulator has the deadlock; neither the start the generator gives a
+  clock nor any trial for backpressure loss gets the build into it. Under batched swings, the clock selected before,
+  the game made 192 in each of 53 periods. How the build gets there under this clock is not traced, and whether to
+  trace it is open. The recording is `.scratch/recordings/utility-science-backpressure-uneven-output-on.json`.
+- **Agricultural science with "Belts do not move" on**: the 2-swing clock moves its 800 packs in every period. The
+  four inserters that bring nutrients to the egg biochambers move 979.89 nutrients a period in the game and 980.85 in
+  the simulator, which the game test reports as a difference. It changes no verdict and no selection.
+
+Known gaps of the trials:
+
+- They do not catch the clock that led to the rule: the advanced circuit clock with evenly spaced windows of 4 ticks
+  gets back from all 48 trials in the simulator and made 608 and 624 of 704 in the game. Nor do they find anything
+  on the clock its reporter tightened by hand (48 of 48), which holds in the game.
+- They do not catch the utility science deadlock above.
+- Both are states a build is in when a clock is put on it while it runs, and no loss of the trials leads to them.
 
 ## Iron bacteria
 
@@ -186,9 +230,9 @@ inserters, 48 each down to 14 and 20 with two short windows in every crafting cy
 (`WINDOWS=`); the windows are in `src/crafting/clock-from-windows.test.ts`.
 
 Open:
-- A clock is only checked from the start the generator gives it, and a build that gets its clock while it runs
-  starts elsewhere: with ingredients below their limits and products in the plants. The evenly spaced clock is the
-  case. In the simulator the clock selected now also ends up short (495 of 528 products a plant) when the plants
+- A clock is checked from the start the generator gives it and, since 2026-10-10, after each backpressure loss
+  (above). A build that gets its clock while it runs starts elsewhere: with ingredients below their limits and
+  products in the plants. The evenly spaced clock is the case, and the trials for backpressure loss do not catch it. In the simulator the clock selected now also ends up short (495 of 528 products a plant) when the plants
   start with 10 to 26 plastic, which the game was not seen to do.
 - The simulator counts far more wake-ups than the game on the output inserters (50 a minute each against 4.5 under
   the clock selected now), from every start of the clock, also in a run that holds what the game held. It is in the
