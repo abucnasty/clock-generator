@@ -417,8 +417,12 @@ resources/
 ### Running Tests
 
 ```bash
-npm test
+npm test                 # the unit tests: under a minute
+npm run test:generation  # the generation tests: the clock alternatives of whole samples, a few minutes
+npm run test:all         # both
 ```
+
+The generation tests are the files named `*.generation.test.ts`. They generate every clock alternative of a sample and check what is selected, so they take as long as the slowest sample (most of it one test of agricultural science). Pull requests run the unit tests; pull requests to master run the generation tests too (`.github/workflows/test.yml`). Run `npm run test:all` before opening one.
 
 ### Recording a Build in Factorio
 
