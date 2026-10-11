@@ -267,8 +267,12 @@ export function shiftedCycleWindows(
 
     const { picked } = search<ShiftedCycleCandidate, { result: TrialRun; check: AsBuiltStabilityCheck }, { windows: Map<string, OpenRange[]>; swings: ShiftedSwings }>({
         candidates,
-        quick: (candidate, index) => runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
-            (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`)),
+        // the run and the check of every shift are kept for the edges of the range that works; the long run's stock is not
+        quick: (candidate, index) => {
+            const { result, check } = runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
+                (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`));
+            return { result, check };
+        },
         // once every shift is tried: the most passing shifts on either side first, then the smallest shift; three at most
         picks: (attempts, done) => {
             if (!done) {

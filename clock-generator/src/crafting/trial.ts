@@ -274,6 +274,12 @@ function inserterEnds(config: Config): InserterEnds[] {
 }
 
 
+/**
+ * The clock-only check of a clock: the build driven only by the decider windows, first with the clock as planned and
+ * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
+ * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
+ * start phase that fails. Fractional periods are only checked unshifted.
+ */
 export function runAsBuiltCheck(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,

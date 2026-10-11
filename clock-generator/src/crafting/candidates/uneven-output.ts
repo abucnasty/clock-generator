@@ -104,9 +104,13 @@ export function deriveUnevenOutputClockWindows(
     const { picked, tried } = search<UnevenOutputCandidate, Derived, Omit<NonNullable<ReturnType<typeof deriveUnevenOutputClockWindows>>, "moved_output_swing">>({
         candidates,
         // each position gets its own observed windows, with the padding search but without its confirmation
-        quick: (candidate, index) => deriveWithOutputWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
-            belt_pickup_slack, period, `output ${describe(candidate)}`, logger,
-            report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false),
+        quick: (candidate, index) => {
+            const derived = deriveWithOutputWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
+                belt_pickup_slack, period, `output ${describe(candidate)}`, logger,
+                report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
+            // only the windows that pass are read again; the runs of a position that does not are let go
+            return derived.windows === null ? { ...derived, verification: null, as_built: null, even_output_windows: null } : derived;
+        },
         // once every position is tried: the most passing positions on either side first, then the smallest move
         picks: (attempts, done) => {
             if (!done) {
