@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.6.1] - 2026-10-11
+
+### Changed
+- The generator was restructured inside. The clocks it makes are the same as in 0.6.0: every sample build gets the same potential clocks, the same windows and the same selected clock.
+- The sidecar mod has a version of its own from now on and stays at 0.6.0. This release needs no update of the mod.
+
 ## [0.6.0] - 2026-10-10
 
 ### Added
