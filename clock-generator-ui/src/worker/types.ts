@@ -17,7 +17,6 @@ import type {
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
     SerializableTransferPlan,
-    SwingBackoffReport,
 } from 'clock-generator/browser';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
@@ -133,7 +132,6 @@ export interface ClockAlternativeView {
     /** Null unless this clock moved a crafting cycle or an output swing */
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
-    swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan;
     usedLcm: number;
 }

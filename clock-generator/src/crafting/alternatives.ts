@@ -9,7 +9,7 @@ import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
-import { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
+import { generateClockForConfig } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount } from "./rank";
 import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf } from "./trial";
@@ -61,14 +61,14 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
 /** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
 const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
 
-/** Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count */
+/** Output swing counts above the planned one offered as alternatives */
 const EXTENDED_SWING_COUNTS = 3;
 
 /** What the remaining alternatives need from the first (batched swings) run */
 export interface ClockAlternativeContext {
+    /** The output swings per cycle of the plan */
     swings: number;
-    /** The output swings per cycle the plan started with: more than `swings` when it backed off to a lower count */
-    planned_swings?: number;
+    /** Whether batched swings hold their expected output: when not, batched swings without the slack is listed too */
     primary_stable: boolean;
     /** Clock period of the primary alternative */
     period_ticks: number;
@@ -90,6 +90,25 @@ export interface ClockAlternativesPlan {
 
 /** The id of the alternative made without belt pickup slack on purpose: batched swings for a non-moving belt */
 const WITHOUT_BELT_PICKUP_SLACK_ID = "planned";
+
+/**
+ * Every kind of clock is made with belt pickup slack first and made again without only when the clock with it does
+ * not hold its expected output (GOALS.md: a clock without the slack is a clock for a belt that does not move, and the
+ * generator must not give the slack up on its own; a clock that does not hold with it is offered without, and ranked
+ * behind the clocks for a moving belt). The clock without is kept when it holds; when neither holds, the one with the
+ * slack is offered as it is. With belts that do not move every clock goes without the slack, so it is made once.
+ */
+function slackFirst(config: Config, make: (belt_pickup_slack: "always" | "never") => BlueprintGenerationResult): BlueprintGenerationResult {
+    if (config.overrides?.non_moving_belts === true) {
+        return make("never");
+    }
+    const with_slack = make("always");
+    if (holds(with_slack)) {
+        return with_slack;
+    }
+    const without = make("never");
+    return holds(without) ? without : with_slack;
+}
 
 
 interface AlternativeDefinition {
@@ -160,8 +179,12 @@ export function withFuelHandRoomWhereNeeded(
 }
 
 
+/**
+ * Batched swings, the plan at its planned output swings per cycle, with belt pickup slack: made once. Where it does
+ * not hold, batched swings without the slack is listed as a clock of its own (`planned`), since both are shown.
+ */
 function primaryDefinition(config: Config, options: GenerateClockOptions, report?: (detail: string) => void): AlternativeDefinition {
-    const generate = (belt_config: Config, fuel_hand_room: boolean = false) => generateClockWithSwingBackoff(
+    const generate = (belt_config: Config, fuel_hand_room: boolean = false) => generateClockForConfig(
         { ...belt_config, overrides: { ...belt_config.overrides, derive_clock_windows: false } },
         { ...options, verify_as_built: true, belt_pickup_slack: "always", fuel_hand_room, on_progress_detail: report });
     const result = config.overrides?.non_moving_belts === true
@@ -247,23 +270,24 @@ function alternativeDefinitionsFor(
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const fractional = config.overrides?.use_fractional_swings === true;
     const { swings } = context;
-    const withSwings = (count: number, extra: GenerateClockOptions) => generateClockForConfig(
-        { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
+    const withSwings = (count: number, extra: GenerateClockOptions) => slackFirst(config, belt_pickup_slack => generateClockForConfig(
+        { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, { ...extra, belt_pickup_slack }));
     // a forced count applies to every alternative
     const swings_forced = config.overrides?.terminal_swing_count !== undefined;
     const lower_counts = swings_forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
     // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
     // output inserter takes hands, so longer cycles can work too
     const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
-        : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
+        : Array.from({ length: EXTENDED_SWING_COUNTS }, (_, i) => swings + 1 + i);
 
     return [
-        // with belts that do not move the first run is already made without the slack, unless it only holds with it
-        ...(config.overrides?.non_moving_belts === true ? [] : [{
+        // batched swings without the slack, where batched swings with it does not hold; with belts that do not move
+        // the first run is already made without the slack
+        ...(config.overrides?.non_moving_belts === true || context.primary_stable ? [] : [{
             id: WITHOUT_BELT_PICKUP_SLACK_ID,
             label: `${BATCHED_SWINGS_LABEL}, non-moving belt`,
             description: BATCHED_SWINGS_DESCRIPTION,
-            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }),
+            run: () => generateClockForConfig(base_config, { ...quiet, belt_pickup_slack: "never" }),
         }]),
         {
             id: "fractional",
@@ -271,10 +295,10 @@ function alternativeDefinitionsFor(
             description: fractional ? `${BATCHED_SWINGS_LABEL} with fractional swings turned off: every cycle uses the same whole number of swings.`
                 : `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
                 + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows.",
-            run: () => generateClockWithSwingBackoff(
+            run: () => slackFirst(config, belt_pickup_slack => generateClockForConfig(
                 { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
-                quiet
-            ),
+                { ...quiet, belt_pickup_slack }
+            )),
             planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
@@ -286,7 +310,7 @@ function alternativeDefinitionsFor(
                 + `one per craft, so there are usually more windows than ${BATCHED_SWINGS_LABEL} has. An inserter between two machines that waits at `
                 + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
                 + "that is already there rather than staying enabled while the machine crafts.",
-            run: () => generateClockWithSwingBackoff(base_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
+            run: () => slackFirst(config, belt_pickup_slack => observedWindowsClock(base_config, { ...quiet, belt_pickup_slack }, "always")),
         }]),
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "uneven-output",
@@ -298,8 +322,7 @@ function alternativeDefinitionsFor(
                 + "whose neighbours work too is used, the smallest move of those. Only offered when the period has more than one "
                 + "output swing and a moved swing passes the clock-only check.",
             run: () => {
-                // one search at the planned swing count; backing off would repeat it for every lower count
-                const result = observedWindowsClock(base_config, quiet, "uneven_output");
+                const result = slackFirst(config, belt_pickup_slack => observedWindowsClock(base_config, { ...quiet, belt_pickup_slack }, "uneven_output"));
                 assert(result.search?.kind === "moved output swing" && result.search.picked !== null, "no moved output swing passes the clock-only check");
                 return result;
             },
@@ -316,8 +339,7 @@ function alternativeDefinitionsFor(
                 + "neighbours work too is used, the smallest of those. Only offered when the clock period has more than one round "
                 + "and a shift passes.",
             run: () => {
-                // one search at the planned swing count, like uneven output swings
-                const result = shiftedSwingsClock(base_config, { ...quiet, belt_pickup_slack: "always" });
+                const result = slackFirst(config, belt_pickup_slack => shiftedSwingsClock(base_config, { ...quiet, belt_pickup_slack }));
                 assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, "no shifted round of swings passes the clock-only check");
                 return result;
             },
@@ -348,15 +370,10 @@ function alternativeDefinitionsFor(
                 + `surplus. Other inserters keep the windows of ${BATCHED_SWINGS_LABEL}.`,
             run: () => {
                 // input windows come from the first planned run whose clock passes, most batched first
-                const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always" };
-                if (context.primary_stable) {
-                    return generateClockWithSwingBackoff(base_config, full_hand, fullHandClock);
-                }
-                const stable_lower = lower_counts.find(lower =>
+                const stable_lower = context.primary_stable ? undefined : lower_counts.find(lower =>
                     known_stable(`swings-${lower}`) ?? holds(withSwings(lower, { ...quiet, on_progress_detail: undefined })));
-                return stable_lower === undefined
-                    ? generateClockWithSwingBackoff(base_config, full_hand, fullHandClock)
-                    : fullHandClock({ ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: stable_lower } }, full_hand);
+                const on = stable_lower === undefined ? base_config : { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: stable_lower } };
+                return slackFirst(config, belt_pickup_slack => fullHandClock(on, { ...quiet, belt_pickup_slack }));
             },
         },
     ];
@@ -478,7 +495,6 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
     const result = definition.run();
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
-        planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
     };

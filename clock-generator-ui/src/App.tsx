@@ -91,7 +91,6 @@ function App() {
         clockWindows,
         shiftOptions,
         simulationDurationTicks,
-        swingBackoffReport,
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
@@ -468,7 +467,6 @@ function App() {
                                 fuelView={fuelView}
                                 clockWindows={clockWindows}
                                 shiftOptions={shiftOptions}
-                                swingBackoffReport={swingBackoffReport}
                                 logs={logs}
                                 debugSteps={debugSteps}
                                 onDebugStepsChange={setDebugSteps}

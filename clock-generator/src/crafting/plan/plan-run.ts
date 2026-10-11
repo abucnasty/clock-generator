@@ -43,7 +43,7 @@ import { factorioDrillState, factorioInserterState, factorioMachineState } from 
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
 import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
-import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, beltPickupSlackHelps, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
@@ -130,32 +130,6 @@ export interface SimulationStabilityCheck {
 }
 
 
-export interface SwingAttemptResult {
-    /** The terminal_swing_count value that was tried */
-    terminal_swing_count: number;
-    /** Whether this attempt produced stable output */
-    holds: boolean;
-    /** Actual items transferred by output inserters */
-    actual_output_items: number;
-    /** Expected items based on the crafting cycle plan */
-    expected_output_items: number;
-}
-
-
-export interface SwingBackoffReport {
-    /** Whether the backoff loop was triggered (false when first attempt was stable or backoff is disabled) */
-    triggered: boolean;
-    /** The terminal_swing_count used in the first attempt */
-    initial_terminal_swing_count: number;
-    /** The stability result of the very first simulation attempt */
-    initial_attempt: SwingAttemptResult;
-    /** The terminal_swing_count that produced stable output, or null if none was found */
-    stable_terminal_swing_count: number | null;
-    /** Results for each swing count tried after the initial attempt */
-    attempts: SwingAttemptResult[];
-}
-
-
 export interface BlueprintGenerationResult {
     blueprint: FactorioBlueprint;
     /** Decider windows exported in the blueprint, per entity id (before circuit latency) */
@@ -218,8 +192,6 @@ export interface BlueprintGenerationResult {
     used_terminal_swing_count: number;
     /** Result of post-simulation output stability check */
     stability_check: SimulationStabilityCheck;
-    /** Report of output swing backoff attempts, present on all results returned by generateClockWithSwingBackoff */
-    swing_backoff_report?: SwingBackoffReport;
     /** Serializable representation of planned transfer counts per inserter/drill, for UI display */
     serializable_transfer_plan: SerializableTransferPlan;
     /** The computed LCM before any manual override from config.overrides.lcm */
@@ -254,8 +226,11 @@ export interface GenerateClockOptions {
     logger?: Logger;
     /** Re-simulate with only the exported clock windows and require that to be stable too (default false) */
     verify_as_built?: boolean;
-    /** Belt pickup slack on belt-fed windows: "auto" keeps it unless a clock-only check gets worse (default "auto") */
-    belt_pickup_slack?: "auto" | "always" | "never";
+    /**
+     * Belt pickup slack on belt-fed windows (default "always"; never on belts that do not move). The alternatives make
+     * every clock with it first and without only when the clock with it does not hold (see alternatives.ts).
+     */
+    belt_pickup_slack?: "always" | "never";
     /**
      * Lengthen the windows of an inserter that takes fuel off a belt as well as an ingredient by the fill of a hand of
      * fuel (see fuelHandRoomTicks), where the clock goes without belt pickup slack. Asked for when a clock for belts
@@ -820,18 +795,15 @@ export interface PlannedClock {
 }
 
 /**
- * The windows of the plan with the room a clock gets: belt pickup slack as the option asks ("auto" keeps it unless a
- * clock-only check gets worse, which costs trials; never on belts that do not move), or room for a hand of fuel where
- * asked for. The belt the clock is made for is read off that.
+ * The windows of the plan with the room a clock gets: belt pickup slack as the option asks (never on belts that do not
+ * move), or room for a hand of fuel where asked for. The belt the clock is made for is read off that.
  */
 export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "belt_pickup_slack" | "fuel_hand_room"> = {}): PlannedClock {
     const { config, logger, unslacked_windows, run: { simulation_context, duration, total_expected_output } } = plan;
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
     // on belts that do not move a clock is made without the slack, whatever the alternative asks for
     const non_moving_belts = config.overrides?.non_moving_belts === true;
-    const belt_pickup_slack_mode = non_moving_belts ? "never" : options.belt_pickup_slack ?? "auto";
-    const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (belt_pickup_slack_mode === "auto"
-        && beltPickupSlackHelps(config, unslacked_windows, full_belt_pickup_slack, duration.ticks, total_expected_output, logger));
+    const use_belt_pickup_slack = !non_moving_belts && (options.belt_pickup_slack ?? "always") === "always";
     const belt_pickup_slack = use_belt_pickup_slack ? full_belt_pickup_slack : new Map<string, number>();
     // the slack only lengthens a window there is, and only in a period of whole ticks (see withBeltPickupSlack)
     const belt_fed_with_windows = Array.from(unslacked_windows)

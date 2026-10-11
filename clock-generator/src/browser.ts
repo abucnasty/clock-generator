@@ -76,7 +76,6 @@ export {
 export {
     generateClockForConfig,
     validateConfig,
-    generateClockWithSwingBackoff,
     generateClockAlternatives,
     blueprintFileFor,
     planClockAlternatives,
@@ -108,8 +107,6 @@ export {
     GenerateClockOptions,
     DebugSteps,
     SimulationStabilityCheck,
-    SwingAttemptResult,
-    SwingBackoffReport,
 } from './crafting/generate-blueprint';
 
 export {

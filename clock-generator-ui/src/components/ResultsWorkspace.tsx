@@ -6,7 +6,6 @@ import type {
     SerializableClockWindows,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
-    SwingBackoffReport,
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import type { FuelViewData, ShiftOptionsView } from '../worker/types';
@@ -17,7 +16,6 @@ import { FuelPanel } from './FuelPanel';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
-import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { rateWarningOf } from '../utils/rateWarning';
 
@@ -41,7 +39,6 @@ interface ResultsWorkspaceProps {
     fuelView: FuelViewData | null;
     clockWindows: SerializableClockWindows | null;
     shiftOptions: ShiftOptionsView | null;
-    swingBackoffReport: SwingBackoffReport | null;
     logs: LogMessage[];
     debugSteps: DebugSteps;
     onDebugStepsChange: (steps: DebugSteps) => void;
@@ -111,7 +108,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Tabs>
 
                 <TabBody shown={shownTab === 'insights'}>
-                    <SwingBackoffReportDisplay report={props.swingBackoffReport} />
                     <InsightsPanel
                         insights={props.alternatives[props.selectedIndex]?.insights ?? []}
                         clockLabel={props.alternatives[props.selectedIndex]?.label ?? null}

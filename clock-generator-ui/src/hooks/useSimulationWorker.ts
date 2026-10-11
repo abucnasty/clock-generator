@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Config, ConfigValidation, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
+import type { Config, ConfigValidation, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
@@ -42,7 +42,6 @@ export interface UseSimulationWorkerResult {
     /** Places tried for the cycle or output swing the selected clock moved; null for other clocks */
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number | null;
-    swingBackoffReport: SwingBackoffReport | null;
     transferPlan: SerializableTransferPlan | null;
     usedLcm: number | null;
     alternatives: ClockAlternativeView[];
@@ -374,7 +373,6 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         clockWindows: selected?.clockWindows ?? null,
         shiftOptions: selected?.shiftOptions ?? null,
         simulationDurationTicks: selected?.simulationDurationTicks ?? null,
-        swingBackoffReport: selected?.swingBackoffReport ?? null,
         transferPlan: selected?.transferPlan ?? null,
         usedLcm: selected?.usedLcm ?? null,
         alternatives,

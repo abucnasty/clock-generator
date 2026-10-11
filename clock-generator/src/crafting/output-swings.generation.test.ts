@@ -23,7 +23,6 @@ describe("generateClockForConfig", () => {
             expect(config.overrides?.terminal_swing_count).toBe(2);
             // batched swings is the plan's own run, with the backoff that run has
             expect(alternatives[0].id).toBe("planned-belt-slack");
-            expect(alternatives[0].result.swing_backoff_report?.triggered).toBe(false);
             expect(alternatives.map(a => a.result.used_terminal_swing_count).every(count => count === 2)).toBe(true);
         });
     });

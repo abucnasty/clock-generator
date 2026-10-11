@@ -392,35 +392,6 @@ export function trialWithOutputFeeders(
 }
 
 /**
- * Slack lets a belt-fed inserter finish a late pickup, but in a short period it can also leave time for an
- * extra swing when the machine is not at its insertion limit. False only when the clock-only check passes
- * without the slack but not with it, or lands further from the expected output with it.
- */
-export function beltPickupSlackHelps(
-    config: Config,
-    windows: Map<string, OpenRange[]>,
-    slack: Map<string, number>,
-    period: number,
-    expected_output: number,
-    logger: Logger,
-): boolean {
-    if (Array.from(slack.values()).every(ticks => ticks === 0) || !Number.isInteger(period)) {
-        return true;
-    }
-    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const with_slack = runAsBuiltCheck(base_config, withBeltPickupSlack(windows, slack, period), period, logger).check;
-    if (with_slack.holds) {
-        return true;
-    }
-    const without_slack = runAsBuiltCheck(base_config, windows, period, logger).check;
-    logger.log(`Belt pickup slack: clock-only actual with=${with_slack.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
-    if (without_slack.holds) {
-        return false;
-    }
-    return Math.abs(with_slack.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
-}
-
-/**
  * Rewrites the config so every inserter and drill is controlled the way the generated blueprint
  * controls it in game: entities with a decider window get a CLOCKED window shifted by the circuit latency,
  * everything else is left unwired (ALWAYS), except explicit NEVER overrides.
