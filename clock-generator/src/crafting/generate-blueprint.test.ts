@@ -113,10 +113,11 @@ describe("generateClockForConfig", () => {
                 });
             });
 
+            // the padding of the observed windows is the smallest whose neighbours pass too: one tick here
             it("observed windows follow the input inserter's activity", () => {
                 expect(windowsOf("derived")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
-                    "inserter:1": [{ start: 25, end: 78 }],
+                    "inserter:1": [{ start: 25, end: 77 }],
                 });
             });
 

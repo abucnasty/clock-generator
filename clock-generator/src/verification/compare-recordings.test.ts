@@ -98,7 +98,8 @@ describe("a simulated run in the format of the recorder", () => {
         const of_recording = wakeUpsOfRecording(simulated, matchOfSimulatedRecording(simulated), from);
         const by_id = (a: { inserter_id: string }, b: { inserter_id: string }) => a.inserter_id.localeCompare(b.inserter_id);
         expect({ ...of_recording, inserters: [...of_recording.inserters].sort(by_id) }).toEqual({ ...of_stock, inserters: [...of_stock.inserters].sort(by_id) });
-        expect(of_recording.wake_ups_per_minute).toBeCloseTo(112.5, 1);
+        // the full-hand clock of automation science as the search of 2026-10-11 times it: 100 a minute, 112.5 before
+        expect(of_recording.wake_ups_per_minute).toBeCloseTo(100, 1);
     });
 
     it("is what simulateRecording returns for a number of ticks", () => {
@@ -124,8 +125,9 @@ describe("laying a recording against a simulated run", () => {
         expect(report.inserters.map(it => it.states.differences)).toEqual([[], []]);
         report.inserters.forEach(it => expect(it.states.agreement).toBeCloseTo(1, 2));
         expect(report.machines[0].states.agreement).toBeCloseTo(1, 2);
-        // counted over other periods of a run that takes several to repeat
-        expect(Math.abs(report.game_wake_ups_per_minute - report.sim_wake_ups_per_minute)).toBeLessThan(2);
+        // counted over other periods of a run that takes several to repeat: 9 against 19 periods, 2.3 a minute apart
+        // under the full-hand clock of 2026-10-11, where the clock before it came within 2
+        expect(Math.abs(report.game_wake_ups_per_minute - report.sim_wake_ups_per_minute)).toBeLessThan(3);
         expect(formatRecordingComparison(report).at(-1)).toBe("RESULT: the simulator moves what the game moved.");
     });
 

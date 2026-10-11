@@ -226,7 +226,7 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: Serializ
 function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight | null {
     const clock_only = result.clock_only_run?.state_transition_history;
     // shifted swings were moved off the plan on purpose; their own insight says where to
-    if (clock_only === undefined || result.shifted_cycle !== undefined) {
+    if (clock_only === undefined || (result.search?.kind === "shifted cycle" && result.search.picked !== null)) {
         return null;
     }
     const plan = result.serializable_state_transition_history;

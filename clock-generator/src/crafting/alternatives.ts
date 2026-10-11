@@ -300,7 +300,7 @@ function alternativeDefinitionsFor(
             run: () => {
                 // one search at the planned swing count; backing off would repeat it for every lower count
                 const result = observedWindowsClock(base_config, quiet, "uneven_output");
-                assert(result.derived_clock_windows?.moved_output_swing !== undefined, "no moved output swing passes the clock-only check");
+                assert(result.search?.kind === "moved output swing" && result.search.picked !== null, "no moved output swing passes the clock-only check");
                 return result;
             },
         }]),
@@ -318,7 +318,7 @@ function alternativeDefinitionsFor(
             run: () => {
                 // one search at the planned swing count, like uneven output swings
                 const result = shiftedSwingsClock(base_config, { ...quiet, belt_pickup_slack: "always" });
-                assert(result.shifted_cycle !== undefined, "no shifted round of swings passes the clock-only check");
+                assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, "no shifted round of swings passes the clock-only check");
                 return result;
             },
         },
@@ -411,14 +411,13 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
-    const moved = result.derived_clock_windows?.moved_output_swing;
-    const moved_note = moved === undefined ? ""
-        : ` Output swing ${moved.swing} starts ${Math.abs(moved.shift_ticks)} ticks ${moved.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
-    const shifted = result.shifted_cycle;
-    const shifted_note = shifted === undefined ? ""
-        : ` The swings planned in clock ticks ${shifted.planned_ticks.start}–${shifted.planned_ticks.end} (`
-        + shifted.moved.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
-        + `) start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const search = result.search?.picked ? result.search : undefined;
+    const moved_note = search?.kind !== "moved output swing" ? ""
+        : ` Output swing ${search.picked!.row} starts ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
+    const shifted_note = search?.kind !== "shifted cycle" ? ""
+        : ` The swings planned in clock ticks ${search.planned_ticks!.start}–${search.planned_ticks!.end} (`
+        + search.moved!.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
+        + `) start ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
     const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)

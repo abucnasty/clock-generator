@@ -41,7 +41,7 @@ import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plu
 import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-plugin";
 import { factorioDrillState, factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { DerivedClockWindowsReport } from "../candidates/observed-windows";
-import type { ShiftedSwings } from "../candidates/shifted-swings";
+import type { SearchReport } from "../candidates/search";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
 import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, beltPickupSlackHelps, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 
@@ -187,8 +187,12 @@ export interface BlueprintGenerationResult {
     serializable_state_transition_history: SerializableStateTransitionHistory;
     /** Insertion limits, crafting time and output per craft of every machine */
     machine_facts: MachineFactsEntry[];
-    /** For shifted swings: the swings that were moved, where else they could go and what limits that */
-    shifted_cycle?: ShiftedSwings;
+    /**
+     * What the search of the candidate's transform tried and picked (see candidates/search.ts): the moved crafting
+     * cycle of shifted swings with the range that works around it, the moved output swing of uneven output swings, the
+     * padding of observed windows, the timing of full-hand output. Absent for a planned clock.
+     */
+    search?: SearchReport;
     /**
      * The clock-only check's unshifted run, when it is a different simulation than the histories above
      * (planned windows come from a run where inserters also wait on inventory). Absent when no clock-only
@@ -858,7 +862,7 @@ export interface ClockExportExtras {
     histories?: TrialRun;
     clock_only_run?: ClockOnlyRun;
     output_feeders?: BlueprintGenerationResult["output_feeders"];
-    shifted_cycle?: ShiftedSwings;
+    search?: SearchReport;
     derived_clock_windows?: DerivedClockWindowsReport;
     /** Item names for the blueprint in place of the plan's: identical windows and items share one combinator */
     item_names?: ReadonlyMap<string, string>;
@@ -1000,7 +1004,7 @@ export function exportClock(
         belt: clock.belt,
         crafting_cycle_plan,
         output_feeders: extras.output_feeders,
-        shifted_cycle: extras.shifted_cycle,
+        search: extras.search,
         clock_only_run: extras.clock_only_run,
         fuel_consumption_view,
         unplanned_inserter_clocks: serializeInserterClocks(inserter_clocks),
@@ -1032,7 +1036,7 @@ export function checkedClock(
     clock: PlannedClock,
     windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions = {},
-    extras: Pick<ClockExportExtras, "shifted_cycle"> = {},
+    extras: Pick<ClockExportExtras, "search"> = {},
 ): BlueprintGenerationResult {
     const { config, logger, run: { stability_check, total_expected_output, all_output_inserters, duration } } = plan;
     let clock_only_run: ClockOnlyRun | undefined;
@@ -1057,7 +1061,7 @@ export function checkedClock(
         stability_check.holds = stability_check.holds && stability_check.as_built.holds;
         logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
-    return exportClock(plan, clock, windows, options, { clock_only_run, output_feeders, item_names, shifted_cycle: extras.shifted_cycle });
+    return exportClock(plan, clock, windows, options, { clock_only_run, output_feeders, item_names, search: extras.search });
 }
 
 /**
