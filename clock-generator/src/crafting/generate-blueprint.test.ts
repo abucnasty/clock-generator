@@ -96,7 +96,7 @@ describe("generateClockForConfig", () => {
             });
 
             it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
-                expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
+                expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
             });
 
             it("batched swings for a moving belt add 4 ticks to the belt input inserter", () => {
@@ -205,7 +205,7 @@ describe("generateClockForConfig", () => {
             const result = alternative(id).result;
             expect(result.simulation_duration.ticks).toBe(period);
             expect(outputWindows(id)).toEqual(windows);
-            expect(alternative(id).is_stable).toBe(true);
+            expect(alternative(id).verdict).toBe("stable");
             expect(result.stability_check.as_built).toMatchObject({ is_stable: true, actual_output_items: bricks });
         });
 

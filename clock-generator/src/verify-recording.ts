@@ -61,7 +61,7 @@ async function main() {
         console.error(`No clock alternative "${wanted}". Alternatives: ${alternatives.alternatives.map((it, index) => `${index}: ${it.id} (${it.label})`).join("; ")}`);
         process.exit(2);
     }
-    console.log(`Clock alternative: ${alternative.label} (${alternative.id}), ${alternative.is_stable ? "stable" : "not stable"} as built`);
+    console.log(`Clock alternative: ${alternative.label} (${alternative.id}), ${alternative.verdict} as built`);
     const result = alternative.result;
 
     // The clock that was built: the subtick clock counts the whole ticks a fractional period repeats after, and the

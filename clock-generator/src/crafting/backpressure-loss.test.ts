@@ -87,13 +87,13 @@ describe("a clock tried for backpressure loss", () => {
     it("is selected and stable at the target rate, as it was before a loss was ever tried", () => {
         expect(selected.id).toBe("full-hand");
         expect(selected.result.simulation_duration.ticks).toBe(72);
-        expect(selected.is_stable).toBe(true);
-        expect(selected.items_per_second).toBeCloseTo(config.target_output.items_per_second, 6);
+        expect(selected.verdict).toBe("stable");
+        expect(selected.assessment.items_per_second).toBeCloseTo(config.target_output.items_per_second, 6);
     });
 
     it("is run once with nothing cut, where it makes what the generator's own check found", () => {
         expect(report.undisturbed.trials).toHaveLength(1);
-        expect(report.undisturbed.recovers).toBe(selected.is_stable);
+        expect(report.undisturbed.recovers).toBe(selected.verdict === "stable");
         expect(report.undisturbed.expected_per_bin).toBe(selected.result.stability_check.expected_output_items);
     });
 
@@ -121,7 +121,6 @@ describe("a clock tried for backpressure loss", () => {
     it("is put in the words a list of clocks needs: whether it survives, and the losses it does not get back from", () => {
         const verdict = verdictOf(report);
         expect(verdict.survives).toBe(report.survives);
-        expect(verdict.holds_undisturbed).toBe(report.undisturbed.recovers);
         expect(verdict.recovered_after_periods).toBe(report.recovered_after_periods);
         expect(verdictOf({ ...report, survives: false, losses: report.losses.map(outcome => ({ ...outcome, recovers: outcome.loss.kind !== "supply" })) }).broken_by)
             .toEqual(["copper-plate stops arriving", "iron-gear-wheel stops arriving"]);
@@ -153,17 +152,17 @@ describe("what the generator calls stable", () => {
     });
 
     it("tries every clock that holds its expected output for backpressure loss, and no other", () => {
-        expect(alternatives.some(alternative => alternative.holds_expected_output)).toBe(true);
-        expect(alternatives.some(alternative => !alternative.holds_expected_output)).toBe(true);
+        expect(alternatives.some(alternative => alternative.verdict !== "unstable")).toBe(true);
+        expect(alternatives.some(alternative => alternative.verdict === "unstable")).toBe(true);
         for (const alternative of alternatives) {
-            expect(alternative.backpressure_loss !== null, alternative.id).toBe(alternative.holds_expected_output);
+            expect(alternative.assessment.backpressure_loss !== null, alternative.id).toBe(alternative.verdict !== "unstable");
         }
     });
 
     it("is a clock that holds its expected output and gets back to it after every loss", () => {
         for (const alternative of alternatives) {
-            expect(alternative.is_stable, alternative.id).toBe(alternative.holds_expected_output && alternative.backpressure_loss!.survives);
-            expect(alternative.meets_target_rate && !alternative.is_stable, alternative.id).toBe(false);
+            expect(alternative.verdict === "stable", alternative.id).toBe(alternative.verdict !== "unstable" && alternative.assessment.backpressure_loss!.survives);
+            expect(alternative.ranking.meets_target_rate && alternative.verdict !== "stable", alternative.id).toBe(false);
         }
     });
 
@@ -171,16 +170,16 @@ describe("what the generator calls stable", () => {
         const report = backpressureLossOf(
             { ...config, overrides: { ...config.overrides, terminal_swing_count: selected.result.used_terminal_swing_count } },
             selected.result.clock_windows, selected.result.simulation_duration.ticks, selected.result.stability_check.expected_output_items, quiet);
-        expect(selected.backpressure_loss).toEqual(verdictOf(report));
+        expect(selected.assessment.backpressure_loss).toEqual(verdictOf(report));
     });
 
     it("selects a clock that survives over one with a better rank that does not", () => {
         const full_hand = alternatives.find(alternative => alternative.id === "full-hand")!;
-        expect(full_hand.holds_expected_output).toBe(true);
-        expect(full_hand.backpressure_loss).toMatchObject({ survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null });
-        expect(full_hand.is_stable).toBe(false);
-        expect(selected.is_stable).toBe(true);
-        expect(selected.backpressure_loss!.survives).toBe(true);
+        expect(full_hand.verdict).not.toBe("unstable");
+        expect(full_hand.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null });
+        expect(full_hand.verdict).not.toBe("stable");
+        expect(selected.verdict).toBe("stable");
+        expect(selected.assessment.backpressure_loss!.survives).toBe(true);
     });
 
     it("says of a clock that does not survive which losses break it, in its description and in an insight", () => {
@@ -197,7 +196,7 @@ describe("what the generator calls stable", () => {
         for (const alternative of alternatives) {
             expect(alternative.deadlock_risks).toEqual([]);
             expect(alternative.insights.some(it => it.id === "deadlock-risk")).toBe(false);
-            expect(alternative.meets_target_rate && !alternative.is_stable, alternative.id).toBe(false);
+            expect(alternative.ranking.meets_target_rate && alternative.verdict !== "stable", alternative.id).toBe(false);
         }
     });
 });

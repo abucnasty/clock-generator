@@ -24,14 +24,14 @@ describe("generateClockForConfig", () => {
         });
 
         it.each(["planned-belt-slack", "planned", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
-            expect(alternative(id).is_stable).toBe(true);
+            expect(alternative(id).verdict).toBe("stable");
             expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
-            expect(alternative(id).items_per_second).toBe(60);
+            expect(alternative(id).assessment.items_per_second).toBe(60);
         });
 
         it("selects batched swings for a moving belt", () => {
             expect(sample.alternatives[0].id).toBe("planned-belt-slack");
-            expect(sample.alternatives[0].is_stable).toBe(true);
+            expect(sample.alternatives[0].verdict).toBe("stable");
         });
 
         it("moves what a period needs through every planned inserter", () => {
@@ -124,9 +124,9 @@ describe("generateClockForConfig", () => {
         });
 
         it.each(["planned-belt-slack", "planned", "fractional", "derived"])("%s is stable as built", (id) => {
-            expect(alternative(id).is_stable).toBe(true);
+            expect(alternative(id).verdict).toBe("stable");
             expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
-            expect(alternative(id).items_per_second).toBe(60);
+            expect(alternative(id).assessment.items_per_second).toBe(60);
         });
 
         // the hand a jelly inserter picks up at the end of a period is dropped in the next one: its pickup needs a

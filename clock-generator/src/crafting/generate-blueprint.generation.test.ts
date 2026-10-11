@@ -65,8 +65,8 @@ describe("generateClockForConfig", () => {
 
         it("holds the target of 380 a second with 3 hands an inserter a cycle", () => {
             expect(selected.label).toBe("6 output swings per cycle, subtick clock");
-            expect(selected.is_stable).toBe(true);
-            expect(selected.items_per_second).toBeCloseTo(380, 6);
+            expect(selected.verdict).toBe("stable");
+            expect(selected.assessment.items_per_second).toBeCloseTo(380, 6);
             // 6 hands a machine in each of the 3 cycles of the period, over all four output inserters
             expect(selected.result.stability_check.expected_output_items).toBe(2 * 6 * 16 * 3);
         });
@@ -74,7 +74,7 @@ describe("generateClockForConfig", () => {
         it("does not call a clock stable whose swings do not come out whole for each output inserter", () => {
             const odd = alternatives.filter(a => /(: | )?[135] output swings? per cycle/.test(a.label));
             expect(odd.length).toBeGreaterThan(0);
-            expect(odd.every(a => !a.is_stable)).toBe(true);
+            expect(odd.every(a => a.verdict !== "stable")).toBe(true);
         });
 
         it("opens one window a cycle for each output inserter, for its 3 hands", () => {
@@ -93,7 +93,7 @@ describe("generateClockForConfig", () => {
             expect(windows["inserter:7"]).toBeUndefined();
             expect(windows["inserter:8"]).toBeUndefined();
             const observed = alternatives.find(a => a.id === "derived-subtick")!;
-            expect(observed.is_stable).toBe(true);
+            expect(observed.verdict).toBe("stable");
             expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
             expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
         });
@@ -101,8 +101,8 @@ describe("generateClockForConfig", () => {
         it("holds the target with batched swings at 2 output swings a cycle too, as it does in the game", () => {
             const batched = alternatives.find(a => a.id === "planned-belt-slack-subtick")!;
             expect(batched.label).toBe("Batched swings: 2 output swings per cycle, subtick clock");
-            expect(batched.is_stable).toBe(true);
-            expect(batched.items_per_second).toBeCloseTo(380, 6);
+            expect(batched.verdict).toBe("stable");
+            expect(batched.assessment.items_per_second).toBeCloseTo(380, 6);
         });
 
         // belt pickup slack is not given to a period that is not a whole number of ticks (GOALS.md, the belt a clock is made for)
@@ -110,7 +110,7 @@ describe("generateClockForConfig", () => {
             expect(alternatives.length).toBeGreaterThan(0);
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "non_moving" })));
             expect(alternatives.some(a => a.id.endsWith("-subtick"))).toBe(true);
-            expect(alternatives.every(a => a.matches_belt_choice)).toBe(true);
+            expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
             expect(alternatives[0].description).toContain("The slack is not given to a clock whose period is not a whole number of ticks");
         });
     });

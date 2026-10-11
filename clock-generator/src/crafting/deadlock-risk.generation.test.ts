@@ -28,11 +28,11 @@ describe("the clocks of a build with a deadlock risk", () => {
 
     it("are ranked by what they hold, not by whether they get back from a loss: the verdict is shown and does not decide", () => {
         for (const alternative of alternatives.filter(it => Number.isInteger(it.result.simulation_duration.ticks))) {
-            expect(alternative.meets_target_rate, alternative.id).toBe(alternative.holds_expected_output);
+            expect(alternative.ranking.meets_target_rate, alternative.id).toBe(alternative.verdict !== "unstable");
         }
-        const no_recovery = alternatives.filter(it => it.holds_expected_output && !it.is_stable);
+        const no_recovery = alternatives.filter(it => it.verdict === "no recovery");
         expect(no_recovery.length).toBeGreaterThan(0);
-        expect(no_recovery.every(it => it.backpressure_loss?.survives === false)).toBe(true);
+        expect(no_recovery.every(it => it.assessment.backpressure_loss?.survives === false)).toBe(true);
         expect(selected.id).toBe("planned-belt-slack");
     });
 });
