@@ -1,25 +1,32 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
+import type { Config } from "../config/schema";
 import { Machine, MachineType, RecipeMetadata } from "../entities";
 import { MachineState } from "../state";
-import { fewestTicksToBurn, FuelLevelRecorder, fuelPlan } from "./fuel-view";
-import { generateClockAlternatives, generateClockForConfig } from "./generate-blueprint";
+import { fewestTicksToBurn, FuelLevelRecorder, fuelPlan, type FuelPlan } from "./fuel-view";
+import { generateClockForConfig, type BlueprintGenerationResult, type FuelConsumptionView } from "./generate-blueprint";
+import { quiet } from "./generate-blueprint-test-helpers";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
 
-const quiet = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
+// The rocket fuel biochambers (GLEBA_ROCKET_FUEL), generated once for the describes below. The fuel consumption view of
+// every clock alternative of the sample is checked in rocket-fuel.generation.test.ts, with the alternatives; that no
+// fuel plan is made for a build without a fuel inserter in rocket-fuel.test.ts.
+let config: Config;
+let result: BlueprintGenerationResult;
+let plan: FuelPlan;
+let view: FuelConsumptionView;
+
+beforeAll(async () => {
+    config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+    result = generateClockForConfig(config, { logger: quiet });
+    plan = result.fuel_plan!;
+    view = result.fuel_consumption_view!;
+});
 
 describe("the fuel plan", () => {
-    it("is absent when no inserter only fills a fuel slot", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
-        expect(generateClockForConfig(config, { logger: quiet }).fuel_plan).toBeUndefined();
-    });
-
-    describe("rocket fuel biochambers on a 128 tick clock", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
-        const result = generateClockForConfig(config, { logger: quiet });
-        const plan = result.fuel_plan!;
+    describe("rocket fuel biochambers on a 128 tick clock", () => {
 
         it("gives what each burner machine uses at its planned crafting share", () => {
             expect(plan.period_ticks).toBe(128);
@@ -78,8 +85,6 @@ describe("the fuel plan", () => {
         });
 
         describe("the fuel consumption view", () => {
-            const view = result.fuel_consumption_view!;
-
             it("covers a few hands of fuel for every machine", () => {
                 const longest_hand = Math.max(...plan.inserters.map(inserter => inserter.hand_lasts_ticks));
                 expect(view.duration_ticks).toBeGreaterThanOrEqual(3 * longest_hand);
@@ -216,18 +221,6 @@ describe("FuelLevelRecorder", () => {
     });
 });
 
-describe("the fuel consumption view of every clock alternative", async () => {
-    const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
-    const { alternatives } = generateClockAlternatives(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } });
-
-    // the observed windows are run as they are for the view, not observed again
-    it.each(alternatives.map(alternative => [alternative.id, alternative] as const))("%s has the fuel every burner machine held", (_id, alternative) => {
-        const view = alternative.result.fuel_consumption_view!;
-        expect(view.fuel_levels.map(levels => levels.machine_id)).toEqual(["machine:1", "machine:2", "machine:3"]);
-        view.fuel_levels.forEach(levels => expect(Number.isFinite(levels.min_level)).toBe(true));
-    });
-});
-
 describe("fewestTicksToBurn", () => {
     it("is how long the fuel lasts from the tick that burns it soonest", () => {
         // a machine that burns 1 a tick for 4 ticks and then rests for 4: 3 items last 3 ticks from where it starts
@@ -248,13 +241,7 @@ describe("fewestTicksToBurn", () => {
     });
 });
 
-describe("fuel clocks made from a run of the exported clock", async () => {
-    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-    const config = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
-    const result = generateClockForConfig(config, { logger: quiet });
-    const view = result.fuel_consumption_view!;
-    const plan = result.fuel_plan!;
-
+describe("fuel clocks made from a run of the exported clock", () => {
     it("measures how long the fuel slot's limit lasted each machine at the least", () => {
         for (const levels of view.fuel_levels) {
             expect(levels.limit_lasts_ticks).not.toBeNull();

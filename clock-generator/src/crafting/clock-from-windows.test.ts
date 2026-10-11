@@ -3,8 +3,7 @@ import { clockFromWindows, type BlueprintGenerationResult, type SerializableCloc
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-
-const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
+import { quiet } from "./generate-blueprint-test-helpers";
 
 /** "26-47 74-95" as windows */
 const windows = (text: string) => text.split(" ").map(range => {

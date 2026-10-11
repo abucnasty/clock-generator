@@ -9,8 +9,7 @@ import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-
-const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
+import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("the trials of a loss", () => {
     it("are the same for every build: four places in the period, and a quarter, a half, three quarters and all of the time the build takes to stop", () => {
@@ -97,7 +96,16 @@ describe("a clock tried for backpressure loss", () => {
         selected = alternatives[selected_index];
         report = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
             selected.result.stability_check.expected_output_items, quiet);
-    }, 120_000);
+    });
+
+    // Pinned before the supply gates were added: the selected clock of the sample and its windows are the same with
+    // them in place, since a run in which nothing is cut is the run it was before
+    it("is selected and stable at the target rate, as it was before a loss was ever tried", () => {
+        expect(selected.id).toBe("full-hand");
+        expect(selected.result.simulation_duration.ticks).toBe(72);
+        expect(selected.is_stable).toBe(true);
+        expect(selected.items_per_second).toBeCloseTo(config.target_output.items_per_second, 6);
+    });
 
     it("is run once with nothing cut, where it makes what the generator's own check found", () => {
         expect(report.undisturbed.trials).toHaveLength(1);
@@ -140,17 +148,6 @@ describe("a clock tried for backpressure loss", () => {
             selected.result.stability_check.expected_output_items, quiet, { places: [0] });
         expect(shorter.losses.every(outcome => outcome.trials.length === 4)).toBe(true);
     });
-});
-
-describe("a run in which nothing is cut", () => {
-    it("is the run it was before: the potential clocks of a sample and their windows are the same with the supply gates in place", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-        // pinned before the gates were added: the selected clock of the sample and its windows
-        expect(alternatives[selected_index].id).toBe("full-hand");
-        expect(alternatives[selected_index].result.simulation_duration.ticks).toBe(72);
-        expect(alternatives[selected_index].is_stable).toBe(true);
-    }, 120_000);
 });
 
 // Military science: every clock but one holds 120 a second and does not get back to it once the coal has run out
@@ -209,5 +206,14 @@ describe("what the generator calls stable", () => {
         expect(full_hand.insights.some(insight => insight.id === "unstable")).toBe(false);
         expect(selected.description).not.toContain("backpressure loss");
         expect(selected.insights.some(insight => insight.id === "backpressure-loss")).toBe(false);
+    });
+
+    // the build has no deadlock risk (see deadlock-risk.ts): on one that has, the verdict is shown and does not decide
+    it("names no deadlock risk on any clock, and has a clock get back from every loss to meet the target rate", () => {
+        for (const alternative of alternatives) {
+            expect(alternative.deadlock_risks).toEqual([]);
+            expect(alternative.insights.some(it => it.id === "deadlock-risk")).toBe(false);
+            expect(alternative.meets_target_rate && !alternative.is_stable, alternative.id).toBe(false);
+        }
     });
 });

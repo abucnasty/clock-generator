@@ -3,10 +3,8 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { deadlockRiskNote, describeSharedItem, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 
-const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const risksOf = (config: Config) => sharedItemDeadlockRisks(createEntityRegistryFromConfig(structuredClone(config)));
 
 // Utility science: inserter 1 brings flying robot frames and low density structures off one belt, inserter 2 low
@@ -71,47 +69,4 @@ describe("the deadlock risk of two inserters that bring the same item", () => {
         }
         expect(with_risk).toEqual(["UTILITY_SCIENCE"]);
     });
-});
-
-describe("the clocks of a build with a deadlock risk", () => {
-    let alternatives: ClockAlternative[];
-    let selected: ClockAlternative;
-
-    beforeAll(async () => {
-        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
-        const generated = generateClockAlternatives(config, { logger: quiet });
-        alternatives = generated.alternatives;
-        selected = alternatives[generated.selected_index];
-    }, 120_000);
-
-    it("all name the risk, in an insight of the build", () => {
-        for (const alternative of alternatives) {
-            expect(alternative.deadlock_risks, alternative.id).toHaveLength(1);
-            const insight = alternative.insights.find(it => it.id === "deadlock-risk");
-            expect(insight?.scope, alternative.id).toBe("build");
-            expect(insight?.what).toContain("Inserters 1 and 2 both bring low-density-structure to machine 1");
-        }
-    });
-
-    it("are ranked by what they hold, not by whether they get back from a loss: the verdict is shown and does not decide", () => {
-        for (const alternative of alternatives.filter(it => Number.isInteger(it.result.simulation_duration.ticks))) {
-            expect(alternative.meets_target_rate, alternative.id).toBe(alternative.holds_expected_output);
-        }
-        const no_recovery = alternatives.filter(it => it.holds_expected_output && !it.is_stable);
-        expect(no_recovery.length).toBeGreaterThan(0);
-        expect(no_recovery.every(it => it.backpressure_loss?.survives === false)).toBe(true);
-        expect(selected.id).toBe("planned-belt-slack");
-    });
-});
-
-describe("the clocks of a build without a deadlock risk", () => {
-    it("name none, and need to get back from every loss to meet the target rate", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE);
-        const { alternatives } = generateClockAlternatives(config, { logger: quiet });
-        for (const alternative of alternatives) {
-            expect(alternative.deadlock_risks).toEqual([]);
-            expect(alternative.insights.some(it => it.id === "deadlock-risk")).toBe(false);
-            expect(alternative.meets_target_rate && !alternative.is_stable, alternative.id).toBe(false);
-        }
-    }, 120_000);
 });

@@ -7,8 +7,7 @@ import { Machine } from "../entities";
 import { compareWithExportedClocks, formatExportedClockReport } from "./compare";
 import { matchRecordingToConfig } from "./entity-matching";
 import { parseRecording } from "./recording";
-
-const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+import { quiet } from "../crafting/generate-blueprint-test-helpers";
 
 beforeAll(() => {
     FactorioDataService.findRecipeOrThrow("iron-gear-wheel");

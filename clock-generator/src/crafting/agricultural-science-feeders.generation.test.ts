@@ -10,8 +10,8 @@ describe("generateClockForConfig", () => {
 
     // The windows of the inserters that bring eggs to the science biochamber are an optimisation: kept only when the clock
     // passes the as-built check with them as it did without. Variations of the agricultural science sample, 5 output swings.
-    // The test that ranks the alternatives with and without them takes over a minute, so it is in a file of its own:
-    // agricultural-science-feeders-ranking.test.ts.
+    // The test that ranks the alternatives with and without them takes three minutes, so it is in a file of its own:
+    // agricultural-science-feeders-ranking.generation.test.ts.
     describe("agricultural science: windows for the inserters feeding the output machine", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
@@ -64,7 +64,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).not.toContain(id);
             }
-        }, 120_000);
+        });
 
         it("clocks them when the as-built check is on and passes with them", () => {
             const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, logger: quiet });
@@ -72,7 +72,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
             }
-        }, 120_000);
+        });
 
         it("verifies the clock with feeder windows over a longer run than the standard check: at least 72,000 ticks", () => {
             expect(OUTPUT_FEEDER_CHECK_TICKS).toBeGreaterThanOrEqual(72_000);

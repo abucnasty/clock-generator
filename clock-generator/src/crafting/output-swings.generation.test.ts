@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
@@ -13,21 +13,17 @@ describe("generateClockForConfig", () => {
     // 4 output swings per 64 tick cycle is the optimal clock; the planner alone only reaches 2 swings
     describe("forced output swing count", async () => {
         const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
-        let result: BlueprintGenerationResult;
         let alternatives: ClockAlternative[];
 
         beforeAll(() => {
-            result = generateClockWithSwingBackoff(config);
             ({ alternatives } = generateClockAlternatives(config));
-        }, 120_000);
-
-        it("uses the terminal_swing_count override as-is instead of backing off", () => {
-            expect(config.overrides?.terminal_swing_count).toBe(2);
-            expect(result.used_terminal_swing_count).toBe(2);
-            expect(result.swing_backoff_report?.triggered).toBe(false);
         });
 
-        it("uses it for every clock alternative", () => {
+        it("uses the terminal_swing_count override as-is instead of backing off, for every clock alternative", () => {
+            expect(config.overrides?.terminal_swing_count).toBe(2);
+            // batched swings is the plan's own run, with the backoff that run has
+            expect(alternatives[0].id).toBe("planned-belt-slack");
+            expect(alternatives[0].result.swing_backoff_report?.triggered).toBe(false);
             expect(alternatives.map(a => a.result.used_terminal_swing_count).every(count => count === 2)).toBe(true);
         });
     });

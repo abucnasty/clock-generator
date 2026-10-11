@@ -1,12 +1,11 @@
 import zlib from "zlib";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { encodeBlueprintFile } from "../blueprints/serde";
-import { generateClockAlternatives, generateClockForConfig, type ClockAlternativesResult } from "../crafting/generate-blueprint";
+import { generateClockForConfig } from "../crafting/generate-blueprint";
+import { quiet } from "../crafting/generate-blueprint-test-helpers";
 import { clockPeriodTicks } from "./factorio-harness";
-
-const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 /**
  * The period the harness cuts a recording into is read from the clock blueprint. The generated clock has two
@@ -15,14 +14,6 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
  */
 describe("clockPeriodTicks on the clocks the generator makes, with the lock", () => {
     const entitiesOf = (blueprint: string) => JSON.parse(zlib.inflateSync(Buffer.from(blueprint.slice(1), "base64")).toString()).blueprint.entities as any[];
-
-    // The alternatives take 3 of the 5 seconds a test has, and more while the other test files run alongside
-    let iron_bacteria: ClockAlternativesResult;
-
-    beforeAll(async () => {
-        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
-        iron_bacteria = generateClockAlternatives(config, { logger: quiet });
-    }, 60_000);
 
     it("reads a plain clock: the period of the plan", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
@@ -33,9 +24,10 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
         expect(clockPeriodTicks(blueprint)).toBe(result.simulation_duration.ticks);
     });
 
-    it("reads a subtick clock: the whole ticks after which the fractional period repeats", () => {
-        const { alternatives, selected_index } = iron_bacteria;
-        const subtick = alternatives[selected_index].result.subtick!;
+    it("reads a subtick clock: the whole ticks after which the fractional period repeats", async () => {
+        // iron bacteria: a period of 1728/19 ticks, so the subtick clock of every clock of the build counts 1728
+        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+        const subtick = generateClockForConfig(config, { logger: quiet }).subtick!;
         expect(subtick.clock.period_ticks).toBe(1728);
         expect(clockPeriodTicks(encodeBlueprintFile({ blueprint: subtick.blueprint }))).toBe(1728);
     });

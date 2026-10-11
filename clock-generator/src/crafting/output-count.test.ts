@@ -3,8 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { generateClockForConfig } from "./generate-blueprint";
-
-const quiet = { log() {}, warn() {}, error() {}, debug() {} };
+import { quiet } from "./generate-blueprint-test-helpers";
 
 /**
  * The stone bricks furnace with its drill and output inserter on fixed clock windows: 3 hands of 16 bricks every 72
