@@ -16,12 +16,13 @@ import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, 
  * smallest shift, the fewest waits. The widest neighbourhood is not preferred beyond that: for a padding it would pick
  * the middle of the range that passes and lengthen every window for nothing (tried on the samples on 2026-10-11, the
  * selected clock's wake-ups rose on five of them). The confirmation is the clock-only check from a dozen start phases
- * and then from a hundred and twelve, with the long run; a search may put a check of its own before it. The first
- * candidate whose confirmation passes is the result, and at most three are confirmed before the search gives up.
+ * without the long run, so a candidate that fails is let go cheaply, and then from a hundred and twelve with the long
+ * run; a search may put a check of its own before it. The first candidate whose confirmation passes is the result, and
+ * at most five are confirmed before the search gives up.
  */
 
 /** How many of the ranked candidates are confirmed before the search gives up */
-export const MAX_CONFIRMATIONS = 3;
+export const MAX_CONFIRMATIONS = 5;
 
 /** One candidate with what its quick trial found */
 export interface Tried<C, Q extends QuickTrial> {
@@ -106,13 +107,13 @@ export interface Confirmed {
 }
 
 /**
- * The confirming trial of every search: the clock-only check from a dozen start phases, which skips a narrow band
- * of failing phases, and then from a hundred and twelve. Null when either fails. `label` names the candidate in the
- * progress shown.
+ * The confirming trial of every search: the clock-only check from a dozen start phases, without the long run, so a
+ * candidate that fails is let go cheaply; then from a hundred and twelve with the long run. Null when either fails.
+ * `label` names the candidate in the progress shown.
  */
 export function confirm(config: Config, windows: Map<string, OpenRange[]>, period: number, logger: Logger, label: string, report?: (detail: string) => void): Confirmed | null {
     const quick = runAsBuiltCheck(config, windows, period, logger, AS_BUILT_START_PHASES,
-        (n, total) => report?.(`Checking ${label}, clock start ${n}/${total}`));
+        (n, total) => report?.(`Checking ${label}, clock start ${n}/${total}`), 0);
     if (!quick.check.holds) {
         logger.log(`Search: ${label} fails the clock-only check from ${quick.check.start_phases_checked} start phases (${quick.check.actual_output_items})`);
         return null;

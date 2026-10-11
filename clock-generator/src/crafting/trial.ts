@@ -302,7 +302,8 @@ export function runAsBuiltCheck(
     report?.(1, total);
     let stock: StockRecording | undefined;
     if (check.holds) {
-        const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, result, logger, long_run_ticks);
+        // no long run when none is asked for (a quick trial of a search)
+        const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result, logger, long_run_ticks) : null;
         stock = long_run?.stock;
         if (stock) {
             // judged as the long run is: what follows its start-up

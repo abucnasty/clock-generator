@@ -6,7 +6,7 @@ import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { BlueprintGenerationResult, GenerateClockOptions, LCM_STABILITY_TOLERANCE, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { AsBuiltStabilityCheck, runClockOnBuild } from "../trial";
-import { Confirmed, QuickTrial, SearchReport, confirm, search } from "./search";
+import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { SpareOutputWindows, withSingleSwingOutput } from "./transforms";
 
 
@@ -183,8 +183,8 @@ export function fullHandOutputWindows(
         candidates: timings,
         quick: (timing, index) => {
             report?.(`Searching full-hand output timing (${index + 1}/${timings.length})`);
-            const result = runClockOnBuild(config, build(timing), period, logger);
-            return result.stability_check.holds
+            const { holds, result } = quickTrial(config, build(timing), period, logger);
+            return holds
                 ? { holds: true, output_full: outputFullTicks(result), slow: slowPickups(result) }
                 : { holds: false, output_full: 0, slow: 0 };
         },
