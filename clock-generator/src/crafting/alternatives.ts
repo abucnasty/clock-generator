@@ -1,0 +1,663 @@
+import assert from "../common/assert";
+import { Config } from "../config";
+import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { Entity, Inserter } from "../entities";
+import { Logger, defaultLogger } from "../common/logger";
+import { BackpressureLossVerdict } from "./backpressure-loss";
+import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
+import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight } from "./insights";
+import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
+import { BlueprintGenerationResult, GenerateClockOptions, generateClockForConfig, generateClockWithSwingBackoff } from "./plan/plan-run";
+import { ClockRanking, clockRankingOf, combineClockAlternativeRuns, rankingWindowCount } from "./rank";
+import { AsBuiltStabilityCheck, backpressureLossVerdictOf } from "./trial";
+
+
+export interface ClockAlternative {
+    id: string;
+    label: string;
+    description: string;
+    /** Total decider windows across inserters, as exported; fewer means more batched swings */
+    inserter_window_count: number;
+    /** The windows the selection compares last: `inserter_window_count` without the windows of the output feeders */
+    ranking_window_count: number;
+    /**
+     * The clock is stable (GOALS.md, "Backpressure Loss"): it holds its expected output, and it gets back to it by
+     * itself after every backpressure loss of its build. A clock the losses could not be tried on is taken by what it
+     * holds.
+     */
+    is_stable: boolean;
+    /**
+     * The clock-only check (the build driven only by the exported clock windows) reaches the expected output, from
+     * the start the generator gives a clock: the machines full of ingredients and emptied of products
+     */
+    holds_expected_output: boolean;
+    /**
+     * Whether the clock gets back to its expected output after each loss of its build, and the losses it does not get
+     * back from (see backpressure-loss.ts). Null when no loss was tried: the clock does not hold its expected output
+     * to begin with, or the trials could not be run on it.
+     */
+    backpressure_loss: BackpressureLossVerdict | null;
+    /**
+     * The deadlock risks of the build, the same for every clock of it (see deadlock-risk.ts): two inserters that bring
+     * the same item to a machine, one of which brings another item too. Empty for a build without one.
+     */
+    deadlock_risks: SharedItemDeadlockRisk[];
+    /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
+    items_per_second: number;
+    /**
+     * Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not.
+     * On a build with a deadlock risk a clock that holds its expected output at the target rate meets it, whether it
+     * gets back from every backpressure loss or not: the trials do not see the deadlock, so what they say of the
+     * clocks of such a build does not decide which is selected (GOALS.md, "Two inserters that bring the same item").
+     */
+    meets_target_rate: boolean;
+    /**
+     * Items per second `items_per_second` is above the target rate; negative when it is short of it. Where no clock
+     * meets the target rate, the one nearest to it is selected.
+     */
+    rate_off_target: number;
+    /**
+     * False when the clock is not made for the belt the config asks for; such a clock is only selected when no other
+     * meets the target rate. It is a clock whose belt-fed inserters go without belt pickup slack though the config
+     * does not say the belts do not move: the simulator's belts do not move, so it looks better there than it is on a
+     * moving belt. True for every clock when the config says the belts do not move (`overrides.non_moving_belts`),
+     * and for a clock with a period that is not a whole number of ticks, which never gets the slack.
+     */
+    matches_belt_choice: boolean;
+    /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
+    belt: ClockBelt | null;
+    /**
+     * Wake-ups a minute, summed over the inserters of one copy of the build in the long run of the clock (see
+     * wake-ups.ts); null when the clock had no long run. Fewer is better: each one is a machine waking an inserter
+     * that a narrower window would have left disabled. Among the clocks that meet the target rate, the one with the
+     * fewest is selected.
+     */
+    wake_ups_per_minute: number | null;
+    /** What the simulation found that is worth explaining about the build and this clock */
+    insights: ClockInsight[];
+    /**
+     * Ranked ahead of the other alternatives that meet the target rate, whatever their wake-ups: full-hand output
+     * swings where a machine can make more in a period than its plan. Such a machine crafts ahead from its stock
+     * whenever an output window lets the surplus out, its ingredient stock drains, and in the end an extra ingredient
+     * hand fits and the build over-produces; short output windows that only ever take a full hand leave the surplus
+     * inside, where the output block stops it.
+     */
+    rank_first: boolean;
+    result: BlueprintGenerationResult;
+}
+
+
+export interface ClockAlternativesResult {
+    alternatives: ClockAlternative[];
+    /**
+     * The best alternative by `ClockRanking`: the one with the fewest wake-ups among those that meet the target rate,
+     * or the one nearest to the target rate when none meets it
+     */
+    selected_index: number;
+}
+
+/** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
+export interface ClockAlternativeRun<T = ClockAlternative> {
+    /** Runs with the same period and windows are duplicates; only the first is listed */
+    signature: string;
+    alternatives: T[];
+}
+
+/** Observed windows re-simulate the build hundreds of times; above this period (a high LCM) that takes minutes */
+const MAX_OBSERVED_WINDOWS_PERIOD_TICKS = 2400;
+
+/** Output swing counts above the planned one offered as alternatives, also when the plan backed off to a lower count */
+const EXTENDED_SWING_COUNTS = 3;
+
+/** What the remaining alternatives need from the first (batched swings) run */
+export interface ClockAlternativeContext {
+    swings: number;
+    /** The output swings per cycle the plan started with: more than `swings` when it backed off to a lower count */
+    planned_swings?: number;
+    primary_stable: boolean;
+    /** Clock period of the primary alternative */
+    period_ticks: number;
+}
+
+
+export interface ClockAlternativeTask {
+    id: string;
+    label: string;
+}
+
+
+export interface ClockAlternativesPlan {
+    primary: ClockAlternativeRun | null;
+    context: ClockAlternativeContext;
+    /** Independent of each other, so they can run in parallel; listed in display order */
+    tasks: ClockAlternativeTask[];
+}
+
+/** The id of the alternative made without belt pickup slack on purpose: batched swings for a non-moving belt */
+const WITHOUT_BELT_PICKUP_SLACK_ID = "planned";
+
+
+interface AlternativeDefinition {
+    id: string;
+    label: string;
+    description: string;
+    run: () => BlueprintGenerationResult;
+    /** The config its clock is planned on, where that is not the one the alternatives are made for */
+    planned_on?: Config;
+}
+
+
+function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (detail: string) => void): GenerateClockOptions {
+    return {
+        ...options,
+        logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
+        verify_as_built: true,
+        on_progress_detail: report,
+    };
+}
+
+/** Items per second an alternative may be off the target rate by and still meet it */
+const TARGET_RATE_TOLERANCE = 1e-6;
+
+/** How much more a machine could make in a period than its plan asks of it before it counts as having spare speed */
+const SPARE_SPEED_MARGIN = 1.05;
+
+/**
+ * True when the machines making the target can craft noticeably more in a period than the plan expects of them:
+ * such a machine never idles for lack of speed, so an open output window drains its ingredient stock over time.
+ */
+function machineHasSpareSpeed(config: Config, result: BlueprintGenerationResult): boolean {
+    const period = result.simulation_duration.ticks;
+    const expected = result.stability_check.expected_output_items;
+    if (!(period > 0) || !(expected > 0)) {
+        return false;
+    }
+    const registry = createEntityRegistryFromConfig(config);
+    const makers = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === config.target_output.recipe);
+    if (makers.length === 0) {
+        return false;
+    }
+    const capacity = makers.reduce((sum, machine) => sum + period * (
+        machine.output.production_rate.amount_per_tick.toDecimal()
+        + machine.bonus_productivity_rate.bonus_crafts_per_tick * machine.bonus_productivity_rate.amount_per_bonus
+    ), 0);
+    return capacity >= expected * SPARE_SPEED_MARGIN;
+}
+
+
+function alternativeIsStable(result: BlueprintGenerationResult): boolean {
+    return result.stability_check.as_built?.is_stable ?? result.stability_check.is_stable;
+}
+
+/** The alternative every run starts with, and the one the others are described against */
+const BATCHED_SWINGS_LABEL = "Batched swings";
+
+
+const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for the target rate. The build is simulated with each "
+    + "inserter waiting on its machine's inventory, and each inserter's windows are the ticks it moved items. Swings are "
+    + "grouped into batches that match the crafting cycle.";
+
+/** True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient */
+function takesFuelOffABelt(config: Config): boolean {
+    return fuelHandRoomTicks(createEntityRegistryFromConfig(config)).size > 0;
+}
+
+/**
+ * For a config whose belts do not move. A clock is then made without belt pickup slack, and some clocks do not hold
+ * the expected output that way, also on the simulator's belt.
+ *
+ * Such a clock is made again with room for a hand of fuel in the windows of the inserters that take fuel off a belt
+ * as well as an ingredient (`withFuelHandRoom`, which gives nothing for a build without one), and that one is kept
+ * when it holds. It is still a clock for a belt that does not move: the room is what the fuel needs there. A clock
+ * that does not hold either way is offered as it is, without the slack: until 2026-10-10 it was made again with the
+ * slack, which no selected clock of any sample needed once the simulator took from the nearest lane of a belt first.
+ */
+export function withFuelHandRoomWhereNeeded(
+    withoutRoom: () => BlueprintGenerationResult,
+    withFuelHandRoom: () => BlueprintGenerationResult | undefined,
+): BlueprintGenerationResult {
+    const result = withoutRoom();
+    // the room changes nothing where no clocked inserter picks up from a belt, or in a period of part ticks
+    if (alternativeIsStable(result) || result.belt?.kind !== "non_moving" || !Number.isInteger(result.simulation_duration.ticks)) {
+        return result;
+    }
+    try {
+        const with_room = withFuelHandRoom();
+        return with_room !== undefined && Object.keys(with_room.fuel_hand_room_ticks).length > 0 && alternativeIsStable(with_room) ? with_room : result;
+    } catch {
+        return result;
+    }
+}
+
+
+function primaryDefinition(config: Config, options: GenerateClockOptions, report?: (detail: string) => void): AlternativeDefinition {
+    const generate = (belt_config: Config, fuel_hand_room: boolean = false) => generateClockWithSwingBackoff(
+        { ...belt_config, overrides: { ...belt_config.overrides, derive_clock_windows: false } },
+        { ...options, verify_as_built: true, belt_pickup_slack: "always", fuel_hand_room, on_progress_detail: report });
+    const result = config.overrides?.non_moving_belts === true
+        ? withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
+        : generate(config);
+    return {
+        id: "planned-belt-slack",
+        label: BATCHED_SWINGS_LABEL,
+        description: BATCHED_SWINGS_DESCRIPTION,
+        run: () => result,
+    };
+}
+
+/**
+ * A sentence for an alternative's description about the belt its clock is made for, and why. `made_without_slack` is
+ * the alternative that leaves belt pickup slack out on purpose.
+ */
+function beltNote(config: Config, result: BlueprintGenerationResult, made_without_slack: boolean): string {
+    const { belt } = result;
+    if (belt === null) {
+        return "";
+    }
+    if (belt.kind === "moving") {
+        const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
+        const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
+        const moving = ` Made for a moving belt: every inserter that picks up from a belt stays enabled ${ticks} after each window `
+            + "(belt pickup slack), long enough for one more full hand at one belt stack a tick. On a moving belt, and more so on "
+            + "one with gaps, a pickup can come late; the extra ticks let it finish instead of the inserter being switched off "
+            + "holding a partial hand. This is a rule of thumb, not a simulated belt: it may work on one build and not on another.";
+        return moving;
+    }
+    const non_moving = " Made for a non-moving belt: its belt inserters get only the windows they need on a belt that is full and "
+        + "does not move, without belt pickup slack. On a moving belt an inserter can be switched off holding a partial hand.";
+    if (config.overrides?.non_moving_belts === true) {
+        const room = Object.entries(result.fuel_hand_room_ticks);
+        const ids = room.map(([key]) => key.slice(key.indexOf(":") + 1));
+        const fuel = room.length === 0 ? ""
+            : ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
+            + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each window, the ticks a hand of fuel takes to fill: `
+            + "the fuel slot asks for a hand in any window, ahead of the hands the window is planned for, and this clock did not hold "
+            + "the expected output without the room for it.";
+        return `${non_moving} The config says the belts do not move, so it goes without the slack.${fuel}`;
+    }
+    if (!Number.isInteger(result.simulation_duration.ticks)) {
+        return `${non_moving} The slack is not given to a clock whose period is not a whole number of ticks.`;
+    }
+    const only_selected_when = "it is only selected for you when no clock for a moving belt holds the target rate.";
+    return made_without_slack ? `${non_moving} So ${only_selected_when}`
+        : `${non_moving} This clock did not hold the expected output with the slack, so ${only_selected_when}`;
+}
+
+/**
+ * Every alternative after the primary one. `known_stable` answers from runs that already finished, so the full-hand
+ * alternative only re-simulates a planned run when it was not generated yet (e.g. in another worker). With belts that
+ * do not move, a clock that does not hold is made again with room for a hand of fuel where the build has an inserter
+ * that takes fuel off a belt (see withFuelHandRoomWhereNeeded).
+ */
+function alternativeDefinitions(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+    known_stable: (id: string) => boolean | undefined = () => undefined,
+): AlternativeDefinition[] {
+    const definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
+    if (config.overrides?.non_moving_belts !== true || !takesFuelOffABelt(config)) {
+        return definitions;
+    }
+    const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
+    return definitions.map(definition => {
+        const with_room = with_fuel_hand_room.find(it => it.id === definition.id);
+        return with_room === undefined ? definition
+            : { ...definition, run: () => withFuelHandRoomWhereNeeded(definition.run, with_room.run) };
+    });
+}
+
+/** The alternatives as the config asks for them, each made once */
+function alternativeDefinitionsFor(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+    known_stable: (id: string) => boolean | undefined,
+): AlternativeDefinition[] {
+    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const fractional = config.overrides?.use_fractional_swings === true;
+    const { swings } = context;
+    const withSwings = (count: number, extra: GenerateClockOptions) => generateClockForConfig(
+        { ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: count } }, extra);
+    // a forced count applies to every alternative
+    const swings_forced = config.overrides?.terminal_swing_count !== undefined;
+    const lower_counts = swings_forced ? [] : Array.from({ length: Math.max(0, swings - 1) }, (_, i) => swings - 1 - i);
+    // the planned count only covers what a machine crafts before its output blocks; it keeps crafting while the
+    // output inserter takes hands, so longer cycles can work too
+    const higher_counts = swings_forced || context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? []
+        : Array.from({ length: Math.max(swings, context.planned_swings ?? swings) + EXTENDED_SWING_COUNTS - swings }, (_, i) => swings + 1 + i);
+
+    return [
+        // with belts that do not move the first run is already made without the slack, unless it only holds with it
+        ...(config.overrides?.non_moving_belts === true ? [] : [{
+            id: WITHOUT_BELT_PICKUP_SLACK_ID,
+            label: `${BATCHED_SWINGS_LABEL}, non-moving belt`,
+            description: BATCHED_SWINGS_DESCRIPTION,
+            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, belt_pickup_slack: "never" }),
+        }]),
+        {
+            id: "fractional",
+            label: fractional ? "Without fractional swings" : "Fractional swings",
+            description: fractional ? `${BATCHED_SWINGS_LABEL} with fractional swings turned off: every cycle uses the same whole number of swings.`
+                : `${BATCHED_SWINGS_LABEL} with fractional swings turned on: an inserter that needs e.g. 3/2 swings per cycle alternates `
+                + "between 1 and 2 swings instead of rounding, which can need fewer or shorter windows.",
+            run: () => generateClockWithSwingBackoff(
+                { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
+                quiet
+            ),
+            planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
+        },
+        ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
+            id: "derived",
+            label: "Observed windows",
+            description: "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only "
+                + "the output inserters clocked and every other inserter running freely; each inserter's windows are the ticks "
+                + "it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly "
+                + `one per craft, so there are usually more windows than ${BATCHED_SWINGS_LABEL} has. An inserter between two machines that waits at `
+                + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
+                + "that is already there rather than staying enabled while the machine crafts.",
+            run: () => generateClockWithSwingBackoff(
+                { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
+                { ...quiet, derive_mode: "always" }
+            ),
+        }]),
+        ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
+            id: "uneven-output",
+            label: "Uneven output swings",
+            description: "Observed windows with one output swing moved off its planned start, so the output swings are not evenly "
+                + "spaced. A machine only has to make up for what the output inserter takes over the whole clock period, so it can "
+                + "craft more between one pair of swings than the next and carry the difference in its output slot. The swing is "
+                + "tried at positions a craft apart and every other inserter's windows are observed again for each; the position "
+                + "with the most working positions on either side is used. Only offered when the period has more than one output "
+                + "swing and a moved swing passes the clock-only check.",
+            run: () => {
+                // one search at the planned swing count; backing off would repeat it for every lower count
+                const result = generateClockForConfig(
+                    { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
+                    { ...quiet, derive_mode: "uneven_output" }
+                );
+                assert(result.derived_clock_windows?.moved_output_swing !== undefined, "no moved output swing passes the clock-only check");
+                return result;
+            },
+        }]),
+        {
+            id: "shifted-swings",
+            label: "Shifted swings",
+            description: `${BATCHED_SWINGS_LABEL} with one round of swings moved together to another place in the `
+                + "clock period: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a "
+                + "machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before "
+                + "it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within "
+                + "those limits a round can run earlier or later. Window lengths and their spacing within the round are kept, so "
+                + "swings stay as batched as planned. Every shift is checked with the clock-only simulation and the one with the "
+                + "most working shifts on either side is used. Only offered when the clock period has more than one round and a "
+                + "shift passes.",
+            run: () => {
+                // one search at the planned swing count, like uneven output swings
+                const result = generateClockForConfig(base_config, { ...quiet, belt_pickup_slack: "always", shifted_cycle: true });
+                assert(result.shifted_cycle !== undefined, "no shifted round of swings passes the clock-only check");
+                return result;
+            },
+        },
+        ...higher_counts.map(higher => ({
+            id: `swings-${higher}`,
+            label: `${higher} output swings per cycle`,
+            description: `${BATCHED_SWINGS_LABEL} with a longer crafting cycle: the output inserter takes ${higher} hands per cycle instead of `
+                + `${swings} while the machine keeps crafting between swings. Batches more swings into fewer, longer windows.`,
+            run: () => withSwings(higher, quiet),
+        })),
+        ...lower_counts.map(lower => ({
+            id: `swings-${lower}`,
+            label: `${lower} output swing${lower === 1 ? "" : "s"} per cycle`,
+            description: `${BATCHED_SWINGS_LABEL} with the output inserter limited to ${lower} swing${lower === 1 ? "" : "s"} per crafting cycle `
+                + `instead of ${swings}. The output machine buffers more between swings; useful when the higher swing count `
+                + "is unstable.",
+            run: () => withSwings(lower, quiet),
+        })),
+        {
+            id: "full-hand",
+            label: "Full-hand output swings",
+            description: "Output inserters swing once per window, evenly spaced and timed so the machine already holds a full hand when "
+                + "the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the "
+                + "planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is "
+                + "searched with clock-only simulations, preferring the fewest pickups that wait for items. The timing must "
+                + "recover from full output machines; if it does not, some windows are lengthened so a second grab can drain the "
+                + `surplus. Other inserters keep the windows of ${BATCHED_SWINGS_LABEL}.`,
+            run: () => {
+                // input windows come from the first planned run whose clock passes, most batched first
+                const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always", full_hand_output: true };
+                if (context.primary_stable) {
+                    return generateClockWithSwingBackoff(base_config, full_hand);
+                }
+                const stable_lower = lower_counts.find(lower =>
+                    known_stable(`swings-${lower}`) ?? alternativeIsStable(withSwings(lower, { ...quiet, on_progress_detail: undefined })));
+                return stable_lower === undefined
+                    ? generateClockWithSwingBackoff(base_config, full_hand)
+                    : withSwings(stable_lower, full_hand);
+            },
+        },
+    ];
+}
+
+/** Sentences for an alternative's description about what the clock-only check found beyond the output count */
+function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_output_items: number): string {
+    if (as_built === undefined) {
+        return "";
+    }
+    let notes = "";
+    if (as_built.repeat_periods !== undefined && as_built.repeat_output_items !== undefined) {
+        const expected = expected_output_items * as_built.repeat_periods;
+        notes += ` In the clock-only check the build repeats every ${as_built.repeat_periods} periods instead of every period, `
+            + `moving ${as_built.repeat_output_items} of ${expected} items over them.`;
+    }
+    return notes;
+}
+
+/** A sentence for an alternative's description about the losses its clock does not get back from */
+function backpressureLossNote(verdict: BackpressureLossVerdict | null): string {
+    if (verdict === null || verdict.survives) {
+        return "";
+    }
+    return verdict.broken_by.length === 0 ? " It was off its expected output in the run the backpressure losses are tried on, so it is not counted as stable."
+        : ` It does not survive backpressure loss: the build does not get back to its expected output under this clock after ${verdict.broken_by.join(", or after ")}.`;
+}
+
+
+function runAlternative(definition: AlternativeDefinition, config: Config, logger: Logger, report?: (detail: string) => void): ClockAlternativeRun | null {
+    const copies = config.target_output.copies ?? 1;
+    let result: BlueprintGenerationResult;
+    try {
+        result = definition.run();
+    } catch (error) {
+        logger.log(`Clock alternative "${definition.label}" could not be generated: ${error instanceof Error ? error.message : error}`);
+        return null;
+    }
+    const { id } = definition;
+    const label = withOutputSwings(definition, result.used_terminal_swing_count);
+    const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
+    const inserter_window_count = Object.entries(result.clock_windows)
+        .filter(([key]) => key.startsWith("inserter:"))
+        .reduce((sum, [, ranges]) => sum + ranges.length, 0);
+    const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.output_feeders);
+    // the planning simulation drives inserters from inventory levels and can over- or undershoot
+    // where the exported clock does not; in game, recordings matched the clock-only check
+    const { as_built, actual_output_items, expected_output_items } = result.stability_check;
+    const holds_expected_output = alternativeIsStable(result);
+    const backpressure_loss = holds_expected_output ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
+    const is_stable = holds_expected_output && backpressure_loss?.survives !== false;
+    const deadlock_risks = sharedItemDeadlockRisks(createEntityRegistryFromConfig(config));
+    const planning_note = actual_output_items === expected_output_items ? ""
+        : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
+        + "stability is judged by the clock-only check, which runs the exported clock windows.";
+    const moved = result.derived_clock_windows?.moved_output_swing;
+    const moved_note = moved === undefined ? ""
+        : ` Output swing ${moved.swing} starts ${Math.abs(moved.shift_ticks)} ticks ${moved.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const shifted = result.shifted_cycle;
+    const shifted_note = shifted === undefined ? ""
+        : ` The swings planned in clock ticks ${shifted.planned_ticks.start}–${shifted.planned_ticks.end} (`
+        + shifted.moved.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
+        + `) start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const { belt } = result;
+    const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
+    const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
+        + backpressureLossNote(backpressure_loss);
+    logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} survives=${backpressure_loss?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
+    // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
+    const insights = [
+        ...clockInsights(result, holds_expected_output),
+        ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
+        ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
+    ];
+    const period = result.simulation_duration.ticks;
+    // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
+    const achieved_output_items = as_built?.actual_output_items ?? actual_output_items;
+    const rateAt = (clock_period: number) => achieved_output_items * 60 / clock_period * copies;
+    const rank_first = id === "full-hand" && machineHasSpareSpeed(config, result);
+    const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
+    const rateOffTarget = (clock_period: number) => rateAt(clock_period) - config.target_output.items_per_second;
+    // on a build with a deadlock risk the recovery verdict does not decide: see `meets_target_rate`
+    const counts_as_holding = deadlock_risks.length > 0 ? holds_expected_output : is_stable;
+    const meetsTargetRate = (clock_period: number) => counts_as_holding && Math.abs(rateOffTarget(clock_period)) <= TARGET_RATE_TOLERANCE;
+    // with belts that do not move every clock goes without the slack, which is the choice
+    const matches_belt_choice = config.overrides?.non_moving_belts === true || !result.belt_pickup_slack_left_out;
+    if (!result.subtick) {
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, holds_expected_output, backpressure_loss, deadlock_risks, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), rate_off_target: rateOffTarget(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
+    }
+    const { period_ticks, scale } = result.subtick.clock;
+    const rounded = Math.floor(period);
+    return {
+        signature,
+        alternatives: [
+            // listed first so it wins ties with the rounded clock for the default selection
+            {
+                id: `${id}-subtick`,
+                label: `${label}, subtick clock`,
+                description: `${description} Exported with a subtick clock: the ${period.toFixed(3)}-tick period is `
+                    + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
+                    + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
+                    + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
+                inserter_window_count,
+                ranking_window_count,
+                is_stable,
+                holds_expected_output,
+                backpressure_loss,
+                deadlock_risks,
+                items_per_second: rateAt(period),
+                meets_target_rate: meetsTargetRate(period),
+                rate_off_target: rateOffTarget(period),
+                matches_belt_choice,
+                belt,
+                wake_ups_per_minute,
+                insights,
+                rank_first,
+                result: { ...result, blueprint: result.subtick.blueprint },
+            },
+            {
+                id,
+                label: `${label} (clock rounded to ${rounded} ticks)`,
+                description: `${description} The period is not a whole number of ticks (${period.toFixed(3)}), so this clock `
+                    + `runs it rounded down to ${rounded} ticks, slightly faster than the target; the clock-only check models `
+                    + "the exact period, so the machines need a little headroom.",
+                inserter_window_count,
+                ranking_window_count,
+                is_stable,
+                holds_expected_output,
+                backpressure_loss,
+                deadlock_risks,
+                items_per_second: rateAt(rounded),
+                meets_target_rate: meetsTargetRate(rounded),
+                rate_off_target: rateOffTarget(rounded),
+                matches_belt_choice,
+                belt,
+                wake_ups_per_minute,
+                insights,
+                rank_first,
+                result,
+            },
+        ],
+    };
+}
+
+/** Runs the primary (batched swings) alternative and lists the rest as independent tasks */
+export function planClockAlternatives(config: Config, options: GenerateClockOptions = {}): ClockAlternativesPlan {
+    const logger = options.logger ?? defaultLogger;
+    const definition = primaryDefinition(config, options, options.on_progress_detail);
+    const primary = runAlternative(definition, config, logger, options.on_progress_detail);
+    const result = definition.run();
+    const context: ClockAlternativeContext = {
+        swings: result.used_terminal_swing_count,
+        planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
+        primary_stable: alternativeIsStable(result),
+        period_ticks: result.simulation_duration.ticks,
+    };
+    const tasks = alternativeDefinitions(config, context, {}).map(({ id, label }) => ({ id, label }));
+    return { primary, context, tasks };
+}
+
+/**
+ * The label of an alternative with the output swings per cycle it ended up with, e.g. "Batched swings: 6 output swings
+ * per cycle". The alternatives named after a swing count already say it.
+ */
+function withOutputSwings(definition: { id: string; label: string }, swings: number): string {
+    if (definition.id.startsWith("swings-")) {
+        return definition.label;
+    }
+    const count = Number.isInteger(swings) ? `${swings}` : swings.toFixed(2).replace(/0+$/, "");
+    return `${definition.label}: ${count} output swing${swings === 1 ? "" : "s"} per cycle`;
+}
+
+/** Generates one alternative listed by planClockAlternatives; progress goes to options.on_progress_detail */
+export function runClockAlternativeTask(
+    config: Config,
+    context: ClockAlternativeContext,
+    task_id: string,
+    options: GenerateClockOptions = {},
+): ClockAlternativeRun | null {
+    const logger = options.logger ?? defaultLogger;
+    const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
+        .find(it => it.id === task_id);
+    assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
+    return runAlternative(definition, config, logger, options.on_progress_detail);
+}
+
+/**
+ * Generates the same config several ways (batched swings with and without belt pickup slack, derived
+ * per-craft windows, fractional swings toggled, lower output swing counts, full-hand output) and checks each
+ * with the clock-only simulation from several start phases. Alternatives with identical windows are listed once.
+ * Runs everything in sequence; the UI runs the tasks from planClockAlternatives in parallel workers instead.
+ */
+export function generateClockAlternatives(
+    config: Config,
+    options: GenerateClockOptions = {}
+): ClockAlternativesResult {
+    const logger = options.logger ?? defaultLogger;
+    let current_step = BATCHED_SWINGS_LABEL;
+    let completed = 0;
+    let total: number | null = null;
+    const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
+    const copies = config.target_output.copies ?? 1;
+
+    report();
+    const plan = planClockAlternatives(config, { ...options, on_progress_detail: report });
+    completed++;
+    total = 1 + plan.tasks.length;
+
+    const runs: (ClockAlternativeRun | null)[] = [plan.primary];
+    const stable_by_id = new Map<string, boolean>();
+    const known_stable = (id: string) => stable_by_id.get(id);
+    const definitions = alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable);
+    for (const definition of definitions) {
+        current_step = definition.label;
+        report();
+        const run = runAlternative(definition, config, logger, report);
+        completed++;
+        runs.push(run);
+        if (run) {
+            // what the full-hand alternative is built on is a run that holds, as before a loss was ever tried
+            stable_by_id.set(definition.id, run.alternatives[0].holds_expected_output);
+        }
+    }
+
+    current_step = "Done";
+    report();
+    return combineClockAlternativeRuns(runs, clockRankingOf);
+}
