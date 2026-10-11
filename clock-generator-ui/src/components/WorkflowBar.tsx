@@ -1,5 +1,5 @@
 import { Check, ContentCopy } from '@mui/icons-material';
-import { Box, Button, Chip, CircularProgress, Paper, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Paper, Snackbar, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { GenerationProgressStatus } from './BlueprintOutput';
@@ -27,6 +27,8 @@ interface WorkflowBarProps {
     blueprintString: string | null;
     /** Name of the selected potential clock */
     selectedLabel: string | null;
+    /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
+    rateWarning: string | null;
 }
 
 /**
@@ -45,8 +47,10 @@ export function WorkflowBar({
     validationStatus,
     blueprintString,
     selectedLabel,
+    rateWarning,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
+    const [warned, setWarned] = useState(false);
 
     const handleCopy = useCallback(async () => {
         if (!blueprintString) {
@@ -55,11 +59,12 @@ export function WorkflowBar({
         try {
             await navigator.clipboard.writeText(blueprintString);
             setCopied(true);
+            setWarned(rateWarning !== null);
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
         }
-    }, [blueprintString]);
+    }, [blueprintString, rateWarning]);
 
     return (
         <Paper
@@ -94,15 +99,27 @@ export function WorkflowBar({
                                 {selectedLabel}
                             </Typography>
                         )}
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={handleCopy}
-                            color={copied ? 'success' : 'primary'}
-                            startIcon={copied ? <Check /> : <ContentCopy />}
+                        <Tooltip title={rateWarning ?? ''} arrow>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={handleCopy}
+                                color={rateWarning ? 'warning' : copied ? 'success' : 'primary'}
+                                startIcon={copied ? <Check /> : <ContentCopy />}
+                            >
+                                {copied ? 'Copied' : 'Copy blueprint'}
+                            </Button>
+                        </Tooltip>
+                        <Snackbar
+                            open={warned && rateWarning !== null}
+                            autoHideDuration={10000}
+                            onClose={() => setWarned(false)}
+                            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
                         >
-                            {copied ? 'Copied' : 'Copy blueprint'}
-                        </Button>
+                            <Alert severity="warning" variant="filled" onClose={() => setWarned(false)}>
+                                Copied. {rateWarning}
+                            </Alert>
+                        </Snackbar>
                     </>
                 )}
                 {validationStatus !== 'none' && validationStatus !== 'running' && (

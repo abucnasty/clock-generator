@@ -22,6 +22,12 @@ export class InserterDropMode implements InserterMode {
 
     public executeForTick(): void {
         if (EntityState.isBelt(this.sink_entity_state)) {
+            // the belt is full of what the hand holds (a run in which the output is not taken away): the hand waits
+            // over it, and goes on as a hand that has just arrived once there is room
+            const held_item_name = this.inserter_state.held_item?.item_name;
+            if (held_item_name !== undefined && this.sink_entity_state.supply.refused.has(held_item_name)) {
+                return;
+            }
             this.dropOffToBelt(this.sink_entity_state, this.inserter_state);
         }
 
@@ -69,6 +75,7 @@ export class InserterDropMode implements InserterMode {
             const actual_drop = Math.min(amount_to_drop, held_item.quantity);
             inserter_state.inventoryState.removeQuantity(held_item.item_name, actual_drop);
             held_item.quantity -= actual_drop;
+            inserter_state.items_dropped += actual_drop;
 
             assert(held_item.quantity >= 0, "Held item quantity went below 0");
             if (held_item.quantity === 0) {
@@ -84,8 +91,9 @@ export class InserterDropMode implements InserterMode {
             held_item !== null,
             `${inserter_state.entity_id} Held item should not be null when dropping off to machine`
         );
-        sink.inventoryState.addQuantity(held_item.item_name, held_item.quantity);
+        MachineState.insertItem(sink, held_item.item_name, held_item.quantity);
         inserter_state.inventoryState.removeQuantity(held_item.item_name, held_item.quantity);
+        inserter_state.items_dropped += held_item.quantity;
         inserter_state.held_item = null;
     }
 
@@ -120,6 +128,7 @@ export class InserterDropMode implements InserterMode {
         // Remove items from inserter inventory and hand
         inserter_state.inventoryState.removeQuantity(held_item.item_name, items_to_drop);
         held_item.quantity -= items_to_drop;
+        inserter_state.items_dropped += items_to_drop;
 
         assert(held_item.quantity >= 0, "Held item quantity went below 0");
         

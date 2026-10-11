@@ -3,6 +3,7 @@ import { OpenRange } from "../../data-types/open-range";
 import {
     CircuitNetworkSelection,
     ComparatorString,
+    CompareType,
     DeciderCombinatorCondition,
     ControlBehavior,
     ControlBehaviorBuilder,
@@ -13,7 +14,8 @@ import {
     EntityType,
     Position,
     SignalId,
-    DeciderCombinatorOutput
+    DeciderCombinatorOutput,
+    fitPlayerDescription,
 } from "../components";
 
 
@@ -46,12 +48,12 @@ export class DeciderCombinatorEntityBuilder {
     }
 
     public setPlayerDescription(description: string): DeciderCombinatorEntityBuilder {
-        this.player_description = description;
+        this.player_description = fitPlayerDescription(description.split("\n"));
         return this;
     }
 
     public setMultiLinePlayerDescription(description: string[]): DeciderCombinatorEntityBuilder {
-        this.player_description = description.join("\n");
+        this.player_description = fitPlayerDescription(description);
         return this;
     }
 
@@ -68,38 +70,81 @@ export class DeciderCombinatorEntityBuilder {
 
 
 
+/**
+ * The counter of a clock that counts 1 to `period` on the clock signal, wired from its output back to its input:
+ * while the count is below the period and the lock signal is off, it outputs the count plus 1; at the period, or
+ * with the lock on, it outputs 1 (the else outputs). So the count is never 0, which is what a decider reads with
+ * the clock switched off, and with the lock on it waits at 1.
+ *
+ * The signals in `derived` are counted from 1 as well: a modulo of the count adds a position to the network, and the
+ * decider adds the 1 to it, in its outputs and its else outputs alike.
+ */
 function clock(
-    threshold: number,
-    step: number = 1
+    period: number,
+    /** The signal the clock counts on */
+    clockSignalId: SignalId = SignalId.clock,
+    /** The signals on the clock's network that count from 1 but are not counted by this combinator, such as modulos of the count */
+    derived: SignalId[] = [],
 ): DeciderCombinatorEntityBuilder {
-    const clockSignalId = SignalId.clock
 
-    const condition = new DeciderCombinatorConditionBuilder(clockSignalId)
-        .setComparator(ComparatorString.LESS_THAN)
-        .setConstant(threshold - 1)
-        .build()
+    const conditions = [
+        new DeciderCombinatorConditionBuilder(clockSignalId)
+            .setComparator(ComparatorString.LESS_THAN)
+            .setConstant(period)
+            .build(),
+        lockIsOff(CompareType.AND),
+    ]
+
+    const startingAtOne = [clockSignalId, ...derived].map(signal => DeciderCombinatorOutput.constant(signal, 1));
 
     const outputs = [
         new DeciderCombinatorOutputBuilder(clockSignalId)
             .setCopyCountFromInput(true)
-            .setConstant(step)
             .setNetworks(CircuitNetworkSelection.BOTH)
             .build(),
-        new DeciderCombinatorOutputBuilder(clockSignalId)
-            .setConstant(1)
-            .setCopyCountFromInput(false)
-            .build(),
+        ...startingAtOne,
     ]
 
     const controlBehavior = new ControlBehaviorBuilder()
-        .setDeciderConditions([condition])
+        .setDeciderConditions(conditions)
         .setOutputs(outputs)
+        .setElseOutputs(startingAtOne)
         .build()
 
     return new DeciderCombinatorEntityBuilder()
         .setPosition(Position.zero)
         .setControlBehavior(controlBehavior)
 
+}
+
+/** The condition that the lock signal is off: absent, as a switched-off constant combinator puts nothing out */
+function lockIsOff(compareType?: CompareType): DeciderCombinatorCondition {
+    const condition = new DeciderCombinatorConditionBuilder(SignalId.lock).setComparator(ComparatorString.EQUAL_TO);
+    return (compareType ? condition.setCompareType(compareType) : condition).build();
+}
+
+/**
+ * Passes every signal on its input while the lock signal is off, and nothing while it is on: what the combinators
+ * wired to its output read is the clock only while the clock runs. It adds 1 to the signals in `starting_at_one`, for
+ * a count that the combinators before it left 0-based, such as the subtick clock.
+ */
+function lockFilter(starting_at_one: SignalId[] = []): DeciderCombinatorEntityBuilder {
+    const outputs = [
+        new DeciderCombinatorOutputBuilder(SignalId.everything)
+            .setCopyCountFromInput(true)
+            .build(),
+        ...starting_at_one.map(signal => DeciderCombinatorOutput.constant(signal, 1)),
+    ]
+
+    const controlBehavior = new ControlBehaviorBuilder()
+        .setDeciderConditions([lockIsOff()])
+        .setOutputs(outputs)
+        .setElseOutputs([])
+        .build()
+
+    return new DeciderCombinatorEntityBuilder()
+        .setPosition(Position.zero)
+        .setControlBehavior(controlBehavior)
 }
 
 function fromRanges(
@@ -165,6 +210,7 @@ function fromInventoryTransfers(
 
 export const DeciderCombinatorEntity = {
     clock: clock,
+    lockFilter: lockFilter,
     fromRanges: fromRanges,
     fromSignalRanges: fromSignalRanges,
     fromInventoryTransfers: fromInventoryTransfers,

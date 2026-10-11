@@ -1,0 +1,65 @@
+{
+  "target_output": {
+    "recipe": "stone-brick",
+    "items_per_second": 120,
+    "copies": 3
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "stone-brick",
+      "productivity": 50,
+      "crafting_speed": 91.875,
+      "type": "furnace"
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "stone-brick"
+      ]
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "stone-brick",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "stone-brick",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [],
+  "drills": {
+    "mining_productivity_level": 8000,
+    "configs": [
+      {
+        "id": 1,
+        "type": "electric-mining-drill",
+        "mined_item_name": "stone",
+        "speed_bonus": 19.0575,
+        "target": {
+          "type": "machine",
+          "id": 1
+        }
+      }
+    ]
+  }
+}

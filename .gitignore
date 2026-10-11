@@ -145,3 +145,5 @@ vite.config.ts.timestamp-*
 
 # other
 .vscode
+# worktrees Claude Code creates for its agents
+.claude/worktrees/

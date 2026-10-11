@@ -7,18 +7,18 @@ import { MiningDrillType } from "../entities";
 describe("parseConfig", () => {
     describe("valid configurations", () => {
         it("should parse a minimal valid config", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = 1.5
-                    copies = 2
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 2,
+                    "items_per_second": 1.5,
+                    "recipe": "electronic-circuit"
                 }
-                machines = []
-                inserters = []
-                belts = []
-            `;
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.target_output.recipe).toBe("electronic-circuit");
             expect(config.target_output.items_per_second).toBe(1.5);
@@ -32,26 +32,26 @@ describe("parseConfig", () => {
         });
 
         it("should parse a config with machines", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "iron-gear-wheel"
-                    items_per_second = 2.0
-                    copies = 1
-                }
-                machines = [
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [
                     {
-                        id = 1
-                        recipe = "iron-gear-wheel"
-                        productivity = 0.5
-                        crafting_speed = 1.25
-                        type = "machine"
+                        "crafting_speed": 1.25,
+                        "id": 1,
+                        "productivity": 0.5,
+                        "recipe": "iron-gear-wheel",
+                        "type": "machine"
                     }
-                ]
-                inserters = []
-                belts = []
-            `;
+                ],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 2,
+                    "recipe": "iron-gear-wheel"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.machines).toHaveLength(1);
             expect(config.machines[0]).toEqual({
@@ -64,24 +64,30 @@ describe("parseConfig", () => {
         });
 
         it("should parse a config with inserters (belt source)", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = 1
-                    copies = 1
-                }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "belt", id = 1 }
-                        sink { type = "machine", id = 1 }
-                        stack_size = 3
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "belt"
+                        },
+                        "stack_size": 3
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "electronic-circuit"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.inserters).toHaveLength(1);
             expect(config.inserters[0].source).toEqual({ type: "belt", id: 1 });
@@ -90,30 +96,39 @@ describe("parseConfig", () => {
         });
 
         it("should parse a config with inserters (machine to machine)", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = 1
-                    copies = 1
-                }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "machine", id = 1 }
-                        sink { type = "machine", id = 2 }
-                        stack_size = 4
-                        filters = ["iron-plate", "copper-plate"]
-                        overrides {
-                            animation {
-                                pickup_duration_ticks = 10
+                        "filters": [
+                            "iron-plate",
+                            "copper-plate"
+                        ],
+                        "overrides": {
+                            "animation": {
+                                "pickup_duration_ticks": 10
                             }
-                        }
+                        },
+                        "sink": {
+                            "id": 2,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "stack_size": 4
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "electronic-circuit"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.inserters[0].source).toEqual({ type: "machine", id: 1 });
             expect(config.inserters[0].sink).toEqual({ type: "machine", id: 2 });
@@ -122,26 +137,29 @@ describe("parseConfig", () => {
         });
 
         it("should parse a config with belts (single lane)", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = 1
-                    copies = 1
-                }
-                machines = []
-                inserters = []
-                belts = [
+            const json = `{
+                "belts": [
                     {
-                        id = 1
-                        type = "express-transport-belt"
-                        lanes = [
-                            { ingredient = "iron-plate", stack_size = 4 }
-                        ]
+                        "id": 1,
+                        "lanes": [
+                            {
+                                "ingredient": "iron-plate",
+                                "stack_size": 4
+                            }
+                        ],
+                        "type": "express-transport-belt"
                     }
-                ]
-            `;
+                ],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "electronic-circuit"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.belts).toHaveLength(1);
             expect(config.belts[0].id).toBe(1);
@@ -151,57 +169,66 @@ describe("parseConfig", () => {
         });
 
         it("should parse a config with belts (two lanes)", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = 1
-                    copies = 1
-                }
-                machines = []
-                inserters = []
-                belts = [
+            const json = `{
+                "belts": [
                     {
-                        id = 1
-                        type = "turbo-transport-belt"
-                        lanes = [
-                            { ingredient = "iron-plate", stack_size = 4 },
-                            { ingredient = "copper-plate", stack_size = 4 }
-                        ]
+                        "id": 1,
+                        "lanes": [
+                            {
+                                "ingredient": "iron-plate",
+                                "stack_size": 4
+                            },
+                            {
+                                "ingredient": "copper-plate",
+                                "stack_size": 4
+                            }
+                        ],
+                        "type": "turbo-transport-belt"
                     }
-                ]
-            `;
+                ],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "electronic-circuit"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.belts[0].lanes).toHaveLength(2);
             expect(config.belts[0].lanes[1]).toEqual({ ingredient: "copper-plate", stack_size: 4 });
         });
 
         it("should parse a config with drills", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "iron-plate"
-                    items_per_second = 1
-                    copies = 1
-                }
-                machines = []
-                inserters = []
-                belts = []
-                drills {
-                    mining_productivity_level = 50
-                    configs = [
+            const json = `{
+                "belts": [],
+                "drills": {
+                    "configs": [
                         {
-                            id = 1
-                            type = "electric-mining-drill"
-                            mined_item_name = "iron-ore"
-                            speed_bonus = 0.5
-                            target { type = "machine", id = 1 }
+                            "id": 1,
+                            "mined_item_name": "iron-ore",
+                            "speed_bonus": 0.5,
+                            "target": {
+                                "id": 1,
+                                "type": "machine"
+                            },
+                            "type": "electric-mining-drill"
                         }
-                    ]
+                    ],
+                    "mining_productivity_level": 50
+                },
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "iron-plate"
                 }
-            `;
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.drills).toBeDefined();
             expect(config.drills?.mining_productivity_level).toBe(50);
@@ -216,119 +243,171 @@ describe("parseConfig", () => {
         });
 
         it("should parse a config with overrides", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = 1
-                    copies = 1
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "overrides": {
+                    "lcm": 120,
+                    "terminal_swing_count": 10
+                },
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "electronic-circuit"
                 }
-                machines = []
-                inserters = []
-                belts = []
-                overrides {
-                    lcm = 120
-                    terminal_swing_count = 10
-                }
-            `;
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.overrides?.lcm).toBe(120);
             expect(config.overrides?.terminal_swing_count).toBe(10);
         });
 
         it("should parse inserter enable_control override with AUTO mode", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "belt", id = 1 }
-                        sink { type = "machine", id = 1 }
-                        stack_size = 4
-                        overrides {
-                            enable_control { mode = "AUTO" }
-                        }
+                        "overrides": {
+                            "enable_control": {
+                                "mode": "AUTO"
+                            }
+                        },
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "belt"
+                        },
+                        "stack_size": 4
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.inserters[0].overrides?.enable_control).toBeDefined();
             expect(config.inserters[0].overrides?.enable_control?.mode).toBe("AUTO");
         });
 
         it("should parse inserter enable_control override with ALWAYS mode", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "belt", id = 1 }
-                        sink { type = "machine", id = 1 }
-                        stack_size = 4
-                        overrides {
-                            enable_control { mode = "ALWAYS" }
-                        }
+                        "overrides": {
+                            "enable_control": {
+                                "mode": "ALWAYS"
+                            }
+                        },
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "belt"
+                        },
+                        "stack_size": 4
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.inserters[0].overrides?.enable_control?.mode).toBe("ALWAYS");
         });
 
         it("should parse inserter enable_control override with NEVER mode", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "belt", id = 1 }
-                        sink { type = "machine", id = 1 }
-                        stack_size = 4
-                        overrides {
-                            enable_control { mode = "NEVER" }
-                        }
+                        "overrides": {
+                            "enable_control": {
+                                "mode": "NEVER"
+                            }
+                        },
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "belt"
+                        },
+                        "stack_size": 4
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.inserters[0].overrides?.enable_control?.mode).toBe("NEVER");
         });
 
         it("should parse inserter enable_control override with CLOCKED mode", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "belt", id = 1 }
-                        sink { type = "machine", id = 1 }
-                        stack_size = 4
-                        overrides {
-                            enable_control {
-                                mode = "CLOCKED"
-                                ranges = [
-                                    { start = 0, end = 100 },
-                                    { start = 200, end = 300 }
+                        "overrides": {
+                            "enable_control": {
+                                "mode": "CLOCKED",
+                                "period_duration_ticks": 500,
+                                "ranges": [
+                                    {
+                                        "end": 100,
+                                        "start": 0
+                                    },
+                                    {
+                                        "end": 300,
+                                        "start": 200
+                                    }
                                 ]
-                                period_duration_ticks = 500
                             }
-                        }
+                        },
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "belt"
+                        },
+                        "stack_size": 4
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             const enableControl = config.inserters[0].overrides?.enable_control;
             expect(enableControl?.mode).toBe("CLOCKED");
@@ -341,26 +420,41 @@ describe("parseConfig", () => {
         });
 
         it("should parse inserter enable_control CLOCKED mode without optional period_duration_ticks", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "belt", id = 1 }
-                        sink { type = "machine", id = 1 }
-                        stack_size = 4
-                        overrides {
-                            enable_control {
-                                mode = "CLOCKED"
-                                ranges = [{ start = 0, end = 50 }]
+                        "overrides": {
+                            "enable_control": {
+                                "mode": "CLOCKED",
+                                "ranges": [
+                                    {
+                                        "end": 50,
+                                        "start": 0
+                                    }
+                                ]
                             }
-                        }
+                        },
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "belt"
+                        },
+                        "stack_size": 4
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             const enableControl = config.inserters[0].overrides?.enable_control;
             expect(enableControl?.mode).toBe("CLOCKED");
@@ -371,86 +465,119 @@ describe("parseConfig", () => {
         });
 
         it("should parse inserter with both animation and enable_control overrides", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = [
+            const json = `{
+                "belts": [],
+                "inserters": [
                     {
-                        source { type = "belt", id = 1 }
-                        sink { type = "machine", id = 1 }
-                        stack_size = 4
-                        overrides {
-                            animation {
-                                pickup_duration_ticks = 15
+                        "overrides": {
+                            "animation": {
+                                "pickup_duration_ticks": 15
+                            },
+                            "enable_control": {
+                                "mode": "ALWAYS"
                             }
-                            enable_control { mode = "ALWAYS" }
-                        }
+                        },
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "belt"
+                        },
+                        "stack_size": 4
                     }
-                ]
-                belts = []
-            `;
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.inserters[0].overrides?.animation?.pickup_duration_ticks).toBe(15);
             expect(config.inserters[0].overrides?.enable_control?.mode).toBe("ALWAYS");
         });
 
         it("should parse drill enable_control override", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = []
-                belts = []
-                drills {
-                    mining_productivity_level = 50
-                    configs = [
+            const json = `{
+                "belts": [],
+                "drills": {
+                    "configs": [
                         {
-                            id = 1
-                            type = "electric-mining-drill"
-                            mined_item_name = "iron-ore"
-                            speed_bonus = 0.5
-                            target { type = "machine", id = 1 }
-                            overrides {
-                                enable_control { mode = "ALWAYS" }
-                            }
+                            "id": 1,
+                            "mined_item_name": "iron-ore",
+                            "overrides": {
+                                "enable_control": {
+                                    "mode": "ALWAYS"
+                                }
+                            },
+                            "speed_bonus": 0.5,
+                            "target": {
+                                "id": 1,
+                                "type": "machine"
+                            },
+                            "type": "electric-mining-drill"
                         }
-                    ]
+                    ],
+                    "mining_productivity_level": 50
+                },
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
                 }
-            `;
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             expect(config.drills?.configs[0].overrides?.enable_control?.mode).toBe("ALWAYS");
         });
 
         it("should parse drill enable_control override with CLOCKED mode", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = []
-                belts = []
-                drills {
-                    mining_productivity_level = 50
-                    configs = [
+            const json = `{
+                "belts": [],
+                "drills": {
+                    "configs": [
                         {
-                            id = 1
-                            type = "electric-mining-drill"
-                            mined_item_name = "iron-ore"
-                            speed_bonus = 0.5
-                            target { type = "machine", id = 1 }
-                            overrides {
-                                enable_control {
-                                    mode = "CLOCKED"
-                                    ranges = [{ start = 10, end = 60 }]
+                            "id": 1,
+                            "mined_item_name": "iron-ore",
+                            "overrides": {
+                                "enable_control": {
+                                    "mode": "CLOCKED",
+                                    "ranges": [
+                                        {
+                                            "end": 60,
+                                            "start": 10
+                                        }
+                                    ]
                                 }
-                            }
+                            },
+                            "speed_bonus": 0.5,
+                            "target": {
+                                "id": 1,
+                                "type": "machine"
+                            },
+                            "type": "electric-mining-drill"
                         }
-                    ]
+                    ],
+                    "mining_productivity_level": 50
+                },
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
                 }
-            `;
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
 
             const enableControl = config.drills?.configs[0].overrides?.enable_control;
             expect(enableControl?.mode).toBe("CLOCKED");
@@ -464,14 +591,29 @@ describe("parseConfig", () => {
             const beltTypes = Object.values(BeltType)
 
             for (const beltType of beltTypes) {
-                const hocon = `
-                    target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                    machines = []
-                    inserters = []
-                    belts = [{ id = 1, type = "${beltType}", lanes = [{ ingredient = "iron-plate", stack_size = 1 }] }]
-                `;
+                const json = `{
+                "belts": [
+                    {
+                        "id": 1,
+                        "lanes": [
+                            {
+                                "ingredient": "iron-plate",
+                                "stack_size": 1
+                            }
+                        ],
+                        "type": "${beltType}"
+                    }
+                ],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-                const config = await parseConfig(hocon);
+                const config = await parseConfig(json);
                 expect(config.belts[0].type).toBe(beltType);
             }
         });
@@ -479,24 +621,33 @@ describe("parseConfig", () => {
         it("should parse all drill types", async () => {
             const drillTypes = Object.values(MiningDrillType);
             for (const drillType of drillTypes) {
-                const hocon = `
-                    target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                    machines = []
-                    inserters = []
-                    belts = []
-                    drills {
-                        mining_productivity_level = 0
-                        configs = [{
-                            id = 1
-                            type = "${drillType}"
-                            mined_item_name = "iron-ore"
-                            speed_bonus = 0
-                            target { type = "machine", id = 1 }
-                        }]
-                    }
-                `;
+                const json = `{
+                "belts": [],
+                "drills": {
+                    "configs": [
+                        {
+                            "id": 1,
+                            "mined_item_name": "iron-ore",
+                            "speed_bonus": 0,
+                            "target": {
+                                "id": 1,
+                                "type": "machine"
+                            },
+                            "type": "${drillType}"
+                        }
+                    ],
+                    "mining_productivity_level": 0
+                },
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-                const config = await parseConfig(hocon);
+                const config = await parseConfig(json);
                 expect(config.drills?.configs[0].type).toBe(drillType);
             }
         });
@@ -504,91 +655,130 @@ describe("parseConfig", () => {
 
     describe("validation errors", () => {
         it("should throw ConfigValidationError for missing required fields", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    # missing items_per_second and machines
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "recipe": "electronic-circuit"
                 }
-                machines = []
-                inserters = []
-                belts = []
-            `;
+            }`;
 
-            await expect(parseConfig(hocon)).rejects.toThrow(ConfigValidationError);
+            await expect(parseConfig(json)).rejects.toThrow(ConfigValidationError);
         });
 
         it("should throw ConfigValidationError for invalid types", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = "not a number"
-                    copies = 1
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": "not a number",
+                    "recipe": "electronic-circuit"
                 }
-                machines = []
-                inserters = []
-                belts = []
-            `;
+            }`;
 
-            await expect(parseConfig(hocon)).rejects.toThrow(ConfigValidationError);
+            await expect(parseConfig(json)).rejects.toThrow(ConfigValidationError);
         });
 
         it("should throw ConfigValidationError for invalid belt type", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = []
-                belts = [{ id = 1, type = "invalid-belt-type", lanes = [{ ingredient = "iron-plate", stack_size = 1 }] }]
-            `;
+            const json = `{
+                "belts": [
+                    {
+                        "id": 1,
+                        "lanes": [
+                            {
+                                "ingredient": "iron-plate",
+                                "stack_size": 1
+                            }
+                        ],
+                        "type": "invalid-belt-type"
+                    }
+                ],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            await expect(parseConfig(hocon)).rejects.toThrow(ConfigValidationError);
+            await expect(parseConfig(json)).rejects.toThrow(ConfigValidationError);
         });
 
         it("should throw ConfigValidationError for invalid drill type", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = []
-                belts = []
-                drills {
-                    mining_productivity_level = 0
-                    configs = [{
-                        id = 1
-                        type = "invalid-drill-type"
-                        mined_item_name = "iron-ore"
-                        speed_bonus = 0
-                        target { type = "machine", id = 1 }
-                    }]
+            const json = `{
+                "belts": [],
+                "drills": {
+                    "configs": [
+                        {
+                            "id": 1,
+                            "mined_item_name": "iron-ore",
+                            "speed_bonus": 0,
+                            "target": {
+                                "id": 1,
+                                "type": "machine"
+                            },
+                            "type": "invalid-drill-type"
+                        }
+                    ],
+                    "mining_productivity_level": 0
+                },
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
                 }
-            `;
+            }`;
 
-            await expect(parseConfig(hocon)).rejects.toThrow(ConfigValidationError);
+            await expect(parseConfig(json)).rejects.toThrow(ConfigValidationError);
         });
 
         it("should throw ConfigValidationError for invalid inserter source type", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = [{ source { type = "invalid", id = 1 }, sink { type = "machine", id = 1 }, stack_size = 1 }]
-                belts = []
-            `;
+            const json = `{
+                "belts": [],
+                "inserters": [
+                    {
+                        "sink": {
+                            "id": 1,
+                            "type": "machine"
+                        },
+                        "source": {
+                            "id": 1,
+                            "type": "invalid"
+                        },
+                        "stack_size": 1
+                    }
+                ],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            await expect(parseConfig(hocon)).rejects.toThrow(ConfigValidationError);
+            await expect(parseConfig(json)).rejects.toThrow(ConfigValidationError);
         });
 
         it("should provide detailed error messages", async () => {
-            const hocon = `
-                target_output {
-                    recipe = "electronic-circuit"
-                    items_per_second = -1
-                    copies = 1
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": -1,
+                    "recipe": "electronic-circuit"
                 }
-                machines = []
-                inserters = []
-                belts = []
-            `;
+            }`;
 
             try {
-                await parseConfig(hocon);
+                await parseConfig(json);
                 expect.fail("Should have thrown");
             } catch (error) {
                 expect(error).toBeInstanceOf(ConfigValidationError);
@@ -599,19 +789,19 @@ describe("parseConfig", () => {
         });
 
         it("should report multiple errors", async () => {
-            const hocon = `
-                target_output {
-                    recipe = 123
-                    items_per_second = "invalid"
-                    machines = -1
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": "not an array",
+                "target_output": {
+                    "items_per_second": "invalid",
+                    "machines": -1,
+                    "recipe": 123
                 }
-                machines = "not an array"
-                inserters = []
-                belts = []
-            `;
+            }`;
 
             try {
-                await parseConfig(hocon);
+                await parseConfig(json);
                 expect.fail("Should have thrown");
             } catch (error) {
                 expect(error).toBeInstanceOf(ConfigValidationError);
@@ -623,103 +813,104 @@ describe("parseConfig", () => {
 
     describe("edge cases", () => {
         it("should handle empty arrays", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = []
-                inserters = []
-                belts = []
-            `;
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
             expect(config.machines).toEqual([]);
             expect(config.inserters).toEqual([]);
             expect(config.belts).toEqual([]);
         });
 
         it("should handle optional fields being omitted", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = [{ id = 1, recipe = "test", productivity = 0, crafting_speed = 1 }]
-                inserters = []
-                belts = []
-            `;
+            const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [
+                    {
+                        "crafting_speed": 1,
+                        "id": 1,
+                        "productivity": 0,
+                        "recipe": "test"
+                    }
+                ],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
             expect(config.machines[0].type).toBeUndefined();
             expect(config.drills).toBeUndefined();
             expect(config.overrides).toBeUndefined();
         });
 
         it("should handle zero values where allowed", async () => {
-            const hocon = `
-                target_output { recipe = "test", items_per_second = 1, copies = 1 }
-                machines = [{ id = 1, recipe = "test", productivity = 0, crafting_speed = 1 }]
-                inserters = []
-                belts = []
-                drills {
-                    mining_productivity_level = 0
-                    configs = [{
-                        id = 1
-                        type = "electric-mining-drill"
-                        mined_item_name = "iron-ore"
-                        speed_bonus = 0
-                        target { type = "machine", id = 1 }
-                    }]
+            const json = `{
+                "belts": [],
+                "drills": {
+                    "configs": [
+                        {
+                            "id": 1,
+                            "mined_item_name": "iron-ore",
+                            "speed_bonus": 0,
+                            "target": {
+                                "id": 1,
+                                "type": "machine"
+                            },
+                            "type": "electric-mining-drill"
+                        }
+                    ],
+                    "mining_productivity_level": 0
+                },
+                "inserters": [],
+                "machines": [
+                    {
+                        "crafting_speed": 1,
+                        "id": 1,
+                        "productivity": 0,
+                        "recipe": "test"
+                    }
+                ],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
                 }
-            `;
+            }`;
 
-            const config = await parseConfig(hocon);
+            const config = await parseConfig(json);
             expect(config.machines[0].productivity).toBe(0);
             expect(config.drills?.mining_productivity_level).toBe(0);
             expect(config.drills?.configs[0].speed_bonus).toBe(0);
-        });
-
-        it("should handle HOCON substitutions", async () => {
-            const hocon = `
-                common_recipe = "electronic-circuit"
-                target_output { 
-                    recipe = \${common_recipe}
-                    items_per_second = 1
-                    copies = 1
-                }
-                machines = []
-                inserters = []
-                belts = []
-            `;
-
-            const config = await parseConfig(hocon);
-            expect(config.target_output.recipe).toBe("electronic-circuit");
-        });
-
-        it("should handle HOCON comments", async () => {
-            const hocon = `
-                # This is a comment
-                target_output {
-                    recipe = "electronic-circuit" // inline comment
-                    items_per_second = 1
-                    copies = 1
-                }
-                machines = []
-                inserters = []
-                belts = []
-            `;
-
-            const config = await parseConfig(hocon);
-            expect(config.target_output.recipe).toBe("electronic-circuit");
         });
     });
 });
 
 describe("parseConfigSafe", () => {
     it("should return success result for valid config", async () => {
-        const hocon = `
-            target_output { recipe = "test", items_per_second = 1, copies = 1 }
-            machines = []
-            inserters = []
-            belts = []
-        `;
+        const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": "test"
+                }
+            }`;
 
-        const result = await parseConfigSafe(hocon);
+        const result = await parseConfigSafe(json);
 
         expect(result.success).toBe(true);
         if (result.success) {
@@ -728,12 +919,14 @@ describe("parseConfigSafe", () => {
     });
 
     it("should return failure result for invalid config", async () => {
-        const hocon = `
-            target_output { recipe = "test" }
-            machines = []
-        `;
+        const json = `{
+                "machines": [],
+                "target_output": {
+                    "recipe": "test"
+                }
+            }`;
 
-        const result = await parseConfigSafe(hocon);
+        const result = await parseConfigSafe(json);
 
         expect(result.success).toBe(false);
         if (!result.success) {
@@ -745,15 +938,19 @@ describe("parseConfigSafe", () => {
 
 describe("ConfigValidationError", () => {
     it("should format single error nicely", async () => {
-        const hocon = `
-            target_output { recipe = 123, items_per_second = 1, copies = 1 }
-            machines = []
-            inserters = []
-            belts = []
-        `;
+        const json = `{
+                "belts": [],
+                "inserters": [],
+                "machines": [],
+                "target_output": {
+                    "copies": 1,
+                    "items_per_second": 1,
+                    "recipe": 123
+                }
+            }`;
 
         try {
-            await parseConfig(hocon);
+            await parseConfig(json);
         } catch (error) {
             expect(error).toBeInstanceOf(ConfigValidationError);
             const validationError = error as ConfigValidationError;
@@ -762,13 +959,15 @@ describe("ConfigValidationError", () => {
     });
 
     it("should provide getFormattedIssues method", async () => {
-        const hocon = `
-            target_output { recipe = "test" }
-            machines = []
-        `;
+        const json = `{
+                "machines": [],
+                "target_output": {
+                    "recipe": "test"
+                }
+            }`;
 
         try {
-            await parseConfig(hocon);
+            await parseConfig(json);
         } catch (error) {
             expect(error).toBeInstanceOf(ConfigValidationError);
             const validationError = error as ConfigValidationError;

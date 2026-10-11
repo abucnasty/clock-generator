@@ -8,24 +8,6 @@ import { RunnerStepType } from './crafting/runner';
 import fs from 'fs/promises'
 
 
-/**
- * utility function to quickly convert all HOCON configs to JSON files
- */
-async function saveAllHoconConfigsToJson() {
-    for(const config_path of Object.values(ConfigPaths)) {
-        console.log(`Loading config from: ${config_path}`)
-        const config: Config = await loadConfigFromFile(config_path);
-
-        const json_file_path = `${config_path.replace('.conf', '.json')}`
-        await fs.writeFile(
-            json_file_path,
-            JSON.stringify(config, null, 2),
-            "utf-8"
-        );
-        console.log(`Saved loaded config to ${json_file_path}`);
-    }
-}
-
 async function main() {
     // Accept config path from command line argument, default to PRODUCTION_SCIENCE_SHARED_JSON
     const configArg = process.argv.find(arg => arg.startsWith('--config='));

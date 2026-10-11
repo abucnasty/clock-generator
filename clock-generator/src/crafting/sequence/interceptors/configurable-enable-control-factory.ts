@@ -109,6 +109,7 @@ export class ConfigurableEnableControlFactory {
             periodDuration: period_duration,
             enabledRanges: enabled_ranges,
             tickProvider: this.tick_provider,
+            is_game_clock: true,
         });
 
         this.resettable_registry.register(clocked_control);

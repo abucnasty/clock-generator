@@ -58,6 +58,39 @@ function helpers.get_target_type(entity)
     return nil
 end
 
+---The lane of a belt that is nearest to an inserter beside it: 1 for the left lane in the direction the belt runs,
+---2 for the right one, as get_transport_line numbers them. An inserter takes from the nearest lane first when its
+---sink takes the items of both (recorded in Factorio 2.1.21). nil where it was not recorded or does not apply: a
+---piece that is not a straight transport belt, and an inserter in line with the belt, which is beside neither lane.
+---@param inserter LuaEntity
+---@param belt LuaEntity The belt piece the inserter picks up from
+---@return 1|2|nil
+function helpers.get_near_lane(inserter, belt)
+    if not belt or not belt.valid or belt.type ~= "transport-belt" or belt.belt_shape ~= "straight" then
+        return nil
+    end
+    -- the direction the belt runs in; y points south
+    local run = {
+        [defines.direction.north] = { x = 0, y = -1 },
+        [defines.direction.east] = { x = 1, y = 0 },
+        [defines.direction.south] = { x = 0, y = 1 },
+        [defines.direction.west] = { x = -1, y = 0 },
+    }
+    local direction = run[belt.direction]
+    if not direction then
+        return nil
+    end
+    -- how far the inserter is to the left of the belt: left of (x, y) is (y, -x)
+    local left = (inserter.position.x - belt.position.x) * direction.y - (inserter.position.y - belt.position.y) * direction.x
+    if left > 0.25 then
+        return 1
+    end
+    if left < -0.25 then
+        return 2
+    end
+    return nil
+end
+
 ---Get the primary ingredient and max stack size from a transport line
 ---@param transport_line LuaTransportLine
 ---@param default_stack_size number? The default stack size to use if no items are found (default 1)

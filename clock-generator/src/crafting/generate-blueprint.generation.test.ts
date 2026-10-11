@@ -1,0 +1,147 @@
+import { describe, it, expect, beforeAll } from "vitest";
+import { generateClockForConfig, generateClockAlternatives, validateConfig, type BlueprintGenerationResult, type ClockAlternative, type ConfigValidation, type SerializableClockWindows } from "./generate-blueprint";
+import { loadConfigFromFile } from "../config/loader";
+import { ConfigPaths } from "../config/config-paths";
+import { EntityId } from "../entities";
+import { quiet } from "./generate-blueprint-test-helpers";
+
+// The samples of generate-blueprint.test.ts whose generation takes longest: the clock alternatives of iron bacteria,
+// and two builds whose single generation runs the long checks.
+describe("generateClockForConfig", () => {
+
+    // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
+    // so a run of one test by name would generate every build in the file first.
+
+    describe("belt lane consumed outside the config", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
+        let result: BlueprintGenerationResult;
+
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+        });
+
+        it("fills the lane at its consumption rate", () => {
+            const lane = config.belts.find(belt => belt.id === 5)!.lanes[0];
+            const consumption_per_second = "consumption_per_second" in lane ? lane.consumption_per_second! : 0;
+            const [, transfers] = Array.from(result.transfer_history.entries())
+                .find(([id]) => id.id === EntityId.forInserter(12).id)!;
+            const exported = transfers.reduce((sum, t) => sum + t.amount, 0);
+            expect(exported).toBe(consumption_per_second * result.simulation_duration.ticks / 60);
+        });
+    });
+
+    // Two iron bacteria cultivation biochambers that give each other the bacteria a craft starts from. Each has two
+    // inserters to a chest (1 and 3, 4 and 6); 7 and 8 go between the machines; 9 and 10 bring bioflux and nutrients.
+    // Recorded in Factorio 2.1.21 for 36000 ticks a clock: 576 bacteria in each of 399 periods on the subtick clock,
+    // exactly 380 a second, and in each of 400 periods on the clock rounded to 90 ticks, 384 a second. With belt
+    // windows of 8 ticks the subtick clock made 373: a fifth of them closed on a partly filled hand.
+    // Recorded again on 2026-10-09 on the scaffold in the samples, for 72,576 ticks: 10,944 in each of the 42 repeats
+    // of 1728 ticks the subtick clock counts, which cut into their 19 periods are 576 in each of 798. These tests
+    // were skipped for a day because the long run counted a period of 90.947 ticks in bins of 90, which hold 570 of
+    // the 576; the clock and the belt pickup rules were never at fault.
+    // Recorded on 2026-10-10 on that scaffold, 36,000 ticks each: batched swings at 2 output swings a cycle and
+    // observed windows move 10,944 in each of 20 repeats too. The simulator had batched swings at 2 swings at 338 a
+    // second for as long as it opened every window a tick early.
+    describe("iron bacteria from two biochambers, each with two output inserters", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
+        let validation: ConfigValidation;
+        let alternatives: ClockAlternative[];
+        let selected: ClockAlternative;
+        let windows: SerializableClockWindows;
+
+        beforeAll(() => {
+            validation = validateConfig(config);
+            const generated = generateClockAlternatives(config, { logger: quiet });
+            alternatives = generated.alternatives;
+            selected = alternatives[generated.selected_index];
+            windows = selected.result.clock_windows;
+        });
+
+        it("validates with the hands a machine gives up a cycle, over both of its output inserters", () => {
+            // 190 a second a machine: 3 hands of 16 every 15.158 ticks
+            expect(validation.output_swings_per_cycle).toBe(3);
+            expect(validation.cycle_ticks).toBeCloseTo(15.158, 3);
+        });
+
+        it("holds the target of 380 a second with 3 hands an inserter a cycle", () => {
+            expect(selected.label).toBe("6 output swings per cycle, subtick clock");
+            expect(selected.is_stable).toBe(true);
+            expect(selected.items_per_second).toBeCloseTo(380, 6);
+            // 6 hands a machine in each of the 3 cycles of the period, over all four output inserters
+            expect(selected.result.stability_check.expected_output_items).toBe(2 * 6 * 16 * 3);
+        });
+
+        it("does not call a clock stable whose swings do not come out whole for each output inserter", () => {
+            const odd = alternatives.filter(a => /(: | )?[135] output swings? per cycle/.test(a.label));
+            expect(odd.length).toBeGreaterThan(0);
+            expect(odd.every(a => !a.is_stable)).toBe(true);
+        });
+
+        it("opens one window a cycle for each output inserter, for its 3 hands", () => {
+            for (const id of ["inserter:1", "inserter:3", "inserter:4", "inserter:6"]) {
+                expect(windows[id]).toEqual([{ start: 0, end: 20 }, { start: 30, end: 50 }, { start: 60, end: 80 }]);
+            }
+        });
+
+        it("keeps the window of an inserter on the belt open long enough for a pickup that starts late or fills slowly", () => {
+            for (const id of ["inserter:9", "inserter:10"]) {
+                expect(windows[id]).toEqual([{ start: 0, end: 16 }, { start: 30, end: 46 }, { start: 60, end: 76 }]);
+            }
+        });
+
+        it("leaves the inserters between the machines always enabled, in observed windows too", () => {
+            expect(windows["inserter:7"]).toBeUndefined();
+            expect(windows["inserter:8"]).toBeUndefined();
+            const observed = alternatives.find(a => a.id === "derived-subtick")!;
+            expect(observed.is_stable).toBe(true);
+            expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
+            expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
+        });
+
+        it("holds the target with batched swings at 2 output swings a cycle too, as it does in the game", () => {
+            const batched = alternatives.find(a => a.id === "planned-belt-slack-subtick")!;
+            expect(batched.label).toBe("Batched swings: 2 output swings per cycle, subtick clock");
+            expect(batched.is_stable).toBe(true);
+            expect(batched.items_per_second).toBeCloseTo(380, 6);
+        });
+
+        // belt pickup slack is not given to a period that is not a whole number of ticks (GOALS.md, the belt a clock is made for)
+        it("names every clock a non-moving belt clock on its clock of 90.947 ticks, the subtick one and the rounded one, and counts none as having left the slack out", () => {
+            expect(alternatives.length).toBeGreaterThan(0);
+            expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "non_moving" })));
+            expect(alternatives.some(a => a.id.endsWith("-subtick"))).toBe(true);
+            expect(alternatives.every(a => a.matches_belt_choice)).toBe(true);
+            expect(alternatives[0].description).toContain("The slack is not given to a clock whose period is not a whole number of ticks");
+        });
+    });
+
+    // Recorded in game: the planned windows ran at 48/96 because the furnace/module window
+    // landed before the output inserter cleared the machine; the derived windows ran stable.
+    //
+    // That recording was of one start of the clock. An inserter that waits for a machine at its output block takes
+    // its items a tick after the output inserter has cleared it (see IdleModeTransitionEvaluator), and with that tick
+    // the simulator finds a start of the clock from which every set of derived windows makes 92 of 96 a period:
+    // they pass from 12 starts and fail the check of them all. Whether the game has that state is not recorded; there
+    // is no scaffold of this build.
+    describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
+
+        it("planned windows fail the clock-only check", () => {
+            const result = generateClockForConfig(config, { verify_as_built: true });
+            expect(result.stability_check.as_built?.is_stable).toBe(false);
+        });
+
+        it("no derived windows pass the clock-only check from every start", () => {
+            const logs: string[] = [];
+            const result = generateClockForConfig({
+                ...config,
+                overrides: { ...config.overrides, derive_clock_windows: true },
+            }, { logger: { ...quiet, log: message => logs.push(message) } });
+            expect(result.derived_clock_windows?.succeeded).toBe(false);
+            expect(result.stability_check.is_stable).toBe(false);
+            // from the 12 starts of the first check they hold the 96, and one of the starts of the full check makes 92
+            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding 2 -> actual=96 stable=true \(12 start phases\)/.test(line))).toBe(true);
+            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding \d+ full check -> actual=92 stable=false/.test(line))).toBe(true);
+        });
+    });
+});

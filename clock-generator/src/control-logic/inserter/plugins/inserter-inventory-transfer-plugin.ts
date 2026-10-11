@@ -37,6 +37,9 @@ export class InserterInventoryHistoryPlugin implements ModePlugin<InserterMode> 
                     snapshot.tick_range.end_inclusive
                 ),
                 amount: snapshot.amount,
+                pickup_tick_before_run: snapshot.pickup_tick_before_reset === undefined
+                    ? undefined
+                    : this.transfer_history.tickBeforeRun(snapshot.pickup_tick_before_reset),
             }
         )
     }

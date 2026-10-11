@@ -8,7 +8,9 @@ export type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
 export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
     return (
         <>
-            <Handle type="target" position={Position.Left} />
+            {data.vertical
+                ? <Handle type="target" id="in" position={data.vertical === 'down' ? Position.Top : Position.Bottom} />
+                : <Handle type="target" position={Position.Left} />}
             <Box
                 sx={{
                     px: 1.5,
@@ -67,7 +69,9 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     </Box>
                 )}
             </Box>
-            <Handle type="source" position={Position.Right} />
+            {data.vertical
+                ? <Handle type="source" id="out" position={data.vertical === 'down' ? Position.Bottom : Position.Top} />
+                : <Handle type="source" position={Position.Right} />}
         </>
     );
 }

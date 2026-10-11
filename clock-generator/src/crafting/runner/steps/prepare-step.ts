@@ -1,6 +1,6 @@
 import { CompositeControlLogic, ControlLogic, EnableControl, TickControlLogic } from "../../../control-logic";
 import { assertIsChest, EntityId } from "../../../entities";
-import { EntityState, MachineStatus } from "../../../state";
+import { EntityState, MachineState, MachineStatus } from "../../../state";
 import { cloneSimulationContextWithInterceptors, SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
 import { RunnerStep, RunnerStepType } from "./runner-step";
@@ -20,6 +20,22 @@ export class PrepareStep implements RunnerStep {
         this.control_logic = this.build()
     }
 
+    /**
+     * A recipe that makes its own ingredient (pentapod eggs) runs dry while the build fills up, since its first
+     * products go wherever an inserter takes them. Until every machine is full it is kept supplied with that
+     * ingredient, the way a player seeds the machines by hand.
+     */
+    private kickStartLoopingRecipes(): void {
+        for (const { machine_state } of this.simulation_context.machines) {
+            for (const item_name of machine_state.machine.self_ingredients) {
+                const limit = machine_state.machine.inputs.getOrThrow(item_name).automated_insertion_limit.quantity;
+                if (machine_state.selfIngredients.getQuantity(item_name) < limit) {
+                    machine_state.selfIngredients.setQuantity(item_name, limit);
+                }
+            }
+        }
+    }
+
     public execute(): void {
         const control_logic = this.control_logic;
         const context = this.simulation_context;
@@ -32,13 +48,14 @@ export class PrepareStep implements RunnerStep {
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id))
         
         while (true) {
+            this.kickStartLoopingRecipes();
             control_logic.executeForTick();
             if (context.tick_provider.getCurrentTick() > 1_000_000) {
                 const machines_not_output_full = context.machines.filter(it => it.machine_state.status !== MachineStatus.OUTPUT_FULL)
                 machines_not_output_full.forEach(it => {
                     console.error(`Machine ${it.machine_state.machine.entity_id} status: ${it.machine_state.status}`);
                     it.machine_state.machine.inputs.forEach(input => {
-                        if (it.machine_state.inventoryState.getItemOrThrow(input.item_name).quantity < 1) {
+                        if (MachineState.ingredientQuantity(it.machine_state, input.item_name) < 1) {
                             console.error(`  Missing input: ${input.item_name}`);
                         }
                     })

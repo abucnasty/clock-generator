@@ -38,6 +38,7 @@ import { ChangelogDialog } from './components/ChangelogDialog';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
+import { rateWarningOf } from './utils/rateWarning';
 
 const darkTheme = createTheme({
     palette: {
@@ -72,18 +73,6 @@ const darkTheme = createTheme({
 });
 
 
-// Simple HOCON parsing fallback - in real scenario use the browser config loader
-async function parseConfig(content: string): Promise<Config> {
-    // Try JSON first
-    try {
-        return JSON.parse(content);
-    } catch {
-        // For HOCON, we'd need to use the createBrowserConfigLoader
-        // For now, just throw an error suggesting JSON
-        throw new Error('HOCON parsing not yet implemented in browser. Please use JSON format.');
-    }
-}
-
 function App() {
     const {
         isInitialized,
@@ -98,6 +87,7 @@ function App() {
         stateTransitionHistory,
         clockOnlyTransferHistory,
         clockOnlyStateTransitionHistory,
+        fuelView,
         clockWindows,
         shiftOptions,
         simulationDurationTicks,
@@ -268,7 +258,6 @@ function App() {
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
-                            parseConfig={parseConfig}
                         />
                     </Toolbar>
                 </AppBar>
@@ -288,6 +277,7 @@ function App() {
                         validationStatus={validationStatus}
                         blueprintString={blueprintString}
                         selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
+                        rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
                     />
                 )}
 
@@ -443,6 +433,7 @@ function App() {
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
+                                    nonMovingBelts={config.overrides?.non_moving_belts}
                                     onUpdate={updateOverrides}
                                 />
                             </Box>
@@ -474,6 +465,7 @@ function App() {
                                 stateTransitionHistory={stateTransitionHistory}
                                 clockOnlyTransferHistory={clockOnlyTransferHistory}
                                 clockOnlyStateTransitionHistory={clockOnlyStateTransitionHistory}
+                                fuelView={fuelView}
                                 clockWindows={clockWindows}
                                 shiftOptions={shiftOptions}
                                 swingBackoffReport={swingBackoffReport}

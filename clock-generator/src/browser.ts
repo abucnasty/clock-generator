@@ -42,6 +42,20 @@ export {
 } from './config/config-browser';
 
 export {
+    LATEST_SIDECAR_VERSION,
+    SIDECAR_VERSION_WITH_ENERGY_CONSUMPTION,
+    SIDECAR_FEATURES,
+    SIDECAR_IMPORT_PIPELINE,
+    compareVersions,
+    checkSidecarImport,
+    sidecarFeatureStep,
+} from './config/sidecar-version';
+export type { SidecarFeature } from './config/sidecar-version';
+export { ImportPipeline } from './config/import-pipeline';
+export type { ImportInput, ImportStep, ImportedMachine } from './config/import-pipeline';
+export { Option } from './data-types/option';
+
+export {
     ConfigValidationError,
     ConfigValidationIssue,
     InserterCoverageError,
@@ -68,16 +82,20 @@ export {
     planClockAlternatives,
     runClockAlternativeTask,
     combineClockAlternativeRuns,
+    clockBeltLabel,
     BlueprintGenerationResult,
     ClockAlternative,
+    ClockBelt,
     ClockAlternativesResult,
     ClockAlternativeRun,
+    ClockRanking,
     ClockAlternativeContext,
     ClockAlternativeTask,
     ClockAlternativesPlan,
     GenerationProgress,
     AsBuiltStabilityCheck,
     ClockOnlyRun,
+    FuelConsumptionView,
     CheckedShift,
     CheckedShiftRow,
     ShiftRangeEdge,
@@ -90,6 +108,13 @@ export {
     SwingAttemptResult,
     SwingBackoffReport,
 } from './crafting/generate-blueprint';
+
+export {
+    FuelPlan,
+    FuelMachinePlan,
+    FuelInserterPlan,
+    FuelLevelSeries,
+} from './crafting/fuel-view';
 
 export {
     SerializableTransferPlan,
@@ -190,6 +215,7 @@ export {
 export {
     SerializableStateTransitionHistory,
     SerializableEntityStateTransitions,
+    SerializableFactorioState,
     SerializableStateTransition,
     serializeStateTransitionHistory,
 } from './crafting/sequence/state-transition-serializer';
@@ -242,4 +268,7 @@ export {
     Machine,
     ComputeMachineFactsParams,
 } from './entities/machine';
-export type { ClockInsight, MachineFactsEntry } from './crafting/insights';
+export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
+export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
+export { deadlockRiskNote } from './crafting/deadlock-risk';
+export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';

@@ -1,6 +1,7 @@
 import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import type { ClockInsight } from 'clock-generator/browser';
+import { ExactTicks, SwingComparison } from './SwingComparison';
 
 interface InsightsPanelProps {
     insights: ClockInsight[];
@@ -28,16 +29,25 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
             <Part label="What" text={insight.what} />
             <Part label="Why" text={insight.why} />
             <Part label="Explanation" text={insight.explanation} />
-            {insight.table && (
+            {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}
+            {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} /></ExactTicks> : <InsightTable table={insight.table} />)}
+        </Paper>
+    );
+}
+
+function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) {
+    return (
+        <>
+            {(
                 <TableContainer sx={{ mt: 1 }}>
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                {insight.table.columns.map(column => <TableCell key={column}>{column}</TableCell>)}
+                                {table.columns.map(column => <TableCell key={column}>{column}</TableCell>)}
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {insight.table.rows.map((row, index) => (
+                            {table.rows.map((row, index) => (
                                 <TableRow key={index}>
                                     {row.map((cell, column) => <TableCell key={column}>{cell}</TableCell>)}
                                 </TableRow>
@@ -46,7 +56,7 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
                     </Table>
                 </TableContainer>
             )}
-        </Paper>
+        </>
     );
 }
 

@@ -93,7 +93,7 @@ export class DebugPluginFactory {
             }
 
             state.machine.inputs.forEach((input) => {
-                const input_quantity = state.inventoryState.getQuantity(input.ingredient.name);
+                const input_quantity = MachineState.ingredientQuantity(state, input.ingredient.name);
                 message += ` \t "${input.ingredient.name}"=${input_quantity}`;
             });
 

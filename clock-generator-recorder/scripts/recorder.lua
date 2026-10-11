@@ -97,8 +97,70 @@ local function recipe_item_names(recipe, key)
     return names
 end
 
+---Names of the items a burner machine accepts as fuel. Which prototype attributes and filters exist differs between
+---Factorio versions, so each way of finding them is tried safely, and the fuel of a biochamber is the last resort.
+---@param burner LuaBurner
+---@return string[]
+local function fuel_item_names(burner)
+    local found = {}
+
+    local categories = {}
+    local ok_categories, fuel_categories = pcall(function() return burner.fuel_categories end)
+    if ok_categories and fuel_categories then
+        for category in pairs(fuel_categories) do
+            categories[category] = true
+        end
+    end
+
+    -- the items of each fuel category, from the prototype filter
+    for category in pairs(categories) do
+        local ok, items = pcall(prototypes.get_item_filtered, { { filter = "fuel-category", ["fuel-category"] = category } })
+        if ok and items then
+            for name in pairs(items) do
+                found[name] = true
+            end
+        end
+    end
+
+    -- else the fuel category of every item prototype, where the attribute exists
+    if next(found) == nil then
+        for name, item in pairs(prototypes.item) do
+            local ok, category = pcall(function() return item.fuel_category end)
+            if ok and category and categories[category] then
+                found[name] = true
+            end
+        end
+    end
+
+    -- else whatever the burner holds or burns now
+    if next(found) == nil then
+        local ok_inventory, inventory = pcall(function() return burner.inventory end)
+        if ok_inventory and inventory then
+            for _, stack in pairs(inventory.get_contents()) do
+                found[stack.name] = true
+            end
+        end
+        local ok_burning, burning = pcall(function() return burner.currently_burning end)
+        if ok_burning and burning and burning.name then
+            found[burning.name.name] = true
+        end
+    end
+
+    -- biochambers burn nutrients and nothing else
+    if next(found) == nil and categories["nutrients"] then
+        found["nutrients"] = true
+    end
+
+    local names = {}
+    for name in pairs(found) do
+        table.insert(names, name)
+    end
+    table.sort(names)
+    return names
+end
+
 ---@param result ExtractionResult
----@return table[] inserters, table[] machines
+---@return table[] inserters, table[] machines, table[] drills
 local function build_tracks(result)
     local inserters = {}
     for _, exported in ipairs(export.exported_inserters(result)) do
@@ -124,6 +186,12 @@ local function build_tracks(result)
         local inputs, outputs = {}, {}
         for _, name in ipairs(recipe_item_names(recipe, "ingredients")) do inputs[name] = {} end
         for _, name in ipairs(recipe_item_names(recipe, "products")) do outputs[name] = {} end
+        -- A burner machine (biochamber) also records its fuel slot and the fuel it is burning
+        local fuel = nil
+        if entity.burner then
+            fuel = {}
+            for _, name in ipairs(fuel_item_names(entity.burner)) do fuel[name] = {} end
+        end
         table.insert(machines, {
             entity = entity,
             info = {
@@ -139,10 +207,39 @@ local function build_tracks(result)
                 products_finished = {},
                 inputs = inputs,
                 outputs = outputs,
+                fuel = fuel,
+                burning_remaining = fuel and {} or nil,
+                currently_burning = fuel and {} or nil,
             },
         })
     end
-    return inserters, machines
+    -- A mining drill that drops into a machine: its status and how far along the ore it is mining is
+    local drills = {}
+    for id, drill in ipairs(result.drills) do
+        local entity = drill.entity
+        local target_id = drill.drop_target_unit_number and result.unit_number_to_id[drill.drop_target_unit_number] or nil
+        table.insert(drills, {
+            entity = entity,
+            info = {
+                id = id,
+                unit_number = entity.unit_number,
+                name = entity.name,
+                mined_item_name = drill.mined_item_name,
+                target = target_id and { type = "machine", id = target_id } or nil,
+            },
+            samples = { status = {}, mining_progress = {}, bonus_mining_progress = {} },
+        })
+    end
+    return inserters, machines, drills
+end
+
+---A number attribute of an entity, or 0 where this Factorio version does not have it
+---@param entity LuaEntity
+---@param attribute string
+---@return number
+local function number_or_zero(entity, attribute)
+    local ok, value = pcall(function() return entity[attribute] end)
+    return ok and type(value) == "number" and value or 0
 end
 
 ---@param recording table
@@ -183,8 +280,34 @@ local function sample(recording)
             for name, values in pairs(s.outputs) do
                 table.insert(values, output_inventory and output_inventory.get_item_count(name) or 0)
             end
+            local burner = s.fuel and entity.burner
+            if burner then
+                -- the burner's attributes differ between Factorio versions, so a missing one records nothing instead of crashing
+                local _, fuel_inventory = pcall(function() return burner.inventory end)
+                for name, values in pairs(s.fuel) do
+                    table.insert(values, fuel_inventory and fuel_inventory.get_item_count(name) or 0)
+                end
+                -- energy left in the item being burned, in MJ
+                local _, remaining = pcall(function() return burner.remaining_burning_fuel end)
+                table.insert(s.burning_remaining, round4((remaining or 0) / 1000000))
+                local _, burning = pcall(function() return burner.currently_burning end)
+                record_change(s.currently_burning, index, burning and burning.name and burning.name.name or "")
+            end
         else
             record_change(s.status, index, "invalid")
+        end
+    end
+
+    for _, track in ipairs(recording.drills or {}) do
+        local entity, s = track.entity, track.samples
+        if entity.valid then
+            record_change(s.status, index, status_name(entity))
+            table.insert(s.mining_progress, round4(number_or_zero(entity, "mining_progress")))
+            table.insert(s.bonus_mining_progress, round4(number_or_zero(entity, "bonus_mining_progress")))
+        else
+            record_change(s.status, index, "invalid")
+            table.insert(s.mining_progress, 0)
+            table.insert(s.bonus_mining_progress, 0)
         end
     end
 end
@@ -218,6 +341,18 @@ function recorder.is_active()
     return storage.recording ~= nil
 end
 
+---How far the running recording is and where the last finished one was written, for a script that waits for it
+---@return table
+function recorder.status()
+    local recording = storage.recording
+    return {
+        active = recording ~= nil,
+        phase = recording and recording.phase or nil,
+        sample_count = recording and recording.sample_count or nil,
+        last_recording = storage.last_recording,
+    }
+end
+
 ---Write the recording to script-output and clear it
 ---@param reason string
 function recorder.finish(reason)
@@ -243,40 +378,64 @@ function recorder.finish(reason)
         config = recording.config,
         inserters = serialize_tracks(recording.inserters),
         machines = serialize_tracks(recording.machines),
+        drills = serialize_tracks(recording.drills or {}),
     }
 
     local filename = "clock-generator-recorder/recording-" .. recording.start_game_tick .. ".json"
     helpers.write_file(filename, helpers.table_to_json(output), false, recording.player_index)
+    -- where a script that started the recording finds it
+    storage.last_recording = { filename = filename, sample_count = recording.sample_count, stop_reason = reason }
     notify(recording.player_index, "Recorded " .. recording.sample_count .. " ticks (" .. reason .. "). Saved to script-output/" .. filename)
+end
+
+---What a recording of these entities would track, without samples: the config and the id of each inserter and machine
+---@param force LuaForce
+---@param entities LuaEntity[]
+---@return table
+function recorder.describe(force, entities)
+    local result = extraction.extract_all_entities(entities, force)
+    local inserters, machines, drills = build_tracks(result)
+    local function infos(tracks)
+        local out = {}
+        for _, track in ipairs(tracks) do
+            table.insert(out, track.info)
+        end
+        return out
+    end
+    return { config = export.to_table(result), inserters = infos(inserters), machines = infos(machines), drills = infos(drills) }
 end
 
 ---Start a recording for the selected entities
 ---@param force LuaForce
 ---@param entities LuaEntity[]
 ---@param player_index uint|nil Player to notify and to write the file for; nil writes on the server
+---@param options {periods: number?, minimum_ticks: number?, ticks_without_clock: number?, ignore_clock: boolean?}|nil Used in place of the mod settings
 ---@return boolean started
-function recorder.start(force, entities, player_index)
+function recorder.start(force, entities, player_index, options)
     if storage.recording then
         notify(player_index, "A recording is already running. Alt-select with the recorder to stop it.")
         return false
     end
 
     local result = extraction.extract_all_entities(entities, force)
-    local inserters, machines = build_tracks(result)
+    local inserters, machines, drills = build_tracks(result)
     if #inserters == 0 and #machines == 0 then
         notify(player_index, "No machines or inserters found in selection.")
         return false
     end
+    storage.last_recording = nil
 
+    options = options or {}
     local settings_table = settings.global
-    local clock = find_clock(entities)
+    local clock = not options.ignore_clock and find_clock(entities) or nil
 
     storage.recording = {
         player_index = player_index,
         clock = clock,
         clock_values = {},
-        periods = settings_table["clock-generator-recorder-periods"].value,
-        fallback_ticks = settings_table["clock-generator-recorder-ticks-without-clock"].value,
+        periods = options.periods or settings_table["clock-generator-recorder-periods"].value,
+        minimum_ticks = options.minimum_ticks or settings_table["clock-generator-recorder-minimum-ticks"].value,
+        fallback_ticks = options.ticks_without_clock or settings_table["clock-generator-recorder-ticks-without-clock"].value,
         phase = clock and "waiting" or "recording",
         waited_ticks = 0,
         wraps = 0,
@@ -286,11 +445,14 @@ function recorder.start(force, entities, player_index)
         config = export.to_table(result),
         inserters = inserters,
         machines = machines,
+        drills = drills,
     }
 
     if clock then
         notify(player_index, "Found clock combinator. Waiting for it to wrap to start recording "
-            .. storage.recording.periods .. " period(s) of " .. #inserters .. " inserters and " .. #machines .. " machines.")
+            .. storage.recording.periods .. " period(s)"
+            .. (storage.recording.minimum_ticks > 0 and (", and whole periods until at least " .. storage.recording.minimum_ticks .. " ticks,") or "")
+            .. " of " .. #inserters .. " inserters, " .. #machines .. " machines and " .. #drills .. " mining drills.")
     else
         notify(player_index, "No clock combinator selected; recording "
             .. storage.recording.fallback_ticks .. " ticks without clock alignment.")
@@ -328,8 +490,9 @@ function recorder.on_tick()
         local value = read_clock(recording.clock) or 0
         if recording.sample_count > 0 and value < recording.last_clock then
             recording.wraps = recording.wraps + 1
-            if recording.wraps >= recording.periods then
-                recorder.finish("recorded " .. recording.periods .. " clock period(s)")
+            -- whole periods: at least the periods asked for, and more until the minimum ticks are recorded
+            if recording.wraps >= recording.periods and recording.sample_count >= (recording.minimum_ticks or 0) then
+                recorder.finish("recorded " .. recording.wraps .. " clock period(s)")
                 return
             end
         end

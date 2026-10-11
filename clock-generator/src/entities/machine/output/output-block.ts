@@ -1,12 +1,21 @@
-import { ItemName } from "../../../data";
+import { EnrichedIngredient, ItemName } from "../../../data";
 import { MachineType } from "../machine-metadata";
 import { RecipeMetadata } from "../recipe";
 import { OverloadMultiplier } from "../traits/overload-multiplier";
 
 export interface OutputBlock {
     readonly item_name: ItemName;
+    /** The most of the product the machine holds before it takes no more ingredients or has no room for it: never more than a stack */
     readonly quantity: number;
     readonly max_stack_size: number;
+    /**
+     * The amount of the product from which the machine takes no more ingredients. For a machine with a recipe this is
+     * the overload multiplier times the amount a craft makes, also where that is more than a stack: such a machine
+     * stops crafting when its stack is full, and goes on taking ingredients up to their insertion limits. Recorded in
+     * Factorio 2.1.21 on three builds: a cryogenic plant that makes plastic (multiplier 73, 2 a craft, block 146)
+     * takes coal while it holds a full stack of 100 plastic bars.
+     */
+    readonly ingredients_blocked_at: number;
 }
 
 
@@ -15,7 +24,7 @@ function fromRecipe(machine_type: MachineType, recipe: RecipeMetadata, overloadM
         return forFurnace(recipe);
     }
 
-    if (machine_type === MachineType.MACHINE) {
+    if (machine_type === MachineType.MACHINE || machine_type === MachineType.BIOCHAMBER) {
         return forMachine(recipe, overloadMultiplier);
     }
 
@@ -37,6 +46,7 @@ function forMachine(recipe: RecipeMetadata, overloadMultiplier: OverloadMultipli
         item_name: recipe.output.name,
         quantity: Math.min(stack_size, overload_quantity),
         max_stack_size: stack_size,
+        ingredients_blocked_at: overload_quantity,
     };
 }
 
@@ -46,9 +56,22 @@ function itemStackSize(recipe: RecipeMetadata): OutputBlock {
         item_name: recipe.output.name,
         quantity: stack_size,
         max_stack_size: stack_size,
+        ingredients_blocked_at: stack_size,
+    };
+}
+
+/** A by-product only blocks the machine once its stack is full. */
+function forByProduct(output: EnrichedIngredient): OutputBlock {
+    const stack_size = output.item.stack_size;
+    return {
+        item_name: output.name,
+        quantity: stack_size,
+        max_stack_size: stack_size,
+        ingredients_blocked_at: stack_size,
     };
 }
 
 export const OutputBlock = {
-    fromRecipe: fromRecipe
+    fromRecipe: fromRecipe,
+    forByProduct: forByProduct,
 };

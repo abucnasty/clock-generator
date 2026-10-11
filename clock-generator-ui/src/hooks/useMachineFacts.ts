@@ -5,7 +5,8 @@ export interface UseMachineFactsParams {
     recipe: string;
     productivity: number;
     crafting_speed: number;
-    type?: 'machine' | 'furnace';
+    type?: 'machine' | 'furnace' | 'biochamber';
+    energy_consumption_bonus?: number;
 }
 
 export interface UseMachineFactsResult {
@@ -37,6 +38,7 @@ function computeFactsSync(params: UseMachineFactsParams): SerializableMachineFac
             productivity: params.productivity,
             crafting_speed: params.crafting_speed,
             type: params.type,
+            energy_consumption_bonus: params.energy_consumption_bonus,
         });
     } catch {
         return null;
@@ -51,7 +53,7 @@ function computeFactsSync(params: UseMachineFactsParams): SerializableMachineFac
  * Call `initializeMachineFacts()` during app initialization.
  */
 export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsResult {
-    const { recipe, productivity, crafting_speed, type } = params;
+    const { recipe, productivity, crafting_speed, type, energy_consumption_bonus } = params;
 
     const result = useMemo(() => {
         if (!recipe) {
@@ -63,12 +65,12 @@ export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsR
         }
 
         try {
-            const facts = computeFactsSync({ recipe, productivity, crafting_speed, type });
+            const facts = computeFactsSync({ recipe, productivity, crafting_speed, type, energy_consumption_bonus });
             return { facts, error: null };
         } catch (e) {
             return { facts: null, error: e instanceof Error ? e.message : 'Unknown error' };
         }
-    }, [recipe, productivity, crafting_speed, type]);
+    }, [recipe, productivity, crafting_speed, type, energy_consumption_bonus]);
 
     return result;
 }

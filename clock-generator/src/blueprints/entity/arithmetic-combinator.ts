@@ -1,4 +1,4 @@
-import { ArithmeticConditions, Entity, EntityType, Position, SignalId } from "../components";
+import { ArithmeticConditions, Entity, EntityType, fitPlayerDescription, Position, SignalId } from "../components";
 
 export interface ArithmeticCombinatorEntity extends Entity {
     readonly name: EntityType;
@@ -17,7 +17,7 @@ function withConstant(args: {
     return {
         name: EntityType.ARITHMETIC_COMBINATOR,
         position: args.position,
-        player_description: args.description?.join("\n"),
+        player_description: args.description && fitPlayerDescription(args.description),
         control_behavior: {
             arithmetic_conditions: {
                 first_signal: args.input,

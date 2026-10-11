@@ -163,10 +163,11 @@ function MachineEditSection({
                     <Select
                         value={machine.type || 'machine'}
                         label="Type"
-                        onChange={(e) => onUpdate(entityIndex, 'type', e.target.value as 'machine' | 'furnace')}
+                        onChange={(e) => onUpdate(entityIndex, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
                     >
                         <MenuItem value="machine">Assembler</MenuItem>
                         <MenuItem value="furnace">Furnace</MenuItem>
+                        <MenuItem value="biochamber">Biochamber</MenuItem>
                     </Select>
                 </FormControl>
             </Box>

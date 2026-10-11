@@ -1,5 +1,6 @@
 import { InfoOutlined } from '@mui/icons-material';
 import {
+    Alert,
     Box,
     Button,
     Chip,
@@ -17,14 +18,23 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
+import { lossesOf } from '../utils/rateWarning';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
+
+/** A clock that holds its expected output and does not get back to it after a backpressure loss */
+const doesNotRecover = (alternative: ClockAlternativeView) => alternative.holdsExpectedOutput && !alternative.isStable;
 
 function statusDetail(alternative: ClockAlternativeView): string {
     const check = alternative.asBuilt;
     if (!check) {
         return 'Not checked';
+    }
+    if (doesNotRecover(alternative)) {
+        const losses = lossesOf(alternative);
+        return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
+            + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run the losses are tried on.');
     }
     const phases = `${check.start_phases_checked} clock start phase(s) simulated`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
@@ -57,24 +67,50 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
         .map((alternative, index) => ({ alternative, index }))
         .filter(({ alternative, index }) => !hidesUnstable || alternative.isStable || index === selectedIndex);
     const hiddenCount = alternatives.length - rows.length;
+    const anyHolds = alternatives.some(alternative => alternative.holdsExpectedOutput);
+    // of the build, so every clock has the same
+    const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
             <Typography variant="h6">Potential Clocks</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Each potential clock was checked by simulating the build driven only by the clock windows,
-                starting the clock at several points. Fewer windows means more batched swings.
+                starting the clock at several points, and a clock that holds the target rate was then tried
+                for backpressure loss: each input stops arriving for a while, and each output stops being taken
+                away, and the build has to get back to its rate by itself. The one selected for you has the fewest
+                wake-ups among those that hold the target rate and get back to it; a clock that leaves belt pickup slack out for a non-moving
+                belt is only selected when no clock for a moving belt holds it. With "Belts do not move" on
+                every clock is made without the slack. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
-                {!anyStable && alternatives.length > 0 && pending.length === 0 && (
+                {!anyStable && alternatives.length > 0 && pending.length === 0 && (anyHolds ? (
+                    <> None of the clocks tried survives backpressure loss, which can be a limit of the build and not
+                        of its clocks. They are listed for what they are: one that holds the target rate has to be
+                        restarted after a loss.</>
+                ) : (
                     <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>
-                )}
+                ))}
             </Typography>
+            {deadlockRisk !== null && (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                    {deadlockRisk} The trials for backpressure loss do not see this, so on this build they do not decide
+                    which clock is selected for you: the clocks that hold the target rate are ranked by their wake-ups.
+                </Alert>
+            )}
             <TableContainer>
                 <Table size="small">
                     <TableHead>
                         <TableRow>
                             <TableCell padding="checkbox" />
                             <TableCell>Clock</TableCell>
+                            <TableCell>
+                                <Tooltip
+                                    title="The belt the clock is made for. Moving: each window of an inserter that picks up from a belt stays open the ticks shown longer (belt pickup slack), so a pickup that comes late on a moving belt can finish; a rule of thumb, not a simulated belt. Non-moving belt: the windows fit a belt that is full and does not move, which is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A subtick clock is always made for a non-moving belt, and is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt."
+                                    arrow
+                                >
+                                    <span>Belt</span>
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="right">
                                 <Tooltip
                                     title="Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of cycles (the clock period)."
@@ -85,7 +121,15 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                             </TableCell>
                             <TableCell align="right">Clock period</TableCell>
                             <TableCell align="right">Inserter windows</TableCell>
-                            <TableCell align="right">Rate (items/s)</TableCell>
+                            <TableCell align="right">
+                                <Tooltip
+                                    title="How often a machine wakes an inserter that is enabled and waiting on it, per minute, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a check that moves little or nothing; fewer is better. Shown for clocks that were run long enough to count them."
+                                    arrow
+                                >
+                                    <span>Wake-ups (per min)</span>
+                                </Tooltip>
+                            </TableCell>
+                            <TableCell align="right">Rate achieved (items/s)</TableCell>
                             <TableCell align="right">Clock-only output</TableCell>
                             <TableCell>Status</TableCell>
                         </TableRow>
@@ -119,11 +163,17 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                         </Tooltip>
                                     </Box>
                                 </TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{alternative.beltLabel}</TableCell>
                                 <TableCell align="right">
                                     {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
                                 </TableCell>
                                 <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
                                 <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
+                                <TableCell align="right">
+                                    {alternative.asBuilt?.wake_ups
+                                        ? Math.round(alternative.asBuilt.wake_ups.wake_ups_per_minute)
+                                        : '—'}
+                                </TableCell>
                                 <TableCell align="right">{alternative.itemsPerSecond.toFixed(2)}</TableCell>
                                 <TableCell align="right">
                                     {alternative.asBuilt
@@ -134,8 +184,8 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                     <Tooltip title={statusDetail(alternative)} arrow>
                                         <Chip
                                             size="small"
-                                            label={alternative.isStable ? 'Stable' : 'Unstable'}
-                                            color={alternative.isStable ? 'success' : 'error'}
+                                            label={alternative.isStable ? 'Stable' : doesNotRecover(alternative) ? 'No recovery' : 'Unstable'}
+                                            color={alternative.isStable ? 'success' : doesNotRecover(alternative) ? 'warning' : 'error'}
                                             variant="outlined"
                                         />
                                     </Tooltip>
@@ -147,7 +197,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                 <TableCell padding="checkbox">
                                     <CircularProgress size={16} sx={{ ml: 1.5 }} />
                                 </TableCell>
-                                <TableCell colSpan={6} sx={{ color: 'text.secondary' }}>
+                                <TableCell colSpan={9} sx={{ color: 'text.secondary' }}>
                                     {label}: computing…
                                 </TableCell>
                             </TableRow>

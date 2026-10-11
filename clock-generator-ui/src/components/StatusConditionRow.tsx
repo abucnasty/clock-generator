@@ -22,6 +22,7 @@ const MACHINE_STATUSES = [
     { value: MachineStatus.INGREDIENT_SHORTAGE, label: 'Ingredient Shortage' },
     { value: MachineStatus.WORKING, label: 'Working' },
     { value: MachineStatus.OUTPUT_FULL, label: 'Output Full' },
+    { value: MachineStatus.NO_FUEL, label: 'No Fuel' },
 ] as const;
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];

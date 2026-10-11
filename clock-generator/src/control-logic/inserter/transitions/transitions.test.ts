@@ -1,15 +1,22 @@
 import { describe, test, expect, vi, beforeEach } from "vitest"
 import { mock } from 'vitest-mock-extended';
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
-import { BeltState, ChestState, EntityState, InserterState, MachineState } from "../../../state"
+import { BeltState, ChestState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineMetadata, MachineType, RecipeMetadata } from "../../../entities"
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
 import { InserterAnimationOverrideConfig } from "../../../config/config"
-import { InserterPickupMode } from "../modes"
+import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";
 
+
+/** A belt built by hand for a test, with the gate every belt has: nothing withheld, nothing refused */
+function withSupplyGate(belt: BeltState): BeltState {
+    // assigned after the mock is made, which would wrap the sets of the gate otherwise
+    belt.supply = new SupplyGate();
+    return belt;
+}
 
 describe("transitions (belt to machine)", () => {
 
@@ -62,9 +69,9 @@ describe("transitions (belt to machine)", () => {
     }
 
     const createTestContext = (): TestContext => {
-        const mockSource: BeltState = mock<BeltState>({
+        const mockSource: BeltState = withSupplyGate(mock<BeltState>({
             entity_id: EntityId.forBelt(-1),
-        });
+        }));
 
         const mockSink: MachineState = MachineState.forMachine(
             createMachine("iron-gear-wheel")
@@ -155,17 +162,111 @@ describe("transitions (belt to machine)", () => {
         })
     })
 
+    // An inserter that waits for space in a machine is asleep and acts in the tick after the one that wakes it.
+    // Recorded in Factorio 2.1.21 on inserters that take from a machine or a chest and had waited 6 ticks or more for a
+    // machine at its output block, at the tick another inserter took its products down: the first items a tick later
+    // in 5,777 cases of 5,777 where the machine finished no craft the tick before, in the same tick in 3,756 of 3,756
+    // where it did. On the advanced circuit scaffold: the output inserter took 16 advanced circuits at sample 230 of
+    // the recording of the evenly spaced windows (28 down to 12, block 21), and the cable and the plastic inserter of
+    // that plant, waiting since 221 and 224, took their hands at 231.
+    describe("an inserter that waits for space in a machine whose products another inserter takes", () => {
+        const setup = (source_state: EntityState) => {
+            const sink = MachineState.forMachine(createMachine("transport-belt"));
+            const inserter_state = InserterState.createIdle(createInserter({
+                source: { entity_id: source_state.entity_id, item_names: new Set(["iron-gear-wheel"]) },
+                sink: { entity_id: sink.entity_id, item_names: new Set(["iron-gear-wheel"]) },
+                filters: ["iron-gear-wheel"],
+            }));
+            const pickup_mode = mock<InserterPickupMode>();
+            let tick = 0;
+            const evaluator = IdleModeTransitionEvaluator.create({
+                inserter_state, source_state, sink_state: sink, pickup_mode,
+                disabled_mode: mock(),
+                tick_provider: { getCurrentTick: () => tick },
+                enable_control: AlwaysEnabledControl,
+            });
+            const block = sink.machine.output.outputBlock;
+            return {
+                sink, pickup_mode,
+                /** The inserter looks at its sink in a tick */
+                look: () => { tick += 1; return evaluator.evaluateTransition(); },
+                /** The machine ends a tick with its output at the block */
+                endTickAtTheBlock: (finished_craft: boolean) => {
+                    sink.inventoryState.setQuantity(block.item_name, block.ingredients_blocked_at);
+                    sink.outputBlockedAfterLastTick = true;
+                    sink.finishedCraftInLastTick = finished_craft;
+                },
+                /** An output inserter, which is updated first, takes the products in the tick the inserter looks next */
+                takeProducts: () => sink.inventoryState.setQuantity(block.item_name, 0),
+                /** The machine ends a tick with its output under the block */
+                endTickUnderTheBlock: () => { sink.outputBlockedAfterLastTick = false; sink.finishedCraftInLastTick = false; },
+            };
+        };
+        const machineWithGears = (): MachineState => {
+            const source = MachineState.forMachine(createMachine("iron-gear-wheel"));
+            source.inventoryState.setQuantity("iron-gear-wheel", 50);
+            return source;
+        };
+
+        test("takes its first items a tick after the products are taken", () => {
+            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode } = setup(machineWithGears());
+            endTickAtTheBlock(false);
+            expect(look()).toBe(ModeTransition.NONE);
+            takeProducts();
+            expect(look()).toBe(ModeTransition.NONE);
+            endTickUnderTheBlock();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("takes them in the tick the products are taken when the machine finished a craft the tick before", () => {
+            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(machineWithGears());
+            endTickAtTheBlock(false);
+            expect(look()).toBe(ModeTransition.NONE);
+            endTickAtTheBlock(true);
+            takeProducts();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("is not held up when it only looks in the tick the products are taken: its arm came back, or its window opened", () => {
+            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(machineWithGears());
+            endTickAtTheBlock(false);
+            takeProducts();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("waits a tick once: products taken again in the tick after do not hold it up again", () => {
+            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(machineWithGears());
+            endTickAtTheBlock(false);
+            expect(look()).toBe(ModeTransition.NONE);
+            takeProducts();
+            expect(look()).toBe(ModeTransition.NONE);
+            // the machine was back at its block when that tick was done, and is emptied again
+            endTickAtTheBlock(false);
+            takeProducts();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("leaves an inserter that takes from a belt to its pickup mode, which lands the first stack a tick later", () => {
+            const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            const { look, endTickAtTheBlock, takeProducts, pickup_mode } = setup(belt);
+            endTickAtTheBlock(false);
+            expect(look()).toBe(ModeTransition.NONE);
+            takeProducts();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+    })
+
     describe("InserterPickupMode (belt to machine)", () => {
 
         test("stops picking up from belt once stack size is reached", () => {
-            const mockSource: BeltState = mock<BeltState>({
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
                 }
-            });
+            }));
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -209,15 +310,80 @@ describe("transitions (belt to machine)", () => {
             expect(inserterState.held_item?.quantity).toBeLessThanOrEqual(stack_size);
         })
 
-        test("caps pickup quantity when remaining capacity is less than lane stack size", () => {
-            const mockSource: BeltState = mock<BeltState>({
+        test("holds a partly filled hand while the machine's output is at the block, and goes on once it is under", () => {
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 belt: {
                     lanes: [
                         { ingredient_name: "iron-plate", stack_size: 4 }
                     ]
                 }
+            }));
+
+            const mockSink: MachineState = MachineState.forMachine(
+                createMachine("iron-gear-wheel")
+            );
+
+            const inserterState = InserterState.createIdle(createInserter({
+                source: {
+                    entity_id: mockSource.entity_id,
+                    item_names: new Set(["iron-plate"])
+                },
+                sink: {
+                    entity_id: mockSink.entity_id,
+                    item_names: new Set(["iron-plate"])
+                },
+                stack_size: InserterStackSize.SIZE_16,
+                filters: ["iron-plate"]
+            }));
+
+            const pickup_mode = InserterPickupMode.create({
+                inserterState: inserterState,
+                sourceState: mockSource,
+                sinkState: mockSink,
             });
+
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(4);
+
+            // the machine's output reaches the block: the hand waits with what it holds
+            const block = mockSink.machine.output.outputBlock;
+            mockSink.inventoryState.addQuantity(block.item_name, block.quantity);
+            pickup_mode.executeForTick();
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(4);
+
+            // the output drops under the block and the inserter comes back from waiting: one tick to decide, then the next stack
+            mockSink.inventoryState.removeQuantity(block.item_name, 1);
+            pickup_mode.onEnter(new InserterWaitForSinkMode());
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(4);
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(8);
+
+            // Again at the block, and this time the machine finished a craft in the tick before its products are taken:
+            // that had woken the inserter, and the next stack lands in the tick they are taken. Recorded in Factorio
+            // 2.1.21: 248 hands of 248 went on in that tick, 843 of 843 a tick later without a craft the tick before.
+            mockSink.inventoryState.addQuantity(block.item_name, 1);
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(8);
+            mockSink.outputBlockedAfterLastTick = true;
+            mockSink.finishedCraftInLastTick = true;
+            mockSink.inventoryState.removeQuantity(block.item_name, 1);
+            pickup_mode.onEnter(new InserterWaitForSinkMode());
+            pickup_mode.executeForTick();
+            expect(inserterState.held_item?.quantity).toBe(12);
+        })
+
+        test("caps pickup quantity when remaining capacity is less than lane stack size", () => {
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
+                entity_id: EntityId.forBelt(-1),
+                belt: {
+                    lanes: [
+                        { ingredient_name: "iron-plate", stack_size: 4 }
+                    ]
+                }
+            }));
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("iron-gear-wheel")
@@ -258,7 +424,7 @@ describe("transitions (belt to machine)", () => {
         })
 
         test("skips blocked belt item and picks next available unblocked item", () => {
-            const mockSource: BeltState = mock<BeltState>({
+            const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
                 inventoryState: mock<any>(),
                 belt: {
@@ -267,7 +433,7 @@ describe("transitions (belt to machine)", () => {
                         { ingredient_name: "copper-cable", stack_size: 4 },
                     ]
                 }
-            });
+            }));
 
             const mockSink: MachineState = MachineState.forMachine(
                 createMachine("electronic-circuit")

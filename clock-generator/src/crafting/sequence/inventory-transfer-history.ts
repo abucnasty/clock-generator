@@ -18,8 +18,11 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
     }
 
     public static removeDuplicateEntities(history: InventoryTransferHistory): InventoryTransferHistory {
-        const deduplicated = deduplicateEntityTransfers(history.getAllTransfers());
-        return new InventoryTransferHistory(deduplicated);
+        const merged_entities = new Map<string, EntityId[]>();
+        const deduplicated = deduplicateEntityTransfers(history.getAllTransfers(), merged_entities);
+        const result = new InventoryTransferHistory(deduplicated);
+        result.merged_entities = merged_entities;
+        return result;
     }
 
     public static offsetHistory(
@@ -33,7 +36,8 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
     public static trimEndsToAvoidBackSwingWakeLists(
         history: InventoryTransferHistory,
         entity_registry: ReadableEntityRegistry,
-        entity_transfer_count_map: EntityTransferCountMap
+        entity_transfer_count_map: EntityTransferCountMap,
+        period_ticks?: number,
     ): InventoryTransferHistory {
         const trimmed: Map<EntityId, InventoryTransfer[]> = new Map();
 
@@ -45,6 +49,12 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
             }
             const source_entity = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
             if (Entity.isBelt(source_entity)) {
+                trimmed.set(entityId, transfers);
+                return;
+            }
+
+            // an inserter that is not in the plan (one that only takes by-products away) has no swing count to trim by
+            if (!entity_transfer_count_map.has(entityId)) {
                 trimmed.set(entityId, transfers);
                 return;
             }
@@ -62,18 +72,34 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
                 entity_transfer_count_map.getOrThrow(entityId)
             );
 
-            const trimmed_transfers: InventoryTransfer[] = transfers.map(transfer => {
+            const trimmed_transfers: InventoryTransfer[] = transfers.flatMap(transfer => {
                 const original_range = transfer.tick_range;
                 const trimmed_range = OpenRange.from(
                     original_range.start_inclusive,
                     original_range.end_inclusive + last_swing_offset.ticks
                 );
-                return {
+                const in_run: InventoryTransfer = {
                     item_name: transfer.item_name,
                     tick_range: trimmed_range,
                     amount: transfer.amount,
+                };
+                if (transfer.pickup_tick_before_run === undefined || period_ticks === undefined) {
+                    return [in_run];
                 }
-            }).filter(transfer => transfer.tick_range.duration().ticks > 0);
+                // A swing in flight when the run started was picked up at the end of the period before. The run
+                // repeats every period, so that pickup needs a window at the end of this one, up to where the part
+                // of the swing inside the run takes over.
+                const wrapped_start = transfer.pickup_tick_before_run + period_ticks;
+                const before_run: InventoryTransfer = {
+                    item_name: transfer.item_name,
+                    tick_range: OpenRange.from(
+                        wrapped_start,
+                        Math.max(wrapped_start, Math.min(trimmed_range.end_inclusive + period_ticks, original_range.start_inclusive + period_ticks - 1)),
+                    ),
+                    amount: 0,
+                };
+                return [in_run, before_run];
+            }).filter(transfer => transfer.tick_range.duration().ticks > 0 || transfer.amount === 0 && transfer.tick_range.duration().ticks >= 0);
 
             trimmed.set(entityId, trimmed_transfers);
         })
@@ -91,8 +117,19 @@ export class InventoryTransferHistory extends MapExtended<EntityId, InventoryTra
         super(Array.from(transfers.entries()));
     }
 
+    /** The entities removeDuplicateEntities left out, by the id of the entity that stands for them */
+    public merged_entities: ReadonlyMap<string, EntityId[]> = new Map();
+
     /** Off during prepare and warmup, whose transfers are cleared before the measured run anyway */
     public recording = true;
+
+    /** Ticks the tick provider was moved back by when the recorded run started, i.e. how long the warm up ran */
+    public ticks_before_run = 0;
+
+    /** A tick read before the recorded run started, as a (negative) tick of the run */
+    public tickBeforeRun(tick: number): number {
+        return tick - this.ticks_before_run;
+    }
 
     public recordTransfer(entity_id: EntityId, transfer: InventoryTransfer): void {
         if (!this.recording) {
@@ -126,10 +163,13 @@ function mergeOverlappingRanges(original: ReadonlyMap<EntityId, InventoryTransfe
 
         by_item.forEach((ranges, itemName) => {
             const merged_ranges: InventoryTransfer[] = OpenRange.reduceRanges(ranges.map(it => it.tick_range), overlap_threshold).map(it => {
+                const merged = ranges.filter(r => it.overlaps(r.tick_range));
+                const before_run = merged.map(r => r.pickup_tick_before_run).filter(tick => tick !== undefined);
                 return {
                     item_name: itemName,
                     tick_range: it,
-                    amount: ranges.filter(r => it.overlaps(r.tick_range)).reduce((sum, r) => sum + r.amount, 0),
+                    amount: merged.reduce((sum, r) => sum + r.amount, 0),
+                    pickup_tick_before_run: before_run.length > 0 ? Math.min(...before_run) : undefined,
                 }
             })
             const existing_ranges = result.get(entityId) ?? []
@@ -181,6 +221,7 @@ function correctNegativeOffsets(original: ReadonlyMap<EntityId, InventoryTransfe
                     it.tick_range.end_inclusive - offset,
                 ),
                 amount: it.amount,
+                pickup_tick_before_run: it.pickup_tick_before_run === undefined ? undefined : it.pickup_tick_before_run - offset,
             }
         })
         result.set(entityId, corrected_ranges)
@@ -218,7 +259,10 @@ function printInventoryTransfers(
 /**
  * if two entities have the exact same transfer ranges and items, we can reduce them to one entity
  */
-function deduplicateEntityTransfers(transfers: ReadonlyMap<EntityId, InventoryTransfer[]>): Map<EntityId, InventoryTransfer[]> {
+function deduplicateEntityTransfers(
+    transfers: ReadonlyMap<EntityId, InventoryTransfer[]>,
+    merged_entities: Map<string, EntityId[]> = new Map(),
+): Map<EntityId, InventoryTransfer[]> {
     const result: Map<EntityId, InventoryTransfer[]> = new Map();
 
     const seenTransferSignatures: Map<string, EntityId> = new Map();
@@ -235,6 +279,8 @@ function deduplicateEntityTransfers(transfers: ReadonlyMap<EntityId, InventoryTr
             result.set(entityId, transferList);
         } else {
             // duplicate found, skip adding this entity
+            const kept = seenTransferSignatures.get(signature)!;
+            merged_entities.set(kept.id, (merged_entities.get(kept.id) ?? []).concat(entityId));
         }
     });
 

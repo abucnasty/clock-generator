@@ -5,7 +5,51 @@ The Factorio mods keep their own `changelog.txt`.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-`clock-generator/package.json` and `clock-generator-ui/package.json` share the same version.
+`clock-generator/package.json`, `clock-generator-ui/package.json` and the sidecar mod (`clock-generator-sidecar/info.json`) share the same version; see Versioning in the README.
+From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
+
+## [0.6.0] - 2026-10-10
+
+### Added
+- Biochambers, the first machine type that burns fuel: a fuel slot, nutrients burned only while crafting, and fuel use in the machine facts. Machine config gains an optional `energy_consumption_bonus` and `fuel`.
+- Fuel inserters run on a clock of their own, sized from how fast the machine burns fuel, so the inserter is enabled as seldom as is safe. A Fuel tab in the results shows burn rates, the fuel clocks and the fuel each machine held.
+- An item can be both an ingredient and the fuel of a machine, like nutrients in a pentapod egg biochamber. Validation reports a missing fuel inserter.
+- Recipes with more than one result, such as `jellynut-processing`. An inserter that only takes a by-product away gets a clock of its own.
+- Recipes that make their own ingredient, such as `pentapod-egg`, and builds where machines feed each other in a loop. The inserters of a loop stay always enabled, except one that feeds the machine the output is taken from, which is disabled while that machine is blocked where the clock still holds. The results warn that the loop must already hold the item and that the clock cannot restart it.
+- Wake-ups: each potential clock lists how often the machines wake its enabled, waiting inserters, per minute, and its insights break that down by inserter. Fewer is lighter on update time.
+- Belt column: each potential clock names the belt it is made for, "moving (+4 ticks)" with belt pickup slack or "non-moving" when its windows only fit a full belt that stands still. A subtick clock is always non-moving.
+- "Belts do not move" switch under Advanced Overrides (`overrides.non_moving_belts`, off by default): clocks are made without belt pickup slack and the one with the fewest wake-ups is selected. An inserter that also takes fuel off the belt gets room for a hand of fuel in its windows when the clock does not hold without it.
+- Nearest lane of a belt: an inserter that takes two items off one belt takes from the lane nearest to it first, as the game does. Set it with `near_lane` on the belt an inserter picks up from, or in the inserter's panel; the sidecar mod exports it. Without it the order of the filters is used, as before.
+- Backpressure loss: a clock that holds the target rate is also tried for an input that stops arriving and an output that is not taken away. A clock the build does not recover under is listed as "No recovery" with the losses that break it, and is only selected when no clock recovers. It is tried in the simulator only, fluids are not cut, and generating takes up to a fifth longer.
+- Deadlock risk: a build where two inserters bring the same item to a machine, and one of them brings another item too, can stop for good. The generator reads this off the config, names it above the potential clocks and warns when a blueprint is copied. On such a build the backpressure verdict is shown and does not decide the selection.
+- When no clock holds the target rate, the one nearest to it is selected, and copying its blueprint warns of the rate it runs at.
+- Every blueprint has a lock: a constant combinator under the clock, off by default. No inserter is enabled while it is on, and the clocks start again from the beginning when it is switched off.
+- Blueprints record their target rate in the description and on the clock combinator. Combinator descriptions name the recipes their inserter or drill works with, and what each modulo and subtick combinator is for.
+- Potential clocks show their output swings per cycle and the rate they achieved.
+- The timeline shows, under each row, the state the entity would show in Factorio, named as the game names it, with "no fuel" for a burner machine that has run out.
+- Pasting from an older sidecar mod says what that version does not export and asks once to update it.
+
+### Changed
+- The clock selected for you is the stable one with the fewest wake-ups a minute, where it was the one with the fewest windows. A clock without belt pickup slack is only selected for you when no clock with the slack holds the target rate.
+- "Planned + belt pickup slack (+4 ticks)" is now "Batched swings", and "Planned" is "Batched swings, non-moving belt". The ids `planned-belt-slack` and `planned` stay.
+- The clock counts from 1 to its period instead of from 0, so a switched-off clock enables nothing. Generated blueprints now need Factorio 2.1.
+- Every potential clock is confirmed with a long run, ten minutes of game time or 120 periods, whichever is shorter. It catches drift that a check of one period missed.
+- The simulator follows recordings of Factorio 2.1.21 more closely: the state an inserter shows, belt pickups into a machine that takes no more, the tick a clocked or a waiting inserter acts in, and an output block larger than a stack. The rules are in `GOALS.md`.
+- Full-hand output swings are searched for in more cases, and ranked first where a machine has at least 5% of spare speed.
+- More output swing counts are offered when batched swings backed off to a lower count.
+- Generating names the inserter that is missing from the transfer plan instead of failing with `No value found for key`.
+- Insights draw where the exported clock swings differently than the plan as a lane chart instead of lists of ticks.
+
+### Fixed
+- An inserter or mining drill set to `ALWAYS` gets no combinator, and every clock is checked with it always enabled. It was given clock windows like any other.
+- A clock period that is a whole number of ticks is no longer offered as a subtick clock through a rounding error.
+- A craft starts whatever the output holds, the output block only stops inserters bringing more, and a full productivity bar pays out when a craft finishes.
+- The transfer plan is solved for all machines at once: an item needed at two levels of a chain is no longer counted twice, and an output machine with several output inserters is counted by all of them.
+- Inserters move at most what the item stacks to, take turns at a machine they wait on together, and keep a window for a hand that is in flight when the clock period starts.
+- Combinator descriptions are cut to the 500 bytes Factorio keeps.
+
+### Removed
+- HOCON support. Configurations are JSON.
 
 ## [0.5.0] - 2026-10-05
 

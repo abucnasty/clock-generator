@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import type { Config, ConfigValidation, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
+import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 
 export type { ClockAlternativeView } from '../worker/types';
 
@@ -36,6 +36,8 @@ export interface UseSimulationWorkerResult {
     /** The selected clock driven only by its exported windows; null when the histories above already are that run */
     clockOnlyTransferHistory: SerializableTransferHistory | null;
     clockOnlyStateTransitionHistory: SerializableStateTransitionHistory | null;
+    /** The selected clock's fuel use and exported fuel clocks; null when no inserter only fills a fuel slot */
+    fuelView: FuelViewData | null;
     clockWindows: SerializableClockWindows | null;
     /** Places tried for the cycle or output swing the selected clock moved; null for other clocks */
     shiftOptions: ShiftOptionsView | null;
@@ -63,7 +65,7 @@ let FactorioDataService: typeof import('clock-generator/browser').FactorioDataSe
 let combineClockAlternativeRuns: typeof import('clock-generator/browser').combineClockAlternativeRuns | null = null;
 
 const FACTORIO_DATA_URL = '/data-filtered.json';
-const PRIMARY_STEP = 'Planned + belt pickup slack';
+const PRIMARY_STEP = 'Batched swings';
 // the slowest alternatives start first so they overlap the most
 const SLOW_TASKS = ['full-hand', 'uneven-output', 'derived', 'fractional'];
 
@@ -154,7 +156,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore]);
 
     const publishAlternatives = useCallback((generation: Generation) => {
-        const combined = combineClockAlternativeRuns!(generation.runs, it => it.isStable, it => it.inserterWindowCount);
+        const combined = combineClockAlternativeRuns!(generation.runs, it => ({
+            meets_target_rate: it.meetsTargetRate,
+            rate_off_target: it.rateOffTarget,
+            matches_belt_choice: it.matchesBeltChoice,
+            rank_first: it.rankFirst,
+            wake_ups_per_minute: it.asBuilt?.wake_ups?.wake_ups_per_minute ?? null,
+            window_count: it.rankingWindowCount,
+        }));
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
@@ -368,6 +377,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         stateTransitionHistory: selected?.stateTransitionHistory ?? null,
         clockOnlyTransferHistory: selected?.clockOnlyTransferHistory ?? null,
         clockOnlyStateTransitionHistory: selected?.clockOnlyStateTransitionHistory ?? null,
+        fuelView: selected?.fuelView ?? null,
         clockWindows: selected?.clockWindows ?? null,
         shiftOptions: selected?.shiftOptions ?? null,
         simulationDurationTicks: selected?.simulationDurationTicks ?? null,

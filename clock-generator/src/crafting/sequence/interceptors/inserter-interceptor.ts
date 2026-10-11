@@ -14,7 +14,7 @@ const AlwaysDisabledInterceptor: InserterInterceptor = (): EnableControl => {
 const WaitUntilSourceIsOutputBlockedInterceptor: InserterInterceptor = (inserter_state, source_state, sink_state): EnableControl => {
     if (EntityState.isMachine(source_state) && EntityState.isMachine(sink_state)) {
         const source_item_name = source_state.machine.output.item_name;
-        const sink_input = sink_state.machine.inputs.getOrThrow(source_item_name);
+        const sink_input = sink_state.machine.getInsertableInputOrThrow(source_item_name);
 
         return EnableControl.latched({
             base: EnableControl.lambda(() => {

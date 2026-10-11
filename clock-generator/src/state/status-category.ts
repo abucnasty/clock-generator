@@ -28,12 +28,14 @@ const INSERTER_STATUS_MAP: MapExtended<InserterStatus, StatusCategory> = new Map
     [InserterStatus.IDLE, StatusCategory.IDLE],
     [InserterStatus.DISABLED, StatusCategory.DISABLED],
     [InserterStatus.TARGET_FULL, StatusCategory.BLOCKED],
+    [InserterStatus.WAITING_FOR_SINK, StatusCategory.BLOCKED],
 ])
 
 const MACHINE_STATUS_MAP: MapExtended<MachineStatus, StatusCategory> = new MapExtended([
     [MachineStatus.WORKING, StatusCategory.ACTIVE],
     [MachineStatus.INGREDIENT_SHORTAGE, StatusCategory.WAITING],
-    [MachineStatus.OUTPUT_FULL, StatusCategory.BLOCKED]
+    [MachineStatus.OUTPUT_FULL, StatusCategory.BLOCKED],
+    [MachineStatus.NO_FUEL, StatusCategory.WAITING],
 ]);
 
 const DRILL_STATUS_MAP: MapExtended<DrillStatus, StatusCategory> = new MapExtended([

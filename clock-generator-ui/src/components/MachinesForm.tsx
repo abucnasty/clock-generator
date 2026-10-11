@@ -147,6 +147,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
         productivity: machine.productivity,
         crafting_speed: machine.crafting_speed,
         type: machine.type,
+        energy_consumption_bonus: machine.energy_consumption_bonus,
     });
 
     return (
@@ -223,16 +224,28 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     sx={{ width: 180 }}
                     size="small"
                 />
+                {machine.type === 'biochamber' && (
+                    <NumberField
+                        label="Energy Consumption (%)"
+                        value={machine.energy_consumption_bonus ?? 0}
+                        onValueChange={(val) => onUpdate(index, 'energy_consumption_bonus', val ?? 0)}
+                        min={-80}
+                        step={1}
+                        defaultValue={0}
+                        sx={{ width: 190 }}
+                        size="small"
+                    />
+                )}
                 <FormControl size="small" sx={{ minWidth: 140 }}>
                     <InputLabel>Type</InputLabel>
                     <Select
                         value={machine.type || 'machine'}
                         label="Type"
-                        onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace')}
+                        onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
                         renderValue={(selected) => (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : 'assembling-machine-3'} size={20} />
-                                {selected === 'furnace' ? 'Furnace' : 'Machine'}
+                                <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} />
+                                {selected === 'furnace' ? 'Furnace' : selected === 'biochamber' ? 'Biochamber' : 'Machine'}
                             </Box>
                         )}
                     >
@@ -246,6 +259,12 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name="electric-furnace" size={20} />
                                 Furnace
+                            </Box>
+                        </MenuItem>
+                        <MenuItem value="biochamber">
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <FactorioIcon name="biochamber" size={20} />
+                                Biochamber
                             </Box>
                         </MenuItem>
                     </Select>
