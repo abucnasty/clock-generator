@@ -45,7 +45,7 @@ Conventions:
 | science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock is the one selected since 2026-10-10 | in `test:game`, both ways; with "Belts do not move" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
-| intermediates/low-density-structure | yes | selected clock exact | in `test:game` |
+| intermediates/low-density-structure | yes | selected clock exact. Since 2026-10-11 the selected clock is batched swings with 6 output swings per cycle, 703 wake-ups a minute, where full-hand output swings (1,528) was selected while the ranking put it first on a machine with spare speed; recorded exact the same day, 36,000 ticks | in `test:game` |
 | science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; a build with a deadlock risk, see "Backpressure loss" and below |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
@@ -70,7 +70,11 @@ In the order they would settle the most:
    that run under-counted a fractional period; counted right, the simulator moves 32 too many in periods 40 to 120,
    the tail of a start-up surplus of 48 that is gone by period 160. Simulator only, and in the simulator both clocks
    stop for good around period 1160 (34 minutes) once the carbon machine runs out of coal: this build needs a
-   recording more than any other.
+   recording more than any other. Changed once more on 2026-10-11, when the ranking stopped putting full-hand output
+   swings first where a machine has spare speed: the two clocks tie at 45 a second and neither meets goal 1, so the
+   fewest wake-ups decide, and the planned 1-swing subtick clock (1,368 a minute) is selected over the full-hand one
+   (1,716). The selected clock is now one the long run calls unstable, where the full-hand one holds its output and
+   has no recovery: the ranking does not part the two by verdict once neither meets goal 1.
 5. **intermediates/processing-units** (belt export): rates moved slightly.
 6. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
 7. **science/electromagnetic-science**, **science/military-science**, **intermediates/flying-robot-frame**,
