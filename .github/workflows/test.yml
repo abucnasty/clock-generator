@@ -1,11 +1,13 @@
 name: Test
 
+# Started by hand only ("Run workflow", or `gh workflow run test.yml --ref <branch>`), not on pull requests for now.
+# The unit tests take over ten minutes on the runner, where they take three on a desktop, and are to be faster
+# first. The UI build is what Vercel does on every push anyway (vercel.json): it compiles the generator, then
+# type-checks and bundles the UI, and reports on the pull request.
 on:
-  pull_request:
-  # the unit tests only run when the workflow is started by hand: see the unit job
   workflow_dispatch:
 
-# a new push to a pull request replaces the run of the one before it
+# a new run on a branch replaces the one before it
 concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
@@ -13,9 +15,6 @@ concurrency:
 jobs:
   unit:
     name: Unit tests
-    # Not on pull requests for now: the suite takes over ten minutes on the runner, where it takes three on a
-    # desktop. Until the tests are faster it is run by hand ("Run workflow", or `gh workflow run test.yml`).
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
