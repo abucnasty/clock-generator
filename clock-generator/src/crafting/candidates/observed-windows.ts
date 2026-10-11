@@ -2,13 +2,16 @@ import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
-import { InserterStatus } from "../../state";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
 import { CheckedShiftRow } from "../candidates/shifted-swings";
-import { CIRCUIT_LATENCY_TICKS, rotateRanges, withBeltPickupSlack } from "../clock";
-import { TrialRun, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
-import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild } from "../trial";
+import { withBeltPickupSlack } from "../clock";
+import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, planRun, windowsFromHistory } from "../plan/plan-run";
+import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
+import { fullHandTransferWindows } from "./full-hand";
+import { search } from "./search";
+import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
+import { deriveUnevenOutputClockWindows } from "./uneven-output";
 
 
 export interface DerivedClockWindowsReport {
@@ -20,21 +23,13 @@ export interface DerivedClockWindowsReport {
     end_padding_ticks: number | null;
     /** Machine-to-machine inserters whose observed windows were replaced by brief full-hand windows */
     full_hand_inserters?: string[];
-    /** With derive_mode "uneven_output": the output swing moved off its planned start and by how many ticks (negative is earlier) */
+    /** For uneven output swings: the output swing moved off its planned start and by how many ticks (negative is earlier) */
     moved_output_swing?: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 }
 
 /** End padding candidates tried in order; a candidate is only used when the next one also passes, for margin */
 const DERIVED_WINDOW_END_PADDING_CANDIDATES = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16];
 
-
-const INSERTER_BUSY_STATUSES = new Set<string>([
-    InserterStatus.PICKUP,
-    InserterStatus.SWING,
-    InserterStatus.DROP_OFF,
-    InserterStatus.TARGET_FULL,
-    InserterStatus.WAITING_FOR_SINK,
-]);
 
 /**
  * Derives clock windows by simulating with only the output inserters clocked (their planned windows)
@@ -74,7 +69,20 @@ export function deriveClockWindows(
     return (even.as_built?.actual_output_items ?? 0) > (planned.as_built?.actual_output_items ?? 0) ? even : planned;
 }
 
+/** One padding tried: the windows at that padding and the quick clock-only check of them */
+interface PaddingAttempt {
+    windows: Map<string, OpenRange[]>;
+    result: TrialRun;
+    check: AsBuiltStabilityCheck;
+}
 
+/**
+ * The build run free under the output windows given, each other inserter's busy ticks read off the run as its windows,
+ * and the padding of their ends searched: the paddings are tried in order with the quick clock-only check, and a
+ * padding is used as soon as it and the one before it pass, for margin. With `confirm` the pick is confirmed from
+ * many more start phases, and when that fails the search goes on to the next paddings. When no padding passes, the
+ * one that moved the most is reported.
+ */
 export function deriveWithOutputWindows(
     base_config: Config,
     output_windows: Map<string, OpenRange[]>,
@@ -98,7 +106,7 @@ export function deriveWithOutputWindows(
     report?.(`Simulating with only the output inserters clocked (${label} windows)`);
     const derivation = runClockOnBuild(base_config, fixed_windows, period, logger);
     logger.log(`Derived clock windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
-    const even_output_windows = evenlySpacedOutputWindows(output_windows, derivation, period);
+    const even_output_windows = evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), period), period);
     if (!derivation.stability_check.holds) {
         return { windows: null, end_padding_ticks: null, verification: derivation, as_built: null, even_output_windows };
     }
@@ -117,136 +125,135 @@ export function deriveWithOutputWindows(
             busy_windows.set(entity.entity_id, ranges);
         }
     }
+    const unpadded = new Map([...fixed_windows, ...busy_windows]);
+    const ticks = (padding: number) => `${padding} tick${padding === 1 ? "" : "s"}`;
 
-    const attempts: { padding: number; result: TrialRun; check: AsBuiltStabilityCheck; windows: Map<string, OpenRange[]> }[] = [];
-    for (const padding of DERIVED_WINDOW_END_PADDING_CANDIDATES) {
-        const padded = new Map(fixed_windows);
-        for (const [key, ranges] of busy_windows) {
-            padded.set(key, OpenRange.reduceRanges(ranges.map(r =>
-                OpenRange.from(r.start_inclusive, Math.min(r.end_inclusive + padding, period - 1))
-            )));
-        }
-        const windows = withBeltPickupSlack(padded, belt_pickup_slack, period);
-        const { result, check } = runAsBuiltCheck(base_config, windows, period, logger, AS_BUILT_START_PHASES,
-            (n, total) => report?.(`Trying ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`));
-        logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${check.actual_output_items} stable=${check.holds} (${check.start_phases_checked} start phases)`);
-        attempts.push({ padding, result, check, windows });
-
-        const previous = attempts[attempts.length - 2];
-        if (previous?.check.holds && check.holds) {
+    const { picked, tried } = search<number, PaddingAttempt, Omit<ReturnType<typeof deriveWithOutputWindows>, "even_output_windows">>({
+        candidates: DERIVED_WINDOW_END_PADDING_CANDIDATES,
+        quick: padding => {
+            const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, period), belt_pickup_slack, period);
+            const { result, check } = runAsBuiltCheck(base_config, windows, period, logger, AS_BUILT_START_PHASES,
+                (n, total) => report?.(`Trying ${ticks(padding)} of padding (${label} windows), clock start ${n}/${total}`));
+            logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${check.actual_output_items} stable=${check.holds} (${check.start_phases_checked} start phases)`);
+            return { windows, result, check };
+        },
+        // a padding is used when it and the one before pass; a padding whose confirmation failed counts as failed
+        picks: (attempts, done) => {
+            const [previous, last] = [attempts[attempts.length - 2], attempts[attempts.length - 1]];
+            return !done && previous?.quick.check.holds && last.quick.check.holds ? [last.index] : [];
+        },
+        confirm: ({ candidate: padding, quick: { windows, result, check } }) => {
             if (!confirm) {
-                return { windows, end_padding_ticks: padding, verification: result, as_built: check, even_output_windows };
+                return { windows, end_padding_ticks: padding, verification: result, as_built: check };
             }
             // failing start phases can be a narrow band the quick check skips over
             const full = runAsBuiltCheck(base_config, windows, period, logger, FULL_CHECK_START_PHASES,
-                (n, total) => report?.(`Confirming ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`)).check;
+                (n, total) => report?.(`Confirming ${ticks(padding)} of padding (${label} windows), clock start ${n}/${total}`)).check;
             logger.log(`Derived clock windows (${label}): end padding ${padding} full check -> actual=${full.actual_output_items} stable=${full.holds} (${full.start_phases_checked} start phases)`);
             if (full.holds) {
-                return { windows, end_padding_ticks: padding, verification: result, as_built: full, even_output_windows };
+                return { windows, end_padding_ticks: padding, verification: result, as_built: full };
             }
             check.holds = false;
             check.actual_output_items = full.actual_output_items;
             check.failed_start_offset = full.failed_start_offset;
             check.repeat_periods = full.repeat_periods;
             check.repeat_output_items = full.repeat_output_items;
-        }
+            return null;
+        },
+    });
+    if (picked !== null) {
+        return { ...picked, even_output_windows };
     }
-
-    const best = attempts.reduce((a, b) => b.check.actual_output_items > a.check.actual_output_items ? b : a);
+    const best = tried.map(it => it.quick).reduce((a, b) => b.check.actual_output_items > a.check.actual_output_items ? b : a);
     return { windows: null, end_padding_ticks: null, verification: best.result, as_built: best.check, even_output_windows };
 }
 
 /**
- * The output inserters' swings spread evenly over the period, one swing per window. Windows are the shortest
- * planned window minus the circuit latency, since the game keeps the inserter enabled that much longer and
- * a longer window lets it return and grab a partial stack. Null when that would not change anything or cannot be built.
+ * The observed windows candidate: the clock of the plan with the windows of every inserter but the output inserters
+ * made anew from what it does in a run of the build under the output windows alone (see `deriveClockWindows`), and
+ * for machine-to-machine inserters that wait at their source for a full hand, brief windows that find one
+ * (`fullHandTransferWindows`). With `mode` "prefer_planned" the planned windows stay where they pass the clock-only
+ * check from every start phase, which is what the config override `derive_clock_windows` asks for; "always" derives
+ * anyway; "uneven_output" derives with one output swing moved off its planned start (`deriveUnevenOutputClockWindows`).
+ * The feeders of the output machine are kept or dropped as for a planned clock. When nothing derived passes, the
+ * planned windows are exported with the report of what was tried.
  */
-function evenlySpacedOutputWindows(
-    output_windows: Map<string, OpenRange[]>,
-    derivation: TrialRun,
-    period: number,
-): Map<string, OpenRange[]> | null {
-    if (!Number.isInteger(period)) {
-        return null;
+export function observedWindowsClock(
+    config: Config,
+    options: GenerateClockOptions = {},
+    mode: "prefer_planned" | "always" | "uneven_output" = "prefer_planned",
+): BlueprintGenerationResult {
+    const plan = planRun(config, options);
+    const clock = clockOfPlan(plan, options);
+    const { logger, run } = plan;
+    const { stability_check, duration, final_history, output_inserter_ids, output_machine_state_machines, all_output_inserters, simulation_context } = run;
+    const planned_windows = clock.windows;
+    const output_machine_ids = new Set(all_output_inserters.map(os => os.inserter.source.entity_id.id));
+    const planned_stable = stability_check.holds;
+    const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+        (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`));
+    let planned_check = planned_run.check;
+    let clock_only_run = clockOnlyRunOf(planned_run.result);
+    if (planned_stable && planned_check.holds) {
+        planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
+            (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`)).check;
     }
-    const swing_counts = new Map<string, number>();
-    for (const entity of derivation.serializable_state_transition_history.entities) {
-        if (!output_windows.has(entity.entity_id)) {
-            continue;
+    logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
+    // the feeders of the output machine are part of the planned windows, kept or dropped here as without derivation
+    const feedPlanned = () => {
+        const fed = planned_stable && planned_check.holds
+            ? trialWithOutputFeeders(non_deriving_config, planned_windows, duration.ticks, output_machine_ids, { check: planned_check, stock: planned_run.stock },
+                planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES, logger, options.on_progress_detail)
+            : null;
+        if (fed !== null) {
+            planned_check = fed.check;
+            clock_only_run = clockOnlyRunOf(fed.result);
         }
-        const sorted = [...entity.transitions].sort((a, b) => a.tick - b.tick);
-        let status = entity.initial_status;
-        let swings = 0;
-        for (const transition of sorted) {
-            if (transition.tick >= 1 && transition.tick <= period && transition.to_status === InserterStatus.DROP_OFF && status !== InserterStatus.DROP_OFF) {
-                swings++;
-            }
-            status = transition.to_status;
-        }
-        swing_counts.set(entity.entity_id, swings);
+        return fed;
+    };
+    const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: DerivedClockWindowsReport): BlueprintGenerationResult =>
+        exportClock(plan, clock, fed?.windows ?? planned_windows, options,
+            { clock_only_run, output_feeders: fed?.output_feeders, item_names: fed?.item_names, derived_clock_windows });
+    if (planned_stable && planned_check.holds && mode === "prefer_planned") {
+        // planned windows keep the plan's batched swings, which derived windows would break into per-craft swings
+        const fed = feedPlanned();
+        stability_check.as_built = planned_check;
+        return exportPlanned(fed, { succeeded: true, kept_planned_windows: true, end_padding_ticks: null });
     }
 
-    const even = new Map<string, OpenRange[]>();
-    let changed = false;
-    for (const [key, ranges] of output_windows) {
-        const swings = swing_counts.get(key) ?? 0;
-        if (swings === 0 || ranges.length === 0) {
-            return null;
+    const uneven = mode !== "uneven_output" ? null : deriveUnevenOutputClockWindows(
+        config, final_history, output_inserter_ids, clock.belt_pickup_slack, duration.ticks,
+        Math.min(...output_machine_state_machines.map(it => it.machine_state.machine.crafting_rate.ticks_per_craft)),
+        logger, options.on_progress_detail);
+    // without a moved swing that works there is nothing to export; plain observed windows are their own alternative
+    const derived = mode === "uneven_output"
+        ? uneven ?? { windows: null, end_padding_ticks: null, verification: null, as_built: null }
+        : deriveClockWindows(config, final_history, output_inserter_ids, clock.belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
+    const report: DerivedClockWindowsReport = {
+        succeeded: derived.windows !== null,
+        kept_planned_windows: false,
+        end_padding_ticks: derived.end_padding_ticks,
+        moved_output_swing: uneven?.moved_output_swing ?? undefined,
+    };
+    stability_check.as_built = derived.as_built ?? undefined;
+    stability_check.holds = stability_check.holds && derived.windows !== null;
+
+    if (derived.windows !== null && derived.verification !== null) {
+        const full_hand = fullHandTransferWindows(non_deriving_config, derived.windows, derived.verification,
+            output_inserter_ids, simulation_context.entity_registry, duration.ticks, logger, options.on_progress_detail);
+        const windows = full_hand?.windows ?? derived.windows;
+        if (full_hand) {
+            stability_check.as_built = full_hand.check;
+            report.full_hand_inserters = full_hand.inserters;
         }
-        const length = Math.min(...ranges.map(r => r.end_inclusive - r.start_inclusive + 1)) - CIRCUIT_LATENCY_TICKS;
-        if (length < 1 || length >= period / swings) {
-            return null;
-        }
-        const first = ranges[0].start_inclusive;
-        const spaced: OpenRange[] = [];
-        for (let k = 0; k < swings; k++) {
-            spaced.push(...rotateRanges([OpenRange.from(first, first + length - 1)], Math.round(k * period / swings), period));
-        }
-        const reduced = OpenRange.reduceRanges(spaced);
-        changed ||= reduced.length !== ranges.length || reduced.some((r, i) => r.start_inclusive !== ranges[i].start_inclusive || r.end_inclusive !== ranges[i].end_inclusive);
-        even.set(key, reduced);
+        // observed windows are what the inserters did, fuel hands included, and the run shown is the trial of them
+        return exportClock(plan, clock, windows, options,
+            { histories: full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report });
     }
-    return changed ? even : null;
+    logger.log("Derived clock windows: no padding passed the as-built check; falling back to the planned windows.");
+    const fed = feedPlanned();
+    stability_check.as_built = planned_check;
+    stability_check.holds = planned_stable && planned_check.holds;
+    return exportPlanned(fed, report);
 }
-
-/** Busy ticks of a simulated inserter as decider windows (shifted back by the circuit latency) */
-function busyDeciderRanges(
-    initial_status: string,
-    transitions: { tick: number; to_status: string }[],
-    period: number,
-): OpenRange[] {
-    // manual lcm overrides can produce fractional periods; the simulation runs whole ticks up to the ceiling
-    const ticks = Math.ceil(period);
-    const busy = new Array<boolean>(ticks).fill(false);
-    const sorted = [...transitions].sort((a, b) => a.tick - b.tick);
-    let status = initial_status;
-    let next = 0;
-    // simulated clock ticks run 1..period, matching the clocked controls
-    for (let tick = 1; tick <= ticks; tick++) {
-        while (next < sorted.length && sorted[next].tick <= tick) {
-            status = sorted[next].to_status;
-            next++;
-        }
-        if (INSERTER_BUSY_STATUSES.has(status)) {
-            busy[(((tick - CIRCUIT_LATENCY_TICKS) % ticks) + ticks) % ticks] = true;
-        }
-    }
-
-    const ranges: OpenRange[] = [];
-    let start: number | null = null;
-    for (let tick = 0; tick <= ticks; tick++) {
-        if (tick < ticks && busy[tick]) {
-            start ??= tick;
-        } else if (start !== null) {
-            ranges.push(OpenRange.from(start, tick - 1));
-            start = null;
-        }
-    }
-    return ranges;
-}
-
-/**
- * Simulates the factory driven only by the given decider windows, first with the clock as planned and then
- * with the whole clock shifted to other start offsets relative to the machines' initial state.
- * Fractional periods are only checked unshifted.
- */

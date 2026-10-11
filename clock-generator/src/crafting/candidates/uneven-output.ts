@@ -7,6 +7,8 @@ import { deriveWithOutputWindows } from "../candidates/observed-windows";
 import { CheckedShiftRow, checkedShiftRows } from "../candidates/shifted-swings";
 import { TrialRun, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
 import { AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
+import { search } from "./search";
+import { withOutputWindowMoved } from "./transforms";
 
 /** Positions tried for moved output swings; each costs dozens of clock-only simulations */
 const MAX_UNEVEN_OUTPUT_CANDIDATES = 24;
@@ -62,12 +64,7 @@ function unevenOutputCandidates(
             shifts.add(-Math.round(n * step));
         }
         for (const shift_ticks of Array.from(shifts).filter(it => it >= min && it <= max).sort((a, b) => a - b)) {
-            candidates.push({
-                window_index,
-                shift_ticks,
-                output_windows: new Map(Array.from(sorted, ([key, ranges]) => [key, ranges.map((range, index) => index !== window_index ? range
-                    : OpenRange.from(range.start_inclusive + shift_ticks, range.end_inclusive + shift_ticks))])),
-            });
+            candidates.push({ window_index, shift_ticks, output_windows: withOutputWindowMoved(sorted, window_index, shift_ticks) });
         }
     }
     return candidates;
@@ -102,53 +99,62 @@ export function deriveUnevenOutputClockWindows(
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
 
     const candidates = unevenOutputCandidates(output_windows, period, step_ticks);
-    const passing: { index: number; candidate: UnevenOutputCandidate; derived: ReturnType<typeof deriveWithOutputWindows> }[] = [];
-    candidates.forEach((candidate, index) => {
-        const label = `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
-        const derived = deriveWithOutputWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
-            belt_pickup_slack, period, label, logger,
-            report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
-        if (derived.windows !== null) {
-            passing.push({ index, candidate, derived });
-        }
-    });
-
-    // candidates are listed per moved window in shift order, so neighbours in the list are neighbours in time
-    const passes = new Set(passing.map(it => it.index));
-    const neighboursPassing = (index: number, direction: 1 | -1) => {
-        let run = 0;
-        for (let next = index + direction; passes.has(next) && candidates[next].window_index === candidates[index].window_index; next += direction) {
-            run++;
-        }
-        return run;
-    };
-    const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
-    const ranked = [...passing].sort((a, b) => margin(b.index) - margin(a.index)
-        || Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks));
-    logger.log(`Uneven output swings: ${passing.length} of ${candidates.length} positions pass the quick clock-only check`);
-    for (const { index, candidate, derived } of passing) {
-        const windows = Array.from(derived.windows!, ([key, ranges]) => `${key} ${ranges.map(r => `${r.start_inclusive}-${r.end_inclusive}`).join(",")}`).join("; ");
-        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, ${margin(index)} passing positions on each side: ${windows}`);
-    }
-
-    for (const { candidate, derived } of ranked) {
-        const full = runAsBuiltCheck(base_config, derived.windows!, period, logger, FULL_CHECK_START_PHASES,
-            (n, total) => report?.(`Confirming output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, clock start ${n}/${total}`));
-        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks full check -> stable=${full.check.holds}`);
-        if (full.check.holds) {
-            return {
-                windows: derived.windows,
-                end_padding_ticks: derived.end_padding_ticks,
-                verification: full.result,
-                as_built: full.check,
-                moved_output_swing: {
-                    swing: candidate.window_index + 1,
-                    shift_ticks: candidate.shift_ticks,
-                    shifts_checked: checkedShiftRows(candidates.map((it, index) =>
-                        ({ index: it.window_index + 1, shift_ticks: it.shift_ticks, holds: passes.has(index) }))),
-                },
+    const describe = (candidate: UnevenOutputCandidate) => `swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
+    type Derived = ReturnType<typeof deriveWithOutputWindows>;
+    const { picked, tried } = search<UnevenOutputCandidate, Derived, Omit<NonNullable<ReturnType<typeof deriveUnevenOutputClockWindows>>, "moved_output_swing">>({
+        candidates,
+        // each position gets its own observed windows, with the padding search but without its confirmation
+        quick: (candidate, index) => {
+            const derived = deriveWithOutputWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
+                belt_pickup_slack, period, `output ${describe(candidate)}`, logger,
+                report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
+            // only the windows that pass are read again; the runs of a position that does not are let go
+            return derived.windows === null ? { ...derived, verification: null, as_built: null, even_output_windows: null } : derived;
+        },
+        // once every position is tried: the most passing positions on either side first, then the smallest move
+        picks: (attempts, done) => {
+            if (!done) {
+                return [];
+            }
+            const passing = attempts.filter(it => it.quick.windows !== null);
+            const passes = new Set(passing.map(it => it.index));
+            // candidates are listed per moved window in shift order, so neighbours in the list are neighbours in time
+            const neighboursPassing = (index: number, direction: 1 | -1) => {
+                let run = 0;
+                for (let next = index + direction; passes.has(next) && candidates[next].window_index === candidates[index].window_index; next += direction) {
+                    run++;
+                }
+                return run;
             };
-        }
+            const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
+            const ranked = [...passing].sort((a, b) => margin(b.index) - margin(a.index)
+                || Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks));
+            logger.log(`Uneven output swings: ${passing.length} of ${candidates.length} positions pass the quick clock-only check`);
+            for (const { index, candidate, quick: derived } of passing) {
+                const windows = Array.from(derived.windows!, ([key, ranges]) => `${key} ${ranges.map(r => `${r.start_inclusive}-${r.end_inclusive}`).join(",")}`).join("; ");
+                logger.log(`Uneven output swings: ${describe(candidate)}, ${margin(index)} passing positions on each side: ${windows}`);
+            }
+            return ranked.map(it => it.index);
+        },
+        confirm: ({ candidate, quick: derived }) => {
+            const full = runAsBuiltCheck(base_config, derived.windows!, period, logger, FULL_CHECK_START_PHASES,
+                (n, total) => report?.(`Confirming output ${describe(candidate)}, clock start ${n}/${total}`));
+            logger.log(`Uneven output swings: ${describe(candidate)} full check -> stable=${full.check.holds}`);
+            return full.check.holds ? { windows: derived.windows, end_padding_ticks: derived.end_padding_ticks, verification: full.result, as_built: full.check } : null;
+        },
+    });
+    if (picked === null) {
+        return null;
     }
-    return null;
+    const passes = new Set(tried.filter(it => it.quick.windows !== null).map(it => it.index));
+    const chosen = tried.find(it => it.confirmed)!.candidate;
+    return {
+        ...picked,
+        moved_output_swing: {
+            swing: chosen.window_index + 1,
+            shift_ticks: chosen.shift_ticks,
+            shifts_checked: checkedShiftRows(candidates.map((it, index) =>
+                ({ index: it.window_index + 1, shift_ticks: it.shift_ticks, holds: passes.has(index) }))),
+        },
+    };
 }

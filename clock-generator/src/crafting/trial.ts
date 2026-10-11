@@ -11,7 +11,8 @@ import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
-import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, generateClockForConfig, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, planRun, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-feeders";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -216,10 +217,12 @@ export function clockFromWindows(
     period_ticks: number,
     logger: Logger = defaultLogger,
 ): BlueprintGenerationResult {
-    const result = generateClockForConfig(
-        { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-        { logger, verify_as_built: true, belt_pickup_slack: "never", given_windows: clock_windows },
-    );
+    const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger });
+    // the windows are built as they are: nothing is added to them, so the clock goes without belt pickup slack
+    const clock = clockOfPlan(plan, { belt_pickup_slack: "never" });
+    const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const result = checkedClock(plan, clock, windows, { logger, verify_as_built: true });
     assert(result.simulation_duration.ticks === period_ticks,
         `The windows are of a clock of ${period_ticks} ticks, and the config is planned on one of ${result.simulation_duration.ticks}`);
     return result;
@@ -271,6 +274,12 @@ function inserterEnds(config: Config): InserterEnds[] {
 }
 
 
+/**
+ * The clock-only check of a clock: the build driven only by the decider windows, first with the clock as planned and
+ * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
+ * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
+ * start phase that fails. Fractional periods are only checked unshifted.
+ */
 export function runAsBuiltCheck(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
@@ -325,6 +334,60 @@ export function runAsBuiltCheck(
         }
     }
     return { result, check, stock };
+}
+
+/**
+ * The feeders of the output machine are only an optimisation, kept when the build passes the same check with them as
+ * it did without: the long run of the check just made (`run`) gives the output of that machine, so no other run is
+ * needed to make them. Returns the check with them, the windows with theirs in, their ids and item names (identical
+ * windows and items share one combinator, as the nutrient inserters of the egg biochambers do), or null when there are
+ * none or the check with them does not pass as without (see `windowsOfInsertersFeedingTheOutputMachine`).
+ */
+export function trialWithOutputFeeders(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    period: number,
+    output_machine_ids: ReadonlySet<string>,
+    run: { check: AsBuiltStabilityCheck; stock?: StockRecording },
+    start_phases: number,
+    logger: Logger,
+    report?: (detail: string) => void,
+): {
+    result: TrialRun;
+    check: AsBuiltStabilityCheck;
+    stock?: StockRecording;
+    windows: Map<string, OpenRange[]>;
+    output_feeders: NonNullable<BlueprintGenerationResult["output_feeders"]>;
+    item_names: Map<string, string>;
+} | null {
+    if (run.stock === undefined) {
+        return null;
+    }
+    const feeders = windowsOfInsertersFeedingTheOutputMachine(config, windows, period, run.stock, output_machine_ids, logger);
+    if (feeders.size === 0) {
+        return null;
+    }
+    const fed_windows = new Map(windows);
+    for (const [inserter_id, feeder] of feeders) {
+        fed_windows.set(inserter_id, feeder.windows);
+    }
+    const fed_run = runAsBuiltCheck(config, fed_windows, period, logger, start_phases,
+        (n, total) => report?.(`Checking output feeder windows, clock start ${n}/${total}`), OUTPUT_FEEDER_CHECK_TICKS);
+    const passes_as_before = fed_run.check.holds && fed_run.check.failed_start_offset === undefined
+        && fed_run.check.start_phases_checked === run.check.start_phases_checked;
+    logger.log(`Output feeders: ${passes_as_before ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
+    if (!passes_as_before) {
+        return null;
+    }
+    return {
+        ...fed_run,
+        windows: fed_windows,
+        output_feeders: {
+            inserter_ids: Array.from(feeders.keys()),
+            window_count_without_feeder_windows: Array.from(feeders.keys()).reduce((sum, id) => sum + (windows.get(id)?.length ?? 0), 0),
+        },
+        item_names: new Map(Array.from(feeders, ([inserter_id, feeder]) => [inserter_id, feeder.item_name])),
+    };
 }
 
 /**
