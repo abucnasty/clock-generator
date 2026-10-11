@@ -8,7 +8,6 @@ const clock = (id: string, ranking: Partial<ClockRanking> = {}): Ranked => ({
     meets_target_rate: true,
     rate_off_target: 0,
     matches_belt_choice: true,
-    rank_first: false,
     wake_ups_per_minute: 100,
     window_count: 10,
     ...ranking,
@@ -42,13 +41,6 @@ describe("combineClockAlternativeRuns", () => {
             clock("slack", { meets_target_rate: false }),
             clock("no-slack", { matches_belt_choice: false }),
         ])).toBe("no-slack");
-    });
-
-    it("selects a clock that is ranked first whatever its wake-ups", () => {
-        expect(selectedOf([
-            clock("fewest", { wake_ups_per_minute: 30 }),
-            clock("ranked-first", { wake_ups_per_minute: 80, rank_first: true }),
-        ])).toBe("ranked-first");
     });
 
     it("selects the fewest windows among clocks with the same wake-ups, and the first listed among equals", () => {
