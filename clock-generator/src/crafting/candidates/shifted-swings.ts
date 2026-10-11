@@ -1,10 +1,9 @@
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { InserterStatus, MachineStatus } from "../../state";
-import { fraction } from "fractionability";
 import { Logger } from "../../common/logger";
 import { CIRCUIT_LATENCY_TICKS } from "../clock";
-import { BlueprintGenerationResult } from "../plan/plan-run";
+import { TrialRun } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
 
 /** One place tried for a moved crafting cycle or output swing, in ticks from its planned start (negative is earlier) */
@@ -164,7 +163,7 @@ const MIN_SHIFT_EDGE_WAIT_TICKS = 3;
  * the moved swings arrive has run out of ingredients.
  */
 function shiftEdgeNotes(
-    run: BlueprintGenerationResult,
+    run: TrialRun,
     moved: { entity_id: string; start: number; end: number }[],
 ): string[] {
     const entities = new Map(run.serializable_state_transition_history.entities.map(entity => [entity.entity_id, entity]));
@@ -264,7 +263,7 @@ export function shiftedCycleWindows(
         `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
 
     const passes = new Set<number>();
-    const runs = new Map<number, BlueprintGenerationResult>();
+    const runs = new Map<number, TrialRun>();
     candidates.forEach((candidate, index) => {
         const { result, check } = runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
             (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`));

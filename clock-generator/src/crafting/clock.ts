@@ -2,7 +2,6 @@ import { EnableControlRange } from "../config/schema";
 import { OpenRange } from "../data-types";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { SubtickClock } from "./blueprint";
-import { withFuelHandRoomWhereNeeded } from "./alternatives";
 
 /**
  * Ticks between the clock reaching a value and an inserter acting on its decider (combinator output, then the

@@ -1,11 +1,11 @@
 import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { OpenRange } from "../../data-types";
-import { Entity, EntityId, handSizeFor, Machine, ReadableEntityRegistry } from "../../entities";
+import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../../entities";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { rotateRanges } from "../clock";
-import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, windowsOfThePlanWhereInsertersRunFree } from "../plan/plan-run";
+import { LCM_STABILITY_TOLERANCE, TrialRun } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild } from "../trial";
 
 
@@ -58,7 +58,7 @@ export function fullHandOutputWindows(
     logger: Logger,
     report?: (detail: string) => void,
     count_waits = false,
-): { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } | null {
+): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck } | null {
     const swing_counts = Array.from(new Set(Array.from(output_swings.values(), s => Math.round(s * 1e6) / 1e6)));
     if (swing_counts.length !== 1 || !Number.isInteger(swing_counts[0]) || swing_counts[0] < 1) {
         return null;
@@ -78,7 +78,7 @@ export function fullHandOutputWindows(
         outputs.forEach(key => result.set(key, ranges));
         return result;
     };
-    const pickupStats = (result: BlueprintGenerationResult) => {
+    const pickupStats = (result: TrialRun) => {
         let slow = 0;
         let pickups = 0;
         let swings = 0;
@@ -103,8 +103,8 @@ export function fullHandOutputWindows(
         }
         return { slow, pickups, swings };
     };
-    const slowPickups = (result: BlueprintGenerationResult) => pickupStats(result).slow;
-    const outputFullTicks = (result: BlueprintGenerationResult) => {
+    const slowPickups = (result: TrialRun) => pickupStats(result).slow;
+    const outputFullTicks = (result: TrialRun) => {
         let ticks = 0;
         for (const entity of result.serializable_state_transition_history.entities) {
             if (!output_machine_ids.has(entity.entity_id)) {
@@ -243,14 +243,14 @@ export function hasPlannedWindowsNotHands(always_enabled: ReadonlySet<string>, i
 export function fullHandTransferWindows(
     config: Config,
     windows: Map<string, OpenRange[]>,
-    verification: BlueprintGenerationResult,
+    verification: TrialRun,
     output_inserter_ids: Set<string>,
     entity_registry: ReadableEntityRegistry,
     period: number,
     logger: Logger,
     report?: (detail: string) => void,
-): { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; inserters: string[] } | null {
-    let current: { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } | null = null;
+): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck; inserters: string[] } | null {
+    let current: { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck } | null = null;
     const inserters: string[] = [];
     const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
     for (const [entity_id, transfers] of verification.transfer_history.entries()) {

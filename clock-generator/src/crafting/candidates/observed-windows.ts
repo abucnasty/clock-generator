@@ -2,13 +2,12 @@ import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
-import { Machine } from "../../entities";
 import { InserterStatus } from "../../state";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
 import { CheckedShiftRow } from "../candidates/shifted-swings";
 import { CIRCUIT_LATENCY_TICKS, rotateRanges, withBeltPickupSlack } from "../clock";
-import { BlueprintGenerationResult, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
+import { TrialRun, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild } from "../trial";
 
 
@@ -54,7 +53,7 @@ export function deriveClockWindows(
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
-    verification: BlueprintGenerationResult | null;
+    verification: TrialRun | null;
     as_built: AsBuiltStabilityCheck | null;
 } {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
@@ -91,7 +90,7 @@ export function deriveWithOutputWindows(
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
-    verification: BlueprintGenerationResult | null;
+    verification: TrialRun | null;
     as_built: AsBuiltStabilityCheck | null;
     even_output_windows: Map<string, OpenRange[]> | null;
 } {
@@ -119,7 +118,7 @@ export function deriveWithOutputWindows(
         }
     }
 
-    const attempts: { padding: number; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; windows: Map<string, OpenRange[]> }[] = [];
+    const attempts: { padding: number; result: TrialRun; check: AsBuiltStabilityCheck; windows: Map<string, OpenRange[]> }[] = [];
     for (const padding of DERIVED_WINDOW_END_PADDING_CANDIDATES) {
         const padded = new Map(fixed_windows);
         for (const [key, ranges] of busy_windows) {
@@ -164,7 +163,7 @@ export function deriveWithOutputWindows(
  */
 function evenlySpacedOutputWindows(
     output_windows: Map<string, OpenRange[]>,
-    derivation: BlueprintGenerationResult,
+    derivation: TrialRun,
     period: number,
 ): Map<string, OpenRange[]> | null {
     if (!Number.isInteger(period)) {

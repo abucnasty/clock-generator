@@ -530,7 +530,6 @@ export function generateClockAlternatives(
     let completed = 0;
     let total: number | null = null;
     const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
-    const copies = config.target_output.copies ?? 1;
 
     report();
     const plan = planClockAlternatives(config, { ...options, on_progress_detail: report });

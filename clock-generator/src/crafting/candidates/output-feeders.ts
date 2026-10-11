@@ -7,7 +7,6 @@ import { Entity, EntityId, Inserter } from "../../entities";
 import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
 import { alwaysEnabledByConfig } from "../plan/plan-run";
-import { OUTPUT_FEEDER_CHECK_TICKS } from "../trial";
 
 /** The inserters from one machine into one of the output machines: the only ones that can be given feeder windows */
 export function feedersOfOutputMachines(inserters: readonly Inserter[], output_machine_ids: ReadonlySet<string>): Inserter[] {

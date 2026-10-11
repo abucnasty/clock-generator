@@ -3,9 +3,9 @@ import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
-import { deriveClockWindows, deriveWithOutputWindows } from "../candidates/observed-windows";
+import { deriveWithOutputWindows } from "../candidates/observed-windows";
 import { CheckedShiftRow, checkedShiftRows } from "../candidates/shifted-swings";
-import { BlueprintGenerationResult, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
+import { TrialRun, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
 import { AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
 
 /** Positions tried for moved output swings; each costs dozens of clock-only simulations */
@@ -92,7 +92,7 @@ export function deriveUnevenOutputClockWindows(
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
-    verification: BlueprintGenerationResult | null;
+    verification: TrialRun | null;
     as_built: AsBuiltStabilityCheck | null;
     moved_output_swing: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 } | null {
