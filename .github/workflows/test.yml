@@ -2,6 +2,8 @@ name: Test
 
 on:
   pull_request:
+  # the unit tests only run when the workflow is started by hand: see the unit job
+  workflow_dispatch:
 
 # a new push to a pull request replaces the run of the one before it
 concurrency:
@@ -11,6 +13,9 @@ concurrency:
 jobs:
   unit:
     name: Unit tests
+    # Not on pull requests for now: the suite takes over ten minutes on the runner, where it takes three on a
+    # desktop. Until the tests are faster it is run by hand ("Run workflow", or `gh workflow run test.yml`).
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
