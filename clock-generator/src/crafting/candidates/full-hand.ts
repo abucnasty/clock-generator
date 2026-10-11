@@ -188,8 +188,10 @@ export function fullHandOutputWindows(
                 ? { holds: true, output_full: outputFullTicks(result), slow: slowPickups(result) }
                 : { holds: false, output_full: 0, slow: 0 };
         },
-        // the offsets of one window length are listed in order, so neighbours in the list are neighbours in time
+        // the offsets of one window length are listed in order, so neighbours in the list are neighbours in time, and
+        // the last offset is next to the first: the windows repeat every spacing
         neighbours: (a, b) => a.length === b.length,
+        wraps: true,
         tieBreak: (a, b) => a.quick.output_full - b.quick.output_full || a.quick.slow - b.quick.slow || a.candidate.length - b.candidate.length,
         // this search's own check first: the timing has to get back from full output machines, with spare windows if need be
         confirm: ({ candidate: timing, quick }) => {
