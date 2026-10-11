@@ -1,0 +1,57 @@
+name: Publish sidecar mod
+
+# The sidecar mod has a version of its own (clock-generator-sidecar/info.json) and is published to the Factorio mod
+# portal when that version is not there yet. It runs when the mod's folder changes on master, and by hand
+# ("Run workflow", or `gh workflow run publish-sidecar.yml`) to try a failed upload again. A release of the clock
+# generator does not publish the mod.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - clock-generator-sidecar/**
+  workflow_dispatch:
+
+jobs:
+  publish-sidecar:
+    runs-on: ubuntu-latest
+    # holds the FACTORIO_MOD_API_KEY secret, and can require approval before anything is published
+    environment: mod-portal
+    env:
+      MOD_NAME: clock-generator-sidecar
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the version of the mod
+        run: echo "VERSION=$(node -p "require('./clock-generator-sidecar/info.json').version")" >> "$GITHUB_ENV"
+
+      - name: Skip when the portal already has this version
+        id: portal
+        run: |
+          # a portal that cannot be read is an error, not a version that is missing
+          RELEASES=$(curl -fsS "https://mods.factorio.com/api/mods/$MOD_NAME/full")
+          if echo "$RELEASES" | jq -e --arg v "$VERSION" '.releases[] | select(.version == $v)' > /dev/null; then
+            echo "$MOD_NAME $VERSION is already on the mod portal, skipping."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the mod
+        if: steps.portal.outputs.publish == 'true'
+        run: ./clock-generator-sidecar/build.sh
+
+      - name: Upload to the mod portal
+        if: steps.portal.outputs.publish == 'true'
+        env:
+          FACTORIO_MOD_API_KEY: ${{ secrets.FACTORIO_MOD_API_KEY }}
+        run: |
+          if [ -z "$FACTORIO_MOD_API_KEY" ]; then
+            echo "::error::The FACTORIO_MOD_API_KEY secret is not set"
+            exit 1
+          fi
+          UPLOAD_URL=$(curl -fsS -X POST https://mods.factorio.com/api/v2/mods/releases/init_upload \
+            -H "Authorization: Bearer $FACTORIO_MOD_API_KEY" \
+            -F "mod=$MOD_NAME" | jq -er '.upload_url')
+          curl -fsS -X POST "$UPLOAD_URL" -F "file=@clock-generator-sidecar/${MOD_NAME}_${VERSION}.zip"
+          echo "Published $MOD_NAME $VERSION to the mod portal."

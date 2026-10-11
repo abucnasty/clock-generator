@@ -89,10 +89,4 @@ describe("sidecar version convention", () => {
         const changelog = fs.readFileSync(path.join(projectRoot, "clock-generator-sidecar", "changelog.txt"), "utf8");
         expect(changelog.match(/^Version: (\S+)/m)?.[1]).toBe(LATEST_SIDECAR_VERSION);
     });
-
-    it("is not older than the version of the project", () => {
-        for (const version of [readVersion("clock-generator", "package.json"), readVersion("clock-generator-ui", "package.json")]) {
-            expect(compareVersions(LATEST_SIDECAR_VERSION, version)).toBeGreaterThanOrEqual(0);
-        }
-    });
 });
