@@ -13,8 +13,8 @@ describe("generateClockForConfig", () => {
     // from the generator's start and fails the long run: counted over its repeat (320 ticks, 3 periods) it moves 32
     // too many in the periods judged, the tail of a start-up surplus. The full-hand clock of the same period holds and
     // does not get back from a loss of tungsten ore. No clock of the build meets goal 1, so the one nearest to the
-    // target rate is selected, and the two tie at 45 a second: until 2026-10-11 the full-hand clock was ranked first
-    // where a machine has spare speed, and since then the fewest wake-ups decide between them.
+    // target rate is selected, and the two tie at 45 a second: the one that holds its expected output comes first
+    // (GOALS.md), so the full-hand clock is selected although the 1-swing clock has fewer wake-ups.
     describe("metallurgic science, which only the simulator vouches for", async () => {
         const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
         let alternatives: ClockAlternative[];
@@ -28,12 +28,13 @@ describe("generateClockForConfig", () => {
             full_hand = alternatives.find(a => a.label === "Full-hand output swings: 1 output swing per cycle, subtick clock")!;
         });
 
-        it("selects the 1-swing subtick clock at 45 a second, with fewer wake-ups than the full-hand clock at the same rate", () => {
-            expect(selected.label).toBe("1 output swing per cycle, subtick clock");
+        it("selects the full-hand subtick clock at 45 a second, which holds its output, over the 1-swing clock at the same rate with fewer wake-ups", () => {
+            expect(selected).toBe(full_hand);
             expect(selected.assessment.items_per_second).toBeCloseTo(45, 6);
             expect(selected.result.simulation_duration.ticks).toBeCloseTo(320 / 3, 6);
-            expect(full_hand.assessment.items_per_second).toBeCloseTo(45, 6);
-            expect(selected.assessment.wake_ups_per_minute!).toBeLessThan(full_hand.assessment.wake_ups_per_minute!);
+            const one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
+            expect(one_swing.assessment.items_per_second).toBeCloseTo(45, 6);
+            expect(one_swing.assessment.wake_ups_per_minute!).toBeLessThan(full_hand.assessment.wake_ups_per_minute!);
         });
 
         // A build no clock on offer survives backpressure loss on (GOALS.md): it keeps its clocks, named for what they are
@@ -44,8 +45,9 @@ describe("generateClockForConfig", () => {
             expect(alternatives.some(a => a.verdict === "stable")).toBe(false);
         });
 
-        it("does not call the plain 1-swing clock of the same period stable", () => {
-            expect(selected.verdict).toBe("unstable");
+        it("calls the plain 1-swing clock of the same period unstable: it fails the long run", () => {
+            const one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
+            expect(one_swing.verdict).toBe("unstable");
         });
     });
 });

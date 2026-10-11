@@ -7,6 +7,7 @@ const clock = (id: string, ranking: Partial<ClockRanking> = {}): Ranked => ({
     id,
     meets_target_rate: true,
     rate_off_target: 0,
+    holds_expected_output: true,
     matches_belt_choice: true,
     wake_ups_per_minute: 100,
     window_count: 10,
@@ -73,6 +74,22 @@ describe("combineClockAlternativeRuns", () => {
             clock("nearest", { meets_target_rate: false, rate_off_target: -5.69, window_count: 40, matches_belt_choice: false }),
             clock("between", { meets_target_rate: false, rate_off_target: -8.57, window_count: 60 }),
         ])).toBe("nearest");
+    });
+
+    // the metallurgic science sample: the full-hand subtick clock holds 45 a second and does not get back from a loss
+    // of tungsten ore; the plain 1-swing clock at the same rate fails the long run, with fewer wake-ups
+    it("selects, of two clocks equally near a target rate no clock meets, the one that holds its expected output", () => {
+        expect(selectedOf([
+            clock("drifts", { meets_target_rate: false, rate_off_target: 0, holds_expected_output: false, wake_ups_per_minute: 30 }),
+            clock("holds", { meets_target_rate: false, rate_off_target: 0, wake_ups_per_minute: 80 }),
+        ])).toBe("holds");
+    });
+
+    it("does not look at whether a clock holds while another is nearer to the target rate", () => {
+        expect(selectedOf([
+            clock("holds-far", { meets_target_rate: false, rate_off_target: -5 }),
+            clock("drifts-near", { meets_target_rate: false, rate_off_target: -1, holds_expected_output: false }),
+        ])).toBe("drifts-near");
     });
 
     it("counts a rate above the target as far off as one below it", () => {
