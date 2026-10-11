@@ -60,15 +60,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Vitest starts the files that took longest last time first, so that the slowest one is not the last to
-      # start: the durations are kept between runs here. Any earlier run's are good enough to order by.
-      - name: Restore the test durations of the last run
-        uses: actions/cache@v4
-        with:
-          path: clock-generator/node_modules/.vite/vitest
-          key: vitest-durations-${{ github.run_id }}
-          restore-keys: vitest-durations-
-
       - name: Generation tests
         run: npm run test:generation -- --reporter=default
 
