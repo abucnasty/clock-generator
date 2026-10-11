@@ -4,12 +4,11 @@ import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
-import { CheckedShiftRow } from "../candidates/shifted-swings";
 import { withBeltPickupSlack } from "../clock";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, planRun, windowsFromHistory } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithOutputFeeders } from "../trial";
 import { fullHandTransferWindows } from "./full-hand";
-import { search } from "./search";
+import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
 import { deriveUnevenOutputClockWindows } from "./uneven-output";
 
@@ -23,13 +22,21 @@ export interface DerivedClockWindowsReport {
     end_padding_ticks: number | null;
     /** Machine-to-machine inserters whose observed windows were replaced by brief full-hand windows */
     full_hand_inserters?: string[];
-    /** For uneven output swings: the output swing moved off its planned start and by how many ticks (negative is earlier) */
-    moved_output_swing?: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 }
 
-/** End padding candidates tried in order; a candidate is only used when the next one also passes, for margin */
+/** End padding candidates, in order */
 const DERIVED_WINDOW_END_PADDING_CANDIDATES = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16];
 
+/** What deriving windows under given output windows yields */
+export interface DerivedWindows {
+    windows: Map<string, OpenRange[]> | null;
+    end_padding_ticks: number | null;
+    verification: TrialRun | null;
+    as_built: AsBuiltStabilityCheck | null;
+    /** The output windows spread evenly, when that would change them: a second try for `deriveClockWindows` */
+    even_output_windows: Map<string, OpenRange[]> | null;
+    search: SearchReport;
+}
 
 /**
  * Derives clock windows by simulating with only the output inserters clocked (their planned windows)
@@ -45,12 +52,7 @@ export function deriveClockWindows(
     period: number,
     logger: Logger,
     report?: (detail: string) => void,
-): {
-    windows: Map<string, OpenRange[]> | null;
-    end_padding_ticks: number | null;
-    verification: TrialRun | null;
-    as_built: AsBuiltStabilityCheck | null;
-} {
+): DerivedWindows {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
@@ -69,19 +71,24 @@ export function deriveClockWindows(
     return (even.as_built?.actual_output_items ?? 0) > (planned.as_built?.actual_output_items ?? 0) ? even : planned;
 }
 
-/** One padding tried: the windows at that padding and the quick clock-only check of them */
-interface PaddingAttempt {
-    windows: Map<string, OpenRange[]>;
-    result: TrialRun;
-    check: AsBuiltStabilityCheck;
+/** The clock-only check a single unshifted run stands for, where no check from several start phases was made */
+function checkOfRun(run: TrialRun): AsBuiltStabilityCheck {
+    return {
+        holds: run.stability_check.holds,
+        actual_output_items: run.stability_check.actual_output_items,
+        start_phases_checked: 1,
+        failed_start_offset: run.stability_check.holds ? undefined : 0,
+        repeat_periods: run.stability_check.repeat_periods,
+        repeat_output_items: run.stability_check.repeat_output_items,
+    };
 }
 
 /**
  * The build run free under the output windows given, each other inserter's busy ticks read off the run as its windows,
- * and the padding of their ends searched: the paddings are tried in order with the quick clock-only check, and a
- * padding is used as soon as it and the one before it pass, for margin. With `confirm` the pick is confirmed from
- * many more start phases, and when that fails the search goes on to the next paddings. When no padding passes, the
- * one that moved the most is reported.
+ * and the padding of their ends searched (see search.ts): every padding gets the quick trial, and of those that pass
+ * one whose neighbours pass too is confirmed before one whose do not, the smallest of those. Without `confirm_pick`
+ * the pick is taken on its quick trial, for a caller that confirms its own pick. When no padding is confirmed, the
+ * quick trial that moved the most is reported, as one run from the generator's start.
  */
 export function deriveWithOutputWindows(
     base_config: Config,
@@ -93,22 +100,20 @@ export function deriveWithOutputWindows(
     label: string,
     logger: Logger,
     report?: (detail: string) => void,
-    /** Confirm the accepted padding from many more start phases; a caller comparing several results confirms its pick itself */
-    confirm: boolean = true,
-): {
-    windows: Map<string, OpenRange[]> | null;
-    end_padding_ticks: number | null;
-    verification: TrialRun | null;
-    as_built: AsBuiltStabilityCheck | null;
-    even_output_windows: Map<string, OpenRange[]> | null;
-} {
+    confirm_pick: boolean = true,
+): DerivedWindows {
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} windows)`);
     const derivation = runClockOnBuild(base_config, fixed_windows, period, logger);
     logger.log(`Derived clock windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
     const even_output_windows = evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), period), period);
+    const reportOf = (tried: { candidate: number; quick: QuickTrial }[], picked: number | null): SearchReport => ({
+        kind: "padding",
+        candidates: tried.map(it => ({ row: 1, setting: it.candidate, holds: it.quick.holds })),
+        picked: picked === null ? null : { row: 1, setting: picked },
+    });
     if (!derivation.stability_check.holds) {
-        return { windows: null, end_padding_ticks: null, verification: derivation, as_built: null, even_output_windows };
+        return { windows: null, end_padding_ticks: null, verification: derivation, as_built: null, even_output_windows, search: reportOf([], null) };
     }
 
     const always_enabled_by_config = alwaysEnabledByConfig(base_config);
@@ -126,46 +131,28 @@ export function deriveWithOutputWindows(
         }
     }
     const unpadded = new Map([...fixed_windows, ...busy_windows]);
-    const ticks = (padding: number) => `${padding} tick${padding === 1 ? "" : "s"}`;
+    const ticks = (padding: number) => `${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows)`;
 
-    const { picked, tried } = search<number, PaddingAttempt, Omit<ReturnType<typeof deriveWithOutputWindows>, "even_output_windows">>({
+    const { picked, pick, tried } = search<number, QuickTrial & { windows: Map<string, OpenRange[]>; result: TrialRun }, Confirmed>({
         candidates: DERIVED_WINDOW_END_PADDING_CANDIDATES,
         quick: padding => {
             const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, period), belt_pickup_slack, period);
-            const { result, check } = runAsBuiltCheck(base_config, windows, period, logger, AS_BUILT_START_PHASES,
-                (n, total) => report?.(`Trying ${ticks(padding)} of padding (${label} windows), clock start ${n}/${total}`));
-            logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${check.actual_output_items} stable=${check.holds} (${check.start_phases_checked} start phases)`);
-            return { windows, result, check };
+            report?.(`Trying ${ticks(padding)}`);
+            const trial = quickTrial(base_config, windows, period, logger);
+            logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${trial.result.stability_check.actual_output_items} holds=${trial.holds}`);
+            return { ...trial, windows };
         },
-        // a padding is used when it and the one before pass; a padding whose confirmation failed counts as failed
-        picks: (attempts, done) => {
-            const [previous, last] = [attempts[attempts.length - 2], attempts[attempts.length - 1]];
-            return !done && previous?.quick.check.holds && last.quick.check.holds ? [last.index] : [];
-        },
-        confirm: ({ candidate: padding, quick: { windows, result, check } }) => {
-            if (!confirm) {
-                return { windows, end_padding_ticks: padding, verification: result, as_built: check };
-            }
-            // failing start phases can be a narrow band the quick check skips over
-            const full = runAsBuiltCheck(base_config, windows, period, logger, FULL_CHECK_START_PHASES,
-                (n, total) => report?.(`Confirming ${ticks(padding)} of padding (${label} windows), clock start ${n}/${total}`)).check;
-            logger.log(`Derived clock windows (${label}): end padding ${padding} full check -> actual=${full.actual_output_items} stable=${full.holds} (${full.start_phases_checked} start phases)`);
-            if (full.holds) {
-                return { windows, end_padding_ticks: padding, verification: result, as_built: full };
-            }
-            check.holds = false;
-            check.actual_output_items = full.actual_output_items;
-            check.failed_start_offset = full.failed_start_offset;
-            check.repeat_periods = full.repeat_periods;
-            check.repeat_output_items = full.repeat_output_items;
-            return null;
-        },
+        neighbours: () => true,
+        tieBreak: (a, b) => a.candidate - b.candidate,
+        confirm: ({ candidate: padding, quick }) => confirm_pick
+            ? confirm(base_config, quick.windows, period, logger, ticks(padding), report)
+            : { result: quick.result, check: checkOfRun(quick.result) },
     });
-    if (picked !== null) {
-        return { ...picked, even_output_windows };
+    if (picked !== null && pick !== null) {
+        return { windows: pick.quick.windows, end_padding_ticks: pick.candidate, verification: picked.result, as_built: picked.check, even_output_windows, search: reportOf(tried, pick.candidate) };
     }
-    const best = tried.map(it => it.quick).reduce((a, b) => b.check.actual_output_items > a.check.actual_output_items ? b : a);
-    return { windows: null, end_padding_ticks: null, verification: best.result, as_built: best.check, even_output_windows };
+    const best = tried.map(it => it.quick).reduce((a, b) => b.result.stability_check.actual_output_items > a.result.stability_check.actual_output_items ? b : a);
+    return { windows: null, end_padding_ticks: null, verification: best.result, as_built: { ...checkOfRun(best.result), holds: false, failed_start_offset: 0 }, even_output_windows, search: reportOf(tried, null) };
 }
 
 /**
@@ -212,9 +199,9 @@ export function observedWindowsClock(
         }
         return fed;
     };
-    const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: DerivedClockWindowsReport): BlueprintGenerationResult =>
+    const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: DerivedClockWindowsReport, report?: SearchReport): BlueprintGenerationResult =>
         exportClock(plan, clock, fed?.windows ?? planned_windows, options,
-            { clock_only_run, output_feeders: fed?.output_feeders, item_names: fed?.item_names, derived_clock_windows });
+            { clock_only_run, output_feeders: fed?.output_feeders, item_names: fed?.item_names, derived_clock_windows, search: report });
     if (planned_stable && planned_check.holds && mode === "prefer_planned") {
         // planned windows keep the plan's batched swings, which derived windows would break into per-craft swings
         const fed = feedPlanned();
@@ -227,14 +214,13 @@ export function observedWindowsClock(
         Math.min(...output_machine_state_machines.map(it => it.machine_state.machine.crafting_rate.ticks_per_craft)),
         logger, options.on_progress_detail);
     // without a moved swing that works there is nothing to export; plain observed windows are their own alternative
-    const derived = mode === "uneven_output"
+    const derived: Omit<DerivedWindows, "even_output_windows" | "search"> & { search?: SearchReport } = mode === "uneven_output"
         ? uneven ?? { windows: null, end_padding_ticks: null, verification: null, as_built: null }
         : deriveClockWindows(config, final_history, output_inserter_ids, clock.belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
     const report: DerivedClockWindowsReport = {
         succeeded: derived.windows !== null,
         kept_planned_windows: false,
         end_padding_ticks: derived.end_padding_ticks,
-        moved_output_swing: uneven?.moved_output_swing ?? undefined,
     };
     stability_check.as_built = derived.as_built ?? undefined;
     stability_check.holds = stability_check.holds && derived.windows !== null;
@@ -249,11 +235,11 @@ export function observedWindowsClock(
         }
         // observed windows are what the inserters did, fuel hands included, and the run shown is the trial of them
         return exportClock(plan, clock, windows, options,
-            { histories: full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report });
+            { histories: full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report, search: derived.search });
     }
     logger.log("Derived clock windows: no padding passed the as-built check; falling back to the planned windows.");
     const fed = feedPlanned();
     stability_check.as_built = planned_check;
     stability_check.holds = planned_stable && planned_check.holds;
-    return exportPlanned(fed, report);
+    return exportPlanned(fed, report, derived.search);
 }

@@ -294,13 +294,13 @@ function alternativeDefinitionsFor(
             description: "Observed windows with one output swing moved off its planned start, so the output swings are not evenly "
                 + "spaced. A machine only has to make up for what the output inserter takes over the whole clock period, so it can "
                 + "craft more between one pair of swings than the next and carry the difference in its output slot. The swing is "
-                + "tried at positions a craft apart and every other inserter's windows are observed again for each; the position "
-                + "with the most working positions on either side is used. Only offered when the period has more than one output "
-                + "swing and a moved swing passes the clock-only check.",
+                + "tried at positions a craft apart and every other inserter's windows are observed again for each; a position "
+                + "whose neighbours work too is used, the smallest move of those. Only offered when the period has more than one "
+                + "output swing and a moved swing passes the clock-only check.",
             run: () => {
                 // one search at the planned swing count; backing off would repeat it for every lower count
                 const result = observedWindowsClock(base_config, quiet, "uneven_output");
-                assert(result.derived_clock_windows?.moved_output_swing !== undefined, "no moved output swing passes the clock-only check");
+                assert(result.search?.kind === "moved output swing" && result.search.picked !== null, "no moved output swing passes the clock-only check");
                 return result;
             },
         }]),
@@ -312,13 +312,13 @@ function alternativeDefinitionsFor(
                 + "machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before "
                 + "it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within "
                 + "those limits a round can run earlier or later. Window lengths and their spacing within the round are kept, so "
-                + "swings stay as batched as planned. Every shift is checked with the clock-only simulation and the one with the "
-                + "most working shifts on either side is used. Only offered when the clock period has more than one round and a "
-                + "shift passes.",
+                + "swings stay as batched as planned. Every shift is checked with the clock-only simulation and a shift whose "
+                + "neighbours work too is used, the smallest of those. Only offered when the clock period has more than one round "
+                + "and a shift passes.",
             run: () => {
                 // one search at the planned swing count, like uneven output swings
                 const result = shiftedSwingsClock(base_config, { ...quiet, belt_pickup_slack: "always" });
-                assert(result.shifted_cycle !== undefined, "no shifted round of swings passes the clock-only check");
+                assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, "no shifted round of swings passes the clock-only check");
                 return result;
             },
         },
@@ -411,14 +411,13 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
-    const moved = result.derived_clock_windows?.moved_output_swing;
-    const moved_note = moved === undefined ? ""
-        : ` Output swing ${moved.swing} starts ${Math.abs(moved.shift_ticks)} ticks ${moved.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
-    const shifted = result.shifted_cycle;
-    const shifted_note = shifted === undefined ? ""
-        : ` The swings planned in clock ticks ${shifted.planned_ticks.start}–${shifted.planned_ticks.end} (`
-        + shifted.moved.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
-        + `) start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
+    const search = result.search?.picked ? result.search : undefined;
+    const moved_note = search?.kind !== "moved output swing" ? ""
+        : ` Output swing ${search.picked!.row} starts ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
+    const shifted_note = search?.kind !== "shifted cycle" ? ""
+        : ` The swings planned in clock ticks ${search.planned_ticks!.start}–${search.planned_ticks!.end} (`
+        + search.moved!.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
+        + `) start ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
     const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)

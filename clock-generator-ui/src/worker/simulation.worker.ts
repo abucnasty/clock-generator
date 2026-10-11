@@ -5,8 +5,8 @@
  * then every worker takes tasks (one alternative each) until all are done. Logs and progress stream back.
  */
 
-import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, WorkerRequest, WorkerResponse } from './types';
+import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
+import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
@@ -42,33 +42,30 @@ async function handleInitialize(factorioDataUrl: string): Promise<void> {
 }
 
 function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['result']): ShiftOptionsView | null {
-    const cycle = result.shifted_cycle;
-    if (cycle) {
-        return {
-            moved: 'swings',
-            chosenIndex: cycle.cycle,
-            chosenShiftTicks: cycle.shift_ticks,
-            movedDescription: cycle.moved.map(it => `${it.entity_id.replace(':', ' ')}: ${it.item_names.join(', ')}`).join('; '),
-            plannedTicks: cycle.planned_ticks,
-            rows: cycle.shifts_checked,
-            earliest: cycle.earliest,
-            latest: cycle.latest,
-        };
+    const search = result.search;
+    if (!search || search.picked === null || (search.kind !== 'shifted cycle' && search.kind !== 'moved output swing')) {
+        return null;
     }
-    const swing = result.derived_clock_windows?.moved_output_swing;
-    if (swing) {
-        return {
-            moved: 'output-swing',
-            chosenIndex: swing.swing,
-            chosenShiftTicks: swing.shift_ticks,
-            movedDescription: `output swing ${swing.swing}`,
-            plannedTicks: null,
-            rows: swing.shifts_checked,
-            earliest: null,
-            latest: null,
-        };
+    const rows = new Map<number, CheckedShiftRow>();
+    for (const candidate of search.candidates) {
+        const row = rows.get(candidate.row) ?? { index: candidate.row, shifts: [] };
+        row.shifts.push({ shift_ticks: candidate.setting, holds: candidate.holds });
+        rows.set(candidate.row, row);
     }
-    return null;
+    const edge = (it: SearchRangeEdge | undefined): ShiftRangeEdge | null => it ? { shift_ticks: it.setting, is_search_limit: it.is_search_limit, notes: it.notes } : null;
+    const shifted = search.kind === 'shifted cycle';
+    return {
+        moved: shifted ? 'swings' : 'output-swing',
+        chosenIndex: search.picked.row,
+        chosenShiftTicks: search.picked.setting,
+        movedDescription: shifted
+            ? (search.moved ?? []).map(it => `${it.entity_id.replace(':', ' ')}: ${it.item_names.join(', ')}`).join('; ')
+            : `output swing ${search.picked.row}`,
+        plannedTicks: shifted ? search.planned_ticks ?? null : null,
+        rows: Array.from(rows.values()),
+        earliest: edge(search.earliest),
+        latest: edge(search.latest),
+    };
 }
 
 /** The fuel plan with the part of the fuel run the page draws: the fuel levels and the fuel inserters' swings */

@@ -5,16 +5,14 @@ import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../../ent
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { BlueprintGenerationResult, GenerateClockOptions, LCM_STABILITY_TOLERANCE, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
-import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild } from "../trial";
-import { search } from "./search";
+import { AsBuiltStabilityCheck, runClockOnBuild } from "../trial";
+import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { SpareOutputWindows, withSingleSwingOutput } from "./transforms";
 
 
 const FULL_HAND_WINDOW_LENGTHS = [4, 6, 8];
 
 const FULL_HAND_OFFSET_STEP = 1;
-
-const FULL_HAND_MAX_CONFIRM_ATTEMPTS = 5;
 
 /** A pickup longer than this waited at the machine for more items */
 const FULL_HAND_SLOW_PICKUP_TICKS = 2;
@@ -42,26 +40,34 @@ interface Timing {
 }
 
 /** What the quick trial of a timing found: whether it holds, and how its windows are used when it does */
-interface TimingTrial {
-    holds: boolean;
+interface TimingTrial extends QuickTrial {
     /** Ticks the output machines sat output full */
     output_full: number;
     /** Pickups that waited at the machine for more items */
     slow: number;
 }
 
+/** What the full-hand search yields: the windows, the confirming check and its run, and what it tried */
+export interface FullHandWindows {
+    windows: Map<string, OpenRange[]>;
+    result: TrialRun;
+    check: AsBuiltStabilityCheck;
+    search: SearchReport;
+}
+
 /**
  * Output windows with one swing each, evenly spaced so each grab finds a full hand already in the machine
- * instead of picking up a few items at a time while the machine crafts. The start offset and window length
- * are searched with clock-only simulations: candidates that keep the expected output are ranked by how long
- * the output machines sit output full (at the input block, a delayed input drop in game starves the machine),
- * then by how many output pickups had to wait for items.
+ * instead of picking up a few items at a time while the machine crafts. The start offset and window length are
+ * searched (see search.ts): every timing gets the quick trial, and of those that keep the expected output one whose
+ * neighbouring offsets pass too is confirmed before one whose do not; of those, the one whose output machines sit
+ * output full the least (at the input block, a delayed input drop in game starves the machine), then the fewest output
+ * pickups that waited for items, then the shortest windows.
  * One grab per window only keeps up with production, so a surplus left by a disturbance (a slow drop onto a busy
  * belt) never drains and keeps the input drops blocked. The timing must recover from full output machines; if it
  * does not, every n-th window is lengthened for a second grab, preferring the fewest pickups that wait for items.
- * The result is confirmed from several clock start phases. Skipped when the planned windows already fill most hands
- * in one grab (and, with count_waits, when most pickups do not wait at the machine either), unless the build moves
- * more than the expected output under them.
+ * That is this search's own check before the confirmation from several clock start phases. Skipped when the planned
+ * windows already fill most hands in one grab (and, with count_waits, when most pickups do not wait at the machine
+ * either), unless the build moves more than the expected output under them.
  */
 export function fullHandOutputWindows(
     config: Config,
@@ -72,7 +78,7 @@ export function fullHandOutputWindows(
     logger: Logger,
     report?: (detail: string) => void,
     count_waits = false,
-): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck } | null {
+): FullHandWindows | null {
     const swing_counts = Array.from(new Set(Array.from(output_swings.values(), s => Math.round(s * 1e6) / 1e6)));
     if (swing_counts.length !== 1 || !Number.isInteger(swing_counts[0]) || swing_counts[0] < 1) {
         return null;
@@ -164,32 +170,8 @@ export function fullHandOutputWindows(
         }
         return null;
     };
-    const confirm = (timing: Timing, trial: TimingTrial) => {
-        let label = `offset ${timing.offset}, ${timing.length}-tick windows`;
-        report?.(`Checking full-hand output recovery (${label})`);
-        const recovery = recoveringTiming(timing, label);
-        if (!recovery) {
-            logger.log(`Full-hand output: ${label} does not recover from full output machines`);
-            return null;
-        }
-        const { output_full, slow } = recovery.spare ? recovery as Required<typeof recovery> : trial;
-        if (recovery.spare) {
-            label += `, every ${recovery.spare.every} windows +${recovery.spare.ticks} ticks`;
-        }
-        const candidate_windows = build(timing, recovery.spare);
-        const quick = runAsBuiltCheck(config, candidate_windows, period, logger, AS_BUILT_START_PHASES,
-            (n, of) => report?.(`Checking full-hand output (${label}), clock start ${n}/${of}`)).check;
-        if (!quick.holds) {
-            return null;
-        }
-        const full = runAsBuiltCheck(config, candidate_windows, period, logger, FULL_CHECK_START_PHASES,
-            (n, of) => report?.(`Confirming full-hand output (${label}), clock start ${n}/${of}`));
-        logger.log(`Full-hand output: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${full.check.holds}`);
-        return full.check.holds ? { windows: candidate_windows, ...full } : null;
-    };
 
-    // shortest windows first, every offset of each length; a timing with no output-full ticks and no slow pickups cannot
-    // be beaten, so it is confirmed at once, up to a few per length so failing short windows still leave longer ones a chance
+    // shortest windows first, every offset of each length
     const timings: Timing[] = FULL_HAND_WINDOW_LENGTHS.filter(length => length < spacing).flatMap(length => {
         const offsets: Timing[] = [];
         for (let offset = 0; offset < spacing; offset += FULL_HAND_OFFSET_STEP) {
@@ -197,41 +179,51 @@ export function fullHandOutputWindows(
         }
         return offsets;
     });
-    const total = FULL_HAND_WINDOW_LENGTHS.length * Math.ceil(spacing / FULL_HAND_OFFSET_STEP);
-    let attempts = 0;
-    const length_attempts = new Map<number, number>();
-    const { picked } = search<Timing, TimingTrial, { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck }>({
+    const { picked, pick, tried } = search<Timing, TimingTrial, Confirmed & { windows: Map<string, OpenRange[]> }>({
         candidates: timings,
         quick: (timing, index) => {
-            report?.(`Searching full-hand output timing (${index + 1}/${total})`);
-            const result = runClockOnBuild(config, build(timing), period, logger);
-            return result.stability_check.holds
+            report?.(`Searching full-hand output timing (${index + 1}/${timings.length})`);
+            const { holds, result } = quickTrial(config, build(timing), period, logger);
+            return holds
                 ? { holds: true, output_full: outputFullTicks(result), slow: slowPickups(result) }
                 : { holds: false, output_full: 0, slow: 0 };
         },
-        picks: (tried, done) => {
-            if (!done) {
-                const last = tried[tried.length - 1];
-                const perfect = last.quick.holds && last.quick.output_full === 0 && last.quick.slow === 0;
-                if (!perfect || (length_attempts.get(last.candidate.length) ?? 0) >= FULL_HAND_MAX_CONFIRM_ATTEMPTS) {
-                    return [];
-                }
-                length_attempts.set(last.candidate.length, (length_attempts.get(last.candidate.length) ?? 0) + 1);
-                attempts++;
-                return [last.index];
+        // the offsets of one window length are listed in order, so neighbours in the list are neighbours in time, and
+        // the last offset is next to the first: the windows repeat every spacing
+        neighbours: (a, b) => a.length === b.length,
+        wraps: true,
+        tieBreak: (a, b) => a.quick.output_full - b.quick.output_full || a.quick.slow - b.quick.slow || a.candidate.length - b.candidate.length,
+        // this search's own check first: the timing has to get back from full output machines, with spare windows if need be
+        confirm: ({ candidate: timing, quick }) => {
+            let label = `full-hand output (offset ${timing.offset}, ${timing.length}-tick windows)`;
+            report?.(`Checking ${label} recovery`);
+            const recovery = recoveringTiming(timing, label);
+            if (!recovery) {
+                logger.log(`Full-hand output: ${label} does not recover from full output machines`);
+                return null;
             }
-            // then the timings that hold but wait somewhere, the least output-full time and the fewest slow pickups first
-            return tried.filter(it => it.quick.holds && (it.quick.output_full > 0 || it.quick.slow > 0))
-                .sort((a, b) => a.quick.output_full - b.quick.output_full || a.quick.slow - b.quick.slow || a.candidate.length - b.candidate.length)
-                .slice(0, Math.max(0, FULL_HAND_MAX_CONFIRM_ATTEMPTS - attempts))
-                .map(it => it.index);
+            const { output_full, slow } = recovery.spare ? recovery as Required<typeof recovery> : quick;
+            if (recovery.spare) {
+                label += `, every ${recovery.spare.every} windows +${recovery.spare.ticks} ticks`;
+            }
+            const candidate_windows = build(timing, recovery.spare);
+            const confirmed = confirm(config, candidate_windows, period, logger, label, report);
+            logger.log(`Full-hand output: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${confirmed !== null}`);
+            return confirmed === null ? null : { ...confirmed, windows: candidate_windows };
         },
-        confirm: ({ candidate, quick }) => confirm(candidate, quick),
     });
-    if (picked === null) {
+    if (picked === null || pick === null) {
         logger.log("Full-hand output: no timing kept the expected output; keeping the planned output windows.");
+        return null;
     }
-    return picked;
+    return {
+        ...picked,
+        search: {
+            kind: "full-hand timing",
+            candidates: tried.map(it => ({ row: it.candidate.length, setting: it.candidate.offset, holds: it.quick.holds })),
+            picked: { row: pick.candidate.length, setting: pick.candidate.offset },
+        },
+    };
 }
 
 /**
@@ -257,7 +249,7 @@ export function fullHandTransferWindows(
     logger: Logger,
     report?: (detail: string) => void,
 ): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck; inserters: string[] } | null {
-    let current: { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck } | null = null;
+    let current: FullHandWindows | null = null;
     const inserters: string[] = [];
     const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
     for (const [entity_id, transfers] of verification.transfer_history.entries()) {
@@ -284,7 +276,7 @@ export function fullHandTransferWindows(
             inserters.push(entity_id.id);
         }
     }
-    return current && { ...current, inserters };
+    return current && { windows: current.windows, result: current.result, check: current.check, inserters };
 }
 
 /**
@@ -313,5 +305,5 @@ export function fullHandClock(config: Config, options: GenerateClockOptions = {}
         new Set(output_inserters.map(os => os.inserter.source.entity_id.id)),
         duration.ticks, plan.logger, options.on_progress_detail,
     );
-    return checkedClock(plan, clock, full_hand?.windows ?? clock.windows, options);
+    return checkedClock(plan, clock, full_hand?.windows ?? clock.windows, options, { search: full_hand?.search });
 }

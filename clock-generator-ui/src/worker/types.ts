@@ -3,12 +3,10 @@ import type {
     ClockAssessment,
     ClockRanking,
     ClockVerdict,
-    CheckedShiftRow,
     ClockInsight,
     ConfigValidation,
     FuelLevelSeries,
     FuelPlan,
-    ShiftRangeEdge,
     ClockAlternativeContext,
     ClockAlternativeRun,
     ClockAlternativeTask,
@@ -48,6 +46,28 @@ export interface FuelViewData {
     plan: FuelPlan;
     /** Null when the run was not made */
     run: FuelRunView | null;
+}
+
+/** One place tried for a moved crafting cycle or output swing, in ticks from its planned start (negative is earlier) */
+export interface CheckedShift {
+    shift_ticks: number;
+    /** Passed the quick trial; only the shift that is used is confirmed from more clock start phases */
+    holds: boolean;
+}
+
+/** Every place tried for one crafting cycle or output swing (1-based `index`), in shift order */
+export interface CheckedShiftRow {
+    index: number;
+    shifts: CheckedShift[];
+}
+
+/** One end of the unbroken range of shifts that work around the shift in use */
+export interface ShiftRangeEdge {
+    shift_ticks: number;
+    /** No place further out was tried: the moved windows would meet the same inserters' other windows or the end of the period */
+    is_search_limit: boolean;
+    /** What the inserters and machines are waiting on at this shift, the limits that stop the swings from going further */
+    notes: string[];
 }
 
 /** Every place tried for the swings a potential clock moved off their planned start */
