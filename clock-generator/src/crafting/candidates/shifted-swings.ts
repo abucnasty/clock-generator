@@ -3,7 +3,7 @@ import { OpenRange } from "../../data-types";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { CIRCUIT_LATENCY_TICKS } from "../clock";
-import { TrialRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
 import { search } from "./search";
 import { cycleOfWindow, withCycleShifted } from "./transforms";
@@ -329,4 +329,23 @@ export function shiftedCycleWindows(
         },
     });
     return picked;
+}
+
+/**
+ * The shifted swings candidate: the clock of the plan with one crafting cycle's windows moved together to another place
+ * in the period (`shiftedCycleWindows`), checked and exported as a planned clock is. The planned windows are exported
+ * when no shift passes.
+ */
+export function shiftedSwingsClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+    const plan = planRun(config, options);
+    const clock = clockOfPlan(plan, options);
+    const shifted = shiftedCycleWindows(
+        { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
+        clock.windows, plan.run.crafting_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
+    );
+    const shifted_cycle = shifted === null ? undefined : {
+        ...shifted.swings,
+        moved: shifted.swings.moved.map(it => ({ ...it, item_names: (plan.item_names.get(it.entity_id) ?? "").split(",").filter(Boolean) })),
+    };
+    return checkedClock(plan, clock, shifted?.windows ?? clock.windows, options, { shifted_cycle });
 }

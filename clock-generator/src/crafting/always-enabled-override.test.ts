@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, type BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, observedWindowsClock, type BlueprintGenerationResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
@@ -44,10 +44,7 @@ describe("an inserter the config sets to always enabled", () => {
 
     it("has no windows made from what it was seen doing either (observed windows)", async () => {
         const config = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATES);
-        const result = generateClockForConfig(
-            { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
-            { logger: quiet, verify_as_built: true, derive_mode: "always" },
-        );
+        const result = observedWindowsClock(config, { logger: quiet, verify_as_built: true }, "always");
         expect(result.derived_clock_windows).toBeDefined();
         expect(alwaysEnabled(config).length).toBeGreaterThan(0);
         for (const id of alwaysEnabled(config)) {

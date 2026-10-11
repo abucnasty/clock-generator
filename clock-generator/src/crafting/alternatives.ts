@@ -6,7 +6,11 @@ import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
 import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight } from "./insights";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
-import { BlueprintGenerationResult, GenerateClockOptions, generateClockForConfig, generateClockWithSwingBackoff } from "./plan/plan-run";
+import { fullHandClock } from "./candidates/full-hand";
+import { observedWindowsClock } from "./candidates/observed-windows";
+import { shiftedSwingsClock } from "./candidates/shifted-swings";
+import { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
+import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount } from "./rank";
 import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf } from "./trial";
 
@@ -282,10 +286,7 @@ function alternativeDefinitionsFor(
                 + `one per craft, so there are usually more windows than ${BATCHED_SWINGS_LABEL} has. An inserter between two machines that waits at `
                 + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
                 + "that is already there rather than staying enabled while the machine crafts.",
-            run: () => generateClockWithSwingBackoff(
-                { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
-                { ...quiet, derive_mode: "always" }
-            ),
+            run: () => generateClockWithSwingBackoff(base_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
         }]),
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "uneven-output",
@@ -298,10 +299,7 @@ function alternativeDefinitionsFor(
                 + "swing and a moved swing passes the clock-only check.",
             run: () => {
                 // one search at the planned swing count; backing off would repeat it for every lower count
-                const result = generateClockForConfig(
-                    { ...config, overrides: { ...config.overrides, derive_clock_windows: true } },
-                    { ...quiet, derive_mode: "uneven_output" }
-                );
+                const result = observedWindowsClock(base_config, quiet, "uneven_output");
                 assert(result.derived_clock_windows?.moved_output_swing !== undefined, "no moved output swing passes the clock-only check");
                 return result;
             },
@@ -319,7 +317,7 @@ function alternativeDefinitionsFor(
                 + "shift passes.",
             run: () => {
                 // one search at the planned swing count, like uneven output swings
-                const result = generateClockForConfig(base_config, { ...quiet, belt_pickup_slack: "always", shifted_cycle: true });
+                const result = shiftedSwingsClock(base_config, { ...quiet, belt_pickup_slack: "always" });
                 assert(result.shifted_cycle !== undefined, "no shifted round of swings passes the clock-only check");
                 return result;
             },
@@ -350,15 +348,15 @@ function alternativeDefinitionsFor(
                 + `surplus. Other inserters keep the windows of ${BATCHED_SWINGS_LABEL}.`,
             run: () => {
                 // input windows come from the first planned run whose clock passes, most batched first
-                const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always", full_hand_output: true };
+                const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always" };
                 if (context.primary_stable) {
-                    return generateClockWithSwingBackoff(base_config, full_hand);
+                    return generateClockWithSwingBackoff(base_config, full_hand, fullHandClock);
                 }
                 const stable_lower = lower_counts.find(lower =>
                     known_stable(`swings-${lower}`) ?? holds(withSwings(lower, { ...quiet, on_progress_detail: undefined })));
                 return stable_lower === undefined
-                    ? generateClockWithSwingBackoff(base_config, full_hand)
-                    : withSwings(stable_lower, full_hand);
+                    ? generateClockWithSwingBackoff(base_config, full_hand, fullHandClock)
+                    : fullHandClock({ ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: stable_lower } }, full_hand);
             },
         },
     ];

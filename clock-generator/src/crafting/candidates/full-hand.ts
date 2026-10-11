@@ -4,7 +4,7 @@ import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../../entities";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
-import { LCM_STABILITY_TOLERANCE, TrialRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, LCM_STABILITY_TOLERANCE, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild } from "../trial";
 import { search } from "./search";
 import { SpareOutputWindows, withSingleSwingOutput } from "./transforms";
@@ -285,4 +285,33 @@ export function fullHandTransferWindows(
         }
     }
     return current && { ...current, inserters };
+}
+
+/**
+ * The full-hand output candidate: the clock of the plan with the output inserters' windows replaced by one swing each,
+ * timed so the machine already holds a full hand (`fullHandOutputWindows`), checked and exported as a planned clock is.
+ * Not searched where a full hand would wait past the output block, which would refuse input drops every cycle; the
+ * planned windows are exported then, and when no timing keeps the expected output.
+ */
+export function fullHandClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+    const plan = planRun(config, options);
+    const clock = clockOfPlan(plan, options);
+    const { output_inserters, output_machine_state_machines, swing_counts, output_inserter_ids, recipe_lcm, duration } = plan.run;
+    // waiting for a full hand past the output block would refuse input drops every cycle
+    const full_hand_fits = output_inserters.every((os, index) =>
+        handSizeFor(os.inserter, output_machine_state_machines[index].machine_state.machine.output.item_name)
+            < output_machine_state_machines[index].machine_state.machine.output.outputBlock.quantity);
+    const output_swings = new Map<string, number>();
+    for (const [entity_id, etc] of swing_counts.entries()) {
+        if (output_inserter_ids.has(entity_id.id)) {
+            output_swings.set(entity_id.id, etc.total_transfer_count.toDecimal() * recipe_lcm);
+        }
+    }
+    const full_hand = !full_hand_fits ? null : fullHandOutputWindows(
+        { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
+        clock.windows, output_swings,
+        new Set(output_inserters.map(os => os.inserter.source.entity_id.id)),
+        duration.ticks, plan.logger, options.on_progress_detail,
+    );
+    return checkedClock(plan, clock, full_hand?.windows ?? clock.windows, options);
 }
