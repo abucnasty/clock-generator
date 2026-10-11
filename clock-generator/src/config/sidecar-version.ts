@@ -3,8 +3,8 @@ import { Option } from "../data-types/option";
 import { ImportInput, ImportedMachine, ImportPipeline, ImportStep } from "./import-pipeline";
 
 /**
- * The newest version of the sidecar mod. The sidecar always has the same version as the rest of the project
- * (see "Versioning" in the README), so this is bumped with every release, whether or not the mod changed.
+ * The newest version of the sidecar mod. The mod has a version of its own (see "Versioning" in the README) and
+ * this is bumped with it, when the mod changes: a paste from an older mod is told to update to this version.
  */
 export const LATEST_SIDECAR_VERSION = "0.6.0";
 
