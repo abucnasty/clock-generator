@@ -17,7 +17,7 @@
  * the build has stopped leaves the machines part empty or part full, which one that runs its course never does.
  * One run makes the trials of a loss one after the other.
  */
-import { CompositeControlLogic, GameClockWires, TickControlLogic } from "../control-logic";
+import { CompositeControlLogic, TickControlLogic } from "../control-logic";
 import { ItemName } from "../data";
 import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { EntityState, InserterState } from "../state";
@@ -30,27 +30,17 @@ export type BackpressureLoss =
     /** The item stops arriving: no belt and no infinity chest has it */
     | { kind: "supply"; item: ItemName }
     /** The item is not taken away: the belts are full of it, and so are the chests the build puts it into */
-    | { kind: "output"; item: ItemName }
-    /**
-     * Nothing is cut but the clock: for a while every inserter and drill is always enabled, as on a build that has no
-     * clock yet. Not a loss of backpressure. It is what a build is doing when a clock is put on it while it runs, and
-     * it is run as a loss is: the clock comes back at a place in its period, and the build has to get to its expected
-     * output from wherever it then is.
-     */
-    | { kind: "unclocked" };
+    | { kind: "output"; item: ItemName };
 
 /** "supply:coal", "output:advanced-circuit", "none" */
 export function lossId(loss: BackpressureLoss): string {
-    return loss.kind === "none" || loss.kind === "unclocked" ? loss.kind : `${loss.kind}:${loss.item}`;
+    return loss.kind === "none" ? loss.kind : `${loss.kind}:${loss.item}`;
 }
 
 /** "coal stops arriving", "advanced-circuit is not taken away" */
 export function lossLabel(loss: BackpressureLoss): string {
     if (loss.kind === "none") {
         return "nothing is cut";
-    }
-    if (loss.kind === "unclocked") {
-        return "the build runs without its clock";
     }
     return loss.kind === "output" ? `${loss.item} is not taken away` : `${loss.item} stops arriving`;
 }
@@ -87,19 +77,6 @@ export function lossTrialsPartOfTheWay(
 ): LossTrialPlan[] {
     return shares.filter(share => share < 1).flatMap(share => places.map(place =>
         ({ cut_at: Math.floor(place * bin_ticks), loss_ticks: Math.max(1, Math.ceil(share * stops_after_ticks)) })));
-}
-
-/**
- * Ticks a build runs without its clock before the clock is started on it: the warm-up the harness gives a scaffold in
- * the game, which is taken for long enough to settle. Rounded up to whole repeats of the clock, so that the clock is
- * started at the place in its period it was cut at.
- */
-export const UNCLOCKED_SETTLE_TICKS = 3600;
-
-/** The trials of a build that runs without its clock: the clock is started on it at each place */
-export function clockStartTrials(bin_ticks: number, places: readonly number[] = LOSS_PLACES): LossTrialPlan[] {
-    const settle_ticks = Math.ceil(UNCLOCKED_SETTLE_TICKS / bin_ticks) * bin_ticks;
-    return places.map(place => ({ cut_at: Math.floor(place * bin_ticks), loss_ticks: settle_ticks }));
 }
 
 /** A loss ends at the latest after this many periods, whether the build has stopped or not */
@@ -219,9 +196,6 @@ function switchOf(context: SimulationContext, loss: BackpressureLoss): { cut(): 
     if (loss.kind === "none") {
         return { cut: () => { }, restore: () => { } };
     }
-    if (loss.kind === "unclocked") {
-        return { cut: () => { GameClockWires.cut = true; }, restore: () => { GameClockWires.cut = false; } };
-    }
     // on every belt and chest that gives the item, or that the build puts it into
     const inserters = context.inserters.map(it => it.inserter_state.inserter);
     const sets: Set<ItemName>[] = [];
@@ -298,10 +272,9 @@ export function runLossTrials(
     const places = options.places ?? LOSS_PLACES;
     const shares = options.shares ?? LOSS_SHARES;
     const plans: LossTrialPlan[] = loss.kind === "none" ? [{ cut_at: 0, loss_ticks: 0 }]
-        : loss.kind === "unclocked" ? clockStartTrials(bin.ticks, places)
         : shares.includes(1) ? lossTrialsUntilStopped(bin.ticks, places) : [{ cut_at: 0, restore_at: 0 }];
     // the trials that end part of the way are planned once it is known how long the build takes to stop
-    let part_of_the_way_planned = loss.kind === "none" || loss.kind === "unclocked";
+    let part_of_the_way_planned = loss.kind === "none";
 
     // a tick as the simulate step runs it
     const control_logic = new CompositeControlLogic([

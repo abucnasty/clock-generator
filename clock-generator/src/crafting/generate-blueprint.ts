@@ -33,7 +33,7 @@ import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "./fuel-v
 import { StockRecorder, StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
-import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LOSS_PLACES, LossOutcome, reportOf, runLossTrials, verdictOf } from "./backpressure-loss";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, runLossTrials, verdictOf } from "./backpressure-loss";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
@@ -2407,41 +2407,6 @@ export function backpressureLossOf(
         return outcomeOf(loss);
     };
     return reportOf(period_ticks, expected_output_items, tried({ kind: "none" }, 0), losses.map((loss, index) => tried(loss, index + 1)));
-}
-
-/**
- * Whether a clock holds when it is started on a build that runs without one, as a clock is when its blueprint is put
- * on a build in the game: every inserter is always enabled for a while (UNCLOCKED_SETTLE_TICKS), the clock is started
- * at a place in its period, and the build has to be at exactly its expected output within the periods a loss gives it
- * (MAX_RECOVERY_PERIODS), and stay there. Each place of LOSS_PLACES on a run of its own, so that a build one start
- * leaves stuck is not stuck for the next. The trials of the outcome are in the order of the places.
- *
- * The config has to be the one the clock was planned on, as for backpressureLossOf.
- */
-export function clockStartOf(
-    config: Config,
-    clock_windows: SerializableClockWindows,
-    period_ticks: number,
-    expected_output_items: number,
-    logger: Logger = defaultLogger,
-    places: readonly number[] = LOSS_PLACES,
-): LossOutcome {
-    const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
-        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const outcomes = places.map(place => runClockOnBuild(check_config, windows, period_ticks, logger, {
-        factorio_states: false,
-        backpressure_loss: { loss: { kind: "unclocked" }, places: [place], period_ticks, expected_output_items },
-    }).backpressure_loss!);
-    const recovers = outcomes.every(outcome => outcome.recovers);
-    return {
-        ...outcomes[0],
-        trials: outcomes.flatMap(outcome => outcome.trials),
-        recovers,
-        recovered_after_bins: recovers ? Math.max(...outcomes.map(outcome => outcome.recovered_after_bins ?? 0)) : null,
-        stopped_after_ticks: null,
-        ticks: outcomes.reduce((sum, outcome) => sum + outcome.ticks, 0),
-    };
 }
 
 /** The machines at the ends of every inserter of the config */

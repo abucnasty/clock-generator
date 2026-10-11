@@ -160,12 +160,18 @@ It is not wired into anything.
 
 ## A clock started on a build that runs without one
 
-A second diagnostic of 2026-10-10, not a check the generator makes. `clockStartOf` lets the build run for 3,600 ticks
-with every inserter always enabled, the warm-up a scaffold gets in the game, then starts the clock at each of the
-four places in its period the loss trials use, each on a run of its own, and wants exactly the expected output within
-40 periods, and for good. `scripts/clock-start-sweep.sh` tries every stable clock that way and `clock-start-table.py`
-prints the table. Without its clock a build does run faster in the simulator: advanced circuit makes 1,210 where its
-clock expects 1,056, utility science 224 for 192.
+A second diagnostic of 2026-10-10, not a check the generator makes, tried and removed. `clockStartOf` let the build run
+for 3,600 ticks with every inserter always enabled, the warm-up a scaffold gets in the game, then started the clock at
+each of the four places in its period the loss trials use, each on a run of its own, and wanted exactly the expected
+output within 40 periods, and for good. The clock was cut off from what it enables through a switch in the enable
+controls (`GameClockWires`), as an "unclocked" kind of loss. `scripts/clock-start-sweep.sh` tried every stable clock
+that way and `clock-start-table.py` printed the table below. Without its clock a build does run faster in the
+simulator: advanced circuit makes 1,210 where its clock expects 1,056, utility science 224 for 192.
+
+Removed on 2026-10-11 (the function, the loss kind, the switch and the three scripts are in the git history up to
+v0.6.0): it changed no verdict, and it does not probe the gap it was aimed at. The short state of the advanced circuit
+build comes from a start short of ingredients or from the state the game was recorded in, which an unclocked warm-up
+does not reach; what that gap needs is a start state handed to the run (`start_stock`), which stays.
 
 - It fails no clock. With "Belts do not move" off 131 of 132 stable clocks get to their output, the slowest within
   19 periods, and with it on 106 of 107; the one left over is fractional swings on biochamber fuel, which cannot be
@@ -177,7 +183,7 @@ clock expects 1,056, utility science 224 for 192.
   second of two repeats of 23 periods from all four places; that is judged on one repeat, and it is not known here
   what the game made of that clock.
 
-It is not wired into anything.
+It was never wired into anything.
 
 ## Iron bacteria
 
