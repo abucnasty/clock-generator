@@ -91,6 +91,10 @@ A clock can settle into more than one steady state with the same output, dependi
 
 Belts and chests are left out of this measure. An inserter that works with a moving belt tracks the position of the item it is going to pick up, which costs more than a wake-up. Belts that do not move are cheaper and are what the simulator models, for simplicity.
 
+## The rules of the game, indexed
+
+Each rule of the game below is one named function, and `clock-generator/src/rules-of-the-game.ts` names all twelve: where each lives, the GOALS.md section it comes from, and the test that holds its recorded cases. The recorded figures travel with the code, as numbers in those tests and in the comments next to the functions; no test reads a recording.
+
 ## Crafting Constraints
 
 The game has two primary constraints that make clocking difficult. Both of these are governed by the overload multiplier of the machine.
