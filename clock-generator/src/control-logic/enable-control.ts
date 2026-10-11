@@ -22,6 +22,13 @@ export interface EnableControl {
     toString?(): string;
 }
 
+/**
+ * The wires from the clocks of the game to what they enable. While they are cut, everything such a clock enables is
+ * always enabled, as a build is that has no clock yet, and the clock goes on counting. Only a run that tries a clock
+ * on a build that ran without one cuts them (see crafting/backpressure-loss.ts), for a stretch of its own ticks.
+ */
+export const GameClockWires = { cut: false };
+
 export const AlwaysEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return true;
@@ -151,6 +158,9 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     }
 
     public isEnabledIn(ticks: number): boolean {
+        if (this.is_game_clock && GameClockWires.cut) {
+            return true;
+        }
         return this.asked.get(this.offset_tick_provider.getCurrentTick() + ticks, this.enabledAt);
     }
 

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-    backpressureLossesOf, judgeRecovery, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossTrialsPartOfTheWay, lossTrialsUntilStopped,
-    MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, verdictOf,
+    backpressureLossesOf, clockStartTrials, judgeRecovery, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossTrialsPartOfTheWay, lossTrialsUntilStopped,
+    MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, UNCLOCKED_SETTLE_TICKS, verdictOf,
     type BackpressureLossReport,
 } from "./backpressure-loss";
 import { backpressureLossOf, generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
@@ -35,6 +35,22 @@ describe("the trials of a loss", () => {
 
     it("last a tick at least, for a build that stops at once", () => {
         expect(lossTrialsPartOfTheWay(100, 0, [0], [0.5])).toEqual([{ cut_at: 0, loss_ticks: 1 }]);
+    });
+});
+
+describe("the trials of a clock that is started on a build that runs without one", () => {
+    it("let the build run without its clock for the warm-up a scaffold gets, in whole periods, and start the clock at each place", () => {
+        expect(UNCLOCKED_SETTLE_TICKS).toBe(3600);
+        expect(clockStartTrials(528)).toEqual([
+            { cut_at: 0, loss_ticks: 3696 }, { cut_at: 132, loss_ticks: 3696 }, { cut_at: 264, loss_ticks: 3696 }, { cut_at: 396, loss_ticks: 3696 },
+        ]);
+        // a period longer than the warm-up is run without the clock once
+        expect(clockStartTrials(4800, [0.5])).toEqual([{ cut_at: 2400, loss_ticks: 4800 }]);
+    });
+
+    it("are named apart from the losses", () => {
+        expect(lossId({ kind: "unclocked" })).toBe("unclocked");
+        expect(lossLabel({ kind: "unclocked" })).toBe("the build runs without its clock");
     });
 });
 

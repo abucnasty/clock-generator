@@ -119,7 +119,8 @@ Recorded in the game on 2026-10-10 after the change, 12 builds, 10 as before:
   trace it is open. The recording is `.scratch/recordings/utility-science-backpressure-uneven-output-on.json`.
 - **Agricultural science with "Belts do not move" on**: the 2-swing clock moves its 800 packs in every period. The
   four inserters that bring nutrients to the egg biochambers move 979.89 nutrients a period in the game and 980.85 in
-  the simulator, which the game test reports as a difference. It changes no verdict and no selection.
+  the simulator. It changes no verdict and no selection, so it is left: the game test of the build names those four
+  inserters as a known difference (`moved_open`) and holds everything else.
 
 Known gaps of the trials:
 
@@ -149,6 +150,27 @@ sample with a belt export:
   full output in every period. A clock whose windows are as long as its hands loses a hand with a tick less, whether
   it is a good clock or not.
 - The trials cost a tenth of the time generating takes.
+
+It is not wired into anything.
+
+## A clock started on a build that runs without one
+
+A second diagnostic of 2026-10-10, not a check the generator makes. `clockStartOf` lets the build run for 3,600 ticks
+with every inserter always enabled, the warm-up a scaffold gets in the game, then starts the clock at each of the
+four places in its period the loss trials use, each on a run of its own, and wants exactly the expected output within
+40 periods, and for good. `scripts/clock-start-sweep.sh` tries every stable clock that way and `clock-start-table.py`
+prints the table. Without its clock a build does run faster in the simulator: advanced circuit makes 1,210 where its
+clock expects 1,056, utility science 224 for 192.
+
+- It fails no clock. With "Belts do not move" off 131 of 132 stable clocks get to their output, the slowest within
+  19 periods, and with it on 106 of 107; the one left over is fractional swings on biochamber fuel, which cannot be
+  built again from its windows. The trials cost 3% of the time generating takes.
+- It catches none of the three cases it was held against. The utility science clock that deadlocks in the game
+  (uneven output swings, belts that do not move) is at 192 within 2 periods from all four places. The advanced
+  circuit clock with windows of 4 ticks is at 704 within 3, and the clock tightened by hand within 6. The nearest
+  clock of the sample at 230 a second, which the generator's own check has at 216.9, makes its full 16,192 in the
+  second of two repeats of 23 periods from all four places; that is judged on one repeat, and it is not known here
+  what the game made of that clock.
 
 It is not wired into anything.
 
