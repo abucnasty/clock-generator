@@ -129,6 +129,29 @@ Known gaps of the trials:
 - They do not catch the utility science deadlock above.
 - Both are states a build is in when a clock is put on it while it runs, and no loss of the trials leads to them.
 
+## Margin: windows a tick shorter
+
+A diagnostic of 2026-10-10, not a check the generator makes (GOALS.md, "Working Rules": margin comes before
+precision). `scripts/margin-sweep.sh` tries every stable clock with every window a tick shorter at its start, and
+again with every window a tick shorter at its end, each as the generator checks its own clocks; `margin-table.py`
+prints the table. A window of one tick is left as it is. With "Belts do not move" off, without the processing unit
+sample with a belt export:
+
+- 132 stable clocks on 34 samples; one could not be built again from its windows (fractional swings on biochamber
+  fuel). Of the other 131, 81 hold both ways and 50 hold neither way. No clock holds one way only.
+- The selected clock holds both ways on 21 samples and neither way on 12: advanced circuit, chemical science with
+  direct-insert engines, chemical science engines, electric furnace, flying robot frame, logistic science with a
+  shared inserter, the four production science samples, the sample config, and utility science with direct-insert
+  low density structures and its chain always on. On 7 of them no stable clock holds both ways.
+- It does catch the advanced circuit clock with evenly spaced windows of 4 ticks (352 of 704 either way), which the
+  trials for backpressure loss do not. It also fails the clock its reporter tightened by hand (608 of 704 either
+  way) and the clock selected for that build (864 of 1056), and both of those were recorded in the game at their
+  full output in every period. A clock whose windows are as long as its hands loses a hand with a tick less, whether
+  it is a good clock or not.
+- The trials cost a tenth of the time generating takes.
+
+It is not wired into anything.
+
 ## Iron bacteria
 
 Recorded on 2026-10-09 in Factorio 2.1.21, with 50 bacteria seeded into each machine (the recipe makes bacteria from
@@ -196,8 +219,7 @@ The build of [issue 98](https://github.com/abucnasty/clock-generator/issues/98),
 sample is the copy whose plastic plant is reached by 4 beacons (crafting speed 61.5), as two of the three copies of
 the design are; the third has 5 (68.875), which is what the config attached to the issue says. The whole design is
 kept as `advanced-circuit-scaffold-full-design.txt`. Until 2026-10-10 the sample was an older state of the build with
-a target of 230 a second, for which no clock holds.
-
+a target of 230 a second, for which no clock holds. 
 Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
 
 | Clock | Output | Game | Simulator |
