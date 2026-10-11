@@ -32,7 +32,7 @@ describe("generateClockForConfig", () => {
             windows = one_swing.result.clock_windows;
             five_swings = alternatives.find(a => a.id === "planned-belt-slack")!;
             five_swing_windows = five_swings.result.clock_windows;
-        }, 180_000);
+        });
 
         // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and
         // 1439.9999999999998, were taken for fractional periods and offered as subtick and "rounded to 2879" clocks

@@ -9,8 +9,8 @@ describe("generateClockForConfig", () => {
 
     // The windows of the inserters that bring eggs to the science biochamber are an optimisation: kept only when the clock
     // passes the as-built check with them as it did without. Variations of the agricultural science sample, 5 output swings.
-    // This test is apart from the rest of the describe, in agricultural-science-feeders.test.ts: it takes over a minute,
-    // which would hold up the others.
+    // This test is apart from the rest of the describe, in agricultural-science-feeders.generation.test.ts: it takes three
+    // minutes, the longest of the suite, which would hold up the others.
     describe("agricultural science: windows for the inserters feeding the output machine", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
 
@@ -42,6 +42,6 @@ describe("generateClockForConfig", () => {
             expect(five_swings.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
             expect(alternatives[selected_index].id).toBe("swings-2");
             expect(alternatives[selected_index].is_stable).toBe(true);
-        }, 240_000);
+        });
     });
 });

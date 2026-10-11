@@ -9,8 +9,7 @@ import { buildDifferences, compareRecordings, formatRecordingComparison } from "
 import { expandChangeList, type Recording } from "./recording";
 import { wakeUpsOfRecording } from "./recording-wake-ups";
 import { matchOfSimulatedRecording, recordingOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, simulateRecording } from "./simulated-recording";
-
-const quiet = { log() { }, warn() { }, error() { }, debug() { } };
+import { quiet } from "../crafting/generate-blueprint-test-helpers";
 
 /**
  * Automation science on the clock that is selected for it (full-hand output swings): a belt inserter into one machine

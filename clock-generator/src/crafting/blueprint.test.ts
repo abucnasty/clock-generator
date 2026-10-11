@@ -8,6 +8,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { generateClockForConfig } from "./generate-blueprint";
 import { CircuitReplay } from "./circuit-replay";
+import { quiet } from "./generate-blueprint-test-helpers";
 
 /**
  * Replays the circuit in positions, without the 1 every signal counts from: the clock reads the tick's position in
@@ -137,7 +138,6 @@ describe("entityDescriptionHeaderLines", () => {
 });
 
 describe("combinator descriptions of the rocket fuel biochambers", async () => {
-    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
     const result = generateClockForConfig(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL), { logger: quiet });
     const first_lines = (result.blueprint.entities ?? [])
         .map(entity => (entity.player_description ?? "").split("\n")[0])
@@ -177,7 +177,6 @@ describe("mergedClockTicks", () => {
 });
 
 describe("the clock of a blueprint with fuel inserters", () => {
-    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
     type Blueprint = ReturnType<typeof generateClockForConfig>["blueprint"];
     const behavior = (entity: Blueprint["entities"][number]) => JSON.stringify(entity.control_behavior ?? {});
     const constantOf = (entity: Blueprint["entities"][number]) => Number(/"constant":(\d+)/.exec(behavior(entity))![1]);
@@ -278,27 +277,23 @@ describe("the clock of a blueprint with fuel inserters", () => {
 });
 
 describe("the target rate in a blueprint", async () => {
-    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-    const blueprintOf = async (path: string) => generateClockForConfig(await loadConfigFromFile(path), { logger: quiet }).blueprint;
-    const clockDescription = (blueprint: Awaited<ReturnType<typeof blueprintOf>>) =>
+    const rocket_fuel = generateClockForConfig(await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL), { logger: quiet }).blueprint;
+    const clockDescription = (blueprint: typeof rocket_fuel) =>
         (blueprint.entities ?? []).map(entity => entity.player_description ?? "").find(text => text.startsWith("Clock for"))!;
 
-    it("is in the description of the blueprint, with the clock period", async () => {
-        const blueprint = await blueprintOf(ConfigPaths.GLEBA_ROCKET_FUEL);
-        expect(blueprint.description).toBe("Target: 60 [item=rocket-fuel] per second\nClock period: 128 ticks");
+    it("is in the description of the blueprint, with the clock period", () => {
+        expect(rocket_fuel.description).toBe("Target: 60 [item=rocket-fuel] per second\nClock period: 128 ticks");
     });
 
-    it("is on the clock combinator", async () => {
-        const blueprint = await blueprintOf(ConfigPaths.GLEBA_ROCKET_FUEL);
-        expect(clockDescription(blueprint).split("\n").slice(0, 2)).toEqual([
+    it("is on the clock combinator", () => {
+        expect(clockDescription(rocket_fuel).split("\n").slice(0, 2)).toEqual([
             "Clock for [item=rocket-fuel]:",
             "- Target: 60 [item=rocket-fuel] per second",
         ]);
     });
 
-    it("says on each modulo of the clock what reads it", async () => {
-        const blueprint = await blueprintOf(ConfigPaths.GLEBA_ROCKET_FUEL);
-        const modulo_descriptions = (blueprint.entities ?? [])
+    it("says on each modulo of the clock what reads it", () => {
+        const modulo_descriptions = (rocket_fuel.entities ?? [])
             .filter(entity => entity.name === "arithmetic-combinator")
             .map(entity => entity.player_description ?? "");
         expect(modulo_descriptions).toEqual([
@@ -309,14 +304,13 @@ describe("the target rate in a blueprint", async () => {
     });
 
     it("gives the rate of all copies and of one", async () => {
-        const blueprint = await blueprintOf(ConfigPaths.AGRICULTURAL_SCIENCE);
+        const blueprint = generateClockForConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE), { logger: quiet }).blueprint;
         expect(blueprint.description?.split("\n")[0])
             .toBe("Target: 250 [item=agricultural-science-pack] per second over 5 copies (50 each)");
     });
 });
 
 describe("the count of a clock", async () => {
-    const quiet = { log() {}, warn() {}, error() {}, debug() {} };
     type Blueprint = ReturnType<typeof generateClockForConfig>["blueprint"];
     type Entity = Blueprint["entities"][number];
     type Condition = { first_signal: { name: string }; comparator: string; constant?: number; compare_type?: string };

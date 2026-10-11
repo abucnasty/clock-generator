@@ -22,7 +22,9 @@
     "build": "tsc",
     "verify": "tsc && node dist/verify-recording.js",
     "record": "tsc && node dist/record-in-factorio.js",
-    "test": "vitest run",
+    "test": "vitest run --project unit",
+    "test:generation": "vitest run --project generation",
+    "test:all": "vitest run",
     "test:game": "vitest run --config vitest.game.config.ts",
     "test:game:watch": "FACTORIO_HARNESS_WATCH=1 vitest run --config vitest.game.config.ts"
   },

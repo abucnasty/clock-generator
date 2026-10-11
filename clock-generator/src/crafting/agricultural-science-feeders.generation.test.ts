@@ -10,8 +10,8 @@ describe("generateClockForConfig", () => {
 
     // The windows of the inserters that bring eggs to the science biochamber are an optimisation: kept only when the clock
     // passes the as-built check with them as it did without. Variations of the agricultural science sample, 5 output swings.
-    // The test that ranks the alternatives with and without them takes over a minute, so it is in a file of its own:
-    // agricultural-science-feeders-ranking.test.ts.
+    // The test that ranks the alternatives with and without them takes three minutes, so it is in a file of its own:
+    // agricultural-science-feeders-ranking.generation.test.ts.
     describe("agricultural science: windows for the inserters feeding the output machine", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
@@ -30,7 +30,7 @@ describe("generateClockForConfig", () => {
             const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
             expect(Date.now() - started).toBeLessThan(60_000);
             expect(result.stability_check.is_stable).toBe(true);
-        }, 120_000);
+        });
 
         it("plans the nutrient inserters 30.652 hands needed per 480 ticks on every clock, 61.304 per 960 on the 2-swing clock", () => {
             for (const [swings, period] of [[5, 480], [1, 480], [2, 960]] as const) {
@@ -43,7 +43,7 @@ describe("generateClockForConfig", () => {
                 const output = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:12")!;
                 expect(output.needed_transfer_count).toBeUndefined();
             }
-        }, 120_000);
+        });
 
         it("keeps the feeders always enabled where the clock with their windows does not pass, as without the rule", () => {
             // egg biochambers at speed 80 and hands of 12 into the science biochamber: with the windows the long run comes up short
@@ -57,14 +57,14 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).not.toContain(id);
             }
-        }, 120_000);
+        });
 
         it("does not clock the feeders when the as-built check is off: nothing would have run them", () => {
             const result = generateClockForConfig(five_swings(sample), { verify_as_built: false, logger: quiet });
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).not.toContain(id);
             }
-        }, 120_000);
+        });
 
         it("clocks them when the as-built check is on and passes with them", () => {
             const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, logger: quiet });
@@ -72,7 +72,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
             }
-        }, 120_000);
+        });
 
         it("verifies the clock with feeder windows over a longer run than the standard check: at least 72,000 ticks", () => {
             expect(OUTPUT_FEEDER_CHECK_TICKS).toBeGreaterThanOrEqual(72_000);
@@ -95,7 +95,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
             }
-        }, 120_000);
+        });
 
         it("takes feeder windows on the prefer-planned path of the derive flow too", () => {
             const config: Config = { ...sample, overrides: { ...sample.overrides, derive_clock_windows: true } };
@@ -105,7 +105,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
             }
-        }, 180_000);
+        });
     });
 
     describe("the pieces of the output feeder rule", () => {

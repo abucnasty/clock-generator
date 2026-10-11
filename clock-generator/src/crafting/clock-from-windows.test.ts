@@ -3,8 +3,7 @@ import { clockFromWindows, type BlueprintGenerationResult, type SerializableCloc
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-
-const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
+import { quiet } from "./generate-blueprint-test-helpers";
 
 /** "26-47 74-95" as windows */
 const windows = (text: string) => text.split(" ").map(range => {
@@ -46,7 +45,7 @@ describe("a clock built from windows that are given", () => {
         const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT);
         config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
         result = clockFromWindows(config, tightened, PERIOD, quiet);
-    }, 120_000);
+    });
 
     it("builds the windows as they are", () => {
         expect(result.simulation_duration.ticks).toBe(PERIOD);
