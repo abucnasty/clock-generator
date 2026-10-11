@@ -4,6 +4,7 @@ import { ItemName } from "../../../data";
 import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import { InserterMode } from "./inserter-mode";
 import { TickProvider } from "../../current-tick-provider";
+import { actsInTheTickTheBlockIsLifted } from "../waiting-inserter";
 
 export class InserterPickupMode implements InserterMode {
 
@@ -42,11 +43,10 @@ export class InserterPickupMode implements InserterMode {
         );
         // A hand that stopped part way because the machine was at its output block goes on in the tick another
         // inserter takes the products down, when the machine finished a craft in the tick before: that craft had
-        // woken the inserter already (see IdleModeTransitionEvaluator). Recorded in Factorio 2.1.21: 248 hands of 248
-        // went on in that tick, and 843 of 843 a tick later where no craft was finished the tick before.
+        // woken the inserter already (see `actsInTheTickTheBlockIsLifted`, the rule of the game with its recorded
+        // cases: 248 hands of 248 went on in that tick, 843 of 843 a tick later)
         const sink = this.sinkEntityState;
-        if (fromMode.status === InserterStatus.WAITING_FOR_SINK && EntityState.isMachine(sink)
-            && sink.outputBlockedAfterLastTick && sink.finishedCraftInLastTick) {
+        if (fromMode.status === InserterStatus.WAITING_FOR_SINK && EntityState.isMachine(sink) && actsInTheTickTheBlockIsLifted(sink)) {
             this.belt_grab_decided = true;
         }
         this.inserterState.waits_for_sink = false;

@@ -6,6 +6,7 @@ import { EnableControl } from "../../enable-control";
 import { InserterDisabledMode } from "../modes/disabled-mode";
 import { TickProvider } from "../../current-tick-provider";
 import { handSizeFor } from "../../../entities";
+import { actsInTheTickTheBlockIsLifted } from "../waiting-inserter";
 
 export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<InserterMode> {
 
@@ -82,13 +83,10 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
     }    
 
     /**
-     * An inserter that waits for space in a machine is asleep, and acts in the tick after the one that wakes it. When
-     * another inserter takes the machine's products down below the output block, that wakes it: it takes its first
-     * items a tick later. A machine that finished a craft in the tick before had woken it already, and then it takes
-     * them in the tick the block is lifted. Recorded in Factorio 2.1.21 on inserters that take from a machine or a
-     * chest and had been waiting for 6 ticks or more: a tick later in 5,777 cases of 5,777 without a craft finished
-     * the tick before, in the same tick in 3,756 of 3,756 with one. An inserter that takes from a belt lands its first
-     * stack a tick later in both cases, which the pickup mode has (belt_grab_decided).
+     * True when another inserter took the sink's products down below the output block in this tick and that is what
+     * wakes this one: it then takes its first items a tick later (see `actsInTheTickTheBlockIsLifted`, the rule of the
+     * game with its recorded cases). An inserter that takes from a belt lands its first stack a tick later in both
+     * cases, which the pickup mode has (belt_grab_decided).
      *
      * Inserters are updated before machines, and those that take from a machine before those that put into it. So
      * a machine that was at its block when its last tick was done, and is not now, has had its products taken in
@@ -99,7 +97,7 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
         if (!EntityState.isMachine(sink) || EntityState.isBelt(this.source_state)) {
             return false;
         }
-        return sink.outputBlockedAfterLastTick && !sink.finishedCraftInLastTick && !MachineState.machineIsOutputBlocked(sink);
+        return sink.outputBlockedAfterLastTick && !MachineState.machineIsOutputBlocked(sink) && !actsInTheTickTheBlockIsLifted(sink);
     }
 
     private sinkAcceptsItems(): boolean {
