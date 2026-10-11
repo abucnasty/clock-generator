@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # scripts/compare-sweeps.py <before dir> <after dir> [-v]
 # Two sweeps (see sweep.sh) laid against each other: the samples that generate other potential clocks, give one
-# another verdict, rate, wake-ups, belt or period, or select another clock. -v also lists clocks whose windows moved.
+# another verdict (stable, no recovery from a backpressure loss, unstable), rate, wake-ups, belt or period, or select
+# another clock. -v also lists clocks whose windows moved.
 import json, os, sys
 
 before_dir, after_dir = sys.argv[1:3]
@@ -13,7 +14,10 @@ def load(directory):
 
 def summary(alt):
     wake = alt["wake_ups_per_minute"]
-    return (f"{'stable' if alt['is_stable'] else 'UNSTABLE'} {alt['items_per_second']:.4g}/s wake {wake if wake is None else round(wake, 1)} "
+    # a sweep from before a loss was tried has neither field: its verdict is of what the clock holds
+    lost = alt.get("holds_expected_output") and not alt["is_stable"]
+    verdict = "stable" if alt["is_stable"] else f"NO RECOVERY ({', '.join(alt.get('broken_by') or []) or 'off with nothing cut'})" if lost else "UNSTABLE"
+    return (f"{verdict} {alt['items_per_second']:.4g}/s wake {wake if wake is None else round(wake, 1)} "
             f"belt {alt['belt']} period {alt['period']} windows {alt['window_count']}")
 
 

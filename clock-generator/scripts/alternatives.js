@@ -1,5 +1,5 @@
 // node scripts/alternatives.js <KEY> [on|off] [swings]
-// The potential clocks of a sample, the selected one starred: verdict, rate, wake-ups a minute, belt. <on|off> is
+// The potential clocks of a sample, the selected one starred: verdict (with the losses it does not get back from), rate, wake-ups a minute, belt. <on|off> is
 // "Belts do not move" (off by default); [swings] forces the output swings per cycle on every clock.
 const [key, belts = "off", swings] = process.argv.slice(2);
 const { dist, quiet, loadSample } = require("./lib");
@@ -12,6 +12,7 @@ const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-bl
     }
     const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
     alternatives.forEach((a, index) => console.log(
-        index === selected_index ? "*" : " ", a.id.padEnd(28), a.is_stable ? "stable  " : "UNSTABLE", `${a.items_per_second.toFixed(2)}/s`.padEnd(10),
-        `wake ${a.wake_ups_per_minute?.toFixed(1) ?? "-"}`.padEnd(13), (a.belt ? clockBeltLabel(a.belt) : "-").padEnd(18), a.label));
+        index === selected_index ? "*" : " ", a.id.padEnd(28), a.is_stable ? "stable     " : a.holds_expected_output ? "NO RECOVERY" : "UNSTABLE   ", `${a.items_per_second.toFixed(2)}/s`.padEnd(10),
+        `wake ${a.wake_ups_per_minute?.toFixed(1) ?? "-"}`.padEnd(13), (a.belt ? clockBeltLabel(a.belt) : "-").padEnd(18), a.label,
+        a.backpressure_loss?.survives === false ? `(${a.backpressure_loss.broken_by.join(", ") || "off with nothing cut"})` : ""));
 })().catch(e => { console.error(e); process.exit(1); });

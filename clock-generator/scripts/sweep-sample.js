@@ -15,7 +15,8 @@ const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-bl
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         row.selected = alternatives[selected_index]?.id;
         row.alternatives = alternatives.map(a => ({
-            id: a.id, label: a.label, is_stable: a.is_stable, meets_target_rate: a.meets_target_rate,
+            id: a.id, label: a.label, is_stable: a.is_stable, holds_expected_output: a.holds_expected_output,
+            broken_by: a.backpressure_loss?.broken_by ?? null, meets_target_rate: a.meets_target_rate,
             matches_belt_choice: a.matches_belt_choice, items_per_second: a.items_per_second,
             wake_ups_per_minute: a.wake_ups_per_minute, belt: a.belt === null ? null : clockBeltLabel(a.belt),
             period: a.result.simulation_duration.ticks, window_count: a.inserter_window_count,

@@ -1,5 +1,5 @@
 // node scripts/backpressure-sample.js <out dir> <KEY>
-// Whether each stable potential clock of one sample survives backpressure loss (GOALS.md, "Backpressure Loss"), as
+// Whether each potential clock of one sample that holds its expected output survives backpressure loss (GOALS.md, "Backpressure Loss"), as
 // <out dir>/<KEY>.json: for every loss of the build (each supplied item stops arriving, each output is not taken
 // away) the fixed trials of src/crafting/backpressure-loss.ts, and whether the build is back at its expected output
 // after each. Simulator only: the harness cannot cut a supply. NON_MOVING=1 turns "Belts do not move" on;
@@ -23,7 +23,8 @@ const places = process.env.PLACES ? process.env.PLACES.split(",").map(Number) : 
         row.generate_seconds = (Date.now() - generated) / 1000;
         row.selected = alternatives[selected_index]?.id;
         row.selected_is_stable = alternatives[selected_index]?.is_stable ?? false;
-        for (const alternative of alternatives.filter(a => a.is_stable)) {
+        // every clock that holds its expected output: "stable" already says whether it gets back from the losses
+        for (const alternative of alternatives.filter(a => a.holds_expected_output)) {
             const result = alternative.result;
             const clock = { id: alternative.id, selected: alternative.id === row.selected, period: result.simulation_duration.ticks };
             const began = Date.now();
