@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 .vscode
 # worktrees Claude Code creates for its agents
 .claude/worktrees/
+
+# the link to the Vercel project that `vercel link` writes, with the ids of the account and the project
+.vercel

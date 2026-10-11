@@ -1,17 +1,41 @@
 name: Release
 
-# A release of the clock generator and its UI. The sidecar mod has a version of its own and is published by
-# publish-sidecar.yml, only when the mod changes.
+# A release of the clock generator and its UI, and the deployment of the site. The sidecar mod has a version of its
+# own and is published by publish-sidecar.yml, only when the mod changes.
+#
+# Vercel does not deploy master by itself (vercel.json switches that off); this workflow does:
+# - The site players use is deployed when a version is released, from the commit of its tag, after its GitHub
+#   release exists. A merge that does not change the version releases nothing and does not reach players.
+# - Every merge to master is deployed as a preview, with an address of its own in the run's summary, to try what is
+#   on master before it is released.
+# "Run workflow" (or `gh workflow run release.yml`) deploys the current version to production again, for a run that
+# failed part way.
+#
+# The deployments need three secrets: VERCEL_TOKEN (a token of the Vercel account), VERCEL_ORG_ID and
+# VERCEL_PROJECT_ID (both in .vercel/project.json after `vercel link`). See "Versioning" in the README.
 on:
   push:
     branches:
       - master
+  workflow_dispatch:
+
+# one at a time, so two merges close together cannot release or deploy out of order
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      released: ${{ steps.release.outputs.released }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +58,7 @@ jobs:
         run: |
           if gh release view "v$VERSION" > /dev/null 2>&1; then
             echo "v$VERSION is already released, skipping."
+            echo "released=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           NOTES=$(awk -v version="$VERSION" 'index($0, "## [" version "]") == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md)
@@ -42,3 +67,73 @@ jobs:
             exit 1
           fi
           gh release create "v$VERSION" --title "v$VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
+          echo "released=true" >> "$GITHUB_OUTPUT"
+
+  production:
+    # The site players use: only a released version, and only after its release exists
+    name: Deploy to production
+    needs: release
+    if: needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERSION: ${{ needs.release.outputs.version }}
+    steps:
+      - name: Check the Vercel secrets
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID have to be set as secrets to deploy v$VERSION. Set them, then run this workflow by hand."
+            exit 1
+          fi
+
+      # the commit of the version, which is not the last commit of master when this is run by hand
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.version }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build and deploy
+        run: |
+          npm install --global vercel@latest
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          URL=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed v$VERSION to production: $URL" >> "$GITHUB_STEP_SUMMARY"
+
+  preview:
+    # What is on master, released or not, at an address of its own
+    name: Deploy master as a preview
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Check the Vercel secrets
+        id: vercel
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::warning::No preview of master: VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID are not set as secrets."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.vercel.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.vercel.outputs.ready == 'true'
+        with:
+          node-version: 24
+
+      - name: Build and deploy
+        if: steps.vercel.outputs.ready == 'true'
+        run: |
+          npm install --global vercel@latest
+          vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+          vercel build --token="$VERCEL_TOKEN"
+          URL=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          echo "Preview of master at ${GITHUB_SHA::7}: $URL" >> "$GITHUB_STEP_SUMMARY"

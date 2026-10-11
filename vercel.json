@@ -1,5 +1,11 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd clock-generator && npm ci && npm run build && cd ../clock-generator-ui && npm ci && npm run build",
   "outputDirectory": "clock-generator-ui/dist",
-  "framework": null
+  "framework": null,
+  "git": {
+    "deploymentEnabled": {
+      "master": false
+    }
+  }
 }
