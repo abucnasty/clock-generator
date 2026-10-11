@@ -50,6 +50,7 @@ Conventions:
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
 | intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Belts do not move" on | in `test:game` with the switch off; see below |
+| intermediates/advanced-circuit, 230 a second | the same scaffold | selected clock exact: 16,192 in each of 2 repeats of 12,672 ticks (23 periods of 550.957), the first clock of this sample that holds, found by the one search of 2026-10-11 | in `test:game`; see below |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | everything else | no | | |
 
@@ -263,11 +264,17 @@ That one is kept as a second sample, `advanced-circuit-230.json` (`ADVANCED_CIRC
 that was exported for it then. It is the same build as the one at 240 and uses the same scaffold: the same five
 machines, nine inserters and three belts, numbered differently. Its config differs in three things only: the target
 rate, the coal inserter set to always enabled, and `ignored_lcm_ingredients` for coal. So the same machines hold 240
-a second under a stable clock, and no clock holds 230: the nearest makes 217.3 on a clock rounded to 550 ticks. At
-230 the clock period is not a whole number of ticks (550.957), and that is where the gap is: in planning a clock
-whose period is not whole, not in the build. It is not traced on this branch
-([issue 102](https://github.com/abucnasty/clock-generator/issues/102)). It can be recorded with the existing scaffold
-(`CONFIG=` on `scripts/record-clock.js`).
+a second under a stable clock, and until 2026-10-11 no clock held 230: the nearest made 217.3 on a clock rounded to
+550 ticks. At 230 the clock period is not a whole number of ticks (550.957), and that is where the gap was thought to
+be: in planning a clock whose period is not whole, not in the build
+([issue 102](https://github.com/abucnasty/clock-generator/issues/102)). The one search of the windows of a clock
+(2026-10-11) finds full-hand output swings that hold it in the simulator, stable from every start and through every
+loss, at 600 wake-ups a minute: the old search confirmed the first timing without a wait and gave up after a few, the
+new one ranks a timing whose neighbours pass first and confirms up to five. Recorded the same day on this scaffold
+(`CONFIG=ADVANCED_CIRCUIT_230 TAG=230` on `scripts/record-clock.js`): the game moved 16,192 items in each of the 2
+repeats of 12,672 ticks that fit the recording, exactly what the clock asks for, at 769 wake-ups a minute against the
+simulator's 600. The build is in `test:game` since. The simulator had called a clock of this build stable before that
+made 90% in the game, so the recording, not the simulator, settles it.
 
 Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
 

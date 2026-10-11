@@ -89,7 +89,8 @@ const RECORDED_TICKS = 36000;
         })).recording;
     }
 
-    const expected = result.stability_check.expected_output_items * clock_ticks / period;
+    // a subtick clock's repeat can leave a float a hair off the whole number of items
+    const expected = Math.round(result.stability_check.expected_output_items * clock_ticks / period * 1e6) / 1e6;
     // the first period is cut where the recording starts
     const periods = outputPerPeriod(recording, recipesMaking(config, config.target_output.recipe)).slice(1);
     const tally = {};
