@@ -23,7 +23,7 @@ export interface DerivedClockWindowsReport {
     end_padding_ticks: number | null;
     /** Machine-to-machine inserters whose observed windows were replaced by brief full-hand windows */
     full_hand_inserters?: string[];
-    /** With derive_mode "uneven_output": the output swing moved off its planned start and by how many ticks (negative is earlier) */
+    /** For uneven output swings: the output swing moved off its planned start and by how many ticks (negative is earlier) */
     moved_output_swing?: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 }
 
