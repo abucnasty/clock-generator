@@ -1,5 +1,6 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
+import type { BackpressureLossVerdict } from "./backpressure-loss";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
 
@@ -330,6 +331,29 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
 }
 
 /** The insights for one potential clock, the ones about the whole build first */
+/** Why a clock that holds its expected output is still not listed as stable (GOALS.md, "Backpressure Loss") */
+export function backpressureLossInsight(verdict: BackpressureLossVerdict, expected_output_items: number): ClockInsight {
+    const what = verdict.broken_by.length > 0
+        ? `This clock moves its ${expected_output_items} items every clock period for as long as nothing runs out and nothing backs up. `
+            + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.`
+        : `The run the losses are tried on did not hold ${expected_output_items} items a clock period with nothing cut, so no loss says `
+            + "anything about this clock.";
+    return {
+        id: "backpressure-loss",
+        scope: "clock",
+        title: "This clock does not survive backpressure loss",
+        what,
+        why: "When an item stops arriving, or the output is not taken away, the machines run dry or fill up. Once it is back, "
+            + "every machine goes on from what it holds then, and the windows of this clock do not bring the build back from "
+            + "there. Each loss is tried in the simulator: "
+            + "cut at four places in the clock period, and for a quarter, a half, three quarters and all of the time the build "
+            + "takes to stop.",
+        explanation: "Such a build has to be restarted by hand after an input ran out or the output backed up. Use a potential "
+            + "clock marked Stable. Where no clock of a build is, the build may not be able to survive a loss whatever the clock, "
+            + "and its clocks are offered for what they are.",
+    };
+}
+
 export function clockInsights(result: BlueprintGenerationResult, is_stable: boolean): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;

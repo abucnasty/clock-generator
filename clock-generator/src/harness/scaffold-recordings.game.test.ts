@@ -77,8 +77,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         settle_ticks: 4800,
     },
-    // its selected clock has no belt pickup slack: batched swings with room for a hand of fuel in the windows of the
-    // three inserters that take nutrients off the belt with their bioflux, without which they do not hold
+    // its clocks have no belt pickup slack: batched swings has room for a hand of fuel in the windows of the three
+    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Selected is the
+    // clock with 2 output swings per cycle, since batched swings does not get back from a loss of nutrients
     "agricultural science (belts do not move)": {
         scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE,

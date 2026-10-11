@@ -269,3 +269,4 @@ export {
     ComputeMachineFactsParams,
 } from './entities/machine';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
+export type { BackpressureLossVerdict } from './crafting/backpressure-loss';

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
     backpressureLossesOf, judgeRecovery, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossTrialsPartOfTheWay, lossTrialsUntilStopped,
+    MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, verdictOf,
     type BackpressureLossReport,
 } from "./backpressure-loss";
 import { backpressureLossOf, generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
@@ -109,6 +110,15 @@ describe("a clock tried for backpressure loss", () => {
         expect(report.recovered_after_periods === null).toBe(!report.survives);
     });
 
+    it("is put in the words a list of clocks needs: whether it survives, and the losses it does not get back from", () => {
+        const verdict = verdictOf(report);
+        expect(verdict.survives).toBe(report.survives);
+        expect(verdict.holds_undisturbed).toBe(report.undisturbed.recovers);
+        expect(verdict.recovered_after_periods).toBe(report.recovered_after_periods);
+        expect(verdictOf({ ...report, survives: false, losses: report.losses.map(outcome => ({ ...outcome, recovers: outcome.loss.kind !== "supply" })) }).broken_by)
+            .toEqual(["copper-plate stops arriving", "iron-gear-wheel stops arriving"]);
+    });
+
     it("cuts at fewer places when asked, to make the run shorter", () => {
         const shorter = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
             selected.result.stability_check.expected_output_items, quiet, { places: [0] });
@@ -125,4 +135,63 @@ describe("a run in which nothing is cut", () => {
         expect(alternatives[selected_index].result.simulation_duration.ticks).toBe(72);
         expect(alternatives[selected_index].is_stable).toBe(true);
     }, 120_000);
+});
+
+// Military science: every clock but one holds 120 a second and does not get back to it once the coal has run out
+describe("what the generator calls stable", () => {
+    let config: Config;
+    let alternatives: ClockAlternative[];
+    let selected: ClockAlternative;
+
+    beforeAll(async () => {
+        config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE);
+        const generated = generateClockAlternatives(config, { logger: quiet });
+        alternatives = generated.alternatives;
+        selected = alternatives[generated.selected_index];
+    }, 120_000);
+
+    it("lets a loss last until the build has stopped, 200 periods at most, and gives the build 40 periods to be back", () => {
+        expect(MAX_LOSS_PERIODS).toBe(200);
+        expect(MAX_RECOVERY_PERIODS).toBe(40);
+    });
+
+    it("tries every clock that holds its expected output for backpressure loss, and no other", () => {
+        expect(alternatives.some(alternative => alternative.holds_expected_output)).toBe(true);
+        expect(alternatives.some(alternative => !alternative.holds_expected_output)).toBe(true);
+        for (const alternative of alternatives) {
+            expect(alternative.backpressure_loss !== null, alternative.id).toBe(alternative.holds_expected_output);
+        }
+    });
+
+    it("is a clock that holds its expected output and gets back to it after every loss", () => {
+        for (const alternative of alternatives) {
+            expect(alternative.is_stable, alternative.id).toBe(alternative.holds_expected_output && alternative.backpressure_loss!.survives);
+            expect(alternative.meets_target_rate && !alternative.is_stable, alternative.id).toBe(false);
+        }
+    });
+
+    it("gives a clock the verdict the trials give its windows", () => {
+        const report = backpressureLossOf(
+            { ...config, overrides: { ...config.overrides, terminal_swing_count: selected.result.used_terminal_swing_count } },
+            selected.result.clock_windows, selected.result.simulation_duration.ticks, selected.result.stability_check.expected_output_items, quiet);
+        expect(selected.backpressure_loss).toEqual(verdictOf(report));
+    });
+
+    it("selects a clock that survives over one with a better rank that does not", () => {
+        const full_hand = alternatives.find(alternative => alternative.id === "full-hand")!;
+        expect(full_hand.holds_expected_output).toBe(true);
+        expect(full_hand.backpressure_loss).toMatchObject({ survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null });
+        expect(full_hand.is_stable).toBe(false);
+        expect(selected.is_stable).toBe(true);
+        expect(selected.backpressure_loss!.survives).toBe(true);
+    });
+
+    it("says of a clock that does not survive which losses break it, in its description and in an insight", () => {
+        const full_hand = alternatives.find(alternative => alternative.id === "full-hand")!;
+        expect(full_hand.description).toContain("It does not survive backpressure loss: the build does not get back to its expected output under this clock after coal stops arriving.");
+        expect(full_hand.insights.find(insight => insight.id === "backpressure-loss")?.what).toContain("coal stops arriving");
+        expect(full_hand.insights.some(insight => insight.id === "unstable")).toBe(false);
+        expect(selected.description).not.toContain("backpressure loss");
+        expect(selected.insights.some(insight => insight.id === "backpressure-loss")).toBe(false);
+    });
 });

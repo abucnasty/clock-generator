@@ -17,14 +17,23 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
+import { lossesOf } from '../utils/rateWarning';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
+
+/** A clock that holds its expected output and does not get back to it after a backpressure loss */
+const doesNotRecover = (alternative: ClockAlternativeView) => alternative.holdsExpectedOutput && !alternative.isStable;
 
 function statusDetail(alternative: ClockAlternativeView): string {
     const check = alternative.asBuilt;
     if (!check) {
         return 'Not checked';
+    }
+    if (doesNotRecover(alternative)) {
+        const losses = lossesOf(alternative);
+        return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
+            + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run the losses are tried on.');
     }
     const phases = `${check.start_phases_checked} clock start phase(s) simulated`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
@@ -57,20 +66,27 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
         .map((alternative, index) => ({ alternative, index }))
         .filter(({ alternative, index }) => !hidesUnstable || alternative.isStable || index === selectedIndex);
     const hiddenCount = alternatives.length - rows.length;
+    const anyHolds = alternatives.some(alternative => alternative.holdsExpectedOutput);
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
             <Typography variant="h6">Potential Clocks</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Each potential clock was checked by simulating the build driven only by the clock windows,
-                starting the clock at several points. The one selected for you has the fewest wake-ups among
-                those that hold the target rate; a clock that leaves belt pickup slack out for a non-moving
+                starting the clock at several points, and a clock that holds the target rate was then tried
+                for backpressure loss: each input stops arriving for a while, and each output stops being taken
+                away, and the build has to get back to its rate by itself. The one selected for you has the fewest
+                wake-ups among those that hold the target rate and get back to it; a clock that leaves belt pickup slack out for a non-moving
                 belt is only selected when no clock for a moving belt holds it. With "Belts do not move" on
                 every clock is made without the slack. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
-                {!anyStable && alternatives.length > 0 && pending.length === 0 && (
+                {!anyStable && alternatives.length > 0 && pending.length === 0 && (anyHolds ? (
+                    <> None of the clocks tried survives backpressure loss, which can be a limit of the build and not
+                        of its clocks. They are listed for what they are: one that holds the target rate has to be
+                        restarted after a loss.</>
+                ) : (
                     <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>
-                )}
+                ))}
             </Typography>
             <TableContainer>
                 <Table size="small">
@@ -159,8 +175,8 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                     <Tooltip title={statusDetail(alternative)} arrow>
                                         <Chip
                                             size="small"
-                                            label={alternative.isStable ? 'Stable' : 'Unstable'}
-                                            color={alternative.isStable ? 'success' : 'error'}
+                                            label={alternative.isStable ? 'Stable' : doesNotRecover(alternative) ? 'No recovery' : 'Unstable'}
+                                            color={alternative.isStable ? 'success' : doesNotRecover(alternative) ? 'warning' : 'error'}
                                             variant="outlined"
                                         />
                                     </Tooltip>

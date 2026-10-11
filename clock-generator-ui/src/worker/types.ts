@@ -1,5 +1,6 @@
 import type {
     AsBuiltStabilityCheck,
+    BackpressureLossVerdict,
     CheckedShiftRow,
     ClockInsight,
     ConfigValidation,
@@ -74,7 +75,12 @@ export interface ClockAlternativeView {
     inserterWindowCount: number;
     /** The windows the selection compares last: the count without the windows of the output feeders */
     rankingWindowCount: number;
+    /** Holds its expected output and gets back to it after every backpressure loss of the build */
     isStable: boolean;
+    /** Holds its expected output for as long as nothing runs out and nothing backs up */
+    holdsExpectedOutput: boolean;
+    /** The losses the clock does not get back from; null when none was tried */
+    backpressureLoss: BackpressureLossVerdict | null;
     /** Stable and at the target rate, which a clock with a rounded period is not */
     meetsTargetRate: boolean;
     /** Items per second the clock is above the target rate, or below it when negative */

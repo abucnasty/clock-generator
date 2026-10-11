@@ -33,10 +33,10 @@ import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "./fuel-v
 import { StockRecorder, StockRecording } from "./machine-stock";
 import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
-import { BackpressureLossOptions, BackpressureLossReport, backpressureLossesOf, LossOutcome, reportOf, runLossTrials } from "./backpressure-loss";
+import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, runLossTrials, verdictOf } from "./backpressure-loss";
 import { SerializableTransferHistory, serializeTransferHistory } from "./sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "./sequence/state-transition-history";
-import { ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
+import { backpressureLossInsight, ClockInsight, clockInsights, MachineFactsEntry } from "./insights";
 import { SerializableStateTransitionHistory, serializeStateTransitionHistory } from "./sequence/state-transition-serializer";
 import { InserterStateTransitionTrackerPlugin } from "../control-logic/inserter/plugins/inserter-state-transition-tracker-plugin";
 import { MachineStateTransitionTrackerPlugin } from "../control-logic/machine/plugins/machine-state-transition-tracker-plugin";
@@ -2389,6 +2389,8 @@ export function backpressureLossOf(
     expected_output_items: number,
     logger: Logger = defaultLogger,
     options: Omit<BackpressureLossOptions, "loss" | "period_ticks" | "expected_output_items"> = {},
+    /** Called before the run of each loss, the one with nothing cut included */
+    on_loss?: (loss: BackpressureLoss, index: number, total: number) => void,
 ): BackpressureLossReport {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -2399,7 +2401,11 @@ export function backpressureLossOf(
         backpressure_loss: { ...options, loss, period_ticks, expected_output_items },
     }).backpressure_loss!;
     const losses = backpressureLossesOf(createEntityRegistryFromConfig(config), config.target_output.recipe);
-    return reportOf(period_ticks, expected_output_items, outcomeOf({ kind: "none" }), losses.map(outcomeOf));
+    const tried = (loss: BackpressureLoss, index: number): LossOutcome => {
+        on_loss?.(loss, index, losses.length + 1);
+        return outcomeOf(loss);
+    };
+    return reportOf(period_ticks, expected_output_items, tried({ kind: "none" }, 0), losses.map((loss, index) => tried(loss, index + 1)));
 }
 
 /** The machines at the ends of every inserter of the config */
@@ -3247,8 +3253,23 @@ export interface ClockAlternative {
     inserter_window_count: number;
     /** The windows the selection compares last: `inserter_window_count` without the windows of the output feeders */
     ranking_window_count: number;
-    /** The clock-only check (the build driven only by the exported clock windows) reaches the expected output */
+    /**
+     * The clock is stable (GOALS.md, "Backpressure Loss"): it holds its expected output, and it gets back to it by
+     * itself after every backpressure loss of its build. A clock the losses could not be tried on is taken by what it
+     * holds.
+     */
     is_stable: boolean;
+    /**
+     * The clock-only check (the build driven only by the exported clock windows) reaches the expected output, from
+     * the start the generator gives a clock: the machines full of ingredients and emptied of products
+     */
+    holds_expected_output: boolean;
+    /**
+     * Whether the clock gets back to its expected output after each loss of its build, and the losses it does not get
+     * back from (see backpressure-loss.ts). Null when no loss was tried: the clock does not hold its expected output
+     * to begin with, or the trials could not be run on it.
+     */
+    backpressure_loss: BackpressureLossVerdict | null;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
     /** Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not */
@@ -3362,6 +3383,8 @@ interface AlternativeDefinition {
     label: string;
     description: string;
     run: () => BlueprintGenerationResult;
+    /** The config its clock is planned on, where that is not the one the alternatives are made for */
+    planned_on?: Config;
 }
 
 function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (detail: string) => void): GenerateClockOptions {
@@ -3559,6 +3582,7 @@ function alternativeDefinitionsFor(
                 { ...base_config, overrides: { ...base_config.overrides, use_fractional_swings: !fractional } },
                 quiet
             ),
+            planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "derived",
@@ -3682,7 +3706,38 @@ export function rankingWindowCount(
     return inserter_window_count - with_feeder_windows + output_feeders.window_count_without_feeder_windows;
 }
 
-function runAlternative(definition: AlternativeDefinition, config: Config, logger: Logger): ClockAlternativeRun | null {
+/**
+ * Tries a clock that holds its expected output for backpressure loss. Null when the trials cannot be run on it, which
+ * is logged: such a clock is taken by what it holds.
+ */
+function backpressureLossVerdictOf(
+    planned_on: Config,
+    result: BlueprintGenerationResult,
+    logger: Logger,
+    report?: (detail: string) => void,
+): BackpressureLossVerdict | null {
+    // the config the clock was planned on has its output swings per cycle
+    const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
+    const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
+    try {
+        return verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items,
+            quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`)));
+    } catch (error) {
+        logger.log(`Backpressure loss could not be tried: ${error instanceof Error ? error.message : error}`);
+        return null;
+    }
+}
+
+/** A sentence for an alternative's description about the losses its clock does not get back from */
+function backpressureLossNote(verdict: BackpressureLossVerdict | null): string {
+    if (verdict === null || verdict.survives) {
+        return "";
+    }
+    return verdict.broken_by.length === 0 ? " It was off its expected output in the run the backpressure losses are tried on, so it is not counted as stable."
+        : ` It does not survive backpressure loss: the build does not get back to its expected output under this clock after ${verdict.broken_by.join(", or after ")}.`;
+}
+
+function runAlternative(definition: AlternativeDefinition, config: Config, logger: Logger, report?: (detail: string) => void): ClockAlternativeRun | null {
     const copies = config.target_output.copies ?? 1;
     let result: BlueprintGenerationResult;
     try {
@@ -3701,7 +3756,9 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     // the planning simulation drives inserters from inventory levels and can over- or undershoot
     // where the exported clock does not; in game, recordings matched the clock-only check
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
-    const is_stable = alternativeIsStable(result);
+    const holds_expected_output = alternativeIsStable(result);
+    const backpressure_loss = holds_expected_output ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
+    const is_stable = holds_expected_output && backpressure_loss?.survives !== false;
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
@@ -3715,9 +3772,14 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
         + `) start ${Math.abs(shifted.shift_ticks)} ticks ${shifted.shift_ticks < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
-    const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items);
-    logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
-    const insights = clockInsights(result, is_stable);
+    const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
+        + backpressureLossNote(backpressure_loss);
+    logger.log(`Clock alternative "${label}": windows=${inserter_window_count} stable=${is_stable} survives=${backpressure_loss?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
+    // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
+    const insights = [
+        ...clockInsights(result, holds_expected_output),
+        ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
+    ];
     const period = result.simulation_duration.ticks;
     // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
     const achieved_output_items = as_built?.actual_output_items ?? actual_output_items;
@@ -3729,7 +3791,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     // with belts that do not move every clock goes without the slack, which is the choice
     const matches_belt_choice = config.overrides?.non_moving_belts === true || !result.belt_pickup_slack_left_out;
     if (!result.subtick) {
-        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), rate_off_target: rateOffTarget(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
+        return { signature, alternatives: [{ id, label, description, inserter_window_count, ranking_window_count, is_stable, holds_expected_output, backpressure_loss, items_per_second: rateAt(period), meets_target_rate: meetsTargetRate(period), rate_off_target: rateOffTarget(period), matches_belt_choice, belt, wake_ups_per_minute, insights, rank_first, result }] };
     }
     const { period_ticks, scale } = result.subtick.clock;
     const rounded = Math.floor(period);
@@ -3747,6 +3809,8 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 inserter_window_count,
                 ranking_window_count,
                 is_stable,
+                holds_expected_output,
+                backpressure_loss,
                 items_per_second: rateAt(period),
                 meets_target_rate: meetsTargetRate(period),
                 rate_off_target: rateOffTarget(period),
@@ -3766,6 +3830,8 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                 inserter_window_count,
                 ranking_window_count,
                 is_stable,
+                holds_expected_output,
+                backpressure_loss,
                 items_per_second: rateAt(rounded),
                 meets_target_rate: meetsTargetRate(rounded),
                 rate_off_target: rateOffTarget(rounded),
@@ -3784,7 +3850,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
 export function planClockAlternatives(config: Config, options: GenerateClockOptions = {}): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     const definition = primaryDefinition(config, options, options.on_progress_detail);
-    const primary = runAlternative(definition, config, logger);
+    const primary = runAlternative(definition, config, logger, options.on_progress_detail);
     const result = definition.run();
     const context: ClockAlternativeContext = {
         swings: result.used_terminal_swing_count,
@@ -3819,7 +3885,7 @@ export function runClockAlternativeTask(
     const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
         .find(it => it.id === task_id);
     assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
-    return runAlternative(definition, config, logger);
+    return runAlternative(definition, config, logger, options.on_progress_detail);
 }
 
 /**
@@ -3902,11 +3968,12 @@ export function generateClockAlternatives(
     for (const definition of definitions) {
         current_step = definition.label;
         report();
-        const run = runAlternative(definition, config, logger);
+        const run = runAlternative(definition, config, logger, report);
         completed++;
         runs.push(run);
         if (run) {
-            stable_by_id.set(definition.id, run.alternatives[0].is_stable);
+            // what the full-hand alternative is built on is a run that holds, as before a loss was ever tried
+            stable_by_id.set(definition.id, run.alternatives[0].holds_expected_output);
         }
     }
 

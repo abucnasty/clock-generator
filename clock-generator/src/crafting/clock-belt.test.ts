@@ -31,7 +31,7 @@ describe("the belt a clock is made for", () => {
 
         beforeAll(async () => {
             config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
-        });
+        }, 120_000);
 
         describe("by default", () => {
             let alternatives: ClockAlternative[];
@@ -120,7 +120,7 @@ describe("the belt a clock is made for", () => {
             const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-        }, 60_000);
+        }, 120_000);
 
         it("makes every clock without the slack, also one that only holds with it", () => {
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "non_moving" })));
@@ -130,11 +130,21 @@ describe("the belt a clock is made for", () => {
             expect(two_swings.result.belt_pickup_slack_ticks).toEqual({});
         });
 
-        it("selects batched swings, which holds the target rate without the slack", () => {
-            expect(selected.id).toBe("planned-belt-slack");
+        it("has batched swings hold the target rate without the slack, at no wake-ups at all", () => {
+            const batched = alternative("planned-belt-slack");
+            expect(batched.belt).toEqual({ kind: "non_moving" });
+            expect(batched.holds_expected_output).toBe(true);
+            expect(batched.wake_ups_per_minute).toBe(0);
+        });
+
+        // It was the clock selected until a clock had to get back from a backpressure loss as well (GOALS.md)
+        it("does not select it: the build does not get back to its rate under it once the packs have not been taken away for a while", () => {
+            const batched = alternative("planned-belt-slack");
+            expect(batched.backpressure_loss).toMatchObject({ survives: false, broken_by: ["utility-science-pack is not taken away"] });
+            expect(batched.meets_target_rate).toBe(false);
+            expect(selected.id).toBe("uneven-output");
             expect(selected.belt).toEqual({ kind: "non_moving" });
             expect(selected.meets_target_rate).toBe(true);
-            expect(selected.wake_ups_per_minute).toBe(0);
         });
     });
 
@@ -144,26 +154,35 @@ describe("the belt a clock is made for", () => {
     // which the game tests record at 400 in every period.
     describe("agricultural science, with belts that do not move", () => {
         let selected: ClockAlternative;
+        let batched: ClockAlternative;
 
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
             const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
             selected = generated.alternatives[generated.selected_index];
+            batched = generated.alternatives.find(a => a.id === "planned-belt-slack")!;
         }, 240_000);
 
-        it("selects batched swings with room for a hand of fuel, as a clock for a belt that does not move", () => {
-            expect(selected.id).toBe("planned-belt-slack");
-            expect(selected.label).toBe("Batched swings: 5 output swings per cycle");
+        it("makes batched swings with room for a hand of fuel, as a clock for a belt that does not move, and it holds the target rate", () => {
+            expect(batched.label).toBe("Batched swings: 5 output swings per cycle");
+            expect(batched.holds_expected_output).toBe(true);
+            expect(batched.belt).toEqual({ kind: "non_moving" });
+            expect(batched.matches_belt_choice).toBe(true);
+            expect(batched.result.belt_pickup_slack_ticks).toEqual({});
+            expect(batched.result.fuel_hand_room_ticks).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });
+            expect(batched.description).toContain("Inserters 1, 2 and 11 take fuel off the belt as well as an ingredient and stay enabled 4 more ticks");
+        });
+
+        // It was the clock selected until a clock had to get back from a backpressure loss as well (GOALS.md)
+        it("does not select it: the build does not get back to its rate under it once the nutrients have run out", () => {
+            expect(batched.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
+            expect(selected.id).toBe("swings-2");
             expect(selected.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "non_moving" });
-            expect(selected.matches_belt_choice).toBe(true);
-            expect(selected.result.belt_pickup_slack_ticks).toEqual({});
-            expect(selected.result.fuel_hand_room_ticks).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });
-            expect(selected.description).toContain("Inserters 1, 2 and 11 take fuel off the belt as well as an ingredient and stay enabled 4 more ticks");
         });
 
         it("lengthens every window of those inserters by the fill of a hand of nutrients", () => {
-            const windows = selected.result.clock_windows;
+            const windows = batched.result.clock_windows;
             expect(windows["inserter:11"]).toEqual([0, 96, 192, 288, 384].map(start => ({ start, end: start + 42 })));
             expect(windows["inserter:1"]).toEqual([0, 96, 192, 288, 384].map(start => ({ start, end: start + 20 })));
             expect(windows["inserter:2"]).toEqual(windows["inserter:1"]);
@@ -181,7 +200,7 @@ describe("the belt a clock is made for", () => {
             const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-        });
+        }, 120_000);
 
         it("makes full-hand output swings from batched swings that move more than the expected output", () => {
             const batched = alternatives.find(a => a.id === "planned-belt-slack")!;
@@ -209,7 +228,7 @@ describe("the belt a clock is made for", () => {
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
             ({ alternatives } = generateClockAlternatives(config, { logger: quiet }));
-        });
+        }, 120_000);
 
         it("names every clock a non-moving belt clock, the subtick one and the rounded one", () => {
             expect(alternatives.length).toBeGreaterThan(0);
@@ -229,7 +248,7 @@ describe("the belt a clock is made for", () => {
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS);
             ({ alternatives } = generateClockAlternatives(config, { logger: quiet }));
-        });
+        }, 120_000);
 
         it("names no belt", () => {
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => null));

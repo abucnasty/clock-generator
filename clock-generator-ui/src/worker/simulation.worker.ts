@@ -105,6 +105,8 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         inserterWindowCount: alternative.inserter_window_count,
         rankingWindowCount: alternative.ranking_window_count,
         isStable: alternative.is_stable,
+        holdsExpectedOutput: alternative.holds_expected_output,
+        backpressureLoss: alternative.backpressure_loss,
         meetsTargetRate: alternative.meets_target_rate,
         rateOffTarget: alternative.rate_off_target,
         matchesBeltChoice: alternative.matches_belt_choice,

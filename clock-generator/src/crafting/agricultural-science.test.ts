@@ -14,20 +14,24 @@ describe("generateClockForConfig", () => {
     // The target is 250 a second over 5 modules, 93% of what the egg biochambers can make. Recorded in Factorio 2.1.21
     // for 144000 ticks after 4800 to settle: with 1 output swing per cycle one module made 400 packs in each of 300
     // periods, and so it did with 5 output swings per cycle; with 2 it came up a hand short in 3 of 150 periods and
-    // with 4 in 12 of 75 (before the idle-window rules of 2026-10-09; recorded again with them, 2 made the same in each of 75 periods). The simulator calls the 5-swing clock stable too, and it is the one selected.
+    // with 4 in 12 of 75 (before the idle-window rules of 2026-10-09; recorded again with them, 2 made the same in each of 75 periods). The simulator has the 5-swing clock hold its
+    // rate too. It was the one selected until 2026-10-10: in the simulator it does not get back from a loss of nutrients
+    // (GOALS.md, "Backpressure Loss"), which the 2-swing and the 1-swing clock do, and the 2-swing clock is selected.
     describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         let alternatives: ClockAlternative[];
         let selected_index: number;
         let one_swing: ClockAlternative;
         let windows: SerializableClockWindows;
-        let selected_windows: SerializableClockWindows;
+        let five_swings: ClockAlternative;
+        let five_swing_windows: SerializableClockWindows;
 
         beforeAll(() => {
             ({ alternatives, selected_index } = generateClockAlternatives(config));
             one_swing = alternatives.find(a => a.label === "1 output swing per cycle")!;
             windows = one_swing.result.clock_windows;
-            selected_windows = alternatives[selected_index].result.clock_windows;
+            five_swings = alternatives.find(a => a.id === "planned-belt-slack")!;
+            five_swing_windows = five_swings.result.clock_windows;
         }, 180_000);
 
         // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and
@@ -42,13 +46,25 @@ describe("generateClockForConfig", () => {
         });
 
         // Recorded in Factorio 2.1.21 on 2026-10-08: the planned 5-swing clock and the 1-swing clock both hold 250 a
-        // second without a miss over 300 periods; the generator selects the planned one
+        // second without a miss over 300 periods
         it("holds the target of 250 a second on a clock of 480 ticks, with the planned 5 output swings per cycle", () => {
-            const selected = alternatives[selected_index];
-            expect(selected.label).toBe("Batched swings: 5 output swings per cycle");
-            expect(selected.is_stable).toBe(true);
-            expect(selected.items_per_second).toBeCloseTo(250, 6);
-            expect(selected.result.simulation_duration.ticks).toBe(480);
+            expect(five_swings.label).toBe("Batched swings: 5 output swings per cycle");
+            expect(five_swings.holds_expected_output).toBe(true);
+            expect(five_swings.items_per_second).toBeCloseTo(250, 6);
+            expect(five_swings.result.simulation_duration.ticks).toBe(480);
+        });
+
+        it("does not call the 5-swing clock stable: the build does not get back to its rate under it once the nutrients have run out", () => {
+            expect(five_swings.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
+            expect(five_swings.is_stable).toBe(false);
+            expect(five_swings.meets_target_rate).toBe(false);
+        });
+
+        it("selects the 2-swing clock, the one with the fewest wake-ups of the two that get back from every loss", () => {
+            const stable = alternatives.filter(a => a.is_stable);
+            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle"]);
+            expect(alternatives[selected_index].label).toBe("2 output swings per cycle");
+            expect(alternatives[selected_index].wake_ups_per_minute).toBeLessThan(one_swing.wake_ups_per_minute!);
         });
 
         it("also holds it with one output swing per cycle", () => {
@@ -67,32 +83,32 @@ describe("generateClockForConfig", () => {
             expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:10");
         });
 
-        it("clocks the inserters that take eggs into the science biochamber on the selected clock, with a combinator of their own", () => {
-            const clocked = Object.keys(selected_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
+        it("clocks the inserters that take eggs into the science biochamber on the 5-swing clock, with a combinator of their own", () => {
+            const clocked = Object.keys(five_swing_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
             expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
-            expect(selected_windows["inserter:10"]).toEqual(selected_windows["inserter:9"]);
+            expect(five_swing_windows["inserter:10"]).toEqual(five_swing_windows["inserter:9"]);
         });
 
         // The output of the science biochamber is back at 28 packs up to 30 ticks after an output window ends in the
         // simulator, and 27 to 28 in the game; two ticks more are the margin. Each of the 5 windows of 37 ticks a
         // period of 96 ticks leaves them enabled for 37 + 31 ticks (0 to 67) and disabled for the 28 that follow, until the next opens.
         it("disables inserters 9 and 10 for the 28 ticks before each output window, 32 ticks after the last one closed", () => {
-            expect(selected_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
+            expect(five_swing_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
             for (const id of ["inserter:9", "inserter:10"]) {
-                expect(selected_windows[id]).toHaveLength(5);
-                expect(selected_windows[id].slice(0, 2)).toEqual([{ start: 0, end: 67 }, { start: 96, end: 163 }]);
+                expect(five_swing_windows[id]).toHaveLength(5);
+                expect(five_swing_windows[id].slice(0, 2)).toEqual([{ start: 0, end: 67 }, { start: 96, end: 163 }]);
             }
         });
 
         it("gives the inserters bringing nutrients to the egg biochambers windows of two hands, 44 hands for the 35 planned a period", () => {
             // 7/5 of a hand an inserter a cycle: 35 hands in 25 cycles, 44 allowed, in 22 windows of 10 ticks
             for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
-                expect(selected_windows[id]).toHaveLength(22);
-                expect(selected_windows[id].slice(0, 3)).toEqual([{ start: 0, end: 9 }, { start: 21, end: 30 }, { start: 43, end: 52 }]);
-                expect(selected_windows[id].every(it => it.end - it.start === 9)).toBe(true);
+                expect(five_swing_windows[id]).toHaveLength(22);
+                expect(five_swing_windows[id].slice(0, 3)).toEqual([{ start: 0, end: 9 }, { start: 21, end: 30 }, { start: 43, end: 52 }]);
+                expect(five_swing_windows[id].every(it => it.end - it.start === 9)).toBe(true);
             }
             // all four share one combinator
-            expect(new Set(["inserter:3", "inserter:4", "inserter:6", "inserter:7"].map(id => JSON.stringify(selected_windows[id]))).size).toBe(1);
+            expect(new Set(["inserter:3", "inserter:4", "inserter:6", "inserter:7"].map(id => JSON.stringify(five_swing_windows[id]))).size).toBe(1);
         });
 
         // The machine needs 30.65 hands an inserter in 480 ticks on every clock (the plans round the fuel up to 35 in 480 on
