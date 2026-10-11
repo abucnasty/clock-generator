@@ -4,7 +4,9 @@ import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { CIRCUIT_LATENCY_TICKS } from "../clock";
 import { TrialRun } from "../plan/plan-run";
-import { AS_BUILT_START_PHASES, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
+import { search } from "./search";
+import { cycleOfWindow, withCycleShifted } from "./transforms";
 
 /** One place tried for a moved crafting cycle or output swing, in ticks from its planned start (negative is earlier) */
 export interface CheckedShift {
@@ -28,7 +30,7 @@ export interface ShiftRangeEdge {
     notes: string[];
 }
 
-/** The planned swings moved together by the shifted_cycle option */
+/** The planned swings moved together by the shifted swings candidate */
 export interface ShiftedSwings {
     /** 1-based crafting cycle within the clock period whose windows were moved */
     cycle: number;
@@ -87,7 +89,7 @@ function shiftedCycleCandidates(
     if (!Number.isInteger(period) || cycles < 2) {
         return [];
     }
-    const cycleOf = (range: OpenRange) => Math.min(cycles - 1, Math.floor(range.start_inclusive / cycle_ticks));
+    const cycleOf = (range: OpenRange) => cycleOfWindow(range, cycle_ticks, cycles);
 
     const room: { cycle_index: number; min: number; max: number }[] = [];
     for (let cycle_index = 1; cycle_index < cycles; cycle_index++) {
@@ -121,10 +123,7 @@ function shiftedCycleCandidates(
                 cycle_index,
                 shift_ticks,
                 selectable: Math.abs(shift_ticks) >= cycle_ticks * MIN_SHIFTED_CYCLE_FRACTION,
-                windows: new Map(Array.from(planned_windows, ([key, ranges]) => [key, ranges
-                    .map(range => cycleOf(range) !== cycle_index ? range
-                        : OpenRange.from(range.start_inclusive + shift_ticks, range.end_inclusive + shift_ticks))
-                    .sort((a, b) => a.start_inclusive - b.start_inclusive)])),
+                windows: withCycleShifted(planned_windows, cycle_index, shift_ticks, cycle_ticks, period),
             });
         }
         if (of_cycle.some(it => it.selectable)) {
@@ -145,7 +144,7 @@ function movedWindows(
     const moved: { entity_id: string; start: number; end: number }[] = [];
     for (const [entity_id, ranges] of planned_windows) {
         for (const range of ranges) {
-            if (Math.min(cycles - 1, Math.floor(range.start_inclusive / cycle_ticks)) === candidate.cycle_index) {
+            if (cycleOfWindow(range, cycle_ticks, cycles) === candidate.cycle_index) {
                 moved.push({ entity_id, start: range.start_inclusive + candidate.shift_ticks, end: range.end_inclusive + candidate.shift_ticks });
             }
         }
@@ -246,9 +245,10 @@ function shiftEdgeNotes(
 /**
  * Finds a place for one crafting cycle's planned windows other than where the plan put them. The plan repeats the
  * same cycle evenly over the clock period, but the build only has to balance over the whole period, so a cycle can
- * run earlier or later while the machines' buffers carry the difference. Every shift is checked with the clock-only
- * simulation; of those that pass, the one with the most passing shifts on either side (in the same direction from
- * the planned position) is confirmed from many start phases and used. Null when no shift passes.
+ * run earlier or later while the machines' buffers carry the difference. Every shift is checked with the quick
+ * clock-only check; of those that pass, the one with the most passing shifts on either side (in the same direction
+ * from the planned position) is confirmed from many start phases and used, the next best after it when that fails,
+ * up to three. Null when no shift passes.
  */
 export function shiftedCycleWindows(
     config: Config,
@@ -261,42 +261,41 @@ export function shiftedCycleWindows(
     const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, period);
     const describe = (candidate: ShiftedCycleCandidate) =>
         `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
-
-    const passes = new Set<number>();
-    const runs = new Map<number, TrialRun>();
-    candidates.forEach((candidate, index) => {
-        const { result, check } = runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
-            (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`));
-        if (check.holds) {
-            passes.add(index);
-            runs.set(index, result);
-        }
-    });
-    logger.log(`Shifted crafting cycle: ${passes.size} of ${candidates.length} shifts pass the quick clock-only check: `
-        + Array.from(passes, index => `${candidates[index].cycle_index + 1}:${candidates[index].shift_ticks}`).join(" "));
-
     // candidates are listed per cycle in shift order; the shifts around the planned position are not used and end a run
     const sameRun = (a: ShiftedCycleCandidate, b: ShiftedCycleCandidate) =>
         a.selectable && b.selectable && a.cycle_index === b.cycle_index && Math.sign(a.shift_ticks) === Math.sign(b.shift_ticks);
-    const neighboursPassing = (index: number, direction: 1 | -1) => {
-        let run = 0;
-        for (let next = index + direction; passes.has(next) && sameRun(candidates[next], candidates[index]); next += direction) {
-            run++;
-        }
-        return run;
-    };
-    const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
-    const ranked = Array.from(passes).filter(index => candidates[index].selectable).sort((a, b) => margin(b) - margin(a)
-        || Math.abs(candidates[a].shift_ticks) - Math.abs(candidates[b].shift_ticks));
-    const shifts_checked = checkedShiftRows(candidates.map((candidate, index) =>
-        ({ index: candidate.cycle_index + 1, shift_ticks: candidate.shift_ticks, holds: passes.has(index) })));
 
-    for (const index of ranked.slice(0, MAX_SHIFTED_CYCLE_CONFIRMATIONS)) {
-        const candidate = candidates[index];
-        const full = runAsBuiltCheck(config, candidate.windows, period, logger, FULL_CHECK_START_PHASES,
-            (n, total) => report?.(`Confirming ${describe(candidate)}, clock start ${n}/${total}`)).check;
-        logger.log(`Shifted crafting cycle: ${describe(candidate)} full check -> stable=${full.holds}`);
-        if (full.holds) {
+    const { picked } = search<ShiftedCycleCandidate, { result: TrialRun; check: AsBuiltStabilityCheck }, { windows: Map<string, OpenRange[]>; swings: ShiftedSwings }>({
+        candidates,
+        quick: (candidate, index) => runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
+            (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`)),
+        // once every shift is tried: the most passing shifts on either side first, then the smallest shift; three at most
+        picks: (attempts, done) => {
+            if (!done) {
+                return [];
+            }
+            const passes = new Set(attempts.filter(it => it.quick.check.holds).map(it => it.index));
+            logger.log(`Shifted crafting cycle: ${passes.size} of ${candidates.length} shifts pass the quick clock-only check: `
+                + Array.from(passes, index => `${candidates[index].cycle_index + 1}:${candidates[index].shift_ticks}`).join(" "));
+            const neighboursPassing = (index: number, direction: 1 | -1) => {
+                let run = 0;
+                for (let next = index + direction; passes.has(next) && sameRun(candidates[next], candidates[index]); next += direction) {
+                    run++;
+                }
+                return run;
+            };
+            const margin = (index: number) => Math.min(neighboursPassing(index, 1), neighboursPassing(index, -1));
+            return Array.from(passes).filter(index => candidates[index].selectable).sort((a, b) => margin(b) - margin(a)
+                || Math.abs(candidates[a].shift_ticks) - Math.abs(candidates[b].shift_ticks)).slice(0, MAX_SHIFTED_CYCLE_CONFIRMATIONS);
+        },
+        confirm: ({ candidate, index }, tried) => {
+            const full = runAsBuiltCheck(config, candidate.windows, period, logger, FULL_CHECK_START_PHASES,
+                (n, total) => report?.(`Confirming ${describe(candidate)}, clock start ${n}/${total}`)).check;
+            logger.log(`Shifted crafting cycle: ${describe(candidate)} full check -> stable=${full.holds}`);
+            if (!full.holds) {
+                return null;
+            }
+            const passes = new Set(tried.filter(it => it.quick.check.holds).map(it => it.index));
             // the range that works runs through the planned position, so its ends ignore the direction split used for ranking
             const edgeOf = (direction: 1 | -1): ShiftRangeEdge => {
                 let edge = index;
@@ -307,7 +306,7 @@ export function shiftedCycleWindows(
                 return {
                     shift_ticks: candidates[edge].shift_ticks,
                     is_search_limit: beyond === undefined || beyond.cycle_index !== candidate.cycle_index,
-                    notes: shiftEdgeNotes(runs.get(edge)!, movedWindows(planned_windows, candidates[edge], cycle_ticks, period)),
+                    notes: shiftEdgeNotes(tried[edge].quick.result, movedWindows(planned_windows, candidates[edge], cycle_ticks, period)),
                 };
             };
             const planned = movedWindows(planned_windows, { ...candidate, shift_ticks: 0 }, cycle_ticks, period);
@@ -321,12 +320,13 @@ export function shiftedCycleWindows(
                         end: Math.max(...planned.map(it => it.end)),
                     },
                     moved: Array.from(new Set(planned.map(it => it.entity_id)), entity_id => ({ entity_id, item_names: [] })),
-                    shifts_checked,
+                    shifts_checked: checkedShiftRows(candidates.map((it, i) =>
+                        ({ index: it.cycle_index + 1, shift_ticks: it.shift_ticks, holds: passes.has(i) }))),
                     earliest: edgeOf(-1),
                     latest: edgeOf(1),
                 },
             };
-        }
-    }
-    return null;
+        },
+    });
+    return picked;
 }
