@@ -30,18 +30,18 @@ describe("generateClockForConfig", () => {
             const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
             const five_swings = alternatives.find(it => it.id === "planned-belt-slack")!;
             const three_swings = alternatives.find(it => it.id === "swings-3")!;
-            expect(five_swings.holds_expected_output).toBe(true);
+            expect(five_swings.verdict).not.toBe("unstable");
             expect(five_swings.inserter_window_count).toBe(354);
             expect(five_swings.ranking_window_count).toBe(324);
             expect(Object.keys(five_swings.result.clock_windows)).toContain("inserter:9");
             expect(three_swings.ranking_window_count).toBe(336);
-            expect(three_swings.holds_expected_output).toBe(false);
-            for (const other of alternatives.filter(it => it.holds_expected_output && it !== five_swings)) {
-                expect(five_swings.wake_ups_per_minute!).toBeLessThan(other.wake_ups_per_minute!);
+            expect(three_swings.verdict).toBe("unstable");
+            for (const other of alternatives.filter(it => it.verdict !== "unstable" && it !== five_swings)) {
+                expect(five_swings.assessment.wake_ups_per_minute!).toBeLessThan(other.assessment.wake_ups_per_minute!);
             }
-            expect(five_swings.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
+            expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
             expect(alternatives[selected_index].id).toBe("swings-2");
-            expect(alternatives[selected_index].is_stable).toBe(true);
+            expect(alternatives[selected_index].verdict).toBe("stable");
         });
     });
 });

@@ -58,7 +58,7 @@ const RECORDED_TICKS = 36000;
             config.overrides = { ...config.overrides, terminal_swing_count: given.output_swings };
         }
         const made = clockFromWindows(config, given.windows, given.period, quiet);
-        selected = { id: process.env.TAG || "given-windows", label: `the windows of ${path.basename(given_windows)}`, belt: made.belt, is_stable: made.stability_check.is_stable, result: made };
+        selected = { id: process.env.TAG || "given-windows", label: `the windows of ${path.basename(given_windows)}`, belt: made.belt, verdict: made.stability_check.is_stable ? "stable" : "unstable", result: made };
     } else {
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         selected = alternative_id ? alternatives.find(a => a.id === alternative_id) : alternatives[selected_index];
@@ -71,7 +71,7 @@ const RECORDED_TICKS = 36000;
     // a fractional period is built as a subtick clock, which counts the whole ticks after which the period repeats
     const clock_ticks = result.subtick ? result.subtick.clock.period_ticks : period;
     console.log(`${name} (belts do not move: ${belts}): ${selected.id} "${selected.label}", belt ${selected.belt ? clockBeltLabel(selected.belt) : "-"}, `
-        + `stable in the simulator ${selected.is_stable}, period ${period}, clock counts ${clock_ticks}`);
+        + `${selected.verdict} in the simulator, period ${period}, clock counts ${clock_ticks}`);
 
     const tag = process.env.TAG ? `-${process.env.TAG}` : "";
     const file = path.join(out_dir, `${name}${tag}-${selected.id}-${belts}.json`);

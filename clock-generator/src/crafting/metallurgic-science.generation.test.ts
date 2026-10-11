@@ -25,22 +25,22 @@ describe("generateClockForConfig", () => {
 
         it("selects the full-hand subtick clock, which holds the target of 45 a second", () => {
             expect(selected.label).toBe("Full-hand output swings: 1 output swing per cycle, subtick clock");
-            expect(selected.holds_expected_output).toBe(true);
-            expect(selected.items_per_second).toBeCloseTo(45, 6);
+            expect(selected.verdict).not.toBe("unstable");
+            expect(selected.assessment.items_per_second).toBeCloseTo(45, 6);
             expect(selected.result.simulation_duration.ticks).toBeCloseTo(320 / 3, 6);
         });
 
         // A build no clock on offer survives backpressure loss on (GOALS.md): it keeps its clocks, named for what they are
         it("calls no clock of the build stable: under the one that holds, it does not get back to its rate once the tungsten ore has run out", () => {
-            expect(selected.backpressure_loss).toMatchObject({ survives: false, broken_by: ["tungsten-ore stops arriving"] });
-            expect(selected.is_stable).toBe(false);
-            expect(alternatives.some(a => a.is_stable)).toBe(false);
+            expect(selected.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["tungsten-ore stops arriving"] });
+            expect(selected.verdict).not.toBe("stable");
+            expect(alternatives.some(a => a.verdict === "stable")).toBe(false);
             expect(selected.description).toContain("It does not survive backpressure loss");
         });
 
         it("does not call the plain 1-swing clock of the same period stable", () => {
             const one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
-            expect(one_swing.is_stable).toBe(false);
+            expect(one_swing.verdict).not.toBe("stable");
         });
     });
 });

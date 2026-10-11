@@ -52,19 +52,19 @@ describe("the belt a clock is made for", () => {
                 const non_moving = alternative("planned");
                 expect(non_moving.label).toBe("Batched swings, non-moving belt: 4 output swings per cycle");
                 expect(non_moving.belt).toEqual({ kind: "non_moving" });
-                expect(non_moving.matches_belt_choice).toBe(false);
+                expect(non_moving.ranking.matches_belt_choice).toBe(false);
                 expect(non_moving.description).toContain("Made for a non-moving belt");
             });
 
             it("names a clock it left the slack out of a non-moving belt clock, and says why", () => {
                 expect(moving.filter(a => a.belt?.kind === "non_moving").map(a => a.id)).toEqual(["planned", "swings-2", "swings-1"]);
-                expect(alternative("swings-2").matches_belt_choice).toBe(false);
+                expect(alternative("swings-2").ranking.matches_belt_choice).toBe(false);
                 expect(alternative("swings-2").description).toContain("This clock did not hold the expected output with the slack");
             });
 
             it("selects a clock for a moving belt over the non-moving belt clock with no wake-ups", () => {
-                expect(alternative("swings-2").wake_ups_per_minute).toBe(0);
-                expect(alternative("swings-2").meets_target_rate).toBe(true);
+                expect(alternative("swings-2").assessment.wake_ups_per_minute).toBe(0);
+                expect(alternative("swings-2").ranking.meets_target_rate).toBe(true);
                 expect(moving_selected.id).toBe("swings-3");
                 expect(moving_selected.belt).toEqual({ kind: "moving", slack_ticks: [4] });
             });
@@ -93,9 +93,9 @@ describe("the belt a clock is made for", () => {
             });
 
             it("holds no clock to the slack, and selects the one with the fewest wake-ups", () => {
-                expect(alternatives.every(a => a.matches_belt_choice)).toBe(true);
+                expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
                 expect(selected.id).toBe("swings-2");
-                expect(selected.wake_ups_per_minute).toBe(0);
+                expect(selected.assessment.wake_ups_per_minute).toBe(0);
             });
         });
     });
@@ -119,17 +119,17 @@ describe("the belt a clock is made for", () => {
 
         it("makes every clock without the slack, also one that only holds with it", () => {
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "non_moving" })));
-            expect(alternatives.every(a => a.matches_belt_choice)).toBe(true);
+            expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
             const two_swings = alternative("swings-2");
-            expect(two_swings.is_stable).toBe(false);
+            expect(two_swings.verdict).not.toBe("stable");
             expect(two_swings.result.belt_pickup_slack_ticks).toEqual({});
         });
 
         it("has batched swings hold the target rate without the slack, at no wake-ups at all", () => {
             const batched = alternative("planned-belt-slack");
             expect(batched.belt).toEqual({ kind: "non_moving" });
-            expect(batched.holds_expected_output).toBe(true);
-            expect(batched.wake_ups_per_minute).toBe(0);
+            expect(batched.verdict).not.toBe("unstable");
+            expect(batched.assessment.wake_ups_per_minute).toBe(0);
         });
 
         // The build has a deadlock risk (GOALS.md, "Two inserters that bring the same item"), which the trials for
@@ -137,15 +137,15 @@ describe("the belt a clock is made for", () => {
         // 192 a period in the game, where batched swings made 192. So on this build the verdict does not decide.
         it("selects it though the build does not get back to its rate under it once the packs have not been taken away for a while", () => {
             const batched = alternative("planned-belt-slack");
-            expect(batched.backpressure_loss).toMatchObject({ survives: false, broken_by: ["utility-science-pack is not taken away"] });
-            expect(batched.is_stable).toBe(false);
+            expect(batched.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["utility-science-pack is not taken away"] });
+            expect(batched.verdict).not.toBe("stable");
             expect(batched.deadlock_risks).toHaveLength(1);
-            expect(batched.meets_target_rate).toBe(true);
+            expect(batched.ranking.meets_target_rate).toBe(true);
             expect(selected.id).toBe("planned-belt-slack");
             // the clocks that do get back hold the rate at more wake-ups
             const uneven = alternative("uneven-output");
-            expect(uneven.is_stable).toBe(true);
-            expect(uneven.wake_ups_per_minute!).toBeGreaterThan(0);
+            expect(uneven.verdict).toBe("stable");
+            expect(uneven.assessment.wake_ups_per_minute!).toBeGreaterThan(0);
         });
     });
 
@@ -166,9 +166,9 @@ describe("the belt a clock is made for", () => {
 
         it("makes batched swings with room for a hand of fuel, as a clock for a belt that does not move, and it holds the target rate", () => {
             expect(batched.label).toBe("Batched swings: 5 output swings per cycle");
-            expect(batched.holds_expected_output).toBe(true);
+            expect(batched.verdict).not.toBe("unstable");
             expect(batched.belt).toEqual({ kind: "non_moving" });
-            expect(batched.matches_belt_choice).toBe(true);
+            expect(batched.ranking.matches_belt_choice).toBe(true);
             expect(batched.result.belt_pickup_slack_ticks).toEqual({});
             expect(batched.result.fuel_hand_room_ticks).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });
             expect(batched.description).toContain("Inserters 1, 2 and 11 take fuel off the belt as well as an ingredient and stay enabled 4 more ticks");
@@ -176,9 +176,9 @@ describe("the belt a clock is made for", () => {
 
         // It was the clock selected until a clock had to get back from a backpressure loss as well (GOALS.md)
         it("does not select it: the build does not get back to its rate under it once the nutrients have run out", () => {
-            expect(batched.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
+            expect(batched.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
             expect(selected.id).toBe("swings-2");
-            expect(selected.meets_target_rate).toBe(true);
+            expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "non_moving" });
         });
 
@@ -205,7 +205,7 @@ describe("the belt a clock is made for", () => {
 
         it("makes full-hand output swings from batched swings that move more than the expected output", () => {
             const batched = alternatives.find(a => a.id === "planned-belt-slack")!;
-            expect(batched.is_stable).toBe(false);
+            expect(batched.verdict).not.toBe("stable");
             expect(batched.result.stability_check.as_built?.actual_output_items).toBe(48);
             expect(batched.result.stability_check.expected_output_items).toBe(32);
             expect(alternatives.map(a => a.id)).toEqual(["planned-belt-slack", "full-hand"]);
@@ -213,7 +213,7 @@ describe("the belt a clock is made for", () => {
 
         it("selects full-hand output swings without the slack", () => {
             expect(selected.id).toBe("full-hand");
-            expect(selected.meets_target_rate).toBe(true);
+            expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "non_moving" });
             expect(selected.result.clock_windows).toEqual({
                 "inserter:1": [{ start: 1, end: 23 }],

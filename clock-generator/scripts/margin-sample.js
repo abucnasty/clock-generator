@@ -36,7 +36,7 @@ const holds = (config, clock_windows, period) => {
         row.generate_seconds = (Date.now() - generated) / 1000;
         row.selected = alternatives[selected_index]?.id;
         const tried = new Set();
-        for (const alternative of alternatives.filter(a => a.is_stable)) {
+        for (const alternative of alternatives.filter(a => a.verdict === "stable")) {
             const result = alternative.result;
             // a subtick clock and the same clock with its period rounded have the same windows
             if (tried.has(result.clock_windows)) {

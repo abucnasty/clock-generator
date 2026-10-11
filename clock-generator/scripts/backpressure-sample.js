@@ -22,9 +22,9 @@ const places = process.env.PLACES ? process.env.PLACES.split(",").map(Number) : 
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         row.generate_seconds = (Date.now() - generated) / 1000;
         row.selected = alternatives[selected_index]?.id;
-        row.selected_is_stable = alternatives[selected_index]?.is_stable ?? false;
+        row.selected_is_stable = alternatives[selected_index]?.verdict === "stable";
         // every clock that holds its expected output: "stable" already says whether it gets back from the losses
-        for (const alternative of alternatives.filter(a => a.holds_expected_output)) {
+        for (const alternative of alternatives.filter(a => a.verdict !== "unstable")) {
             const result = alternative.result;
             const clock = { id: alternative.id, selected: alternative.id === row.selected, period: result.simulation_duration.ticks };
             const began = Date.now();

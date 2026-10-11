@@ -176,7 +176,7 @@ describe("generateClockForConfig", () => {
                 });
 
                 it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
-                    expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
+                    expect(alternatives.find(a => a.id === id)?.verdict).toBe("stable");
                 });
 
                 it("batched swings for a moving belt add 4 ticks to the belt input inserters", () => {
@@ -241,7 +241,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("is stable and repeats every period", () => {
-                expect(planned.is_stable).toBe(true);
+                expect(planned.verdict).toBe("stable");
                 expect(planned.result.stability_check.as_built?.repeat_periods).toBe(1);
             });
 
@@ -310,7 +310,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("is offered and stable from every start phase checked", () => {
-                expect(uneven.is_stable).toBe(true);
+                expect(uneven.verdict).toBe("stable");
                 expect(uneven.result.stability_check.as_built?.start_phases_checked).toBe(112);
                 expect(uneven.result.stability_check.as_built?.repeat_periods).toBe(1);
             });
@@ -348,7 +348,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("is offered and stable", () => {
-                expect(shifted.is_stable).toBe(true);
+                expect(shifted.verdict).toBe("stable");
                 expect(shifted.result.stability_check.as_built?.repeat_periods).toBe(1);
             });
 

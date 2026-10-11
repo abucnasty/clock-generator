@@ -17,21 +17,23 @@ import {
     Typography,
 } from '@mui/material';
 import { useState } from 'react';
+import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { lossesOf } from '../utils/rateWarning';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
-/** A clock that holds its expected output and does not get back to it after a backpressure loss */
-const doesNotRecover = (alternative: ClockAlternativeView) => alternative.holdsExpectedOutput && !alternative.isStable;
+const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Stable', 'no recovery': 'No recovery', unstable: 'Unstable' };
+const VERDICT_COLOR: Record<ClockVerdict, 'success' | 'warning' | 'error'> = { stable: 'success', 'no recovery': 'warning', unstable: 'error' };
+
 
 function statusDetail(alternative: ClockAlternativeView): string {
     const check = alternative.asBuilt;
     if (!check) {
         return 'Not checked';
     }
-    if (doesNotRecover(alternative)) {
+    if (alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
         return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
             + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run the losses are tried on.');
@@ -60,14 +62,14 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
     }
 
     // unstable clocks are hidden until asked for, unless nothing is stable: then they are all there is to look at
-    const unstableCount = alternatives.filter(alternative => !alternative.isStable).length;
+    const unstableCount = alternatives.filter(alternative => alternative.verdict !== 'stable').length;
     const anyStable = unstableCount < alternatives.length;
     const hidesUnstable = anyStable && !showUnstable;
     const rows = alternatives
         .map((alternative, index) => ({ alternative, index }))
-        .filter(({ alternative, index }) => !hidesUnstable || alternative.isStable || index === selectedIndex);
+        .filter(({ alternative, index }) => !hidesUnstable || alternative.verdict === 'stable' || index === selectedIndex);
     const hiddenCount = alternatives.length - rows.length;
-    const anyHolds = alternatives.some(alternative => alternative.holdsExpectedOutput);
+    const anyHolds = alternatives.some(alternative => alternative.verdict !== 'unstable');
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
 
@@ -170,11 +172,11 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                 <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
                                 <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
                                 <TableCell align="right">
-                                    {alternative.asBuilt?.wake_ups
-                                        ? Math.round(alternative.asBuilt.wake_ups.wake_ups_per_minute)
+                                    {alternative.assessment.wake_ups_per_minute !== null
+                                        ? Math.round(alternative.assessment.wake_ups_per_minute)
                                         : '—'}
                                 </TableCell>
-                                <TableCell align="right">{alternative.itemsPerSecond.toFixed(2)}</TableCell>
+                                <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
                                 <TableCell align="right">
                                     {alternative.asBuilt
                                         ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
@@ -184,8 +186,8 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                     <Tooltip title={statusDetail(alternative)} arrow>
                                         <Chip
                                             size="small"
-                                            label={alternative.isStable ? 'Stable' : doesNotRecover(alternative) ? 'No recovery' : 'Unstable'}
-                                            color={alternative.isStable ? 'success' : doesNotRecover(alternative) ? 'warning' : 'error'}
+                                            label={VERDICT_LABEL[alternative.verdict]}
+                                            color={VERDICT_COLOR[alternative.verdict]}
                                             variant="outlined"
                                         />
                                     </Tooltip>

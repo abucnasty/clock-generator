@@ -49,27 +49,27 @@ describe("generateClockForConfig", () => {
         // second without a miss over 300 periods
         it("holds the target of 250 a second on a clock of 480 ticks, with the planned 5 output swings per cycle", () => {
             expect(five_swings.label).toBe("Batched swings: 5 output swings per cycle");
-            expect(five_swings.holds_expected_output).toBe(true);
-            expect(five_swings.items_per_second).toBeCloseTo(250, 6);
+            expect(five_swings.verdict).not.toBe("unstable");
+            expect(five_swings.assessment.items_per_second).toBeCloseTo(250, 6);
             expect(five_swings.result.simulation_duration.ticks).toBe(480);
         });
 
         it("does not call the 5-swing clock stable: the build does not get back to its rate under it once the nutrients have run out", () => {
-            expect(five_swings.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
-            expect(five_swings.is_stable).toBe(false);
-            expect(five_swings.meets_target_rate).toBe(false);
+            expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
+            expect(five_swings.verdict).not.toBe("stable");
+            expect(five_swings.ranking.meets_target_rate).toBe(false);
         });
 
         it("selects the 2-swing clock, the one with the fewest wake-ups of the two that get back from every loss", () => {
-            const stable = alternatives.filter(a => a.is_stable);
+            const stable = alternatives.filter(a => a.verdict === "stable");
             expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle"]);
             expect(alternatives[selected_index].label).toBe("2 output swings per cycle");
-            expect(alternatives[selected_index].wake_ups_per_minute).toBeLessThan(one_swing.wake_ups_per_minute!);
+            expect(alternatives[selected_index].assessment.wake_ups_per_minute).toBeLessThan(one_swing.assessment.wake_ups_per_minute!);
         });
 
         it("also holds it with one output swing per cycle", () => {
-            expect(one_swing.is_stable).toBe(true);
-            expect(one_swing.items_per_second).toBeCloseTo(250, 6);
+            expect(one_swing.verdict).toBe("stable");
+            expect(one_swing.assessment.items_per_second).toBeCloseTo(250, 6);
         });
 
         it("leaves the inserters that take eggs from the egg biochambers into the science biochamber always enabled on the 1-swing clock, and clocks the rest", () => {

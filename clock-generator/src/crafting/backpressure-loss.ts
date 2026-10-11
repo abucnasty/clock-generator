@@ -444,8 +444,6 @@ export function reportOf(period_ticks: number, expected_output_items: number, un
 export interface BackpressureLossVerdict {
     /** The clock gets back to its expected output after every loss of its build */
     survives: boolean;
-    /** False when the run with nothing cut was already off its expected output, so that the losses say nothing */
-    holds_undisturbed: boolean;
     /** The losses it does not get back from, as lossLabel words them: "coal stops arriving" */
     broken_by: string[];
     /** The most periods it took to be back at the expected output over all trials; null when it does not survive */
@@ -455,7 +453,6 @@ export interface BackpressureLossVerdict {
 export function verdictOf(report: BackpressureLossReport): BackpressureLossVerdict {
     return {
         survives: report.survives,
-        holds_undisturbed: report.undisturbed.recovers,
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),
         recovered_after_periods: report.recovered_after_periods,
     };

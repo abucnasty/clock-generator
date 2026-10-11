@@ -235,9 +235,9 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             }
             // stable, but for a build with a deadlock risk: there a clock that holds its expected output is selected
             // whether it gets back from every backpressure loss or not (GOALS.md, "Two inserters that bring the same item")
-            const holds = selected.deadlock_risks.length > 0 ? selected.holds_expected_output : selected.is_stable;
+            const holds = selected.deadlock_risks.length > 0 ? selected.verdict !== "unstable" : selected.verdict === "stable";
             expect(holds, `the selected clock (${selected.label}) is stable in the simulator`).toBe(true);
-            expect(selected.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
+            expect(selected.assessment.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
                 .toBe(config.target_output.items_per_second);
 
             // A fractional period is built as a subtick clock, which counts the whole ticks after which the period

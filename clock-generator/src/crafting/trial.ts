@@ -23,6 +23,47 @@ export const AS_BUILT_START_PHASES = 12;
 export const FULL_CHECK_START_PHASES = 112;
 
 
+/**
+ * What the trial of a clock on its build found, in the terms of GOALS.md: whether it holds its expected output, whether
+ * it survives backpressure loss, the rate it runs the build at (goal 1), and its wake-ups (goal 2).
+ */
+export interface ClockAssessment {
+    /**
+     * The clock-only check (the build driven only by the exported clock windows) reaches the expected output, from
+     * the start the generator gives a clock: the machines full of ingredients and emptied of products
+     */
+    holds: boolean;
+    /**
+     * Whether the clock gets back to its expected output after each loss of its build, and the losses it does not get
+     * back from (see backpressure-loss.ts). Null when no loss was tried: the clock does not hold its expected output
+     * to begin with, or the trials could not be run on it.
+     */
+    backpressure_loss: BackpressureLossVerdict | null;
+    /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
+    items_per_second: number;
+    /**
+     * Wake-ups a minute, summed over the inserters of one copy of the build in the long run of the clock (see
+     * wake-ups.ts); null when the clock had no long run. Fewer is better: each one is a machine waking an inserter
+     * that a narrower window would have left disabled. Among the clocks that meet the target rate, the one with the
+     * fewest is selected.
+     */
+    wake_ups_per_minute: number | null;
+}
+
+/**
+ * The one word for a clock (GOALS.md, "Backpressure Loss"): stable when it holds its expected output and gets back to
+ * it by itself after every backpressure loss of its build; no recovery when it holds and does not get back from some
+ * loss; unstable when it does not hold. A clock the losses could not be tried on is taken by what it holds.
+ */
+export type ClockVerdict = "stable" | "no recovery" | "unstable";
+
+export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
+    if (!assessment.holds) {
+        return "unstable";
+    }
+    return assessment.backpressure_loss?.survives === false ? "no recovery" : "stable";
+}
+
 export interface AsBuiltStabilityCheck {
     /** Whether the blueprint's clock windows alone, without the simulator's inventory conditions, produce the expected output from every start phase tried */
     is_stable: boolean;

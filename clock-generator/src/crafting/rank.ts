@@ -1,28 +1,89 @@
+import { Config } from "../config";
+import { Entity } from "../entities";
 import { ClockAlternative, ClockAlternativeRun } from "./alternatives";
 import { SerializableClockWindows } from "./clock";
 import { BlueprintGenerationResult } from "./plan/plan-run";
+import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 
-/** What the selection compares between two alternatives, in this order; see `combineClockAlternativeRuns` */
+/**
+ * What the selection compares between two alternatives, in this order (see `combineClockAlternativeRuns`), worked out
+ * from a clock's assessment, its belt, and the build's deadlock risks by `rankingOf`.
+ */
 export interface ClockRanking {
+    /**
+     * Goal 1: the clock is stable and runs the build at the target rate, which a clock with a rounded period does not.
+     * On a build with a deadlock risk a clock that holds its expected output at the target rate meets it, whether it
+     * gets back from every backpressure loss or not: the trials do not see the deadlock, so what they say of the
+     * clocks of such a build does not decide which is selected (GOALS.md, "Two inserters that bring the same item").
+     */
     meets_target_rate: boolean;
-    /** Items per second the clock is above the target rate, or below it when negative; compared between clocks that do not meet it */
+    /**
+     * Items per second the clock is above the target rate; negative when it is short of it. Where no clock meets
+     * the target rate, the one nearest to it is selected.
+     */
     rate_off_target: number;
+    /**
+     * False when the clock is not made for the belt the config asks for; such a clock is only selected when no other
+     * meets the target rate. It is a clock whose belt-fed inserters go without belt pickup slack though the config
+     * does not say the belts do not move: the simulator's belts do not move, so it looks better there than it is on a
+     * moving belt. True for every clock when the config says the belts do not move (`overrides.non_moving_belts`),
+     * and for a clock with a period that is not a whole number of ticks, which never gets the slack.
+     */
     matches_belt_choice: boolean;
+    /**
+     * Ranked ahead of the other alternatives that meet the target rate, whatever their wake-ups: full-hand output
+     * swings where a machine can make more in a period than its plan. Such a machine crafts ahead from its stock
+     * whenever an output window lets the surplus out, its ingredient stock drains, and in the end an extra ingredient
+     * hand fits and the build over-produces; short output windows that only ever take a full hand leave the surplus
+     * inside, where the output block stops it.
+     */
     rank_first: boolean;
     /** Null when they were not counted, which ranks after any count */
     wake_ups_per_minute: number | null;
     window_count: number;
 }
 
+/** Items per second an alternative may be off the target rate by and still meet it */
+const TARGET_RATE_TOLERANCE = 1e-6;
 
-export function clockRankingOf(alternative: ClockAlternative): ClockRanking {
+/** How much more a machine could make in a period than its plan asks of it before it counts as having spare speed */
+const SPARE_SPEED_MARGIN = 1.05;
+
+/**
+ * True when the machines making the target can craft noticeably more in a period than the plan expects of them:
+ * such a machine never idles for lack of speed, so an open output window drains its ingredient stock over time.
+ */
+function machineHasSpareSpeed(config: Config, result: BlueprintGenerationResult): boolean {
+    const period = result.simulation_duration.ticks;
+    const expected = result.stability_check.expected_output_items;
+    if (!(period > 0) || !(expected > 0)) {
+        return false;
+    }
+    const registry = createEntityRegistryFromConfig(config);
+    const makers = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === config.target_output.recipe);
+    if (makers.length === 0) {
+        return false;
+    }
+    const capacity = makers.reduce((sum, machine) => sum + period * (
+        machine.output.production_rate.amount_per_tick.toDecimal()
+        + machine.bonus_productivity_rate.bonus_crafts_per_tick * machine.bonus_productivity_rate.amount_per_bonus
+    ), 0);
+    return capacity >= expected * SPARE_SPEED_MARGIN;
+}
+
+/** How a clock ranks, from its assessment and verdict, the belt it is made for, and the deadlock risks of its build */
+export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Config): ClockRanking {
+    const rate_off_target = clock.assessment.items_per_second - config.target_output.items_per_second;
+    // on a build with a deadlock risk the recovery verdict does not decide: see `meets_target_rate`
+    const counts_as_holding = clock.deadlock_risks.length > 0 ? clock.verdict !== "unstable" : clock.verdict === "stable";
     return {
-        meets_target_rate: alternative.meets_target_rate,
-        rate_off_target: alternative.rate_off_target,
-        matches_belt_choice: alternative.matches_belt_choice,
-        rank_first: alternative.rank_first,
-        wake_ups_per_minute: alternative.wake_ups_per_minute,
-        window_count: alternative.ranking_window_count,
+        meets_target_rate: counts_as_holding && Math.abs(rate_off_target) <= TARGET_RATE_TOLERANCE,
+        rate_off_target,
+        // with belts that do not move every clock goes without the slack, which is the choice
+        matches_belt_choice: config.overrides?.non_moving_belts === true || !clock.result.belt_pickup_slack_left_out,
+        rank_first: clock.id.replace(/-subtick$/, "") === "full-hand" && machineHasSpareSpeed(config, clock.result),
+        wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
+        window_count: clock.ranking_window_count,
     };
 }
 
