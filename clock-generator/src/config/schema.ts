@@ -300,7 +300,14 @@ export type DrillsConfig = z.infer<typeof DrillsConfigSchema>;
 
 export const InserterBeltConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
-    id: z.number().int().positive()
+    id: z.number().int().positive(),
+    /**
+     * Of a belt an inserter picks up from: the lane nearest to the inserter, by its place in the belt's `lanes`, 1
+     * or 2 (the sidecar lists the left lane in the direction the belt runs first). The inserter takes from that lane
+     * first when its sink takes the items of both, as in the game. Without it the inserter takes its items in the
+     * order of its `filters`, or of the sink's ingredients when it has none, which may not be what the build does.
+     */
+    near_lane: z.union([z.literal(1), z.literal(2)]).optional()
 });
 
 export type InserterBeltConfig = z.infer<typeof InserterBeltConfigSchema>;
@@ -487,6 +494,18 @@ export const ConfigOverridesSchema = z.object({
      * @default false
      */
     use_fractional_swings: z.boolean().optional(),
+    /**
+     * The belts the inserters pick up from do not move: they are full and backed up, as the simulator models them.
+     *
+     * A clock is made for a moving belt by default: each window of an inserter that picks up from a belt stays open
+     * a few ticks longer (belt pickup slack), and a clock without it is only selected when no clock with it holds the
+     * target rate. When enabled, a clock is made without the slack and the one with the fewest wake-ups is selected.
+     * A clock that does not hold the expected output without the slack keeps it, and is only selected when no clock
+     * without it holds the target rate.
+     *
+     * @default false
+     */
+    non_moving_belts: z.boolean().optional(),
     /**
      * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
      * offered as potential clocks.

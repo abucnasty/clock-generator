@@ -100,7 +100,8 @@ export interface HarnessOptions {
     lua?: string;
     /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
     work_dir?: string;
-    game_speed: number;
+    /** Speed the game is set to as the build is built; absent, it stays what it is, as someone watching may have set it */
+    game_speed?: number;
     /**
      * Also open the game with graphics, joined to the run as a spectator looking at the build, so it can be watched.
      * The run waits for it to join and, once recorded, for its window to be closed.
@@ -486,7 +487,10 @@ async function startWatcher(executable: string, work_dir: string, game_port: num
     await fs.mkdir(client_dir, { recursive: true });
     await fs.cp(path.join(work_dir, "mods"), path.join(client_dir, "mods"), { recursive: true });
     const config = path.join(client_dir, "config.ini");
-    await fs.writeFile(config, `[path]\nread-data=${data_dir}\nwrite-data=${client_dir}\n`);
+    // What a run is watched for: how fast the game runs, and which inserters and machines it wakes. The first line
+    // looks like a comment and is the version of the config: the game resets a config without it, options and all.
+    await fs.writeFile(config, `; version=13\n[path]\nread-data=${data_dir}\nwrite-data=${client_dir}\n`
+        + "[debug]\nshow-fps=always\nshow-wakeup-lists=always\n");
     await fs.writeFile(path.join(client_dir, "player-data.json"), JSON.stringify({ "service-username": "watcher" }));
     return spawn(executable, [
         "--config", config,
@@ -499,75 +503,136 @@ function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Runs Factorio headless on a copy of the save, builds the blueprint, optionally swaps its clock, seeds it,
- * records it with the recorder mod and writes the recording to options.out.
- */
-export async function recordInFactorio(options: HarnessOptions): Promise<HarnessResult> {
+function isRunning(child: ChildProcess): boolean {
+    return child.exitCode === null && child.signalCode === null;
+}
+
+/** What a session starts its game with */
+export type SessionOptions = Pick<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "timeout_seconds" | "log">;
+/** One build to record in the game of a session */
+export type BuildOptions = Omit<HarnessOptions, "factorio" | "save" | "work_dir" | "watch">;
+
+/** Throws when the build cannot be recorded as asked. Nothing of the game is needed to tell */
+function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
     // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
     assertRecordableTicks(options.ticks, options.unclocked ? null : clockPeriodTicks(options.clock ?? options.blueprint));
-    const executable = await resolveFactorioExecutable(options.factorio);
-    const work_dir = path.resolve(options.work_dir ?? await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-harness-")));
-    await fs.mkdir(work_dir, { recursive: true });
-    const files = await prepareWorkDir(work_dir, executable, options.save);
-    const deadline = Date.now() + options.timeout_seconds * 1000;
+}
 
-    options.log(`Starting ${executable} with write data in ${work_dir}`);
-    const server = await FactorioServer.start(executable, files, path.join(work_dir, "mods"));
-    let rcon: RconClient | null = null;
-    let watcher: ChildProcess | null = null;
-    let failed = true;
-    try {
-        rcon = await server.waitForRcon(deadline);
-        const connected = rcon;
+/**
+ * A headless Factorio on a copy of the save that records builds one after another, each built in the place of the one
+ * before it. The game runs on between them, so only the first build starts from the save as it is: a later one starts
+ * at another tick, and with whatever the builds before it changed around them.
+ */
+export class HarnessSession {
+    private rcon: RconClient | null = null;
+    private watcher: ChildProcess | null = null;
+    private has_build = false;
 
-        if (options.watch) {
-            options.log("Opening the game to watch the run; waiting for it to join");
-            watcher = await startWatcher(executable, work_dir, server.game_port);
-            const opened = watcher;
-            for (;;) {
-                server.assertRunning();
-                if (opened.exitCode !== null) {
-                    throw new Error(`The game opened to watch the run closed before it joined (code ${opened.exitCode}); its log is ${path.join(work_dir, "watcher", "factorio-current.log")}`);
-                }
-                if (Number(await connected.command("/sc rcon.print(#game.connected_players)")) > 0) {
-                    break;
-                }
-                if (Date.now() > deadline) {
-                    throw new Error("Timed out waiting for the game opened to watch the run to join");
-                }
-                await sleep(POLL_INTERVAL_MS);
-            }
+    private constructor(
+        private readonly work_dir: string,
+        /** The folder was given, not made for this session: it is left as it is */
+        private readonly keeps_work_dir: boolean,
+        private readonly server: FactorioServer,
+        private readonly log: (message: string) => void,
+    ) { }
+
+    /** Starts the game and, to watch, opens it with graphics and waits for that to join */
+    static async start(options: SessionOptions): Promise<HarnessSession> {
+        const executable = await resolveFactorioExecutable(options.factorio);
+        const work_dir = path.resolve(options.work_dir ?? await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-harness-")));
+        await fs.mkdir(work_dir, { recursive: true });
+        const files = await prepareWorkDir(work_dir, executable, options.save);
+        const deadline = Date.now() + options.timeout_seconds * 1000;
+
+        options.log(`Starting ${executable} with write data in ${work_dir}`);
+        const server = await FactorioServer.start(executable, files, path.join(work_dir, "mods"));
+        const session = new HarnessSession(work_dir, options.work_dir !== undefined, server, options.log);
+        try {
+            await session.connect(executable, deadline, options.watch ?? false);
+        } catch (error) {
+            await session.close(true);
+            throw error;
         }
+        return session;
+    }
 
-        const call = async (name: string, job?: unknown): Promise<any> => {
-            const argument = job === undefined ? "" : `, ${luaLongString(JSON.stringify(job))}`;
-            const answer = await connected.command(`/sc rcon.print(remote.call("${RECORDER_MOD}", "${name}"${argument}))`);
-            try {
-                return JSON.parse(answer);
-            } catch {
-                throw new Error(`${name} failed in game: ${answer.trim() || "no answer"}`);
+    private async connect(executable: string, deadline: number, watch: boolean): Promise<void> {
+        this.rcon = await this.server.waitForRcon(deadline);
+        if (!watch) {
+            return;
+        }
+        this.log("Opening the game to watch the run; waiting for it to join");
+        const opened = this.watcher = await startWatcher(executable, this.work_dir, this.server.game_port);
+        for (;;) {
+            this.server.assertRunning();
+            if (!isRunning(opened)) {
+                throw new Error(`The game opened to watch the run closed before it joined (code ${opened.exitCode}); its log is ${path.join(this.work_dir, "watcher", "factorio-current.log")}`);
             }
-        };
-        const waitFor = async (what: string, done: (status: any) => boolean): Promise<any> => {
-            for (;;) {
-                server.assertRunning();
-                const status = await call("harness_status");
-                if (done(status)) {
-                    return status;
-                }
-                if (Date.now() > deadline) {
-                    throw new Error(`Timed out waiting for ${what}; last status ${JSON.stringify(status)}`);
-                }
-                await sleep(POLL_INTERVAL_MS);
+            if (Number(await this.command("/sc rcon.print(#game.connected_players)")) > 0) {
+                break;
             }
-        };
+            if (Date.now() > deadline) {
+                throw new Error("Timed out waiting for the game opened to watch the run to join");
+            }
+            await sleep(POLL_INTERVAL_MS);
+        }
+        // Nobody is an admin on a server of its own. As one, whoever watches can set the game's speed, pause it and
+        // open the editor. Alt mode is on for the recipes, and stays as they leave it after.
+        await this.command("/sc for _, player in pairs(game.connected_players) do "
+            + "player.admin = true player.game_view_settings.show_entity_info = true end");
+    }
+
+    private command(command: string): Promise<string> {
+        return this.rcon!.command(command);
+    }
+
+    private async call(name: string, job?: unknown): Promise<any> {
+        const argument = job === undefined ? "" : `, ${luaLongString(JSON.stringify(job))}`;
+        const answer = await this.command(`/sc rcon.print(remote.call("${RECORDER_MOD}", "${name}"${argument}))`);
+        try {
+            return JSON.parse(answer);
+        } catch {
+            throw new Error(`${name} failed in game: ${answer.trim() || "no answer"}`);
+        }
+    }
+
+    private async waitFor(what: string, deadline: number, done: (status: any) => boolean): Promise<any> {
+        for (;;) {
+            this.server.assertRunning();
+            const status = await this.call("harness_status");
+            if (done(status)) {
+                return status;
+            }
+            if (Date.now() > deadline) {
+                throw new Error(`Timed out waiting for ${what}; last status ${JSON.stringify(status)}`);
+            }
+            await sleep(POLL_INTERVAL_MS);
+        }
+    }
+
+    /** Whether the game opened to watch is still open */
+    get watched(): boolean {
+        return this.watcher !== null && isRunning(this.watcher);
+    }
+
+    /**
+     * Builds the blueprint, in the place of the build this session recorded before, optionally swaps its clock, seeds
+     * it, records it with the recorder mod and writes the recording to options.out.
+     */
+    async record(options: BuildOptions): Promise<HarnessResult> {
+        assertBuildOptions(options);
+        const deadline = Date.now() + options.timeout_seconds * 1000;
+        if (this.has_build) {
+            const cleared = await this.call("harness_clear");
+            options.log(`Removed the ${cleared.removed} entities of the build before`);
+        }
+        this.has_build = true;
 
         const replaces_clock = options.clock !== undefined || options.unclocked;
-        const build = await call("harness_build", {
+        const build = await this.call("harness_build", {
             blueprint: options.blueprint,
             surface: options.surface,
             position: options.position,
@@ -581,19 +646,21 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
         }
         options.log(`Built ${build.built} entities on ${build.surface}`
             + (replaces_clock ? `, removed ${build.removed_clock_combinators} clock combinators that held ${build.clocked_inserters} inserters` : ""));
-        if (options.watch) {
-            // a spectator has no character to walk into the build, and looks at its middle
+        if (this.watched) {
+            // A spectator has no character to walk into the build, and looks at its middle. Whoever has opened the
+            // editor since keeps it, and whoever was made a spectator before keeps their zoom.
             const x = (build.area.left_top.x + build.area.right_bottom.x) / 2;
             const y = (build.area.left_top.y + build.area.right_bottom.y) / 2;
-            await connected.command(`/sc for _, player in pairs(game.connected_players) do `
-                + `player.set_controller{type = defines.controllers.spectator} `
-                + `player.teleport({${x}, ${y}}, "${build.surface}") player.zoom = 0.75 end`);
+            await this.command(`/sc for _, player in pairs(game.connected_players) do `
+                + `if player.controller_type ~= defines.controllers.spectator and player.controller_type ~= defines.controllers.editor then `
+                + `player.set_controller{type = defines.controllers.spectator} player.zoom = 0.75 end `
+                + `player.teleport({${x}, ${y}}, "${build.surface}") end`);
         }
-        await waitFor("the warm-up", status => status.ready);
+        await this.waitFor("the warm-up", deadline, status => status.ready);
 
         let clock: { blueprint: string; inserters: Record<string, number> } | undefined;
         if (options.clock && options.config) {
-            const described = await call("harness_describe");
+            const described = await this.call("harness_describe");
             const unit_numbers = matchBuiltInserters(described, options.config);
             const missing = clockInserterIds(options.clock).filter(id => !unit_numbers.has(id));
             if (missing.length > 0) {
@@ -607,7 +674,7 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
             clock = { blueprint: options.clock, inserters: Object.fromEntries(unit_numbers) };
         }
 
-        const start = await call("harness_start", {
+        const start = await this.call("harness_start", {
             clock,
             unclocked: options.unclocked,
             seed: options.seed,
@@ -623,32 +690,67 @@ export async function recordInFactorio(options: HarnessOptions): Promise<Harness
         }
         options.log(`Recording from tick ${start.tick}`);
 
-        const finished = await waitFor("the recording", status => !status.settling && !status.active);
+        const finished = await this.waitFor("the recording", deadline, status => !status.settling && !status.active);
         if (!finished.last_recording) {
-            throw new Error(`The recorder stopped without writing a recording. End of the game's log:\n${server.logTail()}`);
+            throw new Error(`The recorder stopped without writing a recording. End of the game's log:\n${this.server.logTail()}`);
         }
-        const written = path.join(work_dir, "script-output", finished.last_recording.filename);
+        const written = path.join(this.work_dir, "script-output", finished.last_recording.filename);
         const recording = parseRecording(JSON.parse(await fs.readFile(written, "utf-8")));
         const recording_path = path.resolve(options.out);
         await fs.mkdir(path.dirname(recording_path), { recursive: true });
         await fs.copyFile(written, recording_path);
         options.log(`Recorded ${recording.sample_count} ticks (${recording.stop_reason})`);
-        if (watcher && watcher.exitCode === null) {
-            options.log("The build keeps running: close the game's window to finish");
-            await connected.command(`/sc game.speed = ${options.game_speed} game.tick_paused = false`);
-            const opened = watcher;
-            await new Promise<void>(resolve => opened.once("exit", () => resolve()));
+        return { recording_path, recording, build, start };
+    }
+
+    /** Lets the build run on, at this speed when one is given, until the window of the game opened to watch is closed; returns at once when none is open */
+    async runUntilWatcherCloses(game_speed?: number): Promise<void> {
+        const opened = this.watcher;
+        if (!opened || !isRunning(opened)) {
+            return;
+        }
+        const closed = new Promise<void>(resolve => opened.once("exit", () => resolve()));
+        this.log("The build keeps running: close the game's window to finish");
+        await this.command(`/sc ${game_speed === undefined ? "" : `game.speed = ${game_speed} `}game.tick_paused = false`);
+        await closed;
+    }
+
+    /** Ends the game, and the one opened to watch it. The write data of a failed session is kept, for the game's log */
+    async close(failed = false): Promise<void> {
+        this.rcon?.close();
+        const opened = this.watcher;
+        // it writes to its folder on its way out, which would bring a folder removed under it back
+        const closed = opened && isRunning(opened) ? new Promise<void>(resolve => opened.once("exit", () => resolve())) : null;
+        opened?.kill();
+        await this.server.stop();
+        await closed;
+        if (this.keeps_work_dir) {
+            return;
+        }
+        if (failed) {
+            this.log(`Kept ${this.work_dir} (factorio-current.log is in it)`);
+        } else {
+            await fs.rm(this.work_dir, { recursive: true, force: true });
+        }
+    }
+}
+
+/**
+ * Runs Factorio headless on a copy of the save, builds the blueprint, optionally swaps its clock, seeds it,
+ * records it with the recorder mod and writes the recording to options.out: a session of one build.
+ */
+export async function recordInFactorio(options: HarnessOptions): Promise<HarnessResult> {
+    assertBuildOptions(options);
+    const session = await HarnessSession.start(options);
+    let failed = true;
+    try {
+        const result = await session.record(options);
+        if (options.watch) {
+            await session.runUntilWatcherCloses(options.game_speed);
         }
         failed = false;
-        return { recording_path, recording, build, start };
+        return result;
     } finally {
-        rcon?.close();
-        watcher?.kill();
-        await server.stop();
-        if (failed && options.work_dir === undefined) {
-            options.log(`Kept ${work_dir} (factorio-current.log is in it)`);
-        } else if (options.work_dir === undefined) {
-            await fs.rm(work_dir, { recursive: true, force: true });
-        }
+        await session.close(failed);
     }
 }

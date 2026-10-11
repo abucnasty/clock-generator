@@ -3,6 +3,7 @@ import { EntityId, InfinityChest } from "../entities";
 import { ConstantInventoryState } from "./constant-inventory-state";
 import { ChestState } from "./chest-state";
 import { WritableInventoryState } from "./inventory-state";
+import { SupplyGate } from "./supply-gate";
 
 /**
  * State class for infinity chest entities.
@@ -17,6 +18,9 @@ export class InfinityChestState implements ChestState {
 
     public static forChest = forChest;
     public static clone = clone;
+
+    /** Items the chest does not give or take for now; nothing, unless a run cuts a supply (see SupplyGate) */
+    public readonly supply = new SupplyGate();
 
     constructor(
         public readonly entity_id: EntityId,
@@ -34,7 +38,7 @@ export class InfinityChestState implements ChestState {
      */
     public getCurrentQuantity(itemName?: ItemName): number {
         if (itemName) {
-            return this.inventoryState.getQuantity(itemName);
+            return this.supply.withheld.has(itemName) ? 0 : this.inventoryState.getQuantity(itemName);
         }
         // If no item specified, return total quantity across all items
         return this.inventoryState.getTotalQuantity();
@@ -42,18 +46,18 @@ export class InfinityChestState implements ChestState {
 
     /**
      * Get the available space remaining in the chest.
-     * Infinity chests always have infinite space.
+     * Infinity chests always have infinite space, but for one that takes nothing while its supply gate refuses an item.
      */
     public getAvailableSpace(): number {
-        return Infinity;
+        return this.supply.refused.size > 0 ? 0 : Infinity;
     }
 
     /**
      * Check if the chest is full (no available space).
-     * Infinity chests are never full.
+     * Infinity chests are never full, but for one that takes nothing while its supply gate refuses an item.
      */
     public isFull(): boolean {
-        return false;
+        return this.supply.refused.size > 0;
     }
 
     /**

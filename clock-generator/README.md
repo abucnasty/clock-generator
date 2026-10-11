@@ -165,11 +165,8 @@ Here is a complete configuration for a utility science pack setup. Recipe names 
     }
   ],
   "target_output": {
+    "copies": 7,
     "items_per_second": 120,
-    "machines": 7,
-    "overrides": {
-      "output_swings": 3
-    },
     "recipe": "utility-science-pack"
   }
 }
@@ -260,6 +257,25 @@ inserters = [
 ]
 ```
 
+### Nearest Belt Lane
+
+An inserter that takes two items off one belt takes from the lane nearest to it first, whenever its machine takes
+both. Which item that is can decide whether a clock holds: on the utility science sample it sets how the low density
+structures are split between the two inserters that bring them. Name the lane with `near_lane` on the inserter's
+source, 1 or 2 by its place in the belt's `lanes`:
+
+```json
+{
+  "source": { "type": "belt", "id": 2, "near_lane": 1 },
+  "sink": { "type": "machine", "id": 1 },
+  "stack_size": 16
+}
+```
+
+The sidecar mod exports it for an inserter beside a straight piece of belt, and the inserter's panel in the UI has a
+field for it. Without it the items are taken in the order of the inserter's `filters`, or of the machine's
+ingredients when it has none.
+
 ### Enable Control Overrides
 
 You can override the automatic enable control logic for individual inserters and drills. This is useful when you want to manually specify when an entity should be enabled during the crafting cycle.
@@ -269,7 +285,7 @@ You can override the automatic enable control logic for individual inserters and
 | Mode | Description |
 |------|-------------|
 | `AUTO` | Use automatic control logic (default behavior) |
-| `ALWAYS` | Entity is always enabled |
+| `ALWAYS` | Entity is always enabled, and gets no combinator in the blueprint |
 | `NEVER` | Entity is never enabled |
 | `CLOCKED` | Entity is enabled during specified tick ranges |
 
@@ -325,7 +341,7 @@ drills {
 
 **AUTO (default)**: The simulation determines optimal enable windows automatically. This is the recommended mode for most setups.
 
-**ALWAYS**: The entity is always enabled. Use this when you want the entity to operate freely without clock control.
+**ALWAYS**: The entity is always enabled. Use this when you want the entity to operate freely without clock control. It gets no clock windows and no combinator in the blueprint, also when it only fills a fuel slot or takes a by-product away, and every clock is checked with it always enabled. An always-enabled inserter is woken at every craft of the machine it waits on, which shows in the wake-ups of the clock.
 
 **NEVER**: The entity is never enabled. Useful for debugging or temporarily disabling an entity.
 
@@ -338,11 +354,22 @@ drills {
 
 ```typescript
 overrides: {
-    output_swings: 3,           // Force specific output inserter swing count
-    terminal_swing_count: 4,    // Override calculated max swings
-    lcm: 12                     // Override LCM calculation for cycle length
+    terminal_swing_count: 4,    // Force the output swings per cycle, instead of the count the plan works out
+    lcm: 12,                    // Override LCM calculation for cycle length
+    non_moving_belts: true      // The belts the inserters pick up from do not move (default false)
 }
 ```
+
+#### The belt a clock is made for
+
+The simulator's belts are always full and do not move. An inserter changes its tick timing when the items on the belt are moving, and more so when the belt has gaps, so a clock that is exact on a non-moving belt can switch an inserter off holding a partial hand on a moving one.
+
+Every potential clock names the belt it is made for:
+
+- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt pickup slack. It is a rule of thumb, not a simulated moving belt: it may work on one build and not on another.
+- **non-moving belt**: the belt inserters get only the windows they need on a full belt that does not move. "Batched swings, non-moving belt" is made this way on purpose; other clocks drop the slack when they do not hold the expected output with it. A clock with a period that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
+
+By default a non-moving belt clock is only selected for you when no clock for a moving belt holds the target rate. Set `non_moving_belts: true` ("Belts do not move" in the UI) when your belts are backed up and standing still: each clock is made without the slack, and the one with the fewest wake-ups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a non-moving belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
 
 ## Troubleshooting
 
@@ -411,10 +438,30 @@ npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warm
 - `--settle` runs the build for a number of ticks on its new clock and seeds before the recording starts, so its start-up is not counted.
 
 `npm run test:game` records the scaffold builds under `resources/config-samples` the same way and checks that the clock the generator selects moves the expected output in every clock period of ten minutes of game time (`src/harness/scaffold-recordings.game.test.ts`). It needs `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE`, skips with the reason when they are missing, and is not part of `npm test`, since each recording takes about ten seconds in a game of its own.
+
+Copy `.env.example` to `.env` and set `FACTORIO_PATH` to your Factorio executable or install folder; `vitest.game.config.ts` loads it automatically, so `npm run test:game` picks it up without exporting anything by hand. `FACTORIO_HARNESS_SAVE` already defaults to the staging save committed at `resources/clock_generator_staging.zip`. `.env` is not read by `npm run record` or `npm run verify`, which still take `FACTORIO_PATH`/`FACTORIO_HARNESS_SAVE` from the shell environment or `--factorio=`/`--save=`.
+
+`npm run test:game:watch` runs the same tests with the game also open with graphics, joined as a spectator over the build, to watch them. All builds then run in one game, each built in the place of the one before it, so there is one window and the game with graphics starts once; it closes by itself after the last build. The builds run at `WATCH_SPEED` (in `src/harness/scaffold-recordings.game.test.ts`) instead of the 1000 they run at unwatched, slow enough to follow over a remote connection. That speed is only where the first build starts: whoever watches is an admin of the game, so they can set its speed (`/c game.speed = 16`), pause it or open the editor (`/editor`) for its time controls, and the builds after keep what they set. Close the window early and the builds left run unwatched at full speed. Narrow it to some builds with `npm run test:game:watch -- -t "automation science"`. Without `:watch` every build still gets a game of its own, so it starts from the save as it is.
 - `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
-- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed.
+- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed. Whoever watches is an admin of the game, with alt mode on, and the game shows the FPS/UPS counter and the wake-up lists (`show-fps` and `show-wakeup-lists`, set to always, so debug mode need not be on).
 
 The save is never written to; Factorio gets a temporary write-data folder (`--work-dir` keeps it). The save needs a place where the blueprint can be built and powered, such as an editor map with a global electric network. Run `npm run record` without arguments for all options.
+
+### Verifying a Recording
+
+`npm run verify` lays a recording against the simulator. It generates the clocks of the config, runs the one that was built on its own in the simulator, as its blueprint runs it in the game, and compares that run with the recording. The run is written in the format of the recorder, so both are read by the same functions (`src/verification/compare-recordings.ts`).
+
+```bash
+npm run verify -- --config=config.json --recording=recording.json [--alternative=planned-belt-slack]
+```
+
+- `--alternative` names the clock that was recorded, by its id, label or index in the list of potential clocks. Without it, the clock the generator selects is taken.
+- The report gives, game against simulator: the output of every clock period, the wake-ups a minute, what every inserter moved and every machine finished in a period, and how much of the time each showed the same state at the same place in the period. A build that takes several periods to repeat, or a loop of machines the clock does not hold to a place in the period, shows other states at the same place without being any different, so that figure comes with how alike the two are wherever in the period.
+- It exits with 1 when the two moved something else: a clock period off the expected output, an inserter or a machine that moves another amount in a period, or a recorded clock that is not the clock of the config. States that differ are listed and do not fail it.
+- A build with fuel is also checked for the fuel its machines burned against the energy consumption of the config, and its fuel inserters against their fuel clocks.
+
+`npm run test:game` makes the same comparison for every scaffold it records.
+
 
 ### Configuration Validation
 

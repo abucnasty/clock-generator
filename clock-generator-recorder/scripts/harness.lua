@@ -325,7 +325,7 @@ local function apply_seed(entities, seed)
 end
 
 ---Build the blueprint and pause the game, after the warm-up when one is asked for
----@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, warmup_ticks: number?, speed: number?}
+---@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, warmup_ticks: number?, speed: number?} speed: the game's speed from here on; it stays what it is when absent
 ---@return table report
 function harness.build(job)
     local surface = game.surfaces[job.surface or "nauvis"]
@@ -377,7 +377,9 @@ function harness.build(job)
     state.area = bounding_box(state.entities)
 
     storage.harness = state
-    game.speed = job.speed or 1
+    if job.speed then
+        game.speed = job.speed
+    end
     -- an inserter only knows what it picks from and drops into after its first tick, so the build runs at least one
     state.pause_tick = game.tick + math.max(job.warmup_ticks or 0, 1)
     game.tick_paused = false
@@ -395,6 +397,43 @@ function harness.build(job)
         clocked_inserters = clocked,
         tick = game.tick,
     }
+end
+
+---Remove the build with the clock wired to it and the items it left on the ground, so the next one is built in its place
+---@return table report
+function harness.clear()
+    local state = storage.harness
+    if not state then
+        return { removed = 0 }
+    end
+    recorder.finish("build removed")
+
+    local built = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid then
+            table.insert(built, entity)
+        end
+    end
+    local removed = #built
+    if removed > 0 then
+        -- measured now, not taken from the state: the clock was built below the build after its area was
+        local area = bounding_box(built)
+        for _, entity in pairs(built) do
+            entity.destroy()
+        end
+        local spilled = game.surfaces[state.surface_index].find_entities_filtered({
+            area = {
+                { area.left_top.x - 2, area.left_top.y - 2 },
+                { area.right_bottom.x + 2, area.right_bottom.y + 2 },
+            },
+            type = "item-entity",
+        })
+        for _, item in pairs(spilled) do
+            item.destroy()
+        end
+    end
+    storage.harness = nil
+    return { removed = removed }
 end
 
 ---@param entity LuaEntity|nil

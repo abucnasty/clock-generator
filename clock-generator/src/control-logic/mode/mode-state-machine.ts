@@ -113,7 +113,7 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
 }
 
 /** Fields holding an absolute tick (not a counter within a mode, like current_tick) */
-const ABSOLUTE_TICK_FIELDS = new Set(["tick", "entered_tick", "exited_tick", "next_evaluation_tick", "last_enabled_tick", "last_craft_tick"]);
+const ABSOLUTE_TICK_FIELDS = new Set(["tick", "entered_tick", "exited_tick", "last_enabled_tick", "last_craft_tick"]);
 
 /** Own primitive fields (absolute ticks relative to `tick`) and referenced modes by status; other objects are skipped */
 export function objectStateKey(value: object, tick: number, skip: ReadonlySet<string> = new Set()): string {

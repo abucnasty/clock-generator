@@ -18,7 +18,8 @@
       "id": 1,
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -34,7 +35,8 @@
       "id": 2,
       "source": {
         "type": "belt",
-        "id": 2
+        "id": 2,
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -68,11 +70,11 @@
       "type": "turbo-transport-belt",
       "lanes": [
         {
-          "ingredient": "flying-robot-frame",
+          "ingredient": "low-density-structure",
           "stack_size": 4
         },
         {
-          "ingredient": "low-density-structure",
+          "ingredient": "flying-robot-frame",
           "stack_size": 4
         }
       ]
@@ -82,11 +84,11 @@
       "type": "turbo-transport-belt",
       "lanes": [
         {
-          "ingredient": "processing-unit",
+          "ingredient": "low-density-structure",
           "stack_size": 4
         },
         {
-          "ingredient": "low-density-structure",
+          "ingredient": "processing-unit",
           "stack_size": 4
         }
       ]

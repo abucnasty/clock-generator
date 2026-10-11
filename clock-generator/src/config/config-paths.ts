@@ -18,6 +18,8 @@ const CONFIG_SAMPLES_DIR = path.resolve(__dirname, '../../resources/config-sampl
  * ```
  */
 export const ConfigPaths = {
+    ADVANCED_CIRCUIT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'advanced-circuit', 'advanced-circuit.json'),
+    ADVANCED_CIRCUIT_230: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'advanced-circuit', 'advanced-circuit-230.json'),
     CHEMICAL_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science.json'),
     CHEMICAL_SCIENCE_ADVANCED_CIRCUIT: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science-advanced-circuit.json'),
     CHEMICAL_SCIENCE_DI_ENGINE: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science-direct-insert-engine.json'),

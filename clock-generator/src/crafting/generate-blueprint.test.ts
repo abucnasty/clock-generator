@@ -1,22 +1,31 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, generateClockAlternatives, generateClockWithSwingBackoff, simulateClockOnly, validateConfig, BlueprintGenerationResult, OUTPUT_FEEDER_CHECK_TICKS, rankingWindowCount, feedersOfOutputMachines, anyFeederCarriesFuel, hasPlannedWindowsNotHands } from "./generate-blueprint";
+import { generateClockForConfig, generateClockAlternatives, validateConfig, type BlueprintGenerationResult, type ClockAlternative, type ConfigValidation, type SerializableClockWindows } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
-import type { Config } from "../config/schema";
-import { EntityId, type Inserter } from "../entities";
+import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
+import { quiet } from "./generate-blueprint-test-helpers";
 
 describe("generateClockForConfig", () => {
+
+    // The builds are generated in beforeAll hooks, not in the describe bodies: those all run when the file is collected,
+    // so a run of one test by name would generate every build in the file first.
 
     describe("STONE_BRICKS_DIRECT_INSERT config", async () => {
 
         const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
-        const result: BlueprintGenerationResult = generateClockForConfig(config);
+        let result: BlueprintGenerationResult;
+        let inserterId: EntityId;
+        let drillId: EntityId;
 
-        // Get the actual EntityId instances from the map keys
-        const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-        const inserterId: EntityId = keys.find(k => k.id === "inserter:1")!;
-        const drillId: EntityId = keys.find(k => k.id === "drill:1")!;
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+
+            // Get the actual EntityId instances from the map keys
+            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            inserterId = keys.find(k => k.id === "inserter:1")!;
+            drillId = keys.find(k => k.id === "drill:1")!;
+        });
 
         it("generates a blueprint", () => {
             expect(result.blueprint).toBeDefined();
@@ -119,12 +128,18 @@ describe("generateClockForConfig", () => {
     describe("LOGISTIC_SCIENCE_SHARED_INSERTER config", async () => {
 
         const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
-        const result: BlueprintGenerationResult = generateClockForConfig(config);
+        let result: BlueprintGenerationResult;
+        let input_inserter_id: EntityId;
+        let output_inserter_id: EntityId;
 
-        // Get the actual EntityId instances from the map keys
-        const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-        const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(1).id)!;
-        const output_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+
+            // Get the actual EntityId instances from the map keys
+            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            input_inserter_id = keys.find(k => k.id === EntityId.forInserter(1).id)!;
+            output_inserter_id = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+        });
 
 
         describe("transfer history", () => {
@@ -175,14 +190,18 @@ describe("generateClockForConfig", () => {
 
         // these three alternatives were confirmed to hold full output in game
         describe("clock alternatives", () => {
-            const { alternatives } = generateClockAlternatives(config);
+            let alternatives: ClockAlternative[];
             const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
+
+            beforeAll(() => {
+                ({ alternatives } = generateClockAlternatives(config));
+            });
 
             it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
                 expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
             });
 
-            it("planned + belt pickup slack adds 4 ticks to the belt input inserter", () => {
+            it("batched swings for a moving belt add 4 ticks to the belt input inserter", () => {
                 expect(windowsOf("planned-belt-slack")).toEqual({
                     "inserter:2": [{ start: 1, end: 49 }],
                     "inserter:1": [{ start: 52, end: 103 }],
@@ -217,12 +236,18 @@ describe("generateClockForConfig", () => {
     describe("CHEMICAL_SCIENCE_ENGINES config (multi-output machine)", async () => {
 
         const config = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_ENGINES);
-        const result: BlueprintGenerationResult = generateClockForConfig(config);
+        let result: BlueprintGenerationResult;
+        let output_inserter_1_id: EntityId;
+        let output_inserter_2_id: EntityId;
 
-        // Get the actual EntityId instances from the map keys
-        const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-        const output_inserter_1_id: EntityId = keys.find(k => k.id === EntityId.forInserter(1).id)!;
-        const output_inserter_2_id: EntityId = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+
+            // Get the actual EntityId instances from the map keys
+            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            output_inserter_1_id = keys.find(k => k.id === EntityId.forInserter(1).id)!;
+            output_inserter_2_id = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+        });
 
         describe("crafting cycle plan properties", () => {
             it("has engine-unit as the production rate item", () => {
@@ -270,11 +295,16 @@ describe("generateClockForConfig", () => {
     describe("PROCESSING_UNITS config (multi-ingredient chest input)", async () => {
 
         const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS);
-        const result: BlueprintGenerationResult = generateClockForConfig(config);
+        let result: BlueprintGenerationResult;
+        let input_inserter_id: EntityId;
 
-        // Get the actual EntityId instances from the map keys
-        const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-        const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(1).id)!;
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+
+            // Get the actual EntityId instances from the map keys
+            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            input_inserter_id = keys.find(k => k.id === EntityId.forInserter(1).id)!;
+        });
 
         it("records input inserter transfers", () => {
             const inserterTransfers = result.transfer_history.getOrThrow(input_inserter_id);
@@ -292,10 +322,14 @@ describe("generateClockForConfig", () => {
 
     describe("belt used as a buffer between machines", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_BELTED_BUFFER);
-        const result = generateClockForConfig(config);
+        let result: BlueprintGenerationResult;
         const moved = (inserter_id: number) => Array.from(result.transfer_history.entries())
             .find(([id]) => id.id === EntityId.forInserter(inserter_id).id)![1]
             .reduce((sum, t) => sum + t.amount, 0);
+
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+        });
 
         it("is stable", () => {
             expect(result.stability_check.is_stable).toBe(true);
@@ -308,7 +342,11 @@ describe("generateClockForConfig", () => {
 
     describe("belt lane consumed outside the config", async () => {
         const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNITS_BELT_EXPORT);
-        const result = generateClockForConfig(config);
+        let result: BlueprintGenerationResult;
+
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+        }, 120_000);
 
         it("fills the lane at its consumption rate", () => {
             const lane = config.belts.find(belt => belt.id === 5)!.lanes[0];
@@ -317,134 +355,6 @@ describe("generateClockForConfig", () => {
                 .find(([id]) => id.id === EntityId.forInserter(12).id)!;
             const exported = transfers.reduce((sum, t) => sum + t.amount, 0);
             expect(exported).toBe(consumption_per_second * result.simulation_duration.ticks / 60);
-        });
-    });
-
-    // Two nutrient biochambers [1], [2] feed two pentapod egg biochambers [3], [4], which give each other the egg a
-    // craft starts from and send the rest to the science biochamber [5]. Bioflux and nutrients come off one belt on
-    // inserters 1, 2 and 11; inserters 3, 4, 6 and 7 bring nutrients to the egg biochambers; 12 takes the science away.
-    // The target is 250 a second over 5 modules, 93% of what the egg biochambers can make. Recorded in Factorio 2.1.21
-    // for 144000 ticks after 4800 to settle: with 1 output swing per cycle one module made 400 packs in each of 300
-    // periods, and so it did with 5 output swings per cycle; with 2 it came up a hand short in 3 of 150 periods and
-    // with 4 in 12 of 75 (before the idle-window rules of 2026-10-09; recorded again with them, 2 made the same in each of 75 periods). The simulator calls the 5-swing clock stable too, and it is the one selected.
-    describe("agricultural science from two pentapod egg biochambers that feed each other", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
-        const { alternatives, selected_index } = generateClockAlternatives(config);
-        const one_swing = alternatives.find(a => a.label === "1 output swing per cycle")!;
-        const windows = one_swing.result.clock_windows;
-        const selected_windows = alternatives[selected_index].result.clock_windows;
-
-        // 25 cycles of 115.2 or 57.6 ticks: multiplied in floating point these came out as 2879.9999999999995 and
-        // 1439.9999999999998, were taken for fractional periods and offered as subtick and "rounded to 2879" clocks
-        it("makes clocks of whole ticks for 6 and 3 output swings per cycle: 2880 and 1440", () => {
-            const period = (swings: number) => validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: swings } }).period_ticks;
-            expect(period(6)).toBe(2880);
-            expect(period(3)).toBe(1440);
-            expect(alternatives.find(a => a.label === "6 output swings per cycle")!.result.simulation_duration.ticks).toBe(2880);
-            expect(alternatives.find(a => a.label === "3 output swings per cycle")!.result.simulation_duration.ticks).toBe(1440);
-            expect(alternatives.filter(a => /subtick|rounded/.test(a.label)).map(a => a.label)).toEqual([]);
-        });
-
-        // Recorded in Factorio 2.1.21 on 2026-10-08: the planned 5-swing clock and the 1-swing clock both hold 250 a
-        // second without a miss over 300 periods; the generator selects the planned one
-        it("holds the target of 250 a second on a clock of 480 ticks, with the planned 5 output swings per cycle", () => {
-            const selected = alternatives[selected_index];
-            expect(selected.label).toBe("Planned + belt pickup slack (+4 ticks): 5 output swings per cycle");
-            expect(selected.is_stable).toBe(true);
-            expect(selected.items_per_second).toBeCloseTo(250, 6);
-            expect(selected.result.simulation_duration.ticks).toBe(480);
-        });
-
-        it("also holds it with one output swing per cycle", () => {
-            expect(one_swing.is_stable).toBe(true);
-            expect(one_swing.items_per_second).toBeCloseTo(250, 6);
-        });
-
-        it("leaves the inserters that take eggs from the egg biochambers into the science biochamber always enabled on the 1-swing clock, and clocks the rest", () => {
-            const clocked = Object.keys(windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
-        });
-
-        it("leaves inserters 9 and 10 always enabled on the 2-swing clock too, where the science biochamber is at its block at the end of most output windows", () => {
-            const two_swings = alternatives.find(a => a.label === "2 output swings per cycle")!;
-            expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:9");
-            expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:10");
-        });
-
-        it("clocks the inserters that take eggs into the science biochamber on the selected clock, with a combinator of their own", () => {
-            const clocked = Object.keys(selected_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
-            expect(selected_windows["inserter:10"]).toEqual(selected_windows["inserter:9"]);
-        });
-
-        // The output of the science biochamber is back at 28 packs up to 30 ticks after an output window ends in the
-        // simulator, and 27 to 28 in the game; two ticks more are the margin. Each of the 5 windows of 37 ticks a
-        // period of 96 ticks leaves them enabled for 37 + 31 ticks (0 to 67) and disabled for the 28 that follow, until the next opens.
-        it("disables inserters 9 and 10 for the 28 ticks before each output window, 32 ticks after the last one closed", () => {
-            expect(selected_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
-            for (const id of ["inserter:9", "inserter:10"]) {
-                expect(selected_windows[id]).toHaveLength(5);
-                expect(selected_windows[id].slice(0, 2)).toEqual([{ start: 0, end: 67 }, { start: 96, end: 163 }]);
-            }
-        });
-
-        it("gives the inserters bringing nutrients to the egg biochambers windows of two hands, 44 hands for the 35 planned a period", () => {
-            // 7/5 of a hand an inserter a cycle: 35 hands in 25 cycles, 44 allowed, in 22 windows of 10 ticks
-            for (const id of ["inserter:3", "inserter:4", "inserter:6", "inserter:7"]) {
-                expect(selected_windows[id]).toHaveLength(22);
-                expect(selected_windows[id].slice(0, 3)).toEqual([{ start: 0, end: 9 }, { start: 21, end: 30 }, { start: 43, end: 52 }]);
-                expect(selected_windows[id].every(it => it.end - it.start === 9)).toBe(true);
-            }
-            // all four share one combinator
-            expect(new Set(["inserter:3", "inserter:4", "inserter:6", "inserter:7"].map(id => JSON.stringify(selected_windows[id]))).size).toBe(1);
-        });
-
-        // The machine needs 30.65 hands an inserter in 480 ticks on every clock (the plans round the fuel up to 35 in 480 on
-        // the 5- and 1-swing clocks, 65 in 960 on the 2-swing), and 1.43 times that is 44 hands in 480 ticks: 22 windows
-        it("gives them 44 windows in 960 ticks on the 2-swing clock, as many for the time as on the others", () => {
-            const two_swings = alternatives.find(a => a.label === "2 output swings per cycle")!;
-            expect(two_swings.result.clock_windows["inserter:3"]).toHaveLength(44);
-            expect(windows["inserter:3"]).toHaveLength(22);
-        });
-
-        it("opens the output window at the start of every cycle, for one pickup", () => {
-            // 16 packs every 19.2 ticks: 25 hands in a period of 480 ticks
-            const output_windows = windows["inserter:12"];
-            expect(output_windows).toHaveLength(25);
-            expect(output_windows.slice(0, 3)).toEqual([{ start: 0, end: 4 }, { start: 19, end: 23 }, { start: 38, end: 42 }]);
-        });
-
-        it("keeps the inserter of the science biochamber enabled: a window as long as a late pickup needs is longer than the cycle", () => {
-            expect(windows["inserter:11"]).toEqual([{ start: 0, end: 479 }]);
-        });
-
-        it("spreads the hands of the nutrient biochambers evenly over the period, fuel included and rounded up", () => {
-            // 400 packs take 160 eggs from 64 crafts: 1920 nutrients and 42 burned, from 98 bioflux: 3.1 hands a machine,
-            // and a hand of nutrients every few periods
-            for (const id of ["inserter:1", "inserter:2"]) {
-                expect(windows[id]).toHaveLength(5);
-                expect(windows[id].map(it => it.start)).toEqual([0, 96, 192, 288, 384]);
-            }
-        });
-
-        it("can be run on its clock alone for a few periods, with what every machine and inserter holds after each tick", () => {
-            const stock = simulateClockOnly(config, windows, 480, 3, { log() {}, warn() {}, error() {}, debug() {} });
-            expect(stock.ticks).toBeGreaterThanOrEqual(3 * 480);
-            const science = stock.machines.find(it => it.recipe === "agricultural-science-pack")!;
-            expect(Object.keys(science.inputs).sort()).toEqual(["bioflux", "pentapod-egg"]);
-            expect(science.outputs["agricultural-science-pack"]).toHaveLength(stock.ticks);
-            expect(science.fuel).toHaveLength(stock.ticks);
-            // the output inserter takes a hand of 16 a cycle: 25 hands in each period of 480 ticks
-            const held = stock.inserters.find(it => it.inserter_id === "inserter:12")!.held;
-            const moved = held.slice(0, 3 * 480).reduce((sum, count, tick) => sum + (tick > 0 && count < held[tick - 1] ? held[tick - 1] - count : 0), 0);
-            expect(moved).toBe(3 * 400);
-        });
-
-        it("says that the egg recipe loops and that the machines start with eggs inside", () => {
-            const insight = one_swing.insights.find(it => it.id === "looping-recipe")!;
-            expect(insight.scope).toBe("build");
-            expect(insight.what).toContain("starts each of these machines with 7 pentapod-egg already inside");
-            expect(insight.table?.rows.map(row => row[0])).toHaveLength(2);
         });
     });
 
@@ -457,12 +367,23 @@ describe("generateClockForConfig", () => {
     // of 1728 ticks the subtick clock counts, which cut into their 19 periods are 576 in each of 798. These tests
     // were skipped for a day because the long run counted a period of 90.947 ticks in bins of 90, which hold 570 of
     // the 576; the clock and the belt pickup rules were never at fault.
+    // Recorded on 2026-10-10 on that scaffold, 36,000 ticks each: batched swings at 2 output swings a cycle and
+    // observed windows move 10,944 in each of 20 repeats too. The simulator had batched swings at 2 swings at 338 a
+    // second for as long as it opened every window a tick early.
     describe("iron bacteria from two biochambers, each with two output inserters", async () => {
         const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
-        const validation = validateConfig(config);
-        const { alternatives, selected_index } = generateClockAlternatives(config);
-        const selected = alternatives[selected_index];
-        const windows = selected.result.clock_windows;
+        let validation: ConfigValidation;
+        let alternatives: ClockAlternative[];
+        let selected: ClockAlternative;
+        let windows: SerializableClockWindows;
+
+        beforeAll(() => {
+            validation = validateConfig(config);
+            const generated = generateClockAlternatives(config);
+            alternatives = generated.alternatives;
+            selected = alternatives[generated.selected_index];
+            windows = selected.result.clock_windows;
+        }, 60_000);
 
         it("validates with the hands a machine gives up a cycle, over both of its output inserters", () => {
             // 190 a second a machine: 3 hands of 16 every 15.158 ticks
@@ -503,177 +424,19 @@ describe("generateClockForConfig", () => {
             expect(windows["inserter:7"]).toBeUndefined();
             expect(windows["inserter:8"]).toBeUndefined();
         });
-    });
 
-    // Metallurgic science, by the simulator alone: the build has no scaffold, so nothing of this is recorded in the
-    // game. It is pinned because the long run decides it. The planned 1-swing clock, period 106.667 ticks, was
-    // selected only while a fractional period was under-counted: counted over its repeat (320 ticks, 3 periods) it
-    // moves 32 too many in the periods judged, the tail of a start-up surplus, and the full-hand clock is selected.
-    describe("metallurgic science, which only the simulator vouches for", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_PACK);
-        const { alternatives, selected_index } = generateClockAlternatives(config);
-        const selected = alternatives[selected_index];
-
-        it("selects the full-hand subtick clock, stable at the target of 45 a second", () => {
-            expect(selected.label).toBe("Full-hand output swings: 1 output swing per cycle, subtick clock");
-            expect(selected.is_stable).toBe(true);
-            expect(selected.items_per_second).toBeCloseTo(45, 6);
-            expect(selected.result.simulation_duration.ticks).toBeCloseTo(320 / 3, 6);
+        it("leaves them always enabled in observed windows too", () => {
+            const observed = alternatives.find(a => a.id === "derived-subtick")!;
+            expect(observed.is_stable).toBe(true);
+            expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
+            expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
         });
 
-        it("does not call the plain 1-swing clock of the same period stable", () => {
-            const one_swing = alternatives.find(a => a.label === "1 output swing per cycle, subtick clock")!;
-            expect(one_swing.is_stable).toBe(false);
-        });
-    });
-
-    /** What the rocket fuel samples have in common: two rocket fuel biochambers fed jelly by one jellynut biochamber */
-    const rocketFuelSample = async (path: string) => {
-        const config = await loadConfigFromFile(path);
-        const ids = (matches: (inserter: Config["inserters"][number]) => boolean) =>
-            config.inserters.filter(matches).map(inserter => `inserter:${inserter.id}`);
-        const { alternatives } = generateClockAlternatives(config);
-        const alternative = (id: string) => alternatives.find(a => a.id === id)!;
-        /** Items an inserter moves in the planned period */
-        const moved = (inserter_id: string): number => alternative("planned").result.serializable_transfer_history.entities
-            .find(entity => entity.entity_id === inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
-        return {
-            config,
-            alternatives,
-            alternative,
-            moved,
-            period: alternative("planned").result.simulation_duration.ticks,
-            jelly_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "machine"),
-            output_inserter_ids: ids(it => it.source.type === "machine" && it.sink.type === "belt" && it.source.id !== 2),
-            // belt 1 carries bioflux and jellynut: machine 2 takes the jellynut, the rocket fuel machines the bioflux
-            jellynut_inserter_id: ids(it => it.source.type === "belt" && it.source.id === 1 && it.sink.id === 2)[0],
-            bioflux_inserter_ids: ids(it => it.source.type === "belt" && it.source.id === 1 && it.sink.id !== 2),
-        };
-    };
-
-    describe("rocket fuel biochambers at 60 per second", async () => {
-        const sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL);
-        const { alternative, moved, period } = sample;
-
-        // 16 jelly a hand is 15/4 hands a 32 tick cycle
-        it("has a 128 tick period", () => {
-            expect(period).toBe(128);
-        });
-
-        it.each(["planned-belt-slack", "planned", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
-            expect(alternative(id).is_stable).toBe(true);
-            expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
-            expect(alternative(id).items_per_second).toBe(60);
-        });
-
-        it("selects the planned clock with belt pickup slack", () => {
-            expect(sample.alternatives[0].id).toBe("planned-belt-slack");
-            expect(sample.alternatives[0].is_stable).toBe(true);
-        });
-
-        it("moves what a period needs through every planned inserter", () => {
-            // 128 rocket fuel is 32 crafts of 30 jelly and 2 bioflux, and 480 jelly is 48 jellynut a 64 ticks
-            sample.output_inserter_ids.forEach(id => expect(moved(id)).toBe(64));
-            sample.jelly_inserter_ids.forEach(id => expect(moved(id)).toBe(240));
-            sample.bioflux_inserter_ids.forEach(id => expect(moved(id)).toBe(32));
-            expect(moved(sample.jellynut_inserter_id)).toBe(96);
-        });
-
-        // one hand of bioflux each 64 ticks rather than both at once: both at once holds the rocket fuel machine's
-        // bioflux over its insertion limit, and the jelly inserters wait for it
-        it("spreads the two hands of bioflux a period over two windows", () => {
-            const windows = alternative("planned").result.clock_windows;
-            for (const id of sample.bioflux_inserter_ids) {
-                expect(windows[id].length).toBe(2);
-                expect(windows[id][1].start - windows[id][0].start).toBe(64);
-            }
-        });
-
-        it("clocks the fuel and seed inserters outside the plan", () => {
-            const clocks = Object.values(alternative("planned").result.unplanned_inserter_clocks ?? {});
-            expect(clocks.filter(clock => clock.kind === "fuel").length).toBe(3);
-            expect(clocks.filter(clock => clock.kind === "by-product").length).toBe(1);
-        });
-
-        // A rocket fuel biochamber's slot is filled up to 11 nutrients and the jellynut one's to 9. In a run of the
-        // exported clock they lasted at least 208 and 246 ticks, as in game. Less the 14 ticks a hand takes to arrive,
-        // the fuel clocks are 192 and 224, divisors of 21 periods, so one clock of 2688 ticks holds them; on the 128
-        // tick clock both were 64.
-        it("looks at each fuel slot nearly as seldom as its fuel is sure to last, on fuel clocks of their own", () => {
-            const clocks = alternative("planned").result.unplanned_inserter_clocks!;
-            const fuel_moduli = sample.config.inserters
-                .filter(it => it.source.type === "belt" && it.source.id === 3)
-                .map(it => [it.sink.id, clocks[`inserter:${it.id}`]] as const);
-            expect(fuel_moduli).toHaveLength(3);
-            for (const [machine_id, clock] of fuel_moduli) {
-                expect(clock.own_clock).toBe(true);
-                expect(clock.modulus).toBe(machine_id === 2 ? 224 : 192);
-                expect(clock.window).toEqual({ start: 0, end: 7 });
-            }
-            expect(alternative("planned").result.fuel_plan?.merged_clock_ticks).toBe(2688);
-            const lasted = alternative("planned").result.fuel_consumption_view!.fuel_levels.map(levels => levels.limit_lasts_ticks);
-            expect(lasted).toEqual([208, 246, 208]);
-        });
-
-        it("keeps every machine fuelled over the fuel consumption view", () => {
-            const view = alternative("planned").result.fuel_consumption_view!;
-            expect(view.fuel_swings_recorded).toBe(true);
-            // a hand of 16 nutrients each time, and a slot that never runs dry shows as a machine that never lacks ingredients
-            const fuel_transfers = view.transfer_history.entities
-                .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id))
-                .flatMap(entity => entity.transfers);
-            expect(fuel_transfers.length).toBeGreaterThan(0);
-            fuel_transfers.forEach(transfer => expect(transfer.amount).toBe(16));
-            const jellynut_machine = view.state_transition_history.entities.find(entity => entity.entity_id === "machine:2")!;
-            expect(jellynut_machine.transitions.map(transition => transition.to_status)).not.toContain("INGREDIENT_SHORTAGE");
-        });
-    });
-
-    describe("rocket fuel biochambers fed jelly by inserters with no time to spare", async () => {
-        // 15 jelly a hand is 8 hands a 64 tick period for each jelly inserter, and a hand takes them 8 ticks
-        const sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL_JELLY_STACK_15);
-        const { alternative, period, jelly_inserter_ids, jellynut_inserter_id } = sample;
-
-        it("sets the jelly inserters to 15 a hand", () => {
-            const jelly_inserters = sample.config.inserters.filter(it => it.source.type === "machine" && it.sink.type === "machine");
-            expect(jelly_inserters.map(it => it.stack_size)).toEqual([15, 15, 15, 15]);
-        });
-
-        it("has a 64 tick period", () => {
-            expect(period).toBe(64);
-        });
-
-        it.each(["planned-belt-slack", "planned", "fractional", "derived"])("%s is stable as built", (id) => {
-            expect(alternative(id).is_stable).toBe(true);
-            expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
-            expect(alternative(id).items_per_second).toBe(60);
-        });
-
-        // the hand a jelly inserter picks up at the end of a period is dropped in the next one: its pickup needs a
-        // window at the end of the period, or the exported clock moves 7 of the 8 hands
-        it("keeps the jelly inserters enabled for the hand that is in flight when the period starts", () => {
-            const windows = alternative("planned").result.clock_windows;
-            for (const id of jelly_inserter_ids) {
-                const last_window = windows[id][windows[id].length - 1];
-                expect(windows[id].length).toBe(2);
-                expect(last_window.end).toBeGreaterThanOrEqual(period - 1);
-            }
-        });
-
-        it("moves the planned 8 hands of jelly a period", () => {
-            const history = alternative("planned").result.serializable_transfer_history;
-            for (const id of jelly_inserter_ids) {
-                const moved = history.entities.find(entity => entity.entity_id === id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
-                expect(moved).toBe(8 * 15);
-            }
-        });
-
-        // 3 hands of 16 jellynut a period: refilled up to the insertion limit of 67 instead, the hands come 5 at a
-        // time every 100 ticks or so, and the one period that is observed sees 1 of them
-        it("brings the planned 3 hands of jellynut in the planned period", () => {
-            const history = alternative("planned").result.serializable_transfer_history;
-            const moved = history.entities.find(entity => entity.entity_id === jellynut_inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);
-            expect(moved).toBe(3 * 16);
+        it("holds the target with batched swings at 2 output swings a cycle too, as it does in the game", () => {
+            const batched = alternatives.find(a => a.id === "planned-belt-slack-subtick")!;
+            expect(batched.label).toBe("Batched swings: 2 output swings per cycle, subtick clock");
+            expect(batched.is_stable).toBe(true);
+            expect(batched.items_per_second).toBeCloseTo(380, 6);
         });
     });
 
@@ -682,9 +445,13 @@ describe("generateClockForConfig", () => {
     // with 1, 3 and 6 output swings each moved exactly their hands every period for 10 periods, from every furnace.
     describe("stone bricks from mining drills that drop into the furnaces", async () => {
         const config = await loadConfigFromFile(ConfigPaths.STONE_BRICKS_DIRECT_INSERT_2_1);
-        const { alternatives } = generateClockAlternatives(config);
+        let alternatives: ClockAlternative[];
         const alternative = (id: string) => alternatives.find(a => a.id === id)!;
         const outputWindows = (id: string) => alternative(id).result.clock_windows["inserter:1"].map(w => [w.start, w.end]);
+
+        beforeAll(() => {
+            ({ alternatives } = generateClockAlternatives(config));
+        });
 
         it.each([
             ["swings-1", 72, 48, [[1, 10], [25, 34], [49, 58]]],
@@ -708,230 +475,6 @@ describe("generateClockForConfig", () => {
 
         it("enables each drill for a few ticks a cycle, which fills the furnace up to what a drill may insert", () => {
             expect(alternative("fractional").result.clock_windows["drill:1"].map(w => [w.start, w.end])).toEqual([[1, 3]]);
-        });
-    });
-
-    // 4 output swings per 64 tick cycle is the optimal clock; the planner alone only reaches 2 swings
-    describe("forced output swing count", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
-        const result = generateClockWithSwingBackoff(config);
-        const { alternatives } = generateClockAlternatives(config);
-
-        it("uses the terminal_swing_count override as-is instead of backing off", () => {
-            expect(config.overrides?.terminal_swing_count).toBe(2);
-            expect(result.used_terminal_swing_count).toBe(2);
-            expect(result.swing_backoff_report?.triggered).toBe(false);
-        });
-
-        it("uses it for every clock alternative", () => {
-            expect(alternatives.map(a => a.result.used_terminal_swing_count).every(count => count === 2)).toBe(true);
-        });
-    });
-
-    describe("a machine with a by-product", () => {
-        it("is stable as built when an inserter takes the by-product off for good", async () => {
-            // jellynut-processing makes jelly for two machines and the seed at 2%; the seeds fill their stack of 10 and
-            // block the machine unless the inserter taking them off picks them up although they are not its main product
-            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
-            const result = generateClockForConfig(config, { verify_as_built: true, logger: { log() {}, warn() {}, error() {}, debug() {} } });
-
-            expect(result.stability_check.is_stable).toBe(true);
-            expect(result.stability_check.actual_output_items).toBeGreaterThan(0);
-            expect(result.stability_check.as_built?.is_stable).toBe(true);
-        });
-
-        it("clocks the inserter taking the by-product off, so it only looks at the machine now and then", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
-            const result = generateClockForConfig(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } });
-
-            // it is not in the plan, so its clock repeats within the period instead of coming from swing counts
-            const windows = result.clock_windows["inserter:11"];
-            expect(windows.length).toBeGreaterThanOrEqual(1);
-            expect(windows[0].end - windows[0].start).toBeLessThan(20);
-            expect(result.serializable_transfer_plan.entities.map(entity => entity.entity_id)).not.toContain("inserter:11");
-
-            const described = result.blueprint.entities
-                .map(entity => entity.player_description ?? "")
-                .find(description => description.includes("(by-product)"));
-            expect(described).toContain("Inserter 11 for [item=jellynut-seed]");
-            expect(described).toContain("looks every");
-        });
-    });
-
-    describe("a biochamber with a fuel inserter", () => {
-        const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-
-        it("is stable as built, with the fuel inserter on a clock of its own", async () => {
-            // 926% energy consumption: the biochamber burns about 5 nutrients a craft, most of the 6 it makes
-            const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
-            const result = generateClockForConfig(config, { verify_as_built: true, logger: quiet });
-
-            expect(result.stability_check.is_stable).toBe(true);
-            expect(result.stability_check.as_built?.is_stable).toBe(true);
-
-            // the fuel clock counts its own ticks, so the fuel inserter has no windows on the clock of the period
-            expect(result.clock_windows["inserter:3"]).toBeUndefined();
-            const fuel_clock = result.unplanned_inserter_clocks!["inserter:3"];
-            expect(fuel_clock).toMatchObject({ kind: "fuel", own_clock: true });
-        });
-
-        it("does not change the LCM", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
-            const without_fuel = { ...config, machines: config.machines.map(machine => ({ ...machine, type: "machine" as const })) };
-            const with_fuel_inserter = generateClockForConfig(config, { logger: quiet });
-            const plain = generateClockForConfig(
-                { ...without_fuel, inserters: config.inserters.filter(inserter => inserter.id !== 3) }, { logger: quiet });
-            expect(with_fuel_inserter.used_lcm).toBe(plain.used_lcm);
-        });
-
-        it("keeps the rocket fuel chain stable as built with the fuel of three biochambers", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
-            const result = generateClockForConfig(config, { verify_as_built: true, logger: quiet });
-
-            expect(result.stability_check.is_stable).toBe(true);
-            expect(result.stability_check.as_built?.is_stable).toBe(true);
-            const fuel_inserter_ids = ["inserter:10", "inserter:12", "inserter:13"];
-            fuel_inserter_ids.forEach(id => {
-                expect(result.clock_windows[id]).toBeUndefined();
-                expect(result.unplanned_inserter_clocks![id].own_clock).toBe(true);
-            });
-        });
-
-        describe("the fuel consumption view", () => {
-            it("runs the exported clock for several periods so the fuel inserter shows inserting", async () => {
-                const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
-                const result = generateClockForConfig(config, { logger: quiet });
-                const view = result.fuel_consumption_view!;
-
-                // a hand of fuel lasts the machine longer than the 960 tick clock, so one period seldom has a swing
-                expect(view.periods).toBeGreaterThanOrEqual(2);
-                expect(view.duration_ticks).toBe(view.periods * result.simulation_duration.ticks);
-                expect(view.state_transition_history.total_duration_ticks).toBe(view.duration_ticks);
-                expect(view.fuel_inserter_ids).toEqual(["inserter:3"]);
-                expect(view.fuel_swings_recorded).toBe(true);
-
-                const fuel_transfers = view.transfer_history.entities.find(entity => entity.entity_id === "inserter:3")!.transfers;
-                expect(fuel_transfers.length).toBeGreaterThan(0);
-                fuel_transfers.forEach(transfer => {
-                    expect(transfer.item_name).toBe("nutrients");
-                    expect(transfer.amount).toBe(16);
-                });
-            });
-
-            it("leaves the clock and its stability as they are", async () => {
-                const config = await loadConfigFromFile(ConfigPaths.BIOCHAMBER_FUEL);
-                const result = generateClockForConfig(config, { logger: quiet });
-                expect(result.simulation_duration.ticks).toBe(result.serializable_state_transition_history.total_duration_ticks);
-                expect(result.stability_check.is_stable).toBe(true);
-            });
-
-            it("shows the fuel being consumed in a chain that also moves a by-product", async () => {
-                const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
-                const view = generateClockForConfig(config, { logger: quiet }).fuel_consumption_view!;
-
-                expect(view.fuel_swings_recorded).toBe(true);
-                const swung = view.transfer_history.entities
-                    .filter(entity => view.fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
-                expect(swung.length).toBeGreaterThan(0);
-            });
-
-            it("is absent when no machine burns fuel", async () => {
-                const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL);
-                expect(generateClockForConfig(config, { logger: quiet }).fuel_consumption_view).toBeUndefined();
-            });
-        });
-
-        describe("the blueprint of rocket fuel biochambers", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS);
-            const result = generateClockForConfig(config, { logger: quiet });
-            const period = result.simulation_duration.ticks;
-            const fuel_moduli = Array.from(new Set(Object.values(result.unplanned_inserter_clocks!)
-                .filter(clock => clock.own_clock).map(clock => clock.modulus))).sort((a, b) => a - b);
-            const entities = result.blueprint.entities;
-            const behavior = (entity: typeof entities[number]) => JSON.stringify(entity.control_behavior ?? {});
-            const clocks = entities.filter(entity => (entity.player_description ?? "").startsWith("Clock for"));
-            const modulos = entities.filter(entity => entity.name === "arithmetic-combinator");
-
-            it("has two fuel clocks, one for the rocket fuel biochambers and one for the jellynut one", () => {
-                expect(fuel_moduli).toHaveLength(2);
-            });
-
-            it("counts one clock long enough for the period and every fuel clock to fit a whole number of times", () => {
-                expect(clocks).toHaveLength(1);
-                expect(entities.filter(entity => (entity.player_description ?? "").startsWith("Fuel clock"))).toHaveLength(0);
-                // the clock counts 1 to its period, so its condition's constant is the period
-                const counted_to = Number(/"constant":(\d+)/.exec(behavior(clocks[0]))![1]);
-                [period, ...fuel_moduli].forEach(ticks => expect(counted_to % ticks).toBe(0));
-                // on a signal of its own, which leaves the clock signal for the clock of the period
-                const { conditions, outputs } = (clocks[0].control_behavior as { decider_conditions: { conditions: { first_signal: { name: string } }[]; outputs: { signal: { name: string }; copy_count_from_input: boolean }[] } }).decider_conditions;
-                expect(conditions[0].first_signal.name).toBe("signal-T");
-                expect(outputs.filter(output => output.copy_count_from_input).map(output => output.signal.name)).toEqual(["signal-T"]);
-                // the clock signal is only the clock of the period starting at 1, like every modulo: a constant row
-                expect(outputs.filter(output => output.signal.name === "signal-clock").map(output => output.copy_count_from_input)).toEqual([false]);
-            });
-
-            it("gives the clock of the period and each fuel clock as a modulo of the one clock", () => {
-                // a fuel clock of as many ticks as the period is the clock of the period
-                expect(modulos).toHaveLength(new Set([period, ...fuel_moduli]).size);
-                modulos.forEach(modulo => expect(behavior(modulo)).toContain('"first_signal":{"name":"signal-T"'));
-                const period_clock = modulos.filter(modulo => behavior(modulo).includes('"output_signal":{"name":"signal-clock"'));
-                expect(period_clock).toHaveLength(1);
-                expect(behavior(period_clock[0])).toContain(`"second_constant":${period}`);
-                fuel_moduli.forEach(modulus =>
-                    expect(modulos.filter(modulo => behavior(modulo).includes(`"second_constant":${modulus}`))).toHaveLength(1));
-            });
-
-            it("puts fuel inserters with the same windows on one described combinator", () => {
-                const nutrient_deciders = entities.filter(entity =>
-                    entity.name === "decider-combinator" && behavior(entity).includes('"name":"nutrients"'));
-                // the two rocket fuel biochambers burn at the same rate and share a combinator; the jellynut one has its own
-                expect(nutrient_deciders).toHaveLength(2);
-                nutrient_deciders.forEach(decider => {
-                    const description = decider.player_description ?? "";
-                    expect(description).toContain("(fuel)");
-                    expect(description).toContain("swings every");
-                    expect(description).toContain("fuel clock");
-                    // reads a modulo of the one clock
-                    expect(behavior(decider)).not.toContain('"name":"signal-T"');
-                });
-            });
-
-            it("leaves the other combinators reading the clock signal", () => {
-                const planned_deciders = entities.filter(entity =>
-                    entity.name === "decider-combinator" && !clocks.includes(entity) && !behavior(entity).includes('"name":"nutrients"')
-                    // the lock filter passes every signal on, it does not read the clock signal
-                    && !behavior(entity).includes('"name":"signal-lock"'));
-                expect(planned_deciders.length).toBeGreaterThan(0);
-                planned_deciders.forEach(decider => expect(behavior(decider)).toContain('"name":"signal-clock"'));
-            });
-
-            it("is not offered again as a modulo blueprint for the fuel clocks alone", () => {
-                if (result.modulo_blueprint) {
-                    expect(result.modulo_blueprint.label).toContain("(modulo clock)");
-                }
-                expect(result.blueprint.label).not.toContain("(modulo clock)");
-            });
-        });
-    });
-
-    describe("combinator descriptions", () => {
-        const quiet = { log() {}, warn() {}, error() {}, debug() {} };
-
-        // Factorio keeps at most 500 bytes of the description of a combinator
-        it.each([
-            ["rocket fuel biochambers", ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS],
-            ["a biochamber with a fuel inserter", ConfigPaths.BIOCHAMBER_FUEL],
-            ["flying robot frames", ConfigPaths.FLYING_ROBOT_FRAME],
-        ])("are at most 500 bytes in the blueprint of %s", async (_name, path) => {
-            const config = await loadConfigFromFile(path);
-            const result = generateClockForConfig(config, { logger: quiet });
-            const descriptions = [result.blueprint, result.modulo_blueprint, result.subtick?.blueprint]
-                .flatMap(blueprint => blueprint?.entities ?? [])
-                .map(entity => entity.player_description)
-                .filter((description): description is string => description !== undefined);
-
-            expect(descriptions.length).toBeGreaterThan(0);
-            descriptions.forEach(description => expect(new TextEncoder().encode(description).length).toBeLessThanOrEqual(500));
         });
     });
 
@@ -987,176 +530,18 @@ describe("generateClockForConfig", () => {
         })
     })
 
-    describe("fractional swings", () => {
-        describe("PRODUCTION_SCIENCE_SHARED with fractional swings enabled", async () => {
-            const configWithFractionalSwings = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_SHARED_JSON);
-
-            const result = generateClockForConfig(configWithFractionalSwings);
-
-            it("has fractional_swings_enabled set to true", () => {
-                expect(result.crafting_cycle_plan.fractional_swings_enabled).toBe(true);
-            });
-
-            it("has a cycle_multiplier defined", () => {
-                expect(result.crafting_cycle_plan.cycle_multiplier).toBeDefined();
-                expect(result.crafting_cycle_plan.cycle_multiplier).toBeGreaterThan(1);
-            });
-
-            it("has swing_distribution defined", () => {
-                expect(result.crafting_cycle_plan.swing_distribution).toBeDefined();
-                expect(result.crafting_cycle_plan.swing_distribution!.size).toBeGreaterThan(0);
-            });
-
-            it("swing distributions sum to correct totals", () => {
-                const distribution = result.crafting_cycle_plan.swing_distribution!;
-                const cycle_multiplier = result.crafting_cycle_plan.cycle_multiplier!;
-
-                for (const [entityId, swingDist] of distribution.entries()) {
-                    const sum = swingDist.swings_per_subcycle.reduce((a, b) => a + b, 0);
-                    expect(sum).toBe(swingDist.total_swings);
-                    expect(swingDist.swings_per_subcycle.length).toBe(cycle_multiplier);
-                }
-            });
-
-            it("output inserter has fractional swing distribution", () => {
-                const distribution = result.crafting_cycle_plan.swing_distribution!;
-                const outputInserterDist = distribution.get("inserter:1");
-
-                expect(outputInserterDist).toBeDefined();
-                // Should have alternating distribution (values differ by at most 1)
-                const swings = outputInserterDist!.swings_per_subcycle;
-                const min = Math.min(...swings);
-                const max = Math.max(...swings);
-                expect(max - min).toBeLessThanOrEqual(1);
-            });
-
-            it("simulation duration is extended by cycle_multiplier", () => {
-                const base_duration = result.crafting_cycle_plan.total_duration.ticks;
-                const cycle_multiplier = result.crafting_cycle_plan.cycle_multiplier!;
-                const expected_simulation_duration = base_duration * cycle_multiplier;
-
-                expect(result.simulation_duration.ticks).toBe(expected_simulation_duration);
-            });
-        });
-
-        describe("PRODUCTION_SCIENCE_SHARED without fractional swings without fractional swings", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_SHARED_JSON);
-            const configWithoutFractionalSwings = {
-                ...config,
-                overrides: {
-                    ...config.overrides,
-                    use_fractional_swings: false
-                }
-            };
-            const result = generateClockForConfig(configWithoutFractionalSwings);
-
-            it("has fractional_swings_enabled set to false", () => {
-                expect(result.crafting_cycle_plan.fractional_swings_enabled).toBe(false);
-            });
-
-            it("does not have swing_distribution defined", () => {
-                expect(result.crafting_cycle_plan.swing_distribution).toBeUndefined();
-            });
-
-            it("does not have cycle_multiplier defined", () => {
-                expect(result.crafting_cycle_plan.cycle_multiplier).toBeUndefined();
-            });
-        });
-
-        describe("Utility Science Belted with Combined Blue and LDS", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS);
-            const result = generateClockForConfig(config);
-
-            // there are two valid tick ranges for this specific configuration.
-            // both have been tested to be functional in the game using the following blueprint:
-            // 0eNrtXc1u5LgRfhWjTwmgzor/lIHNZXPJOQFy2DWMdlueEbatdtTqmRgTP0DeI3mxPElIqW1zbcliVc0sloyBxXZLmmapyPo+llms4pfV1e5Y33VN26/Ov6ya7b49rM5//LI6NB/azc7faze39ep8dVVv3MNVsfr7cbNr+nt3a1d/qNvrTXe/eihWTXtd/2N1zh4uilXd9k3f1GNLw8X9ZXu8vao79w+KVy3e7Q/un7uvTppvwvxBFSsnYM2k+/owLdJJ7OvbUURzHbzo4a6ur9e3++vjrl6LN154/Ln7dXvZtJ/ca+7dg6G55yv3tod+s/15dV4+FDNPnMoP7r/ilap8UVVeZqKqWFZVZKKqXFZVZ6KqWla1ykRVvaiq4JmoapZVVZmoapdVtZmoWi2qKlkmqrJyWVeZi67L/pLMxV9iyw6TysVhYssek8rFY2LLLpPKxWViyz6TysVnYstOk87FaWLLXpPOxWtiy26TzsVtYst+k8nFb+LLfpPJxW/iy36TyWadadlvsrn4TfzZb6rrddPeNK17vN7tN9fu8Su9g6lWDWpfN129Hf+B80r6+zvf0v7Y3x179+ubZtfX3akDTguaT/JudvdN+2Hd7a/2/fqm8zfDjmj33e1m525t97d3m27jVHJ3v1+NOg5tcXJbF4/veOkGwzf0+aPr811z6FdTnfXsePXH7mq/7rtNe7jbd/36qt71E0uv7K3+mpKgoBJKqAQNlSCgEgxUAodKsC8kHJ09dB+6vfuck6GiLLdpveFOiXye167rbePErZ0tXTXtYEsT4h6FyQlhjlL6br+7vKo/bj413ha/PLZ66Z5dDy0NuA+vHIZumu7QXz7HEk5v/anp+uNg34/8MvyL9Xa3d+B/GAQ6IvAxCSGUN/oRoS9DE3HN+d7BvMLdvVPu2PaXN93+9nLs6fObze5Qe3JyXbjb3LsOuK4P2665Gztr9YP//dnNvjv70ZPh98e+8ZheH7ZN3W7r9Z2jt4vzn9r12Q/321199qejQ7f76fkZ0/asb7Y/H54f/uDFn5/xs62/HB78dd9vdsGvhNDjr6aMQJRQy5ZAyxawcI5MOsbBgb3JoWwqnie34WXc/Haou35qYgvbHnt1CqTbptsem/6ybjdXu9p1a98d6+Lp9hNa/b8FYnXT3vcf3Rz2S7iWL6asP3r4zQzZa/UlmCZ5CZngp2QquExOo2ahQRGktDFj4N1bUYcUPtsKRhzSKhq4oswPuBI6zwioFygZKGiVNGYkdJ4RFbQ34+eZsO1szBU+z4RhQhQpSfg8I0saKUkNCpOljRn4PBOGzXBDCp9nZEUc0gpIDdICqUGV0dQQtp0LNSgGCssljRkFnWeUgRpT/DyjTIbGBJ9nwjgoipQUfJ5RlkZKChYGTBsz8HlGK+qQwucZbYhDCp1ntAZSg46fZ7TOjxo0A4Udk8aMhs4zRkGNKX6eMSpDY4LPM0YSSUkrUMwxbQPWyFgK/23FUtgLI/vvv/4zDC29ZVW+avrfT9HL+vLU4Ka9/krymK6+mS6cxSszG5k6SZmK/hCCS38+0doZX4ow/dT+5bMjmTGCdBjiTXfud0Mc6fxM+OveR5LOz/Qkug3S4sVvy+J5qb+hnZivZicT2wG+gpWwwEpeS1iwEfYdD6yETVrJs2O6ORzq26udF3G72br5baTsN4JWfHby7erNtTeM3ok7PE69w83P++5nP3We7p0u40fxb7Ozqhewbe5mMfv4/HJij8bM/HXXuanLoeCTb+wrTWNydhqTwTQ294TPPhGzUx/0D4EwzevV9GenslHi/xAI235FNH7zePqunGHQ/pZv9Mlkf3OCBP6616dECCAvhOGgd15IgRcMdGeZEGArUgQRcVCAbi0LUwDjyM3EB9p4/uQG9RfC4OM7LyTBC/EbIcJ0xEwN3kL3RUgGJBgL9RckB5Kk5QQJcUxvof5CGHl854UUeMFC/QXFoHaqCBIi7VTHhzPL/MkNum1elVByg/oLYRD5nReS4IV4fyFMm80UUhXUX1AVEFIV1F/QJZCHK06QEMfDFdRfCCPI77yQAi9UUH9BV1A7VQQJkXYa7y+E+dS5khvUX9AWSm5QfyHcDPDOC0nwQry/EKZ3ZwopVkIdBmOAmGIl1GMwFsjErOQEEXFUzEqBjGiz39geDvHNAto+Fe5X3cRhv92GFF6KX1cZLuS3U0aqr7bTYLf/vL6u28Mwozhy2zrELW82KCZacvPJtj4c/BR7bJv+a2xYEMOGhd+NOxYm3/Tin+PDF8Ivfv/2Zgb1i80MappLJSiVmaVdQU+hMo3LV3yexzSqCbscWNwcZwgiyphNsKy0pFTmErMNlJUVXKiMEjq7OZ1F1H8ME6jTRipjpGxm3KgGlRgh+cyZ0kNQqzF6CATVxiVhb0IcXzBFEBHHehEVAsO07cSRalBZ1bmCxhJi35HWVRFExGGEl6S0bRz7cjjlS07km4gacmGyeNpI5YKUuY0cVYnKrM6UHjgiT5VRbVwTItZxlMQpQfFISrKgFPXEkVqhMsgzBY2gxIfjDFgwgog4A35VRw2Woo5jXwGnfF0S+UZIUGJ82khFFFLThjyqGpVFnis9IIoTVFQbt4SobiQlVQQRcZQkS1A6ftpIDWqpQbLlMwUNuNqaMVADloIgItKAESUANJV9ETXNjCXyTURRM1tmg1ToXxP2rWXHaduEBw0sOWgQlDGDFXH362a0Iu7T8U90HfeXQdBvUMSdqRJfxX2iwyZFMHwZ91gRHF/HPVaEwBdyjxUhKZXc3zLfecpTCl/FO1YtDYl9+2KYKZ/QZPB1vGP701IqWUew3KTQZ1Z9dI7e3OMURJhPI7q8y+kwPj/88ntAtL7XJ4+KKinBaRxwIopsBXHixK1ac0qlbaTJaUEJTiNHVeKLTUfCN6K4VRC2TN1wNL7cdGx/GkrBZaxtWkroDmmbFSSKlrjhmJJScxk5qoZRQne4UQWXTJEWihADOg40dcOR+MLDsf2pKKV3sbapKYENpG0aSIwhdcOxlOq72FGtKIEN3KiCC0doDUWIBVWgTdxwLKEEbWx/CkoRVqRtWglZDU19EBV+NfR1/06uhlpNEGHj7AS8psvBIqAxOavAIqAxOSuhIl4lw88tD/senV/FWOTaICX+aSV6+7E+TClhXyrx+IvLQ933TfvhMCaM3u4/1ZfHdlzlra8vT+jwkbDJ1ZEgaR64IG7+DxfEK0FYEDdxxicJC+KRIhRhQTxShCYsiEeKMKQFcYNCrCUsiEeqVRHWiKNE8LIkrREbjMPAS4bJ+xI6k0r5vOSkZWiMufJS4FO/Tj2/aEuSpJbG2ZKipH69JfSNvtSkVW4kaAxplRtnNJawyh1JQBVJLZzRsBKTWZYPAWHS+QQRNIzjE70iCYgJQhAhzlwZ6dRGJPSZwuR0ZWSumhREQVEfM/i0rlhzpcWGkNRXUdK6cNDntBgNDjScFqNBGQ2nxGjiCIiWNYY0GlzWWD4ERMsTQ4KGkCcWSUDwPDEDNldLCoEhoY/K18rHXEVJCgGiqI+SshVprrSULST10VK2cNAXkhRhxIGGljqFNBpNiDDGERAmHcmQjcZiMsIyIqCKkgOGA40s8QlakQQkGSGAG2eukpMCuDjoS9TJpfmYq5T41KhY01GU1CgkDUlNSY1CwpCQLTSY72SjltConmu0oiQdIYdElaAcB5XyXgkeJPSAj2YU8r0UcgKlkDk4oyqMK6kZaCpKsErONSrxZw6erHGpwC9XCpTskTi8Nf6ExXd4JwJvQ4jazMLb4g9VjEZiRXjxOQrRJSglJ214a4Y/KPEd3mnAW3NClGsO3loQGp2FnsSfABjLGREZd2HiVOLw1vjzDt/hnQi8CYUA5+Ft8WccRiOxIrz4HIWYEpTelja8DcMfW/gO7zTgDU4JDWNuc/A2gtDoLPQk/jy+WM4wCpSEmDi8Nf70wXd4JwJvwll18/C2+BMHo5FIqJU4SyEWVB0xcXhbhj9E8B3eacDbEmo+zsLbEqo8zkNP4o/Gi+UMq0BJxInDG1bpjKetrEFle/EsK71yG781KAxqZXp2KAencIdBOTHDVxXoaK7E4VUxVC5TpvACH/wuRIQ9xe+PCqNIuWK2kqAoWOLwwuVe5Qqv+KMOwqBOtkgwhKDULNtYUBQqcXhVqMyiPOElwCepK7ZoTwJQbSGMomSKWVFyUBQoaXiJUqAyoXKFV3waYxjUyBYJihCUmWUbDYrCJA4vg8rzyRVelNDCrD3FOwhhFCFXzDJYFCRteDHUGVG5wgtwHHq4qJ8tEgQhKDHHNgxWyjRxeClsvUdGrfd4s7v3Ac1uf7Xv1zedv4ku9ohtC1bvUTBNqPfIYpIEBbjmTFjvMVKEJdR7jBRREeo9xolAFJQJ6z0yRGKj4IxQ7zFSLU6o9xgpQpDqPTJM0qPgtMKAuOFSpBp9SEU1qZgdTlFDqNEXaTSWUFctUkRFqquGGy5EnRRZEodLMFItLKSinFQ0CqeoINTCijMaQTnCI1IE7QgP5HDRjvDADZch1ZxBKmpJxVlwilaEmjNxRgMuRWIUWAQj1QnBDZfkkG1LvEr6ryO5fBhS4Bmlruzy373BbqTUlQUl6aeu7PJ6fOD3pq7s8jlUwQad1JW1kG04qSu7fKZh8PdA4spGFAkKdtekriyDbHdJXdllD0pm40GpiOMks/GglIRsK0ld2WUPSmXjQUUcS6+y8aAU6CTP1JVd9qB0Nh6UWvagdDYelAZtk0hd2YhDVLPxoPSyB2Wy8aC0gGxHSEnZi2L1uelq/0Y/8qrghfufvCj8d1loU3D3XQh3X1TP3919+fidqdMD/2Mphu/+o3B/PPnv/qNQ4301/Hi87z8KPd7Xemz06Tsrnx6IwpQFc9/9R2HM83cvebgw/sHpu/sorB6++4/Cjvf9R1GN9/1HUY33vSDpxKlB3PBZMMaDK39I3nDl77pn5nRl/BWX45X/dFfV6cp3BRN6vBKDQvLUin/nwicfstOVa9WObQ6SCn8m1nDlPwt/5NB4NbzLSd7wWfCTPD6Om7Djlf8s+GkkhrYLn5s2XlkvvRKD9OFu4RNrhmf+bsFPfTTcLXxWwPjMd5nfwD4+8/LEaYiGu4Xf0suGq8FWypPh+LuF3zo4PvPv4jeTjc98T/jNVOziYrRrj67dsb7rmtYvm3+qu8OAL6V5JatKWVnyUtqHh/8BE8wFGQ==
-            const valid_range_set_1 = [
-                OpenRange.from(38, 49),
-                OpenRange.from(49, 60),
-                OpenRange.from(206, 217),
-                OpenRange.from(217, 228),
-                OpenRange.from(245, 256),
-            ]
-
-            const valid_range_set_2 = [
-                OpenRange.from(13, 24),
-                OpenRange.from(24, 35),
-                OpenRange.from(181, 192),
-                OpenRange.from(192, 203),
-                OpenRange.from(234, 245),
-            ]
-
-            // confirmed in game, along with the stable clock alternatives below
-            const valid_range_set_3 = [
-                OpenRange.from(13, 25),
-                OpenRange.from(25, 36),
-                OpenRange.from(181, 193),
-                OpenRange.from(193, 204),
-                OpenRange.from(214, 226),
-            ]
-
-            it("has correct tick ranges for input inserter transfers", () => {
-                // Get the actual EntityId instances from the map keys
-                const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-                // inserter id 3 is the LDS + blue chip inserter in this configuration
-                const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(3).id)!;
-
-                const inserter_transfers = result.transfer_history.getOrThrow(input_inserter_id)
-                const sorted_transfers = [...inserter_transfers].sort((a, b) => a.tick_range.start_inclusive - b.tick_range.start_inclusive);
-                const expected_ranges = valid_range_set_3
-
-                expect(sorted_transfers.length).toBe(5);
-                sorted_transfers.forEach((transfer, index) => {
-                    const expected_range = expected_ranges[index];
-                    expect(transfer.tick_range.start_inclusive).toBe(expected_range.start_inclusive);
-                    expect(transfer.tick_range.end_inclusive).toBe(expected_range.end_inclusive);
-                })
-            });
-
-            // these three alternatives were confirmed to hold full output in game
-            describe("clock alternatives", () => {
-                const { alternatives } = generateClockAlternatives(config);
-                const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
-
-                it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
-                    expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
-                });
-
-                it("planned + belt pickup slack adds 4 ticks to the belt input inserters", () => {
-                    expect(windowsOf("planned-belt-slack")).toEqual({
-                        "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:3": [{ start: 13, end: 40 }, { start: 181, end: 208 }, { start: 214, end: 230 }],
-                        "inserter:1": [{ start: 206, end: 221 }],
-                    });
-                });
-
-                it("planned keeps the simulated windows", () => {
-                    expect(windowsOf("planned")).toEqual({
-                        "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:3": [{ start: 13, end: 36 }, { start: 181, end: 204 }, { start: 214, end: 226 }],
-                        "inserter:1": [{ start: 206, end: 217 }],
-                    });
-                });
-
-                it("observed windows follow each inserter's activity", () => {
-                    expect(windowsOf("derived")).toEqual({
-                        "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:1": [{ start: 53, end: 69 }],
-                        "inserter:3": [{ start: 25, end: 41 }, { start: 53, end: 80 }, { start: 193, end: 209 }, { start: 213, end: 229 }],
-                    });
-                });
-            });
-        });
-    });
-
     // Inserters 1/4 feed the two identical pack machines and 2/3 empty them. Config order puts input 1
     // before output 2 but input 4 after output 3, which used to offset the machines by one tick and
     // desync the shared-clock LDS inserters 6/7.
     describe("UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON (identical machines stay in sync regardless of config order)", async () => {
         const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON);
-        const result = generateClockForConfig({
-            ...config,
-            overrides: { ...config.overrides, terminal_swing_count: 2 },
+        let result: BlueprintGenerationResult;
+
+        beforeAll(() => {
+            result = generateClockForConfig({
+                ...config,
+                overrides: { ...config.overrides, terminal_swing_count: 2 },
+            });
         });
 
         const rangesFor = (id: number) => result.transfer_history
@@ -1178,6 +563,12 @@ describe("generateClockForConfig", () => {
 
     // Recorded in game: the planned windows ran at 48/96 because the furnace/module window
     // landed before the output inserter cleared the machine; the derived windows ran stable.
+    //
+    // That recording was of one start of the clock. An inserter that waits for a machine at its output block takes
+    // its items a tick after the output inserter has cleared it (see IdleModeTransitionEvaluator), and with that tick
+    // the simulator finds a start of the clock from which every set of derived windows makes 92 of 96 a period:
+    // they pass from 12 starts and fail the check of them all. Whether the game has that state is not recorded; there
+    // is no scaffold of this build.
     describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
         const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
 
@@ -1186,14 +577,17 @@ describe("generateClockForConfig", () => {
             expect(result.stability_check.as_built?.is_stable).toBe(false);
         });
 
-        it("derived windows pass the clock-only check", () => {
+        it("no derived windows pass the clock-only check from every start", () => {
+            const logs: string[] = [];
             const result = generateClockForConfig({
                 ...config,
                 overrides: { ...config.overrides, derive_clock_windows: true },
-            });
-            expect(result.derived_clock_windows?.succeeded).toBe(true);
-            expect(result.stability_check.as_built?.actual_output_items).toBe(result.stability_check.expected_output_items);
-            expect(result.stability_check.is_stable).toBe(true);
+            }, { logger: { ...quiet, log: message => logs.push(message) } });
+            expect(result.derived_clock_windows?.succeeded).toBe(false);
+            expect(result.stability_check.is_stable).toBe(false);
+            // from the 12 starts of the first check they hold the 96, and one of the starts of the full check makes 92
+            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding 2 -> actual=96 stable=true \(12 start phases\)/.test(line))).toBe(true);
+            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding \d+ full check -> actual=92 stable=false/.test(line))).toBe(true);
         }, 60_000);
     });
 
@@ -1206,13 +600,19 @@ describe("generateClockForConfig", () => {
     describe("AUTOMATION_SCIENCE: issue #47 regression (multi-filter fractional per-item transfers)", async () => {
 
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE);
-        const result: BlueprintGenerationResult = generateClockForConfig(config);
+        let result: BlueprintGenerationResult;
+        let input_inserter_id: EntityId;
+        let output_inserter_id: EntityId;
 
-        const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-        // inserter:1 = belt→machine (copper-plate + iron-gear-wheel), no explicit id in config → index+1
-        const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(1).id)!;
-        // inserter:2 = machine→belt (automation-science-pack)
-        const output_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+        beforeAll(() => {
+            result = generateClockForConfig(config);
+
+            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            // inserter:1 = belt→machine (copper-plate + iron-gear-wheel), no explicit id in config → index+1
+            input_inserter_id = keys.find(k => k.id === EntityId.forInserter(1).id)!;
+            // inserter:2 = machine→belt (automation-science-pack)
+            output_inserter_id = keys.find(k => k.id === EntityId.forInserter(2).id)!;
+        });
 
         it("generates a blueprint without throwing", () => {
             expect(result.blueprint).toBeDefined();
@@ -1240,365 +640,6 @@ describe("generateClockForConfig", () => {
             const selected = alternatives.alternatives[alternatives.selected_index];
             expect(selected.is_stable).toBe(true);
             expect(selected.items_per_second).toBeCloseTo(config.target_output.items_per_second, 6);
-        });
-    });
-
-    // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
-    // expected output in one simulated period without the build actually repeating that period.
-    describe("FLYING_ROBOT_FRAME clock-only check", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
-
-        // enable ranges as the inserters see them (decider windows shifted by the circuit latency)
-        const clocked = (windows: Record<number, [number, number][]>) => generateClockForConfig({
-            ...config,
-            inserters: config.inserters.map(inserter => ({
-                ...inserter,
-                overrides: {
-                    enable_control: {
-                        mode: "CLOCKED" as const,
-                        ranges: windows[inserter.id!].map(([start, end]) => ({ start, end })),
-                        period_duration_ticks: 288,
-                    },
-                },
-            })),
-        });
-
-        describe("planned clock", () => {
-            const { alternatives } = generateClockAlternatives(config);
-            const planned = alternatives.find(a => a.id === "planned")!;
-
-            it("is stable and repeats every period", () => {
-                expect(planned.is_stable).toBe(true);
-                expect(planned.result.stability_check.as_built?.repeat_periods).toBe(1);
-            });
-
-            // the timelines default to this run; it differs from the planning run the windows were taken from
-            it("carries the clock-only run, where both hands are dropped after the first window", () => {
-                const dropsOf = (history: typeof planned.result.serializable_state_transition_history) => history.entities
-                    .find(entity => entity.entity_id === "inserter:1")!.transitions
-                    .filter(transition => transition.to_status === "DROP")
-                    .map(transition => transition.tick);
-
-                expect(dropsOf(planned.result.serializable_state_transition_history)).toEqual([5, 149]);
-                expect(dropsOf(planned.result.clock_only_run!.state_transition_history)).toEqual([7, 19]);
-                expect(planned.result.clock_only_run!.transfer_history.total_duration_ticks).toBe(288);
-            });
-        });
-
-        describe("insights", () => {
-            const { alternatives } = generateClockAlternatives(config);
-            const insightsOf = (id: string) => alternatives.find(a => a.id === id)!.insights;
-            const insight = (id: string, insight_id: string) => insightsOf(id).find(it => it.id === insight_id);
-
-            it("says how much time the machine has to spare", () => {
-                expect(insight("planned", "spare-time")).toMatchObject({
-                    scope: "build",
-                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each clock period",
-                    table: { rows: [["Machine 1 (flying-robot-frame)", "279", "9", "17.4"]] },
-                });
-            });
-
-            it("lists every ingredient's insertion limit and hands per period", () => {
-                expect(insight("planned", "insertion-limits")?.table?.rows).toEqual([
-                    ["Machine 1 (flying-robot-frame)", "steel-plate", "1", "6", "Inserter 2", "16", "1"],
-                    ["Machine 1 (flying-robot-frame)", "electric-engine-unit", "1", "6", "Inserter 2", "16", "1"],
-                    ["Machine 1 (flying-robot-frame)", "electronic-circuit", "3", "18", "Inserter 3", "16", "3"],
-                    ["Machine 1 (flying-robot-frame)", "battery", "2", "12", "Inserter 3", "16", "2"],
-                ]);
-                expect(insight("planned", "insertion-limits")?.what).toContain("takes electronic-circuit only while it holds fewer than 18");
-            });
-
-            it("says how long a full output hand takes", () => {
-                expect(insight("planned", "output-hand")?.title).toBe("A full hand of flying-robot-frame takes 139.4 ticks to make");
-            });
-
-            it("points out where the exported clock swings differently than the plan", () => {
-                expect(insight("planned", "plan-versus-clock")?.what)
-                    .toContain("Inserter 1 drops at ticks 7, 19 where the plan had 5, 149");
-            });
-
-            it("does not compare shifted swings with the plan they were moved off", () => {
-                expect(insight("shifted-swings", "plan-versus-clock")).toBeUndefined();
-            });
-
-            it("explains an unstable clock instead of reading build numbers from it", () => {
-                const ids = insightsOf("swings-2").map(it => it.id);
-                expect(ids).toContain("unstable");
-                expect(ids).not.toContain("spare-time");
-                expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a clock period");
-                expect(insight("swings-2", "insertion-limits")?.table?.rows).toHaveLength(4);
-            });
-        });
-
-        describe("uneven output swings", () => {
-            const { alternatives } = generateClockAlternatives(config);
-            const uneven = alternatives.find(a => a.id === "uneven-output")!;
-
-            it("is offered and stable from every start phase checked", () => {
-                expect(uneven.is_stable).toBe(true);
-                expect(uneven.result.stability_check.as_built?.start_phases_checked).toBe(112);
-                expect(uneven.result.stability_check.as_built?.repeat_periods).toBe(1);
-            });
-
-            it("moves the second output swing one craft earlier and keeps the first", () => {
-                expect(uneven.result.derived_clock_windows?.moved_output_swing).toMatchObject({ swing: 2, shift_ticks: -17 });
-                expect(uneven.result.clock_windows["inserter:1"]).toEqual([{ start: 1, end: 13 }, { start: 128, end: 140 }]);
-                expect(uneven.description).toContain("Output swing 2 starts 17 ticks earlier than planned.");
-            });
-
-            it("lists every position tried with whether it passed", () => {
-                const rows = uneven.result.derived_clock_windows!.moved_output_swing!.shifts_checked;
-                expect(rows.map(row => row.index)).toEqual([2]);
-                expect(rows[0].shifts.filter(shift => shift.is_stable).map(shift => shift.shift_ticks))
-                    .toEqual([-70, -52, -35, -17, 17, 35, 52, 70]);
-                // 52 works since a machine at its output block crafts the ingredients that reach it, as in game
-                expect(rows[0].shifts.filter(shift => !shift.is_stable).map(shift => shift.shift_ticks))
-                    .toEqual([-105, -87, 87, 105]);
-            });
-
-            it("observes the input windows again for the moved swing", () => {
-                expect(uneven.result.clock_windows["inserter:3"]).toEqual([
-                    { start: 13, end: 51 }, { start: 128, end: 144 }, { start: 161, end: 177 },
-                ]);
-            });
-        });
-
-        describe("shifted swings", () => {
-            const { alternatives } = generateClockAlternatives(config);
-            const shifted = alternatives.find(a => a.id === "shifted-swings")!;
-            const primary = alternatives.find(a => a.id === "planned-belt-slack")!;
-
-            it("is offered and stable", () => {
-                expect(shifted.is_stable).toBe(true);
-                expect(shifted.result.stability_check.as_built?.repeat_periods).toBe(1);
-            });
-
-            it("moves the second output swing and the top-up after it 40 ticks earlier as a block", () => {
-                expect(shifted.result.shifted_cycle).toMatchObject({
-                    cycle: 2,
-                    shift_ticks: -40,
-                    planned_ticks: { start: 145, end: 184 },
-                    moved: [
-                        { entity_id: "inserter:1", item_names: ["flying-robot-frame"] },
-                        { entity_id: "inserter:3", item_names: ["battery", "electronic-circuit"] },
-                    ],
-                });
-                expect(shifted.description).toContain("The swings planned in clock ticks 145–184 (inserter 1: flying-robot-frame; "
-                    + "inserter 3: battery, electronic-circuit) start 40 ticks earlier than planned.");
-                expect(shifted.result.clock_windows).toEqual({
-                    "inserter:1": [{ start: 1, end: 13 }, { start: 105, end: 117 }],
-                    "inserter:2": [{ start: 13, end: 40 }],
-                    "inserter:3": [{ start: 13, end: 51 }, { start: 117, end: 144 }],
-                });
-            });
-
-            it("lists the range of shifts that work, the planned position included", () => {
-                const rows = shifted.result.shifted_cycle!.shifts_checked;
-                expect(rows.map(row => row.index)).toEqual([2]);
-                const stable = rows[0].shifts.filter(shift => shift.is_stable).map(shift => shift.shift_ticks);
-                // one unbroken range, checked every 5 ticks
-                expect(stable).toEqual(Array.from({ length: 23 }, (_, n) => -65 + 5 * n));
-                expect(rows[0].shifts.some(shift => !shift.is_stable)).toBe(true);
-            });
-
-            it("says which machine limit ends the range on each side", () => {
-                expect(shifted.result.shifted_cycle!.earliest).toEqual({
-                    shift_ticks: -65,
-                    is_search_limit: false,
-                    notes: ["Inserter 3 waits 9 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
-                });
-                expect(shifted.result.shifted_cycle!.latest).toEqual({
-                    shift_ticks: 45,
-                    is_search_limit: false,
-                    // full output while its output is at the block, then short of ingredients: one 9 tick stop
-                    notes: ["Machine 1 (flying-robot-frame) is out of ingredients for 9 ticks until these swings arrive"],
-                });
-            });
-
-            it("keeps the planned windows of the first cycle and the planned window lengths", () => {
-                const lengths = (windows: typeof shifted.result.clock_windows) => Object.fromEntries(
-                    Object.entries(windows).map(([key, ranges]) => [key, ranges.map(range => range.end - range.start)]));
-                expect(lengths(shifted.result.clock_windows)).toEqual(lengths(primary.result.clock_windows));
-                expect(shifted.inserter_window_count).toBe(primary.inserter_window_count);
-            });
-        });
-
-        // built by hand and run in game: output swings 116 and 172 ticks apart
-        describe("hand-made clock with unevenly spaced output swings", () => {
-            const result = clocked({
-                1: [[2, 15], [118, 131]],
-                2: [[15, 35]],
-                3: [[15, 45], [131, 149]],
-            });
-
-            it("is stable and repeats every period", () => {
-                expect(result.stability_check.is_stable).toBe(true);
-                expect(result.stability_check.repeat_periods).toBe(1);
-                expect(result.stability_check.repeat_output_items).toBeUndefined();
-            });
-        });
-
-        describe("clock that reaches the expected output only every other period", () => {
-            const result = clocked({
-                1: [[2, 15], [59, 72]],
-                2: [[15, 35]],
-                3: [[15, 45], [201, 219]],
-            });
-
-            it("moves the expected output in the simulated period", () => {
-                expect(result.stability_check.actual_output_items).toBe(result.stability_check.expected_output_items);
-            });
-
-            it("is unstable because the two periods it repeats over move half of it", () => {
-                expect(result.stability_check.repeat_periods).toBe(2);
-                expect(result.stability_check.repeat_output_items).toBe(32);
-                expect(result.stability_check.is_stable).toBe(false);
-            });
-        });
-    });
-
-    // The windows of the inserters that bring eggs to the science biochamber are an optimisation: kept only when the clock
-    // passes the as-built check with them as it did without. Variations of the agricultural science sample, 5 output swings.
-    describe("agricultural science: windows for the inserters feeding the output machine", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
-        const quiet = { log() { }, warn() { }, error() { }, debug() { } };
-        const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
-        const feeders = ["inserter:9", "inserter:10"];
-
-        it("generates a build with a dedicated fuel inserter in bounded time (under a minute), and stable", () => {
-            // inserter 11 brings bioflux only and a new one nutrients, which the science biochamber burns
-            const config: Config = {
-                ...sample,
-                inserters: [
-                    ...sample.inserters.map(it => it.id === 11 ? { ...it, filters: ["bioflux"] } : it),
-                    { id: 13, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 5 }, stack_size: 16, filters: ["nutrients"] },
-                ],
-            };
-            const started = Date.now();
-            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
-            expect(Date.now() - started).toBeLessThan(60_000);
-            expect(result.stability_check.is_stable).toBe(true);
-        }, 120_000);
-
-        it("plans the nutrient inserters 30.652 hands needed per 480 ticks on every clock, 61.304 per 960 on the 2-swing clock", () => {
-            for (const [swings, period] of [[5, 480], [1, 480], [2, 960]] as const) {
-                const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: swings } }, { logger: quiet });
-                const plan = result.crafting_cycle_plan;
-                const planned = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:3")!;
-                expect(result.simulation_duration.ticks).toBe(period);
-                expect(planned.needed_transfer_count!.toDecimal() * period / plan.total_duration.ticks).toBeCloseTo(30.652 * period / 480, 6);
-                // the output inserter has none
-                const output = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:12")!;
-                expect(output.needed_transfer_count).toBeUndefined();
-            }
-        }, 120_000);
-
-        it("keeps the feeders always enabled where the clock with their windows does not pass, as without the rule", () => {
-            // egg biochambers at speed 80 and hands of 12 into the science biochamber: with the windows the long run comes up short
-            const config: Config = {
-                ...sample,
-                machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 80 } : it),
-                inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
-            };
-            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
-            expect(result.stability_check.is_stable).toBe(true);
-            for (const id of feeders) {
-                expect(Object.keys(result.clock_windows)).not.toContain(id);
-            }
-        }, 120_000);
-
-        it("does not clock the feeders when the as-built check is off: nothing would have run them", () => {
-            const result = generateClockForConfig(five_swings(sample), { verify_as_built: false, logger: quiet });
-            for (const id of feeders) {
-                expect(Object.keys(result.clock_windows)).not.toContain(id);
-            }
-        }, 120_000);
-
-        it("clocks them when the as-built check is on and passes with them", () => {
-            const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, logger: quiet });
-            expect(result.stability_check.as_built?.is_stable).toBe(true);
-            for (const id of feeders) {
-                expect(Object.keys(result.clock_windows)).toContain(id);
-            }
-        }, 120_000);
-
-        it("verifies the clock with feeder windows over a longer run than the standard check: at least 72,000 ticks", () => {
-            expect(OUTPUT_FEEDER_CHECK_TICKS).toBeGreaterThanOrEqual(72_000);
-        });
-
-        it("drops feeder windows that pass the standard check but come up a hand short in two periods of 200 (egg biochambers at speed 72, hands of 12)", () => {
-            const config: Config = {
-                ...sample,
-                machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 72 } : it),
-                inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
-            };
-            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
-            expect(result.stability_check.is_stable).toBe(true);
-            expect(result.output_feeders).toBeUndefined();
-            for (const id of feeders) {
-                expect(Object.keys(result.clock_windows)).not.toContain(id);
-            }
-        }, 120_000);
-
-        it("takes feeder windows on the prefer-planned path of the derive flow too", () => {
-            const config: Config = { ...sample, overrides: { ...sample.overrides, derive_clock_windows: true } };
-            const result = generateClockForConfig(five_swings(config), { logger: quiet });
-            expect(result.derived_clock_windows?.kept_planned_windows).toBe(true);
-            expect(result.output_feeders?.inserter_ids).toEqual(feeders);
-            for (const id of feeders) {
-                expect(Object.keys(result.clock_windows)).toContain(id);
-            }
-        }, 180_000);
-
-        it("selects the same alternative with hands of 12 as without the windows of the feeders: they are not ranked by", () => {
-            // 354 windows with the feeders', 324 without: the 3-swing clock has 336 and used to be selected
-            const config: Config = { ...sample, inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it) };
-            const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-            const selected = alternatives[selected_index];
-            expect(selected.id).toBe("planned-belt-slack");
-            expect(selected.inserter_window_count).toBe(354);
-            expect(selected.ranking_window_count).toBe(324);
-            expect(Object.keys(selected.result.clock_windows)).toContain("inserter:9");
-            expect(alternatives.find(it => it.id === "swings-3")!.ranking_window_count).toBe(336);
-        }, 240_000);
-    });
-
-    describe("the pieces of the output feeder rule", () => {
-        const inserter = (id: number, source: string, sink: string, filtered: string[] = []) => ({
-            entity_id: { id: `inserter:${id}` },
-            source: { entity_id: { id: source, type: source.split(":")[0] } },
-            sink: { entity_id: { id: sink, type: sink.split(":")[0] } },
-            filtered_items: new Set(filtered),
-        }) as unknown as Inserter;
-
-        it("counts the windows of the feeders as they are without their windows when it ranks", () => {
-            const windows = { "inserter:1": [{ start: 0, end: 1 }], "inserter:9": [1, 2, 3, 4, 5].map(it => ({ start: it, end: it })) } as never;
-            expect(rankingWindowCount(6, windows, undefined)).toBe(6);
-            expect(rankingWindowCount(6, windows, { inserter_ids: ["inserter:9"], window_count_without_feeder_windows: 0 })).toBe(1);
-            expect(rankingWindowCount(6, windows, { inserter_ids: ["inserter:9"], window_count_without_feeder_windows: 2 })).toBe(3);
-        });
-
-        it("limits the feeders to the inserters from a machine into an output machine", () => {
-            const into_output = inserter(1, "machine:3", "machine:5");
-            const into_other = inserter(2, "machine:3", "machine:4");
-            const from_belt = inserter(3, "belt:1", "machine:5");
-            const to_belt = inserter(4, "machine:5", "belt:2");
-            expect(feedersOfOutputMachines([into_output, into_other, from_belt, to_belt], new Set(["machine:5"]))).toEqual([into_output]);
-            expect(feedersOfOutputMachines([into_output, into_other], new Set(["machine:4", "machine:5"]))).toEqual([into_output, into_other]);
-        });
-
-        it("leaves every feeder of a sink alone when any of them can carry its fuel", () => {
-            const eggs = inserter(1, "machine:3", "machine:5", ["pentapod-egg"]);
-            const nutrients = inserter(2, "machine:3", "machine:5", ["nutrients", "pentapod-egg"]);
-            expect(anyFeederCarriesFuel([eggs], "nutrients")).toBe(false);
-            expect(anyFeederCarriesFuel([eggs, nutrients], "nutrients")).toBe(true);
-            expect(anyFeederCarriesFuel([nutrients], undefined)).toBe(false);
-        });
-
-        it("skips an inserter whose windows are the plan's only in a build with always-enabled inserters", () => {
-            expect(hasPlannedWindowsNotHands(new Set(["inserter:9"]), "inserter:3")).toBe(true);
-            expect(hasPlannedWindowsNotHands(new Set(["inserter:9"]), "inserter:9")).toBe(false);
-            expect(hasPlannedWindowsNotHands(new Set(), "inserter:3")).toBe(false);
         });
     });
 });

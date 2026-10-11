@@ -5,7 +5,7 @@ import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode, I
 import { InserterTargetFullMode } from "./modes/target-full-mode";
 import { InserterWaitForSinkMode } from "./modes/wait-for-sink-mode";
 import { EntityId } from "../../entities";
-import { EntityState, InserterState, ReadableEntityStateRegistry } from "../../state";
+import { EntityState, InserterState, InserterStatus, ReadableEntityStateRegistry } from "../../state";
 import { TickProvider } from "../current-tick-provider";
 import { EnableControl } from "../enable-control";
 import { InserterDisabledMode } from "./modes/disabled-mode";
@@ -23,6 +23,7 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
         transitionGraph: Map<InserterMode, ModeTransitionEvaluator<InserterMode>>,
         plugins: ModePlugin<InserterMode>[] = [],
         public readonly inserter_state: InserterState,
+        public readonly sink_state: EntityState,
         private readonly enable_control?: EnableControl,
     ) {
         super(initialMode, transitionGraph, plugins);
@@ -36,6 +37,33 @@ export class InserterStateMachine extends ModeStateMachine<InserterMode> {
             (this.enable_control as ControlLogic).executeForTick();
         }
         super.executeForTick();
+        this.inserter_state.enabled = this.shownEnabled();
+    }
+
+    /**
+     * Whether the game would show the inserter as enabled after this tick. The game shows it a tick ahead of what
+     * the inserter does. Recorded on seven runs of five builds in Factorio 2.1.21: a hand never grows in the first
+     * tick an inserter shows as enabled, and it does grow in the first tick it shows as disabled, never after that.
+     * A window of 4 ticks shows as 4 ticks that are not disabled, and the inserter acts in the 4 ticks one later.
+     * So a clock of the game is asked for the next tick.
+     *
+     * A clock of the plan is a tick longer than what the inserter acts in, since it wakes in the first: it is asked
+     * for this tick and the next. Any other control is not asked again, since it may latch: with it the inserter
+     * counts as enabled until it reaches its disabled mode.
+     */
+    private shownEnabled(): boolean {
+        const control = this.enable_control;
+        if (control?.isEnabledIn !== undefined && control.is_game_clock) {
+            return control.isEnabledIn(1);
+        }
+        // an inserter in its disabled mode was asked this tick and stayed there
+        if (this.inserter_state.status === InserterStatus.DISABLED) {
+            return false;
+        }
+        if (control?.isEnabledIn === undefined) {
+            return true;
+        }
+        return control.isEnabledIn(0) && control.isEnabledIn(1);
     }
 };
 
@@ -121,6 +149,7 @@ function createInserterStateMachine(args: {
     const disabled_mode_evaluator = new DisabledModeTransitionEvaluator(
         enable_control,
         idle_mode,
+        idle_mode_evaluator,
     );
 
     const graph = new Map<InserterMode, ModeTransitionEvaluator<InserterMode>>([
@@ -142,6 +171,7 @@ function createInserterStateMachine(args: {
         graph,
         [inserter_status_plugin, ...plugins],
         inserter_state,
+        sink_state,
         enable_control,
     );
 }

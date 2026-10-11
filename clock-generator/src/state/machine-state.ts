@@ -20,6 +20,7 @@ export class MachineState implements EntityState {
     public static clone = clone
     public static machineInputIsBlocked = machineInputIsBlocked
     public static machineIsOutputBlocked = machineIsOutputBlocked
+    public static takesNothing = takesNothing
     public static machineAcceptsItem = machineAcceptsItem
     public static insertItem = insertItem
     public static insertableQuantity = insertableQuantity
@@ -50,6 +51,22 @@ export class MachineState implements EntityState {
      * craft, until there is room for it.
      */
     public pendingOutput: number = 0;
+
+    /**
+     * Crafts finished and productivity bars paid out so far, as the game counts a machine's `products_finished`:
+     * one for each, whatever amount it makes.
+     */
+    public productsFinished: number = 0;
+
+    /**
+     * Whether the main product was at the output block when the machine's last tick was done. Inserters are updated
+     * before machines, so an inserter that finds this set and the block gone knows that another inserter took the
+     * products down in the tick it is in.
+     */
+    public outputBlockedAfterLastTick: boolean = false;
+
+    /** Whether the machine finished a craft in its last tick, which wakes the inserters that wait on it */
+    public finishedCraftInLastTick: boolean = false;
 
     /**
      * Ingredients that are also a product of the recipe (a pentapod egg makes pentapod eggs). The machine keeps what
@@ -113,6 +130,9 @@ function clone(machineState: MachineState): MachineState {
         machineState.totalCrafted,
     );
     cloned.pendingOutput = machineState.pendingOutput;
+    cloned.productsFinished = machineState.productsFinished;
+    cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
+    cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.selfIngredients = machineState.selfIngredients.clone();
     machineState.outputWaiters.forEach((waiters, item_name) => cloned.outputWaiters.set(item_name, new Map(waiters)));
     machineState.lastOutputTaker.forEach((inserter_id, item_name) => cloned.lastOutputTaker.set(item_name, inserter_id));
@@ -217,13 +237,37 @@ function machineInputIsBlocked(machineState: MachineState, ingredientName: strin
     return currentQuantity >= input.automated_insertion_limit.quantity;
 }
 
+/**
+ * True while the machine takes no item at all from an inserter: its output is at the block or every ingredient is at
+ * its insertion limit, and its fuel slot, if it burns fuel, is at its limit as well. The game shows an inserter that
+ * waits to put into such a machine as waiting for space in its destination, whatever the inserter would bring; while
+ * the machine still takes anything, an inserter that has nothing it takes shows as waiting for source items.
+ */
+function takesNothing(machineState: MachineState): boolean {
+    const machine = machineState.machine;
+    // asked for every waiting inserter every tick: the same answer as machineInputIsBlocked for each item it takes,
+    // without asking item by item
+    if (machine.fuel_slot && fuelIsBelowLimit(machineState)) {
+        return false;
+    }
+    if (machineIsOutputBlocked(machineState)) {
+        return true;
+    }
+    for (const input of machine.inputs.values()) {
+        if (ingredientQuantity(machineState, input.ingredient.name) < input.automated_insertion_limit.quantity) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function machineIsOutputBlocked(machineState: MachineState): boolean {
     const machine = machineState.machine;
 
     const outputBlock = machine.output.outputBlock;
     const currentQuantity = machineState.inventoryState.getQuantity(outputBlock.item_name);
 
-    return currentQuantity >= outputBlock.quantity
+    return currentQuantity >= outputBlock.ingredients_blocked_at
 }
 
 

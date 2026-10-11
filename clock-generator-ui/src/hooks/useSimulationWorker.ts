@@ -65,7 +65,7 @@ let FactorioDataService: typeof import('clock-generator/browser').FactorioDataSe
 let combineClockAlternativeRuns: typeof import('clock-generator/browser').combineClockAlternativeRuns | null = null;
 
 const FACTORIO_DATA_URL = '/data-filtered.json';
-const PRIMARY_STEP = 'Planned + belt pickup slack';
+const PRIMARY_STEP = 'Batched swings';
 // the slowest alternatives start first so they overlap the most
 const SLOW_TASKS = ['full-hand', 'uneven-output', 'derived', 'fractional'];
 
@@ -156,7 +156,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore]);
 
     const publishAlternatives = useCallback((generation: Generation) => {
-        const combined = combineClockAlternativeRuns!(generation.runs, it => it.isStable, it => it.rankingWindowCount, it => it.rankFirst);
+        const combined = combineClockAlternativeRuns!(generation.runs, it => ({
+            meets_target_rate: it.meetsTargetRate,
+            rate_off_target: it.rateOffTarget,
+            matches_belt_choice: it.matchesBeltChoice,
+            rank_first: it.rankFirst,
+            wake_ups_per_minute: it.asBuilt?.wake_ups?.wake_ups_per_minute ?? null,
+            window_count: it.rankingWindowCount,
+        }));
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);

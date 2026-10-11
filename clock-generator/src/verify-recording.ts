@@ -1,9 +1,15 @@
 import fs from "fs/promises";
 import { loadConfigFromFile } from "./config/loader";
 import { generateClockAlternatives } from "./crafting/generate-blueprint";
-import { compareRecording, DEFAULT_COMPARE_OPTIONS, formatReport } from "./verification/compare";
+import { compareWithExportedClocks, formatExportedClockReport } from "./verification/compare";
+import { compareRecordings, formatRecordingComparison } from "./verification/compare-recordings";
 import { matchRecordingToConfig } from "./verification/entity-matching";
 import { parseRecording } from "./verification/recording";
+import { matchOfSimulatedRecording, simulateRecording } from "./verification/simulated-recording";
+
+/** The simulated run is this many times as long as the recording, and its first third is left out as its start-up */
+const SIMULATED_TO_RECORDED_TICKS = 1.5;
+const SIMULATED_SETTLE_SHARE = 3;
 
 function argValue(name: string): string | undefined {
     return process.argv.find(arg => arg.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
@@ -13,13 +19,15 @@ async function main() {
     const config_path = argValue("config");
     const recording_path = argValue("recording");
     if (!config_path || !recording_path) {
-        console.error("Usage: npm run verify -- --config=<config.json> --recording=<recording.json> [--alternative=<id, label or index>] [--overrides='{\"terminal_swing_count\":2}'] [--tolerance=2] [--window=32]");
-        console.error("  --alternative: the clock that was built, as listed by the UI (default: the one it selects), e.g. planned-belt-slack or 'Planned + belt pickup slack (+4 ticks)'");
+        console.error("Usage: npm run verify -- --config=<config.json> --recording=<recording.json> [--alternative=<id, label or index>] [--overrides='{\"terminal_swing_count\":2}'] [--items-tolerance=0.5] [--state-agreement=0.95]");
+        console.error("  --alternative: the clock that was built, as listed by the UI (default: the one it selects), e.g. planned-belt-slack or 'Batched swings: 5 output swings per cycle'");
+        console.error("  --items-tolerance: items a period an inserter or machine may differ by between the game and the simulator");
+        console.error("  --state-agreement: share of the time an entity has to show the same state in both not to be marked DIFF");
         process.exit(2);
     }
     const options = {
-        tolerance_ticks: Number(argValue("tolerance") ?? DEFAULT_COMPARE_OPTIONS.tolerance_ticks),
-        match_window_ticks: Number(argValue("window") ?? DEFAULT_COMPARE_OPTIONS.match_window_ticks),
+        items_tolerance: Number(argValue("items-tolerance") ?? 0.5),
+        state_agreement: Number(argValue("state-agreement") ?? 0.95),
     };
 
     const loaded = await loadConfigFromFile(config_path);
@@ -33,15 +41,18 @@ async function main() {
     const warn = console.warn;
     console.log = () => {};
     console.warn = () => {};
-    const alternatives = (() => {
+    const quietly = <T>(run: () => T): T => {
+        console.log = () => {};
+        console.warn = () => {};
         try {
-            // verify_as_built runs the exported clock windows on their own, which is what the blueprint does in game
-            return generateClockAlternatives(config, { verify_as_built: true, logger: { log: () => {}, warn: () => {}, error: console.error, debug: () => {} } });
+            return run();
         } finally {
             console.log = log;
             console.warn = warn;
         }
-    })();
+    };
+    const alternatives = quietly(() =>
+        generateClockAlternatives(config, { verify_as_built: true, logger: { log: () => {}, warn: () => {}, error: console.error, debug: () => {} } }));
     const wanted = argValue("alternative");
     const alternative = wanted === undefined
         ? alternatives.alternatives[alternatives.selected_index]
@@ -53,9 +64,39 @@ async function main() {
     console.log(`Clock alternative: ${alternative.label} (${alternative.id}), ${alternative.is_stable ? "stable" : "not stable"} as built`);
     const result = alternative.result;
 
+    // The clock that was built: the subtick clock counts the whole ticks a fractional period repeats after, and the
+    // clock rounded down runs every period that much short
+    const planned_period = result.simulation_duration.ticks;
+    const subtick = alternative.id.endsWith("-subtick") ? result.subtick : undefined;
+    const period = subtick || Number.isInteger(planned_period) ? planned_period : Math.floor(planned_period);
+    const clock_ticks = subtick ? subtick.clock.period_ticks : period;
+    const expected_output_per_period = result.stability_check.expected_output_items * clock_ticks / planned_period;
+
+    // the settled clock on its own, as the blueprint runs it in the game, and not the plan the windows were taken from
+    const simulated = quietly(() =>
+        simulateRecording(config, result.clock_windows, period, Math.ceil(recording.sample_count * SIMULATED_TO_RECORDED_TICKS), clock_ticks));
     const match = matchRecordingToConfig(recording, config);
-    const report = compareRecording(recording, config, result, match, options);
-    formatReport(report, options).forEach(line => console.log(line));
+    const free_running_inserter_ids = new Set(Object.entries(result.unplanned_inserter_clocks ?? {})
+        .filter(([, clock]) => clock.own_clock)
+        .map(([entity_id]) => Number(entity_id.replace("inserter:", ""))));
+
+    console.log("");
+    console.log("Entity mapping (recorded -> config):");
+    console.log(`  machines:  ${Array.from(match.machines).map(([r, c]) => `${r}->${c}`).join(", ")}`);
+    console.log(`  inserters: ${Array.from(match.inserters).map(([r, c]) => `${r}->${c}`).join(", ")}`);
+    console.log("");
+
+    const exported = compareWithExportedClocks(recording, config, result, match);
+    formatExportedClockReport(exported).forEach(line => console.log(line));
+
+    const report = compareRecordings(
+        { recording, match },
+        { recording: simulated, match: matchOfSimulatedRecording(simulated), from_sample: Math.floor(simulated.sample_count / SIMULATED_SETTLE_SHARE) },
+        config,
+        { ...options, expected_output_per_period, free_running_inserter_ids },
+    );
+    report.issues.push(...exported.issues);
+    formatRecordingComparison(report, options).forEach(line => console.log(line));
     process.exit(report.issues.length === 0 ? 0 : 1);
 }
 

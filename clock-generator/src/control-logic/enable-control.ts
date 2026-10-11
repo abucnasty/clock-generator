@@ -5,24 +5,71 @@ import { Resettable } from "./resettable";
 export interface EnableControl {
     isEnabled(): boolean;
     /**
+     * Whether it is enabled this many ticks from now. Only a control that answers from the clock alone has it: asking
+     * such a control changes nothing, where one that latches answers differently the more often it is asked.
+     */
+    isEnabledIn?(ticks: number): boolean;
+    /**
+     * True for a clock as the game has it: the windows of an exported clock, or a fuel or by-product clock. An
+     * inserter acts in every tick such a clock enables it, the first one included, as recorded in the game. On any
+     * other control, which only the planning run has, an inserter wakes in the first tick and acts from the next:
+     * the plan counts its ticks on that.
+     */
+    readonly is_game_clock?: boolean;
+    /**
      * Used for debugging purposes to identify the control in logs.
      */
     toString?(): string;
 }
 
+/**
+ * The wires from the clocks of the game to what they enable. While they are cut, everything such a clock enables is
+ * always enabled, as a build is that has no clock yet, and the clock goes on counting. Only a run that tries a clock
+ * on a build that ran without one cuts them (see crafting/backpressure-loss.ts), for a stretch of its own ticks.
+ */
+export const GameClockWires = { cut: false };
+
 export const AlwaysEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return true;
     },
-    toString: () => "AlwaysEnabledControl"
+    isEnabledIn: () => true,
+    toString: () => "AlwaysEnabledControl",
 };
 
 const NeverEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return false;
     },
-    toString: () => "NeverEnabledControl"
+    isEnabledIn: () => false,
+    toString: () => "NeverEnabledControl",
 };
+
+/**
+ * The answers of a clock for the last two ticks it was asked about. An inserter asks about this tick and the next,
+ * every tick, so all but one of its questions were answered the tick before.
+ */
+class LastTwoTicks {
+    private tick_a = NaN;
+    private value_a = false;
+    private tick_b = NaN;
+    private value_b = false;
+
+    public get(tick: number, compute: (tick: number) => boolean): boolean {
+        if (tick === this.tick_a) {
+            return this.value_a;
+        }
+        if (tick === this.tick_b) {
+            return this.value_b;
+        }
+        const value = compute(tick);
+        this.tick_b = this.tick_a;
+        this.value_b = this.value_a;
+        this.tick_a = tick;
+        this.value_a = value;
+        return value;
+    }
+}
 
 /** Position of a tick in a (possibly fractional) clock period; float error is snapped as the game's integer clock would be */
 function clockPosition(tick: number, period: number): number {
@@ -77,22 +124,27 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     public static create(args: {
         periodDuration: Duration,
         enabledRanges: ReadonlyArray<OpenRange>,
-        tickProvider: TickProvider
+        tickProvider: TickProvider,
+        is_game_clock?: boolean,
     }): ClockedEnableControl {
         return new ClockedEnableControl(
             args.periodDuration,
             args.enabledRanges,
-            args.tickProvider
+            args.tickProvider,
+            args.is_game_clock ?? false,
         );
     }
     private offset = 0;
     private readonly offset_tick_provider: OffsetTickProvider;
     private readonly inRange: (position: number) => boolean;
+    private readonly asked = new LastTwoTicks();
+    private readonly enabledAt = (tick: number) => this.inRange(clockPosition(tick, this.periodDuration.ticks));
 
     constructor(
         public readonly periodDuration: Duration,
         public readonly enabledRanges: ReadonlyArray<OpenRange>,
-        public readonly tickProvider: TickProvider
+        public readonly tickProvider: TickProvider,
+        public readonly is_game_clock: boolean = false,
     ) {
         this.offset_tick_provider = TickProvider.offset({
             base: tickProvider,
@@ -102,9 +154,14 @@ export class ClockedEnableControl implements EnableControl, Resettable {
     }
 
     public isEnabled(): boolean {
-        const currentTick = this.offset_tick_provider.getCurrentTick()
-        const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
-        return this.inRange(adjustedTick);
+        return this.isEnabledIn(0);
+    }
+
+    public isEnabledIn(ticks: number): boolean {
+        if (this.is_game_clock && GameClockWires.cut) {
+            return true;
+        }
+        return this.asked.get(this.offset_tick_provider.getCurrentTick() + ticks, this.enabledAt);
     }
 
     public getOffset(): number {
@@ -118,6 +175,8 @@ export class ClockedEnableControl implements EnableControl, Resettable {
 
 class PeriodicEnableControl implements EnableControl {
     private readonly inRange: (position: number) => boolean;
+    private readonly asked = new LastTwoTicks();
+    private readonly enabledAt = (tick: number) => this.inRange(clockPosition(tick, this.periodDuration.ticks));
 
     constructor(
         public readonly periodDuration: Duration,
@@ -128,9 +187,11 @@ class PeriodicEnableControl implements EnableControl {
     }
 
     public isEnabled(): boolean {
-        const currentTick = this.tickProvider.getCurrentTick()
-        const adjustedTick = clockPosition(currentTick, this.periodDuration.ticks);
-        return this.inRange(adjustedTick);
+        return this.isEnabledIn(0);
+    }
+
+    public isEnabledIn(ticks: number): boolean {
+        return this.asked.get(this.tickProvider.getCurrentTick() + ticks, this.enabledAt);
     }
 }
 

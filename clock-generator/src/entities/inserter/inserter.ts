@@ -50,6 +50,18 @@ function effectiveHandSize(inserter_stack_size: number, item_name: ItemName, bel
     return Math.floor(capacity / belt_lane_stack_size) * belt_lane_stack_size;
 }
 
+/**
+ * The items of an inserter in the order it takes them off a belt. As recorded in the game, an inserter with nothing
+ * in its hand takes from the lane nearest to it when its sink takes what is on both lanes, and from the far lane
+ * only when the sink takes nothing more of the near one. The order of its filters has no say in it.
+ */
+function nearestLaneFirst(items: Set<ItemName>, lanes: readonly Lane[], near_lane: 1 | 2): Set<ItemName> {
+    const near_item = lanes[near_lane - 1]?.ingredient_name;
+    if (near_item === undefined || !items.has(near_item)) {
+        return items;
+    }
+    return new Set([near_item, ...items]);
+}
 
 export class InserterFactory {
     constructor(
@@ -117,6 +129,12 @@ export class InserterFactory {
                 assert(sink_consumed_items.has(it), `Inserter filter ${it} is not a valid item for sink entity ${sink.id} of type ${sink.type}`);
             })
             filtered_items = new Set(config.filters);
+        }
+
+        if (source.type === EntityType.BELT && source.near_lane !== undefined) {
+            const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(source.id));
+            assertIsBelt(belt);
+            filtered_items = nearestLaneFirst(filtered_items, belt.lanes, source.near_lane);
         }
 
         // Calculate belt drop metadata if sink is a belt

@@ -6,6 +6,8 @@ export default defineConfig({
     exclude:[
       ...configDefaults.exclude,
       'dist/*',
+      // sweeps and recordings, and now and then a built copy of the generator with its tests
+      '.scratch/**',
       // the game-backed tests record builds in Factorio and take a while: `npm run test:game` runs them
       '**/*.game.test.ts',
     ],

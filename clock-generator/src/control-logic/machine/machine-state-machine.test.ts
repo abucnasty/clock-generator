@@ -220,7 +220,49 @@ describe("Machine State Machine at the output block", () => {
 
     test("the output block is the overload multiplier times the recipe amount, without productivity", () => {
         const { machine_state } = createRocketFuel(0, 0)
-        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "rocket-fuel", quantity: 11, max_stack_size: 20 })
+        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "rocket-fuel", quantity: 11, max_stack_size: 20, ingredients_blocked_at: 11 })
+    })
+
+    // The cryogenic plant of the advanced circuit scaffold: 61.5 crafting speed, 2 plastic bars a craft, overload
+    // multiplier 73, so an output block of 146 that a stack of 100 never reaches. Recorded in Factorio 2.1.21 on
+    // 2026-10-10 with a full stack of 100 plastic bars in it and the status full_output: the coal inserter took a
+    // hand at 69 coal (and at 53, 61 and 65) and dropped it, and showed waiting for space in the destination at 73,
+    // the insertion limit. The plastic plants of the low density structure and the utility science scaffolds took
+    // coal at a full stack as well (188 and 6 hands in their recordings).
+    test("a machine whose output block is more than a stack takes ingredients with its stack full", () => {
+        const machine_state = MachineState.forMachine(createMachine("plastic-bar", { crafting_speed: 61.5, productivity: 300 }))
+        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "plastic-bar", quantity: 100, max_stack_size: 100, ingredients_blocked_at: 146 })
+        machine_state.inventoryState.setQuantity("plastic-bar", 100)
+        machine_state.inventoryState.setQuantity("coal", 69)
+        expect(MachineState.machineIsOutputBlocked(machine_state)).toBe(false)
+        expect(MachineState.machineInputIsBlocked(machine_state, "coal")).toBe(false)
+        expect(MachineState.takesNothing(machine_state)).toBe(false)
+        machine_state.inventoryState.setQuantity("coal", 73)
+        expect(MachineState.machineInputIsBlocked(machine_state, "coal")).toBe(true)
+        expect(MachineState.takesNothing(machine_state)).toBe(true)
+    })
+
+    test("a machine tells the inserters that wait on it whether it finished a craft in its last tick, and whether its output was at the block then", () => {
+        const { machine_state, state_machine } = createRocketFuel(11, 2)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.outputBlockedAfterLastTick).toBe(true)
+        expect(machine_state.finishedCraftInLastTick).toBe(false)
+        // 7.09 ticks a craft: only the tick the first craft finishes in says so
+        let ticks = 1
+        while (machine_state.craftCount === 0 && ticks < 20) {
+            expect(machine_state.finishedCraftInLastTick).toBe(false)
+            executeControlLogicForTicks(state_machine, 1)
+            ticks += 1
+        }
+        expect(machine_state.craftCount).toBe(1)
+        expect(machine_state.finishedCraftInLastTick).toBe(true)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.finishedCraftInLastTick).toBe(false)
+        // an output inserter takes the products: the machine says so once its own tick is done
+        machine_state.inventoryState.setQuantity("rocket-fuel", 0)
+        expect(machine_state.outputBlockedAfterLastTick).toBe(true)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.outputBlockedAfterLastTick).toBe(false)
     })
 
     // the lowest output the game showed full output at and the highest it showed ingredient shortage at, per recording

@@ -2,6 +2,7 @@ import { ItemName } from "../data";
 import { EntityId, BufferChest } from "../entities";
 import { ChestState } from "./chest-state";
 import { InventoryState, WritableInventoryState } from "./inventory-state";
+import { SupplyGate } from "./supply-gate";
 
 /**
  * State class for buffer chest entities.
@@ -20,6 +21,12 @@ export class BufferChestState implements ChestState {
         );
     }
     public static clone = clone;
+
+    /**
+     * Set to refuse its item on a chest the build's output ends in, for a run in which the output is not taken away
+     * (see SupplyGate): the chest then has no room, whatever it holds. Nothing is refused in any other run.
+     */
+    public readonly supply = new SupplyGate();
 
     constructor(
         public readonly entity_id: EntityId,
@@ -48,7 +55,7 @@ export class BufferChestState implements ChestState {
      * Get the available space remaining in the chest.
      */
     public getAvailableSpace(): number {
-        return this.getCapacity() - this.getCurrentQuantity();
+        return this.supply.refused.size > 0 ? 0 : this.getCapacity() - this.getCurrentQuantity();
     }
 
     /**

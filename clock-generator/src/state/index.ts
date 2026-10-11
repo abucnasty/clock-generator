@@ -10,4 +10,6 @@ export * from "./inventory-state";
 export * from "./machine-state";
 export * from "./progress-state";
 export * from "./drill-state";
-export * from "./status-category";export * from "./factorio-entity-state";
+export * from "./status-category";
+export * from "./supply-gate";
+export * from "./factorio-entity-state";

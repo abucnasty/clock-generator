@@ -49,7 +49,7 @@ interface EnableControlModalProps {
 
 const MODE_DESCRIPTIONS: Record<EnableControlMode, string> = {
     [EnableControlMode.AUTO]: 'Use automatic control logic (default behavior)',
-    [EnableControlMode.ALWAYS]: 'Entity is always enabled',
+    [EnableControlMode.ALWAYS]: 'Entity is always enabled, with no combinator in the blueprint',
     [EnableControlMode.NEVER]: 'Entity is never enabled',
     [EnableControlMode.CLOCKED]: 'Entity is enabled during specified tick ranges',
     [EnableControlMode.CONDITIONAL]: 'Entity is enabled based on custom conditions',

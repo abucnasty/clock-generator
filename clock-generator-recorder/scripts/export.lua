@@ -41,7 +41,9 @@ local function resolve_target_id(target, result)
     
     return {
         type = target.type,
-        id = target_id
+        id = target_id,
+        -- of a belt an inserter picks up from: the lane nearest to the inserter
+        near_lane = target.near_lane
     }
 end
 

@@ -1,5 +1,7 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
+import type { BackpressureLossVerdict } from "./backpressure-loss";
+import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
 
@@ -263,6 +265,48 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
     };
 }
 
+/** Inserters enabled for at least this share of the long run are named as (nearly) always enabled */
+const MOSTLY_ENABLED_SHARE = 0.8;
+
+/** How often the machines wake the inserters under this clock (goal 2 of GOALS.md), and which inserters most */
+function wakeUpsInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+    const wake_ups = result.stability_check.as_built?.wake_ups;
+    if (wake_ups === undefined || wake_ups.inserters.length === 0) {
+        return null;
+    }
+    const percent = (share: number) => `${round(share * 100)}%`;
+    const rows = wake_ups.inserters.map(it => {
+        const entity = entities.find(entity => entity.entity_id === it.inserter_id);
+        const ends = entity?.source && entity.sink ? `${entity.source.label} to ${entity.sink.label}` : "";
+        return { ...it, label: entity?.label ?? it.inserter_id, ends };
+    }).sort((a, b) => b.wake_ups_per_minute - a.wake_ups_per_minute);
+    const most = rows[0];
+    const mostly_enabled = rows.filter(it => it.enabled_share >= MOSTLY_ENABLED_SHARE && it.alarms_per_minute > 0);
+    return {
+        id: "wake-ups",
+        scope: "clock",
+        title: `Machines wake the inserters ${round(wake_ups.wake_ups_per_minute)} times a minute`,
+        what: `In a long run of this clock the machines of one copy of the build woke its inserters ${round(wake_ups.wake_ups_per_minute)} `
+            + `times a minute. ${most.label} is woken most, ${round(most.wake_ups_per_minute)} times a minute: it is enabled `
+            + `${percent(most.enabled_share)} of the time and spends ${percent(most.waiting_share)} of the time waiting.`
+            + (mostly_enabled.length === 0 ? "" : ` Enabled ${percent(MOSTLY_ENABLED_SHARE)} of the time or more: `
+                + `${mostly_enabled.map(it => `${it.label} (${percent(it.enabled_share)})`).join(", ")}.`),
+        why: "An enabled inserter with nothing to move sleeps on the wake-up list of the machine it waits on, and that machine "
+            + "wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a "
+            + "hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug "
+            + "option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+        explanation: "Each wake-up is a check that moves little or nothing, so among clocks that hold the target the one with the "
+            + "fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts "
+            + "of the machine it waits on, whether its windows are long, it is left always enabled in a loop of machines, or "
+            + "the config sets it to always enabled.",
+        table: {
+            columns: ["Inserter", "Between", "Wake-ups a minute", "Machine wakes a minute", "Enabled", "Enabled and waiting"],
+            rows: rows.map(it => [it.label, it.ends, `${round(it.wake_ups_per_minute)}`, `${round(it.alarms_per_minute)}`,
+                percent(it.enabled_share), percent(it.waiting_share)]),
+        },
+    };
+}
+
 /** Why a clock that misses the expected output is listed as unstable */
 function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     const check = result.stability_check;
@@ -288,6 +332,49 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
 }
 
 /** The insights for one potential clock, the ones about the whole build first */
+/** Why a clock that holds its expected output is still not listed as stable (GOALS.md, "Backpressure Loss") */
+export function backpressureLossInsight(verdict: BackpressureLossVerdict, expected_output_items: number): ClockInsight {
+    const what = verdict.broken_by.length > 0
+        ? `This clock moves its ${expected_output_items} items every clock period for as long as nothing runs out and nothing backs up. `
+            + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.`
+        : `The run the losses are tried on did not hold ${expected_output_items} items a clock period with nothing cut, so no loss says `
+            + "anything about this clock.";
+    return {
+        id: "backpressure-loss",
+        scope: "clock",
+        title: "This clock does not survive backpressure loss",
+        what,
+        why: "When an item stops arriving, or the output is not taken away, the machines run dry or fill up. Once it is back, "
+            + "every machine goes on from what it holds then, and the windows of this clock do not bring the build back from "
+            + "there. Each loss is tried in the simulator: "
+            + "cut at four places in the clock period, and for a quarter, a half, three quarters and all of the time the build "
+            + "takes to stop.",
+        explanation: "Such a build has to be restarted by hand after an input ran out or the output backed up. Use a potential "
+            + "clock marked Stable. Where no clock of a build is, the build may not be able to survive a loss whatever the clock, "
+            + "and its clocks are offered for what they are.",
+    };
+}
+
+/** That the build can deadlock whatever its clock is, and which inserters it is about */
+export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): ClockInsight {
+    return {
+        id: "deadlock-risk",
+        scope: "build",
+        title: "This build has a deadlock risk: two inserters bring the same item",
+        what: risks.map(describeSharedItem).join(" "),
+        why: "An inserter that starts picking an item up after the other has already put it in finds the item at its insertion "
+            + "limit by the time its hand is ready, and holds the hand until the machine has used enough for it to drop. While it "
+            + "holds it, it takes nothing else off the belt. If the machine then runs out of what only that inserter brings while "
+            + "the shared item is still at its limit, the machine cannot craft, the item never goes down, and the inserter never "
+            + "lets go.",
+        explanation: "The build then stops for good, whatever the clock does afterwards, and has to be cleared by hand. Whether it "
+            + "happens depends on the timing of the two inserters against each other. The trials for backpressure loss do not see "
+            + "it, so on this build they do not decide which clock is selected: the clocks that hold the target rate are ranked "
+            + "by their wake-ups. A build is free of the risk when each item is brought to a machine by one inserter only, or "
+            + "when an inserter that shares an item brings nothing else.",
+    };
+}
+
 export function clockInsights(result: BlueprintGenerationResult, is_stable: boolean): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
@@ -300,6 +387,7 @@ export function clockInsights(result: BlueprintGenerationResult, is_stable: bool
         outputHandInsight(result, entities),
         is_stable ? null : unstableInsight(result),
         is_stable ? planVersusClockInsight(result) : null,
+        wakeUpsInsight(result, entities),
     ];
     return insights.filter((it): it is ClockInsight => it !== null);
 }
