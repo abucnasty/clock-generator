@@ -245,11 +245,18 @@ Open:
 The build of [issue 98](https://github.com/abucnasty/clock-generator/issues/98), 240 a second over three copies. The
 sample is the copy whose plastic plant is reached by 4 beacons (crafting speed 61.5), as two of the three copies of
 the design are; the third has 5 (68.875), which is what the config attached to the issue says. The whole design is
-kept as `advanced-circuit-scaffold-full-design.txt`. Until 2026-10-10 the sample was an older state of the build with
-a target of 230 a second, for which no clock holds. That one is kept as a second sample, `advanced-circuit-230.json`
-(`ADVANCED_CIRCUIT_230`), with the subtick clock that was exported for it then: a build the generator cannot clock,
-and one whose clock period is not a whole number of ticks. The nearest of its clocks makes 217.3 of 230 a second on
-a clock rounded to 550 ticks. It has no scaffold of one copy.
+kept as `advanced-circuit-scaffold-full-design.txt`. Until 2026-10-10 the sample had a
+target of 230 a second, for which no clock holds.
+
+That one is kept as a second sample, `advanced-circuit-230.json` (`ADVANCED_CIRCUIT_230`), with the subtick clock
+that was exported for it then. It is the same build as the one at 240 and uses the same scaffold: the same five
+machines, nine inserters and three belts, numbered differently. Its config differs in three things only: the target
+rate, the coal inserter set to always enabled, and `ignored_lcm_ingredients` for coal. So the same machines hold 240
+a second under a stable clock, and no clock holds 230: the nearest makes 217.3 on a clock rounded to 550 ticks. At
+230 the clock period is not a whole number of ticks (550.957), and that is where the gap is: in planning a clock
+whose period is not whole, not in the build. It is not traced on this branch
+([issue 102](https://github.com/abucnasty/clock-generator/issues/102)). It can be recorded with the existing scaffold
+(`CONFIG=` on `scripts/record-clock.js`).
 
 Recorded on 2026-10-10, 36,000 ticks each, wake-ups a minute for one copy:
 
