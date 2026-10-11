@@ -21,7 +21,7 @@ describe("generateClockForConfig", () => {
             const generated = generateClockAlternatives(config);
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-        }, 120_000);
+        });
 
         it("selects the full-hand subtick clock, which holds the target of 45 a second", () => {
             expect(selected.label).toBe("Full-hand output swings: 1 output swing per cycle, subtick clock");

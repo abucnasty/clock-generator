@@ -42,6 +42,6 @@ describe("generateClockForConfig", () => {
             expect(five_swings.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
             expect(alternatives[selected_index].id).toBe("swings-2");
             expect(alternatives[selected_index].is_stable).toBe(true);
-        }, 240_000);
+        });
     });
 });

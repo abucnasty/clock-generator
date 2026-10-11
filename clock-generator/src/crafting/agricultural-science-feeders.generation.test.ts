@@ -30,7 +30,7 @@ describe("generateClockForConfig", () => {
             const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
             expect(Date.now() - started).toBeLessThan(60_000);
             expect(result.stability_check.is_stable).toBe(true);
-        }, 120_000);
+        });
 
         it("plans the nutrient inserters 30.652 hands needed per 480 ticks on every clock, 61.304 per 960 on the 2-swing clock", () => {
             for (const [swings, period] of [[5, 480], [1, 480], [2, 960]] as const) {
@@ -43,7 +43,7 @@ describe("generateClockForConfig", () => {
                 const output = Array.from(plan.entity_transfer_map.values()).find(it => it.entity.entity_id.id === "inserter:12")!;
                 expect(output.needed_transfer_count).toBeUndefined();
             }
-        }, 120_000);
+        });
 
         it("keeps the feeders always enabled where the clock with their windows does not pass, as without the rule", () => {
             // egg biochambers at speed 80 and hands of 12 into the science biochamber: with the windows the long run comes up short
@@ -57,7 +57,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).not.toContain(id);
             }
-        }, 120_000);
+        });
 
         it("does not clock the feeders when the as-built check is off: nothing would have run them", () => {
             const result = generateClockForConfig(five_swings(sample), { verify_as_built: false, logger: quiet });
@@ -95,7 +95,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
             }
-        }, 120_000);
+        });
 
         it("takes feeder windows on the prefer-planned path of the derive flow too", () => {
             const config: Config = { ...sample, overrides: { ...sample.overrides, derive_clock_windows: true } };
@@ -105,7 +105,7 @@ describe("generateClockForConfig", () => {
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
             }
-        }, 180_000);
+        });
     });
 
     describe("the pieces of the output feeder rule", () => {

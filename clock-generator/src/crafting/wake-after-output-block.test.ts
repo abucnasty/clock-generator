@@ -86,7 +86,7 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
         config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
         run = simulateClockOnly(config, startingAfter(evenly_spaced, RECORDED_CLOCK_POSITION), PERIOD, PERIODS, quiet,
             { keep_output_buffers: true, warmup_periods: 0, start_stock: recorded_state });
-    }, 120_000);
+    });
 
     // the periods are cut where the recorder cuts them, where the clock wraps: the run starts at position 60
     const FIRST_WRAP = PERIOD - (RECORDED_CLOCK_POSITION + 1);
@@ -144,5 +144,5 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
         const made = clockFromWindows(config, evenly_spaced, PERIOD, quiet);
         expect(made.stability_check.as_built!.is_stable).toBe(true);
         expect(made.stability_check.as_built!.actual_output_items).toBe(704);
-    }, 120_000);
+    });
 });

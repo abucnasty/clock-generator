@@ -18,7 +18,7 @@ describe("generateClockForConfig", () => {
         beforeAll(async () => {
             sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL);
             ({ alternative, moved, period } = sample);
-        }, 120_000);
+        });
 
         // 16 jelly a hand is 15/4 hands a 32 tick cycle
         it("has a 128 tick period", () => {
@@ -105,7 +105,7 @@ describe("generateClockForConfig", () => {
         beforeAll(async () => {
             sample = await rocketFuelSample(ConfigPaths.GLEBA_ROCKET_FUEL_JELLY_STACK_15);
             ({ alternative, period, jelly_inserter_ids, jellynut_inserter_id } = sample);
-        }, 60_000);
+        });
 
         it("sets the jelly inserters to 15 a hand", () => {
             const jelly_inserters = sample.config.inserters.filter(it => it.source.type === "machine" && it.sink.type === "machine");

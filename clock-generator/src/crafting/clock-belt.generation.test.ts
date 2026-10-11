@@ -120,7 +120,7 @@ describe("the belt a clock is made for", () => {
             const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-        }, 120_000);
+        });
 
         it("makes every clock without the slack, also one that only holds with it", () => {
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "non_moving" })));
@@ -167,7 +167,7 @@ describe("the belt a clock is made for", () => {
             const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
             selected = generated.alternatives[generated.selected_index];
             batched = generated.alternatives.find(a => a.id === "planned-belt-slack")!;
-        }, 240_000);
+        });
 
         it("makes batched swings with room for a hand of fuel, as a clock for a belt that does not move, and it holds the target rate", () => {
             expect(batched.label).toBe("Batched swings: 5 output swings per cycle");
@@ -206,7 +206,7 @@ describe("the belt a clock is made for", () => {
             const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
-        }, 120_000);
+        });
 
         it("makes full-hand output swings from batched swings that move more than the expected output", () => {
             const batched = alternatives.find(a => a.id === "planned-belt-slack")!;
@@ -234,7 +234,7 @@ describe("the belt a clock is made for", () => {
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION);
             ({ alternatives } = generateClockAlternatives(config, { logger: quiet }));
-        }, 120_000);
+        });
 
         it("names every clock a non-moving belt clock, the subtick one and the rounded one", () => {
             expect(alternatives.length).toBeGreaterThan(0);

@@ -46,7 +46,7 @@ describe("a clock built from windows that are given", () => {
         const sample = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT);
         config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
         result = clockFromWindows(config, tightened, PERIOD, quiet);
-    }, 120_000);
+    });
 
     it("builds the windows as they are", () => {
         expect(result.simulation_duration.ticks).toBe(PERIOD);

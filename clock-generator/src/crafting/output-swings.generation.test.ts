@@ -177,7 +177,7 @@ describe("generateClockForConfig", () => {
 
                 beforeAll(() => {
                     ({ alternatives } = generateClockAlternatives(config));
-                }, 60_000);
+                });
 
                 it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
                     expect(alternatives.find(a => a.id === id)?.is_stable).toBe(true);
@@ -220,7 +220,7 @@ describe("generateClockForConfig", () => {
 
         beforeAll(() => {
             ({ alternatives } = generateClockAlternatives(config));
-        }, 60_000);
+        });
 
         // enable ranges as the inserters see them (decider windows shifted by the circuit latency)
         const clocked = (windows: Record<number, [number, number][]>) => generateClockForConfig({

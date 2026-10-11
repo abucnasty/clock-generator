@@ -164,7 +164,7 @@ describe("what the generator calls stable", () => {
         const generated = generateClockAlternatives(config, { logger: quiet });
         alternatives = generated.alternatives;
         selected = alternatives[generated.selected_index];
-    }, 120_000);
+    });
 
     it("lets a loss last until the build has stopped, 200 periods at most, and gives the build 40 periods to be back", () => {
         expect(MAX_LOSS_PERIODS).toBe(200);
