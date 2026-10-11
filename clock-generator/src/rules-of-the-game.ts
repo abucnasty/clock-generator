@@ -23,8 +23,10 @@ export { OutputBlock } from "./entities/machine/output/output-block";
 export { AutomatedInsertionLimit } from "./entities/machine/input/automated-insertion-limit";
 
 /**
- * 3. Mining drill limit (GOALS.md "Constraint Exceptions"): a drill fills a machine past the automated insertion limit.
- * Cases: `rules-of-the-game.test.ts` (stone into a stone furnace).
+ * 3. Mining drill limit (GOALS.md "Constraint Exceptions"): a drill fills a machine past the automated insertion limit,
+ * to the limit + 64, and was observed to stop at 114 items at the least, the stack of stone + 64. The function takes
+ * the stack where the limit is below it, and a craft's amount on top. Cases: `rules-of-the-game.test.ts` pins the
+ * function on the stone brick sample, whose furnaces have a limit above the stack; the 114 has no table yet.
  */
 export { miningDrillMaxInsertion } from "./entities/drill/mining-drill-ext";
 
@@ -69,8 +71,8 @@ export { loopInserters, alwaysEnabledInserters } from "./crafting/sequence/unpla
 export { sharedItemDeadlockRisks } from "./crafting/deadlock-risk";
 
 /**
- * 10. Belt pickup slack (GOALS.md "Wake-up Lists"): the ticks one more full hand takes at one belt stack a tick, 16 at
- * most. A rule of thumb for a moving belt. Cases: `rules-of-the-game.test.ts`.
+ * 10. Belt pickup slack (GOALS.md "Wake-up Lists"): the ticks one more full hand takes at one belt stack a tick (the
+ * code caps them at 16). A rule of thumb for a moving belt. Cases: `rules-of-the-game.test.ts`.
  */
 export { beltPickupSlackTicks } from "./crafting/clock";
 

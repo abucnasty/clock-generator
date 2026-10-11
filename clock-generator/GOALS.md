@@ -93,7 +93,7 @@ Belts and chests are left out of this measure. An inserter that works with a mov
 
 ## The rules of the game, indexed
 
-Each rule of the game below is one named function, and `clock-generator/src/rules-of-the-game.ts` names all twelve: where each lives, the GOALS.md section it comes from, and the test that holds its recorded cases. The recorded figures travel with the code, as numbers in those tests and in the comments next to the functions; no test reads a recording.
+Each rule of the game below is one named function, and `clock-generator/src/rules-of-the-game.ts` names all twelve: where each lives, the GOALS.md section it comes from, and the test that holds its recorded cases. The recorded figures travel with the code, as numbers in those tests and in the comments next to the functions; none of those tests reads a recording.
 
 ## Crafting Constraints
 
@@ -166,7 +166,7 @@ The generator reads the risk off the config alone, with the items of an inserter
 
 ### When a waiting inserter acts
 
-An inserter that waits for space in a machine is asleep, and acts in the tick after the one that wakes it. Two things wake it: the machine finishes a craft, or another inserter takes the machine's products. So when the output inserter takes a machine down from its output block, an inserter that was waiting to put into it takes its first items one tick later. Only when the machine finished a craft in the tick before the products were taken was it awake already, and then it takes them in the tick they are taken. An inserter whose arm comes back in that tick, or whose window opens in it, is not held up. It is defined in `clock-generator/src/control-logic/inserter/transitions/idle-mode-transition-evaluator.ts`.
+An inserter that waits for space in a machine is asleep, and acts in the tick after the one that wakes it. Two things wake it: the machine finishes a craft, or another inserter takes the machine's products. So when the output inserter takes a machine down from its output block, an inserter that was waiting to put into it takes its first items one tick later. Only when the machine finished a craft in the tick before the products were taken was it awake already, and then it takes them in the tick they are taken. An inserter whose arm comes back in that tick, or whose window opens in it, is not held up. It is defined in `clock-generator/src/control-logic/inserter/waiting-inserter.ts`, and applied by the idle transition of an inserter and by the pickup of a hand from a belt.
 
 Recorded in Factorio 2.1.21 on the scaffolds, on inserters that take from a machine or a chest and had waited 6 ticks or more: the first items came a tick later in 5,777 cases of 5,777 where no craft was finished the tick before, and in the same tick in 3,756 of 3,756 where one was. A hand from a belt that stopped part way at the output block goes by the same rule (843 of 843 and 248 of 248). A hand from a belt that had not started lands its first stack a tick after the products are taken either way.
 

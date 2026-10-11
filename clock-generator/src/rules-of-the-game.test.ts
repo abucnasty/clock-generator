@@ -32,7 +32,8 @@ describe("the rules of the game", () => {
     describe("the mining drill limit", () => {
         // GOALS.md: the limit is the automated insertion limit + 64, and in practice the drill stops at a minimum of
         // 114 items, the stack of stone (50) + 64. The function takes the stack where the limit is below it, and leaves
-        // room for the stone a craft takes on top. The stone furnaces of the sample have a limit of 70 for stone.
+        // room for the stone a craft takes on top. This pins the function, not a recorded figure: the stone furnaces of
+        // the sample have a limit of 70 for stone, above the stack, so the 114 is not reached here.
         it("fills a stone furnace to its insertion limit for stone plus 64 and one craft's stone", async () => {
             const registry = await registryOf(ConfigPaths.STONE_BRICKS_DIRECT_INSERT);
             const drill = registry.getAll().filter(Entity.isDrill)[0];
@@ -44,20 +45,15 @@ describe("the rules of the game", () => {
     });
 
     describe("when a waiting inserter acts", () => {
-        // recorded on the scaffolds, on inserters that take from a machine or a chest and had waited 6 ticks or more
-        // for a machine at its output block, at the tick another inserter took its products down
+        // recorded on the scaffolds, at the tick another inserter took the products of a machine at its output block
+        // down: on inserters that take from a machine or a chest and had waited 6 ticks or more, and on hands from a
+        // belt that had stopped part way at the block, which go by the same rule
         it.each([
-            ["no craft was finished the tick before: the first items come a tick later (5,777 cases of 5,777)", false, false],
-            ["a craft was finished the tick before: it had woken the inserter already, the items come in the same tick (3,756 of 3,756)", true, true],
+            ["an inserter takes its first items a tick later when no craft was finished the tick before (5,777 cases of 5,777)", false, false],
+            ["an inserter takes them in the same tick when a craft was finished the tick before, which had woken it already (3,756 of 3,756)", true, true],
+            ["a belt hand stopped at the block goes on a tick later without a craft the tick before (843 hands of 843)", false, false],
+            ["a belt hand stopped at the block goes on in that tick with a craft the tick before (248 of 248)", true, true],
         ])("%s", (_case, finished_craft_in_last_tick, acts_this_tick) => {
-            expect(actsInTheTickTheBlockIsLifted({ outputBlockedAfterLastTick: true, finishedCraftInLastTick: finished_craft_in_last_tick })).toBe(acts_this_tick);
-        });
-
-        // a hand from a belt that stopped part way at the output block goes by the same rule
-        it.each([
-            ["goes on a tick later without a craft the tick before (843 hands of 843)", false, false],
-            ["goes on in that tick with a craft the tick before (248 of 248)", true, true],
-        ])("a belt hand stopped at the block %s", (_case, finished_craft_in_last_tick, acts_this_tick) => {
             expect(actsInTheTickTheBlockIsLifted({ outputBlockedAfterLastTick: true, finishedCraftInLastTick: finished_craft_in_last_tick })).toBe(acts_this_tick);
         });
 
