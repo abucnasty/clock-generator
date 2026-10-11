@@ -8,12 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
-## [0.7.0]
+## [0.7.0] - 2026-10-11
 
 ### Changed
-- Full-hand output swings are no longer ranked above every other clock on a machine with spare speed. Among the clocks that meet the target rate the one with the fewest wake-ups is selected, as for every other kind of clock. On the low density structure sample this selects batched swings with 6 output swings per cycle, 703 wake-ups a minute where full-hand output swings has 1,528; it holds its rate in the game.
-- Where no clock meets the target rate and two are equally near it, the one that holds its expected output from a clean start is selected before one that does not. On the metallurgic science sample this keeps the full-hand subtick clock, which does not get back from a loss of tungsten ore, ahead of the 1-swing clock at the same rate, which drifts.
-- The searches for a clock's windows (observed windows, uneven output swings, shifted swings, full-hand output swings) try their candidates the same way: a quick check from a dozen clock starts, then a candidate whose neighbours pass too before one whose do not, confirmed from 112 clock starts and the long run. Some clocks change: shifted swings move less far on several builds and are selected with fewer wake-ups on chemical science (with engines direct-inserted too) and shared production science; advanced circuit at 230 a second gets a stable full-hand clock where no clock held; metallurgic science and production science gain observed-windows clocks; no selected clock has more wake-ups than before.
+- Full-hand output swings are no longer ranked ahead of every other clock on a machine with spare speed. Among the stable clocks the one with the fewest wake-ups is selected, as for every other kind of clock.
+- When no clock holds the target rate and two are equally near it, the one that holds its expected output from a clean start is selected before one that drifts.
+- Observed windows, uneven output swings, shifted swings and full-hand output swings are now searched for in the same way: each candidate is tried from a dozen clock starts, one whose neighbours also pass is preferred, and the pick is confirmed with the long run. Some builds get a clock with fewer wake-ups, and some get a stable clock where none held before.
+- Generating takes about 15% longer, for the more thorough search.
 
 ## [0.6.1] - 2026-10-11
 
