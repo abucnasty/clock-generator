@@ -1,5 +1,5 @@
 import assert from "../../../common/assert";
-import { Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
 import { EntityTransferCountMap, outputInsertersOf } from "../cycle/swing-counts";
 import { AlwaysEnabledControl, EnableControl, ResettableRegistry, TickProvider } from "../../../control-logic";
 import { assertIsInserterState, assertIsMachineState, BeltState, ChestState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -625,67 +625,9 @@ export class EnableControlFactory {
             )
         }
 
-        // For PREVENT_DESYNCS, use clocked control only (no inventory check)
-        if (mode === SimulationMode.PREVENT_DESYNCS) {
-            return clocked_control;
-        }
-
         return clocked_control;
     }
 
-    /**
-     * Computes enable ranges across all sub-cycles for fractional swings.
-     * Each sub-cycle may have a different number of swings based on the distribution.
-     * 
-     * For NORMAL mode, the ranges are extended to cover the entire sub-cycle because
-     * the sourceIsGreaterThanStackSize check will prevent actual swings until items
-     * are available. This gives maximum flexibility for when swings can occur.
-     */
-    private computeEnableRangesFromMachineWithFractionalSwings(
-        inserter_state: InserterState,
-        source_state: MachineState,
-    ): OpenRange[] {
-        const swing_distribution = this.crafting_cycle_plan.swing_distribution;
-        const cycle_multiplier = this.crafting_cycle_plan.cycle_multiplier;
-
-        if (!swing_distribution || !cycle_multiplier) {
-            // Fallback to single range if no distribution available
-            return [this.computeEnableRangeFromMachine(inserter_state, source_state)];
-        }
-
-        const entity_id = inserter_state.inserter.entity_id.id;
-        const distribution = swing_distribution.get(entity_id);
-
-        if (!distribution) {
-            // Fallback to single range if entity not in distribution map
-            return [this.computeEnableRangeFromMachine(inserter_state, source_state)];
-        }
-
-        const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
-        const ranges: OpenRange[] = [];
-
-        // For fractional swings, we extend each range to cover the full sub-cycle.
-        // The sourceIsGreaterThanStackSize condition (in NORMAL mode) will prevent
-        // swings until items are available, so we can safely open the window for
-        // the entire sub-cycle. This ensures we don't miss any swing opportunities.
-
-        // Generate enable ranges for each sub-cycle based on the swing distribution
-        for (let subcycle_index = 0; subcycle_index < cycle_multiplier; subcycle_index++) {
-            const swings_in_subcycle = distribution.swings_per_subcycle[subcycle_index];
-
-            if (swings_in_subcycle === 0) {
-                continue; // No swings in this sub-cycle
-            }
-
-            const subcycle_offset = subcycle_index * base_cycle_duration;
-            const subcycle_end = subcycle_offset + base_cycle_duration;
-
-            // Cover the entire sub-cycle - let the inventory check determine actual swing timing
-            ranges.push(OpenRange.from(subcycle_offset, subcycle_end));
-        }
-
-        return ranges.length > 0 ? ranges : [this.computeEnableRangeFromMachine(inserter_state, source_state)];
-    }
 
     /**
      * Sets the enable range per crafting cycle to be after the output inserter for the sink machine has completed its swings

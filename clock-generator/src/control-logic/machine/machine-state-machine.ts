@@ -1,10 +1,9 @@
 import assert from "../../common/assert"
 import { EntityId } from "../../entities";
 import { EntityState, MachineState, MachineStatus, ReadableEntityStateRegistry } from "../../state";
-import { TickProvider } from "../current-tick-provider";
 import { ModePlugin, ModeStateMachine, ModeTransitionEvaluator } from "../mode";
 import { MachineIngredientShortageMode, MachineMode, MachineNoFuelMode, MachineOutputFullMode, MachineWorkingMode } from "./modes";
-import { CraftEventListener, CraftEventListenerPlugin, MachineStatusPlugin } from "./plugins";
+import { MachineStatusPlugin } from "./plugins";
 import { IngredientShortageModeTransitionEvaluator } from "./transitions/ingredient-shortage-mode-evaluator";
 import { NoFuelModeTransitionEvaluator } from "./transitions/no-fuel-mode-evaluator";
 import { OutputFullModeTransitionEvaluator } from "./transitions/output-full-mode-evaluator";
@@ -22,10 +21,6 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
         plugins: ModePlugin<MachineMode>[] = [],
     ) {
         super(initialMode, graph, plugins);
-    }
-
-    addCraftEventPlugin(tick_provider: TickProvider, onCraftEvent: CraftEventListener): void {
-        this.addPlugin(new CraftEventListenerPlugin(this.machine_state, tick_provider, onCraftEvent));
     }
 }
 
