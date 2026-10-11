@@ -142,7 +142,7 @@ export function fullHandOutputWindows(
 
     type Candidate = { offset: number; length: number; output_full: number; slow: number };
     const recovers = (candidate_windows: Map<string, OpenRange[]>) => FULL_HAND_RECOVERY_PERIODS.every(warmup_periods =>
-        runClockOnBuild(config, candidate_windows, period, logger, { keep_output_buffers: true, warmup_periods }).stability_check.is_stable);
+        runClockOnBuild(config, candidate_windows, period, logger, { keep_output_buffers: true, warmup_periods }).stability_check.holds);
     // shortest spare first: longer windows let more grabs wait for items
     const recoveringTiming = (candidate: Candidate, label: string) => {
         if (recovers(build(candidate.offset, candidate.length))) {
@@ -154,7 +154,7 @@ export function fullHandOutputWindows(
                 const spare = { every, ticks };
                 const spare_windows = build(candidate.offset, candidate.length, spare);
                 const result = runClockOnBuild(config, spare_windows, period, logger);
-                if (result.stability_check.is_stable && recovers(spare_windows)) {
+                if (result.stability_check.holds && recovers(spare_windows)) {
                     return { spare, output_full: outputFullTicks(result), slow: slowPickups(result) };
                 }
             }
@@ -175,13 +175,13 @@ export function fullHandOutputWindows(
         const candidate_windows = build(candidate.offset, candidate.length, timing.spare);
         const quick = runAsBuiltCheck(config, candidate_windows, period, logger, AS_BUILT_START_PHASES,
             (n, of) => report?.(`Checking full-hand output (${label}), clock start ${n}/${of}`)).check;
-        if (!quick.is_stable) {
+        if (!quick.holds) {
             return null;
         }
         const full = runAsBuiltCheck(config, candidate_windows, period, logger, FULL_CHECK_START_PHASES,
             (n, of) => report?.(`Confirming full-hand output (${label}), clock start ${n}/${of}`));
-        logger.log(`Full-hand output: ${label}, ${timing.output_full} output-full ticks, ${timing.slow} slow pickups, stable=${full.check.is_stable}`);
-        return full.check.is_stable ? { windows: candidate_windows, ...full } : null;
+        logger.log(`Full-hand output: ${label}, ${timing.output_full} output-full ticks, ${timing.slow} slow pickups, stable=${full.check.holds}`);
+        return full.check.holds ? { windows: candidate_windows, ...full } : null;
     };
 
     // shortest windows first; a timing with no output-full ticks and no slow pickups cannot be beaten, so try it at once
@@ -198,7 +198,7 @@ export function fullHandOutputWindows(
         for (let offset = 0; offset < spacing; offset += FULL_HAND_OFFSET_STEP) {
             report?.(`Searching full-hand output timing (${++searched}/${total})`);
             const result = runClockOnBuild(config, build(offset, length), period, logger);
-            if (!result.stability_check.is_stable) {
+            if (!result.stability_check.holds) {
                 continue;
             }
             const candidate = { offset, length, output_full: outputFullTicks(result), slow: slowPickups(result) };

@@ -29,7 +29,7 @@ describe("generateClockForConfig", () => {
             const started = Date.now();
             const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
             expect(Date.now() - started).toBeLessThan(60_000);
-            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.holds).toBe(true);
         });
 
         it("plans the nutrient inserters 30.652 hands needed per 480 ticks on every clock, 61.304 per 960 on the 2-swing clock", () => {
@@ -53,7 +53,7 @@ describe("generateClockForConfig", () => {
                 inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
             };
             const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
-            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.holds).toBe(true);
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).not.toContain(id);
             }
@@ -68,7 +68,7 @@ describe("generateClockForConfig", () => {
 
         it("clocks them when the as-built check is on and passes with them", () => {
             const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, logger: quiet });
-            expect(result.stability_check.as_built?.is_stable).toBe(true);
+            expect(result.stability_check.as_built?.holds).toBe(true);
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
             }
@@ -90,7 +90,7 @@ describe("generateClockForConfig", () => {
                 inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
             };
             const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
-            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.holds).toBe(true);
             expect(result.output_feeders?.inserter_ids).toEqual(feeders);
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);

@@ -65,8 +65,8 @@ export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
 }
 
 export interface AsBuiltStabilityCheck {
-    /** Whether the blueprint's clock windows alone, without the simulator's inventory conditions, produce the expected output from every start phase tried */
-    is_stable: boolean;
+    /** The clock windows alone, without the plan's inventory conditions, move the expected output from every start phase tried and over the long run */
+    holds: boolean;
     /** Output of the first failing start phase, or of the unshifted clock when all pass */
     actual_output_items: number;
     /** Number of clock start phases simulated (stops at the first failure) */
@@ -284,7 +284,7 @@ export function runAsBuiltCheck(
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
     const result = runClockOnBuild(config, decider_windows, period, logger);
     const check: AsBuiltStabilityCheck = {
-        is_stable: result.stability_check.is_stable,
+        holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
         start_phases_checked: 1,
         repeat_periods: result.stability_check.repeat_periods,
@@ -292,7 +292,7 @@ export function runAsBuiltCheck(
     };
     report?.(1, total);
     let stock: StockRecording | undefined;
-    if (check.is_stable) {
+    if (check.holds) {
         const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, result, logger, long_run_ticks);
         stock = long_run?.stock;
         if (stock) {
@@ -300,11 +300,11 @@ export function runAsBuiltCheck(
             check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
         }
         if (long_run && !long_run.keeps_up) {
-            check.is_stable = false;
+            check.holds = false;
             check.actual_output_items = long_run.output_items_per_period;
         }
     }
-    if (!check.is_stable) {
+    if (!check.holds) {
         check.failed_start_offset = 0;
         return { result, check, stock };
     }
@@ -315,8 +315,8 @@ export function runAsBuiltCheck(
         const shifted = runClockOnBuild(config, rotated, period, logger, { factorio_states: false });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
-        if (!shifted.stability_check.is_stable) {
-            check.is_stable = false;
+        if (!shifted.stability_check.holds) {
+            check.holds = false;
             check.actual_output_items = shifted.stability_check.actual_output_items;
             check.failed_start_offset = offset;
             check.repeat_periods = shifted.stability_check.repeat_periods;
@@ -345,12 +345,12 @@ export function beltPickupSlackHelps(
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const with_slack = runAsBuiltCheck(base_config, withBeltPickupSlack(windows, slack, period), period, logger).check;
-    if (with_slack.is_stable) {
+    if (with_slack.holds) {
         return true;
     }
     const without_slack = runAsBuiltCheck(base_config, windows, period, logger).check;
     logger.log(`Belt pickup slack: clock-only actual with=${with_slack.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
-    if (without_slack.is_stable) {
+    if (without_slack.holds) {
         return false;
     }
     return Math.abs(with_slack.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);

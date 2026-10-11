@@ -128,7 +128,7 @@ describe("generateClockForConfig", () => {
 
         it("planned windows fail the clock-only check", () => {
             const result = generateClockForConfig(config, { verify_as_built: true });
-            expect(result.stability_check.as_built?.is_stable).toBe(false);
+            expect(result.stability_check.as_built?.holds).toBe(false);
         });
 
         it("no derived windows pass the clock-only check from every start", () => {
@@ -138,7 +138,7 @@ describe("generateClockForConfig", () => {
                 overrides: { ...config.overrides, derive_clock_windows: true },
             }, { logger: { ...quiet, log: message => logs.push(message) } });
             expect(result.derived_clock_windows?.succeeded).toBe(false);
-            expect(result.stability_check.is_stable).toBe(false);
+            expect(result.stability_check.holds).toBe(false);
             // from the 12 starts of the first check they hold the 96, and one of the starts of the full check makes 92
             expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding 2 -> actual=96 stable=true \(12 start phases\)/.test(line))).toBe(true);
             expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding \d+ full check -> actual=92 stable=false/.test(line))).toBe(true);

@@ -99,7 +99,7 @@ export function deriveWithOutputWindows(
     const derivation = runClockOnBuild(base_config, fixed_windows, period, logger);
     logger.log(`Derived clock windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
     const even_output_windows = evenlySpacedOutputWindows(output_windows, derivation, period);
-    if (!derivation.stability_check.is_stable) {
+    if (!derivation.stability_check.holds) {
         return { windows: null, end_padding_ticks: null, verification: derivation, as_built: null, even_output_windows };
     }
 
@@ -129,22 +129,22 @@ export function deriveWithOutputWindows(
         const windows = withBeltPickupSlack(padded, belt_pickup_slack, period);
         const { result, check } = runAsBuiltCheck(base_config, windows, period, logger, AS_BUILT_START_PHASES,
             (n, total) => report?.(`Trying ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`));
-        logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${check.actual_output_items} stable=${check.is_stable} (${check.start_phases_checked} start phases)`);
+        logger.log(`Derived clock windows (${label}): end padding ${padding} -> actual=${check.actual_output_items} stable=${check.holds} (${check.start_phases_checked} start phases)`);
         attempts.push({ padding, result, check, windows });
 
         const previous = attempts[attempts.length - 2];
-        if (previous?.check.is_stable && check.is_stable) {
+        if (previous?.check.holds && check.holds) {
             if (!confirm) {
                 return { windows, end_padding_ticks: padding, verification: result, as_built: check, even_output_windows };
             }
             // failing start phases can be a narrow band the quick check skips over
             const full = runAsBuiltCheck(base_config, windows, period, logger, FULL_CHECK_START_PHASES,
                 (n, total) => report?.(`Confirming ${padding} tick${padding === 1 ? "" : "s"} of padding (${label} windows), clock start ${n}/${total}`)).check;
-            logger.log(`Derived clock windows (${label}): end padding ${padding} full check -> actual=${full.actual_output_items} stable=${full.is_stable} (${full.start_phases_checked} start phases)`);
-            if (full.is_stable) {
+            logger.log(`Derived clock windows (${label}): end padding ${padding} full check -> actual=${full.actual_output_items} stable=${full.holds} (${full.start_phases_checked} start phases)`);
+            if (full.holds) {
                 return { windows, end_padding_ticks: padding, verification: result, as_built: full, even_output_windows };
             }
-            check.is_stable = false;
+            check.holds = false;
             check.actual_output_items = full.actual_output_items;
             check.failed_start_offset = full.failed_start_offset;
             check.repeat_periods = full.repeat_periods;

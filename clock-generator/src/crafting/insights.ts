@@ -375,18 +375,18 @@ export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): C
     };
 }
 
-export function clockInsights(result: BlueprintGenerationResult, is_stable: boolean): ClockInsight[] {
+export function clockInsights(result: BlueprintGenerationResult, holds: boolean): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     // an inserter that never moved in one run is only listed in the other
     const entities = [...run.entities, ...result.serializable_state_transition_history.entities];
     const insights: (ClockInsight | null)[] = [
         loopingRecipeInsight(result, entities),
-        is_stable ? spareTimeInsight(result, run) : null,
+        holds ? spareTimeInsight(result, run) : null,
         insertionLimitsInsight(result, entities),
         outputHandInsight(result, entities),
-        is_stable ? null : unstableInsight(result),
-        is_stable ? planVersusClockInsight(result) : null,
+        holds ? null : unstableInsight(result),
+        holds ? planVersusClockInsight(result) : null,
         wakeUpsInsight(result, entities),
     ];
     return insights.filter((it): it is ClockInsight => it !== null);

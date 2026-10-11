@@ -134,8 +134,8 @@ export function deriveUnevenOutputClockWindows(
     for (const { candidate, derived } of ranked) {
         const full = runAsBuiltCheck(base_config, derived.windows!, period, logger, FULL_CHECK_START_PHASES,
             (n, total) => report?.(`Confirming output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, clock start ${n}/${total}`));
-        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks full check -> stable=${full.check.is_stable}`);
-        if (full.check.is_stable) {
+        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks full check -> stable=${full.check.holds}`);
+        if (full.check.holds) {
             return {
                 windows: derived.windows,
                 end_padding_ticks: derived.end_padding_ticks,
@@ -145,7 +145,7 @@ export function deriveUnevenOutputClockWindows(
                     swing: candidate.window_index + 1,
                     shift_ticks: candidate.shift_ticks,
                     shifts_checked: checkedShiftRows(candidates.map((it, index) =>
-                        ({ index: it.window_index + 1, shift_ticks: it.shift_ticks, is_stable: passes.has(index) }))),
+                        ({ index: it.window_index + 1, shift_ticks: it.shift_ticks, holds: passes.has(index) }))),
                 },
             };
         }

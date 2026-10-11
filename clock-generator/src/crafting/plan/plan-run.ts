@@ -113,8 +113,8 @@ export interface ClockOnlyRun {
 
 
 export interface SimulationStabilityCheck {
-    /** Whether the actual output items are within tolerance of the expected amount (and the as-built check passed, when run) */
-    is_stable: boolean;
+    /** The run moved its expected output, within a hand of tolerance (and the clock-only check held, when one ran) */
+    holds: boolean;
     /** Total items transferred by output inserters during the simulation period */
     actual_output_items: number;
     /** Expected items to be transferred by output inserters based on the crafting cycle plan */
@@ -137,7 +137,7 @@ export interface SwingAttemptResult {
     /** The terminal_swing_count value that was tried */
     terminal_swing_count: number;
     /** Whether this attempt produced stable output */
-    is_stable: boolean;
+    holds: boolean;
     /** Actual items transferred by output inserters */
     actual_output_items: number;
     /** Expected items based on the crafting cycle plan */
@@ -669,7 +669,7 @@ export function runBuild(config: Config, options: RunOptions) {
         || Math.abs(repeat_output_items - total_expected_output_float * repeat_periods) <= LCM_STABILITY_TOLERANCE * repeat_periods;
 
     const stability_check: SimulationStabilityCheck = {
-        is_stable: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0
+        holds: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0
             && repeats_at_expected_output,
         actual_output_items: total_actual_output,
         expected_output_items: total_expected_output,
@@ -677,7 +677,7 @@ export function runBuild(config: Config, options: RunOptions) {
         repeat_periods,
         repeat_output_items,
     };
-    logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.is_stable} (tolerance=${LCM_STABILITY_TOLERANCE})`);
+    logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.holds} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
     let backpressure_loss: LossOutcome | undefined;
     if (options.backpressure_loss) {
@@ -989,7 +989,7 @@ export function generateClockForConfig(
         }
         const fed_run = runAsBuiltCheck(check_config, fed_windows, duration.ticks, logger, start_phases,
             (n, total) => options.on_progress_detail?.(`Checking output feeder windows, clock start ${n}/${total}`), OUTPUT_FEEDER_CHECK_TICKS);
-        const passes_as_before = fed_run.check.is_stable && fed_run.check.failed_start_offset === undefined
+        const passes_as_before = fed_run.check.holds && fed_run.check.failed_start_offset === undefined
             && fed_run.check.start_phases_checked === run.check.start_phases_checked;
         logger.log(`Output feeders: ${passes_as_before ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
         if (!passes_as_before) {
@@ -1008,20 +1008,20 @@ export function generateClockForConfig(
     }
 
     if (config.overrides?.derive_clock_windows) {
-        const planned_stable = stability_check.is_stable;
+        const planned_stable = stability_check.holds;
         const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
         const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
             (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`));
         let planned_check = planned_run.check;
         clock_only_run = clockOnlyRunOf(planned_run.result);
-        if (planned_stable && planned_check.is_stable) {
+        if (planned_stable && planned_check.holds) {
             planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`)).check;
         }
-        logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.is_stable} (${planned_check.start_phases_checked} start phases)`);
+        logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
         // the feeders of the output machine are part of the planned windows, kept or dropped here as without derivation
         const plannedWithFeeders = () => {
-            const fed = planned_stable && planned_check.is_stable
+            const fed = planned_stable && planned_check.holds
                 ? withOutputFeeders(non_deriving_config, { check: planned_check, stock: planned_run.stock },
                     planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES)
                 : null;
@@ -1030,7 +1030,7 @@ export function generateClockForConfig(
                 clock_only_run = clockOnlyRunOf(fed.result);
             }
         };
-        if (planned_stable && planned_check.is_stable && (options.derive_mode ?? "prefer_planned") === "prefer_planned") {
+        if (planned_stable && planned_check.holds && (options.derive_mode ?? "prefer_planned") === "prefer_planned") {
             // planned windows keep the plan's batched swings, which derived windows would break into per-craft swings
             plannedWithFeeders();
             stability_check.as_built = planned_check;
@@ -1055,7 +1055,7 @@ export function generateClockForConfig(
             moved_output_swing: uneven?.moved_output_swing ?? undefined,
         };
         stability_check.as_built = derived.as_built ?? undefined;
-        stability_check.is_stable = stability_check.is_stable && derived.windows !== null;
+        stability_check.holds = stability_check.holds && derived.windows !== null;
 
         if (derived.windows !== null && derived.verification !== null) {
             const full_hand = fullHandTransferWindows(non_deriving_config, derived.windows, derived.verification,
@@ -1093,7 +1093,7 @@ export function generateClockForConfig(
         logger.log("Derived clock windows: no padding passed the as-built check; falling back to the planned windows.");
         plannedWithFeeders();
         stability_check.as_built = planned_check;
-        stability_check.is_stable = planned_stable && planned_check.is_stable;
+        stability_check.holds = planned_stable && planned_check.holds;
         return {
             ...buildResult(),
             derived_clock_windows: report,
@@ -1104,13 +1104,13 @@ export function generateClockForConfig(
         const as_built_run = runAsBuiltCheck(config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
             (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`));
         let kept_run = as_built_run;
-        if (stability_check.is_stable && as_built_run.check.is_stable) {
+        if (stability_check.holds && as_built_run.check.holds) {
             kept_run = withOutputFeeders(config, as_built_run, AS_BUILT_START_PHASES) ?? as_built_run;
         }
         stability_check.as_built = kept_run.check;
         clock_only_run = clockOnlyRunOf(kept_run.result);
-        stability_check.is_stable = stability_check.is_stable && stability_check.as_built.is_stable;
-        logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.is_stable}`);
+        stability_check.holds = stability_check.holds && stability_check.as_built.holds;
+        logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
 
     return buildResult();
@@ -1648,7 +1648,7 @@ export function generateClockWithSwingBackoff(
 
     const swing_count_forced = config.overrides?.terminal_swing_count !== undefined;
 
-    if (initial_result.stability_check.is_stable || swing_count_forced || initial_swing_count <= 1) {
+    if (initial_result.stability_check.holds || swing_count_forced || initial_swing_count <= 1) {
         return {
             ...initial_result,
             swing_backoff_report: {
@@ -1656,11 +1656,11 @@ export function generateClockWithSwingBackoff(
                 initial_terminal_swing_count: initial_swing_count,
                 initial_attempt: {
                     terminal_swing_count: initial_swing_count,
-                    is_stable: initial_result.stability_check.is_stable,
+                    holds: initial_result.stability_check.holds,
                     actual_output_items: initial_result.stability_check.actual_output_items,
                     expected_output_items: initial_result.stability_check.expected_output_items,
                 },
-                stable_terminal_swing_count: initial_result.stability_check.is_stable ? initial_swing_count : null,
+                stable_terminal_swing_count: initial_result.stability_check.holds ? initial_swing_count : null,
                 attempts: [],
             },
         };
@@ -1680,7 +1680,7 @@ export function generateClockWithSwingBackoff(
 
     const initial_attempt: SwingAttemptResult = {
         terminal_swing_count: initial_swing_count,
-        is_stable: false,
+        holds: false,
         actual_output_items: initial_result.stability_check.actual_output_items,
         expected_output_items: initial_result.stability_check.expected_output_items,
     };
@@ -1699,7 +1699,7 @@ export function generateClockWithSwingBackoff(
 
         attempts.push({
             terminal_swing_count: swings,
-            is_stable: attempt_result.stability_check.is_stable,
+            holds: attempt_result.stability_check.holds,
             actual_output_items: attempt_result.stability_check.actual_output_items,
             expected_output_items: attempt_result.stability_check.expected_output_items,
         });
@@ -1707,10 +1707,10 @@ export function generateClockWithSwingBackoff(
         logger.log(
             `swings=${swings}: actual=${attempt_result.stability_check.actual_output_items}, ` +
             `expected=${attempt_result.stability_check.expected_output_items}, ` +
-            `stable=${attempt_result.stability_check.is_stable}`
+            `stable=${attempt_result.stability_check.holds}`
         );
 
-        if (attempt_result.stability_check.is_stable) {
+        if (attempt_result.stability_check.holds) {
             stable_result = attempt_result;
             stable_swing_count = swings;
             break;

@@ -25,7 +25,7 @@ describe("generateClockForConfig", () => {
 
         it.each(["planned-belt-slack", "planned", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
             expect(alternative(id).verdict).toBe("stable");
-            expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
+            expect(alternative(id).result.stability_check.as_built?.holds).toBe(true);
             expect(alternative(id).assessment.items_per_second).toBe(60);
         });
 
@@ -125,7 +125,7 @@ describe("generateClockForConfig", () => {
 
         it.each(["planned-belt-slack", "planned", "fractional", "derived"])("%s is stable as built", (id) => {
             expect(alternative(id).verdict).toBe("stable");
-            expect(alternative(id).result.stability_check.as_built?.is_stable).toBe(true);
+            expect(alternative(id).result.stability_check.as_built?.holds).toBe(true);
             expect(alternative(id).assessment.items_per_second).toBe(60);
         });
 
