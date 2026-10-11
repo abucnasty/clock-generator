@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.7.0]
+
+### Changed
+- Full-hand output swings are no longer ranked above every other clock on a machine with spare speed. Among the clocks that meet the target rate the one with the fewest wake-ups is selected, as for every other kind of clock. On the low density structure sample this selects batched swings with 6 output swings per cycle, 703 wake-ups a minute where full-hand output swings has 1,528; it holds its rate in the game. On the metallurgic science sample, where no clock meets the target rate, the 1-swing subtick clock is selected over the full-hand one at the same rate.
+
 ## [0.6.1] - 2026-10-11
 
 ### Changed
