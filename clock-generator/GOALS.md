@@ -19,7 +19,9 @@ Decided on 2026-10-10, after a clock for the advanced circuit build that makes i
 
 The generator tries every clock that holds its expected output, in the simulator. A loss is one item that stops arriving from the belts and infinity chests of the build, or one output that is no longer taken away. Each loss is cut at four places in the clock period, and at each it lasts a quarter, a half, three quarters and all of the time the build takes to stop. The build has stopped when nothing was moved, crafted or burned for a whole period; a loss ends after 200 periods at the latest. When the item is back the build has 40 periods to be at exactly its expected output again, and has to stay there. The slowest clock of the samples that gets back takes 19. The trials are the same for every build and every clock, and are defined in `clock-generator/src/crafting/backpressure-loss.ts`.
 
-A clock that holds its expected output and does not get back from a loss is not stable. It is listed as a clock with no recovery, with the losses that break it, and it is only selected when no clock of the build survives. On the samples the selection changed for three builds: agricultural science, whose selected clock did not get back from a loss of nutrients; military science, where every clock but the one without belt pickup slack is broken by a loss of coal; and utility science with belts that do not move, whose selected clock did not get back once its packs had not been taken away for a while. No clock of the metallurgic science sample gets back from a loss of tungsten ore, so that build keeps its clocks under that name.
+A clock that holds its expected output and does not get back from a loss is not stable. It is listed as a clock with no recovery, with the losses that break it, and it is only selected when no clock of the build survives. On the samples the selection changed for two builds: agricultural science, whose selected clock did not get back from a loss of nutrients, and military science, where every clock but the one without belt pickup slack is broken by a loss of coal. No clock of the metallurgic science sample gets back from a loss of tungsten ore, so that build keeps its clocks under that name.
+
+One kind of build is left out of this. Where a build has a deadlock risk (see "Two inserters that bring the same item"), its clocks are tried and their verdicts shown, and the verdict does not decide which is selected.
 
 This can cost wake-ups: goal 1 comes first. The clock now selected for agricultural science has 3,950 a minute where the one before had 2,543.
 
@@ -145,6 +147,18 @@ An inserter that takes two items off one belt, one from each lane, takes from th
 Which item comes first decides how an ingredient is split between two inserters that both bring it, and with it whether a clock holds. Under one clock for that build the simulator made 192 of 192 a period with the processing units taken first, where the game, taking the low density structures first, made 96.
 
 The config names the nearest lane with `near_lane` on the belt an inserter picks up from, and the sidecar exports it for an inserter beside a straight piece of belt. Without it the simulator takes the items in the order of the inserter's filters, or of the sink's ingredients, which is a guess. A scaffold test fails when the config and the recorded build disagree on which item comes first, or on the stack size of an inserter.
+
+### Two inserters that bring the same item
+
+When two inserters bring the same item to a machine, one of them can be left holding it. If it starts picking the item up after the other has already put it in, the item is at its insertion limit by the time its hand is ready, and it holds the hand until the machine has used enough for it to drop.
+
+That alone only costs time. It is a deadlock when the inserter that is stuck is also the one that brings another ingredient. While it holds the first item it takes nothing else off the belt. If the machine then runs out of that other ingredient while the first is still at or over its insertion limit, the machine cannot craft, the first item never goes down, and the inserter never lets go. The build stays that way for good, whatever the clock does afterwards.
+
+This is a risk of the build, whatever the items are: a machine with an inserter that brings two items, where another inserter brings one of the same items. Whether it happens is a matter of the timing of the two inserters against each other. This rule comes from my own testing of the game.
+
+Seen on the utility science sample in Factorio 2.1.21 on 2026-10-10, under uneven output swings with belts that do not move: the machine held 16 processing units, 16 low density structures and no flying robot frames, the inserter that brings the frames held 12 low density structures, and the build made 0 of 192 in each of 53 periods. Under batched swings it made 192 in each. The simulator has the deadlock: started in that state it stays in it. None of its checks gets a build into it.
+
+The generator reads the risk off the config alone, with the items of an inserter that has no filters worked out from its belt and its machine (`clock-generator/src/crafting/deadlock-risk.ts`). A build that has it is named as a deadlock risk wherever its clocks are listed, and copying the blueprint of one of its clocks warns which two inserters share which item. On such a build the verdict of the trials for backpressure loss does not decide the selection, since the trials do not see the deadlock: its clocks that hold their expected output are ranked as they were before a clock had to get back from a loss, by their wake-ups.
 
 ### When a waiting inserter acts
 
