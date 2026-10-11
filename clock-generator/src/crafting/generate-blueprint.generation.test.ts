@@ -132,16 +132,17 @@ describe("generateClockForConfig", () => {
         });
 
         it("no derived windows pass the clock-only check from every start", () => {
-            const logs: string[] = [];
             const result = generateClockForConfig({
                 ...config,
                 overrides: { ...config.overrides, derive_clock_windows: true },
-            }, { logger: { ...quiet, log: message => logs.push(message) } });
+            }, { logger: quiet });
             expect(result.derived_clock_windows?.succeeded).toBe(false);
             expect(result.stability_check.holds).toBe(false);
-            // from the 12 starts of the first check they hold the 96, and one of the starts of the full check makes 92
-            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding 2 -> actual=96 stable=true \(12 start phases\)/.test(line))).toBe(true);
-            expect(logs.some(line => /Derived clock windows \(evenly spaced output\): end padding \d+ full check -> actual=92 stable=false/.test(line))).toBe(true);
+            // paddings pass the quick trial from the generator's start and none is confirmed: one of the start phases
+            // of the confirmation makes 92 of 96
+            expect(result.search?.kind).toBe("padding");
+            expect(result.search!.candidates.some(candidate => candidate.holds)).toBe(true);
+            expect(result.search!.picked).toBeNull();
         });
     });
 });
