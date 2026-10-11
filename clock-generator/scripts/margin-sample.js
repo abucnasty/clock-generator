@@ -20,7 +20,7 @@ const holds = (config, clock_windows, period) => {
     const began = Date.now();
     try {
         const check = clockFromWindows(config, clock_windows, period, quiet).stability_check;
-        return { holds: check.as_built?.is_stable ?? check.is_stable, items: check.as_built?.actual_output_items ?? check.actual_output_items, seconds: (Date.now() - began) / 1000 };
+        return { holds: check.as_built?.holds ?? check.holds, items: check.as_built?.actual_output_items ?? check.actual_output_items, seconds: (Date.now() - began) / 1000 };
     } catch (e) {
         return { error: String(e && e.message || e).slice(0, 300), seconds: (Date.now() - began) / 1000 };
     }

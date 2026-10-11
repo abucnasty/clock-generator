@@ -324,10 +324,10 @@ describe("generateClockForConfig", () => {
             it("lists every position tried with whether it passed", () => {
                 const rows = uneven.result.derived_clock_windows!.moved_output_swing!.shifts_checked;
                 expect(rows.map(row => row.index)).toEqual([2]);
-                expect(rows[0].shifts.filter(shift => shift.is_stable).map(shift => shift.shift_ticks))
+                expect(rows[0].shifts.filter(shift => shift.holds).map(shift => shift.shift_ticks))
                     .toEqual([-70, -52, -35, -17, 17, 35, 52, 70]);
                 // 52 works since a machine at its output block crafts the ingredients that reach it, as in game
-                expect(rows[0].shifts.filter(shift => !shift.is_stable).map(shift => shift.shift_ticks))
+                expect(rows[0].shifts.filter(shift => !shift.holds).map(shift => shift.shift_ticks))
                     .toEqual([-105, -87, 87, 105]);
             });
 
@@ -374,10 +374,10 @@ describe("generateClockForConfig", () => {
             it("lists the range of shifts that work, the planned position included", () => {
                 const rows = shifted.result.shifted_cycle!.shifts_checked;
                 expect(rows.map(row => row.index)).toEqual([2]);
-                const stable = rows[0].shifts.filter(shift => shift.is_stable).map(shift => shift.shift_ticks);
+                const stable = rows[0].shifts.filter(shift => shift.holds).map(shift => shift.shift_ticks);
                 // one unbroken range, checked every 5 ticks
                 expect(stable).toEqual(Array.from({ length: 23 }, (_, n) => -65 + 5 * n));
-                expect(rows[0].shifts.some(shift => !shift.is_stable)).toBe(true);
+                expect(rows[0].shifts.some(shift => !shift.holds)).toBe(true);
             });
 
             it("says which machine limit ends the range on each side", () => {
@@ -415,7 +415,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("is stable and repeats every period", () => {
-                expect(result.stability_check.is_stable).toBe(true);
+                expect(result.stability_check.holds).toBe(true);
                 expect(result.stability_check.repeat_periods).toBe(1);
                 expect(result.stability_check.repeat_output_items).toBeUndefined();
             });
@@ -439,7 +439,7 @@ describe("generateClockForConfig", () => {
             it("is unstable because the two periods it repeats over move half of it", () => {
                 expect(result.stability_check.repeat_periods).toBe(2);
                 expect(result.stability_check.repeat_output_items).toBe(32);
-                expect(result.stability_check.is_stable).toBe(false);
+                expect(result.stability_check.holds).toBe(false);
             });
         });
     });

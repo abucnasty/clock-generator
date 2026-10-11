@@ -141,7 +141,7 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
     // start a clock where the game's plant was, so it still passes this clock.
     it("holds 704 a period from the start the generator checks a clock from", () => {
         const made = clockFromWindows(config, evenly_spaced, PERIOD, quiet);
-        expect(made.stability_check.as_built!.is_stable).toBe(true);
+        expect(made.stability_check.as_built!.holds).toBe(true);
         expect(made.stability_check.as_built!.actual_output_items).toBe(704);
     });
 });

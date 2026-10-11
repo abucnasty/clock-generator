@@ -16,17 +16,17 @@ interface ShiftRangePanelProps {
 }
 
 /** The unbroken run of working shifts around the one in use */
-function workingRangeAround(shifts: { shift_ticks: number; is_stable: boolean }[], used: number): { from: number; to: number } | null {
+function workingRangeAround(shifts: { shift_ticks: number; holds: boolean }[], used: number): { from: number; to: number } | null {
     const at = shifts.findIndex(shift => shift.shift_ticks === used);
     if (at < 0) {
         return null;
     }
     let first = at;
     let last = at;
-    while (first > 0 && shifts[first - 1].is_stable) {
+    while (first > 0 && shifts[first - 1].holds) {
         first--;
     }
-    while (last < shifts.length - 1 && shifts[last + 1].is_stable) {
+    while (last < shifts.length - 1 && shifts[last + 1].holds) {
         last++;
     }
     return { from: shifts[first].shift_ticks, to: shifts[last].shift_ticks };
@@ -110,7 +110,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                                 <Tooltip
                                     key={shift.shift_ticks}
                                     arrow
-                                    title={`${describeShift(shift.shift_ticks)}: ${shift.is_stable ? 'works' : 'does not hold the expected output'}`
+                                    title={`${describeShift(shift.shift_ticks)}: ${shift.holds ? 'works' : 'does not hold the expected output'}`
                                         + (used ? ' (used by this clock)' : '')}
                                 >
                                     <Box
@@ -120,8 +120,8 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                                             height: ROW_HEIGHT,
                                             left: percent(shift.shift_ticks - cell / 2),
                                             width,
-                                            bgcolor: shift.is_stable ? WORKS_COLOR : FAILS_COLOR,
-                                            opacity: shift.is_stable ? 1 : 0.55,
+                                            bgcolor: shift.holds ? WORKS_COLOR : FAILS_COLOR,
+                                            opacity: shift.holds ? 1 : 0.55,
                                             boxSizing: 'border-box',
                                             border: used ? `2px solid ${USED_COLOR}` : '1px solid rgba(0, 0, 0, 0.35)',
                                             zIndex: used ? 1 : 0,

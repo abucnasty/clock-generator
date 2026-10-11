@@ -137,10 +137,6 @@ describe("the fuel plan", () => {
                 }
             });
         });
-
-        it("records no fuel levels for the clock itself", () => {
-            expect(result.fuel_levels).toBeUndefined();
-        });
     });
 });
 

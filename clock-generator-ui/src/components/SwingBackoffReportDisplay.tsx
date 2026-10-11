@@ -99,7 +99,7 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                                     {allAttempts.map((attempt, index) => (
                                         <TableRow
                                             key={attempt.terminal_swing_count}
-                                            sx={attempt.is_stable ? { backgroundColor: 'action.selected' } : undefined}
+                                            sx={attempt.holds ? { backgroundColor: 'action.selected' } : undefined}
                                         >
                                             <TableCell>
                                                 {attempt.terminal_swing_count}
@@ -118,8 +118,8 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                                             <TableCell align="right">{attempt.expected_output_items}</TableCell>
                                             <TableCell align="center">
                                                 <Chip
-                                                    label={attempt.is_stable ? 'Stable' : 'Unstable'}
-                                                    color={attempt.is_stable ? 'success' : 'error'}
+                                                    label={attempt.holds ? 'Stable' : 'Unstable'}
+                                                    color={attempt.holds ? 'success' : 'error'}
                                                     size="small"
                                                     variant="outlined"
                                                 />

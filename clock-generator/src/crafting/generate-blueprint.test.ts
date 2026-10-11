@@ -179,7 +179,7 @@ describe("generateClockForConfig", () => {
 
         it("is stable, and clocks the inserters filling the belt for what is taken off it", () => {
             const result = generateClockForConfig(config);
-            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.holds).toBe(true);
             expect(moved(result, 1) + moved(result, 2)).toBe(moved(result, 3));
         });
     });
@@ -206,7 +206,7 @@ describe("generateClockForConfig", () => {
             expect(result.simulation_duration.ticks).toBe(period);
             expect(outputWindows(id)).toEqual(windows);
             expect(alternative(id).verdict).toBe("stable");
-            expect(result.stability_check.as_built).toMatchObject({ is_stable: true, actual_output_items: bricks });
+            expect(result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: bricks });
         });
 
         // a hand takes the inserter 12 ticks: a window for 3 hands is on for at least 2 of them, and off before a
@@ -282,7 +282,7 @@ describe("generateClockForConfig", () => {
 
         it("is stable, with the LDS inserters 6 and 7 and the belt input inserters 1 and 4 swinging on the same ticks", () => {
             const result = generateClockForConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });
-            expect(result.stability_check.is_stable).toBe(true);
+            expect(result.stability_check.holds).toBe(true);
             expect(transferRanges(result, 7)).toEqual(transferRanges(result, 6));
             expect(transferRanges(result, 4)).toEqual(transferRanges(result, 1));
         });

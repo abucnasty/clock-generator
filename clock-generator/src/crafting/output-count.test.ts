@@ -42,6 +42,6 @@ describe("the output counted in the recorded run", () => {
         expect(result.simulation_duration.ticks).toBe(144);
         expect(result.stability_check.expected_output_items).toBe(96);
         expect(result.stability_check.actual_output_items).toBe(96);
-        expect(result.stability_check.is_stable).toBe(true);
+        expect(result.stability_check.holds).toBe(true);
     });
 });

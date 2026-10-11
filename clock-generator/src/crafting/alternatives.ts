@@ -112,7 +112,7 @@ function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (d
  * of a clock's assessment), or the planning run did, where no clock-only check ran
  */
 function holds(result: BlueprintGenerationResult): boolean {
-    return result.stability_check.as_built?.is_stable ?? result.stability_check.is_stable;
+    return result.stability_check.as_built?.holds ?? result.stability_check.holds;
 }
 
 /** The alternative every run starts with, and the one the others are described against */
@@ -530,7 +530,6 @@ export function generateClockAlternatives(
     let completed = 0;
     let total: number | null = null;
     const report = (detail?: string) => options.on_progress?.({ step: current_step, detail, completed, total });
-    const copies = config.target_output.copies ?? 1;
 
     report();
     const plan = planClockAlternatives(config, { ...options, on_progress_detail: report });

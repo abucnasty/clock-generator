@@ -3,9 +3,9 @@ import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
-import { deriveClockWindows, deriveWithOutputWindows } from "../candidates/observed-windows";
+import { deriveWithOutputWindows } from "../candidates/observed-windows";
 import { CheckedShiftRow, checkedShiftRows } from "../candidates/shifted-swings";
-import { BlueprintGenerationResult, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
+import { TrialRun, alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
 import { AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
 
 /** Positions tried for moved output swings; each costs dozens of clock-only simulations */
@@ -92,7 +92,7 @@ export function deriveUnevenOutputClockWindows(
 ): {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
-    verification: BlueprintGenerationResult | null;
+    verification: TrialRun | null;
     as_built: AsBuiltStabilityCheck | null;
     moved_output_swing: { swing: number; shift_ticks: number; shifts_checked: CheckedShiftRow[] };
 } | null {
@@ -134,8 +134,8 @@ export function deriveUnevenOutputClockWindows(
     for (const { candidate, derived } of ranked) {
         const full = runAsBuiltCheck(base_config, derived.windows!, period, logger, FULL_CHECK_START_PHASES,
             (n, total) => report?.(`Confirming output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks, clock start ${n}/${total}`));
-        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks full check -> stable=${full.check.is_stable}`);
-        if (full.check.is_stable) {
+        logger.log(`Uneven output swings: swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks full check -> stable=${full.check.holds}`);
+        if (full.check.holds) {
             return {
                 windows: derived.windows,
                 end_padding_ticks: derived.end_padding_ticks,
@@ -145,7 +145,7 @@ export function deriveUnevenOutputClockWindows(
                     swing: candidate.window_index + 1,
                     shift_ticks: candidate.shift_ticks,
                     shifts_checked: checkedShiftRows(candidates.map((it, index) =>
-                        ({ index: it.window_index + 1, shift_ticks: it.shift_ticks, is_stable: passes.has(index) }))),
+                        ({ index: it.window_index + 1, shift_ticks: it.shift_ticks, holds: passes.has(index) }))),
                 },
             };
         }

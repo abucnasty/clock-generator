@@ -65,7 +65,7 @@ describe("an inserter the config sets to always enabled", () => {
         expect(Object.keys(result.unplanned_inserter_clocks ?? {})).toEqual([]);
         expect(Object.keys(result.clock_windows)).not.toContain("inserter:3");
         expect(result.blueprint.entities.filter(entity => (entity.player_description ?? "").startsWith("Fuel clock"))).toHaveLength(0);
-        expect(result.stability_check.as_built?.is_stable).toBe(true);
+        expect(result.stability_check.as_built?.holds).toBe(true);
     });
 
     it("holds for a mining drill too", async () => {
@@ -78,6 +78,6 @@ describe("an inserter the config sets to always enabled", () => {
         };
         const result = generateClockForConfig(config, { logger: quiet, verify_as_built: true });
         expect(Object.keys(result.clock_windows).filter(id => id.startsWith("drill:"))).not.toContain("drill:1");
-        expect(result.stability_check.as_built?.is_stable).toBe(true);
+        expect(result.stability_check.as_built?.holds).toBe(true);
     });
 });

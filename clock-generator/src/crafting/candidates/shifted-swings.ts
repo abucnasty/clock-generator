@@ -1,17 +1,16 @@
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { InserterStatus, MachineStatus } from "../../state";
-import { fraction } from "fractionability";
 import { Logger } from "../../common/logger";
 import { CIRCUIT_LATENCY_TICKS } from "../clock";
-import { BlueprintGenerationResult } from "../plan/plan-run";
+import { TrialRun } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
 
 /** One place tried for a moved crafting cycle or output swing, in ticks from its planned start (negative is earlier) */
 export interface CheckedShift {
     shift_ticks: number;
     /** Passed the quick clock-only check (a dozen clock start phases); only the shift that is used is confirmed from more */
-    is_stable: boolean;
+    holds: boolean;
 }
 
 /** Every place tried for one crafting cycle or output swing (1-based `index`), in shift order */
@@ -46,10 +45,10 @@ export interface ShiftedSwings {
 }
 
 /** Groups checked shifts by the cycle or swing they moved, keeping their order */
-export function checkedShiftRows(checked: { index: number; shift_ticks: number; is_stable: boolean }[]): CheckedShiftRow[] {
+export function checkedShiftRows(checked: { index: number; shift_ticks: number; holds: boolean }[]): CheckedShiftRow[] {
     const rows = new Map<number, CheckedShift[]>();
-    for (const { index, shift_ticks, is_stable } of checked) {
-        rows.set(index, [...(rows.get(index) ?? []), { shift_ticks, is_stable }]);
+    for (const { index, shift_ticks, holds } of checked) {
+        rows.set(index, [...(rows.get(index) ?? []), { shift_ticks, holds }]);
     }
     return Array.from(rows, ([index, shifts]) => ({ index, shifts }));
 }
@@ -164,7 +163,7 @@ const MIN_SHIFT_EDGE_WAIT_TICKS = 3;
  * the moved swings arrive has run out of ingredients.
  */
 function shiftEdgeNotes(
-    run: BlueprintGenerationResult,
+    run: TrialRun,
     moved: { entity_id: string; start: number; end: number }[],
 ): string[] {
     const entities = new Map(run.serializable_state_transition_history.entities.map(entity => [entity.entity_id, entity]));
@@ -264,11 +263,11 @@ export function shiftedCycleWindows(
         `cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
 
     const passes = new Set<number>();
-    const runs = new Map<number, BlueprintGenerationResult>();
+    const runs = new Map<number, TrialRun>();
     candidates.forEach((candidate, index) => {
         const { result, check } = runAsBuiltCheck(config, candidate.windows, period, logger, AS_BUILT_START_PHASES,
             (n, total) => report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)}), clock start ${n}/${total}`));
-        if (check.is_stable) {
+        if (check.holds) {
             passes.add(index);
             runs.set(index, result);
         }
@@ -290,14 +289,14 @@ export function shiftedCycleWindows(
     const ranked = Array.from(passes).filter(index => candidates[index].selectable).sort((a, b) => margin(b) - margin(a)
         || Math.abs(candidates[a].shift_ticks) - Math.abs(candidates[b].shift_ticks));
     const shifts_checked = checkedShiftRows(candidates.map((candidate, index) =>
-        ({ index: candidate.cycle_index + 1, shift_ticks: candidate.shift_ticks, is_stable: passes.has(index) })));
+        ({ index: candidate.cycle_index + 1, shift_ticks: candidate.shift_ticks, holds: passes.has(index) })));
 
     for (const index of ranked.slice(0, MAX_SHIFTED_CYCLE_CONFIRMATIONS)) {
         const candidate = candidates[index];
         const full = runAsBuiltCheck(config, candidate.windows, period, logger, FULL_CHECK_START_PHASES,
             (n, total) => report?.(`Confirming ${describe(candidate)}, clock start ${n}/${total}`)).check;
-        logger.log(`Shifted crafting cycle: ${describe(candidate)} full check -> stable=${full.is_stable}`);
-        if (full.is_stable) {
+        logger.log(`Shifted crafting cycle: ${describe(candidate)} full check -> stable=${full.holds}`);
+        if (full.holds) {
             // the range that works runs through the planned position, so its ends ignore the direction split used for ranking
             const edgeOf = (direction: 1 | -1): ShiftRangeEdge => {
                 let edge = index;

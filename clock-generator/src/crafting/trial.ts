@@ -11,7 +11,7 @@ import { InserterEnds, WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { judgeLongRun, LONG_RUN_SETTLE_SHARE, longRunPeriods } from "./long-run";
 import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, LossOutcome, reportOf, verdictOf } from "./backpressure-loss";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
-import { BlueprintGenerationResult, GenerateClockOptions, MAX_SIMULATION_TICKS, SimulationStabilityCheck, alwaysEnabledByConfig, generateClockForConfig, withInserterClocks } from "./plan/plan-run";
+import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, generateClockForConfig, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -65,8 +65,8 @@ export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
 }
 
 export interface AsBuiltStabilityCheck {
-    /** Whether the blueprint's clock windows alone, without the simulator's inventory conditions, produce the expected output from every start phase tried */
-    is_stable: boolean;
+    /** The clock windows alone, without the plan's inventory conditions, move the expected output from every start phase tried and over the long run */
+    holds: boolean;
     /** Output of the first failing start phase, or of the unshifted clock when all pass */
     actual_output_items: number;
     /** Number of clock start phases simulated (stops at the first failure) */
@@ -86,13 +86,8 @@ export interface AsBuiltStabilityCheck {
 }
 
 
-const NESTED_RUN_OPTIONS = (logger: Logger): GenerateClockOptions => ({
-    belt_pickup_slack: "never",
-    modulo_blueprint: false,
-    logger: { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } },
-    verify_as_built: false,
-    fuel_consumption_view: false,
-});
+/** A trial logs nothing but errors: it is one of many runs the generator makes of a clock */
+const quietLogger = (logger: Logger): Logger => ({ log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } });
 
 /**
  * Runs a build on clock windows alone, as its blueprint runs it in the game: what has windows is enabled by them, a
@@ -105,11 +100,11 @@ export function runClockOnBuild(
     windows: Map<string, OpenRange[]>,
     period: number,
     logger: Logger,
-    options: GenerateClockOptions = {},
+    options: RunOptions = {},
     /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
-): BlueprintGenerationResult {
-    return generateClockForConfig(buildAsBuiltConfig(config, windows, period, fuel_clocks), { ...NESTED_RUN_OPTIONS(logger), ...options });
+): TrialRun {
+    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks), { logger: quietLogger(logger), ...options }));
 }
 
 /** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
@@ -143,7 +138,7 @@ function longRunOfFreeRunningBuild(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
     period: number,
-    one_period: BlueprintGenerationResult,
+    one_period: TrialRun,
     logger: Logger,
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
 ): { keeps_up: boolean; output_items_per_period: number; stock: StockRecording } | null {
@@ -199,7 +194,7 @@ export function simulateClockOnly(
      * names what machines hold instead, to start in a state the game was recorded in: with `warmup_periods: 0` the
      * first tick of the run is the first tick after that state.
      */
-    start: Pick<GenerateClockOptions, "keep_output_buffers" | "warmup_periods" | "start_stock"> = {},
+    start: Pick<RunOptions, "keep_output_buffers" | "warmup_periods" | "start_stock"> = {},
 ): StockRecording {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -284,12 +279,12 @@ export function runAsBuiltCheck(
     start_phases: number = AS_BUILT_START_PHASES,
     report?: (checked: number, total: number) => void,
     long_run_ticks: number = FREE_RUNNING_CHECK_TICKS,
-): { result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; /** The long run of the check, when it made one */ stock?: StockRecording } {
+): { result: TrialRun; check: AsBuiltStabilityCheck; /** The long run of the check, when it made one */ stock?: StockRecording } {
     const step = Math.max(1, Math.floor(period / start_phases));
     const total = Math.min(start_phases, Math.floor((period - 1) / step) + 1);
     const result = runClockOnBuild(config, decider_windows, period, logger);
     const check: AsBuiltStabilityCheck = {
-        is_stable: result.stability_check.is_stable,
+        holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
         start_phases_checked: 1,
         repeat_periods: result.stability_check.repeat_periods,
@@ -297,7 +292,7 @@ export function runAsBuiltCheck(
     };
     report?.(1, total);
     let stock: StockRecording | undefined;
-    if (check.is_stable) {
+    if (check.holds) {
         const long_run = longRunOfFreeRunningBuild(config, decider_windows, period, result, logger, long_run_ticks);
         stock = long_run?.stock;
         if (stock) {
@@ -305,11 +300,11 @@ export function runAsBuiltCheck(
             check.wake_ups = wakeUpsOfStock(stock, inserterEnds(config), Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
         }
         if (long_run && !long_run.keeps_up) {
-            check.is_stable = false;
+            check.holds = false;
             check.actual_output_items = long_run.output_items_per_period;
         }
     }
-    if (!check.is_stable) {
+    if (!check.holds) {
         check.failed_start_offset = 0;
         return { result, check, stock };
     }
@@ -320,8 +315,8 @@ export function runAsBuiltCheck(
         const shifted = runClockOnBuild(config, rotated, period, logger, { factorio_states: false });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
-        if (!shifted.stability_check.is_stable) {
-            check.is_stable = false;
+        if (!shifted.stability_check.holds) {
+            check.holds = false;
             check.actual_output_items = shifted.stability_check.actual_output_items;
             check.failed_start_offset = offset;
             check.repeat_periods = shifted.stability_check.repeat_periods;
@@ -350,12 +345,12 @@ export function beltPickupSlackHelps(
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const with_slack = runAsBuiltCheck(base_config, withBeltPickupSlack(windows, slack, period), period, logger).check;
-    if (with_slack.is_stable) {
+    if (with_slack.holds) {
         return true;
     }
     const without_slack = runAsBuiltCheck(base_config, windows, period, logger).check;
     logger.log(`Belt pickup slack: clock-only actual with=${with_slack.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
-    if (without_slack.is_stable) {
+    if (without_slack.holds) {
         return false;
     }
     return Math.abs(with_slack.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);

@@ -55,7 +55,7 @@ describe("a clock built from windows that are given", () => {
 
     it("checks the clock as the generator checks its own: it holds 240 a second from every start", () => {
         const as_built = result.stability_check.as_built!;
-        expect(as_built.is_stable).toBe(true);
+        expect(as_built.holds).toBe(true);
         expect(as_built.actual_output_items).toBe(704);
         expect(result.stability_check.expected_output_items).toBe(704);
         expect(as_built.start_phases_checked).toBeGreaterThan(1);

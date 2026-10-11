@@ -1,11 +1,11 @@
 import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { OpenRange } from "../../data-types";
-import { Entity, EntityId, handSizeFor, Machine, ReadableEntityRegistry } from "../../entities";
+import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../../entities";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { rotateRanges } from "../clock";
-import { BlueprintGenerationResult, LCM_STABILITY_TOLERANCE, windowsOfThePlanWhereInsertersRunFree } from "../plan/plan-run";
+import { LCM_STABILITY_TOLERANCE, TrialRun } from "../plan/plan-run";
 import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild } from "../trial";
 
 
@@ -58,7 +58,7 @@ export function fullHandOutputWindows(
     logger: Logger,
     report?: (detail: string) => void,
     count_waits = false,
-): { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } | null {
+): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck } | null {
     const swing_counts = Array.from(new Set(Array.from(output_swings.values(), s => Math.round(s * 1e6) / 1e6)));
     if (swing_counts.length !== 1 || !Number.isInteger(swing_counts[0]) || swing_counts[0] < 1) {
         return null;
@@ -78,7 +78,7 @@ export function fullHandOutputWindows(
         outputs.forEach(key => result.set(key, ranges));
         return result;
     };
-    const pickupStats = (result: BlueprintGenerationResult) => {
+    const pickupStats = (result: TrialRun) => {
         let slow = 0;
         let pickups = 0;
         let swings = 0;
@@ -103,8 +103,8 @@ export function fullHandOutputWindows(
         }
         return { slow, pickups, swings };
     };
-    const slowPickups = (result: BlueprintGenerationResult) => pickupStats(result).slow;
-    const outputFullTicks = (result: BlueprintGenerationResult) => {
+    const slowPickups = (result: TrialRun) => pickupStats(result).slow;
+    const outputFullTicks = (result: TrialRun) => {
         let ticks = 0;
         for (const entity of result.serializable_state_transition_history.entities) {
             if (!output_machine_ids.has(entity.entity_id)) {
@@ -142,7 +142,7 @@ export function fullHandOutputWindows(
 
     type Candidate = { offset: number; length: number; output_full: number; slow: number };
     const recovers = (candidate_windows: Map<string, OpenRange[]>) => FULL_HAND_RECOVERY_PERIODS.every(warmup_periods =>
-        runClockOnBuild(config, candidate_windows, period, logger, { keep_output_buffers: true, warmup_periods }).stability_check.is_stable);
+        runClockOnBuild(config, candidate_windows, period, logger, { keep_output_buffers: true, warmup_periods }).stability_check.holds);
     // shortest spare first: longer windows let more grabs wait for items
     const recoveringTiming = (candidate: Candidate, label: string) => {
         if (recovers(build(candidate.offset, candidate.length))) {
@@ -154,7 +154,7 @@ export function fullHandOutputWindows(
                 const spare = { every, ticks };
                 const spare_windows = build(candidate.offset, candidate.length, spare);
                 const result = runClockOnBuild(config, spare_windows, period, logger);
-                if (result.stability_check.is_stable && recovers(spare_windows)) {
+                if (result.stability_check.holds && recovers(spare_windows)) {
                     return { spare, output_full: outputFullTicks(result), slow: slowPickups(result) };
                 }
             }
@@ -175,13 +175,13 @@ export function fullHandOutputWindows(
         const candidate_windows = build(candidate.offset, candidate.length, timing.spare);
         const quick = runAsBuiltCheck(config, candidate_windows, period, logger, AS_BUILT_START_PHASES,
             (n, of) => report?.(`Checking full-hand output (${label}), clock start ${n}/${of}`)).check;
-        if (!quick.is_stable) {
+        if (!quick.holds) {
             return null;
         }
         const full = runAsBuiltCheck(config, candidate_windows, period, logger, FULL_CHECK_START_PHASES,
             (n, of) => report?.(`Confirming full-hand output (${label}), clock start ${n}/${of}`));
-        logger.log(`Full-hand output: ${label}, ${timing.output_full} output-full ticks, ${timing.slow} slow pickups, stable=${full.check.is_stable}`);
-        return full.check.is_stable ? { windows: candidate_windows, ...full } : null;
+        logger.log(`Full-hand output: ${label}, ${timing.output_full} output-full ticks, ${timing.slow} slow pickups, stable=${full.check.holds}`);
+        return full.check.holds ? { windows: candidate_windows, ...full } : null;
     };
 
     // shortest windows first; a timing with no output-full ticks and no slow pickups cannot be beaten, so try it at once
@@ -198,7 +198,7 @@ export function fullHandOutputWindows(
         for (let offset = 0; offset < spacing; offset += FULL_HAND_OFFSET_STEP) {
             report?.(`Searching full-hand output timing (${++searched}/${total})`);
             const result = runClockOnBuild(config, build(offset, length), period, logger);
-            if (!result.stability_check.is_stable) {
+            if (!result.stability_check.holds) {
                 continue;
             }
             const candidate = { offset, length, output_full: outputFullTicks(result), slow: slowPickups(result) };
@@ -243,14 +243,14 @@ export function hasPlannedWindowsNotHands(always_enabled: ReadonlySet<string>, i
 export function fullHandTransferWindows(
     config: Config,
     windows: Map<string, OpenRange[]>,
-    verification: BlueprintGenerationResult,
+    verification: TrialRun,
     output_inserter_ids: Set<string>,
     entity_registry: ReadableEntityRegistry,
     period: number,
     logger: Logger,
     report?: (detail: string) => void,
-): { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; inserters: string[] } | null {
-    let current: { windows: Map<string, OpenRange[]>; result: BlueprintGenerationResult; check: AsBuiltStabilityCheck } | null = null;
+): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck; inserters: string[] } | null {
+    let current: { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck } | null = null;
     const inserters: string[] = [];
     const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
     for (const [entity_id, transfers] of verification.transfer_history.entries()) {

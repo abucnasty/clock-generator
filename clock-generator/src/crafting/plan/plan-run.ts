@@ -40,14 +40,13 @@ import { MachineStateTransitionTrackerPlugin } from "../../control-logic/machine
 import { DrillStateTransitionTrackerPlugin } from "../../control-logic/drill/plugins/drill-state-transition-tracker-plugin";
 import { FactorioStatePlugin } from "../../control-logic/plugins/factorio-state-plugin";
 import { factorioDrillState, factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
-import { generateClockAlternatives, withFuelHandRoomWhereNeeded } from "../alternatives";
 import { fullHandOutputWindows, fullHandTransferWindows } from "../candidates/full-hand";
 import { DerivedClockWindowsReport, deriveClockWindows } from "../candidates/observed-windows";
 import { windowsOfInsertersFeedingTheOutputMachine } from "../candidates/output-feeders";
 import { ShiftedSwings, shiftedCycleWindows } from "../candidates/shifted-swings";
 import { deriveUnevenOutputClockWindows } from "../candidates/uneven-output";
 import { ClockBelt, SerializableClockWindows, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForPeriod, withBeltPickupSlack } from "../clock";
-import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, OUTPUT_FEEDER_CHECK_TICKS, beltPickupSlackHelps, clockFromWindows, runAsBuiltCheck, runClockOnBuild, simulateClockOnly } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, OUTPUT_FEEDER_CHECK_TICKS, beltPickupSlackHelps, runAsBuiltCheck, runClockOnBuild } from "../trial";
 
 /**
  * The most ticks one simulated run goes on for. A guard, not a limit on test time: a config that passes validation
@@ -114,8 +113,8 @@ export interface ClockOnlyRun {
 
 
 export interface SimulationStabilityCheck {
-    /** Whether the actual output items are within tolerance of the expected amount (and the as-built check passed, when run) */
-    is_stable: boolean;
+    /** The run moved its expected output, within a hand of tolerance (and the clock-only check held, when one ran) */
+    holds: boolean;
     /** Total items transferred by output inserters during the simulation period */
     actual_output_items: number;
     /** Expected items to be transferred by output inserters based on the crafting cycle plan */
@@ -138,7 +137,7 @@ export interface SwingAttemptResult {
     /** The terminal_swing_count value that was tried */
     terminal_swing_count: number;
     /** Whether this attempt produced stable output */
-    is_stable: boolean;
+    holds: boolean;
     /** Actual items transferred by output inserters */
     actual_output_items: number;
     /** Expected items based on the crafting cycle plan */
@@ -206,12 +205,6 @@ export interface BlueprintGenerationResult {
     unplanned_inserter_clocks?: Record<string, SerializableInserterClock>;
     /** What the burner machines use and the fuel clocks exported to refill them; absent when no inserter only fills a fuel slot */
     fuel_plan?: FuelPlan;
-    /** With the fuel_levels option: the fuel each burner machine held over the recorded run */
-    fuel_levels?: FuelLevelSeries[];
-    /** With the machine_stock option: what every machine and inserter held after each tick of the recorded run */
-    machine_stock?: StockRecording;
-    /** With the backpressure_loss option: what the build made after each trial of the loss */
-    backpressure_loss?: LossOutcome;
     /**
      * The exported clock run for several periods, when a machine burns fuel: a fuel inserter swings once in a few
      * periods, so one period seldom shows it inserting. Extended only to show the fuel being consumed; the clock
@@ -282,32 +275,8 @@ export interface GenerateClockOptions {
     full_hand_output?: boolean;
     /** Move one crafting cycle's windows together to another place in the clock period, when the period spans several cycles */
     shifted_cycle?: boolean;
-    /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
-    keep_output_buffers?: boolean;
-    /**
-     * What machines hold when the clock starts, by entity id ("machine:4"), in place of what filling them left; every
-     * inserter then starts with an empty hand. For starting a run in a state read off a recording of the game, to
-     * see what the simulator makes of it (see simulateClockOnly).
-     */
-    start_stock?: Record<string, MachineStartStock>;
-    /**
-     * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
-     * once it is back (see backpressure-loss.ts). For a run on clock windows alone; nothing is cut in any other run.
-     */
-    backpressure_loss?: BackpressureLossOptions;
-    /** Warmup length in simulation periods (default 10) */
-    warmup_periods?: number;
-    /**
-     * Simulate and record this many periods instead of one (default 1). The histories then cover the longer run;
-     * the stability check compares one period of output, so it only means something at 1.
-     */
-    simulate_periods?: number;
     /** Also run the exported clock for several periods to show the fuel being consumed (default true; internal check runs never do) */
     fuel_consumption_view?: boolean;
-    /** Record the fuel each burner machine holds over the run (default false) */
-    fuel_levels?: boolean;
-    /** Record what every machine and inserter holds after each tick of the run (default false) */
-    machine_stock?: boolean;
     /**
      * Record the state the game would show for every entity over the run, for its timelines (default true). A check
      * run whose histories nobody reads leaves it out: working the state out for every entity every tick takes time.
@@ -344,21 +313,58 @@ export interface GenerationProgress {
 }
 
 /**
- * Generates a blueprint from a configuration using the Runner pattern.
- * 
- * This function encapsulates the three-step process:
- * 1. Prepare: Wait until all machines are output blocked
- * 2. Warm up: Simulate the warm up period to ensure steady state
- * 3. Simulate: Run the final simulation and collect transfer history
- * 
- * @param config The configuration for the simulation
- * @param options Optional generation options (debug, debug_steps, logger)
- * @returns The generated blueprint and related metadata
+ * How a build is run: the start it is given, how long it runs, and what is recorded. Shared by the planning run and
+ * the trial of a clock (`runBuild`).
  */
-export function generateClockForConfig(
-    config: Config,
-    options: GenerateClockOptions = {}
-): BlueprintGenerationResult {
+export interface RunOptions {
+    /** Debug settings provider (defaults to disabled) */
+    debug?: MutableDebugSettingsProvider;
+    /** Configuration for which steps should have debugging enabled */
+    debug_steps?: DebugSteps;
+    /** Logger for output messages (defaults to console) */
+    logger?: Logger;
+    /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
+    keep_output_buffers?: boolean;
+    /**
+     * What machines hold when the clock starts, by entity id ("machine:4"), in place of what filling them left; every
+     * inserter then starts with an empty hand. For starting a run in a state read off a recording of the game, to
+     * see what the simulator makes of it (see simulateClockOnly).
+     */
+    start_stock?: Record<string, MachineStartStock>;
+    /**
+     * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
+     * once it is back (see backpressure-loss.ts). For a run on clock windows alone; nothing is cut in any other run.
+     */
+    backpressure_loss?: BackpressureLossOptions;
+    /** Warmup length in simulation periods (default 10) */
+    warmup_periods?: number;
+    /**
+     * Simulate and record this many periods instead of one (default 1). The histories then cover the longer run;
+     * the output is judged over one period, so it only means something at 1.
+     */
+    simulate_periods?: number;
+    /** Record the fuel each burner machine holds over the run (default false) */
+    fuel_levels?: boolean;
+    /** Record what every machine and inserter holds after each tick of the run (default false) */
+    machine_stock?: boolean;
+    /**
+     * Record the state the game would show for every entity over the run, for its timelines (default true). A check
+     * run whose histories nobody reads leaves it out: working the state out for every entity every tick takes time.
+     */
+    factorio_states?: boolean;
+}
+
+/** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
+export type BuildRun = ReturnType<typeof runBuild>;
+
+/**
+ * Runs a build: the machines are filled until their output is blocked (the prepare step), the crafting cycle is
+ * planned on what they made, the output machines are emptied, the build is warmed up and then run for the period of
+ * the plan with every transfer and state recorded, its output is counted against the plan's, and, when asked, the
+ * backpressure losses are tried from where it ended. Every inserter runs as its enable control says: the plan's
+ * controls in a planning run, the clock windows alone in a trial (see `runClockOnBuild`).
+ */
+export function runBuild(config: Config, options: RunOptions) {
     const debug = options.debug ?? DebugSettingsProvider.mutable();
     const debug_steps = options.debug_steps ?? {};
     const logger = options.logger ?? defaultLogger;
@@ -663,7 +669,7 @@ export function generateClockForConfig(
         || Math.abs(repeat_output_items - total_expected_output_float * repeat_periods) <= LCM_STABILITY_TOLERANCE * repeat_periods;
 
     const stability_check: SimulationStabilityCheck = {
-        is_stable: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0
+        holds: Math.abs(total_actual_output - total_expected_output) <= LCM_STABILITY_TOLERANCE && exported_short.length === 0
             && repeats_at_expected_output,
         actual_output_items: total_actual_output,
         expected_output_items: total_expected_output,
@@ -671,7 +677,7 @@ export function generateClockForConfig(
         repeat_periods,
         repeat_output_items,
     };
-    logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.is_stable} (tolerance=${LCM_STABILITY_TOLERANCE})`);
+    logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.holds} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
     let backpressure_loss: LossOutcome | undefined;
     if (options.backpressure_loss) {
@@ -688,6 +694,105 @@ export function generateClockForConfig(
             Math.max(bin.ticks, ...own_clock_ticks), isClockedThroughout(config, loss_period));
         logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
     }
+
+
+    return {
+        simulation_context,
+        new_simulation_context,
+        target_production_rate,
+        output_machine_state_machines,
+        output_inserters,
+        all_output_inserters,
+        output_inserter_ids,
+        crafting_cycle_plan,
+        swing_counts,
+        recipe_lcm,
+        computed_lcm,
+        serializable_transfer_plan,
+        crafting_shares,
+        always_enabled_by_config,
+        /** The clocks of the inserters outside the plan (fuel and by-product), as the plan made them */
+        inserter_clocks,
+        /** The period of the clock */
+        duration,
+        /** What was recorded: `simulate_periods` periods */
+        recorded_duration,
+        /** The transfers of the recorded run, as the windows of the plan are read off them */
+        final_history,
+        state_transition_history,
+        fuel_levels: fuel_level_recorder?.series(),
+        machine_stock: stock_recorder?.recording(),
+        /** What the run moved against what the plan expects */
+        stability_check,
+        total_expected_output,
+        used_terminal_swing_count,
+        /** What the build made after each trial of the loss, when one was asked for */
+        backpressure_loss,
+    };
+}
+
+/**
+ * What a trial of a clock yields: the clock-only run of a build, as its blueprint runs it, with what it moved and
+ * what was recorded of it. It plans nothing of its own and exports nothing.
+ */
+export interface TrialRun {
+    /** What the run moved against what the plan expects */
+    stability_check: SimulationStabilityCheck;
+    simulation_duration: Duration;
+    transfer_history: InventoryTransferHistory;
+    serializable_transfer_history: SerializableTransferHistory;
+    serializable_state_transition_history: SerializableStateTransitionHistory;
+    /** Insertion limits, crafting time and output per craft of every machine */
+    machine_facts: MachineFactsEntry[];
+    /** With the fuel_levels option: the fuel each burner machine held over the run */
+    fuel_levels?: FuelLevelSeries[];
+    /** With the machine_stock option: what every machine and inserter held after each tick of the run */
+    machine_stock?: StockRecording;
+    /** With the backpressure_loss option: what the build made after each trial of the loss */
+    backpressure_loss?: LossOutcome;
+}
+
+export function trialRunOf(run: BuildRun): TrialRun {
+    return {
+        stability_check: run.stability_check,
+        simulation_duration: run.duration,
+        transfer_history: run.final_history,
+        serializable_transfer_history: serializeTransferHistory(run.final_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
+        serializable_state_transition_history: serializeStateTransitionHistory(run.state_transition_history, run.simulation_context.entity_registry, run.recorded_duration.ticks),
+        machine_facts: run.simulation_context.machines.map(it => ({
+            entity_id: it.machine_state.machine.entity_id.id,
+            facts: Machine.getMachineFacts(it.machine_state.machine),
+        })),
+        fuel_levels: run.fuel_levels,
+        machine_stock: run.machine_stock,
+        backpressure_loss: run.backpressure_loss,
+    };
+}
+
+/**
+ * Generates a blueprint from a configuration using the Runner pattern.
+ * 
+ * This function encapsulates the three-step process:
+ * 1. Prepare: Wait until all machines are output blocked
+ * 2. Warm up: Simulate the warm up period to ensure steady state
+ * 3. Simulate: Run the final simulation and collect transfer history
+ * 
+ * @param config The configuration for the simulation
+ * @param options Optional generation options (debug, debug_steps, logger)
+ * @returns The generated blueprint and related metadata
+ */
+export function generateClockForConfig(
+    config: Config,
+    options: GenerateClockOptions = {}
+): BlueprintGenerationResult {
+    const logger = options.logger ?? defaultLogger;
+    const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states });
+    const {
+        simulation_context, target_production_rate, output_machine_state_machines, output_inserters, all_output_inserters, output_inserter_ids,
+        crafting_cycle_plan, swing_counts, recipe_lcm, computed_lcm, serializable_transfer_plan, crafting_shares, always_enabled_by_config,
+        duration, recorded_duration, final_history, state_transition_history, stability_check, total_expected_output, used_terminal_swing_count,
+    } = run;
+    let inserter_clocks = run.inserter_clocks;
 
     const unslacked_windows = windowsFromHistory(final_history, simulation_context.entity_registry, always_enabled_by_config);
     const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
@@ -800,7 +905,6 @@ export function generateClockForConfig(
         : undefined;
 
     let fuel_plan = fuelPlan(simulation_context.entity_registry, inserter_clocks, crafting_shares, duration.ticks);
-    const fuel_levels = fuel_level_recorder?.series();
 
     /**
      * Runs the exported clock for several periods, makes the fuel clocks from what the machines burned in it, and runs
@@ -856,7 +960,7 @@ export function generateClockForConfig(
 
     let clock_only_run: ClockOnlyRun | undefined;
     let output_feeders: BlueprintGenerationResult["output_feeders"];
-    const clockOnlyRunOf = (run: BlueprintGenerationResult): ClockOnlyRun => ({
+    const clockOnlyRunOf = (run: TrialRun): ClockOnlyRun => ({
         transfer_history: run.serializable_transfer_history,
         state_transition_history: run.serializable_state_transition_history,
     });
@@ -870,7 +974,7 @@ export function generateClockForConfig(
         check_config: Config,
         run: { check: AsBuiltStabilityCheck; stock?: StockRecording },
         start_phases: number,
-    ): { result: BlueprintGenerationResult; check: AsBuiltStabilityCheck; stock?: StockRecording } | null {
+    ): { result: TrialRun; check: AsBuiltStabilityCheck; stock?: StockRecording } | null {
         if (run.stock === undefined) {
             return null;
         }
@@ -885,7 +989,7 @@ export function generateClockForConfig(
         }
         const fed_run = runAsBuiltCheck(check_config, fed_windows, duration.ticks, logger, start_phases,
             (n, total) => options.on_progress_detail?.(`Checking output feeder windows, clock start ${n}/${total}`), OUTPUT_FEEDER_CHECK_TICKS);
-        const passes_as_before = fed_run.check.is_stable && fed_run.check.failed_start_offset === undefined
+        const passes_as_before = fed_run.check.holds && fed_run.check.failed_start_offset === undefined
             && fed_run.check.start_phases_checked === run.check.start_phases_checked;
         logger.log(`Output feeders: ${passes_as_before ? "kept" : "dropped, the as-built check with them does not pass as without"}`);
         if (!passes_as_before) {
@@ -904,20 +1008,20 @@ export function generateClockForConfig(
     }
 
     if (config.overrides?.derive_clock_windows) {
-        const planned_stable = stability_check.is_stable;
+        const planned_stable = stability_check.holds;
         const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
         const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
             (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`));
         let planned_check = planned_run.check;
         clock_only_run = clockOnlyRunOf(planned_run.result);
-        if (planned_stable && planned_check.is_stable) {
+        if (planned_stable && planned_check.holds) {
             planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`)).check;
         }
-        logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.is_stable} (${planned_check.start_phases_checked} start phases)`);
+        logger.log(`Derived clock windows: planned windows as-built actual=${planned_check.actual_output_items} stable=${planned_check.holds} (${planned_check.start_phases_checked} start phases)`);
         // the feeders of the output machine are part of the planned windows, kept or dropped here as without derivation
         const plannedWithFeeders = () => {
-            const fed = planned_stable && planned_check.is_stable
+            const fed = planned_stable && planned_check.holds
                 ? withOutputFeeders(non_deriving_config, { check: planned_check, stock: planned_run.stock },
                     planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES)
                 : null;
@@ -926,7 +1030,7 @@ export function generateClockForConfig(
                 clock_only_run = clockOnlyRunOf(fed.result);
             }
         };
-        if (planned_stable && planned_check.is_stable && (options.derive_mode ?? "prefer_planned") === "prefer_planned") {
+        if (planned_stable && planned_check.holds && (options.derive_mode ?? "prefer_planned") === "prefer_planned") {
             // planned windows keep the plan's batched swings, which derived windows would break into per-craft swings
             plannedWithFeeders();
             stability_check.as_built = planned_check;
@@ -951,7 +1055,7 @@ export function generateClockForConfig(
             moved_output_swing: uneven?.moved_output_swing ?? undefined,
         };
         stability_check.as_built = derived.as_built ?? undefined;
-        stability_check.is_stable = stability_check.is_stable && derived.windows !== null;
+        stability_check.holds = stability_check.holds && derived.windows !== null;
 
         if (derived.windows !== null && derived.verification !== null) {
             const full_hand = fullHandTransferWindows(non_deriving_config, derived.windows, derived.verification,
@@ -989,7 +1093,7 @@ export function generateClockForConfig(
         logger.log("Derived clock windows: no padding passed the as-built check; falling back to the planned windows.");
         plannedWithFeeders();
         stability_check.as_built = planned_check;
-        stability_check.is_stable = planned_stable && planned_check.is_stable;
+        stability_check.holds = planned_stable && planned_check.holds;
         return {
             ...buildResult(),
             derived_clock_windows: report,
@@ -1000,13 +1104,13 @@ export function generateClockForConfig(
         const as_built_run = runAsBuiltCheck(config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
             (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`));
         let kept_run = as_built_run;
-        if (stability_check.is_stable && as_built_run.check.is_stable) {
+        if (stability_check.holds && as_built_run.check.holds) {
             kept_run = withOutputFeeders(config, as_built_run, AS_BUILT_START_PHASES) ?? as_built_run;
         }
         stability_check.as_built = kept_run.check;
         clock_only_run = clockOnlyRunOf(kept_run.result);
-        stability_check.is_stable = stability_check.is_stable && stability_check.as_built.is_stable;
-        logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.is_stable}`);
+        stability_check.holds = stability_check.holds && stability_check.as_built.holds;
+        logger.log(`As-built check (clock windows only, ${stability_check.as_built.start_phases_checked} start phases): actual=${stability_check.as_built.actual_output_items} expected=${total_expected_output} stable=${stability_check.as_built.holds}`);
     }
 
     return buildResult();
@@ -1054,9 +1158,6 @@ export function generateClockForConfig(
             fuel_consumption_view,
             unplanned_inserter_clocks: serializeInserterClocks(inserter_clocks),
             fuel_plan,
-            fuel_levels,
-            machine_stock: stock_recorder?.recording(),
-            backpressure_loss,
             used_lcm: recipe_lcm,
             used_terminal_swing_count,
             stability_check,
@@ -1547,7 +1648,7 @@ export function generateClockWithSwingBackoff(
 
     const swing_count_forced = config.overrides?.terminal_swing_count !== undefined;
 
-    if (initial_result.stability_check.is_stable || swing_count_forced || initial_swing_count <= 1) {
+    if (initial_result.stability_check.holds || swing_count_forced || initial_swing_count <= 1) {
         return {
             ...initial_result,
             swing_backoff_report: {
@@ -1555,11 +1656,11 @@ export function generateClockWithSwingBackoff(
                 initial_terminal_swing_count: initial_swing_count,
                 initial_attempt: {
                     terminal_swing_count: initial_swing_count,
-                    is_stable: initial_result.stability_check.is_stable,
+                    holds: initial_result.stability_check.holds,
                     actual_output_items: initial_result.stability_check.actual_output_items,
                     expected_output_items: initial_result.stability_check.expected_output_items,
                 },
-                stable_terminal_swing_count: initial_result.stability_check.is_stable ? initial_swing_count : null,
+                stable_terminal_swing_count: initial_result.stability_check.holds ? initial_swing_count : null,
                 attempts: [],
             },
         };
@@ -1579,7 +1680,7 @@ export function generateClockWithSwingBackoff(
 
     const initial_attempt: SwingAttemptResult = {
         terminal_swing_count: initial_swing_count,
-        is_stable: false,
+        holds: false,
         actual_output_items: initial_result.stability_check.actual_output_items,
         expected_output_items: initial_result.stability_check.expected_output_items,
     };
@@ -1598,7 +1699,7 @@ export function generateClockWithSwingBackoff(
 
         attempts.push({
             terminal_swing_count: swings,
-            is_stable: attempt_result.stability_check.is_stable,
+            holds: attempt_result.stability_check.holds,
             actual_output_items: attempt_result.stability_check.actual_output_items,
             expected_output_items: attempt_result.stability_check.expected_output_items,
         });
@@ -1606,10 +1707,10 @@ export function generateClockWithSwingBackoff(
         logger.log(
             `swings=${swings}: actual=${attempt_result.stability_check.actual_output_items}, ` +
             `expected=${attempt_result.stability_check.expected_output_items}, ` +
-            `stable=${attempt_result.stability_check.is_stable}`
+            `stable=${attempt_result.stability_check.holds}`
         );
 
-        if (attempt_result.stability_check.is_stable) {
+        if (attempt_result.stability_check.holds) {
             stable_result = attempt_result;
             stable_swing_count = swings;
             break;

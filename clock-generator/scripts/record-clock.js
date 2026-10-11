@@ -58,7 +58,7 @@ const RECORDED_TICKS = 36000;
             config.overrides = { ...config.overrides, terminal_swing_count: given.output_swings };
         }
         const made = clockFromWindows(config, given.windows, given.period, quiet);
-        selected = { id: process.env.TAG || "given-windows", label: `the windows of ${path.basename(given_windows)}`, belt: made.belt, verdict: made.stability_check.is_stable ? "stable" : "unstable", result: made };
+        selected = { id: process.env.TAG || "given-windows", label: `the windows of ${path.basename(given_windows)}`, belt: made.belt, verdict: made.stability_check.holds ? "stable" : "unstable", result: made };
     } else {
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         selected = alternative_id ? alternatives.find(a => a.id === alternative_id) : alternatives[selected_index];

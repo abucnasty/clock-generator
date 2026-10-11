@@ -27,9 +27,9 @@ describe("generateClockForConfig", () => {
         it("is stable as built when an inserter takes the by-product off for good", () => {
             // jellynut-processing makes jelly for two machines and the seed at 2%; the seeds fill their stack of 10 and
             // block the machine unless the inserter taking them off picks them up although they are not its main product
-            expect(by_product.stability_check.is_stable).toBe(true);
+            expect(by_product.stability_check.holds).toBe(true);
             expect(by_product.stability_check.actual_output_items).toBeGreaterThan(0);
-            expect(by_product.stability_check.as_built?.is_stable).toBe(true);
+            expect(by_product.stability_check.as_built?.holds).toBe(true);
         });
 
         it("clocks the inserter taking the by-product off, so it only looks at the machine now and then", () => {
@@ -55,8 +55,8 @@ describe("generateClockForConfig", () => {
     describe("a biochamber with a fuel inserter", () => {
         it("is stable as built, with the fuel inserter on a clock of its own", () => {
             // 926% energy consumption: the biochamber burns about 5 nutrients a craft, most of the 6 it makes
-            expect(fuel_inserter.stability_check.is_stable).toBe(true);
-            expect(fuel_inserter.stability_check.as_built?.is_stable).toBe(true);
+            expect(fuel_inserter.stability_check.holds).toBe(true);
+            expect(fuel_inserter.stability_check.as_built?.holds).toBe(true);
 
             // the fuel clock counts its own ticks, so the fuel inserter has no windows on the clock of the period
             expect(fuel_inserter.clock_windows["inserter:3"]).toBeUndefined();
@@ -75,8 +75,8 @@ describe("generateClockForConfig", () => {
         });
 
         it("keeps the rocket fuel chain stable as built with the fuel of three biochambers", () => {
-            expect(biochambers.stability_check.is_stable).toBe(true);
-            expect(biochambers.stability_check.as_built?.is_stable).toBe(true);
+            expect(biochambers.stability_check.holds).toBe(true);
+            expect(biochambers.stability_check.as_built?.holds).toBe(true);
             for (const id of ["inserter:10", "inserter:12", "inserter:13"]) {
                 expect(biochambers.clock_windows[id]).toBeUndefined();
                 expect(biochambers.unplanned_inserter_clocks![id].own_clock).toBe(true);
@@ -104,7 +104,7 @@ describe("generateClockForConfig", () => {
 
             it("leaves the clock and its stability as they are", () => {
                 expect(fuel_inserter.simulation_duration.ticks).toBe(fuel_inserter.serializable_state_transition_history.total_duration_ticks);
-                expect(fuel_inserter.stability_check.is_stable).toBe(true);
+                expect(fuel_inserter.stability_check.holds).toBe(true);
             });
 
             it("shows the fuel being consumed in a chain that also moves a by-product", () => {
