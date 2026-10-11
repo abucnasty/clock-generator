@@ -120,9 +120,12 @@ describe("generateClockForConfig", () => {
     //
     // That recording was of one start of the clock. An inserter that waits for a machine at its output block takes
     // its items a tick after the output inserter has cleared it (see IdleModeTransitionEvaluator), and with that tick
-    // the simulator finds a start of the clock from which every set of derived windows makes 92 of 96 a period:
-    // they pass from 12 starts and fail the check of them all. Whether the game has that state is not recorded; there
-    // is no scaffold of this build.
+    // the simulator found a start of the clock from which the derived windows with 2 ticks of padding make 92 of 96 a
+    // period: they passed from 12 starts and failed the check of them all, and the search of the padding then needed two
+    // paddings in a row to pass, so it found nothing. The search since 2026-10-11 confirms a padding without a passing
+    // neighbour when there is none with one: the windows with no padding pass from every start and over the long run,
+    // where a tick of padding does not. Whether the game has that state is not recorded; there is no scaffold of this
+    // build.
     describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
         const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
 
@@ -131,18 +134,16 @@ describe("generateClockForConfig", () => {
             expect(result.stability_check.as_built?.holds).toBe(false);
         });
 
-        it("no derived windows pass the clock-only check from every start", () => {
+        it("derives windows with no padding, the one setting that passes with none of its neighbours", () => {
             const result = generateClockForConfig({
                 ...config,
                 overrides: { ...config.overrides, derive_clock_windows: true },
             }, { logger: quiet });
-            expect(result.derived_clock_windows?.succeeded).toBe(false);
-            expect(result.stability_check.holds).toBe(false);
-            // paddings pass the quick trial from the generator's start and none is confirmed: one of the start phases
-            // of the confirmation makes 92 of 96
-            expect(result.search?.kind).toBe("padding");
-            expect(result.search!.candidates.some(candidate => candidate.holds)).toBe(true);
-            expect(result.search!.picked).toBeNull();
+            expect(result.derived_clock_windows).toMatchObject({ succeeded: true, kept_planned_windows: false, end_padding_ticks: 0 });
+            expect(result.stability_check.holds).toBe(true);
+            expect(result.search).toMatchObject({ kind: "padding", picked: { row: 1, setting: 0 } });
+            expect(result.search!.candidates.find(candidate => candidate.setting === 1)!.holds).toBe(false);
+            expect(result.search!.candidates.find(candidate => candidate.setting === 2)!.holds).toBe(false);
         });
     });
 });

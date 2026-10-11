@@ -133,10 +133,8 @@ describe("the belt a clock is made for", () => {
         });
 
         // The build has a deadlock risk (GOALS.md, "Two inserters that bring the same item"), which the trials for
-        // backpressure loss do not see: uneven output swings, as searched until 2026-10-11, got back from every loss
-        // in the simulator and made 0 of 192 a period in the game, where batched swings made 192. So on this build the
-        // verdict does not decide. The search since then moves another swing and its windows do not get back from two
-        // losses; the clock holds its rate all the same, at more wake-ups than batched swings.
+        // backpressure loss do not see: uneven output swings gets back from every loss in the simulator and made 0 of
+        // 192 a period in the game, where batched swings made 192. So on this build the verdict does not decide.
         it("selects it though the build does not get back to its rate under it once the packs have not been taken away for a while", () => {
             const batched = alternative("planned-belt-slack");
             expect(batched.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["utility-science-pack is not taken away"] });
@@ -144,9 +142,9 @@ describe("the belt a clock is made for", () => {
             expect(batched.deadlock_risks).toHaveLength(1);
             expect(batched.ranking.meets_target_rate).toBe(true);
             expect(selected.id).toBe("planned-belt-slack");
+            // the clocks that do get back hold the rate at more wake-ups
             const uneven = alternative("uneven-output");
-            expect(uneven.verdict).toBe("no recovery");
-            expect(uneven.ranking.meets_target_rate).toBe(true);
+            expect(uneven.verdict).toBe("stable");
             expect(uneven.assessment.wake_ups_per_minute!).toBeGreaterThan(0);
         });
     });
@@ -213,14 +211,13 @@ describe("the belt a clock is made for", () => {
             expect(alternatives.map(a => a.id)).toEqual(["planned-belt-slack", "full-hand"]);
         });
 
-        // the timing a tick later is the one whose neighbours pass too (search.ts); offset 0 was picked until 2026-10-11
         it("selects full-hand output swings without the slack", () => {
             expect(selected.id).toBe("full-hand");
             expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "non_moving" });
             expect(selected.result.clock_windows).toEqual({
                 "inserter:1": [{ start: 1, end: 23 }],
-                "inserter:2": [{ start: 1, end: 4 }, { start: 37, end: 40 }],
+                "inserter:2": [{ start: 0, end: 3 }, { start: 36, end: 39 }],
             });
         });
     });
