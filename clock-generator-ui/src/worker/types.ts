@@ -1,6 +1,8 @@
 import type {
     AsBuiltStabilityCheck,
-    BackpressureLossVerdict,
+    ClockAssessment,
+    ClockRanking,
+    ClockVerdict,
     CheckedShiftRow,
     ClockInsight,
     ConfigValidation,
@@ -75,31 +77,19 @@ export interface ClockAlternativeView {
     inserterWindowCount: number;
     /** The windows the selection compares last: the count without the windows of the output feeders */
     rankingWindowCount: number;
-    /** Holds its expected output and gets back to it after every backpressure loss of the build */
-    isStable: boolean;
-    /** Holds its expected output for as long as nothing runs out and nothing backs up */
-    holdsExpectedOutput: boolean;
-    /** The losses the clock does not get back from; null when none was tried */
-    backpressureLoss: BackpressureLossVerdict | null;
+    /** What the trial of the clock found: holds, survives backpressure loss, rate, wake-ups */
+    assessment: ClockAssessment;
+    /** The one word for the clock: stable, no recovery, or unstable */
+    verdict: ClockVerdict;
+    /** How the clock ranks against the others; the selection compares these, in order */
+    ranking: ClockRanking;
     /**
      * What to say of a build with a deadlock risk, the same for every clock of it: which two inserters bring the same
      * item to a machine, and what can come of it. Null for a build without one.
      */
     deadlockRisk: string | null;
-    /**
-     * Stable and at the target rate, which a clock with a rounded period is not. On a build with a deadlock risk a
-     * clock that holds the target rate meets it whether it gets back from every backpressure loss or not.
-     */
-    meetsTargetRate: boolean;
-    /** Items per second the clock is above the target rate, or below it when negative */
-    rateOffTarget: number;
-    /** False when the clock is not made for the belt the config asks for: without belt pickup slack, or with it when the belts do not move */
-    matchesBeltChoice: boolean;
     /** The belt the clock is made for: "moving (+4 ticks)" or "non-moving"; empty when no clocked inserter picks up from a belt */
     beltLabel: string;
-    /** Ranked ahead of the others that meet the target rate (full-hand output swings where a machine has spare speed) */
-    rankFirst: boolean;
-    itemsPerSecond: number;
     asBuilt: AsBuiltStabilityCheck | null;
     expectedOutputItems: number;
     terminalSwingCount: number;
