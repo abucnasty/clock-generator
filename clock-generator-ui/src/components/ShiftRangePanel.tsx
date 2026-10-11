@@ -1,5 +1,5 @@
 import { Box, Paper, Tooltip, Typography } from '@mui/material';
-import type { ShiftRangeEdge } from 'clock-generator/browser';
+import type { ShiftRangeEdge } from '../worker/types';
 import type { ShiftOptionsView } from '../worker/types';
 import { COLOR_BLIND_PALETTE } from './colors';
 
