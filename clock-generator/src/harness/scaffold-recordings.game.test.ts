@@ -133,6 +133,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         wake_ups_open: "the simulator shows an output inserter as waiting on its machine in ticks the game shows it as working: "
             + "510 wake-ups a minute against 400 on 2026-10-10 (samples README, Advanced circuit)",
     },
+    // The same build at 230 a second, the target the issue was reported at: its period is not a whole number of ticks
+    // (550.957), so its clock counts 12,672 ticks for 23 periods. No clock held it until the one search of 2026-10-11
+    // found full-hand output swings that do; recorded that day, 16,192 in each of 2 repeats, 769 wake-ups a minute in
+    // the game against 600 in the simulator.
+    "advanced circuit at 230 a second": {
+        scaffold: path.join(SAMPLES, "intermediates", "advanced-circuit", "advanced-circuit-scaffold.txt"),
+        config: ConfigPaths.ADVANCED_CIRCUIT_230,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 4800,
+    },
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
     "utility science": {
@@ -245,7 +256,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // to move is what that many ticks ask for.
             const subtick = selected.result.subtick;
             const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
-            const expected = config.target_output.items_per_second / config.target_output.copies * period / 60;
+            // a subtick clock's repeat and a rate per copy can leave a float a hair off the whole number of items
+            const expected = Math.round(config.target_output.items_per_second / config.target_output.copies * period / 60 * 1e6) / 1e6;
             const clock = encodeBlueprintFile({ blueprint: subtick?.blueprint ?? selected.result.blueprint });
             const result = await record({
                 factorio: FACTORIO!,
