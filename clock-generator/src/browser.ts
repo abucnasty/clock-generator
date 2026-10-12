@@ -82,6 +82,7 @@ export {
     planClockAlternatives,
     runClockAlternativeTask,
     combineClockAlternativeRuns,
+    searchesAreNeeded,
     clockBeltLabel,
     BlueprintGenerationResult,
     ClockAlternative,

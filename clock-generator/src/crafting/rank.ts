@@ -59,6 +59,27 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
 }
 
 /**
+ * A clock the selection can end on as stable: it meets goal 1 and is made for the belt the config asks for. Such a
+ * clock comes before every clock that is not (see `combineClockAlternativeRuns`), so once one is on offer the
+ * selected clock is one of them, whatever else is made.
+ */
+export function selectableAsStable(ranking: ClockRanking): boolean {
+    return ranking.meets_target_rate && ranking.matches_belt_choice;
+}
+
+/**
+ * Whether the searches have to run: none of `runs`, the clocks made without a search, can be selected as stable. A
+ * search then is the only way left to a stable clock. Where one can, a search could only find a clock with fewer
+ * wake-ups, which is looked for when the config asks for it (`overrides.search_for_fewer_wake_ups`).
+ */
+export function searchesAreNeeded<T>(
+    runs: (ClockAlternativeRun<T> | null)[],
+    rankingOf: (alternative: T) => ClockRanking,
+): boolean {
+    return !runs.some(run => run !== null && run.alternatives.some(alternative => selectableAsStable(rankingOf(alternative))));
+}
+
+/**
  * The windows an alternative is ranked by, between clocks with the same wake-ups: those it has without the windows of
  * its output feeders, which only reduce idle checks and must never count against a clock, so its windows rank as they
  * would with its feeders always enabled.

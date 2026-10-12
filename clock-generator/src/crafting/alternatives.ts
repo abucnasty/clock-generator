@@ -11,7 +11,7 @@ import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
-import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount } from "./rank";
+import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
 import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf } from "./trial";
 
 
@@ -49,6 +49,11 @@ export interface ClockAlternativesResult {
      * or the one nearest to the target rate when none meets it
      */
     selected_index: number;
+    /**
+     * The labels of the searches that were not run, because a clock made without one can be selected as stable (see
+     * `searchesAreNeeded`); empty when they ran. `overrides.search_for_fewer_wake_ups` runs them for every build.
+     */
+    skipped_searches: string[];
 }
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
@@ -78,6 +83,11 @@ export interface ClockAlternativeContext {
 export interface ClockAlternativeTask {
     id: string;
     label: string;
+    /**
+     * True for a search the config does not ask for on every build: it waits for the tasks without this, and only
+     * runs when `searchesAreNeeded` says so of their runs and the primary one.
+     */
+    only_when_needed: boolean;
 }
 
 
@@ -99,6 +109,13 @@ interface AlternativeDefinition {
     run: () => BlueprintGenerationResult;
     /** The config its clock is planned on, where that is not the one the alternatives are made for */
     planned_on?: Config;
+    /** One of the four searches: it makes its clock by trying many, which takes most of the time of a generation */
+    search?: boolean;
+}
+
+/** Whether a search waits until it is known that no clock made without one can be selected as stable */
+function onlyWhenNeeded(definition: AlternativeDefinition, config: Config): boolean {
+    return definition.search === true && config.overrides?.search_for_fewer_wake_ups !== true;
 }
 
 
@@ -287,6 +304,7 @@ function alternativeDefinitionsFor(
                 + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
                 + "that is already there rather than staying enabled while the machine crafts.",
             run: () => generateClockWithSwingBackoff(base_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
+            search: true,
         }]),
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "uneven-output",
@@ -303,6 +321,7 @@ function alternativeDefinitionsFor(
                 assert(result.search?.kind === "moved output swing" && result.search.picked !== null, "no moved output swing passes the clock-only check");
                 return result;
             },
+            search: true,
         }]),
         {
             id: "shifted-swings",
@@ -321,6 +340,7 @@ function alternativeDefinitionsFor(
                 assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, "no shifted round of swings passes the clock-only check");
                 return result;
             },
+            search: true,
         },
         ...higher_counts.map(higher => ({
             id: `swings-${higher}`,
@@ -358,6 +378,7 @@ function alternativeDefinitionsFor(
                     ? generateClockWithSwingBackoff(base_config, full_hand, fullHandClock)
                     : fullHandClock({ ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: stable_lower } }, full_hand);
             },
+            search: true,
         },
     ];
 }
@@ -482,7 +503,8 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
     };
-    const tasks = alternativeDefinitions(config, context, {}).map(({ id, label }) => ({ id, label }));
+    const tasks = alternativeDefinitions(config, context, {})
+        .map(definition => ({ id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config) }));
     return { primary, context, tasks };
 }
 
@@ -516,6 +538,11 @@ export function runClockAlternativeTask(
  * Generates the same config several ways (batched swings with and without belt pickup slack, derived
  * per-craft windows, fractional swings toggled, lower output swing counts, full-hand output) and checks each
  * with the clock-only simulation from several start phases. Alternatives with identical windows are listed once.
+ *
+ * The four searches come last and only run when none of the clocks made before them can be selected as stable
+ * (`searchesAreNeeded`), unless the config asks for them on every build (`overrides.search_for_fewer_wake_ups`).
+ * The alternatives are listed in the same order either way.
+ *
  * Runs everything in sequence; the UI runs the tasks from planClockAlternatives in parallel workers instead.
  */
 export function generateClockAlternatives(
@@ -531,25 +558,40 @@ export function generateClockAlternatives(
     report();
     const plan = planClockAlternatives(config, { ...options, on_progress_detail: report });
     completed++;
-    total = 1 + plan.tasks.length;
 
-    const runs: (ClockAlternativeRun | null)[] = [plan.primary];
     const stable_by_id = new Map<string, boolean>();
     const known_stable = (id: string) => stable_by_id.get(id);
     const definitions = alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable);
-    for (const definition of definitions) {
-        current_step = definition.label;
-        report();
-        const run = runAlternative(definition, config, logger, report);
-        completed++;
-        runs.push(run);
-        if (run) {
-            // what the full-hand alternative is built on is a run that holds, as before a loss was ever tried
-            stable_by_id.set(definition.id, run.alternatives[0].assessment.holds);
+    // listed in the order of the definitions, whichever are made first
+    const runs: (ClockAlternativeRun | null)[] = [plan.primary, ...definitions.map(() => null)];
+    const generate = (made: AlternativeDefinition[]) => {
+        for (const definition of made) {
+            current_step = definition.label;
+            report();
+            const run = runAlternative(definition, config, logger, report);
+            completed++;
+            runs[1 + definitions.indexOf(definition)] = run;
+            if (run) {
+                // what the full-hand alternative is built on is a run that holds, as before a loss was ever tried
+                stable_by_id.set(definition.id, run.alternatives[0].assessment.holds);
+            }
         }
+    };
+
+    const searches = definitions.filter(definition => onlyWhenNeeded(definition, config));
+    const first = definitions.filter(definition => !searches.includes(definition));
+    total = 1 + first.length;
+    generate(first);
+    const searches_run = searches.length > 0 && searchesAreNeeded(runs, it => it.ranking);
+    if (searches_run) {
+        total += searches.length;
+        generate(searches);
+    } else if (searches.length > 0) {
+        logger.log(`Not searched (${searches.map(it => it.label).join(", ")}): a clock made without a search is stable. `
+            + "Set overrides.search_for_fewer_wake_ups to search for one with fewer wake-ups.");
     }
 
     current_step = "Done";
     report();
-    return combineClockAlternativeRuns(runs, it => it.ranking);
+    return { ...combineClockAlternativeRuns(runs, it => it.ranking), skipped_searches: searches_run ? [] : searches.map(it => it.label) };
 }

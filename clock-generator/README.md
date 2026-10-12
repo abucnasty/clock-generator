@@ -356,7 +356,8 @@ drills {
 overrides: {
     terminal_swing_count: 4,    // Force the output swings per cycle, instead of the count the plan works out
     lcm: 12,                    // Override LCM calculation for cycle length
-    non_moving_belts: true      // The belts the inserters pick up from do not move (default false)
+    non_moving_belts: true,     // The belts the inserters pick up from do not move (default false)
+    search_for_fewer_wake_ups: true // Run the four searches for every build (default false)
 }
 ```
 
@@ -370,6 +371,14 @@ Every potential clock names the belt it is made for:
 - **non-moving belt**: the belt inserters get only the windows they need on a full belt that does not move. "Batched swings, non-moving belt" is made this way on purpose; other clocks drop the slack when they do not hold the expected output with it. A clock with a period that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
 
 By default a non-moving belt clock is only selected for you when no clock for a moving belt holds the target rate. Set `non_moving_belts: true` ("Belts do not move" in the UI) when your belts are backed up and standing still: each clock is made without the slack, and the one with the fewest wake-ups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a non-moving belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
+
+#### Searching for fewer wake-ups
+
+Four of the potential clocks are found by a search, which tries many clocks in the simulator: observed windows, uneven output swings, shifted swings and full-hand output swings. Together they take most of the time of a generation. The other potential clocks are made straight from the plan: batched swings, fractional swings and the other output swing counts.
+
+By default the searches only run when none of the clocks made without one can be selected as stable: one that holds the target rate, gets back to it after a backpressure loss and is made for the belt the config asks for. Then a search is the only way left to a stable clock, and all four run. Where a clock made without a search is stable, the searches are left out, and the generator says which.
+
+A search can still find a stable clock with fewer wake-ups than the one selected. Set `search_for_fewer_wake_ups: true` ("Search for fewer wake-ups" in the UI) to run the searches for every build and have the clock with the fewest wake-ups selected among all of them.
 
 ## Troubleshooting
 

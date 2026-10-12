@@ -16,7 +16,8 @@ interface OverridesFormProps {
     terminalSwingCount?: number;
     useFractionalSwings?: boolean;
     nonMovingBelts?: boolean;
-    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'non_moving_belts', value: number | boolean | undefined) => void;
+    searchForFewerWakeUps?: boolean;
+    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'non_moving_belts' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
 }
 
 export function OverridesForm({
@@ -24,6 +25,7 @@ export function OverridesForm({
     terminalSwingCount,
     useFractionalSwings,
     nonMovingBelts,
+    searchForFewerWakeUps,
     onUpdate,
 }: OverridesFormProps) {
     return (
@@ -119,6 +121,28 @@ export function OverridesForm({
                                 />
                             }
                             label="Belts do not move"
+                            sx={{ ml: 1 }}
+                        />
+                    </Tooltip>
+                    <Tooltip
+                        title="Runs the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
+                        arrow
+                        placement="top"
+                    >
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={searchForFewerWakeUps ?? false}
+                                    color="primary"
+                                    onChange={(e) =>
+                                        onUpdate(
+                                            'search_for_fewer_wake_ups',
+                                            e.target.checked ? true : undefined
+                                        )
+                                    }
+                                />
+                            }
+                            label="Search for fewer wake-ups"
                             sx={{ ml: 1 }}
                         />
                     </Tooltip>

@@ -3,7 +3,7 @@ import { generateClockForConfig, generateClockAlternatives, validateConfig, type
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { quiet, withSearches } from "./generate-blueprint-test-helpers";
 
 // The samples of generate-blueprint.test.ts whose generation takes longest: the clock alternatives of iron bacteria,
 // and two builds whose single generation runs the long checks.
@@ -51,7 +51,8 @@ describe("generateClockForConfig", () => {
 
         beforeAll(() => {
             validation = validateConfig(config);
-            const generated = generateClockAlternatives(config, { logger: quiet });
+            // with the searches, for the observed windows: the clock with 6 output swings is selected either way
+            const generated = generateClockAlternatives(withSearches(config), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
             windows = selected.result.clock_windows;

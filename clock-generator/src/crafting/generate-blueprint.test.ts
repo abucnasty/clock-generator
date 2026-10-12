@@ -3,6 +3,7 @@ import { generateClockForConfig, generateClockAlternatives, validateConfig, type
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
+import { withSearches } from "./generate-blueprint-test-helpers";
 
 /** The transfers recorded for an inserter, as [start, end] tick ranges in the order they were recorded */
 const transferRanges = (result: BlueprintGenerationResult, inserter_id: number): [number, number][] => result.transfer_history
@@ -92,7 +93,8 @@ describe("generateClockForConfig", () => {
             const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
 
             beforeAll(() => {
-                ({ alternatives } = generateClockAlternatives(config));
+                // batched swings is stable, so observed windows are only made when they are asked for
+                ({ alternatives } = generateClockAlternatives(withSearches(config)));
             });
 
             it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {

@@ -11,6 +11,6 @@ export { SearchReport, SearchCandidate, SearchRangeEdge } from "./candidates/sea
 export { shiftedSwingsClock } from "./candidates/shifted-swings";
 export { hasPlannedWindowsNotHands, fullHandClock } from "./candidates/full-hand";
 export { feedersOfOutputMachines, anyFeederCarriesFuel } from "./candidates/output-feeders";
-export { ClockRanking, rankingOf, rankingWindowCount, combineClockAlternativeRuns } from "./rank";
+export { ClockRanking, rankingOf, rankingWindowCount, combineClockAlternativeRuns, selectableAsStable, searchesAreNeeded } from "./rank";
 export { ClockAlternative, ClockAlternativesResult, ClockAlternativeRun, ClockAlternativeContext, ClockAlternativeTask, ClockAlternativesPlan, planClockAlternatives, runClockAlternativeTask, generateClockAlternatives } from "./alternatives";
 export { blueprintFileFor } from "./blueprint-export";

@@ -4,6 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
+import { withSearches } from "./generate-blueprint-test-helpers";
 
 describe("generateClockForConfig", () => {
 
@@ -172,7 +173,8 @@ describe("generateClockForConfig", () => {
                 const windowsOf = (id: string) => alternatives.find(a => a.id === id)?.result.clock_windows;
 
                 beforeAll(() => {
-                    ({ alternatives } = generateClockAlternatives(config));
+                    // batched swings is stable, so observed windows are only made when they are asked for
+                    ({ alternatives } = generateClockAlternatives(withSearches(config)));
                 });
 
                 it.each(["planned-belt-slack", "planned", "derived"])("%s is stable", (id) => {
@@ -211,11 +213,12 @@ describe("generateClockForConfig", () => {
     describe("FLYING_ROBOT_FRAME clock-only check", async () => {
         const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME);
 
-        // the clock alternatives of the config, generated once for the describes below, which only read them
+        // the clock alternatives of the config, generated once for the describes below, which only read them: with
+        // the searches, which batched swings being stable would leave out
         let alternatives: ClockAlternative[];
 
         beforeAll(() => {
-            ({ alternatives } = generateClockAlternatives(config));
+            ({ alternatives } = generateClockAlternatives(withSearches(config)));
         });
 
         // enable ranges as the inserters see them (decider windows shifted by the circuit latency)

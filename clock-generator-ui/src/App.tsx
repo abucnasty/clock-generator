@@ -96,6 +96,7 @@ function App() {
         selectedAlternativeIndex,
         selectAlternative,
         pendingAlternatives,
+        skippedSearches,
         validation,
         validate,
         error,
@@ -434,6 +435,7 @@ function App() {
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
                                     nonMovingBelts={config.overrides?.non_moving_belts}
+                                    searchForFewerWakeUps={config.overrides?.search_for_fewer_wake_ups}
                                     onUpdate={updateOverrides}
                                 />
                             </Box>
@@ -459,6 +461,7 @@ function App() {
                                 selectedIndex={selectedAlternativeIndex}
                                 onSelect={selectAlternative}
                                 pending={pendingAlternatives}
+                                skippedSearches={skippedSearches}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}
                                 transferHistory={transferHistory}

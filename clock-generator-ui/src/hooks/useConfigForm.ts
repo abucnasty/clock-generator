@@ -191,6 +191,7 @@ export interface ConfigFormData {
         terminal_swing_count?: number;
         use_fractional_swings?: boolean;
         non_moving_belts?: boolean;
+        search_for_fewer_wake_ups?: boolean;
         ignored_lcm_ingredients?: string[];
     };
 }

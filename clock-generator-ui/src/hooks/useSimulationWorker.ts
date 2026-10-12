@@ -50,6 +50,8 @@ export interface UseSimulationWorkerResult {
     selectAlternative: (index: number) => void;
     /** Labels of alternatives still being generated; the finished ones are already in `alternatives` */
     pendingAlternatives: string[];
+    /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
+    skippedSearches: string[];
     validation: ValidationState;
     /** Checks the config and plans its transfers in a worker, without generating a clock */
     validate: (config: Config) => void;
@@ -63,11 +65,14 @@ export interface UseSimulationWorkerResult {
 // Dynamic imports for the clock-generator library
 let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService | null = null;
 let combineClockAlternativeRuns: typeof import('clock-generator/browser').combineClockAlternativeRuns | null = null;
+let searchesAreNeeded: typeof import('clock-generator/browser').searchesAreNeeded | null = null;
 
 const FACTORIO_DATA_URL = '/data-filtered.json';
 const PRIMARY_STEP = 'Batched swings';
 // the slowest alternatives start first so they overlap the most
 const SLOW_TASKS = ['full-hand', 'uneven-output', 'derived', 'fractional'];
+const slowestFirst = (tasks: ClockAlternativeTask[]) => [...tasks].sort((a, b) =>
+    Number(SLOW_TASKS.includes(b.id)) - Number(SLOW_TASKS.includes(a.id)));
 
 export interface GenerationProgressStore {
     get: () => GenerationProgress | null;
@@ -99,7 +104,10 @@ function workerPoolSize(): number {
     return Math.max(1, Math.min((navigator.hardwareConcurrency || 2) - 1, 6));
 }
 
-/** One generation: a plan on one worker, then its tasks spread over the pool */
+/**
+ * One generation: a plan on one worker, then its tasks spread over the pool. The searches that only run when needed
+ * wait for the other tasks, and are then queued or left out.
+ */
 interface Generation {
     runId: number;
     config: Config;
@@ -108,6 +116,10 @@ interface Generation {
     context: ClockAlternativeContext | null;
     tasks: ClockAlternativeTask[];
     queue: ClockAlternativeTask[];
+    /** The searches that wait for every other task: whether they run is decided from the runs of those */
+    waiting: ClockAlternativeTask[];
+    /** The searches that were not run */
+    skipped: ClockAlternativeTask[];
     /** Primary run first, then one per task in display order */
     runs: (ClockAlternativeRunView | null)[];
     running: Map<Worker, ClockAlternativeTask>;
@@ -128,6 +140,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
     const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
     const [pendingAlternatives, setPendingAlternatives] = useState<string[]>([]);
+    const [skippedSearches, setSkippedSearches] = useState<string[]>([]);
     // set once the user picks an alternative, so results arriving later do not move the selection
     const userSelectionRef = useRef<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -151,7 +164,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             step: generation.context ? running.join(', ') : PRIMARY_STEP,
             detail: generation.detail,
             completed: generation.completed,
-            total: generation.context ? 1 + generation.tasks.length : null,
+            // the searches are counted once it is known that they run
+            total: generation.context ? 1 + generation.tasks.length - generation.waiting.length - generation.skipped.length : null,
         });
     }, [progressStore]);
 
@@ -160,10 +174,23 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
-        setPendingAlternatives(generation.tasks.filter(task => !generation.done.has(task.id)).map(task => task.label));
+        const not_started = [...generation.waiting, ...generation.skipped];
+        setPendingAlternatives(generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label));
+        setSkippedSearches(generation.skipped.map(task => task.label));
     }, []);
 
     const dispatchTasks = useCallback((generation: Generation) => {
+        if (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0) {
+            // every clock made without a search is in: the searches run when none of them can be selected as stable
+            const searches = generation.waiting;
+            generation.waiting = [];
+            if (searchesAreNeeded!(generation.runs, it => it.ranking)) {
+                generation.queue = slowestFirst(searches);
+            } else {
+                generation.skipped = searches;
+            }
+            publishAlternatives(generation);
+        }
         while (generation.idle.length > 0 && generation.queue.length > 0) {
             const worker = generation.idle.pop()!;
             const task = generation.queue.shift()!;
@@ -185,7 +212,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         generationRef.current = null;
         progressStore.set(null);
         setIsRunning(false);
-    }, [progressStore, reportProgress]);
+    }, [progressStore, publishAlternatives, reportProgress]);
 
     const handleResponse = useCallback((worker: Worker, response: WorkerResponse) => {
         if (response.type === 'validated' || response.type === 'validation-failed') {
@@ -218,8 +245,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.context = response.context;
                 generation.tasks = response.tasks;
                 generation.runs = [response.primary, ...response.tasks.map(() => null)];
-                generation.queue = [...response.tasks].sort((a, b) =>
-                    Number(SLOW_TASKS.includes(b.id)) - Number(SLOW_TASKS.includes(a.id)));
+                generation.waiting = response.tasks.filter(task => task.only_when_needed);
+                generation.queue = slowestFirst(response.tasks.filter(task => !task.only_when_needed));
                 generation.completed = 1;
                 generation.idle = [...workersRef.current];
                 publishAlternatives(generation);
@@ -277,6 +304,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             
             FactorioDataService = clockGenerator.FactorioDataService;
             combineClockAlternativeRuns = clockGenerator.combineClockAlternativeRuns;
+            searchesAreNeeded = clockGenerator.searchesAreNeeded;
 
             // Fetch and initialize Factorio data
             const response = await fetch(FACTORIO_DATA_URL);
@@ -310,12 +338,13 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
         setPendingAlternatives([]);
+        setSkippedSearches([]);
         userSelectionRef.current = null;
         setError(null);
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config, debugSteps, streamLogs, context: null, tasks: [], queue: [], runs: [],
+            runId, config, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [],
             running: new Map(), done: new Set(), idle: [], completed: 0,
         };
         worker.postMessage({ type: 'plan', runId, config, debugSteps, streamLogs } satisfies WorkerRequest);
@@ -381,6 +410,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         selectedAlternativeIndex,
         selectAlternative,
         pendingAlternatives,
+        skippedSearches,
         validation,
         validate,
         error,
