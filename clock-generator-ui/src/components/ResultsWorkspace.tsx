@@ -30,6 +30,7 @@ interface ResultsWorkspaceProps {
     selectedIndex: number;
     onSelect: (index: number) => void;
     pending: string[];
+    skippedSearches: string[];
     blueprintString: string | null;
     simulationDurationTicks: number | null;
     transferHistory: SerializableTransferHistory | null;
@@ -93,6 +94,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 selectedIndex={props.selectedIndex}
                 onSelect={props.onSelect}
                 pending={props.pending}
+                skippedSearches={props.skippedSearches}
             />
 
             <Box sx={{ display: hasResults ? 'block' : 'none', mt: 2 }}>

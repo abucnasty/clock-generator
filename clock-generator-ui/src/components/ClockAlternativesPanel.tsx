@@ -52,9 +52,14 @@ interface ClockAlternativesPanelProps {
     onSelect: (index: number) => void;
     /** Labels of alternatives still being generated */
     pending?: string[];
+    /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
+    skippedSearches?: string[];
 }
 
-export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, pending = [] }: ClockAlternativesPanelProps) {
+/** "a, b and c" */
+const listed = (names: string[]) => names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+
+export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, pending = [], skippedSearches = [] }: ClockAlternativesPanelProps) {
     const [showUnstable, setShowUnstable] = useState(false);
 
     if (alternatives.length === 0 && pending.length === 0) {
@@ -207,6 +212,14 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                     </TableBody>
                 </Table>
             </TableContainer>
+            {skippedSearches.length > 0 && (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                    Not searched: {listed(skippedSearches)}. A clock made without a search
+                    {deadlockRisk !== null ? ' holds the target rate' : ' is stable'}, so the searches, which take most of the
+                    time of a generation, could only find one with fewer wake-ups. To run them, turn on "Search for
+                    fewer wake-ups" under Advanced Overrides and generate again.
+                </Alert>
+            )}
             {anyStable && (showUnstable ? unstableCount > 0 : hiddenCount > 0) && (
                 <Box sx={{ mt: 1 }}>
                     <Button size="small" onClick={() => setShowUnstable(shown => !shown)}>
