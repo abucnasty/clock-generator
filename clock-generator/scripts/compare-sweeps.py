@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # scripts/compare-sweeps.py <before dir> <after dir> [-v]
 # Two sweeps (see sweep.sh) laid against each other: the samples that generate other potential clocks, give one
-# another verdict (stable, no recovery from a backpressure loss, unstable), rate, wake-ups, belt or period, or select
-# another clock. -v also lists clocks whose windows moved.
+# another verdict (stable, no recovery from a backpressure loss, unstable), rate, wake-ups, belt or period, select
+# another clock, or leave other searches out. -v also lists clocks whose windows moved.
 import json, os, sys
 
 before_dir, after_dir = sys.argv[1:3]
@@ -35,6 +35,9 @@ for key in sorted(set(before) | set(after)):
     ya = {alt["id"]: alt for alt in y.get("alternatives", [])}
     if x.get("deadlock_risks", []) != y.get("deadlock_risks", []):
         lines.append(f"  deadlock risk: {' '.join(x.get('deadlock_risks', [])) or 'none'} -> {' '.join(y.get('deadlock_risks', [])) or 'none'}")
+    # a sweep from before the searches only ran when needed has no such field: it ran them all
+    if x.get("skipped_searches", []) != y.get("skipped_searches", []):
+        lines.append(f"  not searched: {', '.join(x.get('skipped_searches', [])) or 'nothing'} -> {', '.join(y.get('skipped_searches', [])) or 'nothing'}")
     if x.get("selected") != y.get("selected"):
         lines.append(f"  selected: {x.get('selected')} -> {y.get('selected')}")
     for alt_id in sorted(set(xa) | set(ya)):

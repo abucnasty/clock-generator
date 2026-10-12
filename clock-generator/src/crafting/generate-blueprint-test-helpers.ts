@@ -5,6 +5,13 @@ import { generateClockAlternatives, type ClockAlternative } from "./generate-blu
 /** A logger for the generations whose log the test does not read */
 export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
 
+/**
+ * The config with the four searches asked for (`overrides.search_for_fewer_wake_ups`): for a test of a search's clock
+ * on a sample where a clock made without a search is stable, so that the searches would not run
+ */
+export const withSearches = (config: Config): Config =>
+    ({ ...config, overrides: { ...config.overrides, search_for_fewer_wake_ups: true } });
+
 export interface RocketFuelSample {
     config: Config;
     alternatives: ClockAlternative[];
@@ -23,7 +30,8 @@ export const rocketFuelSample = async (path: string): Promise<RocketFuelSample> 
     const config = await loadConfigFromFile(path);
     const ids = (matches: (inserter: Config["inserters"][number]) => boolean) =>
         config.inserters.filter(matches).map(inserter => `inserter:${inserter.id}`);
-    const { alternatives } = generateClockAlternatives(config);
+    // with the searches, whose clocks the tests of these samples read as well: batched swings is stable on both
+    const { alternatives } = generateClockAlternatives(withSearches(config));
     const alternative = (id: string) => alternatives.find(a => a.id === id)!;
     const moved = (inserter_id: string): number => alternative("planned").result.serializable_transfer_history.entities
         .find(entity => entity.entity_id === inserter_id)!.transfers.reduce((sum, t) => sum + t.amount, 0);

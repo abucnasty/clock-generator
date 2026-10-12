@@ -10,7 +10,11 @@ process.chdir(ROOT);
 const dist = file => require(path.join(ROOT, "dist", file));
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
-/** The config of a sample by its key in ConfigPaths, or of a config file by its path; `belts_do_not_move` turns `overrides.non_moving_belts` on */
+/**
+ * The config of a sample by its key in ConfigPaths, or of a config file by its path; `belts_do_not_move` turns
+ * `overrides.non_moving_belts` on. SEARCH=1 in the environment turns `overrides.search_for_fewer_wake_ups` on for
+ * every script: the four searches then run for every sample, and not only where no other clock is stable.
+ */
 async function loadSample(key, belts_do_not_move = false) {
     const { ConfigPaths } = dist("config/config-paths.js");
     const { loadConfigFromFile } = dist("config/loader.js");
@@ -20,6 +24,9 @@ async function loadSample(key, belts_do_not_move = false) {
     const config = await loadConfigFromFile(ConfigPaths[key] ?? path.resolve(INVOKED_FROM, key));
     if (belts_do_not_move) {
         config.overrides = { ...config.overrides, non_moving_belts: true };
+    }
+    if (process.env.SEARCH === "1") {
+        config.overrides = { ...config.overrides, search_for_fewer_wake_ups: true };
     }
     return config;
 }

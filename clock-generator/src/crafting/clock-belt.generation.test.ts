@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { clockBeltLabel, generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
+import { clockBeltLabel, generateClockAlternatives, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { quiet, withSearches } from "./generate-blueprint-test-helpers";
 
 const beltsDoNotMove = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, non_moving_belts: true } });
 
@@ -110,9 +110,13 @@ describe("the belt a clock is made for", () => {
         let selected: ClockAlternative;
         const alternative = (id: string) => alternatives.find(a => a.id === id)!;
 
+        let by_default: ClockAlternativesResult;
+
         beforeAll(async () => {
             const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
-            const generated = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
+            by_default = generateClockAlternatives(beltsDoNotMove(config), { logger: quiet });
+            // with the searches, for the clocks of theirs that get back from every loss
+            const generated = generateClockAlternatives(withSearches(beltsDoNotMove(config)), { logger: quiet });
             alternatives = generated.alternatives;
             selected = alternatives[generated.selected_index];
         });
@@ -146,6 +150,14 @@ describe("the belt a clock is made for", () => {
             const uneven = alternative("uneven-output");
             expect(uneven.verdict).toBe("stable");
             expect(uneven.assessment.wake_ups_per_minute!).toBeGreaterThan(0);
+        });
+
+        // what the selection takes for goal 1 on this build is what the searches are left out for: a clock that
+        // holds at the target rate, whether it gets back from every loss or not
+        it("does not search for another clock by default, since batched swings can be selected as it is", () => {
+            expect(by_default.skipped_searches).toEqual(["Observed windows", "Uneven output swings", "Shifted swings", "Full-hand output swings"]);
+            expect(by_default.alternatives[by_default.selected_index].id).toBe("planned-belt-slack");
+            expect(by_default.alternatives.some(a => a.verdict === "stable")).toBe(false);
         });
     });
 

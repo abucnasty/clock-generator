@@ -507,6 +507,16 @@ export const ConfigOverridesSchema = z.object({
      */
     non_moving_belts: z.boolean().optional(),
     /**
+     * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
+     * output swings. They take most of the time of a generation.
+     *
+     * By default they only run when no clock made without a search can be selected as stable. Where one can, a
+     * search may still find a stable clock with fewer wake-ups; when enabled, the searches run for that too.
+     *
+     * @default false
+     */
+    search_for_fewer_wake_ups: z.boolean().optional(),
+    /**
      * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
      * offered as potential clocks.
      */
