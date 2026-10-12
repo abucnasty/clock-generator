@@ -70,7 +70,7 @@ export function selectableAsStable(ranking: ClockRanking): boolean {
 /**
  * Whether the searches have to run: none of `runs`, the clocks made without a search, can be selected as stable. A
  * search then is the only way left to a stable clock. Where one can, a search could only find a clock with fewer
- * wake-ups, which is not worth its time unless the config asks for it (`overrides.search_for_fewer_wake_ups`).
+ * wake-ups, which is looked for when the config asks for it (`overrides.search_for_fewer_wake_ups`).
  */
 export function searchesAreNeeded<T>(
     runs: (ClockAlternativeRun<T> | null)[],
