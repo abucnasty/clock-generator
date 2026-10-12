@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.8.0] - 2026-10-12
+
+### Added
+- "Search for fewer wake-ups" switch under Advanced Overrides (`overrides.search_for_fewer_wake_ups`, off by default). It runs the four searches (observed windows, uneven output swings, shifted swings, full-hand output swings) for every build and selects the clock with the fewest wake-ups among all of them, as earlier versions did.
+
+### Changed
+- Generating is faster on most builds. The four searches now only run when no other potential clock is stable. A build that needs a search to get a stable clock still gets all four.
+- Where the searches are left out, the Potential Clocks panel says so. The selected clock is stable, and it can have more wake-ups than the one a search would have found. Turn on "Search for fewer wake-ups" to get the selection of earlier versions.
+- The Potential Clocks panel says that a clock's wake-ups are counted from one start of the clock. Another start can settle into a different figure.
+
 ## [0.7.0] - 2026-10-11
 
 ### Changed
