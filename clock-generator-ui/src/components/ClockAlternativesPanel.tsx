@@ -81,7 +81,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                 starting the clock at several points, and a clock that holds the target rate was then tried
                 for backpressure loss: each input stops arriving for a while, and each output stops being taken
                 away, and the build has to get back to its rate by itself. The one selected for you has the fewest
-                wake-ups among those that hold the target rate and get back to it; a clock that leaves belt pickup slack out for a non-moving
+                wake-ups (counted from one start of the clock) among those that hold the target rate and get back to it; a clock that leaves belt pickup slack out for a non-moving
                 belt is only selected when no clock for a moving belt holds it. With "Belts do not move" on
                 every clock is made without the slack. Fewer windows means more batched swings.
                 Select one to show its blueprint and timelines.
@@ -125,7 +125,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                             <TableCell align="right">Inserter windows</TableCell>
                             <TableCell align="right">
                                 <Tooltip
-                                    title="How often a machine wakes an inserter that is enabled and waiting on it, per minute, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a check that moves little or nothing; fewer is better. Shown for clocks that were run long enough to count them."
+                                    title="How often a machine wakes an inserter that is enabled and waiting on it, per minute, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a check that moves little or nothing; fewer is better. Shown for clocks that were run long enough to count them. It is the count from one start of the clock; a clock can settle into another steady state from another start, with another count."
                                     arrow
                                 >
                                     <span>Wake-ups (per min)</span>
