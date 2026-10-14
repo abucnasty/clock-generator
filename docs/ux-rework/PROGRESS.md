@@ -61,7 +61,7 @@ come from here.
 | 2.1 | First visit and the way in | opus | spec | | | |
 | 2.2 | Sidecar mod changes | opus | spec | | | Goes first in Phase 2. Checkpoint: owner tries it in Factorio 2.1 |
 | 2.3 | Fold Validate into Generate | opus | spec | | | |
-| 2.4 | Ask the belt question | sonnet | spec | | | |
+| [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | 2.5 | Results lead with the answer | opus | spec | | | Goes first in Phase 2. Checkpoint: install steps reviewed |
 | 2.6 | Wake windows view | opus | spec | | | |
 | 2.7 | Factorio GUI grammar pass | opus | spec | | | |
