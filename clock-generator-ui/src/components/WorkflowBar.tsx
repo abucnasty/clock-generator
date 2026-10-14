@@ -91,7 +91,7 @@ export function WorkflowBar({
                     {blueprintString && (
                         <>
                             {selectedLabel && (
-                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 320, minWidth: 0, display: { xs: 'none', sm: 'block' } }}>
+                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', sm: 'block' } }}>
                                     {selectedLabel}
                                 </Typography>
                             )}
