@@ -362,8 +362,8 @@ describe("generateClockForConfig", () => {
                     picked: { row: 2, setting: -25 },
                     planned_ticks: { start: 145, end: 184 },
                     moved: [
-                        { entity_id: "inserter:1", item_names: ["flying-robot-frame"] },
-                        { entity_id: "inserter:3", item_names: ["battery", "electronic-circuit"] },
+                        { entity_id: EntityId.forInserter(1), item_names: ["flying-robot-frame"] },
+                        { entity_id: EntityId.forInserter(3), item_names: ["battery", "electronic-circuit"] },
                     ],
                 });
                 expect(shifted.description).toContain("The swings planned in clock ticks 145–184 (inserter 1: flying-robot-frame; "

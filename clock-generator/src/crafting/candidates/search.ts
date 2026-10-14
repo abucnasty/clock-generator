@@ -1,5 +1,6 @@
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
+import { EntityId } from "../../entities";
 import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
 import { TrialRun } from "../plan/plan-run";
@@ -173,5 +174,5 @@ export interface SearchReport {
     latest?: SearchRangeEdge;
     /** For a shifted cycle: the clock ticks the moved windows were planned in, and what moved */
     planned_ticks?: { start: number; end: number };
-    moved?: { entity_id: string; item_names: string[] }[];
+    moved?: { entity_id: EntityId; item_names: string[] }[];
 }

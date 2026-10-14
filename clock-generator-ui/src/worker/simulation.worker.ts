@@ -59,7 +59,7 @@ function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['res
         chosenIndex: search.picked.row,
         chosenShiftTicks: search.picked.setting,
         movedDescription: shifted
-            ? (search.moved ?? []).map(it => `${it.entity_id.replace(':', ' ')}: ${it.item_names.join(', ')}`).join('; ')
+            ? (search.moved ?? []).map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(', ')}`).join('; ')
             : `output swing ${search.picked.row}`,
         plannedTicks: shifted ? search.planned_ticks ?? null : null,
         rows: Array.from(rows.values()),

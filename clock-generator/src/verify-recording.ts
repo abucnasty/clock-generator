@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import { loadConfigFromFile } from "./config/loader";
+import { EntityId } from "./entities";
 import { generateClockAlternatives } from "./crafting/generate-blueprint";
 import { compareWithExportedClocks, formatExportedClockReport } from "./verification/compare";
 import { compareRecordings, formatRecordingComparison } from "./verification/compare-recordings";
@@ -76,9 +77,8 @@ async function main() {
     const simulated = quietly(() =>
         simulateRecording(config, result.clock_windows, period, Math.ceil(recording.sample_count * SIMULATED_TO_RECORDED_TICKS), clock_ticks));
     const match = matchRecordingToConfig(recording, config);
-    const free_running_inserter_ids = new Set(Object.entries(result.unplanned_inserter_clocks ?? {})
-        .filter(([, clock]) => clock.own_clock)
-        .map(([entity_id]) => Number(entity_id.replace("inserter:", ""))));
+    const free_running_inserter_ids = new Set(config.inserters.map((inserter, index) => inserter.id ?? index + 1)
+        .filter(id => result.unplanned_inserter_clocks?.[EntityId.forInserter(id).id]?.own_clock));
 
     console.log("");
     console.log("Entity mapping (recorded -> config):");

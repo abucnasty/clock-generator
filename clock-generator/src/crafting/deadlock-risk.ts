@@ -32,7 +32,6 @@ export interface SharedItemInserter {
  */
 export function sharedItemDeadlockRisks(entity_registry: Pick<ReadableEntityRegistry, "getAll">): SharedItemDeadlockRisk[] {
     const feeders = entity_registry.getAll().filter(Entity.isInserter).filter(inserter => EntityId.isMachine(inserter.sink.entity_id));
-    const numberOf = (entity_id: EntityId) => Number(entity_id.id.slice(entity_id.id.indexOf(":") + 1));
     const risks: SharedItemDeadlockRisk[] = [];
     feeders.forEach((first, index) => {
         for (const second of feeders.slice(index + 1)) {
@@ -44,11 +43,11 @@ export function sharedItemDeadlockRisks(entity_registry: Pick<ReadableEntityRegi
                     continue;
                 }
                 const sharing = (inserter: typeof first): SharedItemInserter => ({
-                    inserter_id: numberOf(inserter.entity_id),
+                    inserter_id: inserter.entity_id.number,
                     other_items: Array.from(inserter.filtered_items).filter(other => other !== item),
                 });
                 const inserters = [sharing(first), sharing(second)].sort((a, b) => a.inserter_id - b.inserter_id) as [SharedItemInserter, SharedItemInserter];
-                risks.push({ machine_id: numberOf(first.sink.entity_id), item, inserters });
+                risks.push({ machine_id: first.sink.entity_id.number, item, inserters });
             }
         }
     });

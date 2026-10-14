@@ -5,7 +5,9 @@ import net from "net";
 import os from "os";
 import path from "path";
 import zlib from "zlib";
+import { encodeBlueprintFile } from "../blueprints/serde";
 import { Config } from "../config";
+import { ClockSchedule } from "../crafting/blueprint";
 import { matchRecordingToConfig } from "../verification/entity-matching";
 import { parseRecording, Recording } from "../verification/recording";
 import { RconClient } from "./rcon";
@@ -15,6 +17,8 @@ const SIDECAR_MOD = "clock-generator-sidecar";
 const REPOSITORY_ROOT = path.resolve(__dirname, "..", "..", "..");
 const RCON_READY = "Starting RCON interface";
 const POLL_INTERVAL_MS = 100;
+/** The tag of a schedule combinator in the clock blueprint the mod builds: the config ids of the inserters it enables */
+const INSERTERS_TAG = "clock_generator_inserters";
 
 /**
  * The most ticks one run in Factorio may record: 20 minutes of game time. It keeps the game-backed tests and
@@ -58,6 +62,12 @@ export function assertRecordableTicks(requested_ticks: number, clock_period_tick
     }
 }
 
+/** A clock the generator made: its blueprint string, and what its combinators do as the generator made them */
+export interface GeneratedClock {
+    blueprint: string;
+    schedule: ClockSchedule;
+}
+
 /** Items put into the build right before the recording starts */
 export interface Seed {
     /** Which built entities get the items; every entity that can take them when absent */
@@ -88,8 +98,8 @@ export interface HarnessOptions {
     /** Ticks the build runs on its new clock and seeds before it is recorded, so its start-up is not in the recording */
     settle_ticks?: number;
     seed: Seed[];
-    /** Blueprint string of a generated clock that replaces the clock of the build; needs config */
-    clock?: string;
+    /** A generated clock that replaces the clock of the build; needs config */
+    clock?: GeneratedClock;
     /** The config the clock was generated from: its inserter ids are the ones the clock's combinators name */
     config?: Config;
     /** Remove the clock of the build and let its inserters run freely */
@@ -238,14 +248,50 @@ function decodeBlueprintString(blueprint: string): any {
     return JSON.parse(zlib.inflateSync(Buffer.from(blueprint.slice(1), "base64")).toString("utf-8"));
 }
 
-/** Config inserter ids named by the schedule combinators of a generated clock ("Inserters 1, 2 for ...") */
-export function clockInserterIds(clock_blueprint: string): number[] {
-    const entities: { player_description?: string }[] = decodeBlueprintString(clock_blueprint).blueprint?.entities ?? [];
-    const ids = entities.flatMap(entity => {
+/**
+ * A generated clock given only as a blueprint string, as `npm run record -- --clock=` takes it, with its schedule read
+ * back from the descriptions of its combinators: "Inserters 1, 2 for ..." names the inserters one enables, and the
+ * clock is the decider described as "Clock for ..." (see clockPeriodTicks). A clock from the generator itself comes
+ * with its schedule (BlueprintGenerationResult.schedule) and needs none of this.
+ */
+export function clockOfBlueprintString(blueprint: string): GeneratedClock {
+    const counted_ticks = clockPeriodTicks(blueprint);
+    if (counted_ticks === null) {
+        throw new Error("The clock blueprint has no clock the generator made: no decider described as \"Clock for ...\" that counts a period");
+    }
+    const entities: { entity_number: number; player_description?: string }[] = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    const inserter_combinators = entities.flatMap(entity => {
         const named = /^Inserters? ([\d, ]+) for/.exec(entity.player_description ?? "");
-        return named ? named[1].split(",").map(id => Number(id.trim())) : [];
+        return named ? [{ entity_number: entity.entity_number, inserter_ids: named[1].split(",").map(id => Number(id.trim())) }] : [];
     });
+    return { blueprint, schedule: { counted_ticks, inserter_combinators } };
+}
+
+/** Config inserter ids the schedule combinators of a clock enable */
+export function scheduledInserterIds(schedule: ClockSchedule): number[] {
+    const ids = schedule.inserter_combinators.flatMap(it => it.inserter_ids);
     return Array.from(new Set(ids)).sort((a, b) => a - b);
+}
+
+/** Ticks a clock counts before it starts over: the game keeps the whole part of the constant, so 90.947 counts 1 to 90 */
+function clockPeriodOf(schedule: ClockSchedule): number {
+    return Math.trunc(schedule.counted_ticks);
+}
+
+/**
+ * The clock blueprint with each schedule combinator tagged with the config ids of the inserters it enables. The mod
+ * reads the tags off the ghosts it builds the clock from, to wire each combinator to its inserters.
+ */
+function withInserterTags(clock: GeneratedClock): string {
+    const file = decodeBlueprintString(clock.blueprint);
+    const inserter_ids = new Map(clock.schedule.inserter_combinators.map(it => [it.entity_number, it.inserter_ids]));
+    for (const entity of file.blueprint?.entities ?? []) {
+        const ids = inserter_ids.get(entity.entity_number);
+        if (ids !== undefined) {
+            entity.tags = { ...entity.tags, [INSERTERS_TAG]: ids };
+        }
+    }
+    return encodeBlueprintFile(file);
 }
 
 /** The build as a recording without samples, matched to the config by structure, as a recording is */
@@ -518,7 +564,8 @@ function assertBuildOptions(options: BuildOptions): void {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
     // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
-    assertRecordableTicks(options.ticks, options.unclocked ? null : clockPeriodTicks(options.clock ?? options.blueprint));
+    const period = options.unclocked ? null : options.clock ? clockPeriodOf(options.clock.schedule) : clockPeriodTicks(options.blueprint);
+    assertRecordableTicks(options.ticks, period);
 }
 
 /**
@@ -662,7 +709,7 @@ export class HarnessSession {
         if (options.clock && options.config) {
             const described = await this.call("harness_describe");
             const unit_numbers = matchBuiltInserters(described, options.config);
-            const missing = clockInserterIds(options.clock).filter(id => !unit_numbers.has(id));
+            const missing = scheduledInserterIds(options.clock.schedule).filter(id => !unit_numbers.has(id));
             if (missing.length > 0) {
                 throw new Error(`The clock names inserters ${missing.join(", ")} of the config, which match no inserter of the build. `
                     + "Belt inserters are matched by what lies on their belt, so a longer warm-up may help.");
@@ -671,7 +718,7 @@ export class HarnessSession {
             if (not_in_config.length > 0) {
                 throw new Error(missingFromConfigMessage(not_in_config));
             }
-            clock = { blueprint: options.clock, inserters: Object.fromEntries(unit_numbers) };
+            clock = { blueprint: withInserterTags(options.clock), inserters: Object.fromEntries(unit_numbers) };
         }
 
         const start = await this.call("harness_start", {

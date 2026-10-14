@@ -80,11 +80,12 @@ const RECORDED_TICKS = 36000;
         recording = parseRecording(JSON.parse(fs.readFileSync(file, "utf-8")));
     } else {
         fs.mkdirSync(out_dir, { recursive: true });
+        const exported = result.subtick ?? result;
         recording = (await recordInFactorio({
             factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE,
             blueprint: fs.readFileSync(scaffold, "utf-8").trim(), out: file,
             ticks: RECORDED_TICKS, warmup_ticks: build.warmup_ticks, settle_ticks: build.settle_ticks, seed: build.seed,
-            clock: encodeBlueprintFile({ blueprint: result.subtick?.blueprint ?? result.blueprint }), config,
+            clock: { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule }, config,
             unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { },
         })).recording;
     }

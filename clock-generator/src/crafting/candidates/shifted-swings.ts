@@ -1,5 +1,6 @@
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
+import { EntityId, EntityType } from "../../entities";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { CIRCUIT_LATENCY_TICKS } from "../clock";
@@ -148,25 +149,26 @@ function shiftEdgeNotes(
                 return;
             }
             if (segment.status === InserterStatus.IDLE && next.status === InserterStatus.PICKUP) {
-                if (entity.source?.entity_id.startsWith("belt:") && entity.sink?.entity_id.startsWith("machine:")) {
+                if (entity.source?.entity_type === EntityType.BELT && entity.sink?.entity_type === EntityType.MACHINE) {
                     const item = run.serializable_transfer_history.entities.find(it => it.entity_id === window.entity_id)
                         ?.transfers.filter(it => it.end_tick > next.start).sort((a, b) => a.start_tick - b.start_tick)[0]?.item_name;
                     notes.add(`${entity.label} waits ${waited} ticks for ${entity.sink.label} to drop below its insertion limit`
                         + (item ? ` for ${item}` : ""));
-                } else if (entity.source?.entity_id.startsWith("machine:")) {
+                } else if (entity.source?.entity_type === EntityType.MACHINE) {
                     notes.add(`${entity.label} waits ${waited} ticks for ${entity.source.label} to have items`);
                 }
             }
-            if (segment.status === InserterStatus.PICKUP && next.status === InserterStatus.SWING && entity.source?.entity_id.startsWith("machine:")) {
+            if (segment.status === InserterStatus.PICKUP && next.status === InserterStatus.SWING && entity.source?.entity_type === EntityType.MACHINE) {
                 notes.add(`${entity.label} waits ${waited} ticks at ${entity.source.label} for a full hand`);
             }
         });
 
         // a machine that only starts again while these swings are under way was waiting for them
-        const fed = entity.sink?.entity_id.startsWith("machine:") ? entity.sink.entity_id : entity.source?.entity_id;
-        if (fed === undefined || !fed.startsWith("machine:")) {
+        const fed_end = entity.sink?.entity_type === EntityType.MACHINE ? entity.sink : entity.source;
+        if (fed_end === undefined || fed_end.entity_type !== EntityType.MACHINE) {
             continue;
         }
+        const fed = fed_end.entity_id;
         const isStopped = (status: string) => status === MachineStatus.INGREDIENT_SHORTAGE || status === MachineStatus.OUTPUT_FULL;
         // a machine out of ingredients shows full output until its output drops under the output block: one stop
         const stops = segmentsOf(fed).reduce<{ status: string; start: number; end: number }[]>((merged, segment) => {
@@ -202,6 +204,8 @@ function shiftEdgeNotes(
 function shiftedCycleWindows(
     config: Config,
     planned_windows: Map<string, OpenRange[]>,
+    /** The entity behind each key of the windows */
+    entity_ids: ReadonlyMap<string, EntityId>,
     cycle_ticks: number,
     period: number,
     logger: Logger,
@@ -252,7 +256,7 @@ function shiftedCycleWindows(
                 start: Math.min(...planned.map(it => it.start)),
                 end: Math.max(...planned.map(it => it.end)),
             },
-            moved: Array.from(new Set(planned.map(it => it.entity_id)), entity_id => ({ entity_id, item_names: [] })),
+            moved: Array.from(new Set(planned.map(it => it.entity_id)), key => ({ entity_id: entity_ids.get(key)!, item_names: [] })),
             earliest: edgeOf(-1),
             latest: edgeOf(1),
         },
@@ -269,11 +273,11 @@ export function shiftedSwingsClock(config: Config, options: GenerateClockOptions
     const clock = clockOfPlan(plan, options);
     const shifted = shiftedCycleWindows(
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-        clock.windows, plan.run.crafting_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
+        clock.windows, plan.entity_ids, plan.run.crafting_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
     );
     const report = shifted === null ? undefined : {
         ...shifted.search,
-        moved: shifted.search.moved!.map(it => ({ ...it, item_names: (plan.item_names.get(it.entity_id) ?? "").split(",").filter(Boolean) })),
+        moved: shifted.search.moved!.map(it => ({ ...it, item_names: (plan.item_names.get(it.entity_id.id) ?? "").split(",").filter(Boolean) })),
     };
     return checkedClock(plan, clock, shifted?.windows ?? clock.windows, options, { search: report });
 }

@@ -1,4 +1,4 @@
-import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
+import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { MachineState } from "../state";
 import { mergedClockTicks } from "./blueprint";
 import { InserterClock, fuelOnlyInserters } from "./sequence/unplanned-inserter-clock";
@@ -9,6 +9,8 @@ const TICKS_PER_MINUTE = 3600;
 /** How a burner machine uses its fuel when it crafts as much as the plan says */
 export interface FuelMachinePlan {
     machine_id: string;
+    /** The id of the machine in the config */
+    machine_number: number;
     recipe: string;
     /** The main product of the recipe */
     output_item: string;
@@ -37,7 +39,10 @@ export interface FuelMachinePlan {
 /** The fuel clock the blueprint exports for one fuel inserter, and how often it is expected to swing on it */
 export interface FuelInserterPlan {
     inserter_id: string;
+    /** The id of the inserter in the config */
+    inserter_number: number;
     machine_id: string;
+    machine_number: number;
     fuel_item: string;
     /** Fuel items in a full hand */
     hand_size: number;
@@ -98,6 +103,7 @@ export function fuelPlan(
         const effective_rate = machine.fuel_consumption.rate_per_second * crafting_share;
         machines.set(machine_id, {
             machine_id,
+            machine_number: machine.entity_id.number,
             recipe: machine.metadata.recipe.name,
             output_item: machine.output.item_name,
             fuel_item: machine.fuel_slot.fuel.item_name,
@@ -124,7 +130,9 @@ export function fuelPlan(
         const ticks_per_swing = hand_lasts_ticks * (inserters_per_machine.get(machine.machine_id) ?? 1);
         inserters.push({
             inserter_id: inserter.entity_id.id,
+            inserter_number: inserter.entity_id.number,
             machine_id: machine.machine_id,
+            machine_number: machine.machine_number,
             fuel_item: machine.fuel_item,
             hand_size,
             hand_lasts_ticks,
@@ -151,6 +159,8 @@ export function fuelPlan(
 /** The fuel a burner machine held over a run: the items in its fuel slot plus what is left of the burning one */
 export interface FuelLevelSeries {
     machine_id: string;
+    /** The id of the machine in the config */
+    machine_number: number;
     /** Ticks of the run each entry of `min` and `max` covers */
     ticks_per_sample: number;
     /** Lowest and highest fuel within each sample, in items */
@@ -204,7 +214,7 @@ export class FuelLevelRecorder {
 
     public series(): FuelLevelSeries[] {
         return Array.from(this.levels, ([state, levels]) =>
-            seriesOf(state.machine.entity_id.id, levels, state.machine.fuel_slot!.automated_insertion_limit));
+            seriesOf(state.machine.entity_id, levels, state.machine.fuel_slot!.automated_insertion_limit));
     }
 }
 
@@ -234,7 +244,7 @@ export function fewestTicksToBurn(burned_per_tick: readonly number[], items: num
 }
 
 /** `levels[0]` is the fuel before the run, `levels[n]` after its n-th tick */
-function seriesOf(machine_id: string, levels: number[], insertion_limit: number): FuelLevelSeries {
+function seriesOf(machine_id: EntityId, levels: number[], insertion_limit: number): FuelLevelSeries {
     const ticks = levels.length - 1;
     const ticks_per_sample = Math.max(1, Math.ceil(ticks / MAX_FUEL_LEVEL_SAMPLES));
     const round = (level: number) => Math.round(level * 100) / 100;
@@ -266,7 +276,8 @@ function seriesOf(machine_id: string, levels: number[], insertion_limit: number)
         max[sample] = Math.max(max[sample] ?? -Infinity, level, before);
     }
     return {
-        machine_id,
+        machine_id: machine_id.id,
+        machine_number: machine_id.number,
         ticks_per_sample,
         min: min.map(round),
         max: max.map(round),

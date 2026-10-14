@@ -1,4 +1,5 @@
 import { WakeUps, wakeUps, WatchedMachine, WatchingInserter } from "../crafting/wake-ups";
+import { EntityId } from "../entities";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording } from "./recording";
 
@@ -16,7 +17,7 @@ export function wakeUpsOfRecording(
 ): WakeUps {
     const machineId = (recorded_id: number): string | null => {
         const id = match ? match.machines.get(recorded_id) : recorded_id;
-        return id === undefined ? null : `machine:${id}`;
+        return id === undefined ? null : EntityId.forMachine(id).id;
     };
     const machines: WatchedMachine[] = recording.machines.flatMap(machine => {
         const machine_id = machineId(machine.id);
@@ -28,7 +29,7 @@ export function wakeUpsOfRecording(
             return [];
         }
         return [{
-            inserter_id: `inserter:${id}`,
+            inserter_id: EntityId.forInserter(id).id,
             source_machine_id: inserter.source.type === "machine" ? machineId(inserter.source.id) : null,
             sink_machine_id: inserter.sink.type === "machine" ? machineId(inserter.sink.id) : null,
             states: expandChangeList(inserter.samples.status, recording.sample_count, ""),
