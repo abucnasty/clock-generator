@@ -21,7 +21,7 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` â
 ## Starting a session
 
 1. Run `git fetch` and check out the current phase branch (create it from `feat/ux-rework` if the phase hasn't
-   started).
+   started; a next phase may start early in idle slots, see `PLAN.md` "Phase branches").
 2. Read `PLAN.md` and `PROGRESS.md`. Check open PRs with `gh pr list`.
 3. Tell the owner in at most 6 lines: the phase, which items are done, in progress and blocked, any open questions,
    and what you'll do next. Then start, unless a checkpoint is open.

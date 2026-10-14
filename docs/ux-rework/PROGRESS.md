@@ -144,7 +144,8 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   re-checked by the reviewer whose minors were fixed; (5) after each merge, `git merge-tree` checks every in-flight
   branch and a conflicting one merges at once, and merge runners use `gh pr merge --squash` then
   `git push origin --delete`. Suggestion 2 (start Phase 2 items before Phase 1 merges) changes a PLAN.md rule, so it
-  went to the owner.
+  went to the owner, who approved it: `feat/ux-rework-p2` is cut from `feat/ux-rework-p1`'s head when a slot goes
+  idle, starting with 2.2 and 2.6 (then 2.11); [PLAN.md](PLAN.md) "Phase branches" updated.
 
 ## Open questions
 
