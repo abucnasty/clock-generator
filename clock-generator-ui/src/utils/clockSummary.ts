@@ -31,10 +31,10 @@ export const SUMMARY_COPY = {
     recoversYes: 'Yes',
     recoversNo: 'No',
     recoversNotTested: 'Not tested',
-    recoversYesDetail: 'It gets back to its rate by itself after it is starved or jammed.',
+    recoversYesDetail: 'In the simulator, it gets back to its rate by itself after it is starved or jammed.',
     recoversNoDetail: (losses: string) => losses
-        ? `After ${losses} for a while, it does not get back to its rate by itself in the simulator.`
-        : 'After it is starved or jammed, it does not get back to its rate by itself in the simulator.',
+        ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.`
+        : 'In the simulator, after it is starved or jammed, it does not get back to its rate by itself.',
     recoversNotTestedDetail: 'This clock does not hold its rate, so it was not starved or jammed.',
     beltMoving: 'Moving',
     beltStill: 'Standing still',

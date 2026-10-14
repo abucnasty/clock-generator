@@ -40,6 +40,8 @@ interface ResultsWorkspaceProps {
     /** The clock the selection rule picks; null while there are none */
     recommendedIndex: number | null;
     onSelectRecommended: () => void;
+    /** The card's Back to recommended: the same, with the focus moving to the card's name, which reads it out */
+    onCardBackToRecommended: () => void;
     /** What the selection rule was given by the latest generation's config; null before one */
     pickRule: PickRule | null;
     pending: string[];
@@ -80,8 +82,6 @@ interface ResultsWorkspaceProps {
     onCopy: () => void;
     /** What the Copy buttons say: "Copy blueprint", "… below target", or "Copy old clock…" */
     copyLabel: string;
-    /** The build has mining drills on the clock */
-    hasDrills: boolean;
     /**
      * What the clocks assume of the input belts, with the action for the other answer (2.4's BeltAssumptionLine), shown in
      * the card in place of its own belt line
@@ -157,7 +157,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 alternatives={props.alternatives}
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}
-                onSelectRecommended={props.onSelectRecommended}
+                onSelectRecommended={props.onCardBackToRecommended}
                 pickRule={props.pickRule}
                 isGenerating={props.isRunning}
                 copied={props.copied}
@@ -165,7 +165,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 copyLabel={props.copyLabel}
                 rateWarning={rateWarning}
                 stale={props.staleFor !== null}
-                hasDrills={props.hasDrills}
                 beltAction={props.beltAction}
             />
 

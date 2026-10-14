@@ -9,11 +9,11 @@ interface InstallInput {
     book: boolean;
     /** The config ids of the inserters wired to each combinator that switches inserters on */
     wiring: number[][];
-    /** The build has mining drills on the clock */
-    hasDrills: boolean;
+    /** The config ids of the mining drills wired to each combinator that switches drills on */
+    drills: number[][];
 }
 
-export type InstallStepId = 'import' | 'book' | 'place' | 'wire' | 'enable' | 'others' | 'none' | 'lock';
+export type InstallStepId = 'import' | 'book' | 'place' | 'wire' | 'enable' | 'drills' | 'others' | 'none' | 'lock';
 
 export interface InstallStep {
     id: InstallStepId;
@@ -28,9 +28,8 @@ export const REQUIRES_FACTORIO = 'Needs Factorio 2.1.';
 export const INSTALL_COPY = {
     heading: 'Put it in your game',
     stale: 'Generate again for a new clock and its steps.',
-    wiringCaption: 'Combinator → inserters',
-    wiringCombinatorColumn: 'Combinator for',
-    wiringInsertersColumn: 'Wire its output to',
+    wiringCaption: 'Combinator → what to wire to its output',
+    oneCombinator: 'one combinator for all of these',
     import: {
         title: 'Import it in Factorio 2.1.',
         detail: 'Press Copy blueprint. In Factorio 2.1, open the blueprint library and import the string: Import '
@@ -38,10 +37,8 @@ export const INSTALL_COPY = {
     },
     book: {
         title: 'Pick one blueprint from the book.',
-        detail: 'The book holds the same clock twice. The first one, whose name ends in "(modulo clock)", checks '
-            + 'windows that repeat against a shorter repeating count, so its combinators have far fewer conditions. The '
-            + 'other lists every wake window on the plain clock. They switch your inserters on at the same ticks. Take '
-            + 'the first one unless you want the plain one.',
+        detail: 'The book holds the same clock twice. Use the first blueprint, whose name ends in "(modulo clock)"; the '
+            + 'book opens on it. The second does the same with more conditions.',
     },
     place: {
         title: 'Place the combinators next to your build.',
@@ -53,26 +50,35 @@ export const INSTALL_COPY = {
         title: 'Wire the output of each combinator to its inserters.',
         detail: 'A combinator described as "Inserter 3 for [item] from [recipe] into [recipe]" switches that inserter '
             + 'on. With a green wire, connect its output to each inserter in the list below. Find an inserter by its '
-            + 'item and by the machines at its two ends; the numbers are the ones on Configure. The game keeps only 500 '
-            + 'bytes of a description, so use this list. The other combinators (Clock, Fuel clock, Clock lock filter, '
-            + 'and the ones about a modulo or a subtick clock) are the clock itself: leave them.',
+            + 'item and by the machines at its two ends; the numbers are the ones on Configure. The combinator\'s '
+            + 'description says the same; this list has all of it. The other combinators (Clock, Clock lock, Fuel '
+            + 'clock, Clock lock filter, and the ones about a modulo or a subtick clock) are the clock itself: leave them.',
+        drills: ' A combinator described as "Drill 1 for …" switches that mining drill on: wire it the same way.',
     },
     enable: {
         title: 'Set each wired inserter to switch on with that wire.',
         detail: 'Open the inserter, find Circuit network connection, choose Enable/disable, and set the condition to '
             + 'Anything > 0. The combinator puts out one of the inserter\'s item only while the clock is in a wake '
             + 'window, so the inserter works only then.',
-        drills: ' A mining drill is wired and set the same way. Its combinator is described as "Drill 1 for …".',
+        drills: ' A mining drill is wired and set the same way.',
+    },
+    drills: {
+        title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
+        detail: 'A combinator described as "Drill 1 for [item] into [recipe]" switches that mining drill on. With a '
+            + 'green wire, connect its output to each drill in the list below; the numbers are the ones on Configure. '
+            + 'Then open the drill, find Circuit network connection, choose Enable/disable, and set the condition to '
+            + 'Anything > 0. The other combinators (Clock, Clock lock, Clock lock filter, and the ones about a modulo or '
+            + 'a subtick clock) are the clock itself: leave them.',
     },
     others: {
         title: 'Leave the other inserters alone.',
         detail: 'An inserter that is not in the list runs all the time: it is set to Always on, or it has nothing to '
-            + 'wait for. Do not wire it. If this clock replaces an older one, set the inserters the old clock switched, '
-            + 'and this list does not name, back to always enabled, or they stay off for good.',
+            + 'wait for. Do not wire it. If this clock replaces an older one, an inserter the old clock switched and '
+            + 'this list does not name stays off for good: remove its wire, or untick Enable/disable.',
     },
     none: {
-        title: 'Nothing to wire.',
-        detail: 'This clock has no combinator for your inserters, so there is nothing to wire.',
+        title: 'Nothing to place or wire.',
+        detail: 'Every inserter runs all the time, so this build needs no clock.',
     },
     lock: {
         title: 'Know the lock.',
@@ -82,42 +88,65 @@ export const INSTALL_COPY = {
     },
 } as const;
 
-const step = (id: Exclude<InstallStepId, 'enable'>): InstallStep => ({ id, ...INSTALL_COPY[id] });
+const step = (id: 'import' | 'book' | 'place' | 'drills' | 'others' | 'none' | 'lock'): InstallStep => ({ id, ...INSTALL_COPY[id] });
 
 /**
  * The steps for a clock, in order (the page numbers them by their place): import; pick from the book (only for a
- * book); place; then wire, switch on and leave the others, or one "nothing to wire" step when no combinator switches
- * an inserter on; and the lock.
+ * book); place; then wire, switch on and leave the others alone (a drill is wired with the inserters, or in a step of
+ * its own when no inserter is on the clock); and the lock. A build whose inserters and drills all run all the time
+ * needs no clock: one step says so.
  */
 export function installSteps(input: InstallInput): InstallStep[] {
-    const enable: InstallStep = {
-        id: 'enable',
-        title: INSTALL_COPY.enable.title,
-        detail: INSTALL_COPY.enable.detail + (input.hasDrills ? INSTALL_COPY.enable.drills : ''),
-    };
+    const inserters = input.wiring.length > 0;
+    const drills = input.drills.length > 0;
+    if (!inserters && !drills) {
+        return [step('none')];
+    }
+    const wiring = inserters
+        ? [
+            { id: 'wire', title: INSTALL_COPY.wire.title, detail: INSTALL_COPY.wire.detail + (drills ? INSTALL_COPY.wire.drills : '') },
+            { id: 'enable', title: INSTALL_COPY.enable.title, detail: INSTALL_COPY.enable.detail + (drills ? INSTALL_COPY.enable.drills : '') },
+        ] satisfies InstallStep[]
+        : [step('drills')];
     return [
         step('import'),
         ...(input.book ? [step('book')] : []),
         step('place'),
-        ...(input.wiring.length > 0 ? [step('wire'), enable, step('others')] : [step('none')]),
+        ...wiring,
+        step('others'),
         step('lock'),
     ];
 }
 
-/** The rows of the wiring list: ids ascending in a row, rows by their first id, empty rows dropped */
-function orderedRows(wiring: number[][]): number[][] {
-    return wiring
+/** One combinator's row of the wiring list */
+export interface WiringRow {
+    /** As its description starts: "Inserters 1, 5", "Drill 2" */
+    combinator: string;
+    /** What to wire to it, one line each: "Inserter 1 — iron-plate: Belt 1 to Machine 1" */
+    entries: string[];
+}
+
+/** "Inserters 1, 5" or "Drill 2", as the engine's description header names a combinator's entities */
+const namesText = (kind: 'Inserter' | 'Drill', ids: number[]) => `${kind}${ids.length > 1 ? 's' : ''} ${ids.join(', ')}`;
+
+/**
+ * The wiring list: one row per combinator, inserters first and then drills, each ordered by its first number, with
+ * what each inserter or drill carries and between which ends (`detailOf`, keyed "inserter:3"; empty when unknown).
+ */
+export function wiringList(
+    facts: Pick<InstallInput, 'wiring' | 'drills'>,
+    detailOf: (id: string) => string,
+): WiringRow[] {
+    const rows = (kind: 'Inserter' | 'Drill', groups: number[][]) => groups
         .map(ids => [...ids].sort((a, b) => a - b))
         .filter(ids => ids.length > 0)
-        .sort((a, b) => a[0] - b[0]);
-}
-
-/** Each combinator's row of the wiring list, ordered by its first inserter: "Inserters 1, 2", "Inserter 3" */
-export function wiringRows(wiring: number[][]): string[] {
-    return orderedRows(wiring).map(ids => `${ids.length > 1 ? 'Inserters' : 'Inserter'} ${ids.join(', ')}`);
-}
-
-/** The inserters each row's combinator is wired to, one by one: "Inserter 1, Inserter 2" */
-export function wiringTargets(wiring: number[][]): string[] {
-    return orderedRows(wiring).map(ids => ids.map(id => `Inserter ${id}`).join(', '));
+        .sort((a, b) => a[0] - b[0])
+        .map(ids => ({
+            combinator: namesText(kind, ids),
+            entries: ids.map(id => {
+                const detail = detailOf(`${kind.toLowerCase()}:${id}`);
+                return detail ? `${kind} ${id} — ${detail}` : `${kind} ${id}`;
+            }),
+        }));
+    return [...rows('Inserter', facts.wiring), ...rows('Drill', facts.drills)];
 }

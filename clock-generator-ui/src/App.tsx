@@ -261,6 +261,22 @@ function App() {
     }, [notify, announce]);
     const copy = useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCopied: handleCopied });
 
+    // another clock is announced ("Showing the clock: …"), except after the card's Back to recommended, which moves the
+    // focus to the card's name and so reads it out already
+    const [selectionQuiet, setSelectionQuiet] = useState(false);
+    const handleSelectClock = useCallback((index: number) => {
+        setSelectionQuiet(false);
+        selectAlternative(index);
+    }, [selectAlternative]);
+    const handleSelectRecommended = useCallback(() => {
+        setSelectionQuiet(false);
+        selectRecommended();
+    }, [selectRecommended]);
+    const handleCardBackToRecommended = useCallback(() => {
+        setSelectionQuiet(true);
+        selectRecommended();
+    }, [selectRecommended]);
+
     // what keeps the build from being clocked, and so where Generate goes instead
     const problems = useMemo(() => problemsOf({
         targetOutput: config.target_output,
@@ -536,6 +552,7 @@ function App() {
                             selectedLabel={selectedName}
                             selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
                             selectedId={selectedClock?.id ?? null}
+                            selectionQuiet={selectionQuiet}
                             rateWarning={rateWarning}
                             copyLabel={copyLabel}
                             belowTarget={isBelowTarget(selectedClock)}
@@ -723,9 +740,10 @@ function App() {
                                 error={error}
                                 alternatives={alternatives}
                                 selectedIndex={selectedAlternativeIndex}
-                                onSelect={selectAlternative}
+                                onSelect={handleSelectClock}
                                 recommendedIndex={recommendedIndex}
-                                onSelectRecommended={selectRecommended}
+                                onSelectRecommended={handleSelectRecommended}
+                                onCardBackToRecommended={handleCardBackToRecommended}
                                 pickRule={pickRule}
                                 pending={pendingAlternatives}
                                 skippedSearches={skippedSearches}
@@ -754,7 +772,6 @@ function App() {
                                 copied={copy.copied}
                                 onCopy={copy.request}
                                 copyLabel={copyLabel}
-                                hasDrills={drillConfigs.length > 0}
                                 // only when the run asked the belt question; otherwise the card says the belt itself
                                 beltAction={beltAssumption?.ask ? (
                                     <BeltAssumptionLine

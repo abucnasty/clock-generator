@@ -43,6 +43,8 @@ interface WorkflowBarProps {
     selectedEngineName: string | null;
     /** Id of the selected clock, which tells apart two of the same name */
     selectedId: string | null;
+    /** The selection last changed by the card's Back to recommended, whose focus on the name reads it: not announced */
+    selectionQuiet: boolean;
     /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
     rateWarning: string | null;
     /** What the Copy button says when it has not just been used: "Copy blueprint", "… below target", or "Copy old clock…" */
@@ -101,6 +103,7 @@ export function WorkflowBar({
     selectedLabel,
     selectedEngineName,
     selectedId,
+    selectionQuiet,
     rateWarning,
     copyLabel,
     belowTarget,
@@ -144,14 +147,14 @@ export function WorkflowBar({
     const hasBlueprint = blueprintString !== null;
     const lastSnapshot = useRef<WorkflowSnapshot | null>(null);
     useEffect(() => {
-        const snapshot: WorkflowSnapshot = { checkStatus, checkedForGenerate, isLoading, failed: generationFailed, hasBlueprint, selectedLabel, selectedId };
+        const snapshot: WorkflowSnapshot = { checkStatus, checkedForGenerate, isLoading, failed: generationFailed, hasBlueprint, selectedLabel, selectedId, selectionQuiet };
         const previous = lastSnapshot.current;
         lastSnapshot.current = snapshot;
         const text = previous && workflowAnnouncement(previous, snapshot);
         if (text) {
             announce(text);
         }
-    }, [checkStatus, checkedForGenerate, isLoading, generationFailed, hasBlueprint, selectedLabel, selectedId, announce]);
+    }, [checkStatus, checkedForGenerate, isLoading, generationFailed, hasBlueprint, selectedLabel, selectedId, selectionQuiet, announce]);
 
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>

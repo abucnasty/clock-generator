@@ -7,7 +7,7 @@ const CANNOT_MEET_RATE = /The current configuration cannot meet the target produ
 const CHECK_ERROR_COPY = {
     cannotMeetRate: (capacity: string, target: string) =>
         `The build's machines can make at most ${capacity}/s, but the target is ${target}/s. Lower the target, `
-        + 'or add machines or crafting speed (modules, beacons or a faster machine).',
+        + 'raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).',
 };
 
 /**

@@ -7,7 +7,7 @@ const ENGINE = 'The current configuration cannot meet the target production rate
 describe('checkErrorText', () => {
     it('rounds the rates, says build, and gives a next step', () => {
         expect(checkErrorText(ENGINE)).toBe("The build's machines can make at most 252.66/s, but the target is 400/s. "
-            + 'Lower the target, or add machines or crafting speed (modules, beacons or a faster machine).');
+            + 'Lower the target, raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).');
     });
 
     it('keeps no engine wording', () => {

@@ -137,6 +137,12 @@ describe('recoversOf', () => {
         expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toContain('starved or jammed');
     });
 
+    it('says "in the simulator" for yes and for no alike', () => {
+        expect(recoversOf(clock('a')).detail).toMatch(/^In the simulator, /);
+        expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toMatch(/^In the simulator, /);
+        expect(recoversOf(clock('c', { verdict: 'no recovery', brokenBy: ['coal stops arriving'] })).detail).toMatch(/^In the simulator, /);
+    });
+
     it('says not tested for a clock that does not hold its rate', () => {
         expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: 'Not tested' });
     });

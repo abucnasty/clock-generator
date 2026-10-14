@@ -1,6 +1,6 @@
 import { Cancel, Check, CheckCircle, ContentCopy, HelpOutline, Warning } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, Paper, Typography } from '@mui/material';
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
 import {
     beltLine,
@@ -14,6 +14,7 @@ import {
 } from '../utils/clockSummary';
 import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
+import { buildWakeWindowRows } from '../utils/wakeWindows';
 import { InstallSteps } from './InstallSteps';
 import { CopyLabel } from './WorkflowBar';
 
@@ -50,8 +51,6 @@ interface ResultSummaryCardProps {
     rateWarning: string | null;
     /** The clocks are for an earlier build */
     stale: boolean;
-    /** The build has mining drills on the clock */
-    hasDrills: boolean;
     /**
      * What the clocks assume of the belts, with the action for the other answer (2.4), in place of the card's own belt
      * line; shown also before the first clock arrives
@@ -155,6 +154,12 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
 /** The warnings, the Copy button and the steps that put the selected clock into the game */
 function ClockCopy(props: SelectedProps) {
     const warns = props.rateWarning !== null || props.stale;
+    // what each inserter and drill carries and between which ends, as the Wake windows rows say it
+    const { selected } = props;
+    const detailOf = useMemo(() => {
+        const details = new Map(buildWakeWindowRows(selected).map(row => [row.id, row.detail]));
+        return (id: string) => details.get(id) ?? '';
+    }, [selected]);
     return (
         <>
             {props.rateWarning && (
@@ -179,7 +184,7 @@ function ClockCopy(props: SelectedProps) {
                 <Typography variant="body2" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
             </Box>
 
-            <InstallSteps install={props.selected.install} hasDrills={props.hasDrills} stale={props.stale} />
+            <InstallSteps install={props.selected.install} detailOf={detailOf} stale={props.stale} />
         </>
     );
 }

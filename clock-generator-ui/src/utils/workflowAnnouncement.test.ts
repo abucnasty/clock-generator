@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from './workflowAnnouncement';
 
-const idle: WorkflowSnapshot = { checkStatus: 'none', checkedForGenerate: false, isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null, selectedId: null };
+const idle: WorkflowSnapshot = { checkStatus: 'none', checkedForGenerate: false, isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null, selectedId: null, selectionQuiet: false };
 const at = (changes: Partial<WorkflowSnapshot>, from: WorkflowSnapshot = idle): WorkflowSnapshot => ({ ...from, ...changes });
 
 describe('workflowAnnouncement: a check from Check only (or the swing plan)', () => {
@@ -90,11 +90,18 @@ describe('workflowAnnouncement: choosing a clock', () => {
 
     it('names the clock chosen while nothing runs', () => {
         expect(workflowAnnouncement(showing, at({ selectedLabel: 'Fewest wake windows', selectedId: 'b' }, showing)))
-            .toBe('Showing Fewest wake windows.');
+            .toBe('Showing the clock: Fewest wake windows.');
     });
 
     it('names a clock of the same name too, as the card changed', () => {
-        expect(workflowAnnouncement(showing, at({ selectedId: 'c' }, showing))).toBe('Showing Fewest wake-ups.');
+        expect(workflowAnnouncement(showing, at({ selectedId: 'c' }, showing))).toBe('Showing the clock: Fewest wake-ups.');
+    });
+
+    it('says nothing when Back to recommended in the card moved the focus to its name, which reads it', () => {
+        expect(workflowAnnouncement(showing, at({ selectedId: 'r', selectedLabel: 'Fewest wake windows', selectionQuiet: true }, showing))).toBeNull();
+        // and the next row chosen in the table is said again
+        const quiet = at({ selectedId: 'r', selectionQuiet: true }, showing);
+        expect(workflowAnnouncement(quiet, at({ selectedId: 'd', selectionQuiet: false }, quiet))).toBe('Showing the clock: Fewest wake-ups.');
     });
 
     it('says nothing while a run goes on', () => {

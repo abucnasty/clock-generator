@@ -33,8 +33,10 @@ interface CopyBlueprint {
  * question is asked in one dialog, and what is said after a copy is said once.
  */
 export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCopied }: CopyBlueprintOptions): CopyBlueprint {
-    const [copied, setCopied] = useState(false);
-    const [confirming, setConfirming] = useState(false);
+    // what was copied, and for which earlier build the question is open: another clock is not "Copied", and a question
+    // asked about clocks that have since become current (or been made again) is not open any more
+    const [copiedString, setCopiedString] = useState<string | null>(null);
+    const [confirmingFor, setConfirmingFor] = useState<GeneratedFor | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -48,24 +50,30 @@ export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCop
             console.error('Failed to copy:', err);
             return;
         }
-        setCopied(true);
+        setCopiedString(blueprintString);
         onCopied(rateWarning);
         clearTimeout(timer.current);
-        timer.current = setTimeout(() => setCopied(false), COPIED_MS);
+        timer.current = setTimeout(() => setCopiedString(null), COPIED_MS);
     }, [blueprintString, rateWarning, onCopied]);
 
     const request = useCallback(() => {
         if (staleFor) {
-            setConfirming(true);
+            setConfirmingFor(staleFor);
         } else {
             void copy();
         }
     }, [staleFor, copy]);
     const confirm = useCallback(() => {
-        setConfirming(false);
+        setConfirmingFor(null);
         void copy();
     }, [copy]);
-    const cancel = useCallback(() => setConfirming(false), []);
+    const cancel = useCallback(() => setConfirmingFor(null), []);
 
-    return { copied, request, confirmingStale: confirming && staleFor !== null, confirm, cancel };
+    return {
+        copied: copiedString !== null && copiedString === blueprintString,
+        request,
+        confirmingStale: confirmingFor !== null && confirmingFor === staleFor,
+        confirm,
+        cancel,
+    };
 }

@@ -9,17 +9,39 @@ export interface ClockInstallFacts {
      * their first id. Empty when every inserter is left always enabled
      */
     wiring: number[][];
+    /**
+     * Per combinator that switches mining drills on: the config ids of its drills, ascending, rows by their first id.
+     * Empty when no drill is on the clock (none in the build, or each one always on)
+     */
+    drills: number[][];
 }
+
+/** The first line of a drill's combinator description, "Drills 1, 2 for [item=iron-ore] …" (`entityDescriptionHeaderLines`) */
+const DRILL_HEADER = /^Drills? (\d+(?:, \d+)*) for /;
+
+const ordered = (rows: number[][]) => rows
+    .map(ids => [...ids].sort((a, b) => a - b))
+    .filter(ids => ids.length > 0)
+    .sort((a, b) => a[0] - b[0]);
 
 /**
  * The install facts of a generated clock, from the same data the in-game harness wires from: whether the string is a
  * book (`blueprintFileFor` makes one when there is a modulo blueprint) and which inserters each combinator switches on.
- * A combinator that switches no inserter on (a part of the clock, or a drill's) has no row.
+ * The schedule leaves drills out, so a drill's combinator is found by the description the engine gives it, which is
+ * what the player reads in the game; a drill that is always on has none. A combinator that switches nothing on (a part
+ * of the clock) has no row.
  */
-export function installFactsOf(result: Pick<BlueprintGenerationResult, 'modulo_blueprint' | 'schedule'>): ClockInstallFacts {
-    const wiring = result.schedule.inserter_combinators
-        .map(combinator => [...combinator.inserter_ids].sort((a, b) => a - b))
-        .filter(ids => ids.length > 0)
-        .sort((a, b) => a[0] - b[0]);
-    return { book: result.modulo_blueprint !== undefined, wiring };
+export function installFactsOf(result: Pick<BlueprintGenerationResult, 'modulo_blueprint' | 'schedule' | 'blueprint'>): ClockInstallFacts {
+    const drills = result.blueprint.entities.flatMap(entity => {
+        if (entity.name !== 'decider-combinator') {
+            return [];
+        }
+        const header = DRILL_HEADER.exec(entity.player_description ?? '');
+        return header ? [header[1].split(', ').map(Number)] : [];
+    });
+    return {
+        book: result.modulo_blueprint !== undefined,
+        wiring: ordered(result.schedule.inserter_combinators.map(combinator => combinator.inserter_ids)),
+        drills: ordered(drills),
+    };
 }
