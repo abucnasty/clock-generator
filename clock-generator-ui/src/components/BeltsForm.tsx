@@ -18,13 +18,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
-
-const BELT_TYPES = [
-    { value: 'transport-belt', label: 'Transport Belt' },
-    { value: 'fast-transport-belt', label: 'Fast Transport Belt' },
-    { value: 'express-transport-belt', label: 'Express Transport Belt' },
-    { value: 'turbo-transport-belt', label: 'Turbo Transport Belt' },
-];
+import { BELT_TYPES } from './entityTypes';
 
 interface BeltsFormProps {
     belts: BeltFormData[];

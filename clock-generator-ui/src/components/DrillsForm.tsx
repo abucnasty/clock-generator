@@ -21,12 +21,7 @@ import { EnableControlModal } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
-
-const DRILL_TYPES = [
-    { value: 'electric-mining-drill', label: 'Electric Mining Drill' },
-    { value: 'burner-mining-drill', label: 'Burner Mining Drill' },
-    { value: 'big-mining-drill', label: 'Big Mining Drill' },
-];
+import { DRILL_TYPES } from './entityTypes';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
 
