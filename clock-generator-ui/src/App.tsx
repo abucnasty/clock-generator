@@ -208,6 +208,34 @@ function App() {
 
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
     const openDiagramFullscreen = useCallback(() => setDiagramFullscreen(true), []);
+
+    // Shared by the inline and fullscreen diagrams
+    const flowDiagramProps = {
+        machines: config.machines,
+        inserters: config.inserters,
+        belts: config.belts,
+        chests: config.chests,
+        drills: drillConfigs,
+        recipeNames,
+        itemNames: itemNamesComposite,
+        getRecipeInfo,
+        onUpdateMachine: updateMachine,
+        onUpdateInserter: updateInserter,
+        onUpdateBelt: updateBelt,
+        onUpdateChest: updateChest,
+        onSwitchChestType: switchChestType,
+        onUpdateDrill: updateDrill,
+        onDeleteMachine: removeMachine,
+        onDeleteInserter: removeInserter,
+        onDeleteBelt: removeBelt,
+        onDeleteChest: removeChest,
+        onDeleteDrill: removeDrill,
+        onAddMachine: addMachine,
+        onAddInserter: addInserter,
+        onAddBelt: addBelt,
+        onAddChest: addChest,
+        onAddDrill: addDrill,
+    };
     const updateMiningProductivityLevel = useCallback(
         (value: number) => updateDrillsConfig('mining_productivity_level', value),
         [updateDrillsConfig]
@@ -379,30 +407,7 @@ function App() {
                             ) : (
                                 <Box sx={{ mb: 2 }}>
                                     <ConfigFlowDiagram
-                                        machines={config.machines}
-                                        inserters={config.inserters}
-                                        belts={config.belts}
-                                        chests={config.chests}
-                                        drills={drillConfigs}
-                                        recipeNames={recipeNames}
-                                        itemNames={itemNamesComposite}
-                                        getRecipeInfo={getRecipeInfo}
-                                        onUpdateMachine={updateMachine}
-                                        onUpdateInserter={updateInserter}
-                                        onUpdateBelt={updateBelt}
-                                        onUpdateChest={updateChest}
-                                        onSwitchChestType={switchChestType}
-                                        onUpdateDrill={updateDrill}
-                                        onDeleteMachine={removeMachine}
-                                        onDeleteInserter={removeInserter}
-                                        onDeleteBelt={removeBelt}
-                                        onDeleteChest={removeChest}
-                                        onDeleteDrill={removeDrill}
-                                        onAddMachine={addMachine}
-                                        onAddInserter={addInserter}
-                                        onAddBelt={addBelt}
-                                        onAddChest={addChest}
-                                        onAddDrill={addDrill}
+                                        {...flowDiagramProps}
                                         onRequestFullscreen={openDiagramFullscreen}
                                     />
                                     <MissingInserterAlert
@@ -555,30 +560,7 @@ function App() {
                     </Box>
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ConfigFlowDiagram
-                            machines={config.machines}
-                            inserters={config.inserters}
-                            belts={config.belts}
-                            chests={config.chests}
-                            drills={drillConfigs}
-                            recipeNames={recipeNames}
-                            itemNames={itemNamesComposite}
-                            getRecipeInfo={getRecipeInfo}
-                            onUpdateMachine={updateMachine}
-                            onUpdateInserter={updateInserter}
-                            onUpdateBelt={updateBelt}
-                            onUpdateChest={updateChest}
-                            onSwitchChestType={switchChestType}
-                            onUpdateDrill={updateDrill}
-                            onDeleteMachine={removeMachine}
-                            onDeleteInserter={removeInserter}
-                            onDeleteBelt={removeBelt}
-                            onDeleteChest={removeChest}
-                            onDeleteDrill={removeDrill}
-                            onAddMachine={addMachine}
-                            onAddInserter={addInserter}
-                            onAddBelt={addBelt}
-                            onAddChest={addChest}
-                            onAddDrill={addDrill}
+                            {...flowDiagramProps}
                             height="100%"
                         />
                     </Box>
