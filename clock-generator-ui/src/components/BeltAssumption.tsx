@@ -33,7 +33,7 @@ export function BeltAssumption({ answer, onChange }: BeltAssumptionProps) {
                 sx={{ flexWrap: 'wrap', columnGap: 3, rowGap: 1, alignItems: 'flex-start' }}
             >
                 {OPTIONS.map(option => (
-                    <Box key={option.value} sx={{ flex: '1 1 260px', maxWidth: '48ch', minWidth: 0 }}>
+                    <Box key={option.value} sx={{ flex: '1 1 320px', maxWidth: '48ch', minWidth: 0 }}>
                         <FormControlLabel
                             value={option.value}
                             control={<Radio slotProps={{ input: { 'aria-describedby': lineId(option.value) } }} />}
