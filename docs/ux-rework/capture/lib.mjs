@@ -1117,3 +1117,89 @@ export async function checkInertFromKeyboard(rec, page, locator, label) {
     const r = await inertFromKeyboardReport(page, locator);
     return rec.check(`inert from the keyboard ${label}`, r.inert, r.reason);
 }
+
+/**
+ * Records a check that `text` is announced by the page's live content: it appears in the accessibility tree
+ * (`page.locator('body').ariaSnapshot()`, which leaves out `aria-hidden` subtrees) inside an element with role status, log or
+ * alert, or with `aria-live` polite or assertive, and that element has no `aria-hidden="true"` ancestor (or itself) in the DOM.
+ * Polls for about 1.5 s, since a live region fills after the event. `text` is a string (whitespace and case ignored) or a RegExp.
+ * Returns whether it passed. The detail lists where the text was found, or which live regions exist and what they say.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {string | RegExp} text
+ * @param {string} [label]  how the check is named (default: the text)
+ */
+export async function checkAnnounced(rec, page, text, label = '') {
+    const source = text instanceof RegExp ? text.source : text.replace(/\s+/g, ' ').trim();
+    const flags = text instanceof RegExp ? text.flags : 'i';
+    const deadline = Date.now() + 1500;
+    let last = null;
+    for (;;) {
+        last = await announcedOnce(page, source, flags, text instanceof RegExp);
+        if (last.pass || Date.now() > deadline) break;
+        await page.waitForTimeout(100);
+    }
+    return rec.check(`announced ${label || JSON.stringify(String(text))}`, last.pass, last.detail);
+}
+
+async function announcedOnce(page, source, flags, isRegex) {
+    const re = isRegex ? new RegExp(source, flags) : null;
+    const norm = (t) => t.replace(/\s+/g, ' ').trim();
+    const matches = (t) => (re ? re.test(t) : norm(t).toLowerCase().includes(source.toLowerCase()));
+    // The DOM: live elements that hold the text, and whether anything above them is aria-hidden
+    const dom = await page.evaluate(
+        ({ src, fl, regex }) => {
+            const re = regex ? new RegExp(src, fl) : null;
+            const clean = (t) => t.replace(/\s+/g, ' ').trim();
+            const has = (t) => (re ? re.test(t) : clean(t).toLowerCase().includes(src.toLowerCase()));
+            const live = [...document.querySelectorAll('[role=status], [role=log], [role=alert], [aria-live=polite], [aria-live=assertive]')];
+            const all = live.map((el) => {
+                const hiddenBy = el.closest('[aria-hidden="true"]');
+                const role = el.getAttribute('role') ?? '';
+                return {
+                    role,
+                    ariaLive: el.getAttribute('aria-live') ?? '',
+                    text: clean(el.textContent ?? '').slice(0, 80),
+                    holds: has(el.textContent ?? ''),
+                    hidden: Boolean(hiddenBy),
+                    inert: Boolean(el.closest('[inert]')),
+                    off: el.getAttribute('aria-live') === 'off',
+                };
+            });
+            return all;
+        },
+        { src: source, fl: flags, regex: isRegex },
+    );
+    const holding = dom.filter((d) => d.holds);
+    const usable = holding.filter((d) => !d.hidden && !d.inert && !d.off);
+    const snapshot = await page.locator('body').ariaSnapshot();
+    // Roles that show in the snapshot: take the indented block under each `- status|log|alert` line
+    const lines = snapshot.split('\n');
+    const blocks = [];
+    lines.forEach((line, i) => {
+        const m = line.match(/^(\s*)- (status|log|alert)\b(.*)$/);
+        if (!m) return;
+        const indent = m[1].length;
+        let block = m[3];
+        for (let j = i + 1; j < lines.length; j++) {
+            const next = lines[j];
+            const ind = next.match(/^(\s*)/)[1].length;
+            if (next.trim() !== '' && ind <= indent) break;
+            block += ' ' + next;
+        }
+        blocks.push(block);
+    });
+    const inRoleBlock = blocks.some(matches);
+    const inTree = matches(snapshot);
+    const roleUsable = usable.some((d) => ['status', 'log', 'alert'].includes(d.role));
+    // A role=status/log/alert element must show the text in its own block of the tree; a bare aria-live element is not a node of its own,
+    // so the text has to be somewhere in the tree
+    const pass = usable.length > 0 && (roleUsable ? inRoleBlock : inTree);
+    const describe = (d) => `${d.role ? `[role=${d.role}]` : ''}${d.ariaLive ? `[aria-live=${d.ariaLive}]` : ''} "${d.text}"${d.hidden ? ' (aria-hidden ancestor)' : ''}${d.inert ? ' (inert)' : ''}${d.off ? ' (aria-live=off)' : ''}`;
+    let detail;
+    if (pass) detail = `in ${describe(usable.find((d) => ['status', 'log', 'alert'].includes(d.role)) ?? usable[0])}`;
+    else if (holding.length && usable.length === 0) detail = `held only by hidden live content: ${holding.map(describe).slice(0, 3).join('; ')}`;
+    else if (usable.length) detail = `a live element holds it but the accessibility tree does not show it there (${usable.map(describe).slice(0, 2).join('; ')})`;
+    else detail = `no live element holds it; ${dom.length} live element${dom.length === 1 ? '' : 's'} on the page${dom.length ? `: ${dom.slice(0, 4).map(describe).join('; ')}` : ''}`;
+    return { pass, detail };
+}
