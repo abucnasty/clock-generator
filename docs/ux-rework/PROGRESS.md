@@ -69,7 +69,7 @@ come from here.
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
-| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | impl | | | Started (sonnet) on `feat/ux-rework-p2-timelines` with its capture script written ahead; also the Fuel chart's role and name (C2 leftover) |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | fix-1 | | 1 | On `feat/ux-rework-p2-timelines` (sonnet): 516 tests; capture 208 PASS, 0 FAIL. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name fixed). A minors round (Blocked painted last, device-pixel rounding) before merge |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
 
 **Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
@@ -347,6 +347,7 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - `capture-enable-chip.mjs` "Delete buttons line up in one column" fails on the Phase 1 base too (1.9/1.13 row layout): the delete buttons don't share a column across rows. For 2.9.
 - 1.12 B leftovers for 2.x copy: the diagram dialog's "Config" tab beside "Enable rule"; the Auto chip tooltip "runs" vs the modal's "switched on"; "Latched Mode … Once enabled"; "Mining drills are disabled… setup"; Stable/Unstable until 2.5. 2.11 spec line 88 should name `CONDITIONAL_CHIP_MAX_CHARS` (36).
 - 2.5 A → 2.7: two filled green buttons on Results (Generate in the bar, Copy in the card); outline Generate while results are fresh, or record the exception. → 2.5 B: "among the Stable clocks" in the reason (glossary "holds the rate"); the table's own "Back to recommended" duplicates the card's.
+- 2.10 → 2.5 B: the Fuel chart paints swings orange while Detailed state charts use orange for "No fuel"; unify the fuel palette with `colors.ts` when the charts move behind Developer tools. Keyboard/hover access to the canvases is left out (light fixes only).
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.
