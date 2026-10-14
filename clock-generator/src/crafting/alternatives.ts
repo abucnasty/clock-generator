@@ -7,6 +7,7 @@ import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
 import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight } from "./insights";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
+import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
 import { observedWindowsClock } from "./candidates/observed-windows";
 import { shiftedSwingsClock } from "./candidates/shifted-swings";
@@ -296,6 +297,16 @@ function alternativeDefinitionsFor(
                 quiet
             ),
             planned_on: { ...config, overrides: { ...config.overrides, use_fractional_swings: !fractional } },
+        },
+        {
+            id: "even-hands",
+            label: "Even hands",
+            description: "One window for each hand an inserter moves in the clock period, the windows spread evenly over the period "
+                + "and each a tick shorter than the inserter's hand cycle, so a window moves one hand whenever in it the source "
+                + "has the hand and the sink takes it. Inserters that move the same hands a period, such as those of two "
+                + "halves of a build that do the same thing, get the same windows and share a window decider. Only offered "
+                + "where every inserter takes from a machine or a chest and moves a whole number of hands a period.",
+            run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "derived",
