@@ -44,6 +44,11 @@ If Node does not pick up `NODE_PATH` for ES modules, copy the scripts into `/tmp
   menu, Validate scrolling to the Validation panel and the "Copied." warning. It writes a pass or fail line per check
   into `INDEX.md`. Run it before and after a change to the header into two out dirs. Set `SAMPLES_DIR` to read the sample
   configs from another checkout. It finds Copy by `/^Copy/`, since it reads "Copy old clock…" while results are stale.
+- `capture-renumber.mjs <out dir>` (on `lib.mjs`) checks one number per entity (item 1.9) at 1440 and 720px, each in a fresh
+  browser context: the label every view gives an entity (row chips, pickers, rule editor, diagram, edit dialog, Transfer Plan)
+  before and after a delete, a reorder and a reload, the references in the saved form, an old saved form with `next_ids`, the
+  dimmed Transfer Plan from the keyboard, the inserter row's layout and the forced-ALWAYS tooltip of the enable chip (step 13,
+  which is step 7 of `capture-enable-chip.mjs`). `RESULTS=1` also generates a sample after a delete (slow).
 
 ## Shared helpers
 
