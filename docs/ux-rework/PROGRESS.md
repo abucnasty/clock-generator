@@ -39,7 +39,7 @@ come from here.
 
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | impl | | | Spec final 2026-10-14 |
+| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | review | | | Evidence verified (tests 96/96, lint, icons, build re-run; shots checked). Code review on Fable, UX audit on opus |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Spec final; moved up (7 files). After 1.5 (uses `notify()`) and 1.8 (`serializeConfig`) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2; not alongside 1.3, 1.5 |
@@ -48,7 +48,7 @@ come from here.
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
-| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | impl | | | Spec final; moved up (10 files). Took 1.13's slot (no file in common with 1.1, 1.8) |
+| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | fix-1 | | | Code review (Fable) PASS, UX audit (opus) PASS. Cheap minors before merge: header brackets, "clock period", Copies helper, tests, README |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
@@ -100,6 +100,8 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   owner will write a strict definition after a separate experiment, and updating the definitions is then the first
   task.
 - 2026-10-14: [PLAN.md](PLAN.md) 2.5 gains the Terms popover (the owner's glossary decision).
+- 2026-10-14: The owner asked the orchestrator to stay responsive and to delegate mechanical steps (check runs, PR,
+  CI wait and merge, rebases) to background agents. [ORCHESTRATOR.md](ORCHESTRATOR.md) "Staying responsive" says how.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
@@ -137,6 +139,20 @@ Minor and nit findings, and anything noticed outside an item's scope.
   '')`). When 1.9 changes the labels, pass `entityType: 'inserter' | 'drill'` instead. The 290px AUTO tooltip also
   covers the next row while open (`placement="top"` is an option).
 - 1.13: the capture README doesn't mention `SAMPLES_DIR`.
+- Tooling: `capture.mjs` `generate()` and `validate()` wait on `innerText` for "Generating..." / "Validating...", but MUI
+  upper-cases button text, so the waits end at once. Use `textContent`.
+- Tooling: under the dev server, React StrictMode runs MUI's dialog focus trap twice, so an `autoFocus` button may not
+  hold focus. Check dialog focus on a `vite preview` build.
+- 1.10 → 1.12 Part B: "Overload Multiplier" and the overload tooltip in `MachineFactsAccordion.tsx` while the diagram
+  says "insertion limit"; one number, two names.
+- 1.10 → 2.11: the diagram node line is `#666` at about 8.8px on `#232323` (about 2.7:1), failing 1.4.3. Use
+  `text.secondary` and at least 0.7rem. Also one precision for craft ticks (facts 5.224, node 5.2).
+- 1.10 → 1.6: Rate cells still read "240.00"; use `formatNumberText`.
+- 1.10 → 1.11: the full-value `title` doubles as the accessible description on fields with no helper text.
+- 1.1 → 2.3: the banner, dialog and tooltip say "Generate again", but after an edit Generate stays disabled until
+  Validate. When 2.3 removes that gate, check these strings hold. 1.4 shows "Validate the build first" meanwhile.
+- 1.1: the stale banner's `role="alert"` is inserted while Results is hidden, so it is rarely announced; consider
+  dropping the live role (1.11).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros

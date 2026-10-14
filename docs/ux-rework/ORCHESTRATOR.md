@@ -91,6 +91,20 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - When CI is green and both verdicts are PASS, merge it yourself (squash, delete the branch).
 8. **Ledger and update.** Update `PROGRESS.md`, commit it to the phase branch, and send the owner the item update.
 
+## Staying responsive
+
+The owner must be able to ask a question at any time. So the orchestrator never blocks on long work. It keeps the
+judgement (verdicts, fix batches, specs, the merge decision) and hands the mechanical steps to background agents:
+
+| Step | Who does it | What the orchestrator keeps |
+|---|---|---|
+| Re-running the checks for the evidence gate | `haiku` runner | It opens two or three screenshots, and reads the runner's result lines |
+| Opening the PR, waiting for CI, squash-merging, deleting the branch and the worktree | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge |
+| Rebasing a child branch on the moved phase branch, and resolving conflicts | The item's implementer (`SendMessage`), or a `sonnet` agent if it has finished | Which side wins when a conflict changes behaviour |
+| Anything that waits, such as `gh pr checks --watch` | A background agent or a background command | Nothing waits in the foreground |
+
+Delegate only when it frees the orchestrator. A one-line `gh` or `git` call is quicker to run directly.
+
 ## Choosing the model
 
 Accuracy matters more than speed or cost on this project, but the orchestrator is on the path of every step, so its
