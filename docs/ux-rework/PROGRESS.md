@@ -29,18 +29,18 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 |---|---|---|---|---|---|---|
 | 1.1 | Never offer a stale blueprint | opus | impl | | | Spec final 2026-10-14 |
 | 1.2 | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
-| 1.3 | Undo snackbar for destructive actions | sonnet | todo | | | |
-| 1.4 | Disabled actions say what is missing | sonnet | todo | | | |
-| 1.5 | Messages above the footer; quieter Ko-fi | sonnet | todo | | | |
-| 1.6 | Make the clock pick explainable | opus | todo | | | |
-| 1.7 | "Search deeper" button | sonnet | todo | | | |
+| 1.3 | Undo snackbar for destructive actions | sonnet | spec | | | |
+| 1.4 | Disabled actions say what is missing | sonnet | spec | | | |
+| 1.5 | Messages above the footer; quieter Ko-fi | sonnet | spec | | | |
+| 1.6 | Make the clock pick explainable | opus | spec | | | |
+| 1.7 | "Search deeper" button | sonnet | spec | | | |
 | 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
-| 1.9 | One number per entity, everywhere | opus | todo | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
-| 1.10 | Readable numbers and units | sonnet | todo | | | |
-| 1.11 | Accessibility basics | sonnet | todo | | | |
-| 1.12 | Glossary and copy pass | sonnet | todo | | | Checkpoint: glossary approval |
-| 1.13 | Enable mode shown on the row | sonnet | todo | | | |
-| 1.14 | Warning colour apart from the brand orange | sonnet | todo | | | |
+| 1.9 | One number per entity, everywhere | opus | spec | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
+| 1.10 | Readable numbers and units | sonnet | spec | | | |
+| 1.11 | Accessibility basics | sonnet | spec | | | |
+| 1.12 | Glossary and copy pass | sonnet | spec | | | Checkpoint: glossary approval |
+| 1.13 | Enable mode shown on the row | sonnet | spec | | | |
+| 1.14 | Warning colour apart from the brand orange | sonnet | spec | | | |
 
 ## Phase 2: newcomer-first structure
 
@@ -75,6 +75,8 @@ Owner decisions made after the plan was written, and every change to `PLAN.md`, 
 - 2026-10-14: 1.9, the id question: the owner chose the recommendation. Delete renumbers the remaining ids of its kind
   and remaps every reference; the UI-only `next_ids` and `retireId` go, and old saved forms that carry `next_ids` still
   load (the field is ignored).
+- 2026-10-14: The owner allowed specs to be drafted ahead without limit; implementation stays at two items at once with
+  no file in common. `ORCHESTRATOR.md` ("The loop for each plan item") is updated to say so.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
