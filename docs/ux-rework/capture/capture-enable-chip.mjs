@@ -15,12 +15,11 @@ if (!OUT || !['before', 'after'].includes(MODE)) {
 }
 const AFTER = MODE === 'after';
 const BASE = `http://localhost:${PORT}/`;
-const SAMPLES = '/Users/abucnasty/dev/factorio-scripts/.claude/worktrees/agent-a0789ccbd416459a4/clock-generator/resources/config-samples';
+const SAMPLES = process.env.SAMPLES_DIR ?? '/Users/abucnasty/dev/factorio-scripts/clock-generator/resources/config-samples';
 const PRODUCTION = `${SAMPLES}/science/production-science/production-science-shared-custom-config.json`;
 const ELECTROMAGNETIC = `${SAMPLES}/science/electromagnetic-science/electromagnetic-science.json`;
 const WIDTHS = [1440, 720];
 const CLOCKED_CHIP = 'Clocked 20–45, 74–89 of 112';
-const CLOCKED_SUMMARY = 'Clocked 20–45, 74–89 of 112 ticks';
 
 mkdirSync(OUT, { recursive: true });
 const index = [];
@@ -98,7 +97,7 @@ const inserterCard = () => card(/^Inserters \(\d+\)$/);
 const drillCard = () => card(/^Mining Drills \(\d+\)$/);
 
 /** The enable controls of a card: chips after the change, gear buttons before it */
-const enableControls = (c) => c.getByRole('button', { name: AFTER ? /^Enable rule for / : 'Configure Enable Control' });
+const enableControls = (c) => c.getByRole('button', { name: AFTER ? /\. Edit rule$/ : 'Configure Enable Control' });
 
 async function chipTexts(c) {
     return enableControls(c).locator('.MuiChip-label').allInnerTexts();
@@ -117,7 +116,10 @@ async function noSideScroll() {
     check('nothing scrolls sideways', scrollWidth <= innerWidth, `scrollWidth ${scrollWidth}, innerWidth ${innerWidth}`);
 }
 
-/** Text contrast and size of the chip, read from the page (text over the first opaque background above it) */
+/**
+ * Text and border contrast and size of the chip, read from the page (against the first opaque background above it).
+ * It ignores the Paper elevation overlay (a background-image), so the ratios are close to, not exactly, what is painted.
+ */
 async function measureChip(chip) {
     return chip.evaluate((el) => {
         const parse = (c) => {
@@ -156,8 +158,12 @@ async function measureChip(chip) {
         const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
         const box = el.getBoundingClientRect();
         const style = getComputedStyle(el);
+        const border = parse(style.borderColor);
+        const borderL = lum(blend(border, bg));
+        const borderRatio = (Math.max(borderL, l2) + 0.05) / (Math.min(borderL, l2) + 0.05);
         return {
             ratio: Math.round(ratio * 100) / 100,
+            borderRatio: Math.round(borderRatio * 100) / 100,
             height: Math.round(box.height * 10) / 10,
             borderRadius: style.borderRadius,
             backgroundColor: style.backgroundColor,
@@ -201,11 +207,26 @@ async function runAt(w) {
         const others = texts.filter((_, i) => i !== 3 && i !== 4);
         check('the other inserters read Enable: Auto', others.length > 0 && others.every((t) => t === 'Enable: Auto'), others.join(' | '));
         check('no gear icon or "Configure Enable Control" button left', (await page.getByRole('button', { name: 'Configure Enable Control' }).count()) === 0 && (await c.locator('[data-testid="SettingsIcon"]').count()) === 0);
-        const aria3 = await c.getByRole('button', { name: /^Enable rule for Inserter 3: / }).count();
-        check('exactly one button is named "Enable rule for Inserter 3: ..."', aria3 === 1, `${aria3} found`);
+        const aria3 = await c.getByRole('button', { name: /, Inserter 3\. Edit rule$/ }).count();
+        check('exactly one button is named "..., Inserter 3. Edit rule"', aria3 === 1, `${aria3} found`);
+        const names = await enableControls(c).evaluateAll((els) => els.map((el) => [el.getAttribute('aria-label') ?? '', el.querySelector('.MuiChip-label')?.textContent ?? '']));
+        check('every chip\'s accessible name starts with its visible text (WCAG 2.5.3)', names.every(([name, text]) => text !== '' && name.startsWith(text)), names.map(([name]) => name).join(' | '));
+        const deleteRights = await c.locator('[data-testid="DeleteIcon"]').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().right)));
+        check('the Delete buttons line up in one column', new Set(deleteRights).size === 1, deleteRights.join(', '));
         const quiet = await measureChip(enableControls(c).nth(0));
         const orange = await measureChip(enableControls(c).nth(3));
-        check('AUTO chip is outlined: no fill, no orange', quiet.backgroundColor === 'rgba(0, 0, 0, 0)' && quiet.borderColor !== orange.backgroundColor, `bg ${quiet.backgroundColor}, border ${quiet.borderColor}, text ${quiet.color}`);
+        const ACCENT = 'rgb(252, 163, 0)';
+        check('AUTO chip is outlined: no fill, no orange in the fill, the text or the border', quiet.backgroundColor === 'rgba(0, 0, 0, 0)' && quiet.borderColor !== ACCENT && quiet.color !== ACCENT, `bg ${quiet.backgroundColor}, border ${quiet.borderColor}, text ${quiet.color}`);
+        check('AUTO chip border contrast >= 3:1', quiet.borderRatio >= 3, `${quiet.borderRatio}:1 (border ${quiet.borderColor})`);
+        await enableControls(c).nth(0).hover();
+        await page.waitForTimeout(400);
+        const hovered = await measureChip(enableControls(c).nth(0));
+        check('AUTO chip has a hover state', hovered.borderColor !== quiet.borderColor || hovered.backgroundColor !== quiet.backgroundColor, `border ${quiet.borderColor} -> ${hovered.borderColor}, bg ${quiet.backgroundColor} -> ${hovered.backgroundColor}`);
+        await page.waitForTimeout(500);
+        const autoTip = await page.getByRole('tooltip').innerText().catch(() => '');
+        check('the AUTO tooltip says what Auto means', autoTip === "Auto: the generator decides when this inserter runs. You don't need to change it. Click to set your own rule.", autoTip);
+        await shot('1-auto-tooltip', 'Hovering inserter 1\'s quiet Enable: Auto chip: the tooltip and the hover state');
+        await page.mouse.move(5, 5);
         check('AUTO chip text contrast >= 4.5:1', quiet.ratio >= 4.5, `${quiet.ratio}:1`);
         check('orange chip is filled with the theme orange', orange.backgroundColor !== 'rgba(0, 0, 0, 0)' && orange.backgroundColor === 'rgb(252, 163, 0)', orange.backgroundColor);
         check('orange chip text contrast >= 4.5:1', orange.ratio >= 4.5, `${orange.ratio}:1 (text ${orange.color})`);
@@ -230,7 +251,7 @@ async function runAt(w) {
         const texts = await chipTexts(c);
         check('the drill reads Clocked 1–2 of 168', texts[0] === 'Clocked 1–2 of 168', texts[0]);
         const label = await enableControls(c).first().getAttribute('aria-label');
-        check('the drill chip is named "Enable rule for Drill 1: ..."', label === 'Enable rule for Drill 1: Clocked 1–2 of 168 ticks. Edit', label ?? '');
+        check('the drill chip is named "Clocked 1–2 of 168, Drill 1. Edit rule"', label === 'Clocked 1–2 of 168, Drill 1. Edit rule', label ?? '');
         const orange = await measureChip(enableControls(c).first());
         check('drill chip is orange with text contrast >= 4.5:1', orange.backgroundColor === 'rgb(252, 163, 0)' && orange.ratio >= 4.5, `${orange.backgroundColor}, ${orange.ratio}:1`);
     });
@@ -242,7 +263,7 @@ async function runAt(w) {
         const control = enableControls(c).nth(3);
         if (AFTER) {
             const label = await control.getAttribute('aria-label');
-            check('chip 4 is named with entity and full rule', label === `Enable rule for Inserter 4: ${CLOCKED_SUMMARY}. Edit`, label ?? '');
+            check('chip 4 is named with its text, the entity and the action', label === `${CLOCKED_CHIP}, Inserter 4. Edit rule`, label ?? '');
         }
         await control.click();
         await page.waitForTimeout(700);
@@ -270,9 +291,9 @@ async function runAt(w) {
         for (let i = 0; i < 400; i++) {
             await page.keyboard.press('Tab');
             label = (await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '')) ?? '';
-            if (label.startsWith('Enable rule for')) break;
+            if (label.endsWith('. Edit rule')) break;
         }
-        check('Tab reaches an enable chip', label.startsWith('Enable rule for'), label);
+        check('Tab reaches an enable chip', label.endsWith('. Edit rule'), label);
         await page.waitForTimeout(300);
         await shot('4-chip-focus-ring', 'Keyboard focus on the first enable chip: the focus ring');
         const outline = await page.evaluate(() => {
@@ -282,7 +303,7 @@ async function runAt(w) {
         check('keyboard focus shows a visible outline of at least 2px', outline.style !== 'none' && outline.width >= 2, `${outline.style} ${outline.width}px`);
         await page.keyboard.press('Enter');
         await page.waitForTimeout(600);
-        const entity = /^Enable rule for (Inserter \d+)/.exec(label)?.[1] ?? '';
+        const entity = /, (Inserter \d+)\. Edit rule$/.exec(label)?.[1] ?? '';
         check('Enter opens the modal for that row', (await visibleDialog().getByText(entity, { exact: true }).count()) === 1, entity);
         await page.keyboard.press('Escape');
         await page.waitForTimeout(600);
@@ -324,13 +345,13 @@ async function runAt(w) {
         check('only the three edited rows changed', texts.length === 5 && texts[3] === CLOCKED_CHIP && texts[4] === CLOCKED_CHIP, texts.join(' | '));
         const orange = await Promise.all([0, 1, 2].map((i) => measureChip(enableControls(c).nth(i))));
         check('the edited chips are orange', orange.every((m) => m.backgroundColor === 'rgb(252, 163, 0)'), orange.map((m) => m.backgroundColor).join(' | '));
-        check('the long rule keeps its whole text in the accessible name', (await enableControls(c).nth(2).getAttribute('aria-label')) === 'Enable rule for Inserter 3: Clocked 0–100, 150–250, 300–400, 450–550 ticks. Edit');
+        check('the long rule\'s accessible name starts with the chip text', (await enableControls(c).nth(2).getAttribute('aria-label')) === 'Clocked 0–100, 150–250 +2 more, Inserter 3. Edit rule');
         await shot('5-set-by-hand', 'Inserters card after ALWAYS on inserter 1, NEVER on 2 and four CLOCKED ranges on 3', c);
 
         await enableControls(c).nth(2).hover();
         await page.waitForTimeout(900);
         const tip = await page.getByRole('tooltip').innerText().catch(() => '');
-        check('the tooltip shows the whole rule in ticks', tip === 'Enable rule: Clocked 0–100, 150–250, 300–400, 450–550 ticks. Click to edit.', tip);
+        check('the tooltip shows the whole rule in ticks', tip === 'Clocked 0–100, 150–250, 300–400, 450–550 ticks', tip);
         await shot('5-tooltip', 'Hovering inserter 3\'s long-rule chip: the tooltip with the whole rule');
         await page.mouse.move(5, 5);
 
