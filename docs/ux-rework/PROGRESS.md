@@ -40,7 +40,7 @@ come from here.
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
-| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | review | | | Evidence verified (tests 117/117, lint, icons, build re-run; merges cleanly; shots checked at 390). Code review and UX audit on opus |
+| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | fix-1 | | 1 | Code review opus PASS. UX audit opus FIX: focus hidden under the sticky header (2.4.11). A7, B25, C1 fixed. Round 1: scroll-padding, 720 action row, capture exit code |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Bundle with 1.5 (1.5 first in the branch). Needs 1.8 merged (`serializeConfig`) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Bundle with 1.14 |
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | spec | | | Bundle with 1.3. After 1.2 (reads `--app-header-height`, replaces its stop-gap) |
@@ -58,17 +58,17 @@ come from here.
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| 2.1 | First visit and the way in | opus | spec | | | |
-| 2.2 | Sidecar mod changes | opus | spec | | | Goes first in Phase 2. Checkpoint: owner tries it in Factorio 2.1 |
-| 2.3 | Fold Validate into Generate | opus | spec | | | |
-| 2.4 | Ask the belt question | sonnet | spec | | | |
+| [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
+| [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | spec | | | Spec final. Goes first in Phase 2. Checkpoint: owner runs the in-game steps in the spec |
+| [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
+| [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | 2.5 | Results lead with the answer | opus | spec | | | Goes first in Phase 2. Checkpoint: install steps reviewed |
-| 2.6 | Wake windows view | opus | spec | | | |
+| [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
 | 2.7 | Factorio GUI grammar pass | opus | spec | | | |
-| 2.8 | In-game item names | sonnet | spec | | | |
+| [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | 2.9 | Half-width layout | sonnet | spec | | | |
-| 2.10 | Developer timelines: light fixes | sonnet | spec | | | |
-| 2.11 | Diagram readability | sonnet | spec | | | |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
+| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
 
 ## Phase 3: expert depth
 
@@ -188,6 +188,12 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.2 → 1.4: `handleValidate`'s smooth scroll stops short because the page grows while Validate runs. Scroll after the
   check completes, or instantly; `--app-header-height` gives the margin.
 - 1.2 → 2.9: at 390 the Configure view scrolls sideways (459px) because of the "limit: 15" chip. Pre-existing.
+- 2.11: a saved `near_lane` can go invisible if a belt's lanes later hold the same item.
+- 1.2 → 1.12: in the ⋮ menu "Import Config" sits next to "Paste from Factorio"; consider "Import config file…".
+- 1.2: the logo's alt text "Logo" says nothing (1.11).
+- 2.8: the pickers list mod and hidden entries (746 recipes, recycling and `ee-*`); engine prose keeps ids.
+- 2.2: Esc or E on the sidecar's copy popup closes the main window and orphans the popup (existing quirk).
+- Final PR: open the built 0.8.0 sidecar zip in game once more (2.2's owner steps 4 to 6).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
