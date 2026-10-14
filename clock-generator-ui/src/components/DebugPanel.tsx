@@ -105,7 +105,7 @@ export function DebugPanel({
                         ))}
                     </Box>
                     <Typography variant="caption" gutterBottom>
-                        The debug messages will appear in the browser console the next time you press "Generate".
+                        The debug messages will appear in the browser console the next time you press Generate.
                     </Typography>
                 </Box>
 

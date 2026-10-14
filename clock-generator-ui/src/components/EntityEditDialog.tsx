@@ -125,7 +125,7 @@ function MachineEditSection({
                 freeSolo
                 autoHighlight
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                 <NumberField
                     label="Productivity (%)"
                     value={machine.productivity}
@@ -146,7 +146,7 @@ function MachineEditSection({
                     sx={{ flex: 1 }}
                     size="small"
                 />
-                <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
+                <FormControl size="small" sx={{ flex: 1, minWidth: { xs: '100%', sm: 200 } }}>
                     <InputLabel id={`dialog-machine-type-label-${entityIndex}`}>Type</InputLabel>
                     <Select
                         labelId={`dialog-machine-type-label-${entityIndex}`}

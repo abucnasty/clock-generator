@@ -249,7 +249,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                         renderValue={(selected) => (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} />
-                                {selected === 'furnace' ? MACHINE_TYPE_LABELS.furnace : selected === 'biochamber' ? MACHINE_TYPE_LABELS.biochamber : MACHINE_TYPE_LABELS.machine}
+                                {MACHINE_TYPE_LABELS[selected]}
                             </Box>
                         )}
                     >
