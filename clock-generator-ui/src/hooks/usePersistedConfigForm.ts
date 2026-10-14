@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ChestType, ConfigSchema } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
+import { askEngine } from '../worker/engineClient';
 import {
     createDefaultConfig,
     type BeltFormData,
@@ -43,8 +44,8 @@ export function migrateChests(chests: unknown[]): ChestFormData[] {
     });
 }
 
-/** Load config from localStorage, returns default if not found or invalid */
-function loadConfigFromStorage(): ConfigFormData {
+/** Read the config from localStorage with the legacy fields migrated; null if there is none or it lacks the required fields */
+function readConfigFromStorage(): ConfigFormData | null {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -70,18 +71,13 @@ function loadConfigFromStorage(): ConfigFormData {
                     parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                         d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
                 }
-                const result = ConfigSchema.safeParse(parsed);
-                // The form can hold values the generator rejects (e.g. 0 items per second); only reject a broken structure
-                if (result.success || result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big')) {
-                    return parsed as ConfigFormData;
-                }
-                console.warn('Saved config in localStorage is invalid, using defaults:', result.error);
+                return parsed as ConfigFormData;
             }
         }
     } catch (e) {
         console.warn('Failed to load config from localStorage:', e);
     }
-    return createDefaultConfig();
+    return null;
 }
 
 /** Save config to localStorage */
@@ -96,19 +92,56 @@ function saveConfigToStorage(config: ConfigFormData): void {
     }
 }
 
-/** The form state, loaded from localStorage and saved back to it on every change */
+/**
+ * The form state, loaded from localStorage and saved back to it on every change.
+ *
+ * The engine's worker checks the saved config against the config schema first, so it is loaded (`isLoaded`) once
+ * that worker is up. Until then the state is the default config, nothing is saved, and `unchecked` holds the saved
+ * config.
+ */
 export function usePersistedConfigForm() {
-    const [config, setConfig] = useState<ConfigFormData>(loadConfigFromStorage);
+    const [stored] = useState(readConfigFromStorage);
+    const [defaultConfig] = useState(createDefaultConfig);
+    const [config, setConfig] = useState<ConfigFormData>(defaultConfig);
+    const [isLoaded, setIsLoaded] = useState(stored === null);
 
-    // Save config to localStorage whenever it changes
     useEffect(() => {
-        saveConfigToStorage(config);
-    }, [config]);
+        if (stored === null) {
+            return;
+        }
+        let current = true;
+        askEngine({ kind: 'saved-config', config: stored }).then(
+            (problem) => {
+                if (!current) return;
+                if (problem === null) {
+                    // unless the config was replaced (imported or reset) in the meantime
+                    setConfig((previous) => previous === defaultConfig ? stored : previous);
+                } else {
+                    console.warn('Saved config in localStorage is invalid, using defaults:', problem);
+                }
+                setIsLoaded(true);
+            },
+            (e) => console.warn('Failed to check the config from localStorage:', e),
+        );
+        return () => {
+            current = false;
+        };
+    }, [stored, defaultConfig]);
+
+    // Save config to localStorage whenever it changes, once the saved one is loaded
+    useEffect(() => {
+        if (isLoaded) {
+            saveConfigToStorage(config);
+        }
+    }, [config, isLoaded]);
 
     const resetConfig = useCallback(() => {
         localStorage.removeItem(STORAGE_KEY);
         setConfig(createDefaultConfig());
     }, []);
 
-    return { config, setConfig, resetConfig };
+    // the saved config while it waits for the check, unless it was replaced in the meantime
+    const unchecked = !isLoaded && config === defaultConfig ? stored : null;
+
+    return { config, setConfig, resetConfig, isLoaded, unchecked };
 }
