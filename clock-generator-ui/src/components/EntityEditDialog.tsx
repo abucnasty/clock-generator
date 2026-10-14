@@ -147,8 +147,10 @@ function MachineEditSection({
                     size="small"
                 />
                 <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
-                    <InputLabel>Type</InputLabel>
+                    <InputLabel id={`dialog-machine-type-label-${entityIndex}`}>Type</InputLabel>
                     <Select
+                        labelId={`dialog-machine-type-label-${entityIndex}`}
+                        SelectDisplayProps={{ id: `dialog-machine-type-select-${entityIndex}` }}
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(entityIndex, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}

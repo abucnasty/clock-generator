@@ -239,8 +239,10 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     />
                 )}
                 <FormControl size="small" sx={{ minWidth: 220 }}>
-                    <InputLabel>Type</InputLabel>
+                    <InputLabel id={`machine-type-label-${index}`}>Type</InputLabel>
                     <Select
+                        labelId={`machine-type-label-${index}`}
+                        SelectDisplayProps={{ id: `machine-type-select-${index}` }}
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
