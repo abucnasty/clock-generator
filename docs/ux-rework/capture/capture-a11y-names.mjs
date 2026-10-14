@@ -373,7 +373,7 @@ const STEP_LIST = [
             const inv = await inventory(page);
             judgeNames(rec, 'Configure (validated)', inv);
             const chips = await page.evaluate(() => [...document.querySelectorAll('.MuiChip-root')].filter((c) => /^(LCM|Used):/.test((c.textContent ?? '').trim())).map((c) => ({ text: (c.textContent ?? '').trim(), tab: c.getAttribute('tabindex') === '0' || Boolean(c.querySelector('[tabindex="0"]')) || c.closest('[tabindex="0"]') !== null, label: c.getAttribute('aria-label') ?? '' })));
-            rec.check('the LCM and Used chips take Tab (their tooltip opens on focus) and their tooltip is not their name', chips.length > 0 && chips.every((c) => c.tab && c.label.length < 40), chips.length ? `${chips.length} chips: ${brief(chips.map((c) => `"${c.text}" ${c.tab ? 'tabbable' : 'not tabbable'}${c.label.length >= 40 ? ', named by a long aria-label' : ''}`), 3)}` : 'no LCM or Used chip found (Transfer Plan not shown?)'); // SELECTOR: confirm
+            rec.check('the LCM and Used chips take Tab (their tooltip opens on focus) and their tooltip is not their name', chips.length > 0 && chips.every((c) => c.tab && c.label.length < 40), chips.length ? `${chips.length} chips: ${brief(chips.map((c) => `"${c.text}" ${c.tab ? 'tabbable' : 'not tabbable'}${c.label.length >= 40 ? ', named by a long aria-label' : ''}`), 3)}` : 'no LCM or Used chip found (Swing Plan not shown?)'); // SELECTOR: confirm
             const toggles = inv.filter((it) => !it.ignored && /^(Included|Excluded)$/.test(it.text));
             const wrongToggle = toggles.filter((t) => !/^(Included in|Excluded from) LCM: .+/.test(t.name));
             rec.check('the Included/Excluded chips are named "Included in LCM: {item}" / "Excluded from LCM: {item}"', toggles.length > 0 && wrongToggle.length === 0, toggles.length ? (wrongToggle.length ? `${wrongToggle.length} of ${toggles.length}: ${brief(wrongToggle.map((t) => `"${t.name.slice(0, 60)}"`), 2)}` : `${toggles.length} chips`) : 'no Included/Excluded chip found'); // SELECTOR: confirm
@@ -777,7 +777,7 @@ const STEP_LIST = [
             const close = dialog.getByRole('button', { name: /^Close$/i });
             rec.check('the modal\'s close button is named "Close"', (await close.count()) === 1, `${await close.count()} buttons named Close; unnamed buttons in the modal: ${await dialog.evaluate((d) => [...d.querySelectorAll('button')].filter((b) => !(b.getAttribute('aria-label') || b.textContent || '').trim()).length)}`);
             // show the rule editors so their selects and delete buttons exist
-            const conditional = dialog.getByRole('radio', { name: /^CONDITIONAL/ }); // SELECTOR: confirm
+            const conditional = dialog.getByRole('radio', { name: /^Conditional/ }); // SELECTOR: confirm
             if ((await conditional.count()) > 0) {
                 await conditional.click();
                 await page.waitForTimeout(300);
@@ -801,7 +801,7 @@ const STEP_LIST = [
             const invConditional = await inventory(page, '[role=dialog]');
             judgeNames(rec, 'the enable-rule modal (Conditional)', invConditional);
             judgeSelects(rec, 'the enable-rule modal (Conditional)', invConditional);
-            const clocked = dialog.getByRole('radio', { name: /^CLOCKED/ });
+            const clocked = dialog.getByRole('radio', { name: /^Clocked/ });
             if ((await clocked.count()) > 0) {
                 await clocked.click();
                 await page.waitForTimeout(300);

@@ -1,4 +1,4 @@
-// Items 1.6 (the recommended clock) and 1.7 (Search deeper): the Potential Clocks panel at 1440px and 720px, after.
+// Items 1.6 (the recommended clock) and 1.7 (Search deeper): the Clocks panel at 1440px and 720px, after.
 // Usage: node capture-clock-pick.mjs <out dir>      (BASE_URL and SAMPLES_DIR are read from the environment)
 // Copy this file and lib.mjs into /tmp/ux-capture/ to run it (playwright-core lives there).
 //
@@ -50,7 +50,7 @@ rec.watch(page);
 
 // ------------------------------------------------------------------------------------------------------- helpers
 
-const heading = () => page.getByRole('heading', { name: 'Potential Clocks' });
+const heading = () => page.getByRole('heading', { name: 'Clocks' });
 const panel = () => heading().locator('xpath=..');
 const notes = () => page.getByRole('note');
 const searchDeeper = () => page.getByRole('button', { name: 'Search deeper', exact: true });
@@ -65,7 +65,7 @@ async function setWidth(width) {
     await page.waitForTimeout(500);
 }
 
-/** Scrolls so the Potential Clocks heading sits just under the app bar, the workflow bar and its progress */
+/** Scrolls so the Clocks heading sits just under the app bar, the workflow bar and its progress */
 async function scrollToPanel() {
     await heading().evaluate((el) => {
         // the bottom of whatever is pinned to the top of the viewport
