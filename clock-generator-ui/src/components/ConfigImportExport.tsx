@@ -358,6 +358,8 @@ export function ConfigImportExport({
                         onClick={handleMenuOpen}
                         size="small"
                         color="inherit"
+                        aria-haspopup="menu"
+                        aria-expanded={menuOpen}
                     >
                         <MoreVert />
                     </IconButton>
@@ -366,6 +368,7 @@ export function ConfigImportExport({
                     anchorEl={menuAnchorEl}
                     open={menuOpen}
                     onClose={handleMenuClose}
+                    slotProps={{ list: { 'aria-label': 'More options' } }}
                     anchorOrigin={{
                         vertical: 'bottom',
                         horizontal: 'right',
