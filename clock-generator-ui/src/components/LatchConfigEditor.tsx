@@ -54,6 +54,8 @@ export function LatchConfigEditor({
                         <Switch
                             checked={enabled}
                             onChange={(e) => handleToggle(e.target.checked)}
+                            // the label is empty: the heading beside the switch is what it is called
+                            slotProps={{ input: { 'aria-label': 'Latched mode' } }}
                         />
                     }
                     label=""
