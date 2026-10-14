@@ -1,5 +1,6 @@
 import { Box, FormControlLabel, Paper, Switch, Typography } from '@mui/material';
 import { useCallback, useId, useMemo, useState } from 'react';
+import { useAnnounce } from '../hooks/useMessages';
 import type { ClockAlternativeView } from '../worker/types';
 import { buildWakeWindowRows, mostWokenRowId, sumWakeUps, wakeUpsCounted } from '../utils/wakeWindows';
 import {
@@ -35,18 +36,6 @@ interface WakeWindowsViewProps {
     /** A card inside Results by default */
     headingLevel?: 'h2' | 'h3';
 }
-
-const visuallyHidden = {
-    position: 'absolute',
-    width: '1px',
-    height: '1px',
-    p: 0,
-    m: '-1px',
-    overflow: 'hidden',
-    clip: 'rect(0 0 0 0)',
-    whiteSpace: 'nowrap',
-    border: 0,
-} as const;
 
 /** The shape each mark of the chart has, so the legend tells them apart without colour */
 function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track' }) {
@@ -107,10 +96,16 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
     const headingId = useId();
     const hintId = useId();
     const rows = useMemo(() => (alternative ? buildWakeWindowRows(alternative) : []), [alternative]);
+    const announce = useAnnounce();
     // stable for the clock, so the chart's memoised rows only render again when their own selection changes
     const onSelect = useCallback((next: { rowId: string; windowIndex: number } | null) => {
         setSelection(next === null || alternative === null ? null : { alternative, ...next });
-    }, [alternative]);
+        // the selected window is read out in the page's one announcements region
+        const row = next === null ? undefined : rows.find(it => it.id === next.rowId);
+        if (next !== null && row && alternative !== null && next.windowIndex < row.windows.length) {
+            announce(selectionAnnouncement(row, next.windowIndex, alternative.simulationDurationTicks));
+        }
+    }, [alternative, rows, announce]);
 
     if (alternative === null) {
         return null;
@@ -122,7 +117,6 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
         ? rows.find(row => row.id === selection.rowId && selection.windowIndex < row.windows.length)
         : undefined;
     const selected = selectedRow && selection ? { rowId: selection.rowId, windowIndex: selection.windowIndex } : null;
-    const announcement = selected && selectedRow ? selectionAnnouncement(selectedRow, selected.windowIndex, periodTicks) : '';
     const counted = wakeUpsCounted(alternative);
     const mostWakeUpsId = mostWokenRowId(rows);
     const summary = summaryText({
@@ -214,9 +208,6 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
                     </>
                 )}
             </Box>
-
-            {/* the one place the selected window is spoken; polite, and not a second role="status" */}
-            <Box aria-live="polite" aria-atomic="true" sx={visuallyHidden} data-wake-live>{announcement}</Box>
         </Paper>
     );
 }
