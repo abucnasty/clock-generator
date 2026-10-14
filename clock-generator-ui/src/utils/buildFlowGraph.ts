@@ -5,13 +5,13 @@ import { isBufferChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { inferInserterItems } from './inferInserterItems';
 
-export const ENTITY_NODE_WIDTH = 180;
-export const ENTITY_NODE_HEIGHT = 80;
-export const ENTITY_NODE_DETAIL_HEIGHT = 200;
-export const INSERTER_NODE_WIDTH = 140;
-export const INSERTER_NODE_HEIGHT = 70;
-export const DRILL_NODE_WIDTH = 140;
-export const DRILL_NODE_HEIGHT = 70;
+const ENTITY_NODE_WIDTH = 180;
+const ENTITY_NODE_HEIGHT = 80;
+const ENTITY_NODE_DETAIL_HEIGHT = 200;
+const INSERTER_NODE_WIDTH = 140;
+const INSERTER_NODE_HEIGHT = 70;
+const DRILL_NODE_WIDTH = 140;
+const DRILL_NODE_HEIGHT = 70;
 
 export type MachineNodeParams = {
     recipe: string;

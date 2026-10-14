@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
 
-export interface UseMachineFactsParams {
+interface UseMachineFactsParams {
     recipe: string;
     productivity: number;
     crafting_speed: number;
@@ -9,7 +9,7 @@ export interface UseMachineFactsParams {
     energy_consumption_bonus?: number;
 }
 
-export interface UseMachineFactsResult {
+interface UseMachineFactsResult {
     facts: SerializableMachineFacts | null;
     error: string | null;
 }
@@ -80,11 +80,4 @@ export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsR
  */
 export async function initializeMachineFacts(): Promise<void> {
     await loadModule();
-}
-
-/**
- * Check if the machine facts module is loaded.
- */
-export function isMachineFactsReady(): boolean {
-    return Machine !== null;
 }

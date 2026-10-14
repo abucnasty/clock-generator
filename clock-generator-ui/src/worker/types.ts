@@ -16,7 +16,6 @@ import type {
     SerializableClockWindows,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
-    SerializableTransferPlan,
     SwingBackoffReport,
 } from 'clock-generator/browser';
 
@@ -134,8 +133,6 @@ export interface ClockAlternativeView {
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     swingBackoffReport: SwingBackoffReport | null;
-    transferPlan: SerializableTransferPlan;
-    usedLcm: number;
 }
 
 export type ClockAlternativeRunView = ClockAlternativeRun<ClockAlternativeView>;

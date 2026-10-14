@@ -3,7 +3,7 @@ import { Box, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import type { DrillNodeData } from '../utils/buildFlowGraph';
 
-export type DrillFlowNodeType = Node<DrillNodeData, 'drillNode'>;
+type DrillFlowNodeType = Node<DrillNodeData, 'drillNode'>;
 
 export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
     return (

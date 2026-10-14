@@ -121,8 +121,6 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
-        transferPlan: result.serializable_transfer_plan,
-        usedLcm: result.used_lcm,
     }));
     return { signature: run.signature, alternatives };
 }

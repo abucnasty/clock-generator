@@ -60,7 +60,7 @@ function isValidFlowConnection(source: string | null, target: string | null): bo
 export type EntityClickType = 'machine' | 'belt' | 'chest' | 'inserter' | 'drill';
 
 // Editing props derived from the dialog — diagram manages open/close/entityType/entityId internally
-export type ConfigFlowDiagramProps = Omit<EntityEditDialogProps, 'open' | 'onClose' | 'entityType' | 'entityId'> & {
+type ConfigFlowDiagramProps = Omit<EntityEditDialogProps, 'open' | 'onClose' | 'entityType' | 'entityId'> & {
     onAddMachine?: () => void;
     onAddInserter?: () => void;
     onAddBelt?: () => void;

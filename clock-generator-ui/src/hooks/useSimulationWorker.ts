@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Config, ConfigValidation, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
+import type { Config, ConfigValidation, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { initializeMachineFacts } from './useMachineFacts';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
@@ -21,7 +21,7 @@ export type ValidationState =
     | { status: 'valid'; config: Config; validation: ConfigValidation }
     | { status: 'invalid'; config: Config; message: string };
 
-export interface UseSimulationWorkerResult {
+interface UseSimulationWorkerResult {
     isInitialized: boolean;
     isRunning: boolean;
     /** Progress lives outside React state so its frequent updates only re-render what reads it */
@@ -43,8 +43,6 @@ export interface UseSimulationWorkerResult {
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number | null;
     swingBackoffReport: SwingBackoffReport | null;
-    transferPlan: SerializableTransferPlan | null;
-    usedLcm: number | null;
     alternatives: ClockAlternativeView[];
     selectedAlternativeIndex: number;
     selectAlternative: (index: number) => void;
@@ -404,8 +402,6 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         shiftOptions: selected?.shiftOptions ?? null,
         simulationDurationTicks: selected?.simulationDurationTicks ?? null,
         swingBackoffReport: selected?.swingBackoffReport ?? null,
-        transferPlan: selected?.transferPlan ?? null,
-        usedLcm: selected?.usedLcm ?? null,
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,

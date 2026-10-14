@@ -82,24 +82,6 @@ export function getCategoryColor(category: StatusCategory): string {
 }
 
 /**
- * Get all status colors for an entity type
- */
-export function getStatusColorsForEntityType(
-    entityType: EntityType
-): Record<string, string> {
-    switch (entityType) {
-        case EntityType.INSERTER:
-            return INSERTER_STATUS_COLORS;
-        case EntityType.MACHINE:
-            return MACHINE_STATUS_COLORS;
-        case EntityType.DRILL:
-            return DRILL_STATUS_COLORS;
-        default:
-            throw new Error(`Unknown entity type: ${entityType}`);
-    }
-}
-
-/**
  * Reason icon mappings for formatted display
  */
 const REASON_ICONS: { pattern: RegExp; icon: string; label: string }[] = [
