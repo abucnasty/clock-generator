@@ -49,6 +49,9 @@ interface UseConfigFormResult {
     config: ConfigFormData;
     /** False until the config saved in localStorage is checked and loaded */
     isLoaded: boolean;
+    /** Tells the user the saved config could not be loaded and where it was backed up; null when there is no news */
+    loadNotice: string | null;
+    dismissLoadNotice: () => void;
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>;
     
     // Target output
@@ -114,7 +117,7 @@ interface UseConfigFormResult {
 }
 
 export function useConfigForm(): UseConfigFormResult {
-    const { config, setConfig, resetConfig, isLoaded, unchecked } = usePersistedConfigForm();
+    const { config, setConfig, resetConfig, isLoaded, unchecked, loadNotice, dismissLoadNotice } = usePersistedConfigForm();
 
     // Each edit applies its plain function of the form state
     const edits = useMemo(() => {
@@ -180,6 +183,8 @@ export function useConfigForm(): UseConfigFormResult {
     return {
         config,
         isLoaded,
+        loadNotice,
+        dismissLoadNotice,
         setConfig,
         ...edits,
         importConfig,

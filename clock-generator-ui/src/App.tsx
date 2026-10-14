@@ -109,6 +109,8 @@ function App() {
     const {
         config,
         isLoaded: isConfigLoaded,
+        loadNotice,
+        dismissLoadNotice,
         updateTargetOutput,
         addMachine,
         updateMachine,
@@ -327,6 +329,11 @@ function App() {
                         <>
                         {/* both views stay mounted so switching keeps what was expanded, filtered or scrolled */}
                         <Box sx={{ display: view === 'configure' ? 'block' : 'none' }}>
+                            {loadNotice && (
+                                <Alert severity="warning" sx={{ mb: 2 }} onClose={dismissLoadNotice}>
+                                    {loadNotice}
+                                </Alert>
+                            )}
                             {error && (
                                 <Alert severity="error" sx={{ mb: 2 }}>
                                     {error}
