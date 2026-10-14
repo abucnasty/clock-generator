@@ -73,6 +73,22 @@ function export.exported_inserters(result)
     return exported
 end
 
+---Inserters that are left out of the exported config, each with the end it is left out for: the pickup when that has
+---no id, else the drop. The target is nil when the sidecar has no type for what is at that end (the ground, a wagon).
+---@param result ExtractionResult
+---@return {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[]
+function export.left_out_inserters(result)
+    local left_out = {}
+    for _, inserter in ipairs(result.inserters) do
+        if not resolve_target_id(inserter.source, result, false) then
+            table.insert(left_out, { inserter = inserter, pickup = true, target = inserter.source })
+        elseif not resolve_target_id(inserter.sink, result, true) then
+            table.insert(left_out, { inserter = inserter, pickup = false, target = inserter.sink })
+        end
+    end
+    return left_out
+end
+
 ---Convert extraction result to a clock-generator compatible config table
 ---@param result ExtractionResult
 ---@return table
