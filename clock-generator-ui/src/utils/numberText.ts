@@ -69,16 +69,19 @@ export function itemsPerSecondHelper(itemsPerSecond: number, copies: number, loc
 }
 
 /** Under Copies */
-export const COPIES_HELPER = "Identical copies you'll place. One clock fits each.";
+export const COPIES_HELPER = "Identical copies of this build you'll place. The clock is made for one copy.";
+
+/** A non-breaking space: the headers below wrap before their brackets, never inside them */
+const NBSP = ' ';
 
 /** Potential Clocks header of the wake-ups, which are counted on one copy */
-export const WAKE_UPS_HEADER = 'Wake-ups/min (1 copy)';
+export const WAKE_UPS_HEADER = `Wake-ups/min (1${NBSP}copy)`;
 /** Potential Clocks header of what one copy's clock-only run moved in a clock period */
-export const OUTPUT_PER_PERIOD_HEADER = 'Output per period (1 copy)';
+export const OUTPUT_PER_PERIOD_HEADER = `Output per clock period (1${NBSP}copy)`;
 
 /** Potential Clocks header of the rate, which is the total for all the copies the clocks were made for */
 export function rateHeader(copies: number): string {
-    return copies > 1 ? `Rate (items/s, all ${copies} copies)` : 'Rate (items/s)';
+    return copies > 1 ? `Rate (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : 'Rate (items/s)';
 }
 
 /** The diagram machine node's last line: "5.2t craft · insertion limit ×15" */

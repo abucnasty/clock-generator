@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    COPIES_HELPER,
     OUTPUT_PER_PERIOD_HEADER,
     WAKE_UPS_HEADER,
     formatNumberText,
@@ -20,6 +21,12 @@ describe('formatNumberText', () => {
         expect(formatNumberText(240, { locale })).toBe('240');
         expect(formatNumberText(5.2, { locale })).toBe('5.2');
         expect(formatNumberText(0.9996, { maxDecimals: 3, locale })).toBe('1');
+        expect(formatNumberText(-68.906247615814, { maxDecimals: 3, locale })).toBe('-68.906');
+    });
+
+    it('rounds half up at the last decimal, and keeps a value just under the half', () => {
+        expect(formatNumberText(0.0005, { maxDecimals: 3, locale })).toBe('0.001');
+        expect(formatNumberText(0.00049999, { maxDecimals: 3, locale })).toBe('0.0005');
     });
 
     it('does not group thousands', () => {
@@ -95,7 +102,7 @@ describe('itemsPerSecondHelper', () => {
 
 describe('rateHeader', () => {
     it('names the copies the rate is the total of', () => {
-        expect(rateHeader(11)).toBe('Rate (items/s, all 11 copies)');
+        expect(rateHeader(11)).toBe('Rate (items/s,\u00a0all\u00a011\u00a0copies)');
         expect(rateHeader(1)).toBe('Rate (items/s)');
     });
 });
@@ -112,8 +119,14 @@ describe('machineNodeCraftLine', () => {
 });
 
 describe('the clocks table headers', () => {
-    it('are the plan\'s words', () => {
-        expect(WAKE_UPS_HEADER).toBe('Wake-ups/min (1 copy)');
-        expect(OUTPUT_PER_PERIOD_HEADER).toBe('Output per period (1 copy)');
+    it('are the plan\'s words, with non-breaking spaces inside the brackets', () => {
+        expect(WAKE_UPS_HEADER).toBe('Wake-ups/min (1\u00a0copy)');
+        expect(OUTPUT_PER_PERIOD_HEADER).toBe('Output per clock period (1\u00a0copy)');
+    });
+});
+
+describe('COPIES_HELPER', () => {
+    it('says what a copy is and what the clock is made for', () => {
+        expect(COPIES_HELPER).toBe("Identical copies of this build you'll place. The clock is made for one copy.");
     });
 });

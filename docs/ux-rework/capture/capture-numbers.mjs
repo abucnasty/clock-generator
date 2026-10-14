@@ -27,6 +27,12 @@ const FULL_SPEED = 68.906247615814;
 const FULL_TEXT = '68.906247615814';
 const SHORT_TEXT = '68.906';
 const LONG_FLOAT = '22.9687492';
+const COPIES_HELPER = "Identical copies of this build you'll place. The clock is made for one copy.";
+// the headers keep their bracketed part on one line with non-breaking spaces
+const NBSP = '\u00a0';
+const WAKE_UPS_HEADER = `Wake-ups/min (1${NBSP}copy)`;
+const OUTPUT_HEADER = `Output per clock period (1${NBSP}copy)`;
+const RATE_11_HEADER = `Rate (items/s,${NBSP}all${NBSP}11${NBSP}copies)`;
 
 mkdirSync(OUT, { recursive: true });
 const index = [];
@@ -205,7 +211,26 @@ async function noSideScroll() {
 const clocksPanel = () => page.getByText('Potential Clocks', { exact: true }).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
 
 async function tableHeaders() {
-    return clocksPanel().locator('thead th').allInnerTexts();
+    return clocksPanel().locator('thead th').allTextContents();
+}
+
+/** Headers whose bracketed part is drawn over more than one line */
+async function headersBrokenInBrackets() {
+    return clocksPanel().locator('thead th').evaluateAll((cells) => cells.flatMap((cell) => {
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        const broken = [];
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            const open = node.data.indexOf('(');
+            const close = node.data.indexOf(')', open);
+            if (open < 0 || close < 0) continue;
+            const range = document.createRange();
+            range.setStart(node, open);
+            range.setEnd(node, close + 1);
+            const tops = new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top)));
+            if (tops.size > 1) broken.push(`${node.data} (${tops.size} lines)`);
+        }
+        return broken;
+    }));
 }
 
 async function shotClocks(slug, desc) {
@@ -240,7 +265,7 @@ async function runAt(w) {
         const ipsHelper = await helperText(ips);
         const copiesHelper = await helperText(copies);
         check('Items per Second helper reads "Total for all 11 copies (21.82/s each)"', ipsHelper === 'Total for all 11 copies (21.82/s each)', JSON.stringify(ipsHelper));
-        check('Copies helper reads "Identical copies you\'ll place. One clock fits each."', copiesHelper === "Identical copies you'll place. One clock fits each.", JSON.stringify(copiesHelper));
+        check(`Copies helper reads "${COPIES_HELPER}"`, copiesHelper === COPIES_HELPER, JSON.stringify(copiesHelper));
         const ipsDesc = await describedBy(ips);
         const copiesDesc = await describedBy(copies);
         check('Items per Second aria-describedby points at its helper', ipsDesc === ipsHelper && ipsDesc !== '', JSON.stringify(ipsDesc));
@@ -421,9 +446,11 @@ async function runAt(w) {
         await shotClocks('9-results-11-copies', 'Results for the logistic build (11 copies): the Potential Clocks table');
         const headers = await tableHeaders();
         record('table headers', headers.join(' | '));
-        check('header "Wake-ups/min (1 copy)"', headers.includes('Wake-ups/min (1 copy)'));
-        check('header "Rate (items/s, all 11 copies)"', headers.includes('Rate (items/s, all 11 copies)'));
-        check('header "Output per period (1 copy)"', headers.includes('Output per period (1 copy)'));
+        check('header "Wake-ups/min (1 copy)", non-breaking inside the brackets', headers.includes(WAKE_UPS_HEADER));
+        check('header "Rate (items/s, all 11 copies)", non-breaking inside the brackets', headers.includes(RATE_11_HEADER));
+        check('header "Output per clock period (1 copy)", non-breaking inside the brackets', headers.includes(OUTPUT_HEADER));
+        const broken = await headersBrokenInBrackets();
+        check('no header breaks inside its brackets', broken.length === 0, broken.join('; ') || 'none');
     });
 
     // ------------------------------------------------------------ 10. Stale header
@@ -439,7 +466,7 @@ async function runAt(w) {
         await shotClocks('10-results-after-copies-7', 'Results after changing Copies from 11 to 7 on Configure: the table keeps the header of its generation');
         const headers = await tableHeaders();
         record('table headers after Copies 11 -> 7', headers.join(' | '));
-        check('the header still says "all 11 copies"', headers.includes('Rate (items/s, all 11 copies)'));
+        check('the header still says "all 11 copies"', headers.includes(RATE_11_HEADER));
         await goConfigure();
         await retype(fieldInput(/^Copies\b/), '11');
         await page.keyboard.press('Tab');
