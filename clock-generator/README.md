@@ -407,15 +407,13 @@ src/
 ├── config/           # Configuration loading and validation
 │   ├── schema.ts     # Zod schemas for config validation
 │   ├── loader.ts     # config file loader
-│   ├── config-paths.ts # Path constants for sample configs
-│   └── examples.ts   # Legacy TypeScript config examples
+│   └── config-paths.ts # Path constants for sample configs
 ├── crafting/         # Core simulation and blueprint generation
 │   ├── runner/       # Step-based execution framework
 │   └── sequence/     # Simulation logic and interceptors
 ├── control-logic/    # Entity behavior and state machines
 ├── entities/         # Machine, inserter, and belt models
-├── blueprints/       # Blueprint encoding/decoding
-└── types/            # Custom type declarations
+└── blueprints/       # Blueprint encoding/decoding
 
 resources/
 └── config-samples/   # sample configurations and scaffolds, by build
