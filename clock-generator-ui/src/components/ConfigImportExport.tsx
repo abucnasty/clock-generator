@@ -1,5 +1,5 @@
 import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons-material';
-import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, lighten, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
@@ -357,6 +357,9 @@ export function ConfigImportExport({
                         vertical: 'top',
                         horizontal: 'right',
                     }}
+                    // the plain paper colour, without the dark theme's elevation overlay (a background image), which
+                    // lightens it so far that Reset's red is below 4.5:1 when hovered or focused
+                    slotProps={{ paper: { sx: { backgroundImage: 'none' } } }}
                 >
                     <MenuItem onClick={handleMenuPasteFromFactorio}>
                         <ListItemIcon>
@@ -381,8 +384,8 @@ export function ConfigImportExport({
                         </MenuItem>
                     )}
                     <Divider />
-                    {/* in the error colour: it throws the build away (Undo brings it back) */}
-                    <MenuItem onClick={handleMenuReset} sx={{ color: 'error.main' }}>
+                    {/* in the error colour, lightened to stay 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
+                    <MenuItem onClick={handleMenuReset} sx={{ color: (theme) => lighten(theme.palette.error.main, 0.3) }}>
                         <ListItemIcon sx={{ color: 'inherit' }}>
                             <RestartAlt fontSize="small" />
                         </ListItemIcon>
