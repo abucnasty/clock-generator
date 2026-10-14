@@ -33,7 +33,7 @@ come from here.
 
 - **Phase:** 1 (started 2026-10-14)
 - **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** 1.12 glossary approval (asked 2026-10-14; see [Open questions](#open-questions))
+- **Open checkpoints:** none
 
 ## Phase 1: stop the harm, quick wins
 
@@ -50,7 +50,7 @@ come from here.
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8 and 1.13. Id question answered 2026-10-14 |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | spec | | | Spec final; moved up (10 files). Next free slot (no file in common with 1.1, 1.8, 1.13) |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
-| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | blocked | | | Part A (copy fixes) spec final, after 1.8. Part B waits for glossary approval |
+| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | review | | | Evidence verified (tests 80/80, build re-run; shots checked). Code review on opus, UX audit on sonnet. Wire the forced-ALWAYS note after 1.8 merges |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | spec | | | Spec final; moved up (7 files). After 1.1 and 1.2; not alongside 1.4, 1.5 |
 
@@ -94,12 +94,17 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
 - 2026-10-14: Order change from the plan's "1.1 to 1.3 first": 1.5 goes before 1.3, so the Undo snackbar is built
   once on 1.5's `notify()`. Planned order for the shared-file chain: 1.1 → 1.2 → 1.5 → 1.3 → 1.4 → 1.14; 1.6 and 1.7
   after 1.1 (1.10 before 1.6); 1.9 after 1.8.
+- 2026-10-14: The owner approved the 1.12 glossary, question by question; the answers are in
+  [specs/1.12-glossary-copy.md](specs/1.12-glossary-copy.md) ("Owner's glossary decisions"). Changes from the proposal:
+  "jammed" (output blocked) and "starved" (input runs out) are two words, not one "jam". "Wake-up" is provisional: the
+  owner will write a strict definition after a separate experiment, and updating the definitions is then the first
+  task.
+- 2026-10-14: [PLAN.md](PLAN.md) 2.5 gains the Terms popover (the owner's glossary decision).
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
 
-- **1.12 glossary (asked 2026-10-14).** The table and the eight word choices are in
-  [specs/1.12-glossary-copy.md](specs/1.12-glossary-copy.md) ("Glossary proposal"). Also: engine text now or in 2.5; "Hand size" for Stack Size (A24); a Terms popover in 2.5.
+None.
 
 ## Follow-ups
 
@@ -126,6 +131,10 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - Tooling: `npm run knip` reports `scripts/*.mjs` as unused when run inside `.claude/worktrees/`; it passes on the main
   checkout. Judge knip on the main checkout or CI.
 - Tooling: Playwright's ES module resolution ignores `NODE_PATH`; copy a capture script into `/tmp/ux-capture` to run it.
+- 1.13 → 1.9: the AUTO tooltip gets its noun by parsing the label (`enableRuleLabel.ts`, `entityLabel.replace(/ \d+$/,
+  '')`). When 1.9 changes the labels, pass `entityType: 'inserter' | 'drill'` instead. The 290px AUTO tooltip also
+  covers the next row while open (`placement="top"` is an option).
+- 1.13: the capture README doesn't mention `SAMPLES_DIR`.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
