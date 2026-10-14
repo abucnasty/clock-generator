@@ -175,10 +175,12 @@ function gui.create_copy_popup(player, json, left_out)
     frame.auto_center = true
 
     -- Instructions
-    frame.add({
+    local instructions = frame.add({
         type = "label",
         caption = { "clock-generator-sidecar.copy-instructions" }
     })
+    instructions.style.single_line = false
+    instructions.style.maximal_width = 600
 
     -- Text box with JSON (user can select all and copy)
     local textbox = frame.add({
@@ -190,9 +192,6 @@ function gui.create_copy_popup(player, json, left_out)
     textbox.style.height = 300
     textbox.read_only = true
     textbox.word_wrap = true
-    -- Select all text automatically
-    textbox.select_all()
-    textbox.focus()
 
     if #left_out > 0 then
         add_left_out_inserters(frame, left_out)
@@ -210,9 +209,34 @@ function gui.create_copy_popup(player, json, left_out)
 
     button_flow.add({
         type = "button",
+        name = "clock_generator_sidecar_select_all",
+        caption = { "clock-generator-sidecar.copy-select-button" },
+        tooltip = { "clock-generator-sidecar.copy-select-tooltip" }
+    })
+
+    button_flow.add({
+        type = "button",
         name = "clock_generator_sidecar_copy_close",
         caption = { "clock-generator-sidecar.close-button" }
     })
+
+    -- Select the JSON and focus it once every child is added, so that only Ctrl+C is left to do
+    textbox.select_all()
+    textbox.focus()
+end
+
+---Select all of the JSON in the copy popup again and focus it, for the Select all button
+---@param player LuaPlayer
+function gui.select_json(player)
+    local copy_frame = player.gui.screen[gui.COPY_GUI_NAME]
+    if not (copy_frame and copy_frame.valid) then
+        return
+    end
+    local textbox = copy_frame["clock_generator_sidecar_json_text"]
+    if textbox and textbox.valid then
+        textbox.select_all()
+        textbox.focus()
+    end
 end
 
 -- Main Results GUI
@@ -252,6 +276,24 @@ function gui.create(player, player_data, result)
         caption = { "clock-generator-sidecar.entity-count", total_count },
         style = "heading_2_label"
     })
+
+    -- The target the JSON suggests, so it can be checked before pasting
+    local suggested = export.suggested_target(result)
+    if suggested then
+        local item = prototypes.item[suggested.recipe]
+        local product = suggested.recipe
+        if item then
+            product = { "", "[item=" .. suggested.recipe .. "] ", item.localised_name }
+        end
+        local suggested_label = frame.add({
+            type = "label",
+            caption = { "clock-generator-sidecar.suggested-target", product, string.format("%.2f", suggested.items_per_second) },
+            tooltip = { "clock-generator-sidecar.suggested-target-tooltip" }
+        })
+        suggested_label.style.single_line = false
+        suggested_label.style.maximal_width = 600
+        suggested_label.style.bottom_margin = 8
+    end
 
     -- Content frame
     local content_frame = frame.add({

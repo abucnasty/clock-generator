@@ -55,6 +55,11 @@
 ---@field source InserterTargetRef|nil The pickup target
 ---@field sink InserterTargetRef|nil The drop target
 
+---@class SuggestedTarget
+---@field recipe string The item name of the main product that leaves the selection (not necessarily the recipe's name)
+---@field items_per_second number What the selected machines of that recipe make of it together at their maximum
+---@field copies number Always 1
+
 ---@class PlayerData
 ---@field machines MachineData[] Extracted machine data
 ---@field gui LuaGuiElement? Reference to the GUI frame
