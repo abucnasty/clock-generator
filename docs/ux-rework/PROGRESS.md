@@ -68,7 +68,7 @@ come from here.
 | 2.8 | In-game item names | sonnet | spec | | | |
 | 2.9 | Half-width layout | sonnet | spec | | | |
 | 2.10 | Developer timelines: light fixes | sonnet | spec | | | |
-| 2.11 | Diagram readability | sonnet | spec | | | |
+| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
 
 ## Phase 3: expert depth
 
@@ -188,6 +188,7 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.2 → 1.4: `handleValidate`'s smooth scroll stops short because the page grows while Validate runs. Scroll after the
   check completes, or instantly; `--app-header-height` gives the margin.
 - 1.2 → 2.9: at 390 the Configure view scrolls sideways (459px) because of the "limit: 15" chip. Pre-existing.
+- 2.11: a saved `near_lane` can go invisible if a belt's lanes later hold the same item.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
