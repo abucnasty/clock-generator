@@ -170,7 +170,8 @@ local function extract_inserter_data(entity)
         if target_type then
             source = {
                 type = target_type,
-                unit_number = pickup_target.unit_number
+                unit_number = pickup_target.unit_number,
+                name = pickup_target.name
             }
             if target_type == "belt" then
                 source.near_lane = helpers.get_near_lane(entity, pickup_target)
@@ -187,7 +188,8 @@ local function extract_inserter_data(entity)
         if target_type then
             sink = {
                 type = target_type,
-                unit_number = drop_target.unit_number
+                unit_number = drop_target.unit_number,
+                name = drop_target.name
             }
         end
     end
@@ -196,6 +198,7 @@ local function extract_inserter_data(entity)
     local data = {
         entity = entity,
         inserter_type = entity.name,
+        position = entity.position,
         stack_size = stack_size,
         filters = filters,
         source = source,

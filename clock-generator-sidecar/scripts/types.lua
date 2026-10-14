@@ -27,6 +27,7 @@
 ---@class InserterTargetRef
 ---@field type "machine"|"belt"|"chest" The target type
 ---@field unit_number number The unit number of the target entity
+---@field name string The target entity's name
 
 ---@class InfinityFilterData
 ---@field item_name string The item name
@@ -48,6 +49,7 @@
 ---@class InserterData
 ---@field entity LuaEntity
 ---@field inserter_type string The inserter entity name
+---@field position MapPosition Where the inserter stands
 ---@field stack_size number The inserter stack size
 ---@field filters string[] Item filters set on the inserter
 ---@field source InserterTargetRef|nil The pickup target

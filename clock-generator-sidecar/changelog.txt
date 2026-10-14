@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.7.0
+Date: 2026-10-14
+  Features:
+    - the window with the JSON lists each inserter left out of it, with where it stands and why: what it takes from or drops into is not in the JSON, or is something the sidecar has no type for. The window with the selection numbers each inserter by its id in the JSON and marks one left out with -
+  Changes:
+    - an inserter that takes from an empty belt or chest or from a machine that is not exported, or that drops into a lab, a machine without a recipe or a machine outside the selection, is left out of the JSON. It used to point at machine, belt or chest 1, which is some other entity. The inserters after it are numbered one lower than before
+  Info:
+    - the contact and homepage links point at the clock-generator repository
+---------------------------------------------------------------------------------------------------
 Version: 0.6.0
 Date: 2026-10-05
   Features:
