@@ -191,7 +191,15 @@ export function WorkflowBar({
                         />
                     )}
                     {chip && (
-                        <Chip size="small" variant="outlined" label={chip.label} color={chip.color} />
+                        <Chip
+                            size="small"
+                            variant="outlined"
+                            label={chip.label}
+                            color={chip.color}
+                            // the lighter shade, for the words and a solid border: the error red is 3.9:1 on the bar, under
+                            // the 4.5 text needs, and MUI's border is that red at 70%
+                            sx={{ color: `${chip.color}.light`, borderColor: `${chip.color}.light` }}
+                        />
                     )}
                     {/* the note under the buttons says where they go instead of checking; it describes both */}
                     <Tooltip title={CHECK_TEXT.checkOnlyTooltip} arrow describeChild>

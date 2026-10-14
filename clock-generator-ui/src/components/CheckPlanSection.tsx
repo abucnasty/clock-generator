@@ -57,7 +57,8 @@ export function CheckPlanSection({
                 // not an alert: it follows every edit, and is not news to read out
                 <Alert severity="warning" role="none" sx={{ mb: 1 }}>{CHECK_TEXT.planOutOfDate}</Alert>
             )}
-            <Box inert={isOutOfDate} sx={{ opacity: isOutOfDate ? 0.45 : 1, pointerEvents: isOutOfDate ? 'none' : 'auto' }} data-swing-plan="">
+            {/* the plan's table is wider than a phone: it scrolls on its own, not the page */}
+            <Box inert={isOutOfDate} sx={{ opacity: isOutOfDate ? 0.45 : 1, pointerEvents: isOutOfDate ? 'none' : 'auto', overflowX: 'auto' }}>
                 {!isOutOfDate && (
                     // not an alert: the check's result is read out once, from the workflow bar
                     <Alert severity="success" role="none" sx={{ mb: 1 }}>

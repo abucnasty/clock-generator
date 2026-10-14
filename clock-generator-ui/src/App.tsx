@@ -241,11 +241,6 @@ function App() {
     const note = barNoteOf({ problems, busy, checkStatus });
 
     const announce = useAnnounce();
-    // a failed check's alert is read out where it shows; from Results it is out of sight, so the result is said instead
-    const viewRef = useRef(view);
-    useEffect(() => {
-        viewRef.current = view;
-    }, [view]);
 
     // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
     const goToTarget = useCallback((target: FocusTarget) => {
@@ -313,11 +308,12 @@ function App() {
         }
     }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, goToTarget, goToCheckError, validate, setCheckingFor]);
 
-    // a check started by Check only or the Exclude chips says how it ended; one started by Generate leads on instead
+    // a check started by Check only or the Exclude chips says how it ended, without moving the focus; one started by
+    // Generate leads on instead, to the clocks or to the reason (the focus on it reads it out)
     const announceCheck = useCallback((outcome: CheckOutcome) => {
         if (outcome.kind === 'valid') {
             announce(`${CHECK_TEXT.chipPassed}.`);
-        } else if (outcome.kind === 'invalid' && viewRef.current !== 'configure') {
+        } else if (outcome.kind === 'invalid') {
             announce(`${CHECK_TEXT.chipFailed}. The reason is at the top of Configure.`);
         }
     }, [announce]);
