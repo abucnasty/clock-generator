@@ -63,13 +63,13 @@ come from here.
 | [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | merged (p2) | [#154](https://github.com/abucnasty/clock-generator/pull/154) | 0 | Into `feat/ux-rework-p2`. CI green. **In-game check: passed** (owner, 2026-10-14: "looks good"). Code review opus PASS (Lua read line by line; checks re-run); UX audit sonnet FIX on the owner steps only (fixed by the orchestrator). A17, Q3 fixed; A2, A3 partly (site side is 2.1); B19 to 2.1. Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | merged (p2) | [#161](https://github.com/abucnasty/clock-generator/pull/161) | 1 | Round 0: code review opus PASS (races fine); UX audit opus FIX (a mouse click on Check only looked silent). Round 1: a visible landing and the reason in the tooltip, plan stays mounted, alert named, announcements in 1.11 A's rule set; merged 2.11 and 1.11 A. Re-review both PASS: A12, B10 fixed. CI green |
-| [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | impl | | | Started on `feat/ux-rework-p2-belt-question` (opus) with a capture writer, right after 2.3 merged. Takes the C7 non-moving row wording |
+| [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | merged (p2) | [#163](https://github.com/abucnasty/clock-generator/pull/163) | 0 | Code review opus PASS (storage, 2.3 interplay, double press, hint all checked; deviations accepted); UX audit opus PASS: A10 fixed, C7 (2.4's part) fixed. 498 tests; capture 274 PASS, 1 FAIL = 1.5's message over the action at 720 (ledgered). CI green |
 | [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A impl | | | Two PRs. A (opus, `feat/ux-rework-p2-results-answer`) started with a capture writer; also takes 2.6's follow-ups (shared `announce()`, footer margin, nits) and, if 2.3 is in, the failed-check alert's raw engine text. Checkpoint: owner tries the install steps in game. B after A merges |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | merged (p2) | [#156](https://github.com/abucnasty/clock-generator/pull/156) | 1 | Code review opus PASS (window maths correct; checks re-run), UX audit opus PASS (C2 fixed for the new chart; old charts → 2.5/2.10); one minors round, re-checked. CI green. Follow-up PR: switch to `announce()`, drop `scrollMarginBottom` |
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
-| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | impl | | | Started (sonnet) on `feat/ux-rework-p2-timelines` with its capture script written ahead; also the Fuel chart's role and name (C2 leftover) |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
 
 **Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
@@ -82,7 +82,7 @@ come from here.
 | 2.5 A → 2.5 B | 2 | after 2.5 A |
 | 2.8 a → 2.8 b (late) | 2 | 2.8 a, any idle slot |
 | 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | merged |
-| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | next free slot |
+| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | in progress |
 
 ## Phase 3: expert depth
 
