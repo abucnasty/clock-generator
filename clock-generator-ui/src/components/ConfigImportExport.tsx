@@ -37,6 +37,8 @@ interface ConfigImportExportProps {
     onReplaceChests: (chests: ChestConfiguration[]) => void;
     onUpdateMiningProductivityLevel: (level: number) => void;
     onReset: () => void;
+    /** Called after Import, Paste or Reset replaced the build, so the clocks and validation of the old one go */
+    onBuildReplaced: () => void;
 }
 
 export function ConfigImportExport({
@@ -49,6 +51,7 @@ export function ConfigImportExport({
     onReplaceChests,
     onUpdateMiningProductivityLevel,
     onReset,
+    onBuildReplaced,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [snackbar, setSnackbar] = useState<{
@@ -106,6 +109,7 @@ export function ConfigImportExport({
                 const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(content) });
 
                 onImport(parsedConfig);
+                onBuildReplaced();
                 setSnackbar({
                     open: true,
                     message: 'Configuration imported successfully!',
@@ -123,7 +127,7 @@ export function ConfigImportExport({
             // Reset the input so the same file can be imported again
             event.target.value = '';
         },
-        [onImport]
+        [onImport, onBuildReplaced]
     );
 
     const handleSnackbarClose = useCallback(() => {
@@ -267,6 +271,7 @@ export function ConfigImportExport({
         setPendingImport(null);
 
         if (parts.length > 0) {
+            onBuildReplaced();
             setSnackbar({
                 open: true,
                 message: `Imported ${parts.join(', ')} from Factorio!`,
@@ -279,7 +284,7 @@ export function ConfigImportExport({
                 severity: 'error',
             });
         }
-    }, [pendingImport, importSelections, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel]);
+    }, [pendingImport, importSelections, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced]);
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);
@@ -308,7 +313,8 @@ export function ConfigImportExport({
     const handleMenuReset = useCallback(() => {
         handleMenuClose();
         onReset();
-    }, [handleMenuClose, onReset]);
+        onBuildReplaced();
+    }, [handleMenuClose, onReset, onBuildReplaced]);
 
     return (
         <>

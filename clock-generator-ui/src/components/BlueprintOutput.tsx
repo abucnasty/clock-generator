@@ -2,6 +2,7 @@ import { ContentCopy, Check } from '@mui/icons-material';
 import {
     Alert,
     Box,
+    Button,
     IconButton,
     LinearProgress,
     Paper,
@@ -10,17 +11,25 @@ import {
 } from '@mui/material';
 import { useCallback, useState } from 'react';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
+import { StaleCopyDialog } from './StaleCopyDialog';
 
 interface BlueprintOutputProps {
     blueprintString: string | null;
     simulationDurationTicks?: number;
     /** Shown over the blueprint: the selected clock does not hold the target rate. Null when it does */
     rateWarning?: string | null;
+    /**
+     * What the clocks were made for, while the build has changed since. The string is then hidden, so it cannot be
+     * copied by hand, and copying asks first. Null when not
+     */
+    staleFor?: GeneratedFor | null;
 }
 
 /** The selected potential clock's blueprint string, for reading or copying by hand */
-export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning }: BlueprintOutputProps) {
+export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor }: BlueprintOutputProps) {
     const [copied, setCopied] = useState(false);
+    const [confirmingOld, setConfirmingOld] = useState(false);
 
     const handleCopy = useCallback(async () => {
         if (!blueprintString) return;
@@ -49,30 +58,56 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
             {rateWarning && (
                 <Alert severity="warning" sx={{ mb: 1 }}>{rateWarning}</Alert>
             )}
-            <Box sx={{ position: 'relative' }}>
-                <TextField
-                    multiline
-                    rows={6}
-                    fullWidth
-                    value={blueprintString}
-                    InputProps={{
-                        readOnly: true,
-                        sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
-                    }}
-                />
-                <IconButton
-                    onClick={handleCopy}
-                    sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        bgcolor: 'background.paper',
-                    }}
-                    color={copied ? 'success' : 'default'}
-                >
-                    {copied ? <Check /> : <ContentCopy />}
-                </IconButton>
-            </Box>
+            {staleFor ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Typography variant="body2" color="text.secondary">
+                        {STALE_BLUEPRINT_NOTE}
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        color="warning"
+                        onClick={() => setConfirmingOld(true)}
+                        startIcon={copied ? <Check /> : <ContentCopy />}
+                    >
+                        {copied ? 'Copied' : STALE_COPY_LABEL}
+                    </Button>
+                    <StaleCopyDialog
+                        open={confirmingOld}
+                        generatedFor={staleFor}
+                        onCancel={() => setConfirmingOld(false)}
+                        onConfirm={() => {
+                            setConfirmingOld(false);
+                            handleCopy();
+                        }}
+                    />
+                </Box>
+            ) : (
+                <Box sx={{ position: 'relative' }}>
+                    <TextField
+                        multiline
+                        rows={6}
+                        fullWidth
+                        value={blueprintString}
+                        InputProps={{
+                            readOnly: true,
+                            sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
+                        }}
+                    />
+                    <IconButton
+                        onClick={handleCopy}
+                        sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            bgcolor: 'background.paper',
+                        }}
+                        color={copied ? 'success' : 'default'}
+                    >
+                        {copied ? <Check /> : <ContentCopy />}
+                    </IconButton>
+                </Box>
+            )}
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                 Copy this string and paste it in Factorio (Ctrl+V while in blueprint library)
             </Typography>

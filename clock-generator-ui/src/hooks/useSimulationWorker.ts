@@ -4,6 +4,7 @@ import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
+import { generatedForOf, type GeneratedFor } from '../utils/resultsStaleness';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -52,6 +53,13 @@ interface UseSimulationWorkerResult {
     error: string | null;
     initialize: () => void;
     runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean) => void;
+    /** What the last Generate was for; null when nothing is generated */
+    generatedFor: GeneratedFor | null;
+    /**
+     * Drops the clocks, the log, the Validate result and any generation still running, for when the build is
+     * replaced as a whole (Import, Paste, Reset). Answers still on their way for the dropped work are ignored.
+     */
+    clearResults: () => void;
     clearLogs: () => void;
     getRecipeInfo: (recipeName: string) => RecipeInfo | null;
 }
@@ -130,6 +138,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
     const [pendingAlternatives, setPendingAlternatives] = useState<string[]>([]);
     const [skippedSearches, setSkippedSearches] = useState<string[]>([]);
+    const [generatedFor, setGeneratedFor] = useState<GeneratedFor | null>(null);
     // set once the user picks an alternative, so results arriving later do not move the selection
     const userSelectionRef = useRef<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -316,6 +325,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             return;
         }
 
+        setGeneratedFor(generatedForOf(config));
         setIsRunning(true);
         progressStore.set(null);
         setAlternatives([]);
@@ -344,6 +354,27 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setValidation({ status: 'running', config });
         worker.postMessage({ type: 'validate', requestId, config } satisfies WorkerRequest);
     }, []);
+
+    const clearResults = useCallback(() => {
+        // the running generation's later answers no longer match it, so they are ignored
+        generationRef.current = null;
+        progressStore.set(null);
+        setIsRunning(false);
+        setAlternatives([]);
+        setSelectedAlternativeIndex(0);
+        setPendingAlternatives([]);
+        setSkippedSearches([]);
+        userSelectionRef.current = null;
+        setLogs([]);
+        setGeneratedFor(null);
+        setValidation({ status: 'none' });
+        // a Validate answer still on its way matches no request; the next request gets a new id
+        validationRef.current = validationRef.current && { ...validationRef.current, requestId: validationRef.current.requestId + 1 };
+        // until the workers are ready, the error is one that stopped them starting, and stays
+        if (isInitialized) {
+            setError(null);
+        }
+    }, [progressStore, isInitialized]);
 
     const selectAlternative = useCallback((index: number) => {
         userSelectionRef.current = alternatives[index]?.id ?? null;
@@ -386,6 +417,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         error,
         initialize,
         runSimulation,
+        generatedFor,
+        clearResults,
         clearLogs,
         getRecipeInfo,
     };

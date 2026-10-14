@@ -39,6 +39,7 @@ import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { rateWarningOf } from './utils/rateWarning';
+import { configKeyOf, isStale } from './utils/resultsStaleness';
 
 const darkTheme = createTheme({
     palette: {
@@ -102,6 +103,8 @@ function App() {
         error,
         initialize,
         runSimulation,
+        generatedFor,
+        clearResults,
         clearLogs,
         getRecipeInfo,
     } = useSimulationWorker();
@@ -189,10 +192,12 @@ function App() {
     }, [itemNames, resourceNames]);
 
     // the Validate step is for the config as it stands; any edit since makes its result out of date
-    const configKey = useMemo(() => JSON.stringify(exportConfig()), [exportConfig]);
-    const isValidationOutOfDate = validation.status !== 'none' && JSON.stringify(validation.config) !== configKey;
+    const configKey = useMemo(() => configKeyOf(exportConfig()), [exportConfig]);
+    const isValidationOutOfDate = validation.status !== 'none' && configKeyOf(validation.config) !== configKey;
     const validationStatus = validation.status === 'none' || validation.status === 'running' ? validation.status
         : isValidationOutOfDate ? 'out-of-date' : validation.status;
+    // likewise the clocks on screen are for the build as it was when Generate was pressed
+    const resultsAreStale = isStale(generatedFor, configKey);
 
     const validationPanelRef = useRef<HTMLDivElement>(null);
     const handleValidate = useCallback(() => {
@@ -299,6 +304,7 @@ function App() {
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
+                            onBuildReplaced={clearResults}
                         />
                     </Toolbar>
                 </AppBar>
@@ -319,6 +325,7 @@ function App() {
                         blueprintString={blueprintString}
                         selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
                         rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
+                        staleFor={resultsAreStale ? generatedFor : null}
                     />
                 )}
 
@@ -504,6 +511,7 @@ function App() {
                                 streamLogs={streamLogs}
                                 onStreamLogsChange={setStreamLogs}
                                 onClearLogs={clearLogs}
+                                staleFor={resultsAreStale ? generatedFor : null}
                             />
                         </Box>
                         </>
