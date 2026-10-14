@@ -2,24 +2,12 @@ import { Box, MenuItem, TextField, Tooltip } from '@mui/material';
 import { useId, useState } from 'react';
 import type { BeltFormData, InserterFormData } from '../hooks/useConfigForm';
 import { nearLaneItems, withNearLane } from '../utils/nearLane';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { FactorioIcon } from './FactorioIcon';
 
 const LABEL = 'Nearest lane of the belt';
 const HELP = 'An inserter takes from the lane nearest to it first when its machine takes both items. The sidecar mod exports it; not set, the order of the filters is used.';
 const NOT_SET = 'Not set';
-
-/** Hidden from sight, read by screen readers */
-const VISUALLY_HIDDEN = {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    m: '-1px',
-    p: 0,
-    overflow: 'hidden',
-    clip: 'rect(0 0 0 0)',
-    whiteSpace: 'nowrap',
-    border: 0,
-} as const;
 
 interface NearLaneSelectProps {
     source: InserterFormData['source'];
