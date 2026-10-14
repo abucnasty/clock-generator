@@ -112,6 +112,10 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   resolves its conflicts), and lighter evidence (a shared capture helper, "before" shots only where the review has
   none, no re-capture after a minors-only fix round). [PLAN.md](PLAN.md) "Child PRs" notes the bundles. Fast mode is
   off limits (the owner).
+- 2026-10-14: The owner asked for an agent that suggests process improvements. [ORCHESTRATOR.md](ORCHESTRATOR.md)
+  "Process coach": a read-only `opus` agent run after every third merge, at each phase end, and on request; the owner
+  approves any change it suggests. Its brief is in the role briefs (no `.claude/agents` file, so nothing outlives the
+  rework).
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions

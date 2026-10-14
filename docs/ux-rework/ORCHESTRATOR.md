@@ -164,6 +164,21 @@ Meanwhile, work on another item if one is unblocked.
 - **Each phase merge** into `feat/ux-rework`. After the owner says go, you do the merge yourself.
 - **The final PR** to `master`. The owner merges it; you never do.
 
+## Process coach
+
+A read-only `opus` agent whose only job is to find ways to finish the roadmap sooner without lowering the bar (every
+item still gets its spec, evidence, an `opus` code review and a UX audit, and the owner's decisions stand).
+
+- **When:** after every third merged item or bundle, at each phase end (before the retro), and when the owner asks.
+- **Inputs the orchestrator gives it:** the ledger, this file, `PLAN.md`, the merged PRs with their open and merge
+  times (`gh pr list --state merged`), the branch's commit times, and a table of each agent run's role, item, model and
+  duration (the orchestrator has these from the task notifications).
+- **Output:** at most five suggestions, ranked by time saved. Each gives the bottleneck it found (with the numbers),
+  the change, the expected saving, the risk to quality, and the exact rule in this file that would change.
+- **What happens next:** the orchestrator relays them to the owner in a few lines with its own view. A suggestion that
+  changes this file, `PLAN.md`, the models or the quality bar is the owner's call; the orchestrator applies only what
+  the owner approves, and logs it in the ledger's decisions log.
+
 ## End of a phase
 
 1. Every item is merged, deferred or carried over in the ledger.
@@ -297,6 +312,17 @@ UX audit only, per cited finding: <A5: fixed | partly | not fixed — why>
   - plain copy
   - regressions on other screens.
 - Be blunt. Return the review verdict template.
+
+**Process coach.** You are the process coach for the UX rework in `/Users/abucnasty/dev/factorio-scripts`. This is
+read-only work: don't edit, commit or push anything.
+- Read `docs/ux-rework/ORCHESTRATOR.md`, `docs/ux-rework/PLAN.md` and `docs/ux-rework/PROGRESS.md`, plus the timing
+  data in this prompt. Use `gh pr list` and `git log --format='%h %ci %s'` for more.
+- Find where the time goes: waiting on shared files, implementation, evidence, reviews, fix rounds, or the
+  orchestrator itself. Back each claim with the numbers.
+- Return at most five suggestions, ranked by time saved: the bottleneck, the change, the expected saving, the risk to
+  quality, and the rule in `ORCHESTRATOR.md` it would change.
+- Never suggest lowering the bar (dropping a review, the evidence gate, tests or the owner's decisions), and never
+  suggest fast mode (the owner ruled it out).
 
 **Phase reviewers (A, B, C).** Use `docs/ux-rework/review/BRIEF.md`, with the persona sections from the original review
 prompts (A newcomer advocate, B power-user interaction designer, C visual, data-viz and accessibility designer), and
