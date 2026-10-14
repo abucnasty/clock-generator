@@ -39,7 +39,7 @@ come from here.
 
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | review | | | Evidence verified (tests 96/96, lint, icons, build re-run; shots checked). Code review on Fable, UX audit on opus |
+| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | fix-1 | | | Code review (Fable) PASS, UX audit (opus) PASS: A5, B1, C5 fixed. Cheap minors before merge (caption, note, dialog wording, tests, ids, onerror guard) |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Spec final; moved up (7 files). After 1.5 (uses `notify()`) and 1.8 (`serializeConfig`) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2; not alongside 1.3, 1.5 |
