@@ -1,5 +1,52 @@
-# Clock Generator and Other Scripts
+# Factorio Clock Generator
 
+A clock generator for Factorio builds. Describe a build (its machines, inserters, belts, chests and drills, and the
+rate it should make) and the generator simulates it tick by tick, works out when each inserter has to be enabled, and
+gives you a blueprint of decider combinators that clock the inserters, so the build makes exactly its target rate with
+as few inserter wake-ups as it can. It lists the clocks it could make, says which hold the rate and recover from a
+backpressure loss, and selects one.
+
+Use it on the site: <https://clock-generator-self.vercel.app>. The source is at
+<https://github.com/abucnasty/clock-generator>.
+
+## Repository
+
+- `clock-generator/`: the engine, a TypeScript library that validates a config, simulates the build and generates the
+  clocks as blueprints; also the `record` and `verify` commands that compare a build in the game with the simulator.
+  See its [README](clock-generator/README.md).
+- `clock-generator-ui/`: the site, a React and Vite app that builds a config, runs the engine in web workers and shows
+  the clocks. See its [README](clock-generator-ui/README.md).
+- `clock-generator-sidecar/`: a Factorio mod that reads machines, inserters and belts from the game and exports them
+  for the generator.
+- `clock-generator-recorder/`: a Factorio mod for development that records every tick of a running build, for
+  comparing the game with the simulator. It is not published.
+
+## Running it locally
+
+With Node.js installed:
+
+```bash
+cd clock-generator-ui
+npm install
+npm run build:deps   # installs and builds the engine in ../clock-generator
+npm run dev          # the site at the address Vite prints
+```
+
+`npm run build` in `clock-generator-ui` builds the engine and the site into `clock-generator-ui/dist`, and
+`npm run lint` lints the UI.
+
+## Tests
+
+In `clock-generator` (after `npm install`):
+
+```bash
+npm test                 # the unit tests
+npm run test:generation  # the generation tests: the clocks of whole samples, a few minutes
+npm run test:all         # both
+npm run test:game        # records the sample builds in Factorio; needs a Factorio install (see the engine README)
+```
+
+In `clock-generator-ui`, `npm test` runs the UI's tests.
 
 ## Versioning
 
@@ -26,18 +73,3 @@ hand). A release of the generator does not publish the mod.
 
 The `clock-generator-recorder` mod is a development tool. It keeps its own version by hand and is not published. It
 depends on the sidecar and uses its extraction and export, so it needs the sidecar of this repository beside it.
-
-## Clock Generator
-
-**install steps**
-1. Install nodejs
-2. open a terminal and navigate to `clock-generator`
-3. execute `npm install`
-4. navigate to `clock-generator-ui`
-5. execute `npm install`
-
-**build steps**
-1. in `clock-generator` run `npm run build`
-
-**run ui**
-1. in `clock-generator-ui` run `npm run dev`
