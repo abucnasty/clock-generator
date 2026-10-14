@@ -161,6 +161,14 @@ export function WorkflowBar({
                             label={problemCountLabel(problems.length)}
                             onClick={() => onGoToProblem(problems[0])}
                             aria-label={`${problemCountLabel(problems.length)}. Go to the first one.`}
+                            // black on the red reads at 6.8:1 (white, MUI's choice, only 3.1); lighter, not darker, when
+                            // hovered or focused, so that the black stays legible and the chip stands off the bar
+                            sx={{
+                                color: '#000',
+                                '&:hover, &.Mui-focusVisible': { bgcolor: 'error.light' },
+                                // until 1.11's focus ring: an outline on the bar, off the red
+                                '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
+                            }}
                         />
                     )}
                     {validationStatus !== 'none' && validationStatus !== 'running' && (
@@ -213,7 +221,21 @@ export function WorkflowBar({
                             size="small"
                             color="error"
                             onClick={() => blocked.generate && onGoToProblem(blocked.generate)}
-                            sx={{ textTransform: 'none', textAlign: 'left', py: 0, px: 0.5, ml: -0.5, minWidth: 0 }}
+                            // the ripple would tint the text's background on focus; an outline marks the focus instead
+                            disableRipple
+                            // the lighter red: the error red is 3.9:1 on the bar, under the 4.5 text needs. A link's
+                            // underline on hover, not a tinted background, which would take the contrast under 4.5 again
+                            sx={{
+                                color: 'error.light',
+                                textTransform: 'none',
+                                textAlign: 'left',
+                                py: 0,
+                                px: 0.5,
+                                ml: -0.5,
+                                minWidth: 0,
+                                '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
+                                '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
+                            }}
                         >
                             {blocked.generate.text}
                         </Button>
