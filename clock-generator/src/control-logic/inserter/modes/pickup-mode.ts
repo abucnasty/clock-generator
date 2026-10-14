@@ -1,7 +1,7 @@
 import { handSizeFor } from "../../../entities";
 import assert from "../../../common/assert";
 import { ItemName } from "../../../data";
-import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState, ReadableEntityStateRegistry } from "../../../state";
+import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState } from "../../../state";
 import { InserterMode } from "./inserter-mode";
 import { TickProvider } from "../../current-tick-provider";
 import { actsInTheTickTheBlockIsLifted } from "../waiting-inserter";

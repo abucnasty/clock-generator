@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest"
+import { describe, test, expect, vi } from "vitest"
 import { mock } from 'vitest-mock-extended';
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
 import { BeltState, ChestState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"

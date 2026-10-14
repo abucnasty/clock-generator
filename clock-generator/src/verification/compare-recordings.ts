@@ -298,7 +298,7 @@ export function compareRecordings(
     config: Config,
     options: Partial<CompareRecordingsOptions> = {},
 ): RecordingComparison {
-    const { expected_output_per_period, free_running_inserter_ids, items_tolerance, state_agreement } = { ...DEFAULT_COMPARE_RECORDINGS_OPTIONS, ...options };
+    const { expected_output_per_period, free_running_inserter_ids, items_tolerance } = { ...DEFAULT_COMPARE_RECORDINGS_OPTIONS, ...options };
     const game = sideOf(game_recording);
     const sim = sideOf(sim_recording);
     const issues: string[] = buildDifferences(game.recording, game.match, config)

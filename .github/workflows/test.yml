@@ -49,8 +49,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Unused files, exports and dependencies
+        run: npm run knip
+
       - name: Build
         run: npm run build
+
+      - name: Lint
+        run: npm run lint
 
       # the game-backed tests need a Factorio install and are not part of this: `npm run test:game`
       - name: Unit tests
@@ -105,8 +111,16 @@ jobs:
       # installs and builds clock-generator first, then type-checks and bundles the UI
       - run: npm run build
 
+      # after the build, which knip needs to see the engine as the dependency it is
+      - name: Unused files, exports and dependencies
+        run: npm run knip
+
       - name: Lint
         run: npm run lint
+
+      # public/icons holds the icons the page always draws, and no file it never asks for
+      - name: Icons
+        run: npm run check:icons
 
       - name: Unit tests
         run: npm test -- --reporter=default

@@ -1,6 +1,6 @@
 import Fraction, { fraction } from "fractionability";
 import assert from "../../../common/assert"
-import { Ingredient, ItemName, Recipe, EnrichedIngredient, EnrichedRecipe, FactorioDataService } from "../../../data";
+import { Ingredient, ItemName, EnrichedIngredient, EnrichedRecipe, FactorioDataService } from "../../../data";
 import { MapExtended } from "../../../data-types";
 
 export interface IngredientRatio {

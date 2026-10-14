@@ -11,5 +11,6 @@
     "scripts/**/*.js",
     "resources/filter-raw.js"
   ],
-  "project": ["src/**/*.ts", "scripts/**/*.js", "resources/*.js"]
+  "project": ["src/**/*.ts", "scripts/**/*.js", "resources/*.js"],
+  "ignoreExportsUsedInFile": true
 }

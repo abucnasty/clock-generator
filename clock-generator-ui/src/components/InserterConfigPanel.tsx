@@ -239,7 +239,7 @@ function InserterEditSection({
 
 // ---- Panel props ----
 
-export interface InserterConfigPanelProps {
+interface InserterConfigPanelProps {
     inserter: InserterFormData;
     entityIndex: number;
     machines: MachineFormData[];

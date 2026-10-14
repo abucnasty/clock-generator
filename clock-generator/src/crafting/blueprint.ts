@@ -25,8 +25,6 @@ function createDeciderCombinatorForTransfers(
     merged_entity_ids: EntityId[] = [],
 ): { combinator: DeciderCombinatorEntity; inserter_ids: number[] } {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
-    let outputSignalId = SignalId.virtual(`signal-${entity_id.number}`);
-
     let description_lines: string[] = []
 
     const swing_counts = cycle.entity_transfer_map.get(entity_id);
@@ -55,10 +53,6 @@ function createDeciderCombinatorForTransfers(
 
     if (!swing_counts && inserter_clock && Entity.isInserter(entity)) {
         description_lines = unplannedInserterClockDescriptionLines(entity_ids, entity_registry, items, inserter_clock);
-    }
-
-    if (items.size === 1) {
-        outputSignalId = SignalId.item(Array.from(items)[0])
     }
 
     const ranges = mapRanges(OpenRange.reduceRanges(inventory_transfers.map(transfer => transfer.tick_range)));

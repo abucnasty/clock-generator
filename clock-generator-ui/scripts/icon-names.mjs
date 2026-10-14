@@ -9,10 +9,10 @@ const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SOURCE_DIR = path.join(UI_ROOT, 'src');
 
 export const ICONS_DIR = path.join(UI_ROOT, 'public', 'icons');
-export const FACTORIO_DATA_FILE = path.resolve(UI_ROOT, '..', 'clock-generator', 'resources', 'data-filtered.json');
+const FACTORIO_DATA_FILE = path.resolve(UI_ROOT, '..', 'clock-generator', 'resources', 'data-filtered.json');
 
 /** The file FactorioIcon loads for a name, without the .png */
-export function iconFileName(name) {
+function iconFileName(name) {
     return name.toLowerCase().replace(/_/g, '-');
 }
 
