@@ -1,5 +1,5 @@
 import { Check, ContentCopy } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, CircularProgress, Paper, Snackbar, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Portal, Snackbar, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { STALE_COPY_LABEL, STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
@@ -36,8 +36,8 @@ interface WorkflowBarProps {
 }
 
 /**
- * Stays in view under the app bar: switches between configuring the build and its results, and keeps the steps
- * of the workflow (validate, generate, copy the blueprint) one click away from either.
+ * The second row of the app bar, so it stays in view with it: switches between configuring the build and its results,
+ * and keeps the steps of the workflow (validate, generate, copy the blueprint) one click away from either.
  */
 export function WorkflowBar({
     view,
@@ -73,18 +73,8 @@ export function WorkflowBar({
     }, [blueprintString, rateWarning]);
 
     return (
-        <Paper
-            square
-            elevation={2}
-            sx={{
-                position: 'sticky',
-                top: { xs: 56, sm: 64 },
-                zIndex: (theme) => theme.zIndex.appBar - 1,
-                px: 2,
-                py: 1,
-            }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
+            <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: { xs: 1, sm: 2 }, py: 1 }}>
                 <ToggleButtonGroup
                     value={view}
                     exclusive
@@ -96,87 +86,91 @@ export function WorkflowBar({
                     <ToggleButton value="results">Results</ToggleButton>
                 </ToggleButtonGroup>
 
-                <Box sx={{ flexGrow: 1 }} />
-
-                {blueprintString && (
-                    <>
-                        {selectedLabel && (
-                            <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 320 }}>
-                                {selectedLabel}
-                            </Typography>
-                        )}
-                        {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
-                        <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild>
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={staleFor ? () => setConfirmingOld(true) : copyBlueprint}
-                                color={staleFor || rateWarning ? 'warning' : copied ? 'success' : 'primary'}
-                                startIcon={copied ? <Check /> : <ContentCopy />}
-                            >
-                                {copied ? 'Copied' : staleFor ? STALE_COPY_LABEL : 'Copy blueprint'}
-                            </Button>
-                        </Tooltip>
-                        <Snackbar
-                            open={warned && rateWarning !== null}
-                            autoHideDuration={10000}
-                            onClose={() => setWarned(false)}
-                            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                        >
-                            <Alert severity="warning" variant="filled" onClose={() => setWarned(false)}>
-                                Copied. {rateWarning}
-                            </Alert>
-                        </Snackbar>
-                        {staleFor && (
-                            <StaleCopyDialog
-                                open={confirmingOld && staleFor !== null}
-                                generatedFor={staleFor}
-                                onCancel={() => setConfirmingOld(false)}
-                                onConfirm={() => {
-                                    setConfirmingOld(false);
-                                    copyBlueprint();
-                                }}
-                            />
-                        )}
-                    </>
-                )}
-                {validationStatus !== 'none' && validationStatus !== 'running' && (
-                    <Chip
-                        size="small"
-                        variant="outlined"
-                        label={VALIDATION_CHIP[validationStatus].label}
-                        color={VALIDATION_CHIP[validationStatus].color}
-                    />
-                )}
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={onValidate}
-                    disabled={validateDisabled || isLoading || validationStatus === 'running'}
-                >
-                    {validationStatus === 'running' ? 'Validating...' : 'Validate'}
-                </Button>
-                <Tooltip title={validationStatus === 'valid' ? '' : 'Validate the configuration first'} arrow>
-                    {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
-                    <span>
-                        <Button
-                            variant="contained"
+                {/* the actions wrap together and stay on the right, instead of one dropping to a row of its own */}
+                <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 1, sm: 2 } }}>
+                    {blueprintString && (
+                        <>
+                            {selectedLabel && (
+                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', sm: 'block' } }}>
+                                    {selectedLabel}
+                                </Typography>
+                            )}
+                            {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
+                            <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={staleFor ? () => setConfirmingOld(true) : copyBlueprint}
+                                    color={staleFor || rateWarning ? 'warning' : copied ? 'success' : 'primary'}
+                                    startIcon={copied ? <Check /> : <ContentCopy />}
+                                >
+                                    {copied ? 'Copied' : staleFor ? STALE_COPY_LABEL : 'Copy blueprint'}
+                                </Button>
+                            </Tooltip>
+                            {/* stop-gap until 1.5's shared message host: in a portal, to be drawn above the app bar this bar is part of, at the bottom to stay off the header */}
+                            <Portal>
+                                <Snackbar
+                                    open={warned && rateWarning !== null}
+                                    autoHideDuration={10000}
+                                    onClose={() => setWarned(false)}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                                >
+                                    <Alert severity="warning" variant="filled" onClose={() => setWarned(false)}>
+                                        Copied. {rateWarning}
+                                    </Alert>
+                                </Snackbar>
+                            </Portal>
+                            {staleFor && (
+                                <StaleCopyDialog
+                                    open={confirmingOld && staleFor !== null}
+                                    generatedFor={staleFor}
+                                    onCancel={() => setConfirmingOld(false)}
+                                    onConfirm={() => {
+                                        setConfirmingOld(false);
+                                        copyBlueprint();
+                                    }}
+                                />
+                            )}
+                        </>
+                    )}
+                    {validationStatus !== 'none' && validationStatus !== 'running' && (
+                        <Chip
                             size="small"
-                            onClick={onGenerate}
-                            color="secondary"
-                            disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
-                            startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
-                        >
-                            {isLoading ? 'Generating...' : 'Generate'}
-                        </Button>
-                    </span>
-                </Tooltip>
-            </Box>
+                            variant="outlined"
+                            label={VALIDATION_CHIP[validationStatus].label}
+                            color={VALIDATION_CHIP[validationStatus].color}
+                        />
+                    )}
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={onValidate}
+                        disabled={validateDisabled || isLoading || validationStatus === 'running'}
+                    >
+                        {validationStatus === 'running' ? 'Validating...' : 'Validate'}
+                    </Button>
+                    <Tooltip title={validationStatus === 'valid' ? '' : 'Validate the configuration first'} arrow>
+                        {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
+                        <span>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={onGenerate}
+                                color="secondary"
+                                disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
+                                startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                            >
+                                {isLoading ? 'Generating...' : 'Generate'}
+                            </Button>
+                        </span>
+                    </Tooltip>
+                </Box>
+            </Toolbar>
             {isLoading && (
-                <Box sx={{ mt: 1 }}>
+                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1 }}>
                     <GenerationProgressStatus store={progressStore} />
                 </Box>
             )}
-        </Paper>
+        </Box>
     );
 }
