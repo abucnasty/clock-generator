@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/index.ts",
+    "src/browser.ts",
+    "src/record-in-factorio.ts",
+    "src/verify-recording.ts",
+    "src/**/*.test.ts",
+    "scripts/**/*.js",
+    "resources/filter-raw.js"
+  ],
+  "project": ["src/**/*.ts", "scripts/**/*.js", "resources/*.js"]
+}
