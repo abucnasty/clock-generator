@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MIN_MARK_PX, markSpan, paintLayer } from './timelineGeometry';
+import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from './timelineGeometry';
 
 describe('markSpan', () => {
     it('keeps the natural span of a wide mark', () => {
@@ -31,8 +31,9 @@ describe('markSpan', () => {
 describe('paintLayer', () => {
     const wide = { x: 0, width: 10, narrow: false };
     const narrow = { x: 0, width: 3, narrow: true };
-    it('ranks wide, narrow, narrow priority', () => {
-        expect(paintLayer(wide, true)).toBe(0);
+    it('ranks wide, narrow, then any priority mark', () => {
+        expect(paintLayer(wide, false)).toBe(0);
+        expect(paintLayer(wide, true)).toBe(2);
         expect(paintLayer(narrow, false)).toBe(1);
         expect(paintLayer(narrow, true)).toBe(2);
     });
@@ -42,5 +43,15 @@ describe('paintLayer', () => {
             { name: 'idle', layer: paintLayer(narrow, false) },
         ];
         expect(marks.sort((a, b) => a.layer - b.layer).map(m => m.name)).toEqual(['idle', 'blocked']);
+    });
+});
+
+describe('snapSpan', () => {
+    it('puts the edges on whole device pixels', () => {
+        expect(snapSpan({ x: 10.3, width: 3, narrow: true }, 1)).toEqual({ x: 10, width: 3 });
+        expect(snapSpan({ x: 10.3, width: 3, narrow: true }, 2)).toEqual({ x: 10.5, width: 3 });
+    });
+    it('keeps a mark at least 3px wide', () => {
+        expect(snapSpan({ x: 0, width: 3, narrow: true }, 1).width).toBe(3);
     });
 });

@@ -16,8 +16,15 @@ export function markSpan(tick: number, durationTicks: number, totalDuration: num
 
 /** Paint order: 0 wide marks, 1 narrow marks, 2 narrow marks of a state that must not be hidden. Paint 0 first. */
 export function paintLayer(span: MarkSpan, priority: boolean): 0 | 1 | 2 {
-    if (!span.narrow) {
-        return 0;
+    if (priority) {
+        return 2;
     }
-    return priority ? 2 : 1;
+    return span.narrow ? 1 : 0;
+}
+
+/** A mark's edges on whole device pixels (`ratio` device px per CSS px), never narrower than MIN_MARK_PX */
+export function snapSpan(span: MarkSpan, ratio: number): { x: number; width: number } {
+    const left = Math.round(span.x * ratio) / ratio;
+    const right = Math.round((span.x + span.width) * ratio) / ratio;
+    return { x: left, width: Math.max(right - left, MIN_MARK_PX) };
 }

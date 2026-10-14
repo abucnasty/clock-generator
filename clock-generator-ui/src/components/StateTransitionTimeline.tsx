@@ -28,7 +28,7 @@ import type {
 } from 'clock-generator/browser';
 import { statusToCategory } from 'clock-generator/light';
 import { BUTTON_NAMES, CHART_NAMES } from '../utils/a11yLabels';
-import { MIN_MARK_PX, markSpan, paintLayer } from '../utils/timelineGeometry';
+import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGeometry';
 import { FactorioIcon } from './FactorioIcon';
 import {
     getStatusColor,
@@ -140,15 +140,16 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         for (const { transition, span } of marks) {
             context.globalAlpha = isFiltered(transition) ? 0.15 : 1;
             context.fillStyle = colorOf(transition);
-            // whole pixels, so a 3px mark is three solid pixels and not two solid and two half-covered
-            const left = Math.round(span.x);
-            context.fillRect(left, 0, Math.max(Math.round(span.x + span.width) - left, MIN_MARK_PX), height);
+            // whole device pixels, so a 3px mark is three solid pixels and not two solid and two half-covered
+            const snapped = snapSpan(span, ratio);
+            context.fillRect(snapped.x, 0, snapped.width, height);
         }
         if (hovered) {
             const span = markSpan(hovered.tick, hovered.duration_ticks, totalDuration, width);
             context.globalAlpha = 1;
             context.strokeStyle = '#ffffff';
-            context.strokeRect(span.x + 0.5, 0.5, span.width - 1, height - 1);
+            const snapped = snapSpan(span, ratio);
+            context.strokeRect(snapped.x + 0.5, 0.5, snapped.width - 1, height - 1);
         }
     }, [marks, totalDuration, width, height, colorOf, isFiltered, hovered]);
 
@@ -259,7 +260,8 @@ function FactorioStateStrip({ states, totalDuration, height, label }: FactorioSt
         context.clearRect(0, 0, width, height);
         for (const { state, span } of marks) {
             context.fillStyle = getFactorioStateColor(state.state);
-            context.fillRect(span.x, 0, span.width, height);
+            const snapped = snapSpan(span, ratio);
+            context.fillRect(snapped.x, 0, snapped.width, height);
         }
     }, [marks, width, height]);
 

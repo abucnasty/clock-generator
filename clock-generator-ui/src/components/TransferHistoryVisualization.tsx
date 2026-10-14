@@ -194,7 +194,8 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
     const timelineContent = (isFullscreen: boolean) => (
         <>
             {/* Legend */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {allItems.map(item => (
                     <Box
                         key={item}
@@ -222,10 +223,11 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                 ))}
             </Box>
             {allItems.length > ITEM_COLOR_COUNT && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: -1, mb: 2 }}>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Colours repeat after {ITEM_COLOR_COUNT} items; the icons name each item.
                 </Typography>
             )}
+            </Box>
 
             {/* Tick markers */}
             <Box sx={{ display: 'flex', mb: 0.5 }}>

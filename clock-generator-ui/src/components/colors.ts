@@ -173,11 +173,11 @@ const FACTORIO_STATE_COLORS: Record<string, string> = {
 export function factorioStatesIn(states: Iterable<string>): string[] {
     const seen = new Set(states);
     const known = Object.keys(FACTORIO_STATE_COLORS).filter(state => seen.has(state));
-    return [...known, ...[...seen].filter(state => !(state in FACTORIO_STATE_COLORS))];
+    return [...known, ...[...seen].filter(state => !Object.hasOwn(FACTORIO_STATE_COLORS, state))];
 }
 
 export function getFactorioStateColor(state: string): string {
-    return FACTORIO_STATE_COLORS[state] ?? COLOR_BLIND_PALETTE.white;
+    return Object.hasOwn(FACTORIO_STATE_COLORS, state) ? FACTORIO_STATE_COLORS[state] : COLOR_BLIND_PALETTE.white;
 }
 
 /** "waiting_for_space_in_destination" as the game's tooltip shows it: "Waiting for space in destination" */
