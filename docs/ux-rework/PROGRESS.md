@@ -35,7 +35,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.6 | Make the clock pick explainable | opus | spec | | | Spec final. After 1.1; not alongside 1.7, 1.10 |
 | 1.7 | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
-| 1.9 | One number per entity, everywhere | opus | spec | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
+| 1.9 | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8 and 1.13. Id question answered 2026-10-14 |
 | 1.10 | Readable numbers and units | opus | spec | | | Spec final; moved up (10 files). Next free slot (no file in common with 1.1, 1.8, 1.13) |
 | 1.11 | Accessibility basics | sonnet | spec | | | |
 | 1.12 | Glossary and copy pass | sonnet | spec | | | Checkpoint: glossary approval |
@@ -104,6 +104,7 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.10: one duration format (BlueprintOutput vs the timelines); right-aligned Insights columns; unrounded rates in the
   engine error at `plan-run.ts:1332-1333`; select-all on focus and silent fallbacks (B27); A16's live "per copy ·
   machine max" line.
+- 1.9 → 1.3: whichever of the two merges second adds "the ones after it were renumbered" to a delete's Undo message.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
