@@ -70,7 +70,7 @@ come from here.
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
-| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | fix-1 | | 1 | On `feat/ux-rework-p2-timelines` (sonnet): 516 tests; capture 208 PASS, 0 FAIL. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name fixed). A minors round (Blocked painted last, device-pixel rounding) before merge |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | merged (p2) | [#165](https://github.com/abucnasty/clock-generator/pull/165) | 1 | Sonnet. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name); one minors round (Blocked painted last, device-pixel rounding), re-check PASS. CI green |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
 
 **Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
@@ -83,7 +83,7 @@ come from here.
 | 2.5 A → 2.5 B | 2 | after 2.5 A |
 | 2.8 a → 2.8 b (late) | 2 | 2.8 a, any idle slot |
 | 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | merged |
-| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | in progress |
+| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | merged |
 
 ## Phase 3: expert depth
 
