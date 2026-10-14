@@ -51,41 +51,41 @@ describe('periodText and lengthText', () => {
 });
 
 describe('onForText', () => {
-    it('says it is a share of the period', () => {
-        expect(onForText(0.17)).toBe('On for 17% of the period');
+    it('says it is a share of the clock period', () => {
+        expect(onForText(0.17)).toBe('On for 17% of the clock period');
     });
 });
 
 describe('summaryText', () => {
     it('gives the period, the rows and the wake-ups', () => {
         expect(summaryText({ periodTicks: 600, inserters: 14, drills: 2, wakeUps: 372.4 }))
-            .toBe('Period 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute for one copy');
+            .toBe('Clock period 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute for one copy');
         expect(summaryText({ periodTicks: 600, inserters: 1, drills: 0, wakeUps: null }))
-            .toBe('Period 600 ticks (10 s) · 1 inserter · Wake-ups not counted');
+            .toBe('Clock period 600 ticks (10 s) · 1 inserter · Wake-ups not counted');
     });
 });
 
 describe('rowSummary', () => {
     it('reads one window', () => {
         const text = rowSummary(row(), 600);
-        expect(text).toBe('Inserter 3, iron-plate: Belt 1 to Machine 2. 1 window: ticks 212–240. '
+        expect(text).toBe('Inserter 3, iron-plate: Belt 1 to Machine 2. 1 wake window: ticks 212–240. '
             + 'On for 5% of the clock period of 600 ticks (10 s). Wake-ups/min: 12.3.');
     });
 
     it('reads several windows, with their belt slack', () => {
         const text = rowSummary(row({ windows: windowsOf([{ start: 0, end: 28 }, { start: 100, end: 120 }, { start: 300, end: 310 }], 600, 4) }), 600);
-        expect(text).toContain('3 windows: ticks 0–28, 100–120 and 300–310, the last 4 ticks of each are belt slack.');
+        expect(text).toContain('3 wake windows: ticks 0–28, 100–120 and 300–310, the last 4 ticks of each are belt slack.');
     });
 
     it('reads a wrapped window', () => {
         expect(rowSummary(row({ windows: windowsOf([{ start: 0, end: 4 }, { start: 590, end: 599 }], 600) }), 600))
-            .toContain('1 window: ticks 590–4 (next period).');
+            .toContain('1 wake window: ticks 590–4 (next clock period).');
     });
 
     it('caps the windows it lists', () => {
         const spans = Array.from({ length: 7 }, (_, index) => ({ start: index * 50, end: index * 50 + 9 }));
         const text = rowSummary(row({ windows: windowsOf(spans, 600) }), 600);
-        expect(text).toContain('7 windows: ticks 0–9, 50–59, 100–109, 150–159 and 3 more.');
+        expect(text).toContain('7 wake windows: ticks 0–9, 50–59, 100–109, 150–159 and 3 more.');
     });
 
     it('reads the rows without bars', () => {
@@ -102,7 +102,7 @@ describe('rowSummary', () => {
 
     it('ends with the row\'s notes, so a screen reader hears them with the row', () => {
         const text = rowSummary(row({ windows: windowsOf([{ start: 212, end: 240 }], 600, 4) }), 600, { mostWakeUpsId: 'inserter:3' });
-        expect(text).toMatch(/Wake-ups\/min: 12\.3\. Note: \+4 ticks: the last 4 ticks of each window are belt slack, .* Note: Woken most of all the inserters of this clock\.$/);
+        expect(text).toMatch(/Wake-ups\/min: 12\.3\. Note: \+4 ticks: the last 4 ticks of each wake window are belt slack, .* Note: Woken most of all the inserters of this clock\.$/);
         expect(rowSummary(row(), 600)).not.toContain('Note:');
     });
 
@@ -127,13 +127,13 @@ describe('rowSummary', () => {
 describe('windowDetails', () => {
     it('gives the ticks, the length and the reaction', () => {
         const details = windowDetails(row({ windows: windowsOf([{ start: 0, end: 9 }, { start: 212, end: 240 }, { start: 400, end: 401 }], 600) }), 1, 600);
-        expect(details).toBe('Window 2 of 3: ticks 212–240 (29 ticks, 0.48 s). The inserter reacts 2 ticks after the window opens.');
+        expect(details).toBe('Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s). The inserter reacts 2 ticks after the wake window opens.');
     });
 
     it('gives the belt slack only when there is some', () => {
         const details = windowDetails(row({ windows: windowsOf([{ start: 212, end: 240 }], 600, 4) }), 0, 600);
-        expect(details).toBe('Window 1 of 1: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are belt slack. '
-            + 'The inserter reacts 2 ticks after the window opens.');
+        expect(details).toBe('Wake window 1 of 1: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are belt slack. '
+            + 'The inserter reacts 2 ticks after the wake window opens.');
     });
 
     it('says a wrapped window runs on from tick 0', () => {
@@ -164,22 +164,22 @@ describe('watchNotes', () => {
         const notes = watchNotes(row({ windows: windowsOf([{ start: 212, end: 240 }], 600, 4) }), ctx);
         expect(notes).toEqual([{
             id: 'slack',
-            text: '+4 ticks: the last 4 ticks of each window are belt slack, so a late pickup from a moving belt can still finish.',
+            text: '+4 ticks: the last 4 ticks of each wake window are belt slack, so a late pickup from a moving belt can still finish.',
         }]);
     });
 
     it('notes a window of 4 ticks and not one of 5', () => {
         expect(SHORT_WINDOW_TICKS).toBe(4);
         const four = watchNotes(row({ windows: windowsOf([{ start: 0, end: 9 }, { start: 100, end: 103 }], 600) }), ctx);
-        expect(four).toEqual([{ id: 'short', text: 'Window 2 is only 4 ticks long. Very short windows are sensitive to timing.' }]);
+        expect(four).toEqual([{ id: 'short', text: 'Wake window 2 is only 4 ticks long. Very short wake windows are sensitive to timing.' }]);
         expect(ids(row({ windows: windowsOf([{ start: 100, end: 104 }], 600) }))).toEqual([]);
         const several = watchNotes(row({ windows: windowsOf([{ start: 0, end: 0 }, { start: 100, end: 102 }], 600) }), ctx);
-        expect(several[0].text).toBe('Windows 1 and 2 are 4 ticks long or shorter. Very short windows are sensitive to timing.');
+        expect(several[0].text).toBe('Wake windows 1 and 2 are 4 ticks long or shorter. Very short wake windows are sensitive to timing.');
     });
 
     it('notes a wrapped window', () => {
         expect(watchNotes(row({ windows: windowsOf([{ start: 0, end: 9 }, { start: 590, end: 599 }], 600) }), ctx))
-            .toEqual([{ id: 'wraps', text: 'Window 1 runs past the end of the clock period and carries on from tick 0.' }]);
+            .toEqual([{ id: 'wraps', text: 'Wake window 1 runs past the end of the clock period and carries on from tick 0.' }]);
     });
 
     it('notes the inserter woken most, and only that one', () => {
