@@ -1,10 +1,11 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
-import { useCallback, useState } from 'react';
-import { useNotify } from '../hooks/useMessages';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAnnounce, useNotify } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
+import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
 import { GenerationProgressStatus } from './BlueprintOutput';
 import { StaleCopyDialog } from './StaleCopyDialog';
 
@@ -92,10 +93,24 @@ export function WorkflowBar({
     const [copied, setCopied] = useState(false);
     const [confirmingOld, setConfirmingOld] = useState(false);
     const notify = useNotify();
+    const announce = useAnnounce();
     // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
     // since a filled button invites the click, and the copy of an old clock is the one to think twice about
     const warns = rateWarning !== null || staleFor !== null;
     const filled = belowTarget && staleFor === null;
+
+    // what changed in the workflow is read out in the app's one announcements region (validating, generating)
+    const hasBlueprint = blueprintString !== null;
+    const lastSnapshot = useRef<WorkflowSnapshot | null>(null);
+    useEffect(() => {
+        const snapshot: WorkflowSnapshot = { validationStatus, isLoading, hasBlueprint, selectedLabel };
+        const previous = lastSnapshot.current;
+        lastSnapshot.current = snapshot;
+        const text = previous && workflowAnnouncement(previous, snapshot);
+        if (text) {
+            announce(text);
+        }
+    }, [validationStatus, isLoading, hasBlueprint, selectedLabel, announce]);
 
     const copyBlueprint = useCallback(async () => {
         if (!blueprintString) {
@@ -105,13 +120,16 @@ export function WorkflowBar({
             await navigator.clipboard.writeText(blueprintString);
             setCopied(true);
             if (rateWarning !== null) {
+                // the warning's own alert says that it was copied
                 notify({ severity: 'warning', text: `Copied. ${rateWarning}` });
+            } else {
+                announce(ANNOUNCEMENTS.copied);
             }
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
         }
-    }, [blueprintString, rateWarning, notify]);
+    }, [blueprintString, rateWarning, notify, announce]);
 
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
@@ -175,8 +193,6 @@ export function WorkflowBar({
                             sx={{
                                 color: '#000',
                                 '&:hover, &.Mui-focusVisible': { bgcolor: 'error.light' },
-                                // until 1.11's focus ring: an outline on the bar, off the red
-                                '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
                             }}
                         />
                     )}
