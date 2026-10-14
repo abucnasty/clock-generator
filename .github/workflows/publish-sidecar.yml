@@ -3,7 +3,8 @@ name: Publish sidecar mod
 # The sidecar mod has a version of its own (clock-generator-sidecar/info.json) and is published to the Factorio mod
 # portal when that version is not there yet. It runs when the mod's folder changes on master, and by hand
 # ("Run workflow", or `gh workflow run publish-sidecar.yml`) to try a failed upload again. A release of the clock
-# generator does not publish the mod.
+# generator does not publish the mod. Nothing is published unless the unit tests and the UI build of test.yml pass:
+# among them are the tests that keep the mod's version, its changelog and the version the generator asks for in step.
 on:
   push:
     branches:
@@ -13,7 +14,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  tests:
+    name: Tests
+    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+    with:
+      generation: false
+
   publish-sidecar:
+    needs: tests
     runs-on: ubuntu-latest
     # holds the FACTORIO_MOD_API_KEY secret, and can require approval before anything is published
     environment: mod-portal
