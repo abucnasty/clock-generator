@@ -241,21 +241,45 @@ function App() {
         window.scrollTo({ top: window.scrollY + panel.getBoundingClientRect().top - headerHeight - 8 });
     }, []);
     // set while a Validate pressed in the bar is running: its answer changes the page's length and the header's height,
-    // so the panel is scrolled to again once it is in
-    const scrollToValidationRef = useRef(false);
+    // so the panel is scrolled to again once it is in. `scrollY` is where the first scroll left the page, `sawRunning`
+    // that the check started (a Validate that could not start leaves nothing to wait for)
+    const pendingValidationScrollRef = useRef<{ scrollY: number | null; sawRunning: boolean } | null>(null);
     const handleValidate = useCallback(() => {
+        // set first: the check's start may be seen while the view is shown, below
+        const pending = { scrollY: null as number | null, sawRunning: false };
+        pendingValidationScrollRef.current = pending;
         validate(exportConfig());
         // the panel sits below the forms; show the Configure view now, so that it can be scrolled to
         flushSync(() => setView('configure'));
-        scrollToValidationRef.current = true;
         scrollToValidationPanel();
+        pending.scrollY = window.scrollY;
     }, [exportConfig, validate, scrollToValidationPanel]);
     useEffect(() => {
-        if (validation.status !== 'running' && scrollToValidationRef.current) {
-            scrollToValidationRef.current = false;
+        const pending = pendingValidationScrollRef.current;
+        if (!pending) {
+            return;
+        }
+        if (validation.status === 'running') {
+            pending.sawRunning = true;
+            return;
+        }
+        if (!pending.sawRunning) {
+            return;
+        }
+        pendingValidationScrollRef.current = null;
+        // not when the panel is hidden (Results), nor when the player has scrolled since
+        const panel = validationPanelRef.current;
+        const scrolledAway = pending.scrollY !== null && Math.abs(window.scrollY - pending.scrollY) > 2;
+        if (panel && panel.offsetParent !== null && !scrolledAway) {
             scrollToValidationPanel();
         }
     }, [validation.status, scrollToValidationPanel]);
+    // switching views drops a scroll still waiting for the check
+    useEffect(() => {
+        if (view !== 'configure') {
+            pendingValidationScrollRef.current = null;
+        }
+    }, [view]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -345,7 +369,7 @@ function App() {
     }, []);
 
     // Search deeper is a Generate, so it is disabled whenever the Generate button is
-    const canSearchDeeper = Boolean(canGenerate) && validationStatus === 'valid';
+    const canSearchDeeper = canGenerate && validationStatus === 'valid';
     // Generate with the slower searches: for this run only, or, kept on, by turning the switch on in the form
     const handleSearchDeeper = useCallback((keepOn: boolean) => {
         if (!canSearchDeeper) {
@@ -686,7 +710,8 @@ function App() {
                     </Box>
                     {coverageIssues.length > 0 && (
                         <Box sx={{ flexShrink: 0, px: 2, pb: 1 }}>
-                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} />
+                            {/* the page's own alert behind this dialog has the ids a problem's jump looks for */}
+                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} focusTargets={false} />
                         </Box>
                     )}
                 </Box>

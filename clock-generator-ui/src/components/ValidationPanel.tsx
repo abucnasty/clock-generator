@@ -60,7 +60,15 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
             )}
 
             {validation.status === 'invalid' && !isOutOfDate && (
-                <Alert id={ELEMENT_IDS.validationError} tabIndex={-1} severity="error">{validation.message}</Alert>
+                <Alert
+                    id={ELEMENT_IDS.validationError}
+                    tabIndex={-1}
+                    severity="error"
+                    // a visible outline when "The last check failed" in the workflow bar moves the focus here
+                    sx={{ '&:focus': { outline: '2px solid', outlineColor: 'error.main', outlineOffset: 2 } }}
+                >
+                    {validation.message}
+                </Alert>
             )}
 
             {validation.status !== 'none' && validation.status !== 'running' && isOutOfDate && (

@@ -48,6 +48,23 @@ interface WorkflowBarProps {
 }
 
 /**
+ * The Copy button's words. What comes after "Copy blueprint" ("(200/s, below target)") keeps its case: upper-cased, the
+ * unit would read "200/S"
+ */
+function CopyLabel({ label }: { label: string }) {
+    const at = label.indexOf(' (');
+    if (at < 0) {
+        return label;
+    }
+    // one span: the button lays its children out as flex items, which would drop the space between them
+    return (
+        <span>
+            {label.slice(0, at)} <Box component="span" sx={{ textTransform: 'none' }}>{label.slice(at + 1)}</Box>
+        </span>
+    );
+}
+
+/**
  * The second row of the app bar, so it stays in view with it: switches between configuring the build and its results,
  * and keeps the steps of the workflow (validate, generate, copy the blueprint) one click away from either.
  */
@@ -125,7 +142,7 @@ export function WorkflowBar({
                                     color={warns ? 'warning' : copied ? 'success' : 'primary'}
                                     startIcon={copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
                                 >
-                                    {copied ? 'Copied' : copyLabel}
+                                    {copied ? 'Copied' : <CopyLabel label={copyLabel} />}
                                 </Button>
                             </Tooltip>
                             {/* stop-gap until 1.5's shared message host: in a portal, to be drawn above the app bar this bar is part of, at the bottom to stay off the header */}
@@ -213,7 +230,8 @@ export function WorkflowBar({
                 </Box>
             </Toolbar>
             {blocked.generate && (
-                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1, mt: -0.5, minWidth: 0 }}>
+                // under the buttons it explains, from md up; under the toggle in a narrow window, where the bar wraps
+                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1, mt: -0.5, minWidth: 0, display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, textAlign: { xs: 'left', md: 'right' } }}>
                     {blocked.generate.target ? (
                         <Button
                             id={ELEMENT_IDS.blockReason}
@@ -228,7 +246,7 @@ export function WorkflowBar({
                             sx={{
                                 color: 'error.light',
                                 textTransform: 'none',
-                                textAlign: 'left',
+                                textAlign: 'inherit',
                                 py: 0,
                                 px: 0.5,
                                 ml: -0.5,
