@@ -3,6 +3,7 @@ import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import type { EntityNodeData, MachineNodeParams } from '../utils/buildFlowGraph';
 import { useMachineFacts } from '../hooks/useMachineFacts';
+import { formatNumberText, machineNodeCraftLine } from '../utils/numberText';
 
 const BORDER_COLORS: Record<EntityNodeData['entityType'], string> = {
     machine: '#fca300',
@@ -24,19 +25,19 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <FactorioIcon name={facts.output_item} size={14} />
                 <Typography variant="caption" sx={{ fontSize: '0.6rem', color: '#fca300', lineHeight: 1 }}>
-                    {facts.output_rate_per_second.toFixed(2)}/s out
+                    {formatNumberText(facts.output_rate_per_second)}/s out
                 </Typography>
             </Box>
             {facts.inputs.map(inp => (
                 <Box key={inp.item_name} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                     <FactorioIcon name={inp.item_name} size={14} />
                     <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
-                        {inp.consumption_rate_per_second.toFixed(2)}/s in
+                        {formatNumberText(inp.consumption_rate_per_second)}/s in
                     </Typography>
                 </Box>
             ))}
             <Typography variant="caption" sx={{ fontSize: '0.55rem', color: '#666', lineHeight: 1, display: 'block', mt: 0.5 }}>
-                {facts.ticks_per_craft.toFixed(1)}t craft · ×{facts.overload_multiplier} overload
+                {machineNodeCraftLine(facts.ticks_per_craft, facts.overload_multiplier)}
             </Typography>
         </Box>
     );

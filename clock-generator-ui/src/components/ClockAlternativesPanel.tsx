@@ -20,6 +20,7 @@ import { useState } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { lossesOf } from '../utils/rateWarning';
+import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, rateHeader } from '../utils/numberText';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
@@ -77,6 +78,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
     const anyHolds = alternatives.some(alternative => alternative.verdict !== 'unstable');
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
+    const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
@@ -133,11 +135,11 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                                     title="How often a machine wakes an inserter that is enabled and waiting on it, per minute, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a check that moves little or nothing; fewer is better. Shown for clocks that were run long enough to count them. It is the count from one start of the clock; a clock can settle into another steady state from another start, with another count."
                                     arrow
                                 >
-                                    <span>Wake-ups (per min)</span>
+                                    <span>{WAKE_UPS_HEADER}</span>
                                 </Tooltip>
                             </TableCell>
-                            <TableCell align="right">Rate achieved (items/s)</TableCell>
-                            <TableCell align="right">Clock-only output</TableCell>
+                            <TableCell align="right">{rateHeader(copies)}</TableCell>
+                            <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
                             <TableCell>Status</TableCell>
                         </TableRow>
                     </TableHead>

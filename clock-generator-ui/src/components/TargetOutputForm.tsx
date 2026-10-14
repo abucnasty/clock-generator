@@ -1,6 +1,7 @@
 import { Autocomplete, Box, Paper, TextField, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import { NumberField } from './NumberField';
+import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
 
 interface TargetOutputFormProps {
     recipe: string;
@@ -69,10 +70,10 @@ export function TargetOutputForm({
                     onValueChange={(val) => onItemsPerSecondChange(parseFloat(val?.toString() || '') || 0)}
                     min={0}
                     step={0.1}
-                    sx={{ width: 150 }}
+                    sx={{ width: 220 }}
                     required
                     error={itemsPerSecond <= 0}
-                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : undefined}
+                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : itemsPerSecondHelper(itemsPerSecond, copies)}
                 />
                 <NumberField
                     label="Copies"
@@ -80,8 +81,9 @@ export function TargetOutputForm({
                     onValueChange={(val) => onCopiesChange(parseInt(val?.toString() || '') || 1)}
                     min={1}
                     step={1}
-                    sx={{ width: 120 }}
+                    sx={{ width: 200 }}
                     required
+                    helperText={COPIES_HELPER}
                 />
             </Box>
         </Paper>
