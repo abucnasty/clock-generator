@@ -14,3 +14,10 @@ export const DRILL_TYPES = [
     { value: 'burner-mining-drill', label: 'Burner Mining Drill' },
     { value: 'big-mining-drill', label: 'Big Mining Drill' },
 ];
+
+/** The saved machine types and the names the player sees for them. */
+export const MACHINE_TYPE_LABELS: Record<'machine' | 'furnace' | 'biochamber', string> = {
+    machine: 'Assembling machine',
+    furnace: 'Furnace',
+    biochamber: 'Biochamber',
+};

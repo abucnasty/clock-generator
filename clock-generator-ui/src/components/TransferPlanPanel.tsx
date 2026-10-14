@@ -180,7 +180,7 @@ function TransferPlanPanelComponent({
                         Transfers per cycle are fractions of the LCM period. Excluded ingredients are omitted from the
                         LCM calculation — their inserters will be forced to{' '}
                         <strong>ALWAYS</strong> enabled, unless you gave them an enable rule of your own, which stays.
-                        Re-run the simulation after making changes.
+                        Validate again, then Generate, after making changes.
                     </Typography>
                 </Box>
             </AccordionDetails>

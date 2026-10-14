@@ -46,7 +46,7 @@ import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
-import { BELT_TYPES, DRILL_TYPES } from './entityTypes';
+import { BELT_TYPES, DRILL_TYPES, MACHINE_TYPE_LABELS } from './entityTypes';
 
 // ---- Props ----
 
@@ -146,16 +146,16 @@ function MachineEditSection({
                     sx={{ flex: 1 }}
                     size="small"
                 />
-                <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
+                <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
                     <InputLabel>Type</InputLabel>
                     <Select
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(entityIndex, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
                     >
-                        <MenuItem value="machine">Assembler</MenuItem>
-                        <MenuItem value="furnace">Furnace</MenuItem>
-                        <MenuItem value="biochamber">Biochamber</MenuItem>
+                        <MenuItem value="machine">{MACHINE_TYPE_LABELS.machine}</MenuItem>
+                        <MenuItem value="furnace">{MACHINE_TYPE_LABELS.furnace}</MenuItem>
+                        <MenuItem value="biochamber">{MACHINE_TYPE_LABELS.biochamber}</MenuItem>
                     </Select>
                 </FormControl>
             </Box>
