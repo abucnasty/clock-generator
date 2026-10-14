@@ -140,6 +140,8 @@ export interface ClockAlternativeView {
     fuelView: FuelViewData | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
+    /** Ticks of belt pickup slack at the end of each window, by inserter id */
+    beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
     /** Null unless this clock moved a crafting cycle or an output swing */
