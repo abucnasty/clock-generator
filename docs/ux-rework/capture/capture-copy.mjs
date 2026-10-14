@@ -1,24 +1,27 @@
-// Screenshots + page checks for item 1.12 "Glossary and copy pass", Part A (spec: docs/ux-rework/specs/1.12-glossary-copy.md).
+// Screenshots + page checks for item 1.12 "Glossary and copy pass", Part A and Part B (spec: docs/ux-rework/specs/1.12-glossary-copy.md).
 // Usage: node capture-copy.mjs <out dir>
 //   BASE_URL     an app that is already running; without it the script serves the production build with `vite preview`
-//                (build first; UI_DIR names another checkout, PREVIEW_PORT the port)
 //   SAMPLES_DIR  the sample configs of another checkout or worktree
 //   WIDTHS       comma list, default "1440,720"
-//   STEPS        comma list of steps to run, default all. Part A steps, in the order they run:
-//                  advanced-note, type-list, type-dialog, debug-hint, transfer-note, log-empty
-//                (the import at the start always runs; transfer-note validates, log-empty validates if needed and generates)
+//   STEPS        comma list of steps, default all. In the order they run (the import at the start always runs):
+//     Part A: advanced-note, type-list, type-dialog, debug-hint, transfer-note
+//     Part B (spec states 6-18): validation-ok, swing-plan, overrides-tooltips, machine-facts, enable-rule-modal, empty-results
+//     Part A: log-empty (generates)
+//     Part B: clocks-table, timelines-note, insights, shift-range (imports chemical-science, search on), phase-1-strings,
+//             fuel-table (imports the fuel sample), rate-warning (imports metallurgic and utility-lds samples)
+//     A step that needs a validation or a generation does it itself, so any subset runs.
 // Copy this file and lib.mjs into /tmp/ux-capture/ (playwright-core lives there) and run it from there.
 //
-// The checks come from the spec's Part A acceptance criteria and "Screens to capture" states 1 to 5, not from the code.
-// Fast pattern (README): forWidths runs every width at once, one generation per width, the small sample, waits on textContent
-// (MUI upper-cases labels with CSS). Part B steps (spec states 6 to 18) go in as more entries of STEP_LIST below.
-//
-// After every shot the lines of document.body.innerText that match the banned-word regex are appended to
-// <out>/copy-check.txt as "state | width | line", and at the end of each width one check says whether any were found in the
-// Part A states. Against today's UI the new-copy checks and that last check FAIL by design; the steps must still run.
+// copy-check.txt: after every shot, the lines of document.body.innerText that match BANNED (or the line-anchored LINE_BANNED), and the
+// text nodes that show a raw AUTO/ALWAYS/NEVER/CLOCKED/CONDITIONAL, as "state | width | kind | line":
+//   HIT      fails the copy-check
+//   engine   text the engine builds (Insights cards, clock names, open clock (i) popovers): may keep the old words
+//   allowed  kept names (Import Config, Export Config, Reset Configuration buttons; the "Config" tab)
+// Every Part B state shot also records one check "no banned word outside engine text" over the lines that are new in that state.
+// Against today's UI the new-wording checks FAIL by design; the steps must still run.
 import { appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { forWidths, previewServer, SMALL_SAMPLE, importFile, goConfigure, goResults, validate, generate, checkLabelInName, accessibleName } from './lib.mjs';
+import { forWidths, previewServer, SMALL_SAMPLE, sample, importFile, goConfigure, goResults, validate, generate, checkLabelInName, accessibleName, waitReady } from './lib.mjs';
 
 const OUT = process.argv[2];
 if (!OUT) {
@@ -28,34 +31,179 @@ if (!OUT) {
 
 const WIDTHS = (process.env.WIDTHS ?? '1440,720').split(',').map((w) => Number(w.trim())).filter(Boolean);
 const STORAGE_KEY = 'clock-generator-config'; // hooks/usePersistedConfigForm.ts STORAGE_KEY
-/** The banned words of the spec's acceptance criteria that Part A removes (Part B extends this with the rest of its list) */
-const BANNED = /devided|terminal swing count|Generate Blueprint|\bAssembler\b|Re-run the simulation/i;
-const norm = (t) => String(t ?? '').replace(/\s+/g, ' ').trim();
+const FUEL_SAMPLE = sample('gleba/biochamber-fuel/nutrients-from-yumako-mash-fuel-bonus.json');
+const SHIFT_CANDIDATES = ['science/chemical-science/chemical-science.json', 'science/chemical-science/chemical-science-engines.json', 'science/utility-science/utility-science.json'].map(sample);
+const NO_RECOVERY_SAMPLE = sample('science/metallurgic-science/metallurgic-science.json'); // its only holding clock has no recovery
+const BELOW_RATE_SAMPLE = sample('science/utility-science/utility-science-direct-insert-lds.json'); // a clock below the target rate
 
-// The Type select's options: the saved value and the label the glossary gives it, in the order of the select
+/** Case-insensitive. Part A words, then the glossary of Part B (owner's decisions 2026-10-14). */
+const BANNED_PARTS = [
+    'devided', 'terminal swing', 'Generate Blueprint', '\\bAssembler\\b', 'Re-run the simulation', 'run a simulation',
+    'potential clocks?', 'Transfer Plan', '\\btransfers?\\b(?! activity)', 'backpressure', 'enable control',
+    '\\bhands\\b', '\\bclock windows?\\b', '\\binserter windows?\\b', '\\benable ranges?\\b',
+    '\\bconfig(?:uration)?s?\\b', '(?<!wake )\\bwindows?\\b', '(?<!clock )\\bperiods?\\b', '\\blcm (?:period|cycles?)\\b',
+    '\\boutput cycles?\\b', 'clear override',
+];
+const BANNED = new RegExp(BANNED_PARTS.join('|'), 'i');
+/** Whole-line bans (the per-entity "Overrides" tab becomes "Enable rule"; "Advanced Overrides" stays) */
+const LINE_BANNED = /^overrides\b/i;
+/** Raw enum names shown as labels; case-sensitive, tested on text nodes (CSS upper-casing does not hide them) */
+const RAW_MODES = /\b(AUTO|ALWAYS|NEVER|CLOCKED|CONDITIONAL)\b/;
+/** Kept names: button names until 2.1; the "Config" tab of the inserter dialog (not in the spec's rename list) */
+const ALLOWED = [/^(import config|export config|reset configuration)$/i, /^config$/i];
+const norm = (t) => String(t ?? '').replace(/\s+/g, ' ').trim();
+const clip = (t, n = 170) => (t.length > n ? `${t.slice(0, n)}...` : t) || '(not found)';
+
 const TYPES = [
     { value: 'machine', label: 'Assembling machine' },
     { value: 'furnace', label: 'Furnace' },
     { value: 'biochamber', label: 'Biochamber' },
 ];
+const MODES = [
+    { key: 'auto', label: 'Auto', gloss: 'The generator decides when it is on (default).' },
+    { key: 'always', label: 'Always on', gloss: 'On all the time, with no combinator in the blueprint.' },
+    { key: 'never', label: 'Never on', gloss: 'Never switched on.' },
+    { key: 'clocked', label: 'Clocked', gloss: 'On only during the wake windows you set.' },
+    { key: 'conditional', label: 'Conditional', gloss: 'On only while your conditions are true.' },
+];
+const CHIP_RE = /^Enable: |Edit (enable )?rule|Configure Enable Control/i; // SELECTOR: confirm (1.13 chip "Enable: Auto"; Part B / 1.11 may rename it "Edit enable rule")
 
 mkdirSync(OUT, { recursive: true });
-writeFileSync(join(OUT, 'copy-check.txt'), '# Lines of document.body.innerText that match the banned words, after each shot: state | width | line\n');
+writeFileSync(join(OUT, 'copy-check.txt'), '# Banned-word lines after each shot: state | width | kind | line   (kind: HIT fails, engine = engine-built text, allowed = kept names)\n');
 
 // ----------------------------------------------------------------------------------------------------------- helpers
 
-/** A shot, then the copy-check: appends the banned-word lines on the page to copy-check.txt (and to rec.banned) */
+const SCAN_FN = ({ bannedSrc, lineSrc, rawSrc, allowSrcs, engineAll }) => {
+    const re = new RegExp(bannedSrc, 'i');
+    const lineRe = new RegExp(lineSrc, 'i');
+    const rawRe = new RegExp(rawSrc);
+    const allow = allowSrcs.map((s) => new RegExp(s.src, s.flags));
+    const isBanned = (t) => re.test(t) || lineRe.test(t);
+    const labels = [...document.querySelectorAll('[aria-label^="How "]')]
+        .map((e) => e.getAttribute('aria-label').replace(/^How /, '').replace(/ is made$/, ''))
+        .sort((a, b) => b.length - a.length);
+    let cards = [...document.querySelectorAll('.MuiPaper-outlined')].filter((p) => {
+        const ls = p.innerText.split('\n').map((l) => l.trim());
+        return ls.includes('What') && ls.includes('Why') && ls.includes('Explanation');
+    });
+    cards = cards.filter((p) => !cards.some((c) => c !== p && p.contains(c)));
+    const engineLines = new Set();
+    for (const c of cards) for (const l of c.innerText.split('\n')) if (l.trim()) engineLines.add(l.trim());
+    const strip = (line) => labels.reduce((s, l) => s.split(l).join(' '), line);
+    const out = [];
+    const seen = new Set();
+    const push = (kind, line) => {
+        if (!seen.has(`${kind}|${line}`)) {
+            seen.add(`${kind}|${line}`);
+            out.push({ kind, line });
+        }
+    };
+    for (const raw of document.body.innerText.split('\n')) {
+        const line = raw.trim();
+        if (!line || !isBanned(line)) continue;
+        if (allow.some((a) => a.test(line))) push('allowed', line);
+        else if (engineAll || engineLines.has(line) || !isBanned(strip(line))) push('engine', line);
+        else push('hit', line);
+    }
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const t = n.textContent.trim();
+        const el = n.parentElement;
+        if (!t || !rawRe.test(t) || !el || el.closest('script,style,noscript') || el.getClientRects().length === 0) continue;
+        push(engineAll || cards.some((c) => c.contains(el)) ? 'engine' : 'hit', `[raw mode name] ${t}`);
+    }
+    return out;
+};
+
+/**
+ * A shot, then the copy-check (see the header). `gate: true` (Part B states) also records one check over the HIT lines that
+ * are new in this state; `engineAll: true` tags everything as engine text (an open clock (i) popover).
+ */
 async function snap(page, rec, state, options = {}) {
-    await rec.shot(page, state, options);
-    const lines = await page.evaluate((src) => {
-        const re = new RegExp(src, 'i');
-        return document.body.innerText.split('\n').map((l) => l.trim()).filter((l) => l && re.test(l));
-    }, BANNED.source);
+    const { gate = false, engineAll = false, ...shotOptions } = options;
+    await rec.shot(page, state, shotOptions);
+    const found = await page.evaluate(SCAN_FN, {
+        bannedSrc: BANNED.source, lineSrc: LINE_BANNED.source, rawSrc: RAW_MODES.source,
+        allowSrcs: ALLOWED.map((a) => ({ src: a.source, flags: a.flags })), engineAll,
+    });
     rec.banned ??= [];
-    for (const l of lines) rec.banned.push(`${state}: ${l}`);
-    if (lines.length) appendFileSync(join(OUT, 'copy-check.txt'), lines.map((l) => `${state} | ${rec.width}px | ${l}`).join('\n') + '\n');
+    rec.seenHits ??= new Set();
+    rec.engineLines ??= new Set();
+    const fresh = [];
+    for (const { kind, line } of found) {
+        if (kind === 'hit') {
+            rec.banned.push(`${state}: ${line}`);
+            if (!rec.seenHits.has(line)) fresh.push(line);
+            rec.seenHits.add(line);
+        } else if (kind === 'engine') rec.engineLines.add(line);
+    }
+    if (found.length) appendFileSync(join(OUT, 'copy-check.txt'), found.map((f) => `${state} | ${rec.width}px | ${f.kind === 'hit' ? 'HIT' : f.kind} | ${f.line}`).join('\n') + '\n');
+    if (gate) rec.check(`${state}: no banned word outside engine text (lines new in this state)`, fresh.length === 0, fresh.length ? clip(fresh.join(' ;; '), 400) : 'none new');
+    return found;
 }
 
+const says = (rec, what, text, re) => rec.check(what, re.test(text), clip(text));
+const lacks = (rec, what, text, re) => rec.check(what, text !== '' && !re.test(text), re.test(text) ? `still has "${text.match(re)[0]}" in "${clip(text)}"` : clip(text));
+const textOf = async (locator) => ((await locator.count()) > 0 ? norm(await locator.first().evaluate((el) => el.textContent ?? '')) : '');
+/** Hovers (scrolled to the middle) and returns the tooltip text; leaves the mouse there, call unhover after the shot */
+async function hoverTip(page, locator, wait = 700) {
+    try {
+        if ((await locator.count()) === 0) return '';
+        await locator.first().evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
+        await locator.first().hover({ timeout: 4000 });
+    } catch {
+        return '';
+    }
+    await page.waitForTimeout(wait);
+    return norm((await page.getByRole('tooltip').allTextContents()).join(' || '));
+}
+const unhover = async (page) => {
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(350);
+};
+const clickTabByName = async (page, name) => {
+    await page.getByRole('tab', { name, exact: true }).click();
+    await page.waitForTimeout(400);
+};
+const ensureList = async (page) => {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.getByRole('button', { name: /^List view/ }).click(); // SELECTOR: confirm
+    await page.waitForTimeout(300);
+};
+const ensureValidated = async (page, state) => {
+    await goConfigure(page);
+    await validate(page);
+    state.validated = true;
+};
+const ensureGenerated = async (page, state) => {
+    if (state.generated) return;
+    await ensureValidated(page, state);
+    await generate(page);
+    state.generated = true;
+};
+const loadBuild = async (page, state, file) => {
+    await goConfigure(page);
+    await importFile(page, file);
+    state.validated = false;
+    state.generated = false;
+};
+const copiesInput = (page) => page.getByLabel(/^Copies/).first(); // SELECTOR: confirm (TargetOutputForm label "Copies")
+/** Changes Copies by one; returns the old value so the caller can put it back */
+async function bumpCopies(page) {
+    await goConfigure(page);
+    const input = copiesInput(page);
+    const old = await input.inputValue();
+    await input.fill(String(Number(old) + 1));
+    await input.blur();
+    await page.waitForTimeout(500);
+    return old;
+}
+async function restoreCopies(page, old) {
+    await goConfigure(page);
+    await copiesInput(page).fill(old);
+    await copiesInput(page).blur();
+    await page.waitForTimeout(400);
+}
 /** The form saved in localStorage, or null */
 const readForm = (page) =>
     page.evaluate((key) => {
@@ -124,7 +272,7 @@ async function checkTypeSelect(page, rec, scope, shotName, viewName) {
     );
 
     // accessible name (WCAG 2.5.3): contains the visible text
-    // the visible label of the field is "Type"; its value ("Assembling machine") is not a label
+    // the field's label is "Type"; its value ("Assembling machine") is not a label
     const name = await accessibleName(page, value);
     rec.check(`label in name ${viewName}: Type select`, /\bType\b/i.test(name), `label "Type", accessible name "${name}"`);
     rec.info(`${viewName}: accessible name of the Type select`, `"${name}" ${/\bType\b/i.test(name) ? '(includes the field label)' : '(does not include the field label "Type")'}`);
@@ -163,9 +311,484 @@ const machineRow = (page) => page.locator('[id^="entity-machine-"]').first(); //
 const text = (locator) => locator.evaluate((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim());
 const debugSummary = (page) => page.getByRole('button', { name: /^Debug Output/ }).first(); // SELECTOR: confirm (the accordion summary on the Results page, there also before a generation)
 
-// ------------------------------------------------------------------------------------------------------------- steps
 
-/** The steps, in the order they run. Part B steps (spec states 6 to 18) are added here. */
+// -------------------------------------------------------------------------------------------------- Part B helpers
+
+const validationPanel = (page) => page.locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: 'Validation', exact: true }) }).last(); // SELECTOR: confirm
+const swingPlan = (page) => page.locator('.MuiAccordion-root').filter({ hasText: /^(Swing Plan|Transfer Plan)/ }).first(); // SELECTOR: confirm (Part B renames the title)
+
+/** The five mode options of an enable-rule form in `scope`: wording and gloss against the glossary, and label in name */
+async function checkModeOptions(page, rec, scope, view) {
+    const radios = scope.getByRole('radio');
+    const count = await radios.count();
+    rec.check(`${view}: five mode options`, count === 5, `${count} radios`);
+    const bad = [];
+    const nameBad = [];
+    for (let i = 0; i < count; i++) {
+        const radio = radios.nth(i);
+        const label = radio.locator('xpath=ancestor::label[1]');
+        const parts = norm(await label.evaluate((el) => el.innerText.split('\n').filter((l) => l.trim()).join(' | '))).split(' | ');
+        const want = MODES[i];
+        const ok = want && parts[0] === want.label && norm(parts[1] ?? '').toLowerCase() === want.gloss.toLowerCase();
+        rec.check(`${view}: mode ${i + 1} reads "${want?.label}" with "${want?.gloss}"`, Boolean(ok), `shows "${parts[0]}" | "${parts[1] ?? ''}"`);
+        if (!ok) bad.push(parts[0]);
+        const name = norm(await accessibleName(page, radio)).toLowerCase();
+        if (!name.includes(parts.join(' ').toLowerCase())) nameBad.push(`"${parts[0]}" named "${name.slice(0, 40)}"`);
+    }
+    rec.check(`${view}: label in name for every mode radio (accessible name contains the visible label and gloss)`, count > 0 && nameBad.length === 0, nameBad.join('; ') || 'all contain');
+}
+
+/** Opens the rule editor of the first inserter row in the List */
+async function openRuleModal(page) {
+    await goConfigure(page);
+    await ensureList(page);
+    const chip = page.getByRole('button', { name: CHIP_RE }).first();
+    await chip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await chip.click();
+    const dialog = page.getByRole('dialog').first();
+    await dialog.waitFor();
+    await page.waitForTimeout(400);
+    return dialog;
+}
+const modeRadio = (dialog, i) => dialog.getByRole('radio').nth(i);
+const closeModal = async (page) => {
+    const cancel = page.getByRole('dialog').first().getByRole('button', { name: 'Cancel', exact: true });
+    if ((await cancel.count()) > 0) await cancel.click();
+    else await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+};
+
+// -------------------------------------------------------------------------------------------------------- Part B steps
+
+const PART_B_BEFORE_GENERATE = [
+    {
+        // spec state 6
+        name: 'validation-ok',
+        async run({ page, rec, state }) {
+            await ensureValidated(page, state);
+            const panel = validationPanel(page);
+            await panel.scrollIntoViewIfNeeded();
+            const desc = await textOf(panel.locator('p.MuiTypography-body2').first());
+            const ok = await textOf(panel.locator('.MuiAlert-root').first());
+            await snap(page, rec, 'validation-ok', { gate: true, desc: 'Validation panel after Validate: description and success alert (spec state 6)' });
+            rec.info('validation description', desc);
+            rec.info('validation success alert', ok);
+            says(rec, 'description starts "Checks that your build can be clocked"', desc, /^Checks that your build can be clocked/);
+            says(rec, 'description ends the advice with "Validate again after you change anything."', desc, /Validate again after you change anything\./);
+            lacks(rec, 'description does not say configuration, hands or transfer plan', desc, /configuration|\bhands?\b|transfer plan/i);
+            says(rec, 'success alert starts "Your build can be clocked."', ok, /^Your build can be clocked\./);
+            says(rec, 'success alert: "makes N swing(s) per crafting cycle of X ticks"', ok, /makes \d+ swings? per crafting cycle of [\d,.]+ ticks/);
+            says(rec, 'success alert: "the clock repeats every Y ticks (Z crafting cycle(s))"', ok, /the clock repeats every [\d,.]+ ticks \(\d+ crafting cycles?\)/);
+            says(rec, 'success alert ends "Generating may still use fewer swings if this count does not hold the rate."', ok, /Generating may still use fewer swings if this count does not hold the rate\.$/);
+            lacks(rec, 'success alert has no hand(s), "is valid", unstable or configuration', ok, /\bhands?\b|is valid|unstable|configuration/i);
+            rec.check('the Validate button and the Valid chip keep their names (owner decision 3)', (await page.getByRole('button', { name: /^Validate/ }).count()) > 0 && (await page.locator('.MuiChip-label', { hasText: /^Valid$/ }).count()) > 0, 'button "Validate..." and chip "Valid"');
+            // the out-of-date alert
+            const old = await bumpCopies(page);
+            await panel.scrollIntoViewIfNeeded();
+            const stale = await textOf(panel.locator('.MuiAlert-colorWarning, .MuiAlert-standardWarning').first());
+            await snap(page, rec, 'validation-out-of-date', { gate: true, desc: 'Validation panel after an edit: the out-of-date alert' });
+            says(rec, 'out-of-date alert: "Your build changed since it was validated. Validate again to check it and refresh the swing plan."', stale, /^Your build changed since it was validated\. Validate again to check it and refresh the swing plan\.$/);
+            await restoreCopies(page, old);
+            await validate(page);
+        },
+    },
+    {
+        // spec state 7
+        name: 'swing-plan',
+        async run({ page, rec, state }) {
+            await ensureValidated(page, state);
+            const plan = swingPlan(page);
+            await plan.scrollIntoViewIfNeeded();
+            const title = await textOf(plan.locator('.MuiAccordionSummary-content .MuiTypography-root').first());
+            const heads = (await plan.locator('th').allTextContents()).map(norm);
+            const lcmTip = await hoverTip(page, plan.locator('.MuiChip-root', { hasText: /^LCM: / })); // SELECTOR: confirm
+            await snap(page, rec, 'swing-plan-lcm-tip', { gate: true, desc: 'Swing plan table, hover on the LCM chip (spec state 7)' });
+            await unhover(page);
+            const inclTip = await hoverTip(page, plan.locator('.MuiChip-root', { hasText: /^(Included|Excluded)$/ }));
+            await snap(page, rec, 'swing-plan-exclude-tip', { gate: true, desc: 'Swing plan table, hover on an Included chip' });
+            await unhover(page);
+            const note = await textOf(plan.locator('.MuiTypography-caption').last());
+            rec.info('plan title / headers', `${title} / ${heads.join(' | ')}`);
+            rec.check('the accordion is titled "Swing Plan"', title === 'Swing Plan', `"${title}"`);
+            rec.check('the third column header is "Swings / cycle"', heads.includes('Swings / cycle'), heads.join(' | '));
+            says(rec, 'LCM chip tooltip: "LCM: the number of crafting cycles in one clock period"', lcmTip, /LCM: the number of crafting cycles in one clock period/);
+            says(rec, 'LCM chip tooltip names the least common multiple', lcmTip, /least common multiple/i);
+            says(rec, 'Exclude chip tooltip says "Always on" (the mode label map)', inclTip, /Always on/);
+            lacks(rec, 'Exclude chip tooltip has no raw ALWAYS', inclTip, /ALWAYS/);
+            says(rec, 'note starts "Swings per cycle can be fractions."', note, /^Swings per cycle can be fractions\./);
+            says(rec, 'note: "The clock period is the number of crafting cycles (the LCM) after which they all come out whole."', note, /The clock period is the number of crafting cycles \(the LCM\) after which they all come out whole\./);
+            says(rec, 'note says "Always on"', note, /Always on/);
+            lacks(rec, 'note has no raw ALWAYS and no "LCM period"', note, /ALWAYS|LCM period/);
+            says(rec, 'note still ends "Validate again, then Generate, after making changes."', note, /Validate again, then Generate, after making changes\.$/);
+            await checkLabelInName(rec, page, plan.locator('.MuiAccordionSummary-root'), 'the Swing Plan accordion button');
+            await checkLabelInName(rec, page, plan.locator('.MuiChip-root[role=button]').first(), 'the first Included chip'); // SELECTOR: confirm
+        },
+    },
+    {
+        // spec state 8
+        name: 'overrides-tooltips',
+        async run({ page, rec }) {
+            await goConfigure(page);
+            const summary = page.getByRole('button', { name: /^Advanced Overrides/ });
+            if (!(await page.getByText('Belts do not move', { exact: true }).first().isVisible())) await summary.click();
+            await page.waitForTimeout(400);
+            const helper = await textOf(page.locator('.MuiFormHelperText-root').filter({ hasText: /LCM/ }));
+            const controls = [
+                ['force', 'Force Output Swings', page.getByLabel('Force Output Swings').first()],
+                ['fractional', 'Enable Fractional Swings', page.getByText('Enable Fractional Swings', { exact: true }).first()],
+                ['belts', 'Belts do not move', page.getByText('Belts do not move', { exact: true }).first()],
+                ['search', 'Search for fewer wake-ups', page.getByText('Search for fewer wake-ups', { exact: true }).first()],
+            ];
+            const tips = {};
+            for (const [key, name, locator] of controls) {
+                tips[key] = await hoverTip(page, locator);
+                await snap(page, rec, `overrides-tip-${key}`, { gate: true, desc: `Advanced Overrides, hover on ${name}` });
+                rec.check(`a tooltip opens on "${name}"`, tips[key] !== '', clip(tips[key]));
+                lacks(rec, `"${name}" tooltip does not say "potential clock"`, tips[key], /potential clock/i);
+                await unhover(page);
+            }
+            says(rec, 'LCM Override helper: "Crafting cycles per clock period (overrides the calculated LCM)"', helper, /^Crafting cycles per clock period/);
+            lacks(rec, 'Force Output Swings tooltip does not say "unstable" (it "does not hold the rate")', tips.force, /unstable/i); // SELECTOR: confirm (spec :63/:84 both name the Force/Fractional strings)
+            lacks(rec, 'Enable Fractional Swings tooltip does not say "unstable"', tips.fractional, /unstable/i);
+            lacks(rec, 'Belts do not move tooltip: "window" only as "wake window"', tips.belts, /(?<!wake )\bwindows?\b/i);
+            says(rec, 'Belts do not move tooltip says "belt slack"', tips.belts, /belt slack/i);
+            lacks(rec, 'Search tooltip: "window" only as "wake window" (the engine\'s search name "observed windows" excepted)', tips.search.replace(/observed windows/gi, ''), /(?<!wake )\bwindows?\b/i);
+            rec.info('Search tooltip keeps the search name', /observed windows/i.test(tips.search) ? 'says "observed windows" (the engine\'s clock name)' : 'does not say "observed windows"');
+        },
+    },
+    {
+        // spec state 15
+        name: 'machine-facts',
+        async run({ page, rec }) {
+            await goConfigure(page);
+            await ensureList(page);
+            if (!(await page.getByText('Insertion Duration:').first().isVisible())) await page.getByRole('button', { name: /^Machine Facts/ }).first().click(); // SELECTOR: confirm
+            await page.waitForTimeout(400);
+            const insertion = await hoverTip(page, page.getByText('Insertion Duration:').first());
+            await snap(page, rec, 'machine-facts-insertion', { gate: true, desc: 'Machine Facts, hover on Insertion Duration (spec state 15)' });
+            await unhover(page);
+            const block = await hoverTip(page, page.getByText('Output Block:').first());
+            await snap(page, rec, 'machine-facts-block', { gate: true, desc: 'Machine Facts, hover on Output Block' });
+            await unhover(page);
+            const type = await hoverTip(page, page.getByText('Type:', { exact: true }).first()); // SELECTOR: confirm (no "Type" fact is drawn today: only its tooltip text exists)
+            lacks(rec, 'Insertion Duration tooltip has no "window"', insertion, /\bwindow/i);
+            says(rec, 'Insertion Duration tooltip says "insertion limit"', insertion, /insertion limit/i);
+            says(rec, 'Output Block tooltip says what the number is ("stops crafting"; the spec proposed "crafting cycle", which was not what it measures)', block, /stops crafting/i);
+            lacks(rec, 'Output Block tooltip no longer says "output cycle"', block, /output cycle/i);
+            if (type) says(rec, 'Type tooltip: "assembling machine, furnace or biochamber"', type, /assembling machine, furnace or biochamber/);
+            else rec.info('Type fact', 'this UI draws no "Type:" fact in Machine Facts, so there is nothing to hover');
+        },
+    },
+    {
+        // spec state 14
+        name: 'enable-rule-modal',
+        async run({ page, rec, state }) {
+            await goConfigure(page);
+            await ensureList(page);
+            await checkLabelInName(rec, page, page.getByRole('button', { name: CHIP_RE }).first(), 'the enable-rule chip of Inserter 1');
+            const dialog = await openRuleModal(page);
+            const title = await textOf(dialog.locator('.MuiTypography-h6').first()); // SELECTOR: confirm
+            await snap(page, rec, 'enable-rule-auto', { gate: true, desc: 'Enable-rule modal from a List row, Auto (spec state 14)' });
+            rec.check('the modal is titled "Enable rule"', /^Enable rule/.test(title), `"${title}"`);
+            await checkModeOptions(page, rec, dialog, 'List modal');
+            for (const [i, mode] of MODES.entries()) {
+                if (i === 0) continue;
+                await modeRadio(dialog, i).check({ force: true }).catch(() => {});
+                await page.waitForTimeout(300);
+                await snap(page, rec, `enable-rule-${mode.key}`, { gate: true, desc: `Enable-rule modal, ${mode.label}` });
+                if (mode.key === 'clocked') {
+                    const sub = await textOf(dialog.getByText(/^(Wake windows|Enable Ranges)$/));
+                    const field = dialog.getByLabel(/^(Repeat every|Period Duration)/); // SELECTOR: confirm
+                    const fieldName = norm(await field.first().evaluate((el) => el.labels?.[0]?.textContent ?? '').catch(() => ''));
+                    const helper = await textOf(dialog.locator('.MuiFormHelperText-root'));
+                    rec.check('Clocked shows the sub-heading "Wake windows"', sub === 'Wake windows', `"${sub}"`);
+                    rec.check('Clocked shows the field "Repeat every (ticks)"', /^Repeat every \(ticks\)/.test(fieldName), `"${fieldName}"`);
+                    if (fieldName) rec.check('label in name: the repeat field is named by its label', norm(await accessibleName(page, field)).toLowerCase().includes(fieldName.toLowerCase()), fieldName);
+                    says(rec, 'its helper reads "Optional. Defaults to one crafting cycle."', helper, /^Optional\. Defaults to one crafting cycle\.$/);
+                }
+            }
+            await modeRadio(dialog, 0).check({ force: true }).catch(() => {});
+            await closeModal(page);
+            // Save a rule so the chip and "Clear rule" can be seen
+            const d2 = await openRuleModal(page);
+            await modeRadio(d2, 1).check({ force: true }).catch(() => {});
+            await d2.getByRole('button', { name: 'Save', exact: true }).click();
+            await page.waitForTimeout(500);
+            const chipText = await textOf(page.getByRole('button', { name: CHIP_RE }).first());
+            await snap(page, rec, 'enable-rule-chip-always', { gate: true, desc: 'List row after saving Always on: the chip' });
+            rec.check('the chip of an Always on rule reads "Enable: Always on"', /^Enable: Always on$/.test(chipText), `"${chipText}"`); // SELECTOR: confirm (chip wording follows the mode label map)
+            await checkLabelInName(rec, page, page.getByRole('button', { name: CHIP_RE }).first(), 'the Always on chip');
+            const d3 = await openRuleModal(page);
+            const clear = d3.getByRole('button', { name: /^Clear (rule|override)/i });
+            const clearText = await textOf(clear);
+            rec.check('the clear button reads "Clear rule"', clearText === 'Clear rule', `"${clearText}"`);
+            if ((await clear.count()) > 0) {
+                await checkLabelInName(rec, page, clear, 'the Clear rule button');
+                await clear.click();
+                await page.waitForTimeout(500);
+            }
+            if ((await page.getByRole('dialog').count()) > 0) await closeModal(page);
+            // the diagram dialog's tab
+            await goConfigure(page);
+            await page.getByRole('button', { name: /^Diagram view/ }).click();
+            await page.waitForTimeout(1500);
+            try {
+                await page.locator('.react-flow__node-inserterNode').first().click();
+                const dd = page.getByRole('dialog').first();
+                await dd.waitFor();
+                await page.waitForTimeout(500);
+                const tabs = dd.getByRole('tab');
+                const names = (await tabs.allTextContents()).map(norm);
+                rec.info('diagram dialog tabs', names.join(' | '));
+                rec.check('the diagram dialog\'s rule tab is named "Enable rule"', names.some((n) => /^Enable rule/.test(n)), names.join(' | '));
+                for (let i = 0; i < names.length; i++) await checkLabelInName(rec, page, tabs.nth(i), `dialog tab "${names[i]}"`);
+                await tabs.nth(names.length - 1).click();
+                await page.waitForTimeout(400);
+                await snap(page, rec, 'enable-rule-dialog-tab', { gate: true, desc: 'Diagram dialog of an inserter, rule tab' });
+                await checkModeOptions(page, rec, dd, 'Diagram dialog tab');
+            } finally {
+                await page.keyboard.press('Escape');
+                await page.waitForTimeout(300);
+                if ((await page.getByRole('dialog').count()) > 0) await page.getByRole('button', { name: 'Close dialog' }).click().catch(() => {});
+                await page.waitForTimeout(400);
+                await page.getByRole('button', { name: /^List view/ }).click();
+            }
+            await validate(page); // the saved and cleared rule may have changed the build's key
+            state.validated = true;
+        },
+    },
+    {
+        // spec state 16
+        name: 'empty-results',
+        async run({ page, rec, state }) {
+            if (state.generated) {
+                await page.reload({ waitUntil: 'commit' });
+                await waitReady(page);
+                state.generated = false;
+                state.validated = false;
+            }
+            await goResults(page);
+            const line = await textOf(page.getByText(/^Nothing generated yet/)); // SELECTOR: confirm
+            await snap(page, rec, 'empty-results', { gate: true, desc: 'Results before any generation (spec state 16)' });
+            says(rec, 'the empty Results line is "Nothing generated yet. Press Generate to create clocks for your build."', line, /^Nothing generated yet\. Press Generate to create clocks for your build\.$/);
+        },
+    },
+];
+
+const PART_B_AFTER_GENERATE = [
+    {
+        // spec state 9
+        name: 'clocks-table',
+        async run({ page, rec, state }) {
+            await ensureGenerated(page, state);
+            await goResults(page);
+            const title = await textOf(page.locator('.MuiTypography-h6').filter({ hasText: /^Clocks$/ }).first());
+            const heads = page.getByRole('columnheader');
+            const names = (await heads.allTextContents()).map(norm);
+            rec.info('clock table headers', names.join(' | '));
+            rec.check('the panel is titled "Clocks"', title === 'Clocks', `"${title}"`);
+            rec.check('the header "Clock period" is there', names.includes('Clock period'), names.join(' | '));
+            rec.check('the header "Wake windows" is there (was "Inserter windows")', names.some((n) => /^Wake windows/.test(n)), names.join(' | '));
+            rec.check('the header "Wake-ups..." is there', names.some((n) => /^Wake-ups/.test(n)), names.join(' | '));
+            const tipOfHead = async (re) => hoverTip(page, heads.filter({ hasText: re }).locator('span').first().or(heads.filter({ hasText: re }).first()));
+            const period = await tipOfHead(/^Clock period/);
+            await snap(page, rec, 'clocks-table-period', { gate: true, desc: 'Clocks table, hover on Clock period (spec state 9)' });
+            await unhover(page);
+            const windows = await tipOfHead(/^(Wake windows|Inserter windows)/);
+            await unhover(page);
+            const wake = await tipOfHead(/^Wake-ups/);
+            await snap(page, rec, 'clocks-table-wakeups', { gate: true, desc: 'Clocks table, hover on Wake-ups' });
+            await unhover(page);
+            const belt = await tipOfHead(/^Belt$/);
+            await unhover(page);
+            rec.info('Clock period / Wake windows header tooltips', `"${clip(period, 100)}" / "${clip(windows, 100)}"`);
+            says(rec, 'Wake-ups tooltip says when a machine wakes an inserter ("...finished a craft")', wake, /finish\w* a craft/);
+            lacks(rec, 'Wake-ups tooltip no longer says "one start of the clock" (it says "start point")', wake, /one start of the clock/);
+            says(rec, 'Belt tooltip says "belt slack"', belt, /belt slack/i);
+            lacks(rec, 'Belt tooltip no longer says "belt pickup slack"', belt, /belt pickup slack/i);
+            lacks(rec, 'Belt tooltip: "window" only as "wake window"', belt, /(?<!wake )\bwindows?\b/i);
+            for (const tab of ['Timelines', 'Insights', 'Blueprint', 'Log']) await checkLabelInName(rec, page, page.getByRole('tab', { name: tab, exact: true }), `Results tab "${tab}"`);
+            const info = page.getByLabel(/^How .* is made$/).first();
+            const i = await hoverTip(page, info);
+            await snap(page, rec, 'clocks-table-info', { gate: true, engineAll: true, desc: 'One clock\'s (i) popover open (engine text)' });
+            rec.check('the (i) of a clock opens its description', i !== '', clip(i));
+            await unhover(page);
+        },
+    },
+    {
+        // spec state 10
+        name: 'timelines-note',
+        async run({ page, rec, state }) {
+            await ensureGenerated(page, state);
+            await goResults(page);
+            await clickTabByName(page, 'Timelines');
+            for (const [value, re, what] of [['Exported clock', /^The timelines show the build driven only by the wake windows in the blueprint\./, 'Exported clock'], ['Plan', /^The timelines show the planning simulation the wake windows were taken from\./, 'Plan']]) {
+                const toggle = page.getByRole('button', { name: value, exact: true });
+                if ((await toggle.count()) === 0) {
+                    rec.check(`the "${value}" toggle is there`, false, 'this build has no clock-only run');
+                    continue;
+                }
+                await toggle.click();
+                await page.waitForTimeout(400);
+                const note = await textOf(page.locator('p.MuiTypography-body2').filter({ hasText: /^The timelines show/ }));
+                await snap(page, rec, `timelines-note-${what === 'Plan' ? 'plan' : 'clock'}`, { gate: true, desc: `Timelines, "${value}" selected: the note (spec state 10)` });
+                says(rec, `${value} note says "wake windows"`, note, re);
+                lacks(rec, `${value} note has no "clock windows"`, note, /clock windows/i);
+            }
+            const legend = await textOf(page.getByText(/decider on; the inserter reacts 2 ticks later/).first());
+            says(rec, 'the timeline legend reads "Wake window (decider on; the inserter reacts 2 ticks later)"', legend, /^Wake window \(decider on/);
+        },
+    },
+    {
+        // spec state 11
+        name: 'insights',
+        async run({ page, rec, state }) {
+            await ensureGenerated(page, state);
+            await goResults(page);
+            await clickTabByName(page, 'Insights');
+            const sub1 = await textOf(page.getByText(/^What is particular to the/));
+            const sub2 = await textOf(page.getByText(/^The limits every/));
+            const found = await snap(page, rec, 'insights', { gate: true, fullPage: true, desc: 'Insights tab (engine text keeps old words; copy-check.txt marks it)' });
+            says(rec, 'Insights lead-in says "the clock selected above"', sub1, /^What is particular to the clock selected above\./);
+            says(rec, 'Insights build lead-in says "every clock for this build"', sub2, /every clock for this build/);
+            rec.info('Insights lines tagged engine on this shot', String(found.filter((f) => f.kind === 'engine').length));
+        },
+    },
+    {
+        // spec state 13
+        name: 'shift-range',
+        async run({ page, rec, state }) {
+            const tried = [];
+            for (const file of SHIFT_CANDIDATES) {
+                tried.push(file.split('/').pop());
+                await loadBuild(page, state, file);
+                const summary = page.getByRole('button', { name: /^Advanced Overrides/ });
+                const searchLabel = page.getByText('Search for fewer wake-ups', { exact: true }).first();
+                if (!(await searchLabel.isVisible())) await summary.click();
+                if (!(await page.getByRole('switch', { name: /Search for fewer wake-ups|Runs the four/ }).first().isChecked())) await searchLabel.click(); // SELECTOR: confirm (the switch's name is its tooltip text)
+                await ensureGenerated(page, state);
+                await goResults(page);
+                const row = page.locator('tbody tr').filter({ hasText: /Shifted swings|Uneven output swings/ }).first();
+                if ((await row.count()) === 0) continue;
+                await row.click();
+                await clickTabByName(page, 'Insights');
+                const title = page.getByText(/^(When the machines accept these swings|Where the output swing can go)$/);
+                if ((await title.count()) === 0) continue;
+                const panel = page.locator('.MuiPaper-outlined').filter({ has: title }).last();
+                await panel.scrollIntoViewIfNeeded();
+                const desc = await textOf(panel.locator('p.MuiTypography-body2').first());
+                const limit = await textOf(panel.getByText(/^• Nothing further was tried/));
+                await snap(page, rec, 'shift-range', { gate: true, desc: `Shift range panel (${tried.join(', ')})` });
+                rec.info('shift range samples tried', tried.join(', '));
+                rec.info('shift panel title', await textOf(title));
+                if (/accept these swings/.test(await textOf(title))) {
+                    says(rec, 'shift panel: "an input swing ... an output swing can leave once a full hand is ready"', desc, /an input swing once it is below its insertion limit and before it runs out, and an output swing can leave once a full hand is ready/);
+                    lacks(rec, 'shift panel: no "input hand" / "output hand" for the trip', desc, /(input|output) hand/);
+                }
+                if (limit) says(rec, 'shift panel search-limit line says "wake windows"', limit, /moved wake windows/);
+                else rec.info('shift panel search-limit line', 'not shown for this clock');
+                return;
+            }
+            rec.check('a sample shows the shift range panel', false, `no panel; samples tried: ${tried.join(', ')}`);
+        },
+    },
+    {
+        // spec state 18
+        name: 'phase-1-strings',
+        async run({ page, rec, state }) {
+            await ensureGenerated(page, state);
+            rec.info('document.title', await page.title());
+            const old = await bumpCopies(page);
+            await goResults(page);
+            const banner = await textOf(page.locator('.MuiAlert-root').filter({ hasText: /^These clocks are for/ }).first()); // SELECTOR: confirm
+            await snap(page, rec, 'stale-banner', { gate: true, desc: 'Results with clocks made for an earlier build: the banner' });
+            says(rec, 'stale banner is in glossary words (clocks, build)', banner, /^These clocks are for .+\. Your build has changed since\. Generate again\.$/);
+            const copy = page.getByRole('button', { name: /^Copy old clock/ }).first();
+            if ((await copy.count()) > 0) {
+                await checkLabelInName(rec, page, copy, 'the "Copy old clock..." button');
+                await copy.click();
+                const dlg = page.getByRole('dialog').first();
+                await dlg.waitFor();
+                await page.waitForTimeout(300);
+                await snap(page, rec, 'copy-old-clock-dialog', { gate: true, desc: '"Copy the old clock?" dialog' });
+                says(rec, 'the dialog asks "Copy the old clock?"', await textOf(dlg.locator('h2')), /^Copy the old clock\?$/);
+                await dlg.getByRole('button', { name: 'Cancel' }).click();
+                await page.waitForTimeout(300);
+            } else rec.check('the "Copy old clock..." button is there while stale', false, 'not found');
+            await restoreCopies(page, old);
+            // discard dialog
+            const dialog = await openRuleModal(page);
+            await modeRadio(dialog, 2).check({ force: true }).catch(() => {});
+            await dialog.getByRole('button').nth(1).click(); // SELECTOR: confirm (the modal's close icon has no name: it is the button after Fullscreen)
+            await page.waitForTimeout(500);
+            const discard = page.getByRole('dialog').last();
+            await snap(page, rec, 'discard-dialog', { gate: true, desc: 'Discard changes dialog over the rule editor' });
+            says(rec, 'discard dialog: "Discard changes to Inserter N\'s rule?"', await textOf(discard.locator('h2')), /^Discard changes to Inserter \d+'s rule\?$/);
+            await discard.getByRole('button', { name: 'Discard' }).click().catch(() => {});
+            await page.waitForTimeout(400);
+            while ((await page.getByRole('dialog').count()) > 0) {
+                await page.keyboard.press('Escape');
+                await page.waitForTimeout(300);
+                const d = page.getByRole('dialog').first();
+                if ((await d.count()) > 0) await d.getByRole('button', { name: /^(Discard|Cancel)$/ }).first().click().catch(() => {});
+                await page.waitForTimeout(300);
+                if (rec.__guard = (rec.__guard ?? 0) + 1, rec.__guard > 6) break;
+            }
+            rec.__guard = 0;
+            await validate(page);
+            state.generated = false; // the build may differ in its key from the generated one
+        },
+    },
+    {
+        // spec state 12
+        name: 'fuel-table',
+        async run({ page, rec, state }) {
+            await loadBuild(page, state, FUEL_SAMPLE);
+            await ensureGenerated(page, state);
+            await goResults(page);
+            const tab = page.getByRole('tab', { name: 'Fuel', exact: true });
+            if (!rec.check('the Fuel tab is there for the fuel sample', (await tab.count()) > 0, 'tabs: ' + (await page.getByRole('tab').allTextContents()).join(' | '))) return;
+            await tab.click();
+            await page.waitForTimeout(500);
+            const body = await page.evaluate(() => document.body.innerText);
+            const heads = (await page.locator('th').allTextContents()).map(norm);
+            await snap(page, rec, 'fuel-table', { gate: true, fullPage: true, desc: 'Fuel tab, tables (spec state 12)' });
+            rec.check('inserter table headers keep "A hand lasts", "Expected swings"', heads.includes('A hand lasts') && heads.includes('Expected swings'), heads.join(' | '));
+            rec.check('machine table keeps "Per clock period"', heads.includes('Per clock period'), heads.join(' | '));
+            const bare = body.split('\n').filter((l) => /(?<!clock )\bperiods?\b/i.test(l)).map((l) => l.trim());
+            rec.check('Fuel tab says "period" only as "clock period"', bare.length === 0, bare.join(' ;; ') || 'none'); // FuelPanel.tsx:34 "tick period"
+            rec.check('Fuel tab does not call a swing a hand or transfer', !/\bhands\b|\btransfers?\b/i.test(body), 'checked the page text');
+        },
+    },
+    {
+        // spec state 17
+        name: 'rate-warning',
+        async run({ page, rec, state }) {
+            for (const [file, tag, wantRe, lackRe, what] of [
+                [NO_RECOVERY_SAMPLE, 'no-recovery', /does not recover|jammed|starved/, /backpressure/i, 'a clock with no recovery'],
+                [BELOW_RATE_SAMPLE, 'below-rate', /^This clock does not hold the target rate/, /unstable/i, 'a clock below the target rate'],
+            ]) {
+                await loadBuild(page, state, file);
+                await ensureGenerated(page, state);
+                await goResults(page);
+                await clickTabByName(page, 'Blueprint');
+                const warn = page.getByText(/^This clock does not/).locator('visible=true').first(); // the Insights card titles say it too, hidden
+                const text = await textOf(warn);
+                await snap(page, rec, `rate-warning-${tag}`, { gate: true, desc: `Blueprint tab: the warning for ${what}` });
+                rec.info(`rate warning (${tag})`, clip(text, 300));
+                says(rec, `${what}: the warning uses jam / starved wording (or the known sentence)`, text, wantRe);
+                lacks(rec, `${what}: the warning does not say backpressure / unstable`, text, lackRe);
+                if (tag === 'no-recovery') {
+                    await goResults(page);
+                    const intro = await textOf(page.getByText(/^None of the clocks tried/));
+                    if (intro) lacks(rec, 'the "None of the clocks tried" line has no "backpressure loss"', intro, /backpressure/i);
+                    else rec.info('"None of the clocks tried" line', 'not shown for this sample (a stable clock exists)');
+                }
+            }
+        },
+    },
+];
+
 const STEP_LIST = [
     {
         // spec state 1
@@ -252,19 +875,20 @@ const STEP_LIST = [
             await goConfigure(page);
             await validate(page);
             state.validated = true;
-            const plan = page.locator('.MuiAccordion-root').filter({ hasText: /^Swing Plan/ }).first(); // SELECTOR: confirm (the accordion titled "Swing Plan"; Part B renames it)
+            const plan = page.locator('.MuiAccordion-root').filter({ hasText: /^(Swing Plan|Transfer Plan)/ }).first(); // SELECTOR: confirm (the accordion titled "Transfer Plan"; Part B renames it)
             await plan.waitFor();
             const note = plan.locator('.MuiTypography-caption').last(); // SELECTOR: confirm (the note is the last caption in the accordion)
             await note.scrollIntoViewIfNeeded();
             await page.waitForTimeout(400);
-            await snap(page, rec, 'transfer-note', { desc: 'Validation panel after Validate, the Swing Plan note at the bottom (spec state 5)' });
+            await snap(page, rec, 'transfer-note', { desc: 'Validation panel after Validate, the Transfer Plan note at the bottom (spec state 5)' });
             const t = await text(note);
             rec.info('transfer note text', t);
-            rec.check('the Swing Plan note ends "Validate again, then Generate, after making changes."', t.endsWith('Validate again, then Generate, after making changes.'), `ends "...${t.slice(-70)}"`);
-            rec.check('the Swing Plan note still contains item 1.8\'s clause "which stays."', /which stays\./.test(t), t);
-            rec.check('the Swing Plan note no longer says "Re-run the simulation"', !/Re-run the simulation/i.test(t), t);
+            rec.check('the plan note ends "Validate again, then Generate, after making changes."', t.endsWith('Validate again, then Generate, after making changes.'), `ends "...${t.slice(-70)}"`);
+            rec.check('the Transfer Plan note still contains item 1.8\'s clause ending "which stays."', /which stays\./.test(t), t);
+            rec.check('the Transfer Plan note no longer says "Re-run the simulation"', !/Re-run the simulation/i.test(t), t);
         },
     },
+    ...PART_B_BEFORE_GENERATE,
     {
         // spec state 2, second half: after a Generate with "Show generator log below" on. The log then holds messages; Clear logs
         // empties it and shows the empty-log line.
@@ -281,6 +905,7 @@ const STEP_LIST = [
             const box = page.getByLabel('Show generator log below');
             if (!(await box.isChecked())) await box.check();
             await generate(page); // once per width
+            state.generated = true;
             await goResults(page);
             await page.getByRole('tab', { name: 'Log', exact: true }).click(); // SELECTOR: confirm (Results tab "Log")
             await page.waitForTimeout(400);
@@ -299,6 +924,7 @@ const STEP_LIST = [
             rec.check('the empty-log line no longer says "run a simulation"', !/run a simulation/i.test(t), t);
         },
     },
+    ...PART_B_AFTER_GENERATE,
 ];
 
 const wanted = process.env.STEPS ? process.env.STEPS.split(',').map((s) => s.trim()).filter(Boolean) : null;
@@ -319,7 +945,7 @@ try {
     const run = await forWidths(
         WIDTHS,
         async ({ page, rec }) => {
-            const state = { validated: false };
+            const state = { validated: false, generated: false };
             await rec.step('import the small sample', async () => {
                 await goConfigure(page);
                 await importFile(page, SMALL_SAMPLE);
@@ -328,16 +954,15 @@ try {
             for (const step of STEP_LIST) {
                 if (wanted && !wanted.includes(step.name)) continue;
                 await rec.step(step.name, () => step.run({ page, rec, state }), page);
-                // a step that stopped half way (a throw) can leave a menu or dialog open: close it before the next one
                 await page.keyboard.press('Escape').catch(() => {});
             }
-            // the copy-check verdict of this width, over every shot taken
             const hits = [...new Set(rec.banned ?? [])];
-            rec.check('copy-check: no banned word (devided, terminal swing count, Generate Blueprint, Assembler, Re-run the simulation) on any shot', hits.length === 0, hits.length ? hits.join(' ;; ') : 'none found');
+            rec.check('copy-check: no banned word outside engine text and the allow-list, on any shot', hits.length === 0, hits.length ? clip(hits.join(' ;; '), 600) : 'none found');
+            rec.info('copy-check: lines tagged engine (Insights prose, clock names and descriptions)', String(rec.engineLines?.size ?? 0));
         },
         { out: OUT, base },
     );
-    code = run.finish({ title: 'Item 1.12 Part A capture (glossary and copy)' });
+    code = run.finish({ title: 'Item 1.12 capture (glossary and copy, Parts A and B)' });
 } finally {
     await stopPreview?.();
 }
