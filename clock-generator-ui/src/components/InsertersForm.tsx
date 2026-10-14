@@ -23,6 +23,10 @@ import { entityLabel } from '../utils/entityLabel';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
+/** Below md the source and destination share the row's first line, each at least 220px wide */
+const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', flex: { xs: '1 1 220px', md: '0 0 auto' } };
+const PICKER_SX = { flex: 1, minWidth: { md: 250 } };
+
 interface EntityOption {
     type: SourceSinkType;
     id: number;
@@ -247,10 +251,10 @@ function InsertersFormComponent({
                 >
                     {dragHandle}
                     {/* Source */}
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Box sx={PICKER_GROUP_SX}>
                         <Autocomplete
                             size="small"
-                            sx={{ minWidth: 250 }}
+                            sx={PICKER_SX}
                             options={entityOptions}
                             value={findEntityOption(inserter.source.type, inserter.source.id)}
                             onChange={(_, newValue) => {
@@ -331,18 +335,15 @@ function InsertersFormComponent({
                             disableClearable
                         />
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+
+                    {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
+                    <Box sx={PICKER_GROUP_SX}>
                         <Typography variant="body2" color="text.secondary">
                             →
                         </Typography>
-                    </Box>
-
-
-                    {/* Sink */}
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Autocomplete
                             size="small"
-                            sx={{ minWidth: 250 }}
+                            sx={PICKER_SX}
                             options={entityOptions}
                             value={findEntityOption(inserter.sink.type, inserter.sink.id)}
                             onChange={(_, newValue) => {

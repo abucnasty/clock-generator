@@ -122,10 +122,11 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
             >
                 <DragIndicator fontSize="small" />
             </Box>
+            {/* at least as wide as "Inserter 99", so the rows of a card line up */}
             <Chip
                 label={label}
                 size="small"
-                sx={{ fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
+                sx={{ minWidth: 72, fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
             />
         </Box>
     );
