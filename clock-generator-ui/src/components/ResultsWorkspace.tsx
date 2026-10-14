@@ -21,12 +21,14 @@ import { StaleResultsBanner } from './StaleResultsBanner';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
+import { WakeWindowsView } from './WakeWindowsView';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
+import { VIEW_HEADING } from '../utils/wakeWindowCopy';
 
-type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
+type ResultsTab = 'wakeWindows' | 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
 interface ResultsWorkspaceProps {
     isRunning: boolean;
@@ -81,13 +83,13 @@ function TabBody({ shown, children }: { shown: boolean; children: ReactNode }) {
  * selected clock, so the page stays one screen long.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
-    const [tab, setTab] = useState<ResultsTab>('timelines');
+    const [tab, setTab] = useState<ResultsTab>('wakeWindows');
     const [timelineRun, setTimelineRun] = useState<'clock' | 'plan'>('clock');
 
     const hasClockOnlyRun = props.clockOnlyTransferHistory !== null && props.clockOnlyStateTransitionHistory !== null;
     const fuelView = props.fuelView;
     // the fuel tab is only there for a build with fuel inserters
-    const shownTab: ResultsTab = tab === 'fuel' && fuelView === null ? 'timelines' : tab;
+    const shownTab: ResultsTab = tab === 'fuel' && fuelView === null ? 'wakeWindows' : tab;
     const showClockOnlyRun = hasClockOnlyRun && timelineRun === 'clock';
     const transferHistory = showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
     const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
@@ -146,12 +148,17 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     scrollButtons="auto"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
+                    <Tab value="wakeWindows" label={VIEW_HEADING} />
                     <Tab value="timelines" label="Timelines" />
                     {fuelView !== null && <Tab value="fuel" label="Fuel" />}
                     <Tab value="insights" label="Insights" />
                     <Tab value="blueprint" label="Blueprint" />
                     <Tab value="log" label="Log" />
                 </Tabs>
+
+                <TabBody shown={shownTab === 'wakeWindows'}>
+                    <WakeWindowsView alternative={props.alternatives[props.selectedIndex] ?? null} />
+                </TabBody>
 
                 <TabBody shown={shownTab === 'insights'}>
                     <SwingBackoffReportDisplay report={props.swingBackoffReport} />

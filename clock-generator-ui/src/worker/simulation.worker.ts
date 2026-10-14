@@ -118,6 +118,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
         fuelView: fuelViewOf(result),
         clockWindows: result.clock_windows,
+        beltPickupSlackTicks: result.belt_pickup_slack_ticks,
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
