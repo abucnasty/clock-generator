@@ -173,7 +173,8 @@ function InserterEditSection({
                     value={inserter.source.near_lane ?? 0}
                     onChange={(e) => {
                         const lane = Number(e.target.value);
-                        const { near_lane: _unset, ...source } = inserter.source;
+                        const source = { ...inserter.source };
+                        delete source.near_lane;
                         onUpdate(entityIndex, { source: lane === 1 || lane === 2 ? { ...source, near_lane: lane } : source });
                     }}
                 >

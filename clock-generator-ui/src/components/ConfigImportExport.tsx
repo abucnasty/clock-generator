@@ -375,12 +375,12 @@ export function ConfigImportExport({
     const handleMenuPasteFromFactorio = useCallback(() => {
         handleMenuClose();
         handlePasteFromFactorio();
-    }, [handlePasteFromFactorio]);
+    }, [handleMenuClose, handlePasteFromFactorio]);
 
     const handleMenuReset = useCallback(() => {
         handleMenuClose();
         onReset();
-    }, [onReset]);
+    }, [handleMenuClose, onReset]);
 
     return (
         <>

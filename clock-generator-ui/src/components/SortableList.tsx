@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -37,17 +37,18 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
     // Local ordered copy — updated synchronously on drag end so dnd-kit can
     // complete its drop animation before the parent re-renders with reassigned IDs.
     const [localItemKeys, setLocalItemKeys] = useState(itemKeys);
+    const [prevItemKeys, setPrevItemKeys] = useState(itemKeys);
 
-    // Sync when items are added or removed (the UUID set changes).
+    // Sync when items are added or removed (the UUID set changes), while rendering
+    // rather than in an effect, so the stale order is never committed.
     // After a plain reorder the parent's UUID set is identical to our local
     // set (stable keys move with their entities), so no spurious sync occurs.
-    useEffect(() => {
-        setLocalItemKeys((prev) => {
-            const prevSet = new Set(prev);
-            const same = prev.length === itemKeys.length && itemKeys.every((k) => prevSet.has(k));
-            return same ? prev : itemKeys;
-        });
-    }, [itemKeys]);
+    if (itemKeys !== prevItemKeys) {
+        setPrevItemKeys(itemKeys);
+        const localSet = new Set(localItemKeys);
+        const same = localItemKeys.length === itemKeys.length && itemKeys.every((k) => localSet.has(k));
+        if (!same) setLocalItemKeys(itemKeys);
+    }
 
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
