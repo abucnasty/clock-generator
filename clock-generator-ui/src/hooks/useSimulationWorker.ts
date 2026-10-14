@@ -158,6 +158,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     // set once the user picks an alternative, so results arriving later do not move the selection; selectRecommended
     // unsets it, so the selection follows the recommended clock again
     const userSelectionRef = useRef<string | null>(null);
+    // the latest list published, which a render may not show yet; selectRecommended picks from it
+    const alternativesRef = useRef<ClockAlternativeView[]>([]);
     const [error, setError] = useState<string | null>(null);
     const workersRef = useRef<Worker[]>([]);
     const generationRef = useRef<Generation | null>(null);
@@ -187,6 +189,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const publishAlternatives = useCallback((generation: Generation) => {
         const combined = combineClockAlternativeRuns(generation.runs, it => it.ranking);
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
+        alternativesRef.current = combined.alternatives;
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
         const not_started = [...generation.waiting, ...generation.skipped];
@@ -356,6 +359,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setSearchedDeeper(run.searchedDeeper);
         setIsRunning(true);
         progressStore.set(null);
+        alternativesRef.current = [];
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
         setPendingAlternatives([]);
@@ -389,6 +393,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         generationRef.current = null;
         progressStore.set(null);
         setIsRunning(false);
+        alternativesRef.current = [];
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
         setPendingAlternatives([]);
@@ -416,10 +421,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     const selectRecommended = useCallback(() => {
         userSelectionRef.current = null;
-        if (recommendedIndex !== null) {
-            setSelectedAlternativeIndex(recommendedIndex);
-        }
-    }, [recommendedIndex]);
+        // from the latest list, not the rendered one: a clock that arrived just before the click can move the pick
+        setSelectedAlternativeIndex(recommendedIndexOf(alternativesRef.current) ?? 0);
+    }, []);
 
     const clearLogs = useCallback(() => {
         setLogs([]);

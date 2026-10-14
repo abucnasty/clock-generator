@@ -74,6 +74,8 @@ interface ClockAlternativesPanelProps {
     pending?: string[];
     /** Shown below the table: whether a deeper search is on offer */
     notice?: ReactNode;
+    /** Keeps the panel, and so the notice, on screen while a generation has no clocks yet, so its focus is not lost */
+    holdNotice?: boolean;
 }
 
 export function ClockAlternativesPanel({
@@ -86,18 +88,21 @@ export function ClockAlternativesPanel({
     isGenerating,
     pending = [],
     notice,
+    holdNotice = false,
 }: ClockAlternativesPanelProps) {
     const [showUnstable, setShowUnstable] = useState(false);
+    // the unstable rows that were on screen when the others were shown
+    const [pinnedIds, setPinnedIds] = useState<string[]>([]);
     // where "Back to recommended" leaves the keyboard focus, as the link itself goes away
     const recommendedRadioRef = useRef<HTMLInputElement>(null);
 
-    if (alternatives.length === 0 && pending.length === 0) {
+    if (alternatives.length === 0 && pending.length === 0 && !holdNotice) {
         return null;
     }
 
     const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(
         alternatives,
-        { selectedIndex, recommendedIndex, showUnstable },
+        { selectedIndex, recommendedIndex, showUnstable, pinnedIds },
     );
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const anyHolds = alternatives.some(alternative => alternative.verdict !== 'unstable');
@@ -184,7 +189,9 @@ export function ClockAlternativesPanel({
             {recommended && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1, mb: 1, maxWidth: '72ch' }}>
                     <Typography variant="body2">
-                        <strong>{RECOMMENDED_COPY.lead(recommended.label)}</strong>{' '}
+                        <strong>
+                            {isGenerating ? RECOMMENDED_COPY.leadWhileGenerating(recommended.label) : RECOMMENDED_COPY.lead(recommended.label)}
+                        </strong>{' '}
                         {recommendationReason(alternatives, recommendedIndex, pickRule, !isGenerating)}
                     </Typography>
                     {selectedIndex !== recommendedIndex && (
@@ -195,7 +202,7 @@ export function ClockAlternativesPanel({
                                 recommendedRadioRef.current?.focus();
                             }}
                         >
-                            {RECOMMENDED_COPY.backToRecommended}
+                            {isGenerating ? RECOMMENDED_COPY.backWhileGenerating : RECOMMENDED_COPY.backToRecommended}
                         </Button>
                     )}
                 </Box>
@@ -211,7 +218,7 @@ export function ClockAlternativesPanel({
                     )}
                 </Typography>
             )}
-            <Accordion disableGutters elevation={0} sx={{ mb: 1, '&::before': { display: 'none' } }}>
+            <Accordion disableGutters elevation={0} sx={{ mb: 1, maxWidth: '72ch', '&::before': { display: 'none' } }}>
                 <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     id="how-clocks-are-chosen-summary"
@@ -220,7 +227,7 @@ export function ClockAlternativesPanel({
                 >
                     <Typography variant="body2">{RECOMMENDED_COPY.disclosureTitle}</Typography>
                 </AccordionSummary>
-                <AccordionDetails sx={{ px: 0, pt: 0, maxWidth: '72ch' }}>
+                <AccordionDetails sx={{ px: 0, pt: 0 }}>
                     {RECOMMENDED_COPY.disclosure.map(paragraph => (
                         <Typography key={paragraph} variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                             {paragraph}
@@ -298,16 +305,25 @@ export function ClockAlternativesPanel({
                     </TableBody>
                 </Table>
             </TableContainer>
-            {notice}
             {anyStable && (showUnstable ? unstableCount > 0 : hiddenCount > 0) && (
                 <Box sx={{ mt: 1 }}>
-                    <Button size="small" onClick={() => setShowUnstable(shown => !shown)}>
+                    <Button
+                        size="small"
+                        onClick={() => {
+                            // the unstable rows already on screen stay first in their group once the others are shown
+                            if (!showUnstable) {
+                                setPinnedIds(unstable.map(({ alternative }) => alternative.id));
+                            }
+                            setShowUnstable(shown => !shown);
+                        }}
+                    >
                         {showUnstable
                             ? `Hide ${unstableCount} unstable clock${unstableCount === 1 ? '' : 's'}`
                             : `Show ${hiddenCount} unstable clock${hiddenCount === 1 ? '' : 's'} that ${hiddenCount === 1 ? 'was' : 'were'} tried`}
                     </Button>
                 </Box>
             )}
+            {notice}
         </Paper>
     );
 }
