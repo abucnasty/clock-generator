@@ -6,7 +6,8 @@ export type InserterInterceptor = (inserter_state: InserterState, source_state: 
 const WaitUntilSourceIsOutputBlockedInterceptor: InserterInterceptor = (inserter_state, source_state, sink_state): EnableControl => {
     if (EntityState.isMachine(source_state) && EntityState.isMachine(sink_state)) {
         const source_item_name = source_state.machine.output.item_name;
-        const sink_input = sink_state.machine.getInsertableInputOrThrow(source_item_name);
+        // throws when the sink does not take what the source makes
+        sink_state.machine.getInsertableInputOrThrow(source_item_name);
 
         return EnableControl.latched({
             base: EnableControl.lambda(() => {

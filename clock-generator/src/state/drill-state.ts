@@ -1,4 +1,4 @@
-import { EntityId, MiningDrill } from "../entities";
+import { MiningDrill } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState, WritableInventoryState } from "./inventory-state";
 import { DrillStatus } from "./entity-status";

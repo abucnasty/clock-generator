@@ -3,7 +3,7 @@ import { InserterAnimation } from "../../../entities/inserter/inserter-animation
 import { InserterStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
-import { InserterDropMode, InserterIdleMode, InserterMode, InserterPickupMode } from "../modes";
+import { InserterDropMode, InserterIdleMode, InserterMode } from "../modes";
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator";
 
 export class InserterSwingModeTransitionEvaluator implements ModeTransitionEvaluator<InserterMode> {

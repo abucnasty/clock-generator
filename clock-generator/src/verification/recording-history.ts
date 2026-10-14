@@ -1,5 +1,4 @@
-import { MachineStatus } from "../state";
-import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, RecordedMachine, Recording, recordedClockPeriod } from "./recording";
+import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, Recording, recordedClockPeriod } from "./recording";
 
 export interface RecordedTransfer {
     item_name: string;

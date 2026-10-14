@@ -2,7 +2,7 @@ import { Duration, OpenRange } from "../../../data-types";
 import { MachineState, MachineStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
 import { ModePlugin, Transition } from "../../mode";
-import { MachineMode, MachineWorkingMode } from "../modes";
+import { MachineMode } from "../modes";
 
 interface CraftEventListenerArgs {
     readonly craft_index: number,

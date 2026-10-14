@@ -1,4 +1,4 @@
-import { ChestState, EntityState, InserterState, InserterStatus, MachineState } from "../../../state";
+import { ChestState, EntityState, InserterState, MachineState } from "../../../state";
 import { ModeTransition, ModeTransitionEvaluator } from "../../mode";
 import { InserterMode } from "../modes/inserter-mode";
 import { InserterPickupMode } from "../modes/pickup-mode";

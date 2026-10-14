@@ -30,7 +30,8 @@
     "test:all": "vitest run",
     "test:game": "vitest run --config vitest.game.config.ts",
     "test:game:watch": "FACTORIO_HARNESS_WATCH=1 vitest run --config vitest.game.config.ts",
-    "knip": "knip"
+    "knip": "knip",
+    "lint": "eslint ."
   },
   "keywords": [
     "factorio",
@@ -41,10 +42,14 @@
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/node": "^22.15.29",
     "@types/pako": "^2.0.4",
+    "eslint": "^9.39.2",
+    "globals": "^16.5.0",
     "knip": "5.88.1",
     "typescript": "^5.8.2",
+    "typescript-eslint": "^8.50.0",
     "vitest": "^4.0.15",
     "vitest-mock-extended": "^3.1.0"
   },

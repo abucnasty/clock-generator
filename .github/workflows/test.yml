@@ -55,6 +55,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Lint
+        run: npm run lint
+
       # the game-backed tests need a Factorio install and are not part of this: `npm run test:game`
       - name: Unit tests
         run: npm test -- --reporter=default

@@ -69,7 +69,7 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
 
     private executePlugins() {
         for (const plugin of this.plugins) {
-            plugin.executeForTick && plugin.executeForTick();
+            plugin.executeForTick?.();
         }
     }
 

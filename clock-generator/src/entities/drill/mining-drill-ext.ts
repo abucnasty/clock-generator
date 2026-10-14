@@ -1,4 +1,3 @@
-import assert from "../../common/assert";
 import { MiningDrill } from "./mining-drill";
 import { Machine } from "../machine";
 

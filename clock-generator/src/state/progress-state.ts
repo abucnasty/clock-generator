@@ -1,6 +1,3 @@
-import Fraction, { fraction } from "fractionability";
-
-
 export interface ProgressState {
     progress: number;
 }

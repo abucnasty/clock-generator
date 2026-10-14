@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";
-import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, largestDivisorAtMost, loopInserters, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
+import { byProductClockFor, byProductOnlyInserters, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, largestDivisorAtMost, loopInserters, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
 import { Entity, Machine } from "../../entities";
 import { SimulationContext } from "./simulation-context";
 

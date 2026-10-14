@@ -1,5 +1,5 @@
 import { Entity, EntityType, ReadableEntityRegistry } from "../../entities";
-import { StateTransitionHistory, StateTransitionEntityType, EntityStatus } from "./state-transition-history";
+import { StateTransitionHistory, StateTransitionEntityType } from "./state-transition-history";
 
 /**
  * A single state transition entry that is JSON-serializable
