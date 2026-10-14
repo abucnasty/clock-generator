@@ -16,12 +16,13 @@ import {
 } from '@mui/material';
 import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
-import { entityLabel } from '../utils/entityLabel';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { DRILL_TYPES } from './entityTypes';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
@@ -74,8 +75,11 @@ function DrillsFormComponent({
         setCopied(true);
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, remove } = useFocusAfterRemove(drills.length, onRemove);
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="h6">
@@ -139,7 +143,7 @@ function DrillsFormComponent({
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" disabled={!enabled}>
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" disabled={!enabled} data-row-add="">
                     Add Drill
                 </Button>
             </Box>
@@ -251,7 +255,7 @@ function DrillsFormComponent({
                                 entityType="drill"
                                 onClick={() => setEnableControlModalDrillIndex(index)}
                             />
-                            <IconButton onClick={() => onRemove(index)} color="error" sx={{ ml: 'auto' }}>
+                            <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete="">
                                 <Delete />
                             </IconButton>
                         </Box>

@@ -2,6 +2,7 @@ import { Autocomplete, Box, Paper, TextField, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import { NumberField } from './NumberField';
 import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
+import { ELEMENT_IDS } from '../utils/firstProblem';
 
 interface TargetOutputFormProps {
     recipe: string;
@@ -30,6 +31,7 @@ export function TargetOutputForm({
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Autocomplete
+                    id={ELEMENT_IDS.targetRecipe}
                     sx={{ minWidth: 300, flex: 1 }}
                     options={recipeNames}
                     value={recipe || null}
@@ -65,6 +67,7 @@ export function TargetOutputForm({
                     autoHighlight
                 />
                 <NumberField
+                    id={ELEMENT_IDS.targetRate}
                     label="Items per Second"
                     value={itemsPerSecond}
                     onValueChange={(val) => onItemsPerSecondChange(parseFloat(val?.toString() || '') || 0)}
@@ -76,6 +79,7 @@ export function TargetOutputForm({
                     helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : itemsPerSecondHelper(itemsPerSecond, copies)}
                 />
                 <NumberField
+                    id={ELEMENT_IDS.targetCopies}
                     label="Copies"
                     value={copies}
                     onValueChange={(val) => onCopiesChange(parseInt(val?.toString() || '') || 1)}

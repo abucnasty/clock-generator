@@ -8,9 +8,12 @@ import '@fontsource/titillium-web/700.css'
 import '@xyflow/react/dist/style.css'
 import './index.css'
 import App from './App.tsx'
+import { MessageProvider } from './components/Messages'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <MessageProvider>
+      <App />
+    </MessageProvider>
   </StrictMode>,
 )

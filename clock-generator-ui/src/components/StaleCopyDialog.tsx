@@ -1,3 +1,4 @@
+import { Warning } from '@mui/icons-material';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import { useId } from 'react';
 import { generatedForText, type GeneratedFor } from '../utils/resultsStaleness';
@@ -33,7 +34,7 @@ export function StaleCopyDialog({ open, generatedFor, onCancel, onConfirm }: Sta
             </DialogContent>
             <DialogActions>
                 <Button onClick={onCancel} autoFocus>Cancel</Button>
-                <Button onClick={onConfirm} variant="outlined" color="warning">Copy old clock</Button>
+                <Button onClick={onConfirm} variant="outlined" color="warning" startIcon={<Warning />}>Copy old clock</Button>
             </DialogActions>
         </Dialog>
     );
