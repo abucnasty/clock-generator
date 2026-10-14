@@ -25,6 +25,7 @@ import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, clockHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
+import { BELT_COPY } from '../utils/beltQuestion';
 import { InfoPopoverButton } from './InfoPopoverButton';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, rateHeader } from '../utils/numberText';
 import {
@@ -151,7 +152,15 @@ export function ClockAlternativesPanel({
                     )}
                 </Box>
             </TableCell>
-            <TableCell sx={{ whiteSpace: 'nowrap' }}>{alternative.beltLabel}</TableCell>
+            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                {alternative.beltLabel}
+                {/* made without belt slack in a run for moving belts: ranked after those made for them */}
+                {!alternative.ranking.matches_belt_choice && (
+                    <Typography variant="caption" component="div" color="text.secondary" sx={{ whiteSpace: 'normal', maxWidth: '16ch' }}>
+                        {BELT_COPY.onlyIfStanding}
+                    </Typography>
+                )}
+            </TableCell>
             <TableCell align="right">
                 {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
             </TableCell>
