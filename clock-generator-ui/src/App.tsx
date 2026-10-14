@@ -16,6 +16,7 @@ import {
     createTheme,
     Alert,
     Icon,
+    Paper,
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
@@ -42,12 +43,15 @@ import { MessageHost } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { CheckErrorAlert } from './components/CheckErrorAlert';
 import { CheckPlanSection } from './components/CheckPlanSection';
+import { BeltAssumption } from './components/BeltAssumption';
+import { BeltAssumptionLine } from './components/BeltAssumptionLine';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
 import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate } from './utils/checkThenGenerate';
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
+import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { a11yThemeComponents } from './utils/a11yTheme';
 import type { EntityKind } from './utils/configForm/formData';
@@ -227,6 +231,11 @@ function App() {
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(exportConfig()), [exportConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
+    // whether the clocks can get belt slack, and what the form says of the input belts
+    const beltQuestion = useMemo(
+        () => beltQuestionOf({ inserters: config.inserters, belts: config.belts, overrides: config.overrides }),
+        [config.inserters, config.belts, config.overrides]
+    );
 
     // what keeps the build from being clocked, and so where Generate goes instead
     const problems = useMemo(() => problemsOf({
@@ -337,6 +346,32 @@ function App() {
         // progress and the potential clocks arrive there
         setView('results');
     }), [runChecked, runSimulation, debugSteps, streamLogs]);
+
+    // Moving stores nothing, Standing `non_moving_belts: true`
+    const handleBeltAnswer = useCallback(
+        (answer: BeltAnswer) => updateOverrides('non_moving_belts', nonMovingBeltsFor(answer)),
+        [updateOverrides]
+    );
+    // Results' "Generate again": checked first as Generate is, then the answer is set on the form and the clocks are
+    // made for the build with it (a check is not changed by the answer, so one for the build as it was stays current)
+    const handleSwitchBelts = useCallback((answer: BeltAnswer) => {
+        if (busy) {
+            return;
+        }
+        runChecked((config) => {
+            if (beltQuestionOf(config).answer !== answer) {
+                handleBeltAnswer(answer);
+            }
+            runSimulation(withBeltAnswer(config, answer), debugSteps, streamLogs);
+            setView('results');
+        });
+    }, [busy, runChecked, handleBeltAnswer, runSimulation, debugSteps, streamLogs]);
+    // the clocks on screen, read for belts that stand still; nothing while they may still change
+    const beltAssumption = generatedFor?.beltQuestion ?? null;
+    const beltHint = useMemo(
+        () => busy || beltAssumption === null ? null : standingBeltsHint(alternatives, recommendedIndex, beltAssumption.answer),
+        [busy, beltAssumption, alternatives, recommendedIndex]
+    );
 
     // the actions that throw part of the build away offer Undo, just before they are applied
     const undoable = useMemo(() => {
@@ -578,6 +613,8 @@ function App() {
                                         onUpdate={updateBelt}
                                         onRemove={undoable.removeBelt}
                                         onReorder={reorderBelts}
+                                        beltQuestion={beltQuestion}
+                                        onBeltAnswer={handleBeltAnswer}
                                     />
 
                                     <ChestsForm
@@ -600,6 +637,15 @@ function App() {
                                         issues={coverageIssues}
                                         onApplyFix={applyInserterFix}
                                     />
+                                    {/* the Belts card is not drawn here, so the belt question gets a card of its own */}
+                                    {beltQuestion.ask && (
+                                        <Paper sx={{ p: 2, mt: 2 }} data-belt-question-diagram="">
+                                            <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
+                                                {BELT_COPY.diagramHeading}
+                                            </Typography>
+                                            <BeltAssumption answer={beltQuestion.answer} onChange={handleBeltAnswer} />
+                                        </Paper>
+                                    )}
                                 </Box>
                             )}
 
@@ -625,7 +671,6 @@ function App() {
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
-                                    nonMovingBelts={config.overrides?.non_moving_belts}
                                     searchForFewerWakeUps={config.overrides?.search_for_fewer_wake_ups}
                                     onUpdate={updateOverrides}
                                     planSlot={(
@@ -678,6 +723,14 @@ function App() {
                                 onStreamLogsChange={setStreamLogs}
                                 onClearLogs={clearLogs}
                                 staleFor={staleFor}
+                                beltAction={(
+                                    <BeltAssumptionLine
+                                        assumption={beltAssumption}
+                                        hint={beltHint}
+                                        busy={busy}
+                                        onSwitch={handleSwitchBelts}
+                                    />
+                                )}
                             />
                         </Box>
                         </>

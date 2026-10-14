@@ -74,6 +74,8 @@ interface ResultsWorkspaceProps {
     onClearLogs: () => void;
     /** What the clocks were made for, while the build has changed since. Null when not */
     staleFor: GeneratedFor | null;
+    /** What the clocks assume of the input belts, with the action for the other answer (2.4's BeltAssumptionLine) */
+    beltAction?: ReactNode;
 }
 
 const tabId = (tab: ResultsTab) => `results-tab-${tab}`;
@@ -137,6 +139,9 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     </Typography>
                 </Paper>
             )}
+
+            {/* also while a run has no clocks yet, so the action that started it keeps the keyboard focus */}
+            {(hasResults || props.isRunning) && props.beltAction}
 
             <ClockAlternativesPanel
                 alternatives={props.alternatives}
