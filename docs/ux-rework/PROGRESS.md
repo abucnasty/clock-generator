@@ -60,7 +60,7 @@ come from here.
 |---|---|---|---|---|---|---|
 | 2.1 | First visit and the way in | opus | spec | | | |
 | 2.2 | Sidecar mod changes | opus | spec | | | Goes first in Phase 2. Checkpoint: owner tries it in Factorio 2.1 |
-| 2.3 | Fold Validate into Generate | opus | spec | | | |
+| [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | 2.5 | Results lead with the answer | opus | spec | | | Goes first in Phase 2. Checkpoint: install steps reviewed |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
