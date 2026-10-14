@@ -9,11 +9,12 @@ import { cloneSimulationContextWithInterceptors, createEntityRegistryFromConfig,
 import { Duration, OpenRange } from "../../data-types";
 import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
-import { EntityState, MachineState } from "../../state";
+import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "fractionability";
 import { createSignalPerInserterBlueprint, mergedClockTicks, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../../control-logic";
+import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
 import { EntityTransferCountMap, outputInsertersOf, SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { InventoryTransfer } from "../sequence/inventory-transfer";
@@ -342,7 +343,32 @@ export interface RunOptions {
 }
 
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
-type BuildRun = ReturnType<typeof runBuild>;
+interface BuildRun extends PlannedCraftingCycle, TransferPlan {
+    simulation_context: SimulationContext;
+    /** The build as it runs: every inserter and drill on its enable control */
+    new_simulation_context: SimulationContext;
+    output_inserter_ids: Set<string>;
+    swing_counts: EntityTransferCountMap;
+    crafting_shares: Map<string, number>;
+    always_enabled_by_config: Set<string>;
+    /** The clocks of the inserters outside the plan (fuel and by-product), as the plan made them */
+    inserter_clocks: Map<string, InserterClock>;
+    /** The period of the clock */
+    duration: Duration;
+    /** What was recorded: `simulate_periods` periods */
+    recorded_duration: Duration;
+    /** The transfers of the recorded run, as the windows of the plan are read off them */
+    final_history: InventoryTransferHistory;
+    state_transition_history: StateTransitionHistory;
+    fuel_levels: FuelLevelSeries[] | undefined;
+    machine_stock: StockRecording | undefined;
+    /** What the run moved against what the plan expects */
+    stability_check: SimulationStabilityCheck;
+    total_expected_output: number;
+    used_terminal_swing_count: number;
+    /** What the build made after each trial of the loss, when one was asked for */
+    backpressure_loss: LossOutcome | undefined;
+}
 
 /**
  * Runs a build: the machines are filled until their output is blocked (the prepare step), the crafting cycle is
@@ -351,27 +377,89 @@ type BuildRun = ReturnType<typeof runBuild>;
  * backpressure losses are tried from where it ended. Every inserter runs as its enable control says: the plan's
  * controls in a planning run, the clock windows alone in a trial (see `runClockOnBuild`).
  */
-export function runBuild(config: Config, options: RunOptions) {
+export function runBuild(config: Config, options: RunOptions): BuildRun {
     const debug = options.debug ?? DebugSettingsProvider.mutable();
     const debug_steps = options.debug_steps ?? {};
     const logger = options.logger ?? defaultLogger;
-    
+
+    const build = recordedBuildOf(config, options, debug, logger);
+    const { simulation_context, state_transition_history } = build;
+    prepareBuild(build, debug, debug_steps, logger);
+
+    const planned_cycle = planCraftingCycle(config, simulation_context, logger);
+    const { crafting_cycle_plan, all_output_inserters } = planned_cycle;
+    setUpTheStart(simulation_context, planned_cycle.output_machine_state_machines, options, logger);
+
+    const swing_counts = crafting_cycle_plan.entity_transfer_map;
+    const transfer_plan = planTransfers(config, crafting_cycle_plan, simulation_context, logger);
+    const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger);
+    const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger);
+
+    const repeat_periods = warmUp(config, controlled, duration, warmup_period, debug, debug_steps, logger);
+    const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger);
+    const final_history = finalHistoryOf(build, crafting_cycle_plan, all_output_inserters, duration, logger);
+    const output = checkOutput(build, controlled, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
+    const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger);
+
+    return {
+        simulation_context,
+        new_simulation_context: controlled.new_simulation_context,
+        target_production_rate: planned_cycle.target_production_rate,
+        output_machine_state_machines: planned_cycle.output_machine_state_machines,
+        output_inserters: planned_cycle.output_inserters,
+        all_output_inserters,
+        output_inserter_ids: output.output_inserter_ids,
+        crafting_cycle_plan,
+        swing_counts,
+        recipe_lcm: transfer_plan.recipe_lcm,
+        computed_lcm: transfer_plan.computed_lcm,
+        serializable_transfer_plan: transfer_plan.serializable_transfer_plan,
+        crafting_shares: controlled.crafting_shares,
+        always_enabled_by_config: controlled.always_enabled_by_config,
+        inserter_clocks: controlled.inserter_clocks,
+        duration,
+        recorded_duration: simulated.recorded_duration,
+        final_history,
+        state_transition_history,
+        fuel_levels: simulated.fuel_levels,
+        machine_stock: simulated.machine_stock,
+        stability_check: output.stability_check,
+        total_expected_output: output.total_expected_output,
+        used_terminal_swing_count: output.used_terminal_swing_count,
+        backpressure_loss,
+    };
+}
+
+/**
+ * A build with what records its run. The recorded ticks count from `relative_tick.start`, which a step that starts
+ * the count again moves on.
+ */
+interface RecordedBuild {
+    simulation_context: SimulationContext;
+    relative_tick: { start: number };
+    relative_tick_provider: TickProvider;
+    inventory_transfer_history: InventoryTransferHistory;
+    state_transition_history: StateTransitionHistory;
+}
+
+/** The simulation of a config, with the debug, transfer and state plugins on every entity; nothing is recorded yet */
+function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
     // Validate inserter coverage before building the entity graph.
     // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
     assertInserterCoverage(config);
 
     // Initialize simulation context
     const simulation_context = SimulationContext.fromConfig(config);
-    
+
     simulation_context.machines
         .map(it => it.machine_state.machine)
         .forEach(machine => Machine.printMachineFacts(machine, logger));
 
-    let relative_tick = 0;
+    const relative_tick = { start: 0 };
 
     const relative_tick_provider = TickProvider.offset({
         base: simulation_context.tick_provider,
-        offset: () => -1 * relative_tick
+        offset: () => -1 * relative_tick.start
     });
 
     // Configure plugins
@@ -383,25 +471,42 @@ export function runBuild(config: Config, options: RunOptions) {
 
     logger.log(`Created simulation context with ${simulation_context.machines.length} machines and ${simulation_context.inserters.length} inserters.`);
 
-    // Step 1: Prepare - wait until all machines are output blocked
-    logger.log("Pre loading all machines until output blocked...");
-    logger.log("Executing Prepare Step");
-    if (debug_steps[RunnerStepType.PREPARE]) {
+    return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history };
+}
+
+/** Runs a step with debugging on when `debug_steps` asks for it for that step, and turns it off after */
+function withDebugFor<T>(debug: MutableDebugSettingsProvider, debug_steps: DebugSteps, step: RunnerStepType, run: () => T): T {
+    if (debug_steps[step]) {
         debug.enable();
     } else {
         debug.disable();
     }
-    
-    const prepare_step = new PrepareStep(simulation_context);
-    prepare_step.execute();
-    
-    inventory_transfer_history.clear();
-    relative_tick = simulation_context.tick_provider.getCurrentTick();
+    const result = run();
     debug.disable();
+    return result;
+}
 
-    const { target_production_rate, output_machine_state_machines, output_inserters, all_output_inserters, crafting_cycle_plan } =
-        planCraftingCycle(config, simulation_context, logger);
+/** Step 1: runs the build until every machine is output blocked; the recorded ticks count from there */
+function prepareBuild(build: RecordedBuild, debug: MutableDebugSettingsProvider, debug_steps: DebugSteps, logger: Logger): void {
+    const { simulation_context, inventory_transfer_history } = build;
+    logger.log("Pre loading all machines until output blocked...");
+    logger.log("Executing Prepare Step");
+    withDebugFor(debug, debug_steps, RunnerStepType.PREPARE, () => {
+        const prepare_step = new PrepareStep(simulation_context);
+        prepare_step.execute();
 
+        inventory_transfer_history.clear();
+        build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
+    });
+}
+
+/** Empties the output machines (unless kept) and puts in what the machines hold at the start, when one is given */
+function setUpTheStart(
+    simulation_context: SimulationContext,
+    output_machine_state_machines: MachineStateMachine[],
+    options: RunOptions,
+    logger: Logger,
+): void {
     // Clear final output machine buffers to prevent OUTPUT_FULL during simulation start
     // This is especially important for fractional swing scenarios where the machine
     // produces slightly more than what gets cleared per sub-cycle
@@ -441,11 +546,13 @@ export function runBuild(config: Config, options: RunOptions) {
     simulation_context.machines.forEach(it => {
         MachineState.print(it.machine_state, logger);
     });
+}
 
-    const swing_counts = crafting_cycle_plan.entity_transfer_map;
-    EntityTransferCountMap.print(swing_counts, logger);
-    const { computed_lcm, recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
-    logger.log(`Simulation context ingredient LCM: ${recipe_lcm}`);
+/** The transfer plan of the crafting cycle (see `transferPlanOf`), with its swing counts and distributions logged */
+function planTransfers(config: Config, crafting_cycle_plan: CraftingCyclePlan, simulation_context: SimulationContext, logger: Logger): TransferPlan {
+    EntityTransferCountMap.print(crafting_cycle_plan.entity_transfer_map, logger);
+    const transfer_plan = transferPlanOf(config, crafting_cycle_plan, simulation_context);
+    logger.log(`Simulation context ingredient LCM: ${transfer_plan.recipe_lcm}`);
 
     logger.log("\n--- Swing Distributions ---");
     if (crafting_cycle_plan.swing_distribution) {
@@ -457,6 +564,31 @@ export function runBuild(config: Config, options: RunOptions) {
     } else {
         logger.log("No swing distribution");
     }
+    return transfer_plan;
+}
+
+/** The build with every inserter and drill on its enable control, and the clocks of the inserters outside the plan */
+interface ControlledBuild {
+    new_simulation_context: SimulationContext;
+    /** Resets every enable control as a step starts */
+    resettable_registry: ResettableRegistry;
+    crafting_shares: Map<string, number>;
+    always_enabled_by_config: Set<string>;
+    inserter_clocks: Map<string, InserterClock>;
+}
+
+/**
+ * Puts every inserter and drill on its enable control: the config's override where it has one, the one the plan
+ * makes for it otherwise.
+ */
+function withEnableControls(
+    config: Config,
+    build: RecordedBuild,
+    crafting_cycle_plan: CraftingCyclePlan,
+    recipe_lcm: number,
+    logger: Logger,
+): ControlledBuild {
+    const { simulation_context, relative_tick_provider } = build;
 
     // Create resettable registry for centralized reset management
     const resettable_registry = new ResettableRegistry();
@@ -478,7 +610,7 @@ export function runBuild(config: Config, options: RunOptions) {
     // The fuel clocks of the planning run are made from the crafting share of the plan. The exported ones are made
     // from what a run of the exported clock burns, once its windows are known: see fuelClocksAndViewFor.
     const always_enabled_by_config = alwaysEnabledByConfig(config);
-    let inserter_clocks = unplannedInserterClocks(
+    const inserter_clocks = unplannedInserterClocks(
         simulation_context.entity_registry,
         CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm),
         crafting_shares,
@@ -517,6 +649,17 @@ export function runBuild(config: Config, options: RunOptions) {
         }
     });
 
+    return { new_simulation_context, resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
+}
+
+/** How long a build runs: the period of the clock, and the warmup before it */
+interface RunPeriods {
+    duration: Duration;
+    warmup_period: Duration;
+}
+
+/** The period of the plan and the warmup, shortened where a long period would take it past MAX_SIMULATION_TICKS */
+function runPeriodsOf(crafting_cycle_plan: CraftingCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger): RunPeriods {
     const duration: Duration = Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm));
     assert(duration.ticks < MAX_SIMULATION_TICKS, `Clock period of ${duration.ticks} ticks exceeds maximum allowed ${MAX_SIMULATION_TICKS} ticks`);
     const requested_warmup_periods = options.warmup_periods ?? 10;
@@ -530,39 +673,74 @@ export function runBuild(config: Config, options: RunOptions) {
     logger.log(`Base Cycle Ticks: ${crafting_cycle_plan.total_duration.ticks}`);
     logger.log(`Warm up period: ${warmup_period.ticks} ticks`);
     logger.log(`Simulation period: ${duration.ticks} ticks`);
+    return { duration, warmup_period };
+}
 
-    // Step 2: Warm up
+/**
+ * Step 2: warms the build up. Returns the periods its state repeats over, when the warmup reached a repeating state;
+ * a build that is not clocked throughout is not checked for one.
+ */
+function warmUp(
+    config: Config,
+    controlled: ControlledBuild,
+    duration: Duration,
+    warmup_period: Duration,
+    debug: MutableDebugSettingsProvider,
+    debug_steps: DebugSteps,
+    logger: Logger,
+): number | undefined {
+    const { new_simulation_context, resettable_registry } = controlled;
     logger.log("Warming up simulation...");
     logger.log("Executing Warmup Step");
     resettable_registry.resetAll();
-    if (debug_steps[RunnerStepType.WARM_UP]) {
-        debug.enable();
-    } else {
-        debug.disable();
-    }
-    
-    const warmup_step = new WarmupStep(new_simulation_context, warmup_period,
-        isPurelyClocked(config, duration.ticks)
-            ? { period_ticks: duration.ticks, key: () => simulationStateKey(new_simulation_context) }
-            : undefined);
-    warmup_step.execute();
-    if (warmup_step.ticks_run < warmup_period.ticks) {
-        logger.log(`Warm up reached a repeating state after ${warmup_step.ticks_run} ticks`);
-    }
-    
-    debug.disable();
+    return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
+        const warmup_step = new WarmupStep(new_simulation_context, warmup_period,
+            isPurelyClocked(config, duration.ticks)
+                ? { period_ticks: duration.ticks, key: () => simulationStateKey(new_simulation_context) }
+                : undefined);
+        warmup_step.execute();
+        if (warmup_step.ticks_run < warmup_period.ticks) {
+            logger.log(`Warm up reached a repeating state after ${warmup_step.ticks_run} ticks`);
+        }
+        return warmup_step.repeat_periods;
+    });
+}
 
-    // Step 3: Simulate
+/** What the recorded run yields beyond the histories of the build */
+interface SimulatedRun {
+    /** What was recorded: `simulate_periods` periods */
+    recorded_duration: Duration;
+    /** The states of the inserters that take the target item out of the build, as it runs */
+    output_inserter_states: InserterState[];
+    /** What those inserters had dropped before the recorded run */
+    dropped_before_run: number;
+    fuel_levels: FuelLevelSeries[] | undefined;
+    machine_stock: StockRecording | undefined;
+}
+
+/** Step 3: runs the build for the periods asked for, with its transfers and states recorded */
+function simulate(
+    build: RecordedBuild,
+    controlled: ControlledBuild,
+    all_output_inserters: InserterState[],
+    duration: Duration,
+    options: RunOptions,
+    debug: MutableDebugSettingsProvider,
+    debug_steps: DebugSteps,
+    logger: Logger,
+): SimulatedRun {
+    const { simulation_context, inventory_transfer_history, state_transition_history } = build;
+    const { new_simulation_context, resettable_registry } = controlled;
     logger.log(`Starting simulation for ${duration.ticks} ticks`);
     logger.log("Executing Simulate Step");
     inventory_transfer_history.clear();
     state_transition_history.clear();
     inventory_transfer_history.recording = true;
     state_transition_history.recording = true;
-    inventory_transfer_history.ticks_before_run = simulation_context.tick_provider.getCurrentTick() - relative_tick;
-    relative_tick = simulation_context.tick_provider.getCurrentTick();
+    inventory_transfer_history.ticks_before_run = simulation_context.tick_provider.getCurrentTick() - build.relative_tick.start;
+    build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
     resettable_registry.resetAll();
-    
+
     const simulate_periods = options.simulate_periods ?? 1;
     const recorded_duration = Duration.ofTicks(duration.ticks * simulate_periods);
     const fuel_level_recorder = options.fuel_levels
@@ -579,16 +757,28 @@ export function runBuild(config: Config, options: RunOptions) {
         : undefined;
     const simulate_step = new SimulateStep(new_simulation_context, recorded_duration,
         (fuel_level_recorder || stock_recorder) && (() => { fuel_level_recorder?.record(); stock_recorder?.record(); }));
-    if (debug_steps[RunnerStepType.SIMULATE]) {
-        debug.enable();
-    } else {
-        debug.disable();
-    }
-    simulate_step.execute();
-    debug.disable();
-    
+    withDebugFor(debug, debug_steps, RunnerStepType.SIMULATE, () => simulate_step.execute());
+
     logger.log(`Simulation complete`);
 
+    return {
+        recorded_duration,
+        output_inserter_states,
+        dropped_before_run,
+        fuel_levels: fuel_level_recorder?.series(),
+        machine_stock: stock_recorder?.recording(),
+    };
+}
+
+/** The transfers of the recorded run, as the windows of the plan are read off them */
+function finalHistoryOf(
+    build: RecordedBuild,
+    crafting_cycle_plan: CraftingCyclePlan,
+    all_output_inserters: InserterState[],
+    duration: Duration,
+    logger: Logger,
+): InventoryTransferHistory {
+    const { simulation_context, inventory_transfer_history } = build;
     // Process transfer history
     const merged_ranges = InventoryTransferHistory.mergeOverlappingRanges(inventory_transfer_history);
     const offset_history = InventoryTransferHistory.correctNegativeOffsets(merged_ranges);
@@ -611,6 +801,36 @@ export function runBuild(config: Config, options: RunOptions) {
 
     logger.log("\n--- Transfer History ---");
     InventoryTransferHistory.print(final_history, logger);
+    return final_history;
+}
+
+/** What the recorded run made, against what the plan expects */
+interface OutputCheck {
+    output_inserter_ids: Set<string>;
+    stability_check: SimulationStabilityCheck;
+    total_expected_output: number;
+    used_terminal_swing_count: number;
+}
+
+/**
+ * Counts what the recorded run made against what the plan expects, the lanes it exports against what their consumers
+ * take, and, when the warmup found the state repeating over several periods, the output over all of them.
+ */
+function checkOutput(
+    build: RecordedBuild,
+    controlled: ControlledBuild,
+    planned_cycle: PlannedCraftingCycle,
+    recipe_lcm: number,
+    duration: Duration,
+    simulated: SimulatedRun,
+    final_history: InventoryTransferHistory,
+    repeat_periods: number | undefined,
+    logger: Logger,
+): OutputCheck {
+    const { simulation_context, inventory_transfer_history, state_transition_history } = build;
+    const { output_inserters, all_output_inserters, crafting_cycle_plan } = planned_cycle;
+    const { output_inserter_states, dropped_before_run } = simulated;
+    const swing_counts = crafting_cycle_plan.entity_transfer_map;
 
     // Compute output stability: compare actual items transferred by output inserters
     // against the expected amount derived from the crafting cycle plan.
@@ -639,11 +859,10 @@ export function runBuild(config: Config, options: RunOptions) {
     }
 
     // the simulated period can hit the expected output while the periods it alternates with fall short
-    const repeat_periods = warmup_step.repeat_periods;
     let repeat_output_items: number | undefined;
     if (repeat_periods !== undefined && repeat_periods > 1 && duration.ticks * repeat_periods < MAX_SIMULATION_TICKS) {
         state_transition_history.recording = false;
-        new SimulateStep(new_simulation_context, Duration.ofTicks(duration.ticks * (repeat_periods - 1))).execute();
+        new SimulateStep(controlled.new_simulation_context, Duration.ofTicks(duration.ticks * (repeat_periods - 1))).execute();
         repeat_output_items = 0;
         for (const [entity_id, transfers] of inventory_transfer_history.entries()) {
             if (output_inserter_ids.has(entity_id.id)) {
@@ -666,56 +885,37 @@ export function runBuild(config: Config, options: RunOptions) {
     };
     logger.log(`Stability check: actual=${total_actual_output} expected=${total_expected_output} stable=${stability_check.holds} (tolerance=${LCM_STABILITY_TOLERANCE})`);
 
-    let backpressure_loss: LossOutcome | undefined;
-    if (options.backpressure_loss) {
-        // the run above is over: the trials go on from where it ended, and nothing of them goes into its histories
-        inventory_transfer_history.recording = false;
-        state_transition_history.recording = false;
-        const loss_period = options.backpressure_loss.period_ticks;
-        const repeat = subtickClockForPeriod(loss_period);
-        const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
-            : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
-        assert(bin !== null, `A clock of ${loss_period} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
-        const own_clock_ticks = Array.from(inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
-        backpressure_loss = runLossTrials(new_simulation_context, output_inserter_states, options.backpressure_loss, bin,
-            Math.max(bin.ticks, ...own_clock_ticks), isClockedThroughout(config, loss_period));
-        logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
+    return { output_inserter_ids, stability_check, total_expected_output, used_terminal_swing_count };
+}
+
+/**
+ * With the backpressure_loss option: the trials of the loss, from where the recorded run ended (see
+ * backpressure-loss.ts). Nothing of them goes into the run's histories.
+ */
+function backpressureLossOf(
+    config: Config,
+    build: RecordedBuild,
+    controlled: ControlledBuild,
+    simulated: SimulatedRun,
+    options: RunOptions,
+    logger: Logger,
+): LossOutcome | undefined {
+    if (!options.backpressure_loss) {
+        return undefined;
     }
-
-
-    return {
-        simulation_context,
-        new_simulation_context,
-        target_production_rate,
-        output_machine_state_machines,
-        output_inserters,
-        all_output_inserters,
-        output_inserter_ids,
-        crafting_cycle_plan,
-        swing_counts,
-        recipe_lcm,
-        computed_lcm,
-        serializable_transfer_plan,
-        crafting_shares,
-        always_enabled_by_config,
-        /** The clocks of the inserters outside the plan (fuel and by-product), as the plan made them */
-        inserter_clocks,
-        /** The period of the clock */
-        duration,
-        /** What was recorded: `simulate_periods` periods */
-        recorded_duration,
-        /** The transfers of the recorded run, as the windows of the plan are read off them */
-        final_history,
-        state_transition_history,
-        fuel_levels: fuel_level_recorder?.series(),
-        machine_stock: stock_recorder?.recording(),
-        /** What the run moved against what the plan expects */
-        stability_check,
-        total_expected_output,
-        used_terminal_swing_count,
-        /** What the build made after each trial of the loss, when one was asked for */
-        backpressure_loss,
-    };
+    // the run above is over: the trials go on from where it ended, and nothing of them goes into its histories
+    build.inventory_transfer_history.recording = false;
+    build.state_transition_history.recording = false;
+    const loss_period = options.backpressure_loss.period_ticks;
+    const repeat = subtickClockForPeriod(loss_period);
+    const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
+        : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
+    assert(bin !== null, `A clock of ${loss_period} ticks does not repeat in whole ticks, so its output cannot be counted by the period`);
+    const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
+    const backpressure_loss = runLossTrials(controlled.new_simulation_context, simulated.output_inserter_states, options.backpressure_loss, bin,
+        Math.max(bin.ticks, ...own_clock_ticks), isClockedThroughout(config, loss_period));
+    logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
+    return backpressure_loss;
 }
 
 /**
@@ -1064,12 +1264,23 @@ export function checkedClock(
     return exportClock(plan, clock, windows, options, { clock_only_run, output_feeders, item_names, search: extras.search });
 }
 
+/** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */
+interface PlannedCraftingCycle {
+    target_production_rate: TargetProductionRate;
+    output_machine_state_machines: MachineStateMachine[];
+    /** One output inserter per output machine, which the swings of a cycle are counted by */
+    output_inserters: InserterState[];
+    /** Every inserter that takes the target item out of the build */
+    all_output_inserters: InserterState[];
+    crafting_cycle_plan: CraftingCyclePlan;
+}
+
 /**
  * The crafting cycle the clock is planned around, for a build whose machines have been run until output blocked
  * (the prepare step): what was crafted by then sets how many hands the output inserters take per cycle.
  * Throws when the build cannot reach the target rate or an output machine has no inserter taking from it.
  */
-export function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger) {
+export function planCraftingCycle(config: Config, simulation_context: SimulationContext, logger: Logger): PlannedCraftingCycle {
     const target_production_rate = TargetProductionRate.fromConfig(config.target_output);
 
     // Find all output machines (machines that produce the target output item)
@@ -1120,8 +1331,17 @@ export function planCraftingCycle(config: Config, simulation_context: Simulation
     return { target_production_rate, output_machine_state_machines, output_inserters, all_output_inserters, crafting_cycle_plan };
 }
 
+/** The cycles the clock needs to make every hand whole, and the plan of the hands */
+interface TransferPlan {
+    /** The cycles the swing counts need to be whole */
+    computed_lcm: number;
+    /** The cycles of the clock: the config's override of computed_lcm, where it has one */
+    recipe_lcm: number;
+    serializable_transfer_plan: SerializableTransferPlan;
+}
+
 /** The hands every inserter and drill moves per crafting cycle, and the cycles the clock needs to make them whole */
-export function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCyclePlan, simulation_context: SimulationContext) {
+export function transferPlanOf(config: Config, crafting_cycle_plan: CraftingCyclePlan, simulation_context: SimulationContext): TransferPlan {
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     assertBeltFillersPlanned(simulation_context.entity_registry, swing_counts);
 
