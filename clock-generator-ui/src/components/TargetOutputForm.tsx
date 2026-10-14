@@ -1,6 +1,7 @@
 import { Autocomplete, Box, Paper, TextField, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import { NumberField } from './NumberField';
+import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
 
 interface TargetOutputFormProps {
@@ -25,7 +26,7 @@ export function TargetOutputForm({
 }: TargetOutputFormProps) {
     return (
         <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
                 Target Output
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -41,11 +42,13 @@ export function TargetOutputForm({
                             placeholder="Search recipes..."
                             required
                             slotProps={{
+                                // the label says "Recipe" in every row: say whose it is
+                                htmlInput: { ...params.inputProps, 'aria-label': TARGET_RECIPE_NAME },
                                 input: {
                                     ...params.InputProps,
                                     startAdornment: recipe ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                            <FactorioIcon name={recipe} size={20} />
+                                            <FactorioIcon name={recipe} size={20} alt="" />
                                         </Box>
                                     ) : null,
                                 },
@@ -56,7 +59,7 @@ export function TargetOutputForm({
                         const { key, ...rest } = props;
                         return (
                             <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={option} size={20} />
+                                <FactorioIcon name={option} size={20} alt="" />
                                 {option}
                             </Box>
                         );

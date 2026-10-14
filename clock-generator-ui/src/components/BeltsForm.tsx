@@ -19,6 +19,7 @@ import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { entityLabel } from '../utils/entityLabel';
+import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
 import { BELT_TYPES } from './entityTypes';
 
 interface BeltsFormProps {
@@ -75,7 +76,7 @@ function BeltsFormComponent({
         <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         Belts ({belts.length})
                     </Typography>
                     <IconButton size="small" onClick={(e) => setInfoAnchor(e.currentTarget)} color="info" aria-label="About belt strategies">
@@ -105,12 +106,14 @@ function BeltsFormComponent({
                 </Button>
             </Box>
 
-            <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
+            <SortableList kind="belt" itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
                 <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-belt-${belt.id}`}
+                    role="group"
+                    aria-label={entityLabel('belt', belt.id)}
                     sx={{
                         mb: 2,
                         p: 2,
@@ -123,6 +126,7 @@ function BeltsFormComponent({
                         <FormControl size="small" sx={{ minWidth: 180 }}>
                             <InputLabel>Belt Type</InputLabel>
                             <Select
+                                inputProps={{ 'aria-label': SELECT_NAMES.beltType }}
                                 value={belt.type}
                                 label="Belt Type"
                                 onChange={(e) =>
@@ -132,7 +136,7 @@ function BeltsFormComponent({
                                 }
                                 renderValue={(selected) => (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <FactorioIcon name={selected} size={20} />
+                                        <FactorioIcon name={selected} size={20} alt="" />
                                         {BELT_TYPES.find((bt) => bt.value === selected)?.label}
                                     </Box>
                                 )}
@@ -140,7 +144,7 @@ function BeltsFormComponent({
                                 {BELT_TYPES.map((bt) => (
                                     <MenuItem key={bt.value} value={bt.value}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={bt.value} size={20} />
+                                            <FactorioIcon name={bt.value} size={20} alt="" />
                                             {bt.label}
                                         </Box>
                                     </MenuItem>
@@ -150,6 +154,7 @@ function BeltsFormComponent({
                         <FormControl size="small" sx={{ minWidth: 130 }}>
                             <InputLabel>Strategy</InputLabel>
                             <Select
+                                inputProps={{ 'aria-label': SELECT_NAMES.beltStrategy }}
                                 value={belt.strategy ?? 'normal'}
                                 label="Strategy"
                                 onChange={(e) =>
@@ -158,7 +163,7 @@ function BeltsFormComponent({
                             >
                                 {BELT_STRATEGIES.map((strategy) => (
                                     <MenuItem key={strategy.value} value={strategy.value}>
-                                        <Tooltip title={strategy.description} placement="right">
+                                        <Tooltip title={strategy.description} placement="right" describeChild>
                                             <span>{strategy.label}</span>
                                         </Tooltip>
                                     </MenuItem>
@@ -213,7 +218,7 @@ function BeltsFormComponent({
                                     size="small"
                                 />
                                 {belt.strategy === 'export' && (
-                                <Tooltip title={LANE_CONSUMPTION_TOOLTIP}>
+                                <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
                                     <Box>
                                         <NumberField
                                             label="Consumed /s"
@@ -234,6 +239,7 @@ function BeltsFormComponent({
                                             size="small"
                                             onClick={() => removeLane(beltIndex)}
                                             color="error"
+                                            aria-label={deleteLaneName(entityLabel('belt', belt.id), laneIndex + 1)}
                                         >
                                             <Delete fontSize="small" />
                                         </IconButton>

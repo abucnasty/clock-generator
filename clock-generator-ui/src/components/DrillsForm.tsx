@@ -22,6 +22,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
 import { entityLabel } from '../utils/entityLabel';
+import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { DRILL_TYPES } from './entityTypes';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
@@ -78,7 +79,7 @@ function DrillsFormComponent({
         <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         Mining Drills ({drills.length})
                     </Typography>
                     <FormControlLabel
@@ -98,7 +99,7 @@ function DrillsFormComponent({
                         label={enabled ? 'Enabled' : 'Disabled'}
                         sx={{ ml: 1 }}
                     />
-                    <IconButton size="small" onClick={handleInfoClick} color="info">
+                    <IconButton size="small" onClick={handleInfoClick} color="info" aria-label={BUTTON_NAMES.aboutDrills}>
                         <Info fontSize="small" />
                     </IconButton>
                     <Popover
@@ -160,11 +161,13 @@ function DrillsFormComponent({
                         />
                     </Box>
 
-                    <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
+                    <SortableList kind="drill" itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
                     {drills.map((drill, index) => (
                         <SortableItem key={drill._uuid} stableKey={drill._uuid} label={entityLabel('drill', drill.id)}>
                             {(dragHandle) => (
                         <Box
+                            role="group"
+                            aria-label={entityLabel('drill', drill.id)}
                             sx={{
                                 display: 'flex',
                                 gap: 2,
@@ -180,6 +183,7 @@ function DrillsFormComponent({
                             <FormControl size="small" sx={{ minWidth: 180 }}>
                                 <InputLabel>Drill Type</InputLabel>
                                 <Select
+                                    inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
                                     value={drill.type}
                                     label="Drill Type"
                                     onChange={(e) =>
@@ -189,7 +193,7 @@ function DrillsFormComponent({
                                     }
                                     renderValue={(selected) => (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={selected} size={20} />
+                                            <FactorioIcon name={selected} size={20} alt="" />
                                             {DRILL_TYPES.find((dt) => dt.value === selected)?.label}
                                         </Box>
                                     )}
@@ -197,7 +201,7 @@ function DrillsFormComponent({
                                     {DRILL_TYPES.map((dt) => (
                                         <MenuItem key={dt.value} value={dt.value}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <FactorioIcon name={dt.value} size={20} />
+                                                <FactorioIcon name={dt.value} size={20} alt="" />
                                                 {dt.label}
                                             </Box>
                                         </MenuItem>
@@ -230,6 +234,7 @@ function DrillsFormComponent({
                             <FormControl size="small" sx={{ minWidth: 120 }} error={!machineIds.includes(drill.target.id)}>
                                 <InputLabel>Target Machine</InputLabel>
                                 <Select
+                                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
                                     value={drill.target.id}
                                     label="Target Machine"
                                     onChange={(e) =>

@@ -23,6 +23,7 @@ import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlot
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
 import { entityLabel } from '../utils/entityLabel';
+import { SELECT_NAMES } from '../utils/a11yLabels';
 
 interface ChestsFormProps {
     chests: ChestFormData[];
@@ -99,7 +100,7 @@ function ChestsFormComponent({
     return (
         <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
+                <Typography variant="h6" component="h2">
                     Chests ({chests.length})
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -118,12 +119,14 @@ function ChestsFormComponent({
                 </Typography>
             )}
 
-            <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
+            <SortableList kind="chest" itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
             {chests.map((chest, index) => (
                 <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-chest-${chest.id}`}
+                    role="group"
+                    aria-label={entityLabel('chest', chest.id)}
                     sx={{
                         mb: 2,
                         p: 2,
@@ -138,6 +141,7 @@ function ChestsFormComponent({
                         <FormControl size="small" sx={{ minWidth: 150 }}>
                             <InputLabel>Type</InputLabel>
                             <Select
+                                inputProps={{ 'aria-label': SELECT_NAMES.chestType }}
                                 value={chest.type}
                                 label="Type"
                                 onChange={(e) => onSwitchType(index, e.target.value)}

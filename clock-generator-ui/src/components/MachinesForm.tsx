@@ -22,6 +22,7 @@ import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { entityLabel } from '../utils/entityLabel';
+import { BUTTON_NAMES, SELECT_NAMES, recipeName } from '../utils/a11yLabels';
 
 interface MachinesFormProps {
     machines: MachineFormData[];
@@ -63,10 +64,10 @@ function MachinesFormComponent({
         <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         Machines ({machines.length})
                     </Typography>
-                    <IconButton size="small" onClick={handleInfoClick} color="info">
+                    <IconButton size="small" onClick={handleInfoClick} color="info" aria-label={BUTTON_NAMES.aboutMachines}>
                         <Info fontSize="small" />
                     </IconButton>
                     <Popover
@@ -112,7 +113,7 @@ function MachinesFormComponent({
                 </Button>
             </Box>
 
-            <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
+            <SortableList kind="machine" itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
                         {(dragHandle) => (
@@ -155,6 +156,8 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
     return (
         <Box
             id={`entity-machine-${machine.id}`}
+            role="group"
+            aria-label={entityLabel('machine', machine.id)}
             sx={{
                 mb: 2,
                 p: 2,
@@ -183,11 +186,13 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                             placeholder="Search recipes..."
                             size="small"
                             slotProps={{
+                                // the label says "Recipe" in every row: say whose it is
+                                htmlInput: { ...params.inputProps, 'aria-label': recipeName(entityLabel('machine', machine.id)) },
                                 input: {
                                     ...params.InputProps,
                                     startAdornment: machine.recipe ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                            <FactorioIcon name={machine.recipe} size={20} />
+                                            <FactorioIcon name={machine.recipe} size={20} alt="" />
                                         </Box>
                                     ) : null,
                                 },
@@ -198,7 +203,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                         const { key, ...rest } = props;
                         return (
                             <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={option} size={20} />
+                                <FactorioIcon name={option} size={20} alt="" />
                                 {option}
                             </Box>
                         );
@@ -239,35 +244,34 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     />
                 )}
                 <FormControl size="small" sx={{ minWidth: 220 }}>
-                    <InputLabel id={`machine-type-label-${index}`}>Type</InputLabel>
+                    <InputLabel>Type</InputLabel>
                     <Select
-                        labelId={`machine-type-label-${index}`}
-                        SelectDisplayProps={{ id: `machine-type-select-${index}` }}
+                        inputProps={{ 'aria-label': SELECT_NAMES.machineType }}
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
                         renderValue={(selected) => (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} />
+                                <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} alt="" />
                                 {MACHINE_TYPE_LABELS[selected]}
                             </Box>
                         )}
                     >
                         <MenuItem value="machine">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="assembling-machine-3" size={20} />
+                                <FactorioIcon name="assembling-machine-3" size={20} alt="" />
                                 {MACHINE_TYPE_LABELS.machine}
                             </Box>
                         </MenuItem>
                         <MenuItem value="furnace">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="electric-furnace" size={20} />
+                                <FactorioIcon name="electric-furnace" size={20} alt="" />
                                 {MACHINE_TYPE_LABELS.furnace}
                             </Box>
                         </MenuItem>
                         <MenuItem value="biochamber">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="biochamber" size={20} />
+                                <FactorioIcon name="biochamber" size={20} alt="" />
                                 {MACHINE_TYPE_LABELS.biochamber}
                             </Box>
                         </MenuItem>

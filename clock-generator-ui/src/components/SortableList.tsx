@@ -18,8 +18,12 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { DragIndicator } from '@mui/icons-material';
 import { Box, Chip } from '@mui/material';
+import { reorderAnnouncements, reorderName } from '../utils/a11yLabels';
+import type { LabelKind } from '../utils/entityLabel';
 
 interface SortableListProps {
+    /** What the rows are, so a drag is read out as "Picked up Inserter 2" and not as the row's key. */
+    kind: LabelKind;
     /** Stable UUID keys for each item, in current order. */
     itemKeys: string[];
     /** Called with the old and new array indices after a drag. */
@@ -28,7 +32,7 @@ interface SortableListProps {
 }
 
 /** Wraps a list of SortableItem children with @dnd-kit context. */
-export function SortableList({ itemKeys, onReorder, children }: SortableListProps) {
+export function SortableList({ kind, itemKeys, onReorder, children }: SortableListProps) {
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -62,7 +66,12 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
     }
 
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            accessibility={{ announcements: reorderAnnouncements(kind, localItemKeys) }}
+        >
             <SortableContext items={localItemKeys} strategy={verticalListSortingStrategy}>
                 {children}
             </SortableContext>
@@ -110,9 +119,15 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
             <Box
                 {...attributes}
                 {...listeners}
+                // after the spread, which sets role="button" and nothing to call it
+                aria-label={reorderName(label)}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
+                    // a target of at least 24px, so a finger or a pointer can find it (WCAG 2.5.8)
+                    width: 28,
+                    height: 28,
                     color: 'text.disabled',
                     cursor: 'grab',
                     touchAction: 'none',
