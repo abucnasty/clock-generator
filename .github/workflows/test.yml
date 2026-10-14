@@ -118,5 +118,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # public/icons holds the icons the page always draws, and no file it never asks for
+      - name: Icons
+        run: npm run check:icons
+
       - name: Unit tests
         run: npm test -- --reporter=default
