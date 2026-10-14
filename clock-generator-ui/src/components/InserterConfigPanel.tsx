@@ -274,15 +274,15 @@ const VISUALLY_HIDDEN = {
 
 /** The tab's text, then "•" when it holds unsaved edits; the tab's name says so in words ("Overrides, unsaved changes") */
 function TabLabel({ text, unsaved }: { text: string; unsaved: boolean }) {
+    if (!unsaved) return <span>{text}</span>;
+    // the whole name in one hidden span: next to the visible text, Chrome would put a space before its comma
     return (
         <span>
-            {text}
-            {unsaved && (
-                <>
-                    <Box component="span" aria-hidden sx={{ ml: 0.5 }}>•</Box>
-                    <Box component="span" sx={VISUALLY_HIDDEN}>, unsaved changes</Box>
-                </>
-            )}
+            <span aria-hidden>
+                {text}
+                <Box component="span" sx={{ ml: 0.5 }}>•</Box>
+            </span>
+            <Box component="span" sx={VISUALLY_HIDDEN}>{text}, unsaved changes</Box>
         </span>
     );
 }

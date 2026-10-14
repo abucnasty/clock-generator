@@ -2,6 +2,7 @@
 //
 //   NODE_PATH=/tmp/ux-capture/node_modules node docs/ux-rework/capture/capture-expert-bugs.mjs <out dir> [label]
 //
+// WIDTHS (e.g. "1440") and STEPS (a regular expression over the step labels, e.g. "^8") narrow a run.
 // BASE_URL (default http://localhost:5199/) and SAMPLES (default the main checkout's config samples) can be set in the
 // environment. Each width gets its own folder under <out dir>; <out dir>/INDEX.md lists every shot and every check.
 // The checks state what the fixed code must do, so on the code before the fix several of them fail on purpose.
@@ -17,7 +18,9 @@ const ADVANCED_CIRCUIT = `${SAMPLES}/intermediates/advanced-circuit/advanced-cir
 const PRODUCTION = `${SAMPLES}/science/production-science/production-science-shared-custom-config.json`;
 const LOGISTIC = `${SAMPLES}/science/logistic-science/logistic-science.json`;
 const STORAGE_KEY = 'clock-generator-config';
-const WIDTHS = [1440, 720];
+const WIDTHS = process.env.WIDTHS ? process.env.WIDTHS.split(',').map(Number) : [1440, 720];
+// STEPS, a regular expression, runs only the steps whose label matches it, on the logistic science build
+const ONLY = process.env.STEPS ? new RegExp(process.env.STEPS) : null;
 
 const browser = await chromium.launch({
     executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -50,6 +53,7 @@ function check(label, ok, detail = '') {
 }
 
 async function step(label, fn) {
+    if (ONLY && !ONLY.test(label)) return;
     try {
         await fn();
     } catch (e) {
@@ -217,6 +221,7 @@ async function scrollPlanIntoView(entity) {
 async function run() {
     await page.goto(BASE);
     await waitReady();
+    if (ONLY) await importFile(LOGISTIC);
 
     // ------------------------------------------------------------ 1. Exclude over a hand-set ALWAYS (B5)
     await step('1-hand-set-always', async () => {
@@ -590,7 +595,7 @@ async function run() {
         await dlg.getByRole('tab', { name: /Config/ }).click();
         await page.waitForTimeout(400);
         const stack = await dlg.getByLabel('Stack Size').inputValue();
-        const unsaved = await dlg.getByText('Unsaved changes').isVisible().catch(() => false);
+        const unsaved = await dlg.getByText('Unsaved changes', { exact: true }).isVisible().catch(() => false);
         const save = dlg.getByRole('button', { name: 'Save', exact: true });
         const saveEnabled = (await save.count()) > 0 && await save.isEnabled();
         await shot('b6-dialog-back-on-config', 'Back on the Config tab: the stack-size edit, the footer');
@@ -602,8 +607,8 @@ async function run() {
         check('The Overrides pick survives the tab switch', mode === 'ALWAYS', `mode ${mode}`);
         check('Footer shows "Unsaved changes" and an enabled Save', unsaved && saveEnabled, `text ${unsaved}, Save enabled ${saveEnabled}`);
         const marked = [
-            await dlg.getByRole('tab', { name: 'Config, unsaved changes' }).count(),
-            await dlg.getByRole('tab', { name: 'Overrides, unsaved changes' }).count(),
+            await dlg.getByRole('tab', { name: /^Config\s*,\s*unsaved changes/ }).count(),
+            await dlg.getByRole('tab', { name: /^Overrides\s*,\s*unsaved changes/ }).count(),
         ];
         check('Both tabs are marked as holding unsaved changes', marked[0] === 1 && marked[1] === 1, `Config ${marked[0]}, Overrides ${marked[1]}`);
         const live = await storedInserter();
