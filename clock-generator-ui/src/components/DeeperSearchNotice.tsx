@@ -1,4 +1,4 @@
-import { Alert, Button, Checkbox, FormControlLabel, Typography } from '@mui/material';
+import { Alert, Button, Checkbox, FormControlLabel, Tooltip, Typography } from '@mui/material';
 import { useEffect, useId, useRef, useState } from 'react';
 import {
     DEEPER_SEARCH_BUTTON,
@@ -10,6 +10,7 @@ import {
     deeperSearchDoneOnce,
     type DeeperSearchNoticeKind,
 } from '../utils/deeperSearch';
+import { ELEMENT_IDS, type Problem } from '../utils/firstProblem';
 
 interface DeeperSearchNoticeProps {
     kind: DeeperSearchNoticeKind;
@@ -17,6 +18,8 @@ interface DeeperSearchNoticeProps {
     recommendedLabel: string | null;
     /** False whenever Generate would be disabled */
     canSearchDeeper: boolean;
+    /** Why Search deeper is off, as Generate says it in the workflow bar; null when it is on or a run is going */
+    blockedBy: Problem | null;
     /** Generates again with the slower searches; `keepOn` also turns "Search for fewer wake-ups" on in the form */
     onSearchDeeper: (keepOn: boolean) => void;
 }
@@ -27,7 +30,7 @@ interface DeeperSearchNoticeProps {
  * arrival of the clocks. Its message stays the same element from the offer to the end of the run, so the keyboard focus
  * put on it when Search deeper is pressed is not lost.
  */
-export function DeeperSearchNotice({ kind, recommendedLabel, canSearchDeeper, onSearchDeeper }: DeeperSearchNoticeProps) {
+export function DeeperSearchNotice({ kind, recommendedLabel, canSearchDeeper, blockedBy, onSearchDeeper }: DeeperSearchNoticeProps) {
     const [keepOn, setKeepOn] = useState(false);
     const [offered, setOffered] = useState(kind === 'offer');
     const messageRef = useRef<HTMLParagraphElement>(null);
@@ -60,17 +63,24 @@ export function DeeperSearchNotice({ kind, recommendedLabel, canSearchDeeper, on
             role="note"
             sx={{ mt: 1, maxWidth: '72ch' }}
             action={kind === 'offer' || kind === 'searching' ? (
-                <Button
-                    ref={buttonRef}
-                    size="small"
-                    variant="outlined"
-                    color="inherit"
-                    disabled={kind === 'searching' || !canSearchDeeper}
-                    onClick={() => onSearchDeeper(keepOn)}
-                    sx={{ whiteSpace: 'nowrap' }}
-                >
-                    {DEEPER_SEARCH_BUTTON}
-                </Button>
+                // the reason is also the text under the workflow bar's buttons, which describes this one for the keyboard
+                <Tooltip title={kind === 'offer' ? blockedBy?.text ?? '' : ''} arrow describeChild>
+                    {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
+                    <span>
+                        <Button
+                            ref={buttonRef}
+                            size="small"
+                            variant="outlined"
+                            color="inherit"
+                            disabled={kind === 'searching' || !canSearchDeeper}
+                            onClick={() => onSearchDeeper(keepOn)}
+                            aria-describedby={kind === 'offer' && blockedBy ? ELEMENT_IDS.blockReason : undefined}
+                            sx={{ whiteSpace: 'nowrap' }}
+                        >
+                            {DEEPER_SEARCH_BUTTON}
+                        </Button>
+                    </span>
+                </Tooltip>
             ) : undefined}
         >
             <Typography ref={messageRef} variant="body2" role="status" tabIndex={-1}>{message}</Typography>

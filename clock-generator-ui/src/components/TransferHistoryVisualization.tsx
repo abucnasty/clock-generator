@@ -4,7 +4,7 @@ import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
-import { COLOR_BLIND_PALETTE_ALL } from './colors';
+import { COLOR_BLIND_PALETTE, COLOR_BLIND_PALETTE_ALL } from './colors';
 
 interface TransferHistoryVisualizationProps {
     transferHistory: SerializableTransferHistory;
@@ -133,7 +133,8 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                             noWrap
                             sx={{
                                 fontSize: '0.75rem',
-                                color: entity.entity_type === 'drill' ? 'warning.main' : 'text.primary',
+                                // a drill is not a warning: a fixed orange, not the theme's warning colour
+                                color: entity.entity_type === 'drill' ? COLOR_BLIND_PALETTE.orange : 'text.primary',
                             }}
                         >
                             {entity.label}

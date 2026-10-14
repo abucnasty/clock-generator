@@ -1,4 +1,4 @@
-import { ContentCopy, Check } from '@mui/icons-material';
+import { ContentCopy, Check, Warning } from '@mui/icons-material';
 import {
     Alert,
     Box,
@@ -72,7 +72,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         size="small"
                         color="warning"
                         onClick={() => setConfirmingOld(true)}
-                        startIcon={copied ? <Check /> : <ContentCopy />}
+                        startIcon={copied ? <Check /> : <Warning />}
                     >
                         {copied ? 'Copied' : STALE_COPY_LABEL}
                     </Button>

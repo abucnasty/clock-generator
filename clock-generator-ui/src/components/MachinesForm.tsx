@@ -16,12 +16,14 @@ import {
 import { useState, memo } from 'react';
 import type { MachineFormData } from '../hooks/useConfigForm';
 import { useMachineFacts } from '../hooks/useMachineFacts';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
-import { entityLabel } from '../utils/entityLabel';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
 import { BUTTON_NAMES, SELECT_NAMES, recipeName } from '../utils/a11yLabels';
 
 interface MachinesFormProps {
@@ -60,8 +62,11 @@ function MachinesFormComponent({
         setCopied(true);
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, remove } = useFocusAfterRemove(machines.length, onRemove);
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="h6" component="h2">
@@ -108,7 +113,7 @@ function MachinesFormComponent({
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
+                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Machine
                 </Button>
             </Box>
@@ -124,7 +129,7 @@ function MachinesFormComponent({
                                 canDelete={machines.length > 1}
                                 dragHandle={dragHandle}
                                 onUpdate={onUpdate}
-                                onRemove={onRemove}
+                                onRemove={remove}
                             />
                         )}
                     </SortableItem>
@@ -175,6 +180,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
             >
                 {dragHandle}
                 <Autocomplete
+                    id={machineRecipeElementId(machine.id)}
                     sx={{ minWidth: 250, flex: 1 }}
                     options={recipeNames}
                     value={machine.recipe || null}
@@ -281,6 +287,8 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     onClick={() => onRemove(index)}
                     color="error"
                     disabled={!canDelete}
+                    aria-label={deleteButtonLabel('machine', machine.id)}
+                    data-row-delete=""
                 >
                     <Delete />
                 </IconButton>

@@ -28,17 +28,21 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` �
 
 ## The loop for each plan item
 
-When a unit frees, start the item at the head of the longest remaining dependency chain; never leave a slot idle while
-an unblocked item waits (coach run 2). Specs (step 1) can be drafted ahead for any number of items at once, including the
+When a unit frees, start the unblocked item at the head of the longest remaining dependency chain (the chain table in
+`PROGRESS.md`); never leave a slot idle while an unblocked item waits (coach run 2). A unit that is only waiting on
+another branch counts as zero units (coach run 3). Specs (step 1) can be drafted ahead for any number of items at once, including the
 next phase's while this one finishes. From step 2
 on, run at most **four units at once** (a bundle counts as one; an item that touches more than about 20 files, like
 1.9, counts as two). Items may share files (the owner, 2026-10-14): each
 implementer merges the phase branch into its branch (`git merge`, never a rebase of a pushed branch) before it reports,
 again just before its PR, and whenever the post-merge conflict check flags its branch, and resolves any conflict
-itself. **Post-merge conflict check:** after every merge into the phase branch, run
+itself, except when only the ledger moved (`git diff --quiet HEAD...origin/<phase branch> -- . ':!docs/ux-rework/PROGRESS.md'`).
+**Cross-item APIs:** when a decision mid-flight creates an API one item provides and another uses, write the exact
+export into both specs at once, and the provider commits it (a stub is fine) first. **Post-merge conflict check:** after every merge into the phase branch, run
 `git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch, and tell any that conflicts to
 merge now, while its implementer still has the context. **Stacking:** in a serial tail (e.g. 1.11 A → 1.11 B → 1.12 B),
-the next item may branch from its predecessor's head once the predecessor reaches review; it merges the predecessor's
+the next item may branch from its predecessor's head once the predecessor's interface is committed (or at once when the
+specs say they share two files or fewer); it merges the predecessor's
 branch after each fix round, then the phase branch once the predecessor merges, and its own review starts only after
 that, so its diff is against the phase branch. After a merge that had conflicts, the checks re-run,
 and the orchestrator reads the conflicted hunks before review or merge. Prefer items that touch different parts of a
@@ -81,7 +85,8 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
        reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`
        (widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
        a `vite preview` of the build), with keyboard reach (`tabTo`), focus not obscured (`focusNotObscured`) and
-       keyboard-inert disabled or out-of-date states (`inertFromKeyboard`) checked for every control and state the item
+       keyboard-inert disabled or out-of-date states (`inertFromKeyboard`), and every announcement reaching an unhidden live
+       region (`checkAnnounced`, with and without a dialog open), checked for every control and state the item
        adds, disables or changes, at every captured width. "Before" screenshots only for
        states the original review has no shot of (its shots are listed in `review/`); otherwise the review's shot is
        the "before".
@@ -116,6 +121,9 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
 
    Steps 4 and 5 run **in parallel**.
 6. **Fix loop.**
+   - Before building a new mechanism in a fix round (an owner decision that changes behaviour, a new shared API), the
+     implementer sends the code reviewer a design note of 15 lines or fewer (where it mounts, what MUI or the page does
+     to it, the API) and waits for its answer.
    - Send every blocker and major from either review back to the implementer in one batch. Minors and nits are fixed
      if they are cheap; otherwise they go in the ledger as follow-ups.
    - After the fixes: the evidence gate again, then only the reviewer or reviewers whose findings were fixed.
@@ -127,6 +135,7 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - Wait for CI with `gh pr checks --watch`.
    - When CI is green and both verdicts are PASS, merge it yourself (squash, delete the branch).
 8. **Ledger and update.** Update `PROGRESS.md`, commit it to the phase branch, and send the owner the item update.
+   Status changes between merges can wait for the next merge's ledger commit; the handoff note holds the live state.
 
 ## Staying responsive
 

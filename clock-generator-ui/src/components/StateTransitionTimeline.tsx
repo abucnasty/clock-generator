@@ -41,6 +41,7 @@ import {
     INSERTER_STATUS_COLORS,
     MACHINE_STATUS_COLORS,
     DRILL_STATUS_COLORS,
+    COLOR_BLIND_PALETTE,
 } from './colors';
 import { sortByRelationship, sortByType } from './topological-sort';
 
@@ -317,7 +318,8 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
     const entityTypeColor = entity.entity_type === 'machine' 
         ? 'success.main' 
         : entity.entity_type === 'drill'
-        ? 'warning.main'
+        // a drill is not a warning: a fixed orange, not the theme's warning colour
+        ? COLOR_BLIND_PALETTE.orange
         : 'info.main';
 
     return (
