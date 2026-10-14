@@ -34,7 +34,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.5 | Messages above the footer; quieter Ko-fi | sonnet | todo | | | |
 | 1.6 | Make the clock pick explainable | opus | todo | | | |
 | 1.7 | "Search deeper" button | sonnet | todo | | | |
-| 1.8 | Fix the dangerous expert bugs | sonnet | spec | | | |
+| 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | 1.9 | One number per entity, everywhere | opus | todo | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
 | 1.10 | Readable numbers and units | sonnet | todo | | | |
 | 1.11 | Accessibility basics | sonnet | todo | | | |
