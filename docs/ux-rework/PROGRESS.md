@@ -122,6 +122,8 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   `sonnet` capture writer alongside each implementer; contrast and accessible names in the evidence gate. The
   orchestrator also applied suggestion 5: Phase 2 specs are drafted now, 2.2 and 2.5 go first in Phase 2 so the owner's
   in-game checks overlap other work, and `capture.mjs` is kept working as items merge.
+- 2026-10-14: The owner asked for distinct agent names. Agent descriptions now follow `<item> <role>: <topic>`
+  ([ORCHESTRATOR.md](ORCHESTRATOR.md) "Staying responsive").
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions

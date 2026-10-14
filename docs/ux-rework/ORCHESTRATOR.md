@@ -136,6 +136,11 @@ the worktree's placeholder branch (`worktree-agent-*`). After each merge the orc
 `worktree-agent-*` branch that is merged and has no live worktree. A dropped or carried item's branches go too, once
 the ledger says so.
 
+**Agent names.** Every Agent call's `description` follows `<item> <role>: <topic>`, so the agent map tells them apart
+at a glance: `1.9 implement: renumber`, `1.9 capture: renumber`, `1.9 code review`, `1.9 UX audit`, `1.9 checks`,
+`1.9 merge`, `2.5 scout: results answer`, `Coach run 2`, `Tooling: capture lib`. A bundle uses its items, e.g.
+`1.6+1.7 implement: clock pick`. A fix round reuses the same agent, so its name doesn't change.
+
 Delegate only when it frees the orchestrator. A one-line `gh` or `git` call is quicker to run directly.
 
 ## Choosing the model
