@@ -62,7 +62,8 @@ export function FilterSlotSelector({
     };
 
     return (
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        // the gap leaves room for a remove button between two slots, clear of the next one
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                 Filters:
             </Typography>
@@ -168,8 +169,9 @@ export function FilterSlotSelector({
                                 onClick={() => removeFilter(slotIndex)}
                                 sx={{
                                     position: 'absolute',
+                                    // over the slot's corner by 6px at most, so 24x24 of the 30px slot stays its own to click
                                     top: -10,
-                                    right: -10,
+                                    right: -18,
                                     width: 24,
                                     height: 24,
                                     bgcolor: 'error.main',
