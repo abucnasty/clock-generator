@@ -34,10 +34,15 @@ const LOGISTIC_STILL = variant(LOGISTIC, { non_moving_belts: true }, 'logistic-s
 
 const OFFER = 'We stopped once we found a working clock. A deeper, slower search might find one with fewer wake-ups.';
 const DONE_ONCE = 'We searched deeper for this run. These clocks include the slower searches.';
-const DONE_KEPT = 'Deeper search is on for this build. To stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.';
+const DONE_KEPT = 'Deeper search is on for this build.';
+const STOP_KEPT = 'To stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.';
+const SEARCHING = 'Searching deeper… this can take several times longer.';
+/** The "searched deeper" line, which names the pick: `start` and " Recommended is now {label}." */
+const namesPick = (notes, start, label) => notes.some((note) => note.startsWith(start) && note.includes(` Recommended is now ${label}.`));
 const SEARCH_NAMES = ['Observed windows', 'Uneven output swings', 'Shifted swings', 'Full-hand output swings'];
 const STALE_TEXT = 'Your build has changed since';
-const WIDTHS = [1440, 720];
+/** WIDTHS=1440 shoots one width only, for a fix round */
+const WIDTHS = (process.env.WIDTHS ?? '1440,720').split(',').map(Number);
 
 const rec = createRecorder(OUT);
 const { browser, page } = await openSession({ out: OUT });
@@ -49,8 +54,9 @@ const heading = () => page.getByRole('heading', { name: 'Potential Clocks' });
 const panel = () => heading().locator('xpath=..');
 const notes = () => page.getByRole('note');
 const searchDeeper = () => page.getByRole('button', { name: 'Search deeper', exact: true });
-const keepOn = () => page.getByLabel('Keep it on for this build');
-const backLink = () => page.getByRole('button', { name: 'Back to recommended', exact: true });
+const keepOn = () => page.getByLabel('Always search deeper for this build');
+/** "Back to recommended", or "Back to the pick" while clocks are still being made */
+const backLink = () => page.getByRole('button', { name: /^Back to (recommended|the pick)$/ });
 const disclosure = () => page.getByRole('button', { name: 'How clocks are chosen' });
 
 async function setWidth(width) {
@@ -131,7 +137,7 @@ const selectedRow = (rows) => clocksOf(rows).find((row) => row.selected);
 
 /** The bold "Recommended: …" line and its reason, or null */
 async function recommendationLine() {
-    const strong = panel().locator('strong', { hasText: /^Recommended: / });
+    const strong = panel().locator('strong', { hasText: /^(Recommended|Best so far): / });
     if ((await strong.count()) === 0) return null;
     return strong.first().evaluate((el) => el.parentElement.textContent);
 }
@@ -253,7 +259,7 @@ await rec.step('logistic: streaming and an early pick', async () => {
             const live = await tableRows();
             if (await isGenerating()) {
                 rec.check('while generating the chip reads "Best so far"', chipRows(live).length === 1 && chipRows(live)[0].chip === 'Best so far', JSON.stringify(chipRows(live).map((row) => row.chip)));
-                rec.check('while generating the reason starts with "More clocks are still being made"', /^Recommended: .*?\. More clocks are still being made/.test(line ?? ''), line ?? 'no line');
+                rec.check('while generating the line reads "Best so far: {label}. More clocks are still being made…"', /^Best so far: .*?\. More clocks are still being made/.test(line ?? ''), line ?? 'no line');
                 checkedLive = true;
             }
         }
@@ -294,8 +300,8 @@ await rec.step('logistic: finished, back to recommended', async () => {
     const rows = await tableRows();
     rec.check('the chip is on the selected row before another pick', chipRows(rows)[0]?.label === selectedRow(rows)?.label);
     const line = await recommendationLine();
-    rec.check('the line reads "Recommended: {label}. Fewest wake-ups among the clocks that hold 240/s on a moving belt."',
-        line === `Recommended: ${chipRows(rows)[0]?.label}. Fewest wake-ups among the clocks that hold 240/s on a moving belt.`, line ?? 'no line');
+    rec.check('the line reads "Recommended: {label}. Fewest wake-ups among the Stable clocks at 240/s on a moving belt."',
+        line === `Recommended: ${chipRows(rows)[0]?.label}. Fewest wake-ups among the Stable clocks at 240/s on a moving belt.`, line ?? 'no line');
     const intro = await panel().locator('p').first().textContent();
     const words = intro.trim().split(/\s+/).length;
     rec.check('the intro is one line of at most 25 words', words <= 25, `${words} words: ${intro}`);
@@ -303,7 +309,7 @@ await rec.step('logistic: finished, back to recommended', async () => {
         await setWidth(width);
         const introWidth = await within72ch(panel().locator('p').first());
         rec.check('the intro is at most 72ch wide', introWidth.pass, introWidth.detail);
-        const lineWidth = await within72ch(panel().locator('strong', { hasText: /^Recommended: / }).locator('xpath=../..'));
+        const lineWidth = await within72ch(panel().locator('strong', { hasText: /^(Recommended|Best so far): / }).locator('xpath=../..'));
         rec.check('the recommendation line is at most 72ch wide', lineWidth.pass, lineWidth.detail);
     }
     await setWidth(1440);
@@ -386,7 +392,7 @@ await rec.step('logistic, belts do not move', async () => {
     const rows = await checkFinished('logistic still');
     rec.check('logistic still: the chip is on the selected row', chipRows(rows)[0]?.label === selectedRow(rows)?.label);
     const line = await recommendationLine();
-    rec.check('logistic still: the reason says "with belts that stand still"', (line ?? '').endsWith('Fewest wake-ups among the clocks that hold 240/s with belts that stand still.'), line ?? 'no line');
+    rec.check('logistic still: the reason says "with belts that stand still"', (line ?? '').endsWith('Fewest wake-ups among the Stable clocks at 240/s with belts that stand still.'), line ?? 'no line');
     await disclosure().click();
     await page.waitForTimeout(600);
     rec.check('logistic still: the "This run" line says belts that stand still', (await panel().textContent()).includes('This run assumed belts that stand still.'));
@@ -412,13 +418,25 @@ await rec.step('chemical: the offer', async () => {
     rec.check('chemical: none of the four search names in the panel', SEARCH_NAMES.every((name) => !text.includes(name)), SEARCH_NAMES.filter((name) => text.includes(name)).join(', '));
     rec.check('chemical: the offer reads exactly the plan\'s sentence', (await noteTexts()).some((note) => note.startsWith(OFFER)), JSON.stringify(await noteTexts()));
     rec.check('chemical: Search deeper is there and enabled', (await searchDeeper().count()) === 1 && (await searchDeeper().isEnabled()));
-    rec.check('chemical: "Keep it on for this build" is unticked', !(await keepOn().isChecked()));
+    rec.check('chemical: "Always search deeper for this build" is unticked', !(await keepOn().isChecked()));
+    const describedBy = await keepOn().getAttribute('aria-describedby');
+    const caption = describedBy ? await page.locator(`[id="${describedBy}"]`).textContent() : null;
+    rec.check('chemical: the checkbox is described by its caption', caption === 'With Search deeper, also turns on "Search for fewer wake-ups" in Advanced Overrides.', String(caption));
+    const toggle = page.getByRole('button', { name: /^Show \d+ unstable clock/ });
+    if ((await toggle.count()) > 0) {
+        const [toggleTop, noteTop] = [await toggle.boundingBox(), await notes().first().boundingBox()].map((box) => box?.y ?? 0);
+        rec.check('chemical: the notice comes after "Show N unstable clocks"', noteTop > toggleTop, `toggle at ${toggleTop}, notice at ${noteTop}`);
+    }
+    const noteWidth = await within72ch(notes().first());
+    rec.check('chemical: the notice is at most 72ch wide', noteWidth.pass, noteWidth.detail);
+    const summaryWidth = await within72ch(disclosure().locator('xpath=ancestor::div[contains(@class, "MuiAccordion-root")]'));
+    rec.check('chemical: the "How clocks are chosen" disclosure is at most 72ch wide', summaryWidth.pass, summaryWidth.detail);
     await shotState('chemical-offer', 'Chemical science: the one-line offer, the unticked checkbox and Search deeper; the bar shows "Copy blueprint"', { focus: notes, fullPage: true });
     // keyboard: Space ticks the checkbox, Tab goes on to the button
     await keepOn().focus();
     await page.keyboard.press('Space');
     await page.waitForTimeout(300);
-    rec.check('chemical: Space ticks "Keep it on for this build"', await keepOn().isChecked());
+    rec.check('chemical: Space ticks "Always search deeper for this build"', await keepOn().isChecked());
     await shotState('chemical-offer-ticked', 'Chemical science: the checkbox ticked from the keyboard (focus ring)', { focus: notes, widths: [1440] });
     await page.keyboard.press('Space');
     await page.keyboard.press('Tab');
@@ -433,23 +451,35 @@ await rec.step('chemical: one-run deeper search', async () => {
     await page.keyboard.press('Enter');
     const started = Date.now();
     const seen = new Set();
-    let notesWhileRunning = 0;
+    const notesWhileRunning = new Set();
+    let buttonEnabledWhileRunning = false;
     let shotRunning = false;
+    await page.waitForTimeout(300);
+    const focusedAfterPress = await page.evaluate(() => {
+        const el = document.activeElement;
+        return el === null || el === document.body ? 'body' : `${el.tagName.toLowerCase()}: ${(el.textContent ?? '').slice(0, 60)}`;
+    });
+    rec.check('Search deeper pressed: the keyboard focus is not left on <body>', focusedAfterPress !== 'body', focusedAfterPress);
     while (Date.now() - started < GEN_TIMEOUT && (await isGenerating())) {
         const rows = await tableRows();
-        notesWhileRunning = Math.max(notesWhileRunning, await notes().count());
+        (await noteTexts()).forEach((note) => notesWhileRunning.add(note));
+        if ((await searchDeeper().count()) > 0 && (await searchDeeper().isEnabled())) buttonEnabledWhileRunning = true;
         const searching = rows.filter((row) => row.kind === 'pending' && SEARCH_NAMES.some((name) => row.text.startsWith(`${name}: computing`)));
         searching.forEach((row) => seen.add(row.text.split(':')[0]));
         if (!shotRunning && searching.length > 0 && (await isGenerating())) {
             await center(panel().locator('tbody tr').filter({ hasText: searching[0].text }));
-            await rec.shot(page, 'chemical-search-deeper-running', { desc: `Chemical science, ${Date.now() - started} ms after Search deeper (Enter): the searches computing, no notice` });
+            await rec.shot(page, 'chemical-search-deeper-running', { desc: `Chemical science, ${Date.now() - started} ms after Search deeper (Enter): the searches computing` });
+            await center(notes());
+            await rec.shot(page, 'chemical-search-deeper-running-notice', { desc: 'The same run: "Searching deeper…" with the button disabled' });
             shotRunning = true;
         }
         await page.waitForTimeout(100);
     }
     await slowWorkers(0);
     rec.info('chemical: deeper search took', `${Date.now() - started} ms with each finished plan or task handed on ${SLOW_MS} ms late`);
-    rec.check('running: no notice while generating', notesWhileRunning === 0);
+    rec.check('running: the notice only says "Searching deeper…"', [...notesWhileRunning].every((note) => note.startsWith(SEARCHING)) && notesWhileRunning.size === 1,
+        JSON.stringify([...notesWhileRunning]));
+    rec.check('running: Search deeper is disabled', !buttonEnabledWhileRunning);
     rec.check('running: the searches show as "computing…" rows', seen.size > 0, [...seen].join(', ') || 'none seen');
     await waitGenerated();
     const rows = await checkFinished('after one-run deeper search');
@@ -457,7 +487,10 @@ await rec.step('chemical: one-run deeper search', async () => {
     rec.info('chemical: recommended after a deeper search', `${pick?.label} (${pick?.wakeUps} wake-ups/min)`);
     rec.check('the deeper search recommends a clock with fewer wake-ups', Number(pick?.wakeUps) < Number(chemicalDefault?.wakeUps),
         `${chemicalDefault?.wakeUps} -> ${pick?.wakeUps}`);
-    rec.check('after one-run deeper search: the notice says it was for this run', (await noteTexts()).includes(DONE_ONCE), JSON.stringify(await noteTexts()));
+    rec.check('after one-run deeper search: the notice says it was for this run and names the new pick', namesPick(await noteTexts(), DONE_ONCE, pick?.label),
+        JSON.stringify(await noteTexts()));
+    const focusedAfterRun = await page.evaluate(() => (document.activeElement === document.body ? 'body' : document.activeElement?.textContent?.slice(0, 300)));
+    rec.check('after one-run deeper search: the keyboard focus is still on the notice', focusedAfterRun !== 'body' && (focusedAfterRun ?? '').startsWith(DONE_ONCE), String(focusedAfterRun));
     await disclosure().click();
     await page.waitForTimeout(600);
     rec.check('after one-run deeper search: the "This run" line says the searches ran', (await panel().textContent()).includes('The slower searches for fewer wake-ups were run.'));
@@ -490,7 +523,7 @@ await rec.step('chemical: stale after an edit', async () => {
     await page.waitForTimeout(600);
     await goResults(page);
     rec.check('put back: no stale banner', (await page.getByText(STALE_TEXT).count()) === 0);
-    rec.check('put back: the notice returns', (await noteTexts()).includes(DONE_ONCE), JSON.stringify(await noteTexts()));
+    rec.check('put back: the notice returns', (await noteTexts()).some((note) => note.startsWith(DONE_ONCE)), JSON.stringify(await noteTexts()));
 }, page);
 
 await rec.step('chemical: plain Generate again', async () => {
@@ -508,8 +541,8 @@ await rec.step('chemical: keep it on', async () => {
     await page.waitForTimeout(1000);
     await waitGenerated();
     await checkFinished('after keep-it-on deeper search');
-    rec.check('kept on: the notice says deeper search is on for this build', (await noteTexts()).includes(DONE_KEPT), JSON.stringify(await noteTexts()));
-    await shotState('chemical-searched-kept', 'Chemical science, "Keep it on for this build" ticked and Search deeper: the "Deeper search is on" line, no stale banner', { focus: notes, fullPage: true });
+    rec.check('kept on: the notice says deeper search is on for this build', (await noteTexts()).some((note) => note.startsWith(DONE_KEPT) && note.endsWith(STOP_KEPT)), JSON.stringify(await noteTexts()));
+    await shotState('chemical-searched-kept', 'Chemical science, "Always search deeper for this build" ticked and Search deeper: the "Deeper search is on" line, no stale banner', { focus: notes, fullPage: true });
     const toggle = await overridesSwitch();
     rec.check('kept on: "Search for fewer wake-ups" is on', await toggle.isChecked());
     await shotState('chemical-overrides-on', 'Configure, Advanced Overrides after keep-it-on: the switch is on', { focus: () => toggle, widths: [1440] });
@@ -522,7 +555,7 @@ await rec.step('chemical: keep it on', async () => {
     await generate(page);
     await goResults(page);
     await checkFinished('plain Generate with the switch on');
-    rec.check('switch on, plain Generate: the same "Deeper search is on" line', (await noteTexts()).includes(DONE_KEPT), JSON.stringify(await noteTexts()));
+    rec.check('switch on, plain Generate: the same "Deeper search is on" line', (await noteTexts()).some((note) => note.startsWith(DONE_KEPT) && note.endsWith(STOP_KEPT)), JSON.stringify(await noteTexts()));
     await disclosure().click();
     await page.waitForTimeout(600);
     rec.check('switch on, plain Generate: the searches ran', (await panel().textContent()).includes('The slower searches for fewer wake-ups were run.'));
