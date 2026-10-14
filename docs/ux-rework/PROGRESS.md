@@ -36,7 +36,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.7 | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | 1.9 | One number per entity, everywhere | opus | spec | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
-| 1.10 | Readable numbers and units | sonnet | spec | | | |
+| 1.10 | Readable numbers and units | opus | spec | | | Spec final; moved up (10 files). Next free slot (no file in common with 1.1, 1.8, 1.13) |
 | 1.11 | Accessibility basics | sonnet | spec | | | |
 | 1.12 | Glossary and copy pass | sonnet | spec | | | Checkpoint: glossary approval |
 | 1.13 | Enable mode shown on the row | sonnet | impl | | | Third slot, alongside 1.1 and 1.8. Wire the forced-ALWAYS note after 1.8 merges |
@@ -98,6 +98,9 @@ Minor and nit findings, and anything noticed outside an item's scope.
   tooltip and snackbar). For the 1.12 glossary pass.
 - 1.14 → 1.11: a `#fca300` focus ring is 1.55:1 on the yellow fill; draw it with an offset on the dark surface.
 - 1.14 → 2.7: a warning-state yellow Copy replaces the green next-step button rather than sitting beside it.
+- 1.10: one duration format (BlueprintOutput vs the timelines); right-aligned Insights columns; unrounded rates in the
+  engine error at `plan-run.ts:1332-1333`; select-all on focus and silent fallbacks (B27); A16's live "per copy ·
+  machine max" line.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
