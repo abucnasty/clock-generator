@@ -1,5 +1,4 @@
 import type { Announcements, UniqueIdentifier } from '@dnd-kit/core';
-import { entityLabel, type LabelKind } from './entityLabel';
 
 /**
  * The accessible names that are not the text on screen, in one place so the wording can be read (and changed) together.
@@ -29,9 +28,16 @@ export const BUTTON_NAMES = {
     blueprintCopied: 'Blueprint copied',
     closeFullscreen: 'Close fullscreen',
     removeCondition: 'Remove condition',
-    removeStatusCheck: 'Remove status check',
+    removeStatusCheck: 'Remove status condition',
     removeRange: 'Remove wake window',
     close: 'Close',
+    moreOptions: 'More options',
+} as const;
+
+/** Fields with no visible label of their own */
+export const FIELD_NAMES = {
+    blueprintString: 'Blueprint string',
+    latchedMode: 'Latched mode',
 } as const;
 
 export const PROGRESS_NAMES = {
@@ -57,7 +63,7 @@ export function recipeName(owner: string): string {
 }
 
 /** The name of the target's recipe field */
-export const TARGET_RECIPE_NAME = 'Target Output recipe';
+export const TARGET_RECIPE_NAME = 'Recipe, Target Output';
 
 /** The name of the second lane's delete button, "Delete lane 2 of Belt 1" */
 export function deleteLaneName(beltLabel: string, lane: number): string {
@@ -71,14 +77,11 @@ export function removeFilterName(slot: number, item: string): string {
 
 /**
  * What dnd-kit reads out while a row is dragged. Its defaults say "Picked up draggable item" and the row's key, a UUID.
- * This names the row the way the page does and gives positions: "Inserter 2 is over position 3".
+ * This names the row the way its chip does (the labels, by key) and gives positions: "Inserter 2 is over position 3".
  */
-export function reorderAnnouncements(kind: LabelKind, keys: readonly string[]): Announcements {
+export function reorderAnnouncements(labels: ReadonlyMap<string, string>, keys: readonly string[]): Announcements {
     const positionOf = (id: UniqueIdentifier): number => keys.indexOf(String(id)) + 1;
-    const nameOf = (id: UniqueIdentifier): string => {
-        const position = positionOf(id);
-        return position > 0 ? entityLabel(kind, position) : 'The row';
-    };
+    const nameOf = (id: UniqueIdentifier): string => labels.get(String(id)) ?? 'The row';
     return {
         onDragStart: ({ active }) => `Picked up ${nameOf(active.id)}.`,
         onDragOver: ({ active, over }) =>

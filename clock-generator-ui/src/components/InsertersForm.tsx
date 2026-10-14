@@ -236,7 +236,7 @@ function InsertersFormComponent({
                 </Button>
             </Box>
 
-            <SortableList kind="inserter" itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
                 <SortableItem key={inserter._uuid} stableKey={inserter._uuid} label={entityLabel('inserter', inserter.id)}>
                     {(dragHandle) => (

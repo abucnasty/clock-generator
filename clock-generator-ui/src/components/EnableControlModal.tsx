@@ -402,9 +402,11 @@ function EnableControlModalContent({
                 maxWidth={isFullscreen ? false : 'md'}
                 fullWidth
                 fullScreen={isFullscreen}
+                // named by the title text, not by the title bar with its buttons
+                aria-labelledby="enable-control-title"
             >
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
+                <DialogTitle id="enable-control-bar" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box id="enable-control-title">
                         <Typography variant="h6" component="span" sx={{ display: 'block' }}>Enable rule</Typography>
                         <Typography variant="body2" color="text.secondary">{entityLabel}</Typography>
                     </Box>

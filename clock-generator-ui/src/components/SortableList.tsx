@@ -19,20 +19,19 @@ import { CSS } from '@dnd-kit/utilities';
 import { DragIndicator } from '@mui/icons-material';
 import { Box, Chip } from '@mui/material';
 import { reorderAnnouncements, reorderName } from '../utils/a11yLabels';
-import type { LabelKind } from '../utils/entityLabel';
 
 interface SortableListProps {
-    /** What the rows are, so a drag is read out as "Picked up Inserter 2" and not as the row's key. */
-    kind: LabelKind;
     /** Stable UUID keys for each item, in current order. */
     itemKeys: string[];
+    /** The name each row shows ("Inserter 3"), in the same order, so a drag is read out by it and not by the row's key. */
+    itemLabels: string[];
     /** Called with the old and new array indices after a drag. */
     onReorder: (fromIndex: number, toIndex: number) => void;
     children: React.ReactNode;
 }
 
 /** Wraps a list of SortableItem children with @dnd-kit context. */
-export function SortableList({ kind, itemKeys, onReorder, children }: SortableListProps) {
+export function SortableList({ itemKeys, itemLabels, onReorder, children }: SortableListProps) {
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -70,7 +69,7 @@ export function SortableList({ kind, itemKeys, onReorder, children }: SortableLi
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
-            accessibility={{ announcements: reorderAnnouncements(kind, localItemKeys) }}
+            accessibility={{ announcements: reorderAnnouncements(new Map(itemKeys.map((key, i) => [key, itemLabels[i]])), localItemKeys) }}
         >
             <SortableContext items={localItemKeys} strategy={verticalListSortingStrategy}>
                 {children}

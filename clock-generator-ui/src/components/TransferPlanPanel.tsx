@@ -59,7 +59,10 @@ function TransferPlanPanelComponent({
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Swing Plan
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 0 }}>
+                {/* here, not in the title: the title is a button, and a focusable chip in a button cannot be reached or named */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1 }}>
                     <Tooltip title="LCM: the number of crafting cycles in one clock period (the least common multiple of every inserter's swings per cycle)." describeChild>
                         <Chip
                             tabIndex={0}
@@ -91,8 +94,6 @@ function TransferPlanPanelComponent({
                         />
                     )}
                 </Box>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 0 }}>
                 <Table size="small">
                     <TableHead>
                         <TableRow>
