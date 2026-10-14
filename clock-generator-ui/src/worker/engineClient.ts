@@ -12,10 +12,15 @@ let factorioData: Promise<string> | null = null;
 /** The text of the game data, fetched once and handed to every worker */
 export function loadFactorioData(): Promise<string> {
     factorioData ??= fetch(FACTORIO_DATA_URL)
-        .then(response => response.text())
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.text();
+        })
         .catch((error) => {
             factorioData = null;
-            throw error;
+            throw new Error(`Failed to fetch the game data: ${error instanceof Error ? error.message : String(error)}`);
         });
     return factorioData;
 }
@@ -33,7 +38,7 @@ let queryWorker: QueryWorker | null = null;
 let nextRequestId = 0;
 const pending = new Map<number, { resolve: (answer: unknown) => void; reject: (error: Error) => void }>();
 
-/** The worker that answers the queries, started on the first one; it lives as long as the page */
+/** The worker that answers the queries, started on the first one; it lives until it crashes */
 function startQueryWorker(): QueryWorker {
     const worker = createSimulationWorker();
     const ready = new Promise<void>((resolve, reject) => {
@@ -53,7 +58,19 @@ function startQueryWorker(): QueryWorker {
                 }
             }
         };
-        worker.onerror = (event) => reject(new Error(event.message || 'Engine worker failed'));
+        worker.onerror = (event) => {
+            const error = new Error(event.message || 'Engine worker failed');
+            reject(error);
+            // once it is ready, the queries it was answering are failed, and the next query starts a new worker
+            for (const request of pending.values()) {
+                request.reject(error);
+            }
+            pending.clear();
+            worker.terminate();
+            if (queryWorker?.worker === worker) {
+                queryWorker = null;
+            }
+        };
         loadFactorioData().then(
             data => worker.postMessage({ type: 'initialize', factorioData: data } satisfies WorkerRequest),
             reject,

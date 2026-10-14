@@ -142,14 +142,16 @@ function saveConfigToStorage(config: ConfigFormData): void {
  *
  * The engine's worker checks the saved config against the config schema first, so it is loaded (`isLoaded`) once
  * that worker is up. Until then the state is the default config, nothing is saved, and `unchecked` holds the saved
- * config. A saved config that cannot be loaded is backed up before the defaults are saved over it, and `loadNotice`
- * tells the user so.
+ * config, which Export offers; if the check fails, `loadError` says why. A saved config that cannot be loaded is
+ * backed up before the defaults are saved over it, and `loadNotice` tells the user so.
  */
 export function usePersistedConfigForm() {
     const [stored] = useState(readConfigFromStorage);
     const [defaultConfig] = useState(createDefaultConfig);
     const [config, setConfig] = useState<ConfigFormData>(defaultConfig);
     const [isLoaded, setIsLoaded] = useState(stored?.config == null);
+    // why the saved config could not be checked, e.g. the engine's worker did not start
+    const [loadError, setLoadError] = useState<string | null>(null);
     // one that cannot be read at all is backed up at once, before the first save (doing it twice does no harm)
     const [loadNotice, setLoadNotice] = useState(() => {
         if (stored?.config !== null) return null;
@@ -175,7 +177,10 @@ export function usePersistedConfigForm() {
                 }
                 setIsLoaded(true);
             },
-            (e) => console.warn('Failed to check the config from localStorage:', e),
+            (e) => {
+                console.warn('Failed to check the config from localStorage:', e);
+                if (current) setLoadError(e instanceof Error ? e.message : 'Failed to check the saved config');
+            },
         );
         return () => {
             current = false;
@@ -199,5 +204,5 @@ export function usePersistedConfigForm() {
 
     const dismissLoadNotice = useCallback(() => setLoadNotice(null), []);
 
-    return { config, setConfig, resetConfig, isLoaded, unchecked, loadNotice, dismissLoadNotice };
+    return { config, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice };
 }
