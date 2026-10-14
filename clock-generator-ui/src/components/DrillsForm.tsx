@@ -22,7 +22,7 @@ import { EnableRuleChip } from './EnableRuleChip';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
-import { entityLabel } from '../utils/entityLabel';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { DRILL_TYPES } from './entityTypes';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
@@ -76,11 +76,7 @@ function DrillsFormComponent({
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, focusAfterRemove } = useFocusAfterRemove(drills.length);
-    const remove = (index: number) => {
-        focusAfterRemove(index);
-        onRemove(index);
-    };
+    const { cardRef, remove } = useFocusAfterRemove(drills.length, onRemove);
 
     return (
         <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
@@ -259,7 +255,7 @@ function DrillsFormComponent({
                                 entityType="drill"
                                 onClick={() => setEnableControlModalDrillIndex(index)}
                             />
-                            <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} data-row-delete="">
+                            <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete="">
                                 <Delete />
                             </IconButton>
                         </Box>

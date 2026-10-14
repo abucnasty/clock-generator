@@ -20,7 +20,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
-import { entityLabel } from '../utils/entityLabel';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
@@ -223,11 +223,7 @@ function InsertersFormComponent({
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, focusAfterRemove } = useFocusAfterRemove(inserters.length);
-    const remove = (index: number) => {
-        focusAfterRemove(index);
-        onRemove(index);
-    };
+    const { cardRef, remove } = useFocusAfterRemove(inserters.length, onRemove);
 
     return (
         <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
@@ -462,7 +458,7 @@ function InsertersFormComponent({
                         onClick={() => setEnableControlModalInserterIndex(index)}
                     />
 
-                    <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} data-row-delete="">
+                    <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
                         <Delete />
                     </IconButton>
                 </Box>

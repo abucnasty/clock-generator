@@ -21,7 +21,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
-import { entityLabel } from '../utils/entityLabel';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 
 interface MachinesFormProps {
     machines: MachineFormData[];
@@ -60,11 +60,7 @@ function MachinesFormComponent({
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, focusAfterRemove } = useFocusAfterRemove(machines.length);
-    const remove = (index: number) => {
-        focusAfterRemove(index);
-        onRemove(index);
-    };
+    const { cardRef, remove } = useFocusAfterRemove(machines.length, onRemove);
 
     return (
         <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
@@ -282,6 +278,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     onClick={() => onRemove(index)}
                     color="error"
                     disabled={!canDelete}
+                    aria-label={deleteButtonLabel('machine', machine.id)}
                     data-row-delete=""
                 >
                     <Delete />

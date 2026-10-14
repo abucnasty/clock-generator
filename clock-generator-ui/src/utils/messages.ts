@@ -17,24 +17,35 @@ export interface MessageInput {
     action?: MessageAction;
     /** Read out after the text, and not shown: what a screen reader user needs besides, such as a key to press */
     hint?: string;
+    /** Called once when the message goes, however it goes: closed, timed out, or replaced by another */
+    onClose?: () => void;
+    /** Where focus goes when the player closes the message, or uses its action, from inside it; none leaves it be */
+    returnFocus?: () => HTMLElement | null;
 }
 
-export interface Message {
+export interface Message extends Omit<MessageInput, 'severity' | 'durationMs'> {
     id: number;
-    text: string;
     severity: MessageSeverity;
     durationMs: number | null;
-    action?: MessageAction;
-    hint?: string;
+}
+
+/** Text for the page's one polite live region; a new id writes it again, so the same text is read out twice */
+export interface Announcement {
+    id: number;
+    text: string;
 }
 
 export interface MessageState {
     current: Message | null;
+    announcement: Announcement | null;
 }
 
-type MessageEvent = { type: 'notify'; id: number; message: MessageInput } | { type: 'dismiss'; id: number };
+type MessageEvent =
+    | { type: 'notify'; id: number; message: MessageInput }
+    | { type: 'dismiss'; id: number }
+    | { type: 'announce'; id: number; text: string };
 
-export const NO_MESSAGE: MessageState = { current: null };
+export const NO_MESSAGE: MessageState = { current: null, announcement: null };
 
 /** An error stays until the player closes it: it may need reading twice */
 const DEFAULT_DURATION_MS: Record<MessageSeverity, number | null> = {
@@ -44,26 +55,33 @@ const DEFAULT_DURATION_MS: Record<MessageSeverity, number | null> = {
     error: null,
 };
 
+/** Errors and warnings are alerts, read out at once by their own role; the rest go through the polite live region */
+export const isUrgent = (severity: MessageSeverity) => severity === 'error' || severity === 'warning';
+
 /**
  * One message at a time: a new one replaces the one shown, since the player should see the result of what they just
- * did. Closing a message that has already been replaced leaves the newer one open, and the state as it is.
+ * did. Closing a message that has already been replaced leaves the newer one open, and the state as it is. A message
+ * that is not urgent is also announced, with its hint, in the live region, as `announce` text is.
  */
 export function messagesReducer(state: MessageState, event: MessageEvent): MessageState {
     switch (event.type) {
         case 'notify': {
-            const severity = event.message.severity ?? 'info';
+            const { severity = 'info', durationMs, ...rest } = event.message;
             return {
                 current: {
+                    ...rest,
                     id: event.id,
-                    text: event.message.text,
                     severity,
-                    durationMs: event.message.durationMs !== undefined ? event.message.durationMs : DEFAULT_DURATION_MS[severity],
-                    action: event.message.action,
-                    hint: event.message.hint,
+                    durationMs: durationMs !== undefined ? durationMs : DEFAULT_DURATION_MS[severity],
                 },
+                announcement: isUrgent(severity)
+                    ? state.announcement
+                    : { id: event.id, text: [rest.text, rest.hint].filter(Boolean).join(' ') },
             };
         }
         case 'dismiss':
-            return state.current?.id === event.id ? NO_MESSAGE : state;
+            return state.current?.id === event.id ? { ...state, current: null } : state;
+        case 'announce':
+            return { ...state, announcement: { id: event.id, text: event.text } };
     }
 }

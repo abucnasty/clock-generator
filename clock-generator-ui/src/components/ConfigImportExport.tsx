@@ -5,7 +5,7 @@ import type { Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
 import { useNotify } from '../hooks/useMessages';
-import { describePaste, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
+import { countOf, describePaste, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -15,6 +15,8 @@ import type {
     MiningDrillConfiguration,
     PastedEntities,
 } from '../worker/types';
+
+const EXPORTED_MESSAGE = 'Build exported.';
 
 interface PendingImport extends PastedEntities {
     miningProductivityLevel?: number;
@@ -90,7 +92,7 @@ export function ConfigImportExport({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        notify({ severity: 'success', text: 'Configuration exported successfully!' });
+        notify({ severity: 'success', text: EXPORTED_MESSAGE });
     }, [config, notify]);
 
     const handleImportClick = useCallback(() => {
@@ -231,11 +233,11 @@ export function ConfigImportExport({
         const belts = importSelections.belts && pendingImport.belts.length > 0;
         const chests = importSelections.chests && pendingImport.chests.length > 0;
         const parts = [
-            machines && `${pendingImport.machines.length} machines`,
-            drills && `${pendingImport.drills.length} drills`,
-            inserters && `${pendingImport.inserters.length} inserters`,
-            belts && `${pendingImport.belts.length} belts`,
-            chests && `${pendingImport.chests.length} chests`,
+            machines && countOf(pendingImport.machines.length, 'machine', 'machines'),
+            drills && countOf(pendingImport.drills.length, 'drill', 'drills'),
+            inserters && countOf(pendingImport.inserters.length, 'inserter', 'inserters'),
+            belts && countOf(pendingImport.belts.length, 'belt', 'belts'),
+            chests && countOf(pendingImport.chests.length, 'chest', 'chests'),
         ].filter((part) => part !== false);
 
         setPendingImport(null);

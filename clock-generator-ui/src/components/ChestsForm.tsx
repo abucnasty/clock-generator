@@ -23,7 +23,7 @@ import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
-import { entityLabel } from '../utils/entityLabel';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 
 interface ChestsFormProps {
     chests: ChestFormData[];
@@ -98,11 +98,7 @@ function ChestsFormComponent({
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, focusAfterRemove } = useFocusAfterRemove(chests.length);
-    const remove = (index: number) => {
-        focusAfterRemove(index);
-        onRemove(index);
-    };
+    const { cardRef, remove } = useFocusAfterRemove(chests.length, onRemove);
 
     return (
         <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
@@ -214,7 +210,7 @@ function ChestsFormComponent({
 
                         <Box sx={{ flex: 1 }} />
 
-                        <IconButton onClick={() => remove(index)} color="error" data-row-delete="">
+                        <IconButton onClick={() => remove(index)} color="error" aria-label={deleteButtonLabel('chest', chest.id)} data-row-delete="">
                             <Delete />
                         </IconButton>
                     </Box>

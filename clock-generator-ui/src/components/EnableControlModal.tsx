@@ -388,6 +388,8 @@ function EnableControlModalContent({
         <>
             <Dialog
                 open
+                // it edits an entity by its place in the list, which an Undo could move: it withdraws the offer
+                data-edits-build=""
                 // a click outside does nothing, so a half-built rule is not lost to a stray click
                 onClose={(_event, reason) => {
                     if (reason === 'backdropClick') return;

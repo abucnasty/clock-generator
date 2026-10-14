@@ -12,8 +12,11 @@ import {
     describeDrillsOff,
     describePaste,
     describeRemoval,
+    countOf,
     removalMessage,
+    removedDeleteLabel,
     settleUndoEntry,
+    undoMessageInput,
     undoOutcome,
     UNDO_RESULTS_NOTE,
     type UndoEntry,
@@ -301,15 +304,25 @@ describe('the messages', () => {
 
     it('say what the delete itself renumbered and unlinked', () => {
         expect(removalMessage(form(), 'inserters', 0)).toBe('Deleted Inserter 1. Inserters 2–3 are now 1–2.');
-        expect(removalMessage(form(), 'belts', 0)).toBe('Deleted Belt 1. 1 inserter end no longer has a target.');
+        expect(removalMessage(form(), 'belts', 0)).toBe('Deleted Belt 1. Inserter 1 has no Source now.');
         expect(removalMessage(form(), 'machines', 0))
-            .toBe('Deleted Machine 1. Machines 2–3 are now 1–2. 1 inserter end and 1 drill no longer have a target.');
+            .toBe('Deleted Machine 1. Machines 2–3 are now 1–2. Inserter 3 has no Source now. Drill 1 has no Target Machine now.');
         expect(removalMessage(form(), 'drills', 0)).toBe('Deleted Drill 1. Drill 2 is now 1.');
     });
 
-    it('say which links were cleared', () => {
-        expect(removalMessage(form(), 'machines', 2)).toBe('Deleted Machine 3. 2 inserter ends and 1 drill no longer have a target.');
-        expect(removalMessage(form(), 'chests', 1)).toBe('Deleted Chest 2. 1 inserter end no longer has a target.');
+    it('say which links were cleared, in the form\'s words, one sentence per kind', () => {
+        expect(removalMessage(form(), 'machines', 2))
+            .toBe('Deleted Machine 3. Inserter 2 has no Source and Inserter 1 has no Destination now. Drill 2 has no Target Machine now.');
+        expect(removalMessage(form(), 'chests', 1)).toBe('Deleted Chest 2. Inserter 2 has no Destination now.');
+        const twoFromMachine3 = edits.updateInserter(form(), 0, { source: { type: 'machine', id: 3 }, sink: { type: 'belt', id: 1 } });
+        expect(removalMessage(twoFromMachine3, 'machines', 2))
+            .toBe('Deleted Machine 3. Inserters 1–2 have no Source now. Drill 2 has no Target Machine now.');
+    });
+
+    it('name the delete button that an Undo brings back', () => {
+        expect(removedDeleteLabel(form(), 'inserters', 1)).toBe('Delete Inserter 2');
+        expect(removedDeleteLabel(form(), 'drills', 0)).toBe('Delete Drill 1');
+        expect(removedDeleteLabel(form(), 'chests', 5)).toBeNull();
     });
 
     it('name a chest switch, and nothing for a switch to the same type', () => {
@@ -324,7 +337,29 @@ describe('the messages', () => {
         expect(describeDrillsOff(edits.disableDrills(form()))).toBeNull();
     });
 
-    it('list what a paste imported', () => {
+    it('list what a paste imported, one or many of each', () => {
         expect(describePaste(['3 machines', '2 inserters'])).toBe('Imported 3 machines, 2 inserters from Factorio.');
+        expect(describePaste([countOf(1, 'machine', 'machines'), countOf(1, 'belt', 'belts'), countOf(2, 'drill', 'drills')]))
+            .toBe('Imported 1 machine, 1 belt, 2 drills from Factorio.');
+    });
+});
+
+describe('undoMessageInput', () => {
+    const extras = { hint: 'Or press Ctrl+Z to undo.', onUndo: () => {}, onClose: () => {}, returnFocus: () => null };
+
+    it('has no timer while it offers Undo: it stays until an edit, another action, Close or Escape', () => {
+        const input = undoMessageInput(createUndoEntry(1, 'Build reset.', form(), true, false), extras);
+        expect(input.durationMs).toBeNull();
+        expect(input).toMatchObject({ severity: 'info', text: 'Build reset.', hint: extras.hint });
+        expect(input.action).toMatchObject({ label: 'Undo', onClick: extras.onUndo, keyShortcuts: 'Control+Z Meta+Z' });
+        expect(input.onClose).toBe(extras.onClose);
+        expect(input.returnFocus).toBe(extras.returnFocus);
+    });
+
+    it('is a notice for 8 seconds, without Undo or its key, when it does not offer Undo', () => {
+        const input = undoMessageInput(createUndoEntry(1, UNDO_RESULTS_NOTE, form(), false, false), extras);
+        expect(input.durationMs).toBe(8000);
+        expect(input.action).toBeUndefined();
+        expect(input.hint).toBeUndefined();
     });
 });

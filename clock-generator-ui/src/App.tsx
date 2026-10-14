@@ -44,7 +44,8 @@ import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
-import { describeChestSwitch, describeDrillsOff, removalMessage } from './utils/undoSnapshot';
+import type { EntityKind } from './utils/configForm/formData';
+import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 
 const darkTheme = createTheme({
     palette: {
@@ -240,20 +241,31 @@ function App() {
     }, [exportConfig, runSimulation, debugSteps, streamLogs]);
 
     // the actions that throw part of the build away offer Undo, just before they are applied
-    const undoable = useMemo(() => ({
-        removeMachine: (index: number) => { offerUndo((form) => removalMessage(form, 'machines', index)); removeMachine(index); },
-        removeInserter: (index: number) => { offerUndo((form) => removalMessage(form, 'inserters', index)); removeInserter(index); },
-        removeBelt: (index: number) => { offerUndo((form) => removalMessage(form, 'belts', index)); removeBelt(index); },
-        removeChest: (index: number) => { offerUndo((form) => removalMessage(form, 'chests', index)); removeChest(index); },
-        removeDrill: (index: number) => { offerUndo((form) => removalMessage(form, 'drills', index)); removeDrill(index); },
-        switchChestType: (index: number, type: ChestType) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type); },
-        disableDrills: () => { offerUndo(describeDrillsOff); disableDrills(); },
-    }), [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, disableDrills]);
-    // Import, Paste and Reset clear the generated clocks, which their Undo does not bring back
-    const hasResults = alternatives.length > 0 || isRunning;
+    const undoable = useMemo(() => {
+        // a delete offers Undo, which brings the deleted row's delete button back for focus to go to
+        const removal = (kind: EntityKind, remove: (index: number) => void) => (index: number) => {
+            offerUndo((form) => removalMessage(form, kind, index), { restoredLabel: (form) => removedDeleteLabel(form, kind, index) });
+            remove(index);
+        };
+        return {
+            removeMachine: removal('machines', removeMachine),
+            removeInserter: removal('inserters', removeInserter),
+            removeBelt: removal('belts', removeBelt),
+            removeChest: removal('chests', removeChest),
+            removeDrill: removal('drills', removeDrill),
+            switchChestType: (index: number, type: ChestType) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type); },
+            disableDrills: () => { offerUndo(describeDrillsOff); disableDrills(); },
+        };
+    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, disableDrills]);
+    // Import, Paste and Reset clear the generated clocks, which their Undo does not bring back; read when the build is
+    // replaced, which for an import is after the file has been checked
+    const hasResultsRef = useRef(false);
+    useEffect(() => {
+        hasResultsRef.current = alternatives.length > 0 || isRunning;
+    }, [alternatives, isRunning]);
     const offerUndoOfReplace = useCallback(
-        (message: string) => offerUndo(message, { resultsCleared: hasResults }),
-        [offerUndo, hasResults]
+        (message: string) => offerUndo(message, { resultsCleared: hasResultsRef.current }),
+        [offerUndo]
     );
 
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
@@ -626,6 +638,8 @@ function App() {
                 open={diagramFullscreen}
                 onClose={() => setDiagramFullscreen(false)}
                 PaperProps={{ sx: { bgcolor: 'background.default' } }}
+                // a view of the build, not an edit of one entity: Ctrl/Cmd+Z undoes in it as on the page
+                data-fullscreen-diagram=""
             >
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
                     <Box

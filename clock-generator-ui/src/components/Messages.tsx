@@ -1,21 +1,10 @@
 import { Close } from '@mui/icons-material';
 import { Alert, Box, Button, IconButton, Portal, Snackbar } from '@mui/material';
 import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
-import { MessageActionsContext, MessageStateContext, useCurrentMessage, useDismissMessage } from '../hooks/useMessages';
-import { messagesReducer, NO_MESSAGE, type MessageInput } from '../utils/messages';
-
-/** Hidden from sight, read by screen readers */
-const VISUALLY_HIDDEN = {
-    position: 'absolute',
-    width: '1px',
-    height: '1px',
-    m: '-1px',
-    p: 0,
-    overflow: 'hidden',
-    clip: 'rect(0 0 0 0)',
-    whiteSpace: 'nowrap',
-    border: 0,
-} as const;
+import { MessageActionsContext, MessageStateContext, useDismissMessage, useMessageState } from '../hooks/useMessages';
+import { isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput } from '../utils/messages';
+import { isEscapeForSomethingElse } from '../utils/undoKeys';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 
 /** Holds the one message shown, for any component to raise with `useNotify()`; goes above `App`, which raises some */
 export function MessageProvider({ children }: { children: ReactNode }) {
@@ -27,17 +16,22 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         return id;
     }, []);
     const dismiss = useCallback((id: number) => dispatch({ type: 'dismiss', id }), []);
-    // the id of the message on screen, for isShown, which must not make its callers render again
-    const shownId = useRef<number | null>(null);
+    const announce = useCallback((text: string) => dispatch({ type: 'announce', id: ++nextId.current, text }), []);
+    const actions = useMemo(() => ({ notify, dismiss, announce }), [notify, dismiss, announce]);
+
+    // a message that goes, however it goes (closed, timed out, replaced), is told so once
+    const shown = useRef<Message | null>(null);
     useEffect(() => {
-        shownId.current = state.current?.id ?? null;
+        const previous = shown.current;
+        shown.current = state.current;
+        if (previous && previous !== state.current) {
+            previous.onClose?.();
+        }
     }, [state]);
-    const isShown = useCallback((id: number) => shownId.current === id, []);
-    const actions = useMemo(() => ({ notify, dismiss, isShown }), [notify, dismiss, isShown]);
 
     return (
         <MessageActionsContext.Provider value={actions}>
-            <MessageStateContext.Provider value={state.current}>
+            <MessageStateContext.Provider value={state}>
                 {children}
             </MessageStateContext.Provider>
         </MessageActionsContext.Provider>
@@ -45,29 +39,55 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Draws the message shown, top centre just below the header, over the page, its footer and any dialog. Rendered once,
- * inside the theme; the portal keeps it out of any stacking context a parent makes. It is announced by its own role:
- * an alert for an error or a warning, a status otherwise.
+ * The page's one polite live region, always there so that what is written into it is read out, and the message shown,
+ * top centre just below the header, over the page, its footer and any dialog. Rendered once, inside the theme. An error
+ * or a warning is announced by its own alert role; any other message by the live region, so it is read out once.
  */
 export function MessageHost() {
-    const message = useCurrentMessage();
+    const { current, announcement } = useMessageState();
     const dismiss = useDismissMessage();
-    if (!message) {
-        return null;
-    }
-    const close = () => dismiss(message.id);
-    const urgent = message.severity === 'error' || message.severity === 'warning';
+    return (
+        <>
+            <Box role="status" sx={VISUALLY_HIDDEN} data-message-announcer="">
+                {/* a new node for each announcement, so the same text twice is read out twice */}
+                {announcement && <span key={announcement.id}>{announcement.text}</span>}
+            </Box>
+            {current && <MessageSnackbar key={current.id} message={current} onDismiss={dismiss} />}
+        </>
+    );
+}
 
+function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: (id: number) => void }) {
+    const rootRef = useRef<HTMLDivElement>(null);
+    const urgent = isUrgent(message.severity);
+
+    /** Closes it, after `run`; from inside it, focus moves where the message says instead of falling to the page's top */
+    const leave = (run?: () => void) => {
+        const focusWasInside = rootRef.current?.contains(document.activeElement) ?? false;
+        run?.();
+        onDismiss(message.id);
+        const { returnFocus } = message;
+        if (focusWasInside && returnFocus) {
+            // once what `run` changed is drawn
+            setTimeout(() => returnFocus()?.focus(), 0);
+        }
+    };
+
+    // the portal keeps it out of any stacking context a parent makes
     return (
         <Portal>
             <Snackbar
-                key={message.id}
+                ref={rootRef}
                 open
                 autoHideDuration={message.durationMs}
                 // hovering or focusing it pauses the timer; leaving gives it its full time again, not MUI's half
                 resumeHideDuration={message.durationMs ?? undefined}
-                // a click elsewhere on the page does not close it: it goes after its time, with Escape or its close button
-                onClose={(_, reason) => { if (reason !== 'clickaway') close(); }}
+                onClose={(event, reason) => {
+                    // a click elsewhere on the page does not close it, nor an Escape that closes a list, menu or dialog
+                    if (reason === 'clickaway') return;
+                    if (reason === 'escapeKeyDown' && isEscapeForSomethingElse(event as Event, document.activeElement)) return;
+                    leave();
+                }}
                 anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
                 sx={{
                     top: { xs: 'calc(var(--app-header-height, 64px) + 8px)', sm: 'calc(var(--app-header-height, 64px) + 8px)' },
@@ -78,24 +98,22 @@ export function MessageHost() {
                 <Alert
                     severity={message.severity}
                     variant={urgent ? 'filled' : 'standard'}
-                    role={urgent ? 'alert' : 'status'}
+                    // the live region reads out the rest; a status mounted with its text is often not read out
+                    role={urgent ? 'alert' : 'none'}
                     elevation={6}
                     sx={{ width: '100%', alignItems: 'center' }}
-                    onClose={message.action ? undefined : close}
+                    onClose={message.action ? undefined : () => leave()}
                     action={message.action && (
                         <>
                             <Button
                                 color="inherit"
                                 size="small"
                                 aria-keyshortcuts={message.action.keyShortcuts}
-                                onClick={() => {
-                                    message.action?.onClick();
-                                    close();
-                                }}
+                                onClick={() => leave(message.action?.onClick)}
                             >
                                 {message.action.label}
                             </Button>
-                            <IconButton size="small" color="inherit" aria-label="Close" onClick={close}>
+                            <IconButton size="small" color="inherit" aria-label="Close" onClick={() => leave()}>
                                 <Close fontSize="small" />
                             </IconButton>
                         </>

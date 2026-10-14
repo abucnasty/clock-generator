@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { focusTargetIndex } from '../utils/rowFocus';
 
 /**
  * Keeps the keyboard in a list card when one of its rows is deleted, since the row's delete button goes with it and
  * focus would fall back to the top of the page (WCAG 2.4.3): it moves to the delete button of the row that took its
  * place, or of the row before when it was the last, or to the card's Add button when no row is left. The card is the
  * element `cardRef` is given, its rows' delete buttons are marked `data-row-delete` and its Add button `data-row-add`;
- * `count` is its number of rows.
+ * `count` is its number of rows. `remove` deletes the row at an index with `onRemove`, and moves focus after it.
  */
-export function useFocusAfterRemove(count: number) {
+export function useFocusAfterRemove(count: number, onRemove: (index: number) => void) {
     const cardRef = useRef<HTMLDivElement>(null);
     const pending = useRef<{ index: number; count: number } | null>(null);
 
@@ -20,14 +21,14 @@ export function useFocusAfterRemove(count: number) {
             return;
         }
         const buttons = Array.from(card.querySelectorAll<HTMLElement>('[data-row-delete]:not(:disabled)'));
-        const target = buttons[Math.min(removed.index, buttons.length - 1)] ?? card.querySelector<HTMLElement>('[data-row-add]');
-        target?.focus();
+        const target = focusTargetIndex(removed.index, buttons.length);
+        (target === null ? card.querySelector<HTMLElement>('[data-row-add]') : buttons[target])?.focus();
     }, [count]);
 
-    /** Call as the row at the index is deleted */
-    const focusAfterRemove = useCallback((index: number) => {
+    const remove = useCallback((index: number) => {
         pending.current = { index, count };
-    }, [count]);
+        onRemove(index);
+    }, [count, onRemove]);
 
-    return { cardRef, focusAfterRemove };
+    return { cardRef, remove };
 }

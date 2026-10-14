@@ -1,20 +1,21 @@
 import { ChestType } from 'clock-generator/light';
 import * as edits from './configForm/edits';
 import { isInfinityChest, type ConfigFormData, type EntityKind } from './configForm/formData';
-import { entityLabel, type LabelKind } from './entityLabel';
+import { deleteButtonLabel, entityLabel, type LabelKind } from './entityLabel';
+import type { MessageInput } from './messages';
 
-// Every text of the Undo messages, so that the copy changes in one place
-export const UNDO_DURATION_MS = 10_000;
-export const UNDO_NOTICE_DURATION_MS = 8_000;
-export const UNDO_LABEL = 'Undo';
+// Every text of the Undo messages, so that the copy changes in one place. An Undo message has no timer: it stays until
+// the build is edited, another action offers Undo, or it is closed (the owner, 2026-10-14). The notice after it has one.
+const UNDO_NOTICE_DURATION_MS = 8_000;
+const UNDO_LABEL = 'Undo';
 export const UNDO_RESET_MESSAGE = 'Build reset.';
 export const UNDO_IMPORT_MESSAGE = 'Build imported.';
 const UNDO_DRILLS_OFF_MESSAGE = 'Mining drills turned off.';
-export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Generate to make them again.';
+export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Validate, then Generate to make them again.';
 /** Read out after an Undo message: the key that undoes too, on a Mac and elsewhere */
 export const UNDO_KEY_HINT = { mac: 'Or press Cmd+Z to undo.', other: 'Or press Ctrl+Z to undo.' };
 /** The same keys, for the Undo button's `aria-keyshortcuts` */
-export const UNDO_KEY_SHORTCUTS = 'Control+Z Meta+Z';
+const UNDO_KEY_SHORTCUTS = 'Control+Z Meta+Z';
 
 /** One of a kind, for `entityLabel`, and the kind's name for several ("Inserters 3–5 are now 2–4") */
 const KINDS: Record<EntityKind, { one: LabelKind; many: string }> = {
@@ -68,6 +69,26 @@ export function settleUndoEntry(entry: UndoEntry | null, form: ConfigFormData): 
 }
 
 /**
+ * The message of an entry: with Undo and no timer while it offers Undo, or a notice for 8 seconds. Its hint names the
+ * Undo key; `onClose` hears when it goes, and `returnFocus` says where focus goes from inside it.
+ */
+export function undoMessageInput(
+    entry: UndoEntry,
+    { hint, onUndo, onClose, returnFocus }: { hint: string; onUndo: () => void; onClose: () => void; returnFocus: () => HTMLElement | null },
+): MessageInput {
+    const canUndo = entry.snapshot !== null;
+    return {
+        severity: 'info',
+        text: entry.message,
+        durationMs: canUndo ? null : UNDO_NOTICE_DURATION_MS,
+        action: canUndo ? { label: UNDO_LABEL, onClick: onUndo, keyShortcuts: UNDO_KEY_SHORTCUTS } : undefined,
+        hint: canUndo ? hint : undefined,
+        onClose,
+        returnFocus,
+    };
+}
+
+/**
  * The form an Undo puts back, and the notice that follows it when the action had cleared generated clocks, which the
  * Undo does not bring back; null for an entry without Undo. The notice is about the form put back, so it goes with the
  * first edit after it.
@@ -91,48 +112,56 @@ function idList(ids: number[]): string {
     return consecutive && ids.length > 1 ? `${ids[0]}–${ids[ids.length - 1]}` : ids.join(', ');
 }
 
-const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** "3 machines", "1 machine" */
+export const countOf = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** "Inserter 3", "Inserters 1–2", "Inserters 1, 3" */
+function named(kind: EntityKind, ids: number[]): string {
+    return ids.length === 1 ? entityLabel(KINDS[kind].one, ids[0]) : `${KINDS[kind].many} ${idList(ids)}`;
+}
+
+const hasOrHave = (ids: number[]) => (ids.length === 1 ? 'has' : 'have');
+const ascending = (ids: number[]) => [...ids].sort((a, b) => a - b);
 
 /**
- * What deleting the entity at the index did, from the forms before and after it: which one went, which of its kind
- * were renumbered, and which links to it were cleared. "Deleted Inserter 2. Inserters 3–5 are now 2–4." Null when there
- * is no entity at the index.
+ * What deleting the entity at the index did, from the forms before and after it, in the form's words: which one went,
+ * which of its kind were renumbered, and which inserters and drills lost what pointed at it, one sentence per kind.
+ * "Deleted Machine 2. Machines 3–4 are now 2–3. Inserters 1–2 have no Source now. Drill 1 has no Target Machine now."
+ * Null when there is no entity at the index.
  */
 export function describeRemoval(before: ConfigFormData, after: ConfigFormData, kind: EntityKind, index: number): string | null {
     const removed = itemsOf(before, kind)[index];
     if (!removed) {
         return null;
     }
-    const names = KINDS[kind];
-    const sentences = [`Deleted ${entityLabel(names.one, removed.id)}.`];
+    const sentences = [`Deleted ${entityLabel(KINDS[kind].one, removed.id)}.`];
 
     const newIds = new Map(itemsOf(after, kind).map((item) => [item._uuid, item.id]));
     const moved = itemsOf(before, kind).filter((item) => newIds.has(item._uuid) && newIds.get(item._uuid) !== item.id);
     if (moved.length > 0) {
-        const from = idList(moved.map((item) => item.id));
         const to = idList(moved.map((item) => newIds.get(item._uuid)!));
-        sentences.push(moved.length === 1 ? `${entityLabel(names.one, moved[0].id)} is now ${to}.` : `${names.many} ${from} are now ${to}.`);
+        sentences.push(`${named(kind, moved.map((item) => item.id))} ${moved.length === 1 ? 'is' : 'are'} now ${to}.`);
     }
 
-    // the links of the same inserter or drill that had a target before and have none after
+    // the inserters and drills that pointed at something before and at nothing after, numbered as they are now
     const insertersBefore = new Map(before.inserters.map((ins) => [ins._uuid, ins]));
-    const clearedEnds = after.inserters.reduce((sum, ins) => {
+    const lost = (end: 'source' | 'sink') => ascending(after.inserters.filter((ins) => {
         const was = insertersBefore.get(ins._uuid);
-        if (!was) return sum;
-        return sum + [[was.source, ins.source], [was.sink, ins.sink]].filter(([then, now]) => then.id !== 0 && now.id === 0).length;
-    }, 0);
+        return was !== undefined && was[end].id !== 0 && ins[end].id === 0;
+    }).map((ins) => ins.id));
+    const ends = ([['Source', lost('source')], ['Destination', lost('sink')]] as const)
+        .filter(([, ids]) => ids.length > 0)
+        .map(([field, ids]) => `${named('inserters', ids)} ${hasOrHave(ids)} no ${field}`);
+    if (ends.length > 0) {
+        sentences.push(`${ends.join(' and ')} now.`);
+    }
     const drillsBefore = new Map((before.drills?.configs ?? []).map((drill) => [drill._uuid, drill]));
-    const clearedDrills = (after.drills?.configs ?? []).filter((drill) => {
+    const drills = ascending((after.drills?.configs ?? []).filter((drill) => {
         const was = drillsBefore.get(drill._uuid);
         return was !== undefined && was.target.id !== 0 && drill.target.id === 0;
-    }).length;
-    const cleared = [
-        clearedEnds > 0 ? count(clearedEnds, 'inserter end', 'inserter ends') : null,
-        clearedDrills > 0 ? count(clearedDrills, 'drill', 'drills') : null,
-    ].filter((part) => part !== null);
-    if (cleared.length > 0) {
-        const one = clearedEnds + clearedDrills === 1;
-        sentences.push(`${cleared.join(' and ')} no longer ${one ? 'has a target' : 'have a target'}.`);
+    }).map((drill) => drill.id));
+    if (drills.length > 0) {
+        sentences.push(`${named('drills', drills)} ${hasOrHave(drills)} no Target Machine now.`);
     }
     return sentences.join(' ');
 }
@@ -150,6 +179,12 @@ export function removalMessage(form: ConfigFormData, kind: EntityKind, index: nu
     return describeRemoval(form, REMOVE[kind](form, index), kind, index);
 }
 
+/** The name of the deleted entity's delete button, which is back after an Undo, for focus to go to; null if none */
+export function removedDeleteLabel(form: ConfigFormData, kind: EntityKind, index: number): string | null {
+    const removed = itemsOf(form, kind)[index];
+    return removed ? deleteButtonLabel(KINDS[kind].one, removed.id) : null;
+}
+
 /** "Chest 2 changed to Infinity Chest."; null when the chest is already of that type or there is none */
 export function describeChestSwitch(form: ConfigFormData, index: number, newType: ChestType): string | null {
     const chest = form.chests[index];
@@ -165,7 +200,7 @@ export function describeDrillsOff(form: ConfigFormData): string | null {
     return form.drills === undefined ? null : UNDO_DRILLS_OFF_MESSAGE;
 }
 
-/** "Imported 3 machines, 2 inserters from Factorio." */
+/** "Imported 3 machines, 1 inserter from Factorio." */
 export function describePaste(parts: string[]): string {
     return `Imported ${parts.join(', ')} from Factorio.`;
 }
