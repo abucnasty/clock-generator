@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isEscapeForSomethingElse, isInOtherDialog, isTextField, isUndoShortcut } from './undoKeys';
+import { entersEditingDialog, isEscapeForSomethingElse, isInOtherDialog, isTextField, isUndoShortcut } from './undoKeys';
 
 const key = (key: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }> = {}) =>
     ({ key, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...mods });
@@ -67,5 +67,23 @@ describe('isEscapeForSomethingElse', () => {
     it('is false on the page, in the message, or with nothing focused', () => {
         expect(isEscapeForSomethingElse({ defaultPrevented: false }, inside())).toBe(false);
         expect(isEscapeForSomethingElse({ defaultPrevented: false }, null)).toBe(false);
+    });
+});
+
+describe('entersEditingDialog', () => {
+    const outside = { tagName: 'BUTTON' };
+    const otherInside = { tagName: 'INPUT' };
+    const dialog = { contains: (node: unknown) => node === otherInside };
+    const inDialog = { tagName: 'DIV', closest: (selector: string) => (selector === '[data-edits-build]' ? dialog : null) };
+
+    it('is true when focus comes into a rule or entity dialog from the page, or from nowhere', () => {
+        expect(entersEditingDialog(inDialog, outside)).toBe(true);
+        expect(entersEditingDialog(inDialog, null)).toBe(true);
+    });
+
+    it('is false when focus moves inside the dialog, or lands outside any', () => {
+        expect(entersEditingDialog(inDialog, otherInside)).toBe(false);
+        expect(entersEditingDialog({ tagName: 'BUTTON', closest: () => null }, outside)).toBe(false);
+        expect(entersEditingDialog(null, outside)).toBe(false);
     });
 });

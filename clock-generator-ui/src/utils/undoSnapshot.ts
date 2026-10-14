@@ -12,6 +12,8 @@ export const UNDO_RESET_MESSAGE = 'Build reset.';
 export const UNDO_IMPORT_MESSAGE = 'Build imported.';
 const UNDO_DRILLS_OFF_MESSAGE = 'Mining drills turned off.';
 export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Validate, then Generate to make them again.';
+/** Read out when an editing dialog opening takes the offer away */
+export const UNDO_WITHDRAWN_MESSAGE = 'Undo is no longer offered.';
 /** Read out after an Undo message: the key that undoes too, on a Mac and elsewhere */
 export const UNDO_KEY_HINT = { mac: 'Or press Cmd+Z to undo.', other: 'Or press Ctrl+Z to undo.' };
 /** The same keys, for the Undo button's `aria-keyshortcuts` */

@@ -2,6 +2,7 @@ import { Close } from '@mui/icons-material';
 import { Alert, Box, Button, IconButton, Portal, Snackbar } from '@mui/material';
 import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
 import { MessageActionsContext, MessageStateContext, useDismissMessage, useMessageState } from '../hooks/useMessages';
+import { ANNOUNCER_ATTRIBUTE, announceText } from '../utils/announcer';
 import { isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput } from '../utils/messages';
 import { isEscapeForSomethingElse } from '../utils/undoKeys';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
@@ -39,19 +40,24 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * The page's one polite live region, always there so that what is written into it is read out, and the message shown,
- * top centre just below the header, over the page, its footer and any dialog. Rendered once, inside the theme. An error
- * or a warning is announced by its own alert role; any other message by the live region, so it is read out once.
+ * The page's polite live region, always there and empty until something is announced, and the message shown, top
+ * centre just below the header, over the page, its footer and any dialog. Rendered once, inside the theme. An error or
+ * a warning is announced by its own alert role; any other message, and `announce` text, by the live region, so it is
+ * read out once. While a dialog hides the app from screen readers, `announceText` uses a region on `<body>` instead.
  */
 export function MessageHost() {
     const { current, announcement } = useMessageState();
     const dismiss = useDismissMessage();
+    const regionRef = useRef<HTMLDivElement>(null);
+    // written outside React: where it goes depends on the page at the moment it is written
+    useEffect(() => {
+        if (announcement) {
+            announceText(regionRef.current, announcement.text);
+        }
+    }, [announcement]);
     return (
         <>
-            <Box role="status" sx={VISUALLY_HIDDEN} data-message-announcer="">
-                {/* a new node for each announcement, so the same text twice is read out twice */}
-                {announcement && <span key={announcement.id}>{announcement.text}</span>}
-            </Box>
+            <Box ref={regionRef} role="status" sx={VISUALLY_HIDDEN} {...{ [ANNOUNCER_ATTRIBUTE]: '' }} />
             {current && <MessageSnackbar key={current.id} message={current} onDismiss={dismiss} />}
         </>
     );

@@ -84,6 +84,8 @@ export function WorkflowBar({
                     onChange={(_, value) => { if (value) onViewChange(value); }}
                     size="small"
                     aria-label="Configure the build or look at its results"
+                    // always in the header: where focus goes back to when what it was on has gone
+                    data-focus-fallback=""
                 >
                     <ToggleButton value="configure">Configure</ToggleButton>
                     <ToggleButton value="results">Results</ToggleButton>

@@ -31,6 +31,11 @@ export function useDismissMessage(): (id: number) => void {
     return useContext(MessageActionsContext).dismiss;
 }
 
+/** Reads text out to screen reader users without showing a message: for news that shows elsewhere, or nowhere */
+export function useAnnounce(): (text: string) => void {
+    return useContext(MessageActionsContext).announce;
+}
+
 export function useMessageState(): MessageState {
     return useContext(MessageStateContext);
 }

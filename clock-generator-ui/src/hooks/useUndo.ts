@@ -1,26 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ConfigFormData } from '../utils/configForm/formData';
-import { isInOtherDialog, isTextField, isUndoShortcut } from '../utils/undoKeys';
+import { entersEditingDialog, isInOtherDialog, isTextField, isUndoShortcut } from '../utils/undoKeys';
 import {
     createUndoEntry,
     settleUndoEntry,
     undoMessageInput,
     undoOutcome,
     UNDO_KEY_HINT,
+    UNDO_WITHDRAWN_MESSAGE,
     type UndoEntry,
 } from '../utils/undoSnapshot';
-import { useDismissMessage, useNotify } from './useMessages';
+import { useAnnounce, useDismissMessage, useNotify } from './useMessages';
 
 const UNDO_HINT = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? UNDO_KEY_HINT.mac : UNDO_KEY_HINT.other;
 
-/** A dialog that edits an entity by its place in a list, which an Undo could move under it */
-const EDITS_BUILD = '[data-edits-build]';
+/** Where focus goes when nothing it was on is left: the selected Configure/Results toggle, always in the header */
+const FOCUS_FALLBACK = '[data-focus-fallback] [aria-pressed="true"]';
 
 /** Where focus goes when the player leaves an Undo message from inside it */
 interface ReturnFocus {
     /** What had focus when the action was taken (a delete button is gone after its delete) */
     offeredFrom: HTMLElement | null;
-    /** What got focus next, outside the message: the next row's delete button, or the menu button the menu went back to */
+    /** What last had focus outside the message: the next row's delete button, the menu button the menu went back to */
     next: HTMLElement | null;
     /** After an Undo of a delete, the name of the deleted entity's delete button, which is back */
     restoredLabel: string | null;
@@ -34,7 +35,7 @@ function returnTarget(record: ReturnFocus): HTMLElement | null {
         const restored = document.querySelector<HTMLElement>(`[data-row-delete][aria-label="${CSS.escape(record.restoredLabel)}"]`);
         if (restored) return restored;
     }
-    return usable(record.offeredFrom) ?? usable(record.next);
+    return usable(record.offeredFrom) ?? usable(record.next) ?? document.querySelector<HTMLElement>(FOCUS_FALLBACK);
 }
 
 /**
@@ -51,6 +52,7 @@ export function useUndo(
 ) {
     const notify = useNotify();
     const dismiss = useDismissMessage();
+    const announce = useAnnounce();
     const [entry, setEntry] = useState<UndoEntry | null>(null);
 
     // read by the handlers, which may run after an await, so they see the form as it is then
@@ -147,14 +149,17 @@ export function useUndo(
         const onFocusIn = (event: FocusEvent) => {
             const target = event.target instanceof HTMLElement ? event.target : null;
             if (!target) return;
-            // an editing dialog opening withdraws the offer, as an Undo would change the entity it shows
-            const dialog = target.closest(EDITS_BUILD);
-            if (dialog && !(event.relatedTarget instanceof Node && dialog.contains(event.relatedTarget))) {
+            // an editing dialog opening withdraws the offer, as an Undo would change the entity it shows; a screen reader
+            // user is told, since the message goes without anything they did to it
+            if (entersEditingDialog(target, event.relatedTarget)) {
+                if (entryRef.current?.snapshot) {
+                    announce(UNDO_WITHDRAWN_MESSAGE);
+                }
                 setEntry(null);
                 return;
             }
             const record = returnRef.current;
-            if (record && record.next === null && target !== record.offeredFrom && !target.closest('[data-message]')) {
+            if (record && target !== record.offeredFrom && !target.closest('[data-message]')) {
                 record.next = target;
             }
         };
@@ -164,7 +169,7 @@ export function useUndo(
             document.removeEventListener('keydown', onKeyDown);
             document.removeEventListener('focusin', onFocusIn);
         };
-    }, [undo]);
+    }, [undo, announce]);
 
     return { offerUndo };
 }

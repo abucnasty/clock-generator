@@ -44,3 +44,18 @@ export function isInOtherDialog(element: ElementLike | null): boolean {
 export function isEscapeForSomethingElse(event: { defaultPrevented: boolean }, focused: ElementLike | null): boolean {
     return event.defaultPrevented || Boolean(focused?.closest?.(POPUP));
 }
+
+/** A dialog that edits an entity by its place in a list, which an Undo could move under it */
+const EDITING_DIALOG = '[data-edits-build]';
+
+/**
+ * Whether focus moving from `from` to `to` enters an editing dialog (the rule dialog, the entity dialog), which means it
+ * just opened: then Undo is no longer offered. Focus moving about inside one is not entering it.
+ */
+export function entersEditingDialog(
+    to: ElementLike | null,
+    from: unknown,
+): boolean {
+    const dialog = to?.closest?.(EDITING_DIALOG) as { contains?: (node: unknown) => boolean } | null | undefined;
+    return Boolean(dialog) && !(from && dialog?.contains?.(from));
+}
