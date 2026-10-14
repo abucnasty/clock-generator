@@ -10,33 +10,36 @@ local export = {}
 ---Resolve a target reference to its ID using the unit_number mappings
 ---@param target InserterTargetRef|nil The target reference with type and unit_number
 ---@param result ExtractionResult The extraction result containing ID mappings
----@return table|nil config The resolved target config with type and id
-local function resolve_target_id(target, result)
+---@param is_sink boolean Whether the inserter drops into the target
+---@return table|nil config The resolved target config with type and id, or nil when the inserter is left out
+local function resolve_target_id(target, result, is_sink)
     if not target then
         return nil
     end
     
-    local target_id = 1 -- Default fallback
+    local target_id = nil
     if target.unit_number then
         if target.type == "belt" then
             -- Look up belt ID
-            local mapped_id = result.belt_unit_number_to_id[target.unit_number]
-            if mapped_id then
-                target_id = mapped_id
-            end
+            target_id = result.belt_unit_number_to_id[target.unit_number]
         elseif target.type == "chest" then
             -- Look up chest ID
-            local mapped_id = result.chest_unit_number_to_id[target.unit_number]
-            if mapped_id then
-                target_id = mapped_id
-            end
+            target_id = result.chest_unit_number_to_id[target.unit_number]
         else
             -- Look up machine ID
-            local mapped_id = result.unit_number_to_id[target.unit_number]
-            if mapped_id then
-                target_id = mapped_id
-            end
+            target_id = result.unit_number_to_id[target.unit_number]
         end
+    end
+    
+    if not target_id then
+        -- An output belt or chest is often empty when selected, so it is not exported and has no id. The inserter that
+        -- drops into it is kept, pointing at the first belt or chest: it is the build's output, and a recording is
+        -- matched to its config by the type of what an inserter drops into, not by its id. Any other end without an id
+        -- (an empty belt or chest to take from, a machine that is not exported such as a lab) leaves the inserter out.
+        if not (is_sink and (target.type == "belt" or target.type == "chest")) then
+            return nil
+        end
+        target_id = 1
     end
     
     return {
@@ -55,8 +58,8 @@ end
 function export.exported_inserters(result)
     local exported = {}
     for _, inserter in ipairs(result.inserters) do
-        local source_config = resolve_target_id(inserter.source, result)
-        local sink_config = resolve_target_id(inserter.sink, result)
+        local source_config = resolve_target_id(inserter.source, result, false)
+        local sink_config = resolve_target_id(inserter.sink, result, true)
         -- Only include inserter if both source and sink are known
         if source_config and sink_config then
             table.insert(exported, {
