@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
 import { generatedForOf, type GeneratedFor } from '../utils/resultsStaleness';
+import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -43,6 +44,12 @@ interface UseSimulationWorkerResult {
     alternatives: ClockAlternativeView[];
     selectedAlternativeIndex: number;
     selectAlternative: (index: number) => void;
+    /** Index of the clock the selection rule picks, whichever is selected; null while there are no clocks */
+    recommendedIndex: number | null;
+    /** Selects the recommended clock and lets the selection follow it again */
+    selectRecommended: () => void;
+    /** What the selection rule was given by the config of the latest generation; null before one */
+    pickRule: PickRule | null;
     /** Labels of alternatives still being generated; the finished ones are already in `alternatives` */
     pendingAlternatives: string[];
     /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
@@ -138,8 +145,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
     const [pendingAlternatives, setPendingAlternatives] = useState<string[]>([]);
     const [skippedSearches, setSkippedSearches] = useState<string[]>([]);
+    const [pickRule, setPickRule] = useState<PickRule | null>(null);
     const [generatedFor, setGeneratedFor] = useState<GeneratedFor | null>(null);
-    // set once the user picks an alternative, so results arriving later do not move the selection
+    // set once the user picks an alternative, so results arriving later do not move the selection; selectRecommended
+    // unsets it, so the selection follows the recommended clock again
     const userSelectionRef = useRef<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const workersRef = useRef<Worker[]>([]);
@@ -339,6 +348,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setSelectedAlternativeIndex(0);
         setPendingAlternatives([]);
         setSkippedSearches([]);
+        setPickRule(pickRuleOf(config));
         userSelectionRef.current = null;
         setError(null);
         setLogs([]);
@@ -371,6 +381,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setSelectedAlternativeIndex(0);
         setPendingAlternatives([]);
         setSkippedSearches([]);
+        setPickRule(null);
         userSelectionRef.current = null;
         setLogs([]);
         setGeneratedFor(null);
@@ -387,6 +398,15 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         userSelectionRef.current = alternatives[index]?.id ?? null;
         setSelectedAlternativeIndex(index);
     }, [alternatives]);
+
+    const recommendedIndex = useMemo(() => recommendedIndexOf(alternatives), [alternatives]);
+
+    const selectRecommended = useCallback(() => {
+        userSelectionRef.current = null;
+        if (recommendedIndex !== null) {
+            setSelectedAlternativeIndex(recommendedIndex);
+        }
+    }, [recommendedIndex]);
 
     const clearLogs = useCallback(() => {
         setLogs([]);
@@ -417,6 +437,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
+        recommendedIndex,
+        selectRecommended,
+        pickRule,
         pendingAlternatives,
         skippedSearches,
         validation,

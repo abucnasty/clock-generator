@@ -22,6 +22,7 @@ import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
+import type { PickRule } from '../utils/recommendedClock';
 
 type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
@@ -31,6 +32,11 @@ interface ResultsWorkspaceProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
+    /** The clock the selection rule picks; null while there are none */
+    recommendedIndex: number | null;
+    onSelectRecommended: () => void;
+    /** What the selection rule was given by the latest generation's config; null before one */
+    pickRule: PickRule | null;
     pending: string[];
     skippedSearches: string[];
     blueprintString: string | null;
@@ -99,6 +105,10 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 alternatives={props.alternatives}
                 selectedIndex={props.selectedIndex}
                 onSelect={props.onSelect}
+                recommendedIndex={props.recommendedIndex}
+                onSelectRecommended={props.onSelectRecommended}
+                pickRule={props.pickRule}
+                isGenerating={props.isRunning}
                 pending={props.pending}
                 skippedSearches={props.skippedSearches}
             />

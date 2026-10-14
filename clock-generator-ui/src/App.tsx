@@ -96,6 +96,9 @@ function App() {
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
+        recommendedIndex,
+        selectRecommended,
+        pickRule,
         pendingAlternatives,
         skippedSearches,
         validation,
@@ -494,6 +497,9 @@ function App() {
                                 alternatives={alternatives}
                                 selectedIndex={selectedAlternativeIndex}
                                 onSelect={selectAlternative}
+                                recommendedIndex={recommendedIndex}
+                                onSelectRecommended={selectRecommended}
+                                pickRule={pickRule}
                                 pending={pendingAlternatives}
                                 skippedSearches={skippedSearches}
                                 blueprintString={blueprintString}

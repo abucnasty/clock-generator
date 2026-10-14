@@ -1,5 +1,9 @@
 import { InfoOutlined } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
     Alert,
     Box,
     Button,
@@ -16,11 +20,18 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { lossesOf } from '../utils/rateWarning';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, rateHeader } from '../utils/numberText';
+import {
+    RECOMMENDED_COPY,
+    disclosureRunLine,
+    partitionClockRows,
+    recommendationReason,
+    type PickRule,
+} from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
@@ -51,6 +62,14 @@ interface ClockAlternativesPanelProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
+    /** The clock the selection rule picks, which gets the "Recommended" chip; null while there are none */
+    recommendedIndex: number | null;
+    /** Selects the recommended clock and lets the selection follow it again */
+    onSelectRecommended: () => void;
+    /** What the selection rule was given by the latest generation's config; null before one */
+    pickRule: PickRule | null;
+    /** While true more clocks may still arrive, so the recommendation is the best so far */
+    isGenerating: boolean;
     /** Labels of alternatives still being generated */
     pending?: string[];
     /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
@@ -60,46 +79,159 @@ interface ClockAlternativesPanelProps {
 /** "a, b and c" */
 const listed = (names: string[]) => names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 
-export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, pending = [], skippedSearches = [] }: ClockAlternativesPanelProps) {
+export function ClockAlternativesPanel({
+    alternatives,
+    selectedIndex,
+    onSelect,
+    recommendedIndex,
+    onSelectRecommended,
+    pickRule,
+    isGenerating,
+    pending = [],
+    skippedSearches = [],
+}: ClockAlternativesPanelProps) {
     const [showUnstable, setShowUnstable] = useState(false);
+    // where "Back to recommended" leaves the keyboard focus, as the link itself goes away
+    const recommendedRadioRef = useRef<HTMLInputElement>(null);
 
     if (alternatives.length === 0 && pending.length === 0) {
         return null;
     }
 
-    // unstable clocks are hidden until asked for, unless nothing is stable: then they are all there is to look at
-    const unstableCount = alternatives.filter(alternative => alternative.verdict !== 'stable').length;
-    const anyStable = unstableCount < alternatives.length;
-    const hidesUnstable = anyStable && !showUnstable;
-    const rows = alternatives
-        .map((alternative, index) => ({ alternative, index }))
-        .filter(({ alternative, index }) => !hidesUnstable || alternative.verdict === 'stable' || index === selectedIndex);
-    const hiddenCount = alternatives.length - rows.length;
+    const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(
+        alternatives,
+        { selectedIndex, recommendedIndex, showUnstable },
+    );
+    const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const anyHolds = alternatives.some(alternative => alternative.verdict !== 'unstable');
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
 
+    // the index is the one drawn in this render, so a click cannot land on a row that has since moved
+    const renderRow = ({ alternative, index }: { alternative: ClockAlternativeView; index: number }) => (
+        <TableRow
+            key={alternative.id}
+            hover
+            selected={index === selectedIndex}
+            onClick={() => onSelect(index)}
+            sx={{ cursor: 'pointer' }}
+        >
+            <TableCell padding="checkbox">
+                <Radio
+                    checked={index === selectedIndex}
+                    size="small"
+                    inputRef={index === recommendedIndex ? recommendedRadioRef : undefined}
+                />
+            </TableCell>
+            <TableCell>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                    {alternative.label}
+                    <Tooltip
+                        title={<Typography variant="body2">{alternative.description}</Typography>}
+                        placement="right"
+                        arrow
+                    >
+                        <InfoOutlined
+                            fontSize="small"
+                            color="action"
+                            aria-label={`How ${alternative.label} is made`}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </Tooltip>
+                    {index === recommendedIndex && (
+                        <Chip
+                            size="small"
+                            color="primary"
+                            label={isGenerating ? RECOMMENDED_COPY.chipWhileGenerating : RECOMMENDED_COPY.chip}
+                        />
+                    )}
+                </Box>
+            </TableCell>
+            <TableCell sx={{ whiteSpace: 'nowrap' }}>{alternative.beltLabel}</TableCell>
+            <TableCell align="right">
+                {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
+            </TableCell>
+            <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
+            <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
+            <TableCell align="right">
+                {alternative.assessment.wake_ups_per_minute !== null
+                    ? Math.round(alternative.assessment.wake_ups_per_minute)
+                    : '—'}
+            </TableCell>
+            <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
+            <TableCell align="right">
+                {alternative.asBuilt
+                    ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
+                    : '—'}
+            </TableCell>
+            <TableCell>
+                <Tooltip title={statusDetail(alternative)} arrow>
+                    <Chip
+                        size="small"
+                        label={VERDICT_LABEL[alternative.verdict]}
+                        color={VERDICT_COLOR[alternative.verdict]}
+                        variant="outlined"
+                    />
+                </Tooltip>
+            </TableCell>
+        </TableRow>
+    );
+
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
             <Typography variant="h6">Potential Clocks</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Each potential clock was checked by simulating the build driven only by the clock windows,
-                starting the clock at several points, and a clock that holds the target rate was then tried
-                for backpressure loss: each input stops arriving for a while, and each output stops being taken
-                away, and the build has to get back to its rate by itself. The one selected for you has the fewest
-                wake-ups (counted from one start of the clock) among those that hold the target rate and get back to it; a clock that leaves belt pickup slack out for a non-moving
-                belt is only selected when no clock for a moving belt holds it. With "Belts do not move" on
-                every clock is made without the slack. Fewer windows means more batched swings.
-                Select one to show its blueprint and timelines.
-                {!anyStable && alternatives.length > 0 && pending.length === 0 && (anyHolds ? (
-                    <> None of the clocks tried survives backpressure loss, which can be a limit of the build and not
-                        of its clocks. They are listed for what they are: one that holds the target rate has to be
-                        restarted after a loss.</>
-                ) : (
-                    <> None of the clocks tried holds the target rate, so the unstable ones are listed.</>
-                ))}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
+                {RECOMMENDED_COPY.intro}
             </Typography>
+            {recommended && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1, mb: 1, maxWidth: '72ch' }}>
+                    <Typography variant="body2">
+                        <strong>{RECOMMENDED_COPY.lead(recommended.label)}</strong>{' '}
+                        {recommendationReason(alternatives, recommendedIndex, pickRule, !isGenerating)}
+                    </Typography>
+                    {selectedIndex !== recommendedIndex && (
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                onSelectRecommended();
+                                recommendedRadioRef.current?.focus();
+                            }}
+                        >
+                            {RECOMMENDED_COPY.backToRecommended}
+                        </Button>
+                    )}
+                </Box>
+            )}
+            {!anyStable && alternatives.length > 0 && pending.length === 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
+                    {anyHolds ? (
+                        <>None of the clocks tried survives backpressure loss, which can be a limit of the build and not
+                            of its clocks. They are listed for what they are: one that holds the target rate has to be
+                            restarted after a loss.</>
+                    ) : (
+                        <>None of the clocks tried holds the target rate, so the unstable ones are listed.</>
+                    )}
+                </Typography>
+            )}
+            <Accordion disableGutters elevation={0} sx={{ mb: 1, '&::before': { display: 'none' } }}>
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    id="how-clocks-are-chosen-summary"
+                    aria-controls="how-clocks-are-chosen-details"
+                    sx={{ px: 0 }}
+                >
+                    <Typography variant="body2">{RECOMMENDED_COPY.disclosureTitle}</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 0, pt: 0, maxWidth: '72ch' }}>
+                    {RECOMMENDED_COPY.disclosure.map(paragraph => (
+                        <Typography key={paragraph} variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            {paragraph}
+                        </Typography>
+                    ))}
+                    <Typography variant="body2">{disclosureRunLine(pickRule)}</Typography>
+                </AccordionDetails>
+            </Accordion>
             {deadlockRisk !== null && (
                 <Alert severity="warning" sx={{ mb: 1 }}>
                     {deadlockRisk} The trials for backpressure loss do not see this, so on this build they do not decide
@@ -144,63 +276,18 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {rows.map(({ alternative, index }) => (
-                            <TableRow
-                                key={alternative.id}
-                                hover
-                                selected={index === selectedIndex}
-                                onClick={() => onSelect(index)}
-                                sx={{ cursor: 'pointer' }}
-                            >
-                                <TableCell padding="checkbox">
-                                    <Radio checked={index === selectedIndex} size="small" />
-                                </TableCell>
-                                <TableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        {alternative.label}
-                                        <Tooltip
-                                            title={<Typography variant="body2">{alternative.description}</Typography>}
-                                            placement="right"
-                                            arrow
-                                        >
-                                            <InfoOutlined
-                                                fontSize="small"
-                                                color="action"
-                                                aria-label={`How ${alternative.label} is made`}
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        </Tooltip>
-                                    </Box>
-                                </TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{alternative.beltLabel}</TableCell>
-                                <TableCell align="right">
-                                    {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
-                                </TableCell>
-                                <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
-                                <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
-                                <TableCell align="right">
-                                    {alternative.assessment.wake_ups_per_minute !== null
-                                        ? Math.round(alternative.assessment.wake_ups_per_minute)
-                                        : '—'}
-                                </TableCell>
-                                <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
-                                <TableCell align="right">
-                                    {alternative.asBuilt
-                                        ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
-                                        : '—'}
-                                </TableCell>
-                                <TableCell>
-                                    <Tooltip title={statusDetail(alternative)} arrow>
-                                        <Chip
-                                            size="small"
-                                            label={VERDICT_LABEL[alternative.verdict]}
-                                            color={VERDICT_COLOR[alternative.verdict]}
-                                            variant="outlined"
-                                        />
-                                    </Tooltip>
+                        {stable.map(renderRow)}
+                        {stable.length > 0 && unstable.length > 0 && (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={10}
+                                    sx={{ color: 'text.secondary', borderTop: 1, borderColor: 'divider', fontWeight: 'bold' }}
+                                >
+                                    {RECOMMENDED_COPY.unstableDivider}
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
+                        {unstable.map(renderRow)}
                         {pending.map(label => (
                             <TableRow key={`pending-${label}`}>
                                 <TableCell padding="checkbox">
