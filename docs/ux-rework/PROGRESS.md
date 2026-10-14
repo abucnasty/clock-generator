@@ -263,6 +263,9 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.12A → 1.12B: "Validate again, then Generate, after making changes" could read "After making changes, validate again, then Generate"; the `'Type'` tooltip in `MachineFactsAccordion.tsx` never renders (no FactItem has that label).
 - 1.4 → 1.11: the fullscreen diagram renders a second `MissingInserterAlert`, so coverage-row ids are duplicated while it is open and a jump focuses the copy behind the modal. The Recipe inputs are all named just "Recipe".
 - 1.5 → 1.11: 1.11's `announce()` callers must also land in an unhidden region (the 1.5 round-2 design handles MUI modals hiding `#root`).
+- 1.4: Validate's late re-scroll skips when `scrollY` moved more than 2px; browser scroll anchoring after the header
+  changes height (reason row going away, chip wrapping at 390) might trip it and leave the panel's top under the header.
+  Not seen in the capture (P12 passes at 390); allow the header's change in height, or detect real player scrolling.
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.
