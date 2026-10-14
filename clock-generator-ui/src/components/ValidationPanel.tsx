@@ -80,7 +80,9 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
             {validation.status === 'valid' && (
                 <Box inert={isOutOfDate} sx={{ mt: 1.5, opacity: isOutOfDate ? 0.45 : 1, pointerEvents: isOutOfDate ? 'none' : 'auto' }}>
                     {!isOutOfDate && (
-                        <Alert severity="success" sx={{ mb: 1 }}>
+                        // role none: the app's announcements region already says the configuration is valid; this
+                        // alert would say it a second time, in full
+                        <Alert severity="success" role="none" sx={{ mb: 1 }}>
                             The configuration is valid. Each output inserter takes {validation.validation.output_swings_per_cycle} hand
                             {validation.validation.output_swings_per_cycle === 1 ? '' : 's'} per crafting cycle of{' '}
                             {formatTicks(validation.validation.cycle_ticks)} ticks, and the clock repeats every{' '}

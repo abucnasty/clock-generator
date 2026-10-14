@@ -1,6 +1,6 @@
 import { Add, Close } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover, TextField, Button } from '@mui/material';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 
@@ -34,6 +34,8 @@ export function ChestFilterSlotSelector({
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
     const [pendingItem, setPendingItem] = useState<string | null>(null);
     const [pendingQuantity, setPendingQuantity] = useState<number>(1);
+    const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const addButtonRef = useRef<HTMLDivElement>(null);
 
     const handleSlotClick = (slotIndex: number, element: HTMLElement) => {
         const filter = filters[slotIndex];
@@ -87,108 +89,112 @@ export function ChestFilterSlotSelector({
         handleClose();
     };
 
+    const removeFilter = (slotIndex: number) => {
+        onRemoveFilter(slotIndex);
+        // the slot goes with its filter: once it is gone, the keyboard focus moves to the slot that took its place,
+        // else the one before it, else the add button
+        setTimeout(() => (slotRefs.current[slotIndex] ?? slotRefs.current[slotIndex - 1] ?? addButtonRef.current)?.focus(), 0);
+    };
+
     const displayedFilters = filters.slice(0, maxSlots);
     const showAddButton = canAddMore && filters.length < maxSlots;
 
     return (
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+        // the gap keeps a remove button, which sticks out past its slot's corner, a few pixels off the next slot
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Render existing filter slots */}
             {displayedFilters.map((filter, slotIndex) => (
-                <Box
-                    key={slotIndex}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={
-                        filter.item_name
-                            ? `Filter ${slotIndex + 1}: ${filter.item_name} (${filter.quantity})`
-                            : `Configure filter ${slotIndex + 1}`
-                    }
-                    onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleSlotClick(slotIndex, e.currentTarget);
+                // the slot and its remove button are siblings: a button inside a button cannot be reached or named
+                <Box key={slotIndex} sx={{ position: 'relative', m: 0.5 }}>
+                    <Box
+                        ref={(element: HTMLDivElement | null) => { slotRefs.current[slotIndex] = element; }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={
+                            filter.item_name
+                                ? `Filter ${slotIndex + 1}: ${filter.item_name} (${filter.quantity})`
+                                : `Configure filter ${slotIndex + 1}`
                         }
-                    }}
-                    sx={{
-                        width: 44,
-                        height: 44,
-                        border: '2px solid',
-                        borderColor: filter.item_name ? 'primary.main' : 'divider',
-                        borderRadius: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        bgcolor: 'background.paper',
-                        position: 'relative',
-                        transition: 'all 0.2s',
-                        m: 0.5,
-                        '&:hover, &:focus': {
-                            borderColor: 'primary.light',
-                            bgcolor: 'action.hover',
-                            outline: 'none',
-                            transform: 'scale(1.05)',
-                        },
-                        '&:focus-visible': {
-                            boxShadow: '0 0 0 2px',
-                            boxShadowColor: 'primary.main',
-                        },
-                    }}
-                >
-                    {filter.item_name ? (
-                        <>
-                            <FactorioIcon name={filter.item_name} size={32} />
-                            {/* Quantity badge */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    bottom: -6,
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    bgcolor: 'primary.main',
-                                    color: 'primary.contrastText',
-                                    fontSize: '10px',
-                                    fontWeight: 'bold',
-                                    px: 0.5,
-                                    py: 0.25,
-                                    borderRadius: 0.5,
-                                    lineHeight: 1,
-                                    minWidth: 16,
-                                    textAlign: 'center',
-                                }}
-                            >
-                                {filter.quantity}
-                            </Box>
-                            {/* Remove button */}
-                            <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRemoveFilter(slotIndex);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        onRemoveFilter(slotIndex);
-                                    }
-                                }}
-                                sx={{
-                                    position: 'absolute',
-                                    top: -8,
-                                    right: -8,
-                                    width: 16,
-                                    height: 16,
-                                    bgcolor: 'error.main',
-                                    '&:hover': { bgcolor: 'error.dark' },
-                                }}
-                            >
-                                <Close sx={{ fontSize: 12, color: 'white' }} />
-                            </IconButton>
-                        </>
-                    ) : (
-                        <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
+                        onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleSlotClick(slotIndex, e.currentTarget);
+                            } else if (e.key === 'Delete' && filter.item_name) {
+                                e.preventDefault();
+                                removeFilter(slotIndex);
+                            }
+                        }}
+                        sx={{
+                            width: 44,
+                            height: 44,
+                            border: '2px solid',
+                            borderColor: filter.item_name ? 'primary.main' : 'divider',
+                            borderRadius: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            bgcolor: 'background.paper',
+                            position: 'relative',
+                            // not the outline: the focus ring appears at once, in its place
+                            transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
+                            // the pointer tints the slot; focus is the theme's ring alone, so an empty slot does not
+                            // take a filled slot's orange border when focused
+                            '&:hover': {
+                                borderColor: 'primary.light',
+                                bgcolor: 'action.hover',
+                                transform: 'scale(1.05)',
+                            },
+                        }}
+                    >
+                        {filter.item_name ? (
+                            <>
+                                <FactorioIcon name={filter.item_name} size={32} />
+                                {/* Quantity badge */}
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        bottom: -6,
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        bgcolor: 'primary.main',
+                                        color: 'primary.contrastText',
+                                        fontSize: '10px',
+                                        fontWeight: 'bold',
+                                        px: 0.5,
+                                        py: 0.25,
+                                        borderRadius: 0.5,
+                                        lineHeight: 1,
+                                        minWidth: 16,
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    {filter.quantity}
+                                </Box>
+                            </>
+                        ) : (
+                            <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
+                        )}
+                    </Box>
+                    {/* Remove button */}
+                    {filter.item_name && (
+                        <IconButton
+                            size="small"
+                            aria-label={`Remove filter ${slotIndex + 1}: ${filter.item_name}`}
+                            onClick={() => removeFilter(slotIndex)}
+                            sx={{
+                                position: 'absolute',
+                                top: -10,
+                                right: -10,
+                                width: 24,
+                                height: 24,
+                                bgcolor: 'error.main',
+                                '&:hover': { bgcolor: 'error.dark' },
+                            }}
+                        >
+                            <Close sx={{ fontSize: 14, color: 'white' }} />
+                        </IconButton>
                     )}
                 </Box>
             ))}
@@ -196,6 +202,7 @@ export function ChestFilterSlotSelector({
             {/* Add new filter button */}
             {showAddButton && (
                 <Box
+                    ref={addButtonRef}
                     tabIndex={0}
                     role="button"
                     aria-label="Add new filter"
@@ -217,12 +224,12 @@ export function ChestFilterSlotSelector({
                         justifyContent: 'center',
                         cursor: 'pointer',
                         bgcolor: 'transparent',
-                        transition: 'all 0.2s',
+                        // not the outline: the focus ring appears at once, in its place
+                        transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
                         m: 0.5,
-                        '&:hover, &:focus': {
+                        '&:hover': {
                             borderColor: 'primary.light',
                             bgcolor: 'action.hover',
-                            outline: 'none',
                         },
                     }}
                 >
