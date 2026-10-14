@@ -31,7 +31,8 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` �
 Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once. From step 2
 on, run at most **three items at once**, and only when their specs show no file in common. Run each in its own worktree
 (`isolation: "worktree"`). A spec drafted ahead is checked again against the phase branch before its item is
-implemented, since items merged in the meantime move its line numbers.
+implemented, since items merged in the meantime move its line numbers. The orchestrator decides the order in which
+items are implemented and merged (the owner, 2026-10-14), following the dependencies between the specs.
 
 ```
  1 Spec ─► 2 Implement ─► 3 Evidence gate ─► 4 Code review ─┐

@@ -29,7 +29,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 |---|---|---|---|---|---|---|
 | 1.1 | Never offer a stale blueprint | opus | impl | | | Spec final 2026-10-14 |
 | 1.2 | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
-| 1.3 | Undo snackbar for destructive actions | sonnet | spec | | | |
+| 1.3 | Undo snackbar for destructive actions | opus | spec | | | Spec final; moved up (7 files). After 1.5 (uses `notify()`) and 1.8 (`serializeConfig`) |
 | 1.4 | Disabled actions say what is missing | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2; not alongside 1.3, 1.5 |
 | 1.5 | Messages above the footer; quieter Ko-fi | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2 |
 | 1.6 | Make the clock pick explainable | opus | spec | | | Spec final. After 1.1; not alongside 1.7, 1.10 |
@@ -78,12 +78,15 @@ Owner decisions made after the plan was written, and every change to `PLAN.md`, 
 - 2026-10-14: The owner allowed specs to be drafted ahead without limit; implementation stays at two items at once with
   no file in common. `ORCHESTRATOR.md` ("The loop for each plan item") is updated to say so.
 - 2026-10-14: The owner raised the implementation cap from two items at once to three (still no file in common).
+- 2026-10-14: The owner gave the orchestrator the call on implementation and merge order. `ORCHESTRATOR.md` says so.
+- 2026-10-14: Order change from the plan's "1.1 to 1.3 first": 1.5 goes before 1.3, so the Undo snackbar is built
+  once on 1.5's `notify()`. Planned order for the shared-file chain: 1.1 → 1.2 → 1.5 → 1.3 → 1.4 → 1.14; 1.6 and 1.7
+  after 1.1 (1.10 before 1.6); 1.9 after 1.8.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
 
-- **Merge 1.5 before 1.3? (asked 2026-10-14).** 1.3's Undo snackbar would use 1.5's `notify()`. With the plan's order
-  (1.3 first), 1.3 builds its own snackbar and 1.5 moves it a week later. Recommendation: 1.1, 1.2, 1.5, then 1.3.
+None.
 
 ## Follow-ups
 
