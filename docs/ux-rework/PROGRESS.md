@@ -335,6 +335,15 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.11 B: NumberField steppers are all named "Increase"/"Decrease" (allowed gap in the spec); include the field's label.
 - 2.3: the swing plan's own "Check only" (before the first check) unmounts when pressed, so focus falls to `body`; move focus to the plan's summary after the check. Exclude chips stay keyboard-operable but inert while re-checking.
 - 1.11 B: the enable-rule dialog's heading still wraps its title-bar buttons ("… Fullscreen Close" in the heading list); an empty unstable row group when there are none.
+- **1.5, raised priority (three reports: 1.11 A, 2.11, 2.4):** the untimed Undo message ("Build imported. Undo") sits
+  over the page: over an open dialog at 390, over the fullscreen Diagram, and over 2.4's Results action (36% at 720;
+  the whole assumption line at 390). Plan a small Phase 2 fix: put messages in the page flow under the bar (or move
+  them clear of focused controls), keeping the owner's no-timer rule. Candidate owner: 2.7 B (layout) or its own item.
+- 2.4: "may do with 0 wake-ups a minute instead of 177" is true but not self-explaining (fewer = less UPS; 0 can
+  read as broken) → 2.5 B terms / copy; the Standing option doesn't say what goes wrong if picked wrongly → 1.12 B copy;
+  the Results assumption line sits before the "Potential Clocks" h2 (2.5 A moves it into its card); "Not sure? Leave it
+  on Moving." isn't linked to the group (`aria-describedby`); the Belt column's "non-moving"/"moving (+4 ticks)" and
+  engine clock names differ from the radio's wording → 2.5 B.
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.
