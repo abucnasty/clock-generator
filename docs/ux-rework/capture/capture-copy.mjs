@@ -148,12 +148,18 @@ const textOf = async (locator) => ((await locator.count()) > 0 ? norm(await loca
 /** Hovers (scrolled to the middle) and returns the tooltip text; leaves the mouse there, call unhover after the shot */
 async function hoverTip(page, locator, wait = 700) {
     try {
-        if ((await locator.count()) === 0) return '';
+        await locator.first().waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+        if ((await locator.count()) === 0) { console.log('hoverTip: no element'); return ''; }
         await locator.first().evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
-        await locator.first().hover({ timeout: 4000 });
-    } catch {
+        // off and back on, so a tooltip left over from the last hover cannot swallow this one
+        await page.mouse.move(0, 0);
+        await page.waitForTimeout(200);
+        await locator.first().hover({ timeout: 4000 }).catch(() => locator.first().hover({ timeout: 4000, force: true }));
+    } catch (e) {
+        console.log('hoverTip: could not hover:', String(e.message).split('\n')[0]);
         return '';
     }
+    await page.getByRole('tooltip').first().waitFor({ timeout: 3000 }).catch(() => console.log('hoverTip: no tooltip appeared'));
     await page.waitForTimeout(wait);
     return norm((await page.getByRole('tooltip').allTextContents()).join(' || '));
 }
