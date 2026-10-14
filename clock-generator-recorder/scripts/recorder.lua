@@ -2,9 +2,9 @@
 -- Samples inserters and machines every tick, aligned to the generated clock combinator,
 -- and writes the raw samples to script-output so the simulation can be verified offline.
 
-require("scripts.types")
-local extraction = require("scripts.extraction")
-local export = require("scripts.export")
+require("__clock-generator-sidecar__.scripts.types")
+local extraction = require("__clock-generator-sidecar__.scripts.extraction")
+local export = require("__clock-generator-sidecar__.scripts.export")
 
 local recorder = {}
 

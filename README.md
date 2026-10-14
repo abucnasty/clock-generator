@@ -24,7 +24,8 @@ to the mod's folder to `master` publishes a version the Factorio mod portal does
 (`.github/workflows/publish-sidecar.yml`, which needs the `FACTORIO_MOD_API_KEY` secret and can also be started by
 hand). A release of the generator does not publish the mod.
 
-The `clock-generator-recorder` mod is a development tool. It keeps its own version by hand and is not published.
+The `clock-generator-recorder` mod is a development tool. It keeps its own version by hand and is not published. It
+depends on the sidecar and uses its extraction and export, so it needs the sidecar of this repository beside it.
 
 ## Clock Generator
 
