@@ -143,7 +143,7 @@ export function RuleSetEditor({
                     startIcon={<Add />}
                     onClick={handleAddCondition}
                 >
-                    Add Condition
+                    Add condition
                 </Button>
                 {canAddStatusCondition && (
                     <Button
@@ -151,7 +151,7 @@ export function RuleSetEditor({
                         startIcon={<Add />}
                         onClick={handleAddStatusCondition}
                     >
-                        Add Status Check
+                        Add status condition
                     </Button>
                 )}
                 <Button
@@ -160,7 +160,7 @@ export function RuleSetEditor({
                     onClick={handleAddGroup}
                     variant="outlined"
                 >
-                    Add Group
+                    Add group
                 </Button>
             </Box>
         </Paper>

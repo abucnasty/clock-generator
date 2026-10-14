@@ -24,7 +24,7 @@
 //   - slots: "Filter 1: iron-plate" and a sibling "Remove filter 1: iron-plate", not nested
 //   - tooltips: column headers are named by their text, the description is the tooltip, the target takes Tab (describeChild)
 //   - headings: one h1, h2 per section, h3 for cards, no h6, no level skipped, no heading inside a heading, accordion titles
-//   - Results: clock radios share a name and are named by their clock, table "Potential clocks", tab/tabpanel pairs, the unstable
+//   - Results: clock radios share a name and are named by their clock, table "Clocks", tab/tabpanel pairs, the unstable
 //     divider row is a header cell, "Copy blueprint string", "Close fullscreen", the (i) button by keyboard (Tab, Enter/Space,
 //     Esc returns focus, click does not select the row)
 //   - header: logo alt, ⋮ menu (aria-haspopup, aria-expanded, menu named), loading spinner and generation progress bar named
@@ -220,13 +220,13 @@ function readHeadings(page, { dialog = false } = {}) {
 
 const CONFIGURE_HEADINGS = [
     [/^Target Output/, 2], [/^Machines \(/, 2], [/^Machine Facts/, 3], [/^Inserters \(/, 2], [/^Belts \(/, 2], [/^Chests \(/, 2],
-    [/^Mining Drills/, 2], [/^Advanced Overrides/, 2], [/^Validation/, 2], [/^Transfer Plan/, 3],
-]; // SELECTOR: confirm (the heading table of the spec; Transfer Plan shows after Validate)
+    [/^Mining Drills/, 2], [/^Advanced Overrides/, 2], [/^Validation/, 2], [/^Swing Plan/, 3],
+]; // SELECTOR: confirm (the heading table of the spec; Swing Plan shows after Validate)
 const RESULTS_HEADINGS = {
-    timelines: [[/^Potential Clocks/, 2], [/^Transfer Activity Timeline/, 2], [/^State Transition Timeline/, 2]],
-    insights: [[/^Potential Clocks/, 2], [/^About this clock/, 2], [/^About this build/, 2]],
-    blueprint: [[/^Potential Clocks/, 2]],
-    log: [[/^Potential Clocks/, 2], [/^Debug Output/, 2]],
+    timelines: [[/^Clocks/, 2], [/^Transfer Activity Timeline/, 2], [/^State Transition Timeline/, 2]],
+    insights: [[/^Clocks/, 2], [/^About this clock/, 2], [/^About this build/, 2]],
+    blueprint: [[/^Clocks/, 2]],
+    log: [[/^Clocks/, 2], [/^Debug Output/, 2]],
 };
 
 function judgeHeadings(rec, view, headings, expected, { needH1 = true, h3Min = 0, file } = {}) {
@@ -311,9 +311,9 @@ async function closeDialogs(page) {
     }
 }
 
-/** The clock table: named "Potential clocks" after PR B; found by its Clock period header until then */
+/** The clock table: named "Clocks" after PR B; found by its Clock period header until then */
 const clockTable = (page) => {
-    const named = page.getByRole('table', { name: 'Potential clocks' });
+    const named = page.getByRole('table', { name: 'Clocks' });
     return { named, any: page.locator('table').filter({ hasText: 'Clock period' }).filter({ has: page.locator('input[type=radio]') }).first() }; // SELECTOR: confirm
 };
 
@@ -374,7 +374,7 @@ const STEP_LIST = [
             const inv = await inventory(page);
             judgeNames(rec, 'Configure (validated)', inv);
             const chips = await page.evaluate(() => [...document.querySelectorAll('.MuiChip-root')].filter((c) => /^(LCM|Used):/.test((c.textContent ?? '').trim())).map((c) => ({ text: (c.textContent ?? '').trim(), tab: c.getAttribute('tabindex') === '0' || Boolean(c.querySelector('[tabindex="0"]')) || c.closest('[tabindex="0"]') !== null, label: c.getAttribute('aria-label') ?? '' })));
-            rec.check('the LCM and Used chips take Tab (their tooltip opens on focus) and their tooltip is not their name', chips.length > 0 && chips.every((c) => c.tab && c.label.length < 40), chips.length ? `${chips.length} chips: ${brief(chips.map((c) => `"${c.text}" ${c.tab ? 'tabbable' : 'not tabbable'}${c.label.length >= 40 ? ', named by a long aria-label' : ''}`), 3)}` : 'no LCM or Used chip found (Transfer Plan not shown?)'); // SELECTOR: confirm
+            rec.check('the LCM and Used chips take Tab (their tooltip opens on focus) and their tooltip is not their name', chips.length > 0 && chips.every((c) => c.tab && c.label.length < 40), chips.length ? `${chips.length} chips: ${brief(chips.map((c) => `"${c.text}" ${c.tab ? 'tabbable' : 'not tabbable'}${c.label.length >= 40 ? ', named by a long aria-label' : ''}`), 3)}` : 'no LCM or Used chip found (Swing Plan not shown?)'); // SELECTOR: confirm
             const toggles = inv.filter((it) => !it.ignored && /^(Included|Excluded)$/.test(it.text));
             const wrongToggle = toggles.filter((t) => !/^(Included in|Excluded from) LCM: .+/.test(t.name));
             rec.check('the Included/Excluded chips are named "Included in LCM: {item}" / "Excluded from LCM: {item}"', toggles.length > 0 && wrongToggle.length === 0, toggles.length ? (wrongToggle.length ? `${wrongToggle.length} of ${toggles.length}: ${brief(wrongToggle.map((t) => `"${t.name.slice(0, 60)}"`), 2)}` : `${toggles.length} chips`) : 'no Included/Excluded chip found'); // SELECTOR: confirm
@@ -403,7 +403,7 @@ const STEP_LIST = [
         async run({ page, rec }) {
             await goResults(page);
             const { named, any } = clockTable(page);
-            rec.check('the clock table is named "Potential clocks"', (await named.count()) === 1, (await named.count()) === 1 ? 'table "Potential clocks"' : 'no table with that name');
+            rec.check('the clock table is named "Clocks"', (await named.count()) === 1, (await named.count()) === 1 ? 'table "Clocks"' : 'no table with that name');
             const table = (await named.count()) === 1 ? named : any;
             if ((await table.count()) === 0) {
                 rec.check('the clock table is there to read', false, 'no table with a Clock period header and radios');
@@ -804,11 +804,11 @@ const STEP_LIST = [
             const close = dialog.getByRole('button', { name: /^Close$/i });
             rec.check('the modal\'s close button is named "Close"', (await close.count()) === 1, `${await close.count()} buttons named Close; unnamed buttons in the modal: ${await dialog.evaluate((d) => [...d.querySelectorAll('button')].filter((b) => !(b.getAttribute('aria-label') || b.textContent || '').trim()).length)}`);
             // show the rule editors so their selects and delete buttons exist
-            const conditional = dialog.getByRole('radio', { name: /^CONDITIONAL/ }); // SELECTOR: confirm
+            const conditional = dialog.getByRole('radio', { name: /^Conditional/ }); // SELECTOR: confirm
             if ((await conditional.count()) > 0) {
                 await conditional.click();
                 await page.waitForTimeout(300);
-                const status = dialog.getByRole('button', { name: 'Add Status Check' }); // SELECTOR: confirm
+                const status = dialog.getByRole('button', { name: 'Add status condition' }); // SELECTOR: confirm
                 if ((await status.count()) > 0) {
                     await status.click();
                     await page.waitForTimeout(300);
@@ -816,7 +816,7 @@ const STEP_LIST = [
             }
             const wantedControls = [
                 ['Quick templates', ['combobox']], ['Comparison operator', ['combobox']], ['Value type', ['combobox']], ['Constant value', ['spinbutton', 'textbox']],
-                ['Remove condition', ['button']], ['Is or is not', ['combobox']], ['Machine status', ['combobox']], ['Remove status check', ['button']],
+                ['Remove condition', ['button']], ['Is or is not', ['combobox']], ['Machine status', ['combobox']], ['Remove status condition', ['button']],
             ]; // SELECTOR: confirm (roles of the rule editor controls)
             const absent = [];
             for (const [n, roles] of wantedControls) {
@@ -824,15 +824,15 @@ const STEP_LIST = [
                 for (const role of roles) found += await dialog.getByRole(role, { name: exactly(n) }).count();
                 if (found === 0) absent.push(n);
             }
-            rec.check('the rule editor\'s controls are named "Quick templates", "Comparison operator", "Value type", "Constant value", "Remove condition", "Is or is not", "Machine status", "Remove status check"', absent.length === 0, absent.length ? `${absent.length} of ${wantedControls.length} not found: ${brief(absent, 8)}` : `${wantedControls.length} names`);
+            rec.check('the rule editor\'s controls are named "Quick templates", "Comparison operator", "Value type", "Constant value", "Remove condition", "Is or is not", "Machine status", "Remove status condition"', absent.length === 0, absent.length ? `${absent.length} of ${wantedControls.length} not found: ${brief(absent, 8)}` : `${wantedControls.length} names`);
             const invConditional = await inventory(page, '[role=dialog]');
             judgeNames(rec, 'the enable-rule modal (Conditional)', invConditional);
             judgeSelects(rec, 'the enable-rule modal (Conditional)', invConditional);
-            const clocked = dialog.getByRole('radio', { name: /^CLOCKED/ });
+            const clocked = dialog.getByRole('radio', { name: /^Clocked/ });
             if ((await clocked.count()) > 0) {
                 await clocked.click();
                 await page.waitForTimeout(300);
-                rec.check('the range delete button is named "Remove range"', (await dialog.getByRole('button', { name: exactly('Remove range') }).count()) === 1, `${await dialog.getByRole('button', { name: exactly('Remove range') }).count()} found`);
+                rec.check('the range delete button is named "Remove wake window"', (await dialog.getByRole('button', { name: exactly('Remove wake window') }).count()) === 1, `${await dialog.getByRole('button', { name: exactly('Remove wake window') }).count()} found`);
             }
             const inv = await inventory(page, '[role=dialog]');
             judgeNames(rec, 'the enable-rule modal (Clocked)', inv);

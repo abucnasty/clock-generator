@@ -1,9 +1,9 @@
-/** What a screen reader is told as the workflow moves on; one place for the glossary pass (1.12) */
+/** What a screen reader is told as the workflow moves on; words from the glossary in the README */
 export const ANNOUNCEMENTS = {
-    checking: 'Checking the configuration.',
-    valid: 'The configuration is valid.',
-    invalid: 'The configuration is not valid.',
-    outOfDate: 'The configuration changed since it was checked.',
+    checking: 'Checking the build.',
+    valid: 'Your build can be clocked.',
+    invalid: 'Your build cannot be clocked.',
+    outOfDate: 'Your build changed since it was checked.',
     generating: 'Generating clocks.',
     finished: (selectedLabel: string) => `Finished generating. Selected clock: ${selectedLabel}.`,
     finishedNoLabel: 'Finished generating.',

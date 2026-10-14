@@ -57,10 +57,10 @@ export function OverridesForm({
                         slotProps={{ htmlInput: { min: 1 } }}
                         sx={{ width: 200 }}
                         size="small"
-                        helperText="Override the calculated LCM"
+                        helperText="Crafting cycles per clock period (overrides the calculated LCM)"
                     />
                     <Tooltip
-                        title="Uses exactly this many output swings per crafting cycle for every potential clock, even if the result is unstable. Leave empty to let the generator pick the count, lower it until the output is stable, and offer other counts as potential clocks."
+                        title="Uses exactly this many output swings per crafting cycle for every clock, even if the clock does not hold the rate. Leave empty to let the generator pick the count, lower it until the output holds the rate, and offer other counts as clocks."
                         arrow
                         describeChild
                         placement="top"
@@ -105,7 +105,7 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each window of an inserter that picks up from a belt stays open a few ticks longer (belt pickup slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, every clock is made without the slack and the one with the fewest wake-ups is selected. A clock that does not hold the target rate without the slack is listed as unstable."
+                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each wake window of an inserter that picks up from a belt stays open a few ticks longer (belt slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, every clock is made without the slack and the one with the fewest wake-ups is selected. A clock that does not hold the target rate without the slack is listed as unstable."
                         arrow
                         describeChild
                         placement="top"
@@ -128,7 +128,7 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="Runs the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
+                        title="Runs the four searches for every build: observed wake windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
                         arrow
                         describeChild
                         placement="top"

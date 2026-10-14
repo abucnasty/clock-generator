@@ -62,7 +62,7 @@ export const RECOMMENDED_COPY = {
         ` ${othersText(others, kind)} on wake-ups, so the one with fewer wake windows was picked.`,
     tieOnWakeUpsUncounted: (others: number, kind: string) =>
         ` ${othersText(others, kind)} on wake-ups, so the one with fewer wake windows was picked, not counting the `
-        + 'extra windows that only cut wake-ups.',
+        + 'extra wake windows that only cut wake-ups.',
     tieOnWindows: (others: number, kind: string) =>
         ` ${othersText(others, kind)} on wake-ups and on wake windows, so the first listed was picked.`,
     tieKindMoving: ' for a moving belt',

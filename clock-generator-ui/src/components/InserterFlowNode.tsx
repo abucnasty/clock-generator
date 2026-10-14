@@ -2,6 +2,7 @@ import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import type { InserterNodeData } from '../utils/buildFlowGraph';
+import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
 
 type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
@@ -56,7 +57,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                 {data.overrideMode && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25 }}>
                         <Chip
-                            label={data.overrideMode}
+                            label={ENABLE_MODE_LABELS[data.overrideMode]}
                             size="small"
                             sx={{
                                 height: 14,

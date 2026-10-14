@@ -115,7 +115,7 @@ async function diagramView() {
 const GEAR = 'button[aria-label="Configure Enable Control"], [role="button"][aria-label$=". Edit rule"]';
 const gear = (i) => page.locator(GEAR).nth(i);
 const gearCount = () => page.locator(GEAR).count();
-const ruleModal = () => page.getByRole('dialog').filter({ hasText: 'Enable Control Override' });
+const ruleModal = () => page.getByRole('dialog').filter({ hasText: 'Enable rule' });
 const prompt = () => page.getByRole('dialog').filter({ hasText: 'Discard changes' });
 
 async function gearIsPrimary(i) {
@@ -173,9 +173,9 @@ async function contrastOf(button) {
     }, { data, color });
 }
 
-const planRows = () => page.locator('.MuiAccordion-root', { hasText: 'Transfer Plan' }).locator('tbody tr');
+const planRows = () => page.locator('.MuiAccordion-root', { hasText: 'Swing Plan' }).locator('tbody tr');
 
-/** The Transfer Plan rows as { entity, item, state }, in page order */
+/** The Swing Plan rows as { entity, item, state }, in page order */
 async function planEntries() {
     return planRows().evaluateAll((trs) => {
         let entity = '';
@@ -192,7 +192,7 @@ async function planEntries() {
 async function planChip(entity, item) {
     const entries = await planEntries();
     const i = entries.findIndex((e) => e.entity === entity && e.item === item);
-    if (i === -1) throw new Error(`no Transfer Plan row for ${entity} ${item}`);
+    if (i === -1) throw new Error(`no Swing Plan row for ${entity} ${item}`);
     return planRows().nth(i).locator('.MuiChip-root', { hasText: /^(Included|Excluded)$/ });
 }
 
@@ -200,7 +200,7 @@ async function planChip(entity, item) {
 async function setItem(item, state) {
     const entries = await planEntries();
     const e = entries.find((x) => x.item === item);
-    if (!e) throw new Error(`no Transfer Plan row for ${item}`);
+    if (!e) throw new Error(`no Swing Plan row for ${item}`);
     if (e.state === state) return;
     const chip = await planChip(e.entity, item);
     await chip.scrollIntoViewIfNeeded();
@@ -228,7 +228,7 @@ async function run() {
         await importFile(ADVANCED_CIRCUIT);
         await validate();
         await scrollPlanIntoView('Inserter #9');
-        await shot('b5-advanced-circuit-coal-excluded', 'advanced-circuit-230 validated: the Transfer Plan, coal (inserter 9) Excluded as imported');
+        await shot('b5-advanced-circuit-coal-excluded', 'advanced-circuit-230 validated: the Swing Plan, coal (inserter 9) Excluded as imported');
         await openGear(8);
         const before = await checkedMode(ruleModal());
         await shot('b5-inserter9-modal-before-include', `Inserter 9's rule as imported (modal reads ${before})`);
@@ -247,7 +247,7 @@ async function run() {
         await page.waitForTimeout(500);
     });
 
-    // ------------------------------------------------------------ 10. Transfer Plan tooltip and note
+    // ------------------------------------------------------------ 10. Swing Plan tooltip and note
     await step('10-transfer-plan-copy', async () => {
         await validate();
         const chip = await planChip('Inserter #1', 'copper-cable');
@@ -255,15 +255,15 @@ async function run() {
         await chip.hover();
         await page.waitForTimeout(900);
         const tip = await page.getByRole('tooltip').innerText().catch(() => '');
-        await shot('transfer-plan-chip-tooltip', 'Transfer Plan: hovering an Included chip shows its tooltip');
+        await shot('transfer-plan-chip-tooltip', 'Swing Plan: hovering an Included chip shows its tooltip');
         check('Chip tooltip says inserters with their own rule keep it', tip.includes('unless they already have an enable rule of your own'), JSON.stringify(tip));
         await page.mouse.move(0, 0);
-        const note = page.locator('.MuiAccordion-root', { hasText: 'Transfer Plan' }).getByText(/Transfers per cycle are fractions/);
+        const note = page.locator('.MuiAccordion-root', { hasText: 'Swing Plan' }).getByText(/Swings per cycle can be fractions/);
         await note.scrollIntoViewIfNeeded();
         await page.evaluate(() => window.scrollBy(0, 200));
         await page.waitForTimeout(300);
         const text = await note.innerText();
-        await shot('transfer-plan-note', 'Transfer Plan: the note under the table');
+        await shot('transfer-plan-note', 'Swing Plan: the note under the table');
         check('Note says an enable rule of your own stays', text.includes('unless you gave them an enable rule of your own, which stays'), JSON.stringify(text));
     });
 
@@ -336,7 +336,7 @@ async function run() {
         await importFile(PRODUCTION);
         await validate();
         const items = (await planEntries()).filter((e) => e.entity === 'Inserter #4').map((e) => e.item);
-        if (items.length === 0) throw new Error('no Transfer Plan rows for inserter 4');
+        if (items.length === 0) throw new Error('no Swing Plan rows for inserter 4');
         for (const item of items) {
             await setItem(item, 'Excluded');
             await validate();
@@ -365,7 +365,7 @@ async function run() {
         await shot('b6-drill-modal-after-backdrop', 'Drill 1\'s rule modal after a click on the backdrop');
         check('Backdrop click leaves the drill rule modal open', open);
         if (!open) await openGear(drill);
-        await ruleModal().getByRole('radio', { name: /^ALWAYS/ }).check();
+        await ruleModal().getByRole('radio', { name: /^Always on/ }).check();
         await page.keyboard.press('Escape');
         await page.waitForTimeout(500);
         const title = await prompt().getByRole('heading').innerText().catch(() => '');
@@ -449,7 +449,7 @@ async function run() {
     // ------------------------------------------------------------ 6. Backdrop click on the rule modal (B6)
     let storedRule;
     const editRule = async () => {
-        await ruleModal().getByRole('radio', { name: /^CLOCKED/ }).check();
+        await ruleModal().getByRole('radio', { name: /^Clocked/ }).check();
         await ruleModal().getByLabel('End Tick').first().fill('150');
         await page.waitForTimeout(300);
     };
@@ -546,7 +546,7 @@ async function run() {
 
     await step('7c-esc-in-popup', async () => {
         await openGear(0);
-        await ruleModal().getByRole('radio', { name: /^CONDITIONAL/ }).check();
+        await ruleModal().getByRole('radio', { name: /^Conditional/ }).check();
         await page.waitForTimeout(300);
         const select = ruleModal().getByRole('combobox').first();
         await select.click();
@@ -588,9 +588,9 @@ async function run() {
         await setStackSize('7');
         await page.waitForTimeout(400);
         await shot('b6-dialog-config-edited', `Diagram: Inserter ${target}'s dialog, Stack Size changed to 7`);
-        await dlg.getByRole('tab', { name: /Overrides/ }).click();
+        await dlg.getByRole('tab', { name: /Enable rule/ }).click();
         await page.waitForTimeout(400);
-        await dlg.getByRole('radio', { name: /^ALWAYS/ }).check();
+        await dlg.getByRole('radio', { name: /^Always on/ }).check();
         await shot('b6-dialog-overrides-always', 'Overrides tab: ALWAYS picked');
         await dlg.getByRole('tab', { name: /Config/ }).click();
         await page.waitForTimeout(400);
@@ -600,7 +600,7 @@ async function run() {
         const saveEnabled = (await save.count()) > 0 && await save.isEnabled();
         await shot('b6-dialog-back-on-config', 'Back on the Config tab: the stack-size edit, the footer');
         check('The Config edit survives the tab switch', stack === '7', `Stack Size ${stack}`);
-        await dlg.getByRole('tab', { name: /Overrides/ }).click();
+        await dlg.getByRole('tab', { name: /Enable rule/ }).click();
         await page.waitForTimeout(400);
         const mode = await checkedMode(dlg);
         await shot('b6-dialog-back-on-overrides', 'Overrides again: the ALWAYS pick');
@@ -608,7 +608,7 @@ async function run() {
         check('Footer shows "Unsaved changes" and an enabled Save', unsaved && saveEnabled, `text ${unsaved}, Save enabled ${saveEnabled}`);
         const marked = [
             await dlg.getByRole('tab', { name: /^Config\s*,\s*unsaved changes/ }).count(),
-            await dlg.getByRole('tab', { name: /^Overrides\s*,\s*unsaved changes/ }).count(),
+            await dlg.getByRole('tab', { name: /^Enable rule\s*,\s*unsaved changes/ }).count(),
         ];
         check('Both tabs are marked as holding unsaved changes', marked[0] === 1 && marked[1] === 1, `Config ${marked[0]}, Overrides ${marked[1]}`);
         const live = await storedInserter();
@@ -643,9 +643,9 @@ async function run() {
         await openInserterDialog();
         const dlg = inserterDialog();
         await setStackSize('9');
-        await dlg.getByRole('tab', { name: /Overrides/ }).click();
+        await dlg.getByRole('tab', { name: /Enable rule/ }).click();
         await page.waitForTimeout(400);
-        await dlg.getByRole('radio', { name: /^NEVER/ }).check();
+        await dlg.getByRole('radio', { name: /^Never on/ }).check();
         await page.mouse.click(5, 5);
         await page.waitForTimeout(500);
         const asked = await prompt().isVisible();

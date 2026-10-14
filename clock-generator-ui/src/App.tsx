@@ -304,7 +304,7 @@ function App() {
     const handleGenerate = useCallback(() => {
         const configToRun = exportConfig();
         runSimulation(configToRun, debugSteps, streamLogs);
-        // progress and the potential clocks arrive there
+        // progress and the clocks arrive there
         setView('results');
     }, [exportConfig, runSimulation, debugSteps, streamLogs]);
 

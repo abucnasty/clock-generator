@@ -1,4 +1,5 @@
 import dagre from '@dagrejs/dagre';
+import { EnableControlMode } from 'clock-generator/light';
 import type { Node, Edge } from '@xyflow/react';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { isBufferChest } from '../hooks/useConfigForm';
@@ -38,7 +39,7 @@ export type InserterNodeData = {
     inserterId: number;
     stackSize: number;
     filterIcons?: string[];
-    overrideMode?: 'ALWAYS' | 'NEVER' | 'CLOCKED' | 'CONDITIONAL';
+    overrideMode?: EnableControlMode;
     /** An inserter between two machines of a loop, drawn between them: it carries items down or up */
     vertical?: 'down' | 'up';
 };
@@ -197,7 +198,7 @@ export function buildFlowGraph(
             : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const ecMode = inserter.overrides?.enable_control?.mode;
-        const overrideMode = ecMode && ecMode !== 'AUTO' ? ecMode as 'ALWAYS' | 'NEVER' | 'CLOCKED' | 'CONDITIONAL' : undefined;
+        const overrideMode = ecMode && ecMode !== EnableControlMode.AUTO ? ecMode : undefined;
         nodes.push({
             id: inserterNodeId,
             type: 'inserterNode',

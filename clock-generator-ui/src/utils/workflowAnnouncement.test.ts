@@ -6,18 +6,18 @@ const at = (changes: Partial<WorkflowSnapshot>, from: WorkflowSnapshot = idle): 
 
 describe('workflowAnnouncement: validation', () => {
     it('says the check started', () => {
-        expect(workflowAnnouncement(idle, at({ validationStatus: 'running' }))).toBe('Checking the configuration.');
+        expect(workflowAnnouncement(idle, at({ validationStatus: 'running' }))).toBe('Checking the build.');
     });
 
     it('says how the check ended', () => {
         const running = at({ validationStatus: 'running' });
-        expect(workflowAnnouncement(running, at({ validationStatus: 'valid' }))).toBe('The configuration is valid.');
-        expect(workflowAnnouncement(running, at({ validationStatus: 'invalid' }))).toBe('The configuration is not valid.');
+        expect(workflowAnnouncement(running, at({ validationStatus: 'valid' }))).toBe('Your build can be clocked.');
+        expect(workflowAnnouncement(running, at({ validationStatus: 'invalid' }))).toBe('Your build cannot be clocked.');
     });
 
-    it('says when a valid configuration was changed', () => {
+    it('says when a build that was checked was changed', () => {
         expect(workflowAnnouncement(at({ validationStatus: 'valid' }), at({ validationStatus: 'out-of-date' })))
-            .toBe('The configuration changed since it was checked.');
+            .toBe('Your build changed since it was checked.');
     });
 
     it.each<WorkflowSnapshot['validationStatus']>(['running', 'valid', 'invalid', 'out-of-date'])(

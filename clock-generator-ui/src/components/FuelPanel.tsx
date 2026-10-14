@@ -28,11 +28,11 @@ function exportedClockText(fuel: FuelViewData): string {
     const fuelClocks = `${moduli.length === 1 ? 'a fuel clock' : 'fuel clocks'} of ${moduli.join(' and ')} ticks`;
     if (plan.merged_clock_ticks !== null) {
         return `One clock counts ${plan.merged_clock_ticks.toLocaleString()} ticks, the least common multiple of the `
-            + `${plan.period_ticks} tick period and ${fuelClocks}. Modulo combinators give the period and each fuel clock from it.`;
+            + `${plan.period_ticks} tick clock period and ${fuelClocks}. Modulo combinators give the clock period and each fuel clock from it.`;
     }
-    return `The blueprint has ${fuelClocks} next to the clock of the period, each with a counter of its own, because `
+    return `The blueprint has ${fuelClocks} next to the main clock, each with a counter of its own, because `
         + (plan.separate_clocks_reason === 'fractional_period'
-            ? `the ${plan.period_ticks.toFixed(3)} tick period is not a whole number of ticks.`
+            ? `the ${plan.period_ticks.toFixed(3)} tick clock period is not a whole number of ticks.`
             : 'one clock for all of them would count further than a signal can hold.');
 }
 
@@ -353,7 +353,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
 }
 
 /**
- * Fuel is outside the transfer plan: what each burner machine uses, the fuel clocks the blueprint exports to refill
+ * Fuel is outside the swing plan: what each burner machine uses, the fuel clocks the blueprint exports to refill
  * them, and the exported clock run long enough to show the fuel going down and being refilled.
  */
 function FuelPanelComponent({ fuel }: FuelPanelProps) {

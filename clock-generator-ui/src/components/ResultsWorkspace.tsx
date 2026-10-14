@@ -95,7 +95,7 @@ function TabBody({ tab, shown, children }: { tab: ResultsTab; shown: boolean; ch
 }
 
 /**
- * Everything a generation produced: the potential clocks to pick from, and one tabbed area of detail for the
+ * Everything a generation produced: the clocks to pick from, and one tabbed area of detail for the
  * selected clock, so the page stays one screen long.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
@@ -131,7 +131,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             {!hasResults && !props.isRunning && !props.error && (
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
                     <Typography variant="body1" color="text.secondary">
-                        Nothing generated yet. Press Generate to create clocks for your configuration.
+                        Nothing generated yet. Press Generate to create clocks for your build.
                     </Typography>
                 </Paper>
             )}
@@ -197,9 +197,9 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             </ToggleButtonGroup>
                             <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
                                 {timelineRun === 'clock'
-                                    ? 'The timelines show the build driven only by the clock windows in the blueprint. '
+                                    ? 'The timelines show the build driven only by the wake windows in the blueprint. '
                                         + 'This is the run the Status and Clock-only output columns are judged on.'
-                                    : 'The timelines show the planning simulation the clock windows were taken from. '
+                                    : 'The timelines show the planning simulation the wake windows were taken from. '
                                         + 'Inserters also wait on their machine\'s inventory there, so swings can land differently than with the clock alone.'}
                             </Typography>
                         </Paper>

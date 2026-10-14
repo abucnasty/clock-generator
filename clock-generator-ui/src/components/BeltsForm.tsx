@@ -99,8 +99,8 @@ function BeltsFormComponent({
                                 </Typography>
                             ))}
                             <Typography variant="body2" color="text.secondary">
-                                Inserters putting items onto a belt are clocked for what the inserters in this config take off
-                                it. Use an export belt when machines outside this config take items off it too.
+                                Inserters putting items onto a belt are clocked for what the inserters in this build take off
+                                it. Use an export belt when machines outside this build take items off it too.
                             </Typography>
                         </Box>
                     </Popover>

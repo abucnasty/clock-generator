@@ -20,7 +20,7 @@ export interface MachineFormData {
     energy_consumption_bonus?: number;
 }
 
-// Enable control override types come from the engine's config schema
+// Enable rule types come from the engine's config schema
 export type { Condition, EnableControlRange, RuleSet, ValueReference };
 export type EnableControlOverride = EnableControlOverrideConfig;
 export type LatchConfig = NonNullable<Extract<EnableControlOverride, { mode: 'CONDITIONAL' }>['latch']>;
