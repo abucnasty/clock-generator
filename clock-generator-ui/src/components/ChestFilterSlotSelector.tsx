@@ -138,12 +138,13 @@ export function ChestFilterSlotSelector({
                             position: 'relative',
                             // not the outline: the focus ring appears at once, in its place
                             transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
-                            // the theme draws the focus ring; focus only tints the slot, so the ring does not move
-                            '&:hover, &:focus': {
+                            // the pointer tints the slot; focus is the theme's ring alone, so an empty slot does not
+                            // take a filled slot's orange border when focused
+                            '&:hover': {
                                 borderColor: 'primary.light',
                                 bgcolor: 'action.hover',
+                                transform: 'scale(1.05)',
                             },
-                            '&:hover': { transform: 'scale(1.05)' },
                         }}
                     >
                         {filter.item_name ? (
@@ -225,7 +226,7 @@ export function ChestFilterSlotSelector({
                         // not the outline: the focus ring appears at once, in its place
                         transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
                         m: 0.5,
-                        '&:hover, &:focus': {
+                        '&:hover': {
                             borderColor: 'primary.light',
                             bgcolor: 'action.hover',
                         },
