@@ -6,6 +6,8 @@ import { createDefaultConfig, type ConfigFormData } from './configForm/formData'
 import { configKeyOf, isStale } from './resultsStaleness';
 import {
     DEEPER_SEARCH_OFFER,
+    deeperSearchDoneKept,
+    deeperSearchDoneOnce,
     deeperSearchNoticeOf,
     planGenerationRun,
     withDeeperSearch,
@@ -96,13 +98,19 @@ describe('planGenerationRun', () => {
 describe('deeperSearchNoticeOf', () => {
     const state = { searchesSkipped: false, searchedDeeper: false, keptOn: false, isRunning: false, stale: false };
 
-    it('shows nothing while a generation runs, even when searches were skipped', () => {
+    it('shows nothing while a generation that does not search deeper runs, even when searches were skipped', () => {
         expect(deeperSearchNoticeOf({ ...state, searchesSkipped: true, isRunning: true })).toBe('none');
+    });
+
+    it('says a deeper search is going while one runs, so the notice and its focus stay', () => {
+        expect(deeperSearchNoticeOf({ ...state, searchedDeeper: true, isRunning: true })).toBe('searching');
+        expect(deeperSearchNoticeOf({ ...state, searchedDeeper: true, keptOn: true, isRunning: true })).toBe('searching');
     });
 
     it('shows nothing while the results are out of date', () => {
         expect(deeperSearchNoticeOf({ ...state, searchesSkipped: true, stale: true })).toBe('none');
         expect(deeperSearchNoticeOf({ ...state, searchedDeeper: true, stale: true })).toBe('none');
+        expect(deeperSearchNoticeOf({ ...state, searchedDeeper: true, isRunning: true, stale: true })).toBe('none');
     });
 
     it('offers a deeper search when a search was skipped', () => {
@@ -126,5 +134,22 @@ describe('deeperSearchNoticeOf', () => {
 describe('DEEPER_SEARCH_OFFER', () => {
     it('is the plan\'s sentence', () => {
         expect(DEEPER_SEARCH_OFFER).toBe('We stopped once we found a working clock. A deeper, slower search might find one with fewer wake-ups.');
+    });
+});
+
+describe('after a deeper search', () => {
+    it('names the new pick', () => {
+        expect(deeperSearchDoneOnce('Shifted swings: 2 output swings per cycle'))
+            .toBe('We searched deeper for this run. These clocks include the slower searches. Recommended is now Shifted '
+                + 'swings: 2 output swings per cycle.');
+        expect(deeperSearchDoneKept('Shifted swings: 2 output swings per cycle'))
+            .toBe('Deeper search is on for this build. Recommended is now Shifted swings: 2 output swings per cycle. To '
+                + 'stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.');
+    });
+
+    it('leaves the pick out when there is none', () => {
+        expect(deeperSearchDoneOnce(null)).toBe('We searched deeper for this run. These clocks include the slower searches.');
+        expect(deeperSearchDoneKept(null))
+            .toBe('Deeper search is on for this build. To stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.');
     });
 });

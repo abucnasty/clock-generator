@@ -92,6 +92,13 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const transferHistory = showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
     const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
+    const noticeKind = deeperSearchNoticeOf({
+        searchesSkipped: props.skippedSearches.length > 0,
+        searchedDeeper: props.searchedDeeper,
+        keptOn: props.keptOn,
+        isRunning: props.isRunning,
+        stale: props.staleFor !== null,
+    });
 
     return (
         <Box>
@@ -122,17 +129,13 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 pending={props.pending}
                 notice={
                     <DeeperSearchNotice
-                        kind={deeperSearchNoticeOf({
-                            searchesSkipped: props.skippedSearches.length > 0,
-                            searchedDeeper: props.searchedDeeper,
-                            keptOn: props.keptOn,
-                            isRunning: props.isRunning,
-                            stale: props.staleFor !== null,
-                        })}
+                        kind={noticeKind}
+                        recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
                         canSearchDeeper={props.canSearchDeeper}
                         onSearchDeeper={props.onSearchDeeper}
                     />
                 }
+                holdNotice={noticeKind === 'searching'}
             />
 
             <Box sx={{ display: hasResults ? 'block' : 'none', mt: 2 }}>

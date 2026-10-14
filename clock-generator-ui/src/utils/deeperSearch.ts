@@ -6,18 +6,29 @@ export const DEEPER_SEARCH_OFFER = 'We stopped once we found a working clock. A 
 
 export const DEEPER_SEARCH_BUTTON = 'Search deeper';
 
-export const DEEPER_SEARCH_KEEP_ON = 'Keep it on for this build';
+export const DEEPER_SEARCH_KEEP_ON = 'Always search deeper for this build';
 
-export const DEEPER_SEARCH_KEEP_ON_NOTE = 'Turns on "Search for fewer wake-ups" in Advanced Overrides.';
+export const DEEPER_SEARCH_KEEP_ON_NOTE = 'With Search deeper, also turns on "Search for fewer wake-ups" in Advanced Overrides.';
+
+/** Said while a run that searches deeper goes */
+export const DEEPER_SEARCH_SEARCHING = 'Searching deeper… this can take several times longer.';
+
+/** " Recommended is now {label}." after a deeper search; nothing when no clock is recommended */
+const recommendedNow = (label: string | null) => label === null ? '' : ` Recommended is now ${label}.`;
 
 /** Said after a deeper search for one run */
-export const DEEPER_SEARCH_DONE_ONCE = 'We searched deeper for this run. These clocks include the slower searches.';
+export const deeperSearchDoneOnce = (label: string | null) =>
+    `We searched deeper for this run. These clocks include the slower searches.${recommendedNow(label)}`;
 
 /** Said after every run while "Search for fewer wake-ups" is on */
-export const DEEPER_SEARCH_DONE_KEPT = 'Deeper search is on for this build. To stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.';
+export const deeperSearchDoneKept = (label: string | null) =>
+    `Deeper search is on for this build.${recommendedNow(label)} To stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.`;
 
-/** What the notice under the clock table says: nothing, the offer, or that the run searched deeper */
-export type DeeperSearchNoticeKind = 'none' | 'offer' | 'searched-once' | 'searched-kept';
+/**
+ * What the notice under the clock table says: nothing, the offer, that a run searching deeper is going, or that the
+ * run searched deeper
+ */
+export type DeeperSearchNoticeKind = 'none' | 'offer' | 'searching' | 'searched-once' | 'searched-kept';
 
 /** `config` with "Search for fewer wake-ups" on; a copy, and the same again when it already is */
 export function withDeeperSearch(config: Config): Config {
@@ -43,9 +54,9 @@ export function planGenerationRun(
 }
 
 /**
- * Which notice shows under the clock table. Nothing while a generation runs or the results are out of date; after a
- * run that searched deeper, whether it was for that run or is kept on (`keptOn`, the form's switch); otherwise the
- * offer when a search was left out.
+ * Which notice shows under the clock table. Nothing while the results are out of date; while a generation runs, that
+ * it searches deeper when it does, and otherwise nothing; after a run that searched deeper, whether it was for that run
+ * or is kept on (`keptOn`, the form's switch); otherwise the offer when a search was left out.
  */
 export function deeperSearchNoticeOf(state: {
     searchesSkipped: boolean;
@@ -54,8 +65,11 @@ export function deeperSearchNoticeOf(state: {
     isRunning: boolean;
     stale: boolean;
 }): DeeperSearchNoticeKind {
-    if (state.isRunning || state.stale) {
+    if (state.stale) {
         return 'none';
+    }
+    if (state.isRunning) {
+        return state.searchedDeeper ? 'searching' : 'none';
     }
     if (state.searchedDeeper) {
         return state.keptOn ? 'searched-kept' : 'searched-once';

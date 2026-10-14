@@ -1,17 +1,20 @@
 import { Alert, Button, Checkbox, FormControlLabel, Typography } from '@mui/material';
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
     DEEPER_SEARCH_BUTTON,
-    DEEPER_SEARCH_DONE_KEPT,
-    DEEPER_SEARCH_DONE_ONCE,
     DEEPER_SEARCH_KEEP_ON,
     DEEPER_SEARCH_KEEP_ON_NOTE,
     DEEPER_SEARCH_OFFER,
+    DEEPER_SEARCH_SEARCHING,
+    deeperSearchDoneKept,
+    deeperSearchDoneOnce,
     type DeeperSearchNoticeKind,
 } from '../utils/deeperSearch';
 
 interface DeeperSearchNoticeProps {
     kind: DeeperSearchNoticeKind;
+    /** The recommended clock's label, named after a deeper search; null when there is none */
+    recommendedLabel: string | null;
     /** False whenever Generate would be disabled */
     canSearchDeeper: boolean;
     /** Generates again with the slower searches; `keepOn` also turns "Search for fewer wake-ups" on in the form */
@@ -19,54 +22,77 @@ interface DeeperSearchNoticeProps {
 }
 
 /**
- * Under the clock table: the offer to search deeper when the slower searches were left out, or what a run that
- * searched deeper did. A note, not an alert: it follows the player's own action or the arrival of the clocks.
+ * Under the clock table: the offer to search deeper when the slower searches were left out, that a deeper search is
+ * going, or what a run that searched deeper did. A note, not an alert: it follows the player's own action or the
+ * arrival of the clocks. Its message stays the same element from the offer to the end of the run, so the keyboard focus
+ * put on it when Search deeper is pressed is not lost.
  */
-export function DeeperSearchNotice({ kind, canSearchDeeper, onSearchDeeper }: DeeperSearchNoticeProps) {
+export function DeeperSearchNotice({ kind, recommendedLabel, canSearchDeeper, onSearchDeeper }: DeeperSearchNoticeProps) {
+    const [keepOn, setKeepOn] = useState(false);
+    const [offered, setOffered] = useState(kind === 'offer');
+    const messageRef = useRef<HTMLParagraphElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const noteId = useId();
+
+    // "Always search deeper" starts unticked each time the offer comes back
+    if ((kind === 'offer') !== offered) {
+        setOffered(kind === 'offer');
+        setKeepOn(false);
+    }
+
+    useEffect(() => {
+        // the button is disabled while the search goes, which takes the keyboard focus from it: keep it on the note
+        const focused = document.activeElement;
+        if (kind === 'searching' && (focused === null || focused === document.body || focused === buttonRef.current)) {
+            messageRef.current?.focus();
+        }
+    }, [kind]);
+
     if (kind === 'none') {
         return null;
     }
-    if (kind === 'offer') {
-        return <DeeperSearchOffer canSearchDeeper={canSearchDeeper} onSearchDeeper={onSearchDeeper} />;
-    }
-    return (
-        <Alert severity="info" role="note" sx={{ mt: 1 }}>
-            {kind === 'searched-kept' ? DEEPER_SEARCH_DONE_KEPT : DEEPER_SEARCH_DONE_ONCE}
-        </Alert>
-    );
-}
-
-/** The offer, mounted only while it shows, so "Keep it on for this build" starts unticked each time */
-function DeeperSearchOffer({ canSearchDeeper, onSearchDeeper }: Omit<DeeperSearchNoticeProps, 'kind'>) {
-    const [keepOn, setKeepOn] = useState(false);
-
+    const message = kind === 'offer' ? DEEPER_SEARCH_OFFER
+        : kind === 'searching' ? DEEPER_SEARCH_SEARCHING
+            : kind === 'searched-kept' ? deeperSearchDoneKept(recommendedLabel) : deeperSearchDoneOnce(recommendedLabel);
     return (
         <Alert
             severity="info"
             role="note"
-            sx={{ mt: 1 }}
-            action={
+            sx={{ mt: 1, maxWidth: '72ch' }}
+            action={kind === 'offer' || kind === 'searching' ? (
                 <Button
+                    ref={buttonRef}
                     size="small"
                     variant="outlined"
                     color="inherit"
-                    disabled={!canSearchDeeper}
+                    disabled={kind === 'searching' || !canSearchDeeper}
                     onClick={() => onSearchDeeper(keepOn)}
                     sx={{ whiteSpace: 'nowrap' }}
                 >
                     {DEEPER_SEARCH_BUTTON}
                 </Button>
-            }
+            ) : undefined}
         >
-            <Typography variant="body2">{DEEPER_SEARCH_OFFER}</Typography>
-            <FormControlLabel
-                control={<Checkbox size="small" checked={keepOn} onChange={(_, checked) => setKeepOn(checked)} />}
-                label={<Typography variant="body2">{DEEPER_SEARCH_KEEP_ON}</Typography>}
-                sx={{ mt: 0.5, mr: 0 }}
-            />
-            <Typography variant="caption" color="text.secondary" component="p">
-                {DEEPER_SEARCH_KEEP_ON_NOTE}
-            </Typography>
+            <Typography ref={messageRef} variant="body2" role="status" tabIndex={-1}>{message}</Typography>
+            {kind === 'offer' && (
+                <>
+                    <FormControlLabel
+                        control={(
+                            <Checkbox
+                                size="small"
+                                checked={keepOn}
+                                onChange={(_, checked) => setKeepOn(checked)}
+                                slotProps={{ input: { 'aria-describedby': noteId } }}
+                            />
+                        )}
+                        label={<Typography variant="body2">{DEEPER_SEARCH_KEEP_ON}</Typography>}
+                        sx={{ mt: 0.5, mr: 0 }}
+                    />
+                    <Typography id={noteId} variant="caption" color="text.secondary" component="p">
+                        {DEEPER_SEARCH_KEEP_ON_NOTE}
+                    </Typography>
+                </>
+            )}
         </Alert>
     );
 }
