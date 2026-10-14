@@ -134,6 +134,41 @@ async function storedConfig() {
     return page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY);
 }
 
+/** WCAG contrast of a button's text (its computed colour) on its most common rendered pixel colour */
+async function contrastOf(button) {
+    const data = (await button.screenshot()).toString('base64');
+    const color = await button.evaluate((e) => getComputedStyle(e).color);
+    return page.evaluate(async ({ data, color }) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${data}`;
+        await img.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const px = ctx.getImageData(0, 0, img.width, img.height).data;
+        const counts = new Map();
+        for (let i = 0; i < px.length; i += 4) {
+            const key = `${px[i]},${px[i + 1]},${px[i + 2]}`;
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
+        const bg = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0].split(',').map(Number);
+        const [r, g, b, a = 1] = color.match(/[\d.]+/g).map(Number);
+        const fg = [r, g, b].map((v, i) => v * a + bg[i] * (1 - a));
+        const lum = (rgb) => {
+            const [R, G, B] = rgb.map((v) => {
+                const c = v / 255;
+                return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+            });
+            return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+        };
+        const [l1, l2] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+        const hex = (rgb) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+        return { ratio: (l1 + 0.05) / (l2 + 0.05), fg: hex(fg), bg: hex(bg) };
+    }, { data, color });
+}
+
 const planRows = () => page.locator('.MuiAccordion-root', { hasText: 'Transfer Plan' }).locator('tbody tr');
 
 /** The Transfer Plan rows as { entity, item, state }, in page order */
@@ -245,6 +280,14 @@ async function run() {
         const stored = await storedConfig();
         const flags = stored.inserters.filter((ins) => ins._forced_always).map((ins) => ins.id);
         check('Saved form flags exactly inserters 4 and 5 as forced', JSON.stringify(flags) === '[4,5]', `flagged ${JSON.stringify(flags)}`);
+        // Save without a change is a Cancel: the forced ALWAYS stays forced
+        await openGear(3);
+        await shot('b5-forced-modal-unchanged', 'Inserter 4\'s rule modal (the forced ALWAYS), about to be saved unchanged');
+        await ruleModal().getByRole('button', { name: 'Save', exact: true }).click();
+        await page.waitForTimeout(500);
+        const ins4 = (await storedConfig()).inserters.find((ins) => ins.id === 4);
+        check('An unchanged Save in the rule modal keeps inserter 4 forced', ins4?._forced_always === true
+            && ins4?.overrides?.enable_control?.mode === 'ALWAYS', `flag ${ins4?._forced_always}, rule ${ins4?.overrides?.enable_control?.mode}`);
     });
 
     // ------------------------------------------------------------ 4. Export has no flag (B5)
@@ -437,6 +480,22 @@ async function run() {
         check('The prompt fits the window', box !== null && box.x >= 0 && box.x + box.width <= width, box ? `x ${Math.round(box.x)}, width ${Math.round(box.width)}` : 'no prompt');
         const focused = await page.evaluate(() => document.activeElement?.textContent);
         check('Keep editing has the focus', focused === 'Keep editing', JSON.stringify(focused));
+        // text contrast of both buttons, Keep editing focused (as the prompt opens) and then Discard focused
+        const keep = prompt().getByRole('button', { name: 'Keep editing' });
+        const discard = prompt().getByRole('button', { name: 'Discard', exact: true });
+        const ratios = [['Keep editing, focused', keep], ['Discard, unfocused', discard]];
+        const measured = [];
+        for (const [label, button] of ratios) measured.push([label, await contrastOf(button)]);
+        await page.keyboard.press('Tab');
+        await page.waitForTimeout(500);
+        await shot('b6-esc-prompt-discard-focused', 'The prompt with the focus moved to Discard (Tab)');
+        measured.push(['Discard, focused', await contrastOf(discard)]);
+        measured.push(['Keep editing, unfocused', await contrastOf(keep)]);
+        for (const [label, c] of measured) {
+            check(`Contrast of ${label} is at least 4.5:1`, c.ratio >= 4.5, `${c.ratio.toFixed(2)}:1, text ${c.fg} on ${c.bg}`);
+        }
+        await page.keyboard.press('Shift+Tab');
+        await page.waitForTimeout(300);
         await prompt().getByRole('button', { name: 'Keep editing' }).click();
         await page.waitForTimeout(500);
         const kept = await endTick();
@@ -542,6 +601,11 @@ async function run() {
         await shot('b6-dialog-back-on-overrides', 'Overrides again: the ALWAYS pick');
         check('The Overrides pick survives the tab switch', mode === 'ALWAYS', `mode ${mode}`);
         check('Footer shows "Unsaved changes" and an enabled Save', unsaved && saveEnabled, `text ${unsaved}, Save enabled ${saveEnabled}`);
+        const marked = [
+            await dlg.getByRole('tab', { name: 'Config, unsaved changes' }).count(),
+            await dlg.getByRole('tab', { name: 'Overrides, unsaved changes' }).count(),
+        ];
+        check('Both tabs are marked as holding unsaved changes', marked[0] === 1 && marked[1] === 1, `Config ${marked[0]}, Overrides ${marked[1]}`);
         const live = await storedInserter();
         check('Nothing reaches the config before Save', JSON.stringify(live) === JSON.stringify(original), `stack_size ${live.stack_size}, rule ${live.overrides?.enable_control?.mode}`);
 
