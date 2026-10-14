@@ -338,39 +338,68 @@ describe('renumbering', () => {
         expect(edits.reorderMachines(config, 0, 1).inserters[0].source).toEqual({ type: 'machine', id: 0 });
     });
 
-    /** Every id of each kind is 1 to n, and every reference is unset or to an entity that exists */
-    function expectConsistent(config: ConfigFormData) {
-        const kinds = {
-            machine: ids(config.machines),
-            belt: ids(config.belts),
-            chest: ids(config.chests),
-        };
-        for (const list of [...Object.values(kinds), ids(config.inserters), ids(config.drills?.configs ?? [])]) {
+    /** Every id of each kind is 1 to n */
+    function expectNumbered(config: ConfigFormData) {
+        for (const list of [config.machines, config.belts, config.chests, config.inserters, config.drills?.configs ?? []].map(ids)) {
             expect(list).toEqual(list.map((_, i) => i + 1));
         }
+    }
+
+    type End = InserterFormData['source'];
+
+    /** Every reference, by the uuid of the entity holding it and its role, with the uuid of the entity it names (null if none) */
+    function references(config: ConfigFormData): Map<string, { end: End; target: string | null }> {
+        const pool = { machine: config.machines, belt: config.belts, chest: config.chests };
+        const target = (end: End) => pool[end.type].find((e) => e.id === end.id)?._uuid ?? null;
+        const refs = new Map<string, { end: End; target: string | null }>();
         for (const ins of config.inserters) {
-            for (const end of [ins.source, ins.sink]) {
-                expect(end.id === 0 || kinds[end.type].includes(end.id)).toBe(true);
-            }
+            refs.set(`${ins._uuid} source`, { end: ins.source, target: target(ins.source) });
+            refs.set(`${ins._uuid} sink`, { end: ins.sink, target: target(ins.sink) });
         }
         for (const drill of config.drills?.configs ?? []) {
-            expect(drill.target.id === 0 || kinds.machine.includes(drill.target.id)).toBe(true);
+            refs.set(`${drill._uuid} target`, { end: drill.target, target: target(drill.target) });
+        }
+        return refs;
+    }
+
+    /**
+     * Every reference still names the entity it named before the edit, with its lane, unless it named the removed entity;
+     * then it is unset, `{ type, id: 0 }` with no lane
+     */
+    function expectFollowed(before: ConfigFormData, after: ConfigFormData, removed?: string) {
+        const was = references(before);
+        for (const [key, now] of references(after)) {
+            const old = was.get(key)!;
+            expect(old, key).toBeDefined();
+            if (old.target !== null && old.target === removed) {
+                expect(now.end, key).toEqual({ type: old.end.type, id: 0 });
+            } else {
+                expect(now.target, key).toBe(old.target);
+                expect(now.end.near_lane, key).toBe(old.end.near_lane);
+            }
         }
     }
 
     const kinds = [
-        { name: 'machines', count: 3, remove: edits.removeMachine, reorder: edits.reorderMachines },
-        { name: 'inserters', count: 3, remove: edits.removeInserter, reorder: edits.reorderInserters },
-        { name: 'belts', count: 2, remove: edits.removeBelt, reorder: edits.reorderBelts },
-        { name: 'chests', count: 2, remove: edits.removeChest, reorder: edits.reorderChests },
-        { name: 'drills', count: 2, remove: edits.removeDrill, reorder: edits.reorderDrills },
+        { name: 'machines', remove: edits.removeMachine, reorder: edits.reorderMachines, list: (c: ConfigFormData) => c.machines },
+        { name: 'inserters', remove: edits.removeInserter, reorder: edits.reorderInserters, list: (c: ConfigFormData) => c.inserters },
+        { name: 'belts', remove: edits.removeBelt, reorder: edits.reorderBelts, list: (c: ConfigFormData) => c.belts },
+        { name: 'chests', remove: edits.removeChest, reorder: edits.reorderChests, list: (c: ConfigFormData) => c.chests },
+        { name: 'drills', remove: edits.removeDrill, reorder: edits.reorderDrills, list: (c: ConfigFormData) => c.drills!.configs },
     ];
 
-    it.each(kinds)('leaves the $name numbered 1 to n and no reference dangling after any remove or reorder', ({ count, remove, reorder }) => {
+    it.each(kinds)('numbers the $name 1 to n and keeps every reference on its entity after any remove or reorder', ({ remove, reorder, list }) => {
+        const before = form();
+        const count = list(before).length;
         for (let i = 0; i < count; i++) {
-            expectConsistent(remove(form(), i));
+            const removed = remove(before, i);
+            expectNumbered(removed);
+            expect(list(removed).map((e) => e._uuid)).toEqual(list(before).filter((_, k) => k !== i).map((e) => e._uuid));
+            expectFollowed(before, removed, list(before)[i]._uuid);
             for (let j = 0; j < count; j++) {
-                expectConsistent(reorder(form(), i, j));
+                const reordered = reorder(before, i, j);
+                expectNumbered(reordered);
+                expectFollowed(before, reordered);
             }
         }
     });

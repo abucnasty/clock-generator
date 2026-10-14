@@ -369,8 +369,9 @@ export function updateDrill(prev: ConfigFormData, index: number, updates: Partia
 }
 
 export function removeDrill(prev: ConfigFormData, index: number): ConfigFormData {
-    const removed = prev.drills && removeAndRenumber(prev.drills.configs, index);
-    if (!prev.drills || !removed) return prev;
+    if (!prev.drills) return prev;
+    const removed = removeAndRenumber(prev.drills.configs, index);
+    if (!removed) return prev;
     return { ...prev, drills: { ...prev.drills, configs: removed.items } };
 }
 
