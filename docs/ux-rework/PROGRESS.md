@@ -179,7 +179,7 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   lines in the handoff, push after every commit, resume all agents first after a restart; (5) capture writers start
   as soon as a spec is final.
 - 2026-10-14: `master` moved outside the rework: the owner merged #158 (engine fix for issue 152, release 0.9.1;
-  24 files in `clock-generator/`). Plan (coach run 4): merge `master` into `feat/ux-rework` now, run the engine and generation tests there, and start the final PR's version bump from
+  24 files in `clock-generator/`). Done (coach run 4): `master` merged into `feat/ux-rework` at 2d6aff4; engine 734 tests and UI checks pass; generation tests run 38651863631 passed; both phase branches merge it cleanly, run the engine and generation tests there, and start the final PR's version bump from
   0.9.1.
 
 ## Open questions
