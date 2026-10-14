@@ -63,7 +63,7 @@ come from here.
 | 2.3 | Fold Validate into Generate | opus | spec | | | |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | 2.5 | Results lead with the answer | opus | spec | | | Goes first in Phase 2. Checkpoint: install steps reviewed |
-| 2.6 | Wake windows view | opus | spec | | | |
+| [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
 | 2.7 | Factorio GUI grammar pass | opus | spec | | | |
 | 2.8 | In-game item names | sonnet | spec | | | |
 | 2.9 | Half-width layout | sonnet | spec | | | |
