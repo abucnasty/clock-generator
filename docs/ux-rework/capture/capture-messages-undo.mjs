@@ -293,6 +293,55 @@ async function checkMessage(page, rec, slug, { re = null, label = slug, desc = '
     return loc;
 }
 
+/**
+ * Starts recording every text written into a message announcer region: whether the region had an `aria-hidden`
+ * ancestor at that moment (MutationObserver callbacks run in the same task as the write), and whether the region was in
+ * the page before (a region added in the same moment as its text is often not read out).
+ */
+async function watchAnnouncements(page) {
+    await page.evaluate(() => {
+        window.__announced = [];
+        const addedAt = new WeakMap();
+        window.__annObserver?.disconnect();
+        const observer = new MutationObserver((records) => {
+            const now = performance.now();
+            for (const record of records) {
+                for (const node of record.addedNodes) {
+                    if (node.nodeType === 1 && node.matches('[data-message-announcer]')) addedAt.set(node, now);
+                }
+                const region = record.target.nodeType === 1 ? record.target.closest('[data-message-announcer]') : null;
+                if (region && record.addedNodes.length > 0 && region.textContent) {
+                    const added = addedAt.get(region);
+                    window.__announced.push({
+                        text: region.textContent,
+                        hidden: region.closest('[aria-hidden="true"]') !== null,
+                        emptyBefore: added === undefined || now - added >= 30,
+                        onBody: region.parentElement === document.body,
+                    });
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        window.__annObserver = observer;
+    });
+}
+
+/** After `watchAnnouncements`: the text matching `re` was written where a screen reader reads it, and only one region holds it */
+async function checkAnnounced(page, rec, label, re) {
+    await page.waitForTimeout(500);
+    const r = await page.evaluate((source) => {
+        const match = new RegExp(source);
+        const writes = (window.__announced ?? []).filter((w) => match.test(w.text));
+        const holders = [...document.querySelectorAll('[data-message-announcer], [role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')]
+            .filter((el) => match.test(el.textContent ?? ''));
+        return { writes, holders: holders.length };
+    }, re.source);
+    const where = r.writes.map((w) => `${w.onBody ? 'body region' : 'app region'}${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written';
+    rec.check(`${label}: its text is written into a polite region with no aria-hidden ancestor at that moment`, r.writes.length > 0 && r.writes.every((w) => !w.hidden), where);
+    rec.check(`${label}: that region was in the page, empty, before the text was written`, r.writes.length > 0 && r.writes.every((w) => w.emptyBefore), where);
+    rec.check(`${label}: one region holds the text`, r.holders === 1, `${r.holders} region(s)`);
+}
+
 /** AA contrast of a message's text, its action button (if `action`) and its close icon (3:1, non-text) */
 async function checkMessageContrast(page, rec, label, { action = false } = {}) {
     const pairs = [{ name: `${label}: message text`, locator: snack(page).locator('.MuiAlert-message').first() }];
@@ -603,7 +652,9 @@ try {
         await rec.step('B paste ok', async () => {
             await dismissMessage(page);
             await scrollTo(page, 0);
+            if (width === 1440) await watchAnnouncements(page);
             await pasteOk(page);
+            if (width === 1440) await checkAnnounced(page, rec, 'announced: Paste > Import Selected (the dialog closing)', /^Imported .* from Factorio/);
             // right after Import Selected the dialog is still fading out: the message must be above it
             const loc = await waitMessage(page, /Imported .* from Factorio/, 3500);
             if (loc) {
@@ -661,10 +712,11 @@ try {
                     rec.check('aria (success): no alert and no status of its own', statuses === 0 && alerts === 0, `${statuses} status, ${alerts} alert`);
                     const region = await page.evaluate(() => {
                         // React Flow adds assertive status regions of its own (not the app's); the polite ones are the app's
-                        const regions = [...document.querySelectorAll('[role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')];
-                        return { count: regions.length, text: document.querySelector('[data-message-announcer]')?.textContent ?? '' };
+                        const holders = [...document.querySelectorAll('[role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')]
+                            .filter((el) => /^Build exported\./.test(el.textContent ?? ''));
+                        return { count: holders.length, app: holders.every((el) => el.matches('[data-message-announcer]') && !el.closest('[aria-hidden="true"]')) };
                     });
-                    rec.check('aria (success): the one polite live region on the page holds its text', region.count === 1 && /^Build exported\./.test(region.text), `${region.count} region(s), "${region.text}"`);
+                    rec.check('aria (success): one polite live region holds its text, the app\'s announcer, not hidden', region.count === 1 && region.app, `${region.count} region(s)`);
                 }
                 rec.check(`aria (${kind}): no aria-live wrapper around the host`, !live);
                 rec.check(`aria (${kind}): a close button named "Close"`, (await closeBtn(page).count()) === 1, `${await closeBtn(page).count()} found`);
@@ -895,9 +947,10 @@ try {
             await fresh(page, LOGISTIC);
             await trash(page, 'Inserters').last().click();
             await waitMessage(page, /^Deleted /);
+            await watchAnnouncements(page);
             await section(page, 'Inserters').locator('[aria-label*="Edit rule"]').first().click();
             await page.getByRole('dialog').first().waitFor({ timeout: 3000 }).catch(() => {});
-            await page.waitForTimeout(500);
+            await checkAnnounced(page, rec, 'announced: the offer withdrawn by the rule dialog', /^Undo is no longer offered\.$/);
             rec.check('opening an inserter\'s rule dialog withdraws the Undo message', (await undoBtn(page).count()) === 0, `${await undoBtn(page).count()} found`);
             await rec.shot(page, 'undo-withdrawn-by-rule-dialog', { desc: 'An inserter\'s rule dialog opened after a delete: the Undo message is gone' });
             await page.keyboard.press('Escape');
@@ -990,7 +1043,9 @@ try {
             await inserterNode(page).click();
             await page.waitForTimeout(800);
             await rec.shot(page, 'undo-diagram-dialog', { desc: 'Diagram view: an inserter\'s edit dialog just before its Delete' });
+            if (width === 1440) await watchAnnouncements(page);
             await page.getByRole('button', { name: 'Delete entity' }).click();
+            if (width === 1440) await checkAnnounced(page, rec, 'announced: Delete in the diagram\'s entity dialog (the dialog closing)', /^Deleted Inserter \d+/);
             await undoMessage(page, rec, 'undo-diagram-delete', /Deleted Inserter \d+/, 'diagram delete', { desc: 'Diagram dialog Delete: "Deleted Inserter N." with Undo' });
             const focusAfter = async () => page.evaluate(() => {
                 const el = document.activeElement;
@@ -1012,7 +1067,9 @@ try {
             await page.waitForTimeout(1200);
             await inserterNode(page.getByRole('dialog').first()).click();
             await page.waitForTimeout(800);
+            if (width === 1440) await watchAnnouncements(page);
             await page.getByRole('button', { name: 'Delete entity' }).click();
+            if (width === 1440) await checkAnnounced(page, rec, 'announced: Delete in the fullscreen diagram (a dialog staying open)', /^Deleted Inserter \d+/);
             await undoMessage(page, rec, 'undo-diagram-fullscreen', /Deleted Inserter \d+/, 'fullscreen diagram delete', { desc: 'Delete in the fullscreen diagram: the message above the dialog' });
             const full = await focusAfter();
             rec.check('fullscreen diagram delete: focus stays in the fullscreen diagram, not on the page\'s top', !full.body && full.inDiagram, full.what);
