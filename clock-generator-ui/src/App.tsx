@@ -635,6 +635,7 @@ function App() {
                                             checkStatus={checkStatus}
                                             busy={busy}
                                             onCheckOnly={handleCheckOnly}
+                                            note={note}
                                             excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
                                             onExcludeChange={handleExcludeChange}
                                         />

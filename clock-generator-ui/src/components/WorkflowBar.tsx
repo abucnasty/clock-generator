@@ -92,14 +92,25 @@ export function WorkflowBar({
     const notify = useNotify();
     // Check only is off while its check runs, which takes the keyboard focus from it: it gets the focus back after
     // (unless the player has put it somewhere since)
+    // only for a check this button started: one from the swing plan in Advanced leaves the focus to the plan
     const checkOnlyRef = useRef<HTMLButtonElement>(null);
+    const pressedAtRef = useRef<number | null>(null);
+    const startedHereRef = useRef(false);
     const checkingRef = useRef(checking);
     useEffect(() => {
         const was = checkingRef.current;
         checkingRef.current = checking;
-        const focused = document.activeElement;
-        if (was === 'check-only' && checking === null && (focused === null || focused === document.body)) {
-            checkOnlyRef.current?.focus({ preventScroll: true });
+        if (was === null && checking === 'check-only') {
+            // the check starts in the same update as the click, so a press just before it is this button's
+            const pressedAt = pressedAtRef.current;
+            startedHereRef.current = pressedAt !== null && performance.now() - pressedAt < 1000;
+            pressedAtRef.current = null;
+        } else if (was === 'check-only' && checking === null) {
+            const focused = document.activeElement;
+            if (startedHereRef.current && (focused === null || focused === document.body)) {
+                checkOnlyRef.current?.focus({ preventScroll: true });
+            }
+            startedHereRef.current = false;
         }
     }, [checking]);
     // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
@@ -201,15 +212,19 @@ export function WorkflowBar({
                             sx={{ color: `${chip.color}.light`, borderColor: `${chip.color}.light` }}
                         />
                     )}
-                    {/* the note under the buttons says where they go instead of checking; it describes both */}
-                    <Tooltip title={CHECK_TEXT.checkOnlyTooltip} arrow describeChild>
+                    {/* the note under the buttons says where they go instead of checking; it describes both, and is their
+                        tooltip too. Above the buttons, so that the tooltip does not cover the note it repeats */}
+                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top">
                         {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
                         <span>
                             <Button
                                 ref={checkOnlyRef}
                                 variant="outlined"
                                 size="small"
-                                onClick={onCheckOnly}
+                                onClick={() => {
+                                    pressedAtRef.current = performance.now();
+                                    onCheckOnly();
+                                }}
                                 disabled={busy}
                                 aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" /> : undefined}
@@ -218,7 +233,7 @@ export function WorkflowBar({
                             </Button>
                         </span>
                     </Tooltip>
-                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild>
+                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top">
                         <span>
                             <Button
                                 variant="contained"
@@ -258,7 +273,9 @@ export function WorkflowBar({
                                 ml: -0.5,
                                 minWidth: 0,
                                 '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
-                                '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
+                                // on any focus, not only the keyboard's: Check only moves the focus here when the build has
+                                // a problem, and a mouse click must show where it went
+                                '&:focus, &.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
                             }}
                         >
                             {note.text}

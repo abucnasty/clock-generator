@@ -1,6 +1,9 @@
-import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Tooltip, Typography } from '@mui/material';
+import type { ConfigValidation } from 'clock-generator/browser';
+import { useState } from 'react';
 import type { ValidationState } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
+import { ELEMENT_IDS, type Problem } from '../utils/firstProblem';
 import { TransferPlanPanel } from './TransferPlanPanel';
 
 interface CheckPlanSectionProps {
@@ -9,6 +12,8 @@ interface CheckPlanSectionProps {
     /** A check or a generation is running */
     busy: boolean;
     onCheckOnly: () => void;
+    /** The workflow bar's note: where Check only goes instead of checking; null when it checks */
+    note: Problem | null;
     excludedIngredients: string[];
     onExcludeChange: (items: string[]) => void;
 }
@@ -24,15 +29,40 @@ export function CheckPlanSection({
     checkStatus,
     busy,
     onCheckOnly,
+    note,
     excludedIngredients,
     onExcludeChange,
 }: CheckPlanSectionProps) {
+    // the plan last shown, kept on screen while a check runs again (an Exclude chip's): the page does not jump and the chip
+    // keeps the focus. A replaced build has none
+    const current = validation.status === 'valid' ? validation.validation : validation.status === 'none' ? null : undefined;
+    const [lastPlan, setLastPlan] = useState<ConfigValidation | null>(current ?? null);
+    if (current !== undefined && current !== lastPlan) {
+        setLastPlan(current);
+    }
+    const checkingRow = (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <CircularProgress size={16} color="inherit" />
+            <Typography variant="body2">{CHECK_TEXT.checking}</Typography>
+        </Box>
+    );
     if (checkStatus === 'running') {
+        if (!lastPlan) {
+            return checkingRow;
+        }
         return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={16} color="inherit" />
-                <Typography variant="body2">{CHECK_TEXT.checking}</Typography>
-            </Box>
+            <>
+                {checkingRow}
+                {/* dimmed, not inert: the chip that started the check keeps the focus; a press meanwhile does nothing */}
+                <Box aria-busy="true" sx={{ opacity: 0.45, pointerEvents: 'none', overflowX: 'auto' }}>
+                    <TransferPlanPanel
+                        transferPlan={lastPlan.transfer_plan}
+                        usedLcm={lastPlan.used_lcm}
+                        excludedIngredients={excludedIngredients}
+                        onExcludeChange={onExcludeChange}
+                    />
+                </Box>
+            </>
         );
     }
     if (checkStatus === 'invalid') {
@@ -43,9 +73,21 @@ export function CheckPlanSection({
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 <Typography variant="body2" color="text.secondary">{CHECK_TEXT.planEmpty}</Typography>
-                <Button variant="text" size="small" onClick={onCheckOnly} disabled={busy}>
-                    {CHECK_TEXT.checkOnly}
-                </Button>
+                {/* like the bar's Check only: with a problem in the build it says the problem, and goes to the bar's note */}
+                <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild>
+                    {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
+                    <span>
+                        <Button
+                            variant="text"
+                            size="small"
+                            onClick={onCheckOnly}
+                            disabled={busy}
+                            aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
+                        >
+                            {CHECK_TEXT.checkOnly}
+                        </Button>
+                    </span>
+                </Tooltip>
             </Box>
         );
     }
