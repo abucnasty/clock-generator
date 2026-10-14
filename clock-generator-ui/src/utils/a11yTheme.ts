@@ -24,8 +24,8 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
                 root: { '&.Mui-focusVisible': ring },
             },
         },
+        // an accordion's title keeps the ring outside: some have no side padding, where a ring inside would touch the text
         MuiTab: { styleOverrides: { root: insetRing } },
-        MuiAccordionSummary: { styleOverrides: { root: insetRing } },
         MuiMenuItem: { styleOverrides: { root: insetRing } },
         MuiAlert: {
             styleOverrides: {
