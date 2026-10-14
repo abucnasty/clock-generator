@@ -21,7 +21,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 
 - **Phase:** 1 (started 2026-10-14)
 - **Branch:** `feat/ux-rework-p1` (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** 1.9 the id question (asked 2026-10-14)
+- **Open checkpoints:** none
 
 ## Phase 1: stop the harm, quick wins
 
@@ -34,8 +34,8 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.5 | Messages above the footer; quieter Ko-fi | sonnet | todo | | | |
 | 1.6 | Make the clock pick explainable | opus | todo | | | |
 | 1.7 | "Search deeper" button | sonnet | todo | | | |
-| 1.8 | Fix the dangerous expert bugs | sonnet | todo | | | |
-| 1.9 | One number per entity, everywhere | opus | blocked | | | Checkpoint: the id question (see Open questions) |
+| 1.8 | Fix the dangerous expert bugs | sonnet | spec | | | |
+| 1.9 | One number per entity, everywhere | opus | todo | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
 | 1.10 | Readable numbers and units | sonnet | todo | | | |
 | 1.11 | Accessibility basics | sonnet | todo | | | |
 | 1.12 | Glossary and copy pass | sonnet | todo | | | Checkpoint: glossary approval |
@@ -72,17 +72,14 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 Owner decisions made after the plan was written, and every change to `PLAN.md`, with the date.
 
 - 2026-10-14: The orchestrator runs on Opus 5.5. Code review of the items implemented on `opus` uses Fable 5.1.
+- 2026-10-14: 1.9, the id question: the owner chose the recommendation. Delete renumbers the remaining ids of its kind
+  and remaps every reference; the UI-only `next_ids` and `retireId` go, and old saved forms that carry `next_ids` still
+  load (the field is ignored).
+- 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
 
-- **1.9, the id question (asked 2026-10-14).** `git log -S retireId` finds one commit, ece7f65 "Keep the ids of removed
-  entities from being given to new ones" (2026-10-14, chore/cleanup). It added the UI-only `next_ids` to
-  `ConfigFormData`, so a new entity never reuses a removed one's id that a reference might still hold.
-  `formDataToConfig` strips `next_ids`, so exports, the engine, the sidecar and the recorder never see it; only the
-  saved form in localStorage carries it. Renumbering with full remapping (like `reorderWithIdReassignment`) removes the
-  reason for it, provided delete first unsets every reference to the removed entity (it already does for machines,
-  belts and chests via `unsetInserterEndsAt`). Recommendation: renumber on delete and drop `next_ids` (ignore it when
-  reading old saved forms).
+None. (1.9's id question was answered on 2026-10-14; see the decisions log.)
 
 ## Follow-ups
 
