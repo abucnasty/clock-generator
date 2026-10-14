@@ -157,6 +157,7 @@ export function ConfigImportExport({
                     belts?: unknown[];
                     chests?: unknown[];
                     sidecar_version?: unknown;
+                    suggested_target?: unknown;
                 };
                 
                 const machineCount = Array.isArray(data.machines) ? data.machines.length : 0;
@@ -186,6 +187,7 @@ export function ConfigImportExport({
                     belts: data.belts,
                     chests: data.chests,
                     sidecar_version: data.sidecar_version,
+                    suggested_target: data.suggested_target,
                 });
 
                 // Store pending import and show confirmation modal
@@ -219,6 +221,7 @@ export function ConfigImportExport({
                 belts: [],
                 chests: [],
                 sidecar_version: undefined,
+                suggested_target: undefined,
             });
 
             // Store pending import and show confirmation modal (legacy format - machines only)
