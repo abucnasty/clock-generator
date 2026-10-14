@@ -230,25 +230,32 @@ function App() {
     }), [problems, checkedCoverageIssues, isRunning, validationStatus]);
 
     const validationPanelRef = useRef<HTMLDivElement>(null);
-    // set while a Validate pressed in the bar is running: its answer makes the page longer, so it is scrolled to again
+    // the Validation panel's top just below the header, at once: a smooth scroll stops short when the page changes under it
+    const scrollToValidationPanel = useCallback(() => {
+        const panel = validationPanelRef.current;
+        if (!panel) {
+            return;
+        }
+        // the header's height as it is now, as the page's scroll padding follows it only a frame later; and its 8px gap
+        const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 0;
+        window.scrollTo({ top: window.scrollY + panel.getBoundingClientRect().top - headerHeight - 8 });
+    }, []);
+    // set while a Validate pressed in the bar is running: its answer changes the page's length and the header's height,
+    // so the panel is scrolled to again once it is in
     const scrollToValidationRef = useRef(false);
     const handleValidate = useCallback(() => {
         validate(exportConfig());
         // the panel sits below the forms; show the Configure view now, so that it can be scrolled to
         flushSync(() => setView('configure'));
         scrollToValidationRef.current = true;
-        // at once, not smoothly: the header's height is the scroll padding, which a smooth scroll would race
-        validationPanelRef.current?.scrollIntoView({ block: 'start' });
-    }, [exportConfig, validate]);
+        scrollToValidationPanel();
+    }, [exportConfig, validate, scrollToValidationPanel]);
     useEffect(() => {
-        if (validation.status === 'running' || !scrollToValidationRef.current) {
-            return;
+        if (validation.status !== 'running' && scrollToValidationRef.current) {
+            scrollToValidationRef.current = false;
+            scrollToValidationPanel();
         }
-        scrollToValidationRef.current = false;
-        // after the header has taken its new height (the reason under the buttons goes once the build is valid)
-        const frame = requestAnimationFrame(() => validationPanelRef.current?.scrollIntoView({ block: 'start' }));
-        return () => cancelAnimationFrame(frame);
-    }, [validation.status]);
+    }, [validation.status, scrollToValidationPanel]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
