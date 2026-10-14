@@ -92,7 +92,16 @@ function clone(state: InserterState): InserterState {
     };
 }
 
+/**
+ * What drives the inserter's next ticks besides its inventory (see simulationStateKey). The counts of items only grow,
+ * and `tick` is never updated, so relative to the current tick it would never repeat either.
+ */
+function stateKey(state: InserterState): string {
+    return [state.status, state.waits_for_sink, state.enabled, JSON.stringify(state.held_item)].join(";");
+}
+
 export const InserterState = {
     createIdle: createIdleInserterState,
-    clone: clone
+    clone: clone,
+    stateKey: stateKey,
 };

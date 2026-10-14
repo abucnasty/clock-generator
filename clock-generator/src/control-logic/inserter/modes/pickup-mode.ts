@@ -59,6 +59,10 @@ export class InserterPickupMode implements InserterMode {
      */
     private belt_grab_decided: boolean = true;
 
+    public stateKey(): string {
+        return `${this.current_tick},${this.belt_grab_decided}`;
+    }
+
     public onExit(toMode: InserterMode): void {
         // No action needed on exit
     }

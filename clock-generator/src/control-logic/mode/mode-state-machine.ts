@@ -100,35 +100,14 @@ export class ModeStateMachine<M extends Mode> implements ModeProvider<M> {
     }
 
     /**
-     * The current mode and every mode's and evaluator's own primitive fields, with tick fields made relative to
-     * `tick`; two equal keys one clock period apart mean this state machine repeats. Plugins only observe.
+     * The current mode and what every mode and evaluator keeps from one tick to the next, with ticks made relative
+     * to `tick`; two equal keys one clock period apart mean this state machine repeats. Plugins only observe.
      */
     public stateKey(tick: number): string {
-        const parts = [objectStateKey({ current: this.current }, tick)];
+        const parts = [this.current.status];
         for (const [mode, evaluator] of this.graph) {
-            parts.push(objectStateKey(mode, tick), objectStateKey(evaluator, tick));
+            parts.push(mode.stateKey?.(tick) ?? "", evaluator.stateKey?.(tick) ?? "");
         }
         return parts.join("|");
     }
-}
-
-/** Fields holding an absolute tick (not a counter within a mode, like current_tick) */
-const ABSOLUTE_TICK_FIELDS = new Set(["tick", "entered_tick", "exited_tick", "last_enabled_tick", "last_craft_tick"]);
-
-/** Own primitive fields (absolute ticks relative to `tick`) and referenced modes by status; other objects are skipped */
-export function objectStateKey(value: object, tick: number, skip: ReadonlySet<string> = new Set()): string {
-    const fields: string[] = [];
-    for (const [key, field] of Object.entries(value)) {
-        if (skip.has(key) || typeof field === "function") {
-            continue;
-        }
-        if (typeof field === "number") {
-            fields.push(`${key}=${ABSOLUTE_TICK_FIELDS.has(key) ? field - tick : field}`);
-        } else if (field === null || field === undefined || typeof field === "string" || typeof field === "boolean") {
-            fields.push(`${key}=${field}`);
-        } else if (typeof field === "object" && "status" in field && "onEnter" in field) {
-            fields.push(`${key}=${String((field as { status: unknown }).status)}`);
-        }
-    }
-    return fields.join(",");
 }
