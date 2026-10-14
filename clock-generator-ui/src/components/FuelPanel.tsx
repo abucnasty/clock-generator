@@ -2,6 +2,7 @@ import { Alert, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHe
 import { memo } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
+import { CHART_NAMES } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { COLOR_BLIND_PALETTE } from './colors';
@@ -28,11 +29,11 @@ function exportedClockText(fuel: FuelViewData): string {
     const fuelClocks = `${moduli.length === 1 ? 'a fuel clock' : 'fuel clocks'} of ${moduli.join(' and ')} ticks`;
     if (plan.merged_clock_ticks !== null) {
         return `One clock counts ${plan.merged_clock_ticks.toLocaleString()} ticks, the least common multiple of the `
-            + `${plan.period_ticks} tick period and ${fuelClocks}. Modulo combinators give the period and each fuel clock from it.`;
+            + `${plan.period_ticks} tick clock period and ${fuelClocks}. Modulo combinators give the clock period and each fuel clock from it.`;
     }
-    return `The blueprint has ${fuelClocks} next to the clock of the period, each with a counter of its own, because `
+    return `The blueprint has ${fuelClocks} next to the main clock, each with a counter of its own, because `
         + (plan.separate_clocks_reason === 'fractional_period'
-            ? `the ${plan.period_ticks.toFixed(3)} tick period is not a whole number of ticks.`
+            ? `the ${plan.period_ticks.toFixed(3)} tick clock period is not a whole number of ticks.`
             : 'one clock for all of them would count further than a signal can hold.');
 }
 
@@ -174,7 +175,7 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
 }
 
 /** The fuel a machine held: the highest of each sample as an area, the lowest as a line, and the insertion limit dashed */
-function FuelLevelChart({ levels, durationTicks, insertionLimit }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number }) {
+function FuelLevelChart({ levels, durationTicks, insertionLimit, label }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number; label: string }) {
     const top = Math.max(levels.max_level, insertionLimit) * 1.08;
     const y = (level: number) => (1 - level / top) * LEVEL_HEIGHT;
     const x = (sample: number) => Math.min(sample * levels.ticks_per_sample, durationTicks);
@@ -185,6 +186,8 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit }: { levels: Fue
     return (
         <Box
             component="svg"
+            role="img"
+            aria-label={CHART_NAMES.fuelLevel(label)}
             viewBox={`0 0 ${durationTicks} ${LEVEL_HEIGHT}`}
             preserveAspectRatio="none"
             sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: 'action.hover', borderRadius: 0.5 }}
@@ -250,6 +253,8 @@ function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInser
             <Box sx={{ flex: 1, height: ROW_HEIGHT, position: 'relative', bgcolor: 'action.hover', borderRadius: 0.5 }}>
                 <Box
                     component="svg"
+                    role="img"
+                    aria-label={CHART_NAMES.fuelClock(entityLabel('inserter', inserter.inserter_number))}
                     viewBox={`0 0 ${durationTicks} 1`}
                     preserveAspectRatio="none"
                     sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -333,7 +338,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                                     </Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} />
+                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} label={entityLabel('machine', machine.machine_number)} />
                                 </Box>
                             </Box>
                         )}
@@ -353,7 +358,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
 }
 
 /**
- * Fuel is outside the transfer plan: what each burner machine uses, the fuel clocks the blueprint exports to refill
+ * Fuel is outside the swing plan: what each burner machine uses, the fuel clocks the blueprint exports to refill
  * them, and the exported clock run long enough to show the fuel going down and being refilled.
  */
 function FuelPanelComponent({ fuel }: FuelPanelProps) {

@@ -61,6 +61,10 @@ preview unless you are debugging.
   "(in)"/"(out)" belt and the left-to-right order, arrowheads and their hover colour, 12px text and its contrast, overlaps,
   the node chips against the List's, Enter on a focused node and the focus ring, the fullscreen fit, and the List's
   "Nearest lane of the belt" select. `STEPS` (a regexp on the step numbers) runs a part.
+- `capture-timelines.mjs <out dir>` (on `lib.mjs`) checks the developer timelines (item 2.10) at 1440 and 720px: the
+  `#1b1b1b` track and legend chips, 3:1 contrast of every colour drawn, the six item colours and the repeat caption, bars
+  and Blocked runs at least 3px, the strip legend row, Detailed-mode swatches, canvas and SVG `role="img"` names, the
+  fuel chart, fullscreen, and the drill label's orange. `BASE_URL`, `WIDTHS` and `STEPS` as above.
 
 ## Shared helpers
 

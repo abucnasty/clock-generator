@@ -115,7 +115,7 @@ function readConfigFromStorage(): StoredConfig | null {
  * gives the message that tells the user so
  */
 export function backUpSavedConfig(storage: Pick<Storage, 'setItem'>, text: string): string {
-    const failed = 'Your saved configuration could not be loaded.';
+    const failed = 'Your saved build could not be loaded.';
     try {
         storage.setItem(BACKUP_STORAGE_KEY, text);
     } catch (e) {

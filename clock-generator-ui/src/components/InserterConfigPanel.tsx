@@ -351,7 +351,7 @@ export function InserterConfigPanel({
                     aria-controls={`${id}-tabpanel-0`}
                 />
                 <Tab
-                    label={<TabLabel text="Overrides" unsaved={rule.changed} />}
+                    label={<TabLabel text="Enable rule" unsaved={rule.changed} />}
                     id={`${id}-tab-1`}
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"

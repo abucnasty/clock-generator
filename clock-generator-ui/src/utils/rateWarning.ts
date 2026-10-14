@@ -12,15 +12,15 @@ const MIN_SHORTFALL = 0.005;
 
 const COPY_BLUEPRINT_LABEL = 'Copy blueprint';
 
-/** The losses a clock does not get back from, in a sentence part: "coal stops arriving, or after iron-plate is not taken away" */
+/** The causes a clock does not recover from, in a sentence part: "coal stops arriving, or after iron-plate is not taken away" */
 export function lossesOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
     return alternative.assessment.backpressure_loss?.broken_by.join(', or after ') ?? '';
 }
 
 /**
  * What to tell whoever copies the blueprint of a clock: that it does not hold the target rate, as happens when no
- * potential clock does and the one nearest to it is selected; that it holds it and does not survive backpressure
- * loss; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
+ * clock does and the one nearest to it is selected; that it holds it and does not recover after the build is
+ * starved or jammed; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
  * at the target rate on a build without the risk.
  */
 export function rateWarningOf(
@@ -38,8 +38,8 @@ function clockWarningOf(
 ): string | null {
     if (alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
-        return 'This clock does not survive backpressure loss: '
-            + (losses ? `after ${losses} for a while, the build does not get back to its rate by itself` : 'it was off its rate in the run the losses are tried on')
+        return 'This clock does not recover: '
+            + (losses ? `after ${losses} for a while, the build does not get back to its rate by itself` : 'the build was off its rate in the run that starves and jams it')
             + ' in the simulator, and has to be restarted.';
     }
     if (alternative.ranking.meets_target_rate) {

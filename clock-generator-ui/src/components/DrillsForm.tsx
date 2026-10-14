@@ -285,7 +285,7 @@ function DrillsFormComponent({
                 </Typography>
             )}
 
-            {/* Enable Control Modal */}
+            {/* the enable rule modal */}
             <EnableControlModal
                 open={enableControlModalDrillIndex !== null}
                 onClose={() => setEnableControlModalDrillIndex(null)}

@@ -383,7 +383,7 @@ function App() {
 
     const handleGenerate = useCallback(() => runChecked((config) => {
         runSimulation(config, debugSteps, streamLogs);
-        // progress and the potential clocks arrive there
+        // progress and the clocks arrive there
         setView('results');
     }), [runChecked, runSimulation, debugSteps, streamLogs]);
 

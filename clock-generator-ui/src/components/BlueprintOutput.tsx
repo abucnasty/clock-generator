@@ -32,7 +32,7 @@ interface BlueprintOutputProps {
 /** Under the string */
 const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. The steps are at the top of Results.';
 
-/** The selected potential clock's blueprint string, for reading or copying by hand */
+/** The selected clock's blueprint string, for reading or copying by hand */
 export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor, copied, onCopy }: BlueprintOutputProps) {
     if (!blueprintString) {
         return null;
@@ -111,7 +111,7 @@ export function GenerationProgressStatus({ store }: { store: GenerationProgressS
             />
             <Typography variant="body2" sx={{ mt: 1 }}>
                 {progress
-                    ? `${progress.total ? `${progress.completed} of ${progress.total} potential clocks done, running: ` : ''}${progress.step}`
+                    ? `${progress.total ? `${progress.completed} of ${progress.total} clocks done, running: ` : ''}${progress.step}`
                     : 'Starting simulation...'}
             </Typography>
             {progress?.detail && (

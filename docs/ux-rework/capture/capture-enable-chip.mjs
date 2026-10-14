@@ -270,7 +270,7 @@ async function runAt(w) {
         await shot('3-rule-modal', AFTER ? 'Inserter 4\'s chip clicked: the enable rule modal on CLOCKED with two ranges' : 'Inserter 4\'s gear clicked: the enable rule modal on CLOCKED with two ranges');
         const dialog = visibleDialog();
         check('the modal subtitle reads Inserter 4', (await dialog.getByText('Inserter 4', { exact: true }).count()) === 1);
-        check('the modal is on CLOCKED with two ranges', (await dialog.getByRole('radio', { name: /^CLOCKED/ }).isChecked()) && (await dialog.getByLabel('Start Tick').count()) === 2);
+        check('the modal is on CLOCKED with two ranges', (await dialog.getByRole('radio', { name: /^Clocked/ }).isChecked()) && (await dialog.getByLabel('Start Tick').count()) === 2);
         await page.keyboard.press('Escape');
         await page.waitForTimeout(500);
     });
@@ -325,22 +325,22 @@ async function runAt(w) {
         const save = () => dialog.getByRole('button', { name: 'Save', exact: true }).click();
 
         await enableControls(c).nth(0).click();
-        await dialog.getByRole('radio', { name: /^ALWAYS/ }).check();
+        await dialog.getByRole('radio', { name: /^Always on/ }).check();
         await save();
         await page.waitForTimeout(500);
         await enableControls(c).nth(1).click();
-        await dialog.getByRole('radio', { name: /^NEVER/ }).check();
+        await dialog.getByRole('radio', { name: /^Never on/ }).check();
         await save();
         await page.waitForTimeout(500);
         await enableControls(c).nth(2).click();
-        await dialog.getByRole('radio', { name: /^CLOCKED/ }).check();
-        for (let i = 0; i < 3; i++) await dialog.getByRole('button', { name: 'Add Range' }).click();
+        await dialog.getByRole('radio', { name: /^Clocked/ }).check();
+        for (let i = 0; i < 3; i++) await dialog.getByRole('button', { name: 'Add wake window' }).click();
         await save();
         await page.waitForTimeout(600);
 
         const texts = await chipTexts(c);
-        check('ALWAYS saved: Enable: Always', texts[0] === 'Enable: Always', texts[0]);
-        check('NEVER saved: Enable: Never', texts[1] === 'Enable: Never', texts[1]);
+        check('ALWAYS saved: Enable: Always on', texts[0] === 'Enable: Always on', texts[0]);
+        check('NEVER saved: Enable: Never on', texts[1] === 'Enable: Never on', texts[1]);
         check('four ranges saved: Clocked 0–100, 150–250 +2 more', texts[2] === 'Clocked 0–100, 150–250 +2 more', texts[2]);
         check('only the three edited rows changed', texts.length === 5 && texts[3] === CLOCKED_CHIP && texts[4] === CLOCKED_CHIP, texts.join(' | '));
         const orange = await Promise.all([0, 1, 2].map((i) => measureChip(enableControls(c).nth(i))));
@@ -356,13 +356,13 @@ async function runAt(w) {
         await page.mouse.move(5, 5);
 
         await enableControls(c).nth(0).click();
-        await dialog.getByRole('button', { name: 'Clear Override' }).click();
+        await dialog.getByRole('button', { name: 'Clear rule' }).click();
         await page.waitForTimeout(600);
         const after = await chipTexts(c);
-        check('Clear Override returns inserter 1 to Enable: Auto', after[0] === 'Enable: Auto', after[0]);
+        check('Clear rule returns inserter 1 to Enable: Auto', after[0] === 'Enable: Auto', after[0]);
         const quiet = await measureChip(enableControls(c).nth(0));
         check('the cleared chip is quiet again', quiet.backgroundColor === 'rgba(0, 0, 0, 0)', quiet.backgroundColor);
-        await shot('5-cleared', 'Inserters card after Clear Override on inserter 1: back to the quiet Enable: Auto', c);
+        await shot('5-cleared', 'Inserters card after Clear rule on inserter 1: back to the quiet Enable: Auto', c);
     });
 
     // ------------------------------------------------------------ 6. CONDITIONAL with a latch
@@ -374,8 +374,8 @@ async function runAt(w) {
         await page.waitForTimeout(400);
         await shot('6-conditional', 'Electromagnetic science: the Inserters card with the CONDITIONAL, latched rows', c);
         const texts = await chipTexts(c);
-        const latched = texts.filter((t) => t === 'Conditional: 2 rules, latched');
-        check('the two CONDITIONAL rows read "Conditional: 2 rules, latched"', latched.length === 2, texts.join(' | '));
+        const latched = texts.filter((t) => t === 'Conditional: 2 conditions, latched');
+        check('the two CONDITIONAL rows read "Conditional: 2 conditions, latched"', latched.length === 2, texts.join(' | '));
     });
 
     // ------------------------------------------------------------ 8. narrow window

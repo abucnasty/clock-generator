@@ -28,8 +28,8 @@ export const BUTTON_NAMES = {
     blueprintCopied: 'Blueprint copied',
     closeFullscreen: 'Close fullscreen',
     removeCondition: 'Remove condition',
-    removeStatusCheck: 'Remove status check',
-    removeRange: 'Remove range',
+    removeStatusCheck: 'Remove status condition',
+    removeRange: 'Remove wake window',
     close: 'Close',
     moreOptions: 'More options',
 } as const;
@@ -45,7 +45,7 @@ export const PROGRESS_NAMES = {
     loadingData: 'Loading Factorio data',
 } as const;
 
-export const CLOCK_TABLE_NAME = 'Potential clocks';
+export const CLOCK_TABLE_NAME = 'Clocks';
 
 /** The box the install steps' wiring list scrolls in, past 8 rows */
 export const WIRING_LIST_NAME = 'Wiring list';
@@ -54,6 +54,20 @@ export const WIRING_LIST_NAME = 'Wiring list';
 export function clockHelpName(clockLabel: string): string {
     return `How ${clockLabel} is made`;
 }
+
+/** The names of the charts drawn on a canvas or in an SVG (no text of their own), each naming the clock it shows */
+export const CHART_NAMES = {
+    /** "Inserter 3 state timeline, 17 changes" */
+    stateTimeline: (rowLabel: string, changes: number) =>
+        `${rowLabel} state timeline, ${changes} ${changes === 1 ? 'change' : 'changes'}`,
+    /** "Inserter 3 state the game shows, 4 changes" */
+    factorioStrip: (rowLabel: string, changes: number) =>
+        `${rowLabel} state the game shows, ${changes} ${changes === 1 ? 'change' : 'changes'}`,
+    /** "Machine 1 fuel level over the run" */
+    fuelLevel: (machineLabel: string) => `${machineLabel} fuel level over the run`,
+    /** "Inserter 2 fuel clock windows and swings" */
+    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock windows and swings`,
+} as const;
 
 /** The name of a row's drag handle, "Reorder Inserter 2" */
 export function reorderName(rowLabel: string): string {

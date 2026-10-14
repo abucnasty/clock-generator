@@ -240,7 +240,7 @@ describe('recommendationReason', () => {
     it('says the windows are counted without the extra ones when the table does not show the pick with fewer', () => {
         expect(reason([clock('a', { window_count: 3, shownWindows: 7 }), clock('b', { window_count: 4, shownWindows: 6 })]))
             .toBe('Fewest wake-ups among the Stable clocks at 240/s on a moving belt. 1 other clock for a moving belt '
-                + 'ties on wake-ups, so the one with fewer wake windows was picked, not counting the extra windows that '
+                + 'ties on wake-ups, so the one with fewer wake windows was picked, not counting the extra wake windows that '
                 + 'only cut wake-ups.');
     });
 

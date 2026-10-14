@@ -5,7 +5,7 @@ import { ExactTicks, SwingComparison } from './SwingComparison';
 
 interface InsightsPanelProps {
     insights: ClockInsight[];
-    /** Name of the selected potential clock */
+    /** Name of the selected clock */
     clockLabel: string | null;
     /** Insights drawn by the page itself (a chart, a report), listed with the selected clock's */
     children?: ReactNode;
@@ -62,7 +62,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
 
 /**
  * A readable report of what the simulation found: first what holds for the build whichever clock is picked,
- * then what is particular to the selected potential clock.
+ * then what is particular to the selected clock.
  */
 export function InsightsPanel({ insights, clockLabel, children }: InsightsPanelProps) {
     const build = insights.filter(insight => insight.scope === 'build');
@@ -72,7 +72,7 @@ export function InsightsPanel({ insights, clockLabel, children }: InsightsPanelP
         <Box>
             <Typography variant="h6" component="h2">About this clock{clockLabel ? `: ${clockLabel}` : ''}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                What is particular to the potential clock selected above.
+                What is particular to the clock selected above.
             </Typography>
             {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
             {children}
@@ -84,7 +84,7 @@ export function InsightsPanel({ insights, clockLabel, children }: InsightsPanelP
 
             <Typography variant="h6" component="h2" sx={{ mt: 3 }}>About this build</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                The limits every potential clock for this configuration has to work within.
+                The limits every clock for this build has to work within.
             </Typography>
             {build.map(insight => <InsightCard key={insight.id} insight={insight} />)}
         </Box>

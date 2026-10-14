@@ -125,10 +125,10 @@ async function checkStored(page, name, kinds = ['machines', 'inserters', 'belts'
     return s;
 }
 
-/** The Transfer Plan rows as { entity, item } (the entity cell is only filled on a group's first row) */
+/** The Swing Plan rows as { entity, item } (the entity cell is only filled on a group's first row) */
 async function readPlan(page) {
     return page.evaluate(() => {
-        const acc = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => /^Transfer Plan/.test(a.textContent.trim()));
+        const acc = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => /^Swing Plan/.test(a.textContent.trim()));
         if (!acc) return null;
         let entity = '';
         return [...acc.querySelectorAll('tbody tr')].map((tr) => {
@@ -140,7 +140,7 @@ async function readPlan(page) {
     });
 }
 
-const planAccordion = (page) => page.locator('.MuiAccordion-root').filter({ hasText: /^Transfer Plan/ }).first();
+const planAccordion = (page) => page.locator('.MuiAccordion-root').filter({ hasText: /^Swing Plan/ }).first();
 
 /** The card (nearest Paper above the heading) of a kind */
 const cardOf = (page, kind) => {
@@ -299,16 +299,16 @@ async function runSteps(page, width) {
         rec.info('inserter row 3 height', `${layout.height}px, ${layout.lines} lines`);
     }, page);
 
-    // ------------------------------------------------------------------ 2. Validate, Transfer Plan
-    await rec.step('2 validate and the Transfer Plan (before the delete)', async () => {
+    // ------------------------------------------------------------------ 2. Validate, Swing Plan
+    await rec.step('2 validate and the Swing Plan (before the delete)', async () => {
         await validate(page);
         await planAccordion(page).scrollIntoViewIfNeeded();
-        await rec.shot(page, 'transfer-plan-before', { locator: planAccordion(page), desc: 'Transfer Plan after Validate, before the delete (spec state 2)' });
+        await rec.shot(page, 'transfer-plan-before', { locator: planAccordion(page), desc: 'Swing Plan after Validate, before the delete (spec state 2)' });
         const plan = await readPlan(page);
         const entities = [...new Set((plan ?? []).map((r) => r.entity))];
         table('transfer-plan-before', { 'Plan entities': entities });
-        rec.check('the Transfer Plan names the inserters Inserter 1 to 5 (no "#")', same(entities.filter((e) => /^Inserter/.test(e)), labelsOf('inserter', range(5))), show(entities));
-        rec.check('the Transfer Plan names the drill "Drill 1"', entities.includes('Drill 1'), show(entities.filter((e) => /^Drill/.test(e))));
+        rec.check('the Swing Plan names the inserters Inserter 1 to 5 (no "#")', same(entities.filter((e) => /^Inserter/.test(e)), labelsOf('inserter', range(5))), show(entities));
+        rec.check('the Swing Plan names the drill "Drill 1"', entities.includes('Drill 1'), show(entities.filter((e) => /^Drill/.test(e))));
     }, page);
 
     // ------------------------------------------------------------------ 3. enable-control modal of row 4
@@ -374,22 +374,22 @@ async function runSteps(page, width) {
     }, page);
 
     // ------------------------------------------------------------------ 7. validation panel
-    await rec.step('7 the Transfer Plan cannot be edited after the delete', async () => {
+    await rec.step('7 the Swing Plan cannot be edited after the delete', async () => {
         const warning = page.getByText(/changed since it was validated/i).first();
         await warning.scrollIntoViewIfNeeded();
-        await rec.shot(page, 'validation-after', { desc: 'Validation panel after the delete: the "changed since it was validated" warning and the dimmed Transfer Plan (spec state 7)' });
+        await rec.shot(page, 'validation-after', { desc: 'Validation panel after the delete: the "changed since it was validated" warning and the dimmed Swing Plan (spec state 7)' });
         rec.check('the "changed since it was validated" warning shows', await warning.isVisible());
         const dim = await planAccordion(page).evaluate((el) => {
             const s = getComputedStyle(el.parentElement);
             return { pointerEvents: s.pointerEvents, opacity: Number(s.opacity) };
         });
-        rec.check('the Transfer Plan is dimmed and ignores clicks', dim.pointerEvents === 'none' && dim.opacity < 1, show(dim));
+        rec.check('the Swing Plan is dimmed and ignores clicks', dim.pointerEvents === 'none' && dim.opacity < 1, show(dim));
 
         // nor can it be used from the keyboard: Tab through the page from the top and press Enter on whatever has focus
         const stored = (await readStored(page)).text;
         /** Where the focus is against the dimmed panel: 'in', 'before' or 'after' it in document order, or 'none' */
         const focusAt = () => page.evaluate(() => {
-            const acc = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => /^Transfer Plan/.test(a.textContent.trim()));
+            const acc = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => /^Swing Plan/.test(a.textContent.trim()));
             const panel = acc?.parentElement;
             const focused = document.activeElement;
             if (!panel || !focused || focused === document.body) return 'none';
@@ -397,7 +397,7 @@ async function runSteps(page, width) {
             return panel.compareDocumentPosition(focused) & Node.DOCUMENT_POSITION_FOLLOWING ? 'after' : 'before';
         });
         const inert = await planAccordion(page).evaluate((el) => el.parentElement.inert === true);
-        rec.check('the dimmed Transfer Plan is inert', inert);
+        rec.check('the dimmed Swing Plan is inert', inert);
         await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo(0, 0); });
         let landed = 0;
         let passedIt = false;
@@ -407,7 +407,7 @@ async function runSteps(page, width) {
             if (at === 'in') landed++;
             if (at === 'after') passedIt = true;
         }
-        rec.check('Tab reaches past the dimmed Transfer Plan', passedIt);
+        rec.check('Tab reaches past the dimmed Swing Plan', passedIt);
         // try the chip itself as well: with nothing else focused, focus it directly and press Enter and Space
         await page.evaluate(() => document.activeElement?.blur());
         const chip = planAccordion(page).getByText(/^(Included|Excluded)$/).first();
@@ -416,7 +416,7 @@ async function runSteps(page, width) {
         await page.keyboard.press('Enter');
         await page.keyboard.press('Space');
         await page.waitForTimeout(500);
-        rec.check('Tab never lands in the dimmed Transfer Plan, nor does focusing a chip directly', landed === 0, `${landed} times`);
+        rec.check('Tab never lands in the dimmed Swing Plan, nor does focusing a chip directly', landed === 0, `${landed} times`);
         const after = (await readStored(page)).text;
         rec.check('Enter and Space on a dimmed Included/Excluded chip leave the form unchanged', after === stored, after === stored ? '' : 'the saved form changed');
     }, page);
@@ -592,25 +592,25 @@ async function runSteps(page, width) {
             if (await included.count()) await included.click();
             await page.waitForTimeout(250);
         }
-        await rec.shot(page, 'forced-plan', { locator: acc, desc: `Transfer Plan with every item of Inserter 3 (${target.map((r) => r.item).join(', ')}) excluded` });
+        await rec.shot(page, 'forced-plan', { locator: acc, desc: `Swing Plan with every item of Inserter 3 (${target.map((r) => r.item).join(', ')}) excluded` });
         await goConfigure(page);
         await scrollToCard(page, 'inserters');
         let list = await readList(page);
-        rec.check('Inserter 3 now reads Enable: Always', list.enable[2]?.text === 'Enable: Always', list.enable[2]?.text);
+        rec.check('Inserter 3 now reads Enable: Always on', list.enable[2]?.text === 'Enable: Always on', list.enable[2]?.text);
         const forcedName = list.enable[2]?.name ?? '';
-        rec.check('the accessible name of the forced chip is "Enable: Always, Inserter 3. Edit rule" (the note is not in the name)', forcedName === 'Enable: Always, Inserter 3. Edit rule', forcedName);
+        rec.check('the accessible name of the forced chip is "Enable: Always on, Inserter 3. Edit rule" (the note is not in the name)', forcedName === 'Enable: Always on, Inserter 3. Edit rule', forcedName);
         rec.check('the forced chip\'s name starts with its visible text', forcedName.startsWith(list.enable[2]?.text ?? '?'));
-        await readTooltip(page, enableChip(page, /^Enable: Always, Inserter 3\. Edit rule$/), 'forced', 'Always (set by Exclude from LCM)', true);
+        await readTooltip(page, enableChip(page, /^Enable: Always on, Inserter 3\. Edit rule$/), 'forced', 'Always on (set by Exclude from LCM)', true);
         await rec.shot(page, 'forced-tooltip', { desc: 'Hovering Inserter 3\'s forced ALWAYS chip: the tooltip says it was set by Exclude from LCM' });
         await page.mouse.move(5, 5);
 
         // a hand-set ALWAYS on Inserter 1 must not carry the note
         await enableChip(page, /, Inserter 1\. Edit rule$/).click();
         const dialog = page.getByRole('dialog');
-        await dialog.getByRole('radio', { name: /^ALWAYS/ }).check();
+        await dialog.getByRole('radio', { name: /^Always on/ }).check();
         await dialog.getByRole('button', { name: 'Save', exact: true }).click();
         await page.waitForTimeout(600);
-        await readTooltip(page, enableChip(page, /^Enable: Always, Inserter 1\. Edit rule$/), 'hand-set', 'Always', false);
+        await readTooltip(page, enableChip(page, /^Enable: Always on, Inserter 1\. Edit rule$/), 'hand-set', 'Always on', false);
         await page.mouse.move(5, 5);
 
         // delete Inserter 2: the forced inserter becomes Inserter 2 and keeps its flag, the hand-set ALWAYS stays Inserter 1
@@ -618,12 +618,12 @@ async function runSteps(page, width) {
         await scrollToCard(page, 'inserters');
         list = await readList(page);
         await rec.shot(page, 'forced-after-delete', { desc: 'After deleting Inserter 2: the forced ALWAYS inserter is now Inserter 2' });
-        rec.check('after the delete the forced ALWAYS is Inserter 2', list.enable[1]?.name === 'Enable: Always, Inserter 2. Edit rule', list.enable.map((e) => e.name).join(' | '));
+        rec.check('after the delete the forced ALWAYS is Inserter 2', list.enable[1]?.name === 'Enable: Always on, Inserter 2. Edit rule', list.enable.map((e) => e.name).join(' | '));
         const stored = await readStored(page);
         const flagged = stored ? stored.inserters.filter((i) => i.forced).map((i) => i.id) : null;
         rec.check('_forced_always stays on the same inserter through the renumber (now id 2)', same(flagged, [2]), show(flagged));
         rec.check('the hand-set ALWAYS (Inserter 1) has no flag', stored && stored.inserters[0].mode === 'ALWAYS' && !stored.inserters[0].forced, stored ? show(stored.inserters[0]) : '');
-        await readTooltip(page, enableChip(page, /^Enable: Always, Inserter 2\. Edit rule$/), 'forced after the delete', 'Always (set by Exclude from LCM)', true);
+        await readTooltip(page, enableChip(page, /^Enable: Always on, Inserter 2\. Edit rule$/), 'forced after the delete', 'Always on (set by Exclude from LCM)', true);
         await page.mouse.move(5, 5);
         await checkStored(page, 'after the forced-ALWAYS delete', ['machines', 'inserters', 'belts', 'chests', 'drills']);
         const side = await noSideScroll(page);
