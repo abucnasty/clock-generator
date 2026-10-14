@@ -1,6 +1,7 @@
 import { Alert, Box, Button, CircularProgress, Paper, Typography } from '@mui/material';
 import { forwardRef } from 'react';
 import type { ValidationState } from '../hooks/useSimulationWorker';
+import { ELEMENT_IDS, type Problem } from '../utils/firstProblem';
 import { TransferPlanPanel } from './TransferPlanPanel';
 
 interface ValidationPanelProps {
@@ -10,6 +11,8 @@ interface ValidationPanelProps {
     onValidate: () => void;
     /** The form is filled in far enough to be checked (recipe, machines, inserters for every ingredient) */
     canValidate: boolean;
+    /** Why Validate is off, if the build has a problem */
+    problem: Problem | null;
     isGenerating: boolean;
     excludedIngredients: string[];
     onExcludeChange: (items: string[]) => void;
@@ -26,6 +29,7 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
     isOutOfDate,
     onValidate,
     canValidate,
+    problem,
     isGenerating,
     excludedIngredients,
     onExcludeChange,
@@ -51,12 +55,12 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
                 recalculated while you edit; validate again when you are done. Generating needs a valid, up-to-date configuration.
             </Typography>
 
-            {validation.status === 'none' && !canValidate && (
-                <Alert severity="info">Fill in the target, the machines and an inserter for every ingredient and output first.</Alert>
+            {validation.status === 'none' && problem && (
+                <Alert severity="info">{problem.text}</Alert>
             )}
 
             {validation.status === 'invalid' && !isOutOfDate && (
-                <Alert severity="error">{validation.message}</Alert>
+                <Alert id={ELEMENT_IDS.validationError} tabIndex={-1} severity="error">{validation.message}</Alert>
             )}
 
             {validation.status !== 'none' && validation.status !== 'running' && isOutOfDate && (

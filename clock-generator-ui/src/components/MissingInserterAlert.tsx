@@ -1,6 +1,7 @@
 import { Alert, AlertTitle, Box, Button, Stack, Typography } from '@mui/material';
 import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { entityLabel } from '../utils/entityLabel';
+import { coverageIssueElementId } from '../utils/firstProblem';
 import { FactorioIcon } from './FactorioIcon';
 
 interface Props {
@@ -31,7 +32,16 @@ export function MissingInserterAlert({ issues, onApplyFix }: Props) {
                 {issues.map((issue, i) => (
                     <Box
                         key={i}
-                        sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}
+                        // a problem in the workflow bar focuses the row, not one of its fixes, which would change the build
+                        id={coverageIssueElementId(issue)}
+                        tabIndex={-1}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            '&:focus': { outline: '2px solid', outlineColor: 'error.main', outlineOffset: 2 },
+                        }}
                     >
                         <FactorioIcon name={issue.item_name} size={20} />
                         <Typography variant="body2" sx={{ flexShrink: 0 }}>

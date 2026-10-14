@@ -21,6 +21,7 @@ import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { entityLabel } from '../utils/entityLabel';
+import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
 
 interface MachinesFormProps {
     machines: MachineFormData[];
@@ -106,7 +107,7 @@ function MachinesFormComponent({
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
+                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} onClick={onAdd} variant="text" size="small">
                     Add Machine
                 </Button>
             </Box>
@@ -171,6 +172,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
             >
                 {dragHandle}
                 <Autocomplete
+                    id={machineRecipeElementId(machine.id)}
                     sx={{ minWidth: 250, flex: 1 }}
                     options={recipeNames}
                     value={machine.recipe || null}

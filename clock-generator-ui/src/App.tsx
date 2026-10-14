@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
     AppBar,
     Box,
@@ -39,6 +40,7 @@ import { ChangelogDialog } from './components/ChangelogDialog';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
+import { blockedActionsOf, focusProblemTarget, needsListView, problemsOf, type Problem } from './utils/firstProblem';
 import { rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 
@@ -204,13 +206,39 @@ function App() {
     const resultsAreStale = isStale(generatedFor, configKey);
     const staleFor = resultsAreStale ? generatedFor : null;
 
+    // what keeps the build from being validated and generated, and so why each of the two buttons is off
+    const problems = useMemo(() => problemsOf({
+        targetOutput: config.target_output,
+        machines: config.machines,
+        coverageIssues: checkedCoverageIssues ?? [],
+    }), [config.target_output, config.machines, checkedCoverageIssues]);
+    const blocked = useMemo(() => blockedActionsOf({
+        problems,
+        coverageChecked: checkedCoverageIssues !== null,
+        isRunning,
+        validationStatus,
+    }), [problems, checkedCoverageIssues, isRunning, validationStatus]);
+
     const validationPanelRef = useRef<HTMLDivElement>(null);
+    // set while a Validate pressed in the bar is running: its answer makes the page longer, so it is scrolled to again
+    const scrollToValidationRef = useRef(false);
     const handleValidate = useCallback(() => {
         validate(exportConfig());
-        setView('configure');
-        // the panel sits below the forms; wait for the Configure view to be shown again before scrolling to it
-        setTimeout(() => validationPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+        // the panel sits below the forms; show the Configure view now, so that it can be scrolled to
+        flushSync(() => setView('configure'));
+        scrollToValidationRef.current = true;
+        // at once, not smoothly: the header's height is the scroll padding, which a smooth scroll would race
+        validationPanelRef.current?.scrollIntoView({ block: 'start' });
     }, [exportConfig, validate]);
+    useEffect(() => {
+        if (validation.status === 'running' || !scrollToValidationRef.current) {
+            return;
+        }
+        scrollToValidationRef.current = false;
+        // after the header has taken its new height (the reason under the buttons goes once the build is valid)
+        const frame = requestAnimationFrame(() => validationPanelRef.current?.scrollIntoView({ block: 'start' }));
+        return () => cancelAnimationFrame(frame);
+    }, [validation.status]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -274,19 +302,30 @@ function App() {
         importConfig(imported);
     }, [importConfig]);
 
-    // Check if config is valid enough to generate
-    const canGenerate = useMemo(() => {
-        return (
-            isInitialized &&
-            !isRunning &&
-            config.target_output.recipe &&
-            config.target_output.items_per_second > 0 &&
-            config.target_output.copies > 0 &&
-            config.machines.length > 0 &&
-            config.machines.every((m) => m.recipe) &&
-            checkedCoverageIssues?.length === 0
-        );
-    }, [isInitialized, isRunning, config, checkedCoverageIssues]);
+    // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown
+    const handleBuildReplaced = useCallback(() => {
+        clearResults();
+        setView('configure');
+    }, [clearResults]);
+
+    // the build can be generated once it is checked and has no problems; Generate also waits for the Validate step
+    const canGenerate = isInitialized && !isRunning && checkedCoverageIssues !== null && problems.length === 0;
+
+    // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
+    const handleGoToProblem = useCallback((problem: Problem) => {
+        const { target } = problem;
+        if (target === null) {
+            return;
+        }
+        // shown before the focus moves: a hidden element takes no focus
+        flushSync(() => {
+            if (needsListView(target)) {
+                setConfigView('list');
+            }
+            setView('configure');
+        });
+        focusProblemTarget(target);
+    }, []);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -310,7 +349,7 @@ function App() {
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
-                            onBuildReplaced={clearResults}
+                            onBuildReplaced={handleBuildReplaced}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -328,6 +367,9 @@ function App() {
                             selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
                             rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
                             staleFor={staleFor}
+                            problems={problems}
+                            blocked={blocked}
+                            onGoToProblem={handleGoToProblem}
                         />
                     )}
                 </AppBar>
@@ -482,7 +524,8 @@ function App() {
                                 validation={validation}
                                 isOutOfDate={isValidationOutOfDate}
                                 onValidate={handleValidate}
-                                canValidate={Boolean(canGenerate)}
+                                canValidate={canGenerate}
+                                problem={problems[0] ?? null}
                                 isGenerating={isRunning}
                                 excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
                                 onExcludeChange={handleExcludeChange}

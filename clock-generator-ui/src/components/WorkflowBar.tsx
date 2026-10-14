@@ -2,6 +2,7 @@ import { Check, ContentCopy } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, CircularProgress, Portal, Snackbar, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_LABEL, STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { GenerationProgressStatus } from './BlueprintOutput';
 import { StaleCopyDialog } from './StaleCopyDialog';
@@ -33,6 +34,12 @@ interface WorkflowBarProps {
     rateWarning: string | null;
     /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
+    /** What keeps the build from being validated and generated, first to fix first; empty when nothing does */
+    problems: Problem[];
+    /** Why each of Validate and Generate is off; null when it is on or says on its own label what it is doing */
+    blocked: { validate: Problem | null; generate: Problem | null };
+    /** Shows and focuses where a problem is fixed */
+    onGoToProblem: (problem: Problem) => void;
 }
 
 /**
@@ -53,6 +60,9 @@ export function WorkflowBar({
     selectedLabel,
     rateWarning,
     staleFor,
+    problems,
+    blocked,
+    onGoToProblem,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
     const [warned, setWarned] = useState(false);
@@ -133,6 +143,15 @@ export function WorkflowBar({
                             )}
                         </>
                     )}
+                    {problems.length > 0 && (
+                        <Chip
+                            size="small"
+                            color="error"
+                            label={problemCountLabel(problems.length)}
+                            onClick={() => onGoToProblem(problems[0])}
+                            aria-label={`${problemCountLabel(problems.length)}. Go to the first one.`}
+                        />
+                    )}
                     {validationStatus !== 'none' && validationStatus !== 'running' && (
                         <Chip
                             size="small"
@@ -141,16 +160,22 @@ export function WorkflowBar({
                             color={VALIDATION_CHIP[validationStatus].color}
                         />
                     )}
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={onValidate}
-                        disabled={validateDisabled || isLoading || validationStatus === 'running'}
-                    >
-                        {validationStatus === 'running' ? 'Validating...' : 'Validate'}
-                    </Button>
-                    <Tooltip title={validationStatus === 'valid' ? '' : 'Validate the configuration first'} arrow>
+                    {/* the reason is also the text under the buttons, which describes them for the keyboard and screen readers */}
+                    <Tooltip title={blocked.validate?.text ?? ''} arrow describeChild>
                         {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
+                        <span>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={onValidate}
+                                disabled={validateDisabled || isLoading || validationStatus === 'running'}
+                                aria-describedby={blocked.validate ? ELEMENT_IDS.blockReason : undefined}
+                            >
+                                {validationStatus === 'running' ? 'Validating...' : 'Validate'}
+                            </Button>
+                        </span>
+                    </Tooltip>
+                    <Tooltip title={blocked.generate?.text ?? ''} arrow describeChild>
                         <span>
                             <Button
                                 variant="contained"
@@ -158,6 +183,7 @@ export function WorkflowBar({
                                 onClick={onGenerate}
                                 color="secondary"
                                 disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
+                                aria-describedby={blocked.generate ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
                             >
                                 {isLoading ? 'Generating...' : 'Generate'}
@@ -166,6 +192,26 @@ export function WorkflowBar({
                     </Tooltip>
                 </Box>
             </Toolbar>
+            {blocked.generate && (
+                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1, mt: -0.5, minWidth: 0 }}>
+                    {blocked.generate.target ? (
+                        <Button
+                            id={ELEMENT_IDS.blockReason}
+                            variant="text"
+                            size="small"
+                            color="error"
+                            onClick={() => blocked.generate && onGoToProblem(blocked.generate)}
+                            sx={{ textTransform: 'none', textAlign: 'left', py: 0, px: 0.5, ml: -0.5, minWidth: 0 }}
+                        >
+                            {blocked.generate.text}
+                        </Button>
+                    ) : (
+                        <Typography id={ELEMENT_IDS.blockReason} variant="body2" color="text.secondary">
+                            {blocked.generate.text}
+                        </Typography>
+                    )}
+                </Box>
+            )}
             {isLoading && (
                 <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1 }}>
                     <GenerationProgressStatus store={progressStore} />
