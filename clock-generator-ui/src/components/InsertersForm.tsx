@@ -12,6 +12,7 @@ import { TargetType } from 'clock-generator/light';
 import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
@@ -19,7 +20,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
-import { entityLabel } from '../utils/entityLabel';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
@@ -221,13 +222,16 @@ function InsertersFormComponent({
         onUpdate(inserterIndex, { filters: filters.length > 0 ? filters : undefined });
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, remove } = useFocusAfterRemove(inserters.length, onRemove);
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                     Inserters ({inserters.length})
                 </Typography>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Inserter
                 </Button>
             </Box>
@@ -454,7 +458,7 @@ function InsertersFormComponent({
                         onClick={() => setEnableControlModalInserterIndex(index)}
                     />
 
-                    <IconButton onClick={() => onRemove(index)} color="error" sx={{ ml: 'auto' }}>
+                    <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
                         <Delete />
                     </IconButton>
                 </Box>

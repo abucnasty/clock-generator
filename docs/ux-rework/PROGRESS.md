@@ -43,9 +43,9 @@ come from here.
 |---|---|---|---|---|---|---|
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | merged | [#149](https://github.com/abucnasty/clock-generator/pull/149) | 2 | Code review opus PASS; UX audit FIX (focus under the header, 2.4.11) then PASS after round 1; a one-line minor in round 2. CI green |
-| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | fix-2 | | 2 | Bundle with 1.5. Code review opus PASS (minors); UX audit opus FIX: Undo timed out for keyboard users (2.2.1) → owner: no timer. A18, C15 fixed; B2 fixed within the plan; B3 partly (delete buttons unnamed: fixed in round 1). Re-review after round 1: both FIX on one shared major (the polite region sits in `#root`, which MUI's modal hides, so messages raised in or while closing a dialog aren't read). Round 2 (last): announce into an unhidden region |
-| [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | fix-1 | | 1 | Bundle with 1.14 (`feat/ux-rework-p1-first-problem-warning`). Code review opus PASS, UX audit opus PASS (A6, B21, C10, C4 fixed); a minors round (8 cheap items). Also the 1.7 and 1.2 follow-ups (Search deeper's reason, Validate's scroll). 257 tests; capture 901 PASS, 2 FAIL (pre-existing 390 sideways scroll when stale, 2.9) |
-| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | fix-2 | | 2 | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`). Merged #151 in (import-line conflict only). A14, A29, B30, C6 fixed; C3 partly (one filled button per state is 1.4's). Round 1: the untimed Undo, focus after Undo/Close, one live region with `announce()`, named delete buttons, 9 minors. Re-review after round 1: both FIX on one shared major (the polite region sits in `#root`, which MUI's modal hides, so messages raised in or while closing a dialog aren't read). Round 2 (last): announce into an unhidden region |
+| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | merged | [#157](https://github.com/abucnasty/clock-generator/pull/157) | 2 | Bundle with 1.5. Code review opus PASS (minors); UX audit opus FIX: Undo timed out for keyboard users (2.2.1) → owner: no timer. A18, C15 fixed; B2 fixed within the plan; B3 partly (delete buttons unnamed: fixed in round 1). Re-review after round 1: both FIX on one shared major (the polite region sits in `#root`, which MUI's modal hides, so messages raised in or while closing a dialog aren't read). Round 2 (last): announce into an unhidden region→ both re-reviews PASS (announcer with a spare body-level region; checked in a browser). CI green |
+| [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | merged | [#155](https://github.com/abucnasty/clock-generator/pull/155) | 1 | Bundle with 1.14 (`feat/ux-rework-p1-first-problem-warning`). Code review opus PASS, UX audit opus PASS (A6, B21, C10, C4 fixed); a minors round (8 cheap items). Also the 1.7 and 1.2 follow-ups (Search deeper's reason, Validate's scroll). 257 tests; capture 901 PASS, 2 FAIL (pre-existing 390 sideways scroll when stale, 2.9) Code re-check PASS; CI green |
+| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | merged | [#157](https://github.com/abucnasty/clock-generator/pull/157) | 2 | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`). Merged #151 in (import-line conflict only). A14, A29, B30, C6 fixed; C3 partly (one filled button per state is 1.4's). Round 1: the untimed Undo, focus after Undo/Close, one live region with `announce()`, named delete buttons, 9 minors. Re-review after round 1: both FIX on one shared major (the polite region sits in `#root`, which MUI's modal hides, so messages raised in or while closing a dialog aren't read). Round 2 (last): announce into an unhidden region→ both re-reviews PASS (announcer with a spare body-level region; checked in a browser). CI green |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.7. Code review opus PASS; UX audit opus minors only (A9, A11, B12, B14 fixed, C7 partly). Round 1: 13 cheap minors; orchestrator read the diff and shots. Runner re-ran checks after merging 1.9 in (235 tests). CI green |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.6. A22, B15, C27 fixed |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
@@ -54,7 +54,7 @@ come from here.
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | impl | | | Two PRs. PR A (opus, `feat/ux-rework-p1-a11y-basics`) in impl with a capture writer, moved up by coach run 2; announcements go through 1.5's `announce()`. PR B (sonnet) stacks on A |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | A merged | [#153](https://github.com/abucnasty/clock-generator/pull/153) | 1 | Part A merged: code review opus PASS (re-ran checks in a clean copy), UX audit sonnet PASS (C30 fixed; A25, B32 partly, rest is Part B); one minors round (dialog row wraps at 390). CI green. Part B last in the phase, stacked on 1.11 B |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
-| [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | fix-1 | | 1 | Bundle with 1.4. C4 fixed |
+| [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | merged | [#155](https://github.com/abucnasty/clock-generator/pull/155) | 1 | Bundle with 1.4. C4 fixed Code re-check PASS; CI green |
 
 ## Phase 2: newcomer-first structure
 
@@ -65,12 +65,23 @@ come from here.
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
-| [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | impl | | | Started early on `feat/ux-rework-p2-wake-windows` (opus) with a capture writer. Uses 1.5's `announce()` once p1 is merged into p2 |
+| [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | merged (p2) | [#156](https://github.com/abucnasty/clock-generator/pull/156) | 1 | Code review opus PASS (window maths correct; checks re-run), UX audit opus PASS (C2 fixed for the new chart; old charts → 2.5/2.10); one minors round, re-checked. CI green. Follow-up PR: switch to `announce()`, drop `scrollMarginBottom` |
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
-| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
+| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | impl | | | Started early on `feat/ux-rework-p2-diagram` (opus) with a capture writer, in the slot #155 freed. Takes the 1.10 node-line contrast and 1.13 diagram chip follow-ups |
+
+**Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
+
+| Chain | Length | Next unblocked |
+|---|---|---|
+| 2.3 → 2.4 → 2.7 B → 2.9 → 2.10 | 5 | 2.3 (now) |
+| 2.6 → 2.5 A → 2.7 A (also after 2.3) → 2.7 B | 4 | 2.5 A once 2.6 merges |
+| 2.1 (two units; after 1.5 + 1.3) → 2.7 B | 3 | 2.1 once 1.5 + 1.3 is in p2 |
+| 2.5 A → 2.5 B | 2 | after 2.5 A |
+| 2.8 a → 2.8 b (late) | 2 | 2.8 a, any idle slot |
+| 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | in progress |
 
 ## Phase 3: expert depth
 
@@ -135,6 +146,15 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
 - 2026-10-14: **Undo has no timer** (the owner, on the 1.3 UX audit's WCAG 2.2.1 major): the Undo message stays until
   the next edit, the next undoable action, Close or Escape, and Ctrl/Cmd+Z works while it is offered. Other messages
   keep their timers. [PLAN.md](PLAN.md) 1.3 updated.
+- 2026-10-14: Process coach run 3 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated). Throughput rose from one merge per
+  23.7 min to one per 19.2 min. Applied: (1) a unit that only waits on another branch counts as zero units, a stacked
+  item starts once its predecessor's interface is committed (1.11 B started on 1.11 A's head), and a cross-item API
+  decided mid-flight is written into both specs as an exact export; (2) a Phase 2 chain table drives slot choice (2.3
+  next), and 2.11 merges when ready with 2.9 re-sweeping the diagram; (3) an implementer sends the code reviewer a
+  short design note before building a new mechanism in a fix round, and `lib.mjs` gains `checkAnnounced`; (4) an
+  implementer skips merging the phase branch when only the ledger moved, and ledger updates are batched with merges.
+  Note on run 2's rule: 1.12 A's minors round was re-checked by the orchestrator reading the 3-line diff, not by the
+  reviewer.
 - 2026-10-14: 2.2 checkpoint closed: the owner installed the built sidecar from `feat/ux-rework-p2` and reported "looks good".
 - 2026-10-14: One polite announcements region for the whole app: 1.5's message host owns it and exposes `announce()`;
   1.11 PR A routes its workflow announcements through it instead of adding a region in the workflow bar.
@@ -266,6 +286,17 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.4: Validate's late re-scroll skips when `scrollY` moved more than 2px; browser scroll anchoring after the header
   changes height (reason row going away, chip wrapping at 390) might trip it and leave the panel's top under the header.
   Not seen in the capture (P12 passes at 390); allow the header's change in height, or detect real player scrolling.
+- 2.6 → 1.11: the sticky footer can hide anything focused near the window's bottom across the app (moot once 1.5's
+  static footer merges); MUI's Switch vanishes in forced colours app-wide.
+- 2.6 → 2.10: C2's other charts stay mouse-only (canvas state timeline, transfer bars); the fuel chart's role and label
+  is covered by no item yet: add it to 2.10.
+- 2.6: `CIRCUIT_LATENCY_TICKS` (2) and `MOSTLY_ON_SHARE` (0.8) are copied from the engine (`clock.ts:10`,
+  `insights.ts:269`); export them from `clock-generator/light` instead (an engine change).
+- 2.6: VoiceOver not run; a row group's label repeats its visible text and may be read twice (the spec's own risk).
+- 1.5: the announcer's module state (`spare`, timers) isn't reset when `MessageHost` unmounts (HMR/tests only);
+  spot-check its 100 ms write delay with NVDA and JAWS (1.11).
+- 2.6: nits left: "Between its windows the inserter is off" (say "it"), Escape clears only a selection in the focused
+  row, a missing space in `ID_PATTERN =/`.
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.
