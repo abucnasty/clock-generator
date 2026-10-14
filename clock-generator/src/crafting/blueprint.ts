@@ -435,6 +435,13 @@ function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
     return OpenRange.reduceRanges(wholeRanges(scaled));
 }
 
+/** A clock blueprint, and whether some of its windows are checked against a modulo of the clock */
+export interface SignalPerInserterBlueprint {
+    blueprint: FactorioBlueprint;
+    /** Some window repeats within the period and is checked against the clock modulo its length: a modulo clock */
+    modulo: boolean;
+}
+
 export function createSignalPerInserterBlueprint(
     final_output_item_name: string,
     cycle: CraftingCyclePlan,
@@ -444,7 +451,7 @@ export function createSignalPerInserterBlueprint(
     subtick_clock?: SubtickClock,
     use_modulo: boolean = false,
     inserter_clocks: ReadonlyMap<string, InserterClock> = new Map(),
-): FactorioBlueprint {
+): SignalPerInserterBlueprint {
 
     const inventory_transfers = history.getAllTransfers()
 
@@ -710,11 +717,12 @@ export function createSignalPerInserterBlueprint(
         ...lockWires(lock, lock_receivers, [clock, ...subtick_combinators, ...modulo_combinators, main_filter, ...deciderCombinatorEntities, ...fuel_combinators]),
     );
 
-    if (split_moduli.length > 0) {
+    const modulo = split_moduli.length > 0;
+    if (modulo) {
         blueprint_label += " (modulo clock)";
     }
 
-    return new BlueprintBuilder()
+    const blueprint = new BlueprintBuilder()
         .setLabel(blueprint_label)
         .setDescription(`${targetRateDescription(cycle)}\nClock period: ${formatRate(total_duration.ticks)} ticks`)
         .setEntities([
@@ -728,4 +736,5 @@ export function createSignalPerInserterBlueprint(
         ])
         .setWires(wires.concat(fuel_wires))
         .build();
+    return { blueprint, modulo };
 }

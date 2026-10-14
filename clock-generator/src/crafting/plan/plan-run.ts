@@ -11,7 +11,7 @@ import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, Read
 import { TargetProductionRate } from "../target-production-rate";
 import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "fractionability";
-import { createSignalPerInserterBlueprint, mergedClockTicks, SubtickClock } from "../blueprint";
+import { createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../../control-logic";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
@@ -1096,7 +1096,7 @@ export function exportClock(
     // before the blueprint, which exports the fuel clocks this settles on
     const { inserter_clocks, fuel_plan, fuel_consumption_view } = settledFuelClocks(plan, windows, options);
 
-    const blueprintForWindows = (all_windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): FactorioBlueprint => {
+    const blueprintForWindows = (all_windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): SignalPerInserterBlueprint => {
         const clocked = withInserterClocks(all_windows, inserter_clocks, duration.ticks);
         return createSignalPerInserterBlueprint(
             target_production_rate.machine_production_rate.item,
@@ -1118,15 +1118,15 @@ export function exportClock(
         if (options.modulo_blueprint === false) {
             return undefined;
         }
-        const blueprint = blueprintForWindows(all_windows, undefined, true);
+        const { blueprint, modulo } = blueprintForWindows(all_windows, undefined, true);
         // only worth offering when a window repeats within the period: a fuel clock alone is a modulo of the clock too
-        return blueprint.label?.includes("(modulo clock)") ? blueprint : undefined;
+        return modulo ? blueprint : undefined;
     };
     const subtickClockFor = (all_windows: Map<string, OpenRange[]>) => subtick_clock
-        ? { clock: subtick_clock, blueprint: blueprintForWindows(all_windows, subtick_clock) }
+        ? { clock: subtick_clock, blueprint: blueprintForWindows(all_windows, subtick_clock).blueprint }
         : undefined;
 
-    const blueprint = blueprintForWindows(windows);
+    const { blueprint } = blueprintForWindows(windows);
     const histories: Pick<TrialRun, "simulation_duration" | "transfer_history" | "serializable_transfer_history" | "serializable_state_transition_history" | "machine_facts"> =
         extras.histories ?? {
             simulation_duration: duration,
