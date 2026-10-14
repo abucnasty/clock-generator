@@ -111,6 +111,10 @@ The helpers:
   `checkLabelInName(rec, page, locator, label?)` records a check that it contains the visible text (case and spacing are
   ignored; an icon-only control passes with a note).
 - `noSideScroll` and `isClickable` are the other page measurements.
+- `checkAnnounced(rec, page, text, label?)` records a check that `text` (a string or RegExp) is announced: it must be in the accessibility
+  tree (`page.locator('body').ariaSnapshot()`, which leaves out `aria-hidden` subtrees) inside an element with role status, log or
+  alert, or `aria-live` polite or assertive, and that element must have no `aria-hidden="true"` ancestor in the DOM. It polls for about
+  1.5 s and returns whether it passed; the detail names the live regions it found, or says the text sits only under `aria-hidden`.
 - **Keyboard and focus** (audits kept finding what the scripts never checked: focus hidden under the sticky header, controls
   that stay operable from the keyboard while they look disabled or out of date, controls Tab never reaches). Each helper has a
   `rec.check` wrapper that follows `checkLabelInName(rec, page, locator, label)`:
