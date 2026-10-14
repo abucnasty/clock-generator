@@ -240,6 +240,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 
 ## Phase 2: the newcomer-first structure
 
+**Order:** 2.2 (sidecar) and 2.5 (install steps) go first, so the owner's in-game checks overlap the other items
+(orchestrator, 2026-10-14).
+
 **2.1 First visit and the way in** (A1, A2, A4, A15, A17)
 - **What:**
   - An intro card above Target Output, dismissible and remembered. It gives one sentence on what the tool does, then
