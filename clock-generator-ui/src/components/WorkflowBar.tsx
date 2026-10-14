@@ -22,6 +22,8 @@ interface WorkflowBarProps {
     view: WorkflowView;
     onViewChange: (view: WorkflowView) => void;
     isLoading: boolean;
+    /** The last generation stopped on an error */
+    generationFailed: boolean;
     progressStore: GenerationProgressStore;
     onGenerate: () => void;
     generateDisabled: boolean;
@@ -74,6 +76,7 @@ export function WorkflowBar({
     view,
     onViewChange,
     isLoading,
+    generationFailed,
     progressStore,
     onGenerate,
     generateDisabled,
@@ -103,14 +106,14 @@ export function WorkflowBar({
     const hasBlueprint = blueprintString !== null;
     const lastSnapshot = useRef<WorkflowSnapshot | null>(null);
     useEffect(() => {
-        const snapshot: WorkflowSnapshot = { validationStatus, isLoading, hasBlueprint, selectedLabel };
+        const snapshot: WorkflowSnapshot = { validationStatus, isLoading, failed: generationFailed, hasBlueprint, selectedLabel };
         const previous = lastSnapshot.current;
         lastSnapshot.current = snapshot;
         const text = previous && workflowAnnouncement(previous, snapshot);
         if (text) {
             announce(text);
         }
-    }, [validationStatus, isLoading, hasBlueprint, selectedLabel, announce]);
+    }, [validationStatus, isLoading, generationFailed, hasBlueprint, selectedLabel, announce]);
 
     const copyBlueprint = useCallback(async () => {
         if (!blueprintString) {
@@ -229,7 +232,7 @@ export function WorkflowBar({
                                 color="secondary"
                                 disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
                                 aria-describedby={blocked.generate ? ELEMENT_IDS.blockReason : undefined}
-                                startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                                startIcon={isLoading ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
                                 {isLoading ? 'Generating...' : 'Generate'}
                             </Button>
