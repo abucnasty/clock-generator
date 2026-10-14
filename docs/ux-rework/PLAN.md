@@ -15,6 +15,9 @@ merged, and the owner then decided how to resolve every open question (the table
   and `review/C-visual-a11y.md` (full reviews), `review/BRIEF.md` (the brief the reviewers worked from), and
   `capture/` (the screenshot scripts; see its README).
 
+**How the work is run:** `ORCHESTRATOR.md` sets out the loop (spec, implement, evidence gate, code review, UX audit,
+fix cap, merge), which model each role uses, and the checkpoints with the owner. `PROGRESS.md` is the ledger.
+
 Finding references such as **A5**, **B4** and **C8** are finding numbers in those reviews. Read the finding before
 changing the code it points at: each one names the screenshot and `file:line` it is about.
 
