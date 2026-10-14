@@ -66,7 +66,7 @@ come from here.
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
 | 2.7 | Factorio GUI grammar pass | opus | spec | | | |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
-| 2.9 | Half-width layout | sonnet | spec | | | |
+| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
 

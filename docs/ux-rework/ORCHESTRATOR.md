@@ -79,6 +79,8 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      - for every text or control colour pair the item adds or changes, a measured `contrast()` ratio, and for every new
        control an aria snapshot showing its accessible name (which must contain its visible label). Below WCAG AA
        (4.5:1 text, 3:1 large text and non-text) the gate fails.
+     - for an item that adds or rebuilds a view, the half-width geometry sweep at 960, 800 and 720 (no sideways scroll;
+       wide tables and charts scroll inside their own box), with `lib.mjs`.
      - a short evidence note: the commands and their result lines, the contrast ratios, and the list of screenshots.
    - **You verify this. Don't trust the report.** Re-run at least `npm test` and the build yourself, or through a haiku
      runner, and open two or three of the screenshots.
