@@ -29,8 +29,17 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` â
 ## The loop for each plan item
 
 Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once. From step 2
-on, run at most **three items at once**, and only when their specs show no file in common. Run each in its own worktree
-(`isolation: "worktree"`). A spec drafted ahead is checked again against the phase branch before its item is
+on, run at most **three items at once** (a bundle counts as one). Items may share files (the owner, 2026-10-14): each
+implementer merges the phase branch into its branch (`git merge`, never a rebase of a pushed branch) before it reports,
+and again just before its PR, and resolves any conflict itself. After a merge that had conflicts, the checks re-run,
+and the orchestrator reads the conflicted hunks before review or merge. Prefer items that touch different parts of a
+shared file. Run each in its own worktree (`isolation: "worktree"`).
+
+**Bundles.** Items that change the same files and depend on each other are built as one bundle: one branch, one
+implementer, one review, one PR that names every item and its findings. Each item keeps its spec and its row in the
+ledger. Phase 1 bundles: **1.5 + 1.3** (messages, then Undo on `notify()`), **1.4 + 1.14** (the workflow bar's
+buttons), **1.6 + 1.7** (the clock table panel). If one part fails review, the fix round covers the bundle; if it
+can't be fixed in two rounds, split that part out rather than hold the rest. A spec drafted ahead is checked again against the phase branch before its item is
 implemented, since items merged in the meantime move its line numbers. The orchestrator decides the order in which
 items are implemented and merged (the owner, 2026-10-14), following the dependencies between the specs.
 
@@ -55,11 +64,16 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - Nothing goes to review without all of:
      - the full local check set passing. In `clock-generator-ui`: `npm test`, `npm run lint`, `npm run knip`,
        `npm run check:icons`, `npm run build`. The same in `clock-generator` if the engine changed.
-     - before/after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
-       reachability), made with `docs/ux-rework/capture/`.
+     - after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
+       reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`. "Before" screenshots only for
+       states the original review has no shot of (its shots are listed in `review/`); otherwise the review's shot is
+       the "before".
      - a short evidence note: the commands and their result lines, and the list of screenshots.
    - **You verify this. Don't trust the report.** Re-run at least `npm test` and the build yourself, or through a haiku
      runner, and open two or three of the screenshots.
+   - **After a fix round of minors only**, the checks re-run but the capture doesn't: the orchestrator reads the diff and
+     looks at one screenshot the implementer takes of the changed state. A fix round with a blocker or major re-runs
+     the capture for the affected states.
 4. **Code review** (code reviewer, read-only). It reviews the child branch's diff against the spec for:
    - correctness bugs, including edge cases and state that goes out of date
    - whether the code reads like the surrounding code

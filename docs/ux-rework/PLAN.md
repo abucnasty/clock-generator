@@ -67,7 +67,8 @@ master
      └─ feat/ux-rework-p3
 ```
 
-- **Child PRs:** small, one item per PR where practical, targeting the phase branch. **The agent may merge a child PR**
+- **Child PRs:** small, one item per PR where practical (items that share files may be bundled; see
+  `ORCHESTRATOR.md`), targeting the phase branch. **The agent may merge a child PR**
   once CI passes.
 - **Phase branches:** start each one from `feat/ux-rework` after the previous phase has merged. When the phase is done,
   its UX review has run (see Verification) and CI passes, **the agent may merge the phase PR into `feat/ux-rework`**.
