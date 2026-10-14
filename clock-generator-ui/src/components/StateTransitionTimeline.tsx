@@ -140,7 +140,9 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         for (const { transition, span } of marks) {
             context.globalAlpha = isFiltered(transition) ? 0.15 : 1;
             context.fillStyle = colorOf(transition);
-            context.fillRect(span.x, 0, span.width, height);
+            // whole pixels, so a 3px mark is three solid pixels and not two solid and two half-covered
+            const left = Math.round(span.x);
+            context.fillRect(left, 0, Math.max(Math.round(span.x + span.width) - left, MIN_MARK_PX), height);
         }
         if (hovered) {
             const span = markSpan(hovered.tick, hovered.duration_ticks, totalDuration, width);
