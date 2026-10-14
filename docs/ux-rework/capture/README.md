@@ -38,4 +38,24 @@ If Node does not pick up `NODE_PATH` for ES modules, copy the scripts into `/tmp
   Facts, the diagram's machine node and the Potential Clocks headers. It writes a pass or fail line per check into
   `INDEX.md`. Set `SAMPLES_DIR` to read the sample configs from another checkout (a worktree's
   `clock-generator/resources/config-samples`).
+## Shared helpers
+
+New item scripts use `lib.mjs` (the helpers below) and start from `example-item.mjs`, so a script is only its steps and
+checks. `lib.mjs` needs `playwright-core`, and Node ignores `NODE_PATH` for ES modules, so copy the item script and
+`lib.mjs` into `/tmp/ux-capture/` and run them from there:
+
+```bash
+cp docs/ux-rework/capture/{lib,my-item}.mjs /tmp/ux-capture/
+BASE_URL=http://localhost:5204 node /tmp/ux-capture/my-item.mjs /tmp/ux-capture/out/my-item   # SAMPLES_DIR for a worktree
+```
+
+- `openSession`, `createRecorder` (`shot`, `step`, `check`, `info`, `finish`) and `eachWidth` run the browser, number the
+  shots and write `INDEX.md` with a PASS or FAIL line per check. `finish()` returns a non-zero exit code if a check or a
+  step failed.
+- `importFile`, `goConfigure`, `goResults`, `validate`, `generate` and `openMenu` are the app actions. `validate` and
+  `generate` wait on the buttons' `textContent` until the work has finished.
+- `contrast`, `noSideScroll` and `isClickable` are the page measurements.
+- "Before" shots are only for states the original review has no shot of; the review's shots already show 0.9.0.
+- The default widths are 1440 and 720. Add 390 (at 844 high) when the item affects reachability.
+
 - Never commit the screenshots. Attach a summary of the review to the phase PR instead.
