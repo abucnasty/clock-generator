@@ -1,7 +1,7 @@
 import { OpenRange } from "../../data-types";
 
 /** Ticks added to the latest tick an output machine was seen back at its block, before its feeders are enabled again */
-export const OUTPUT_FEEDER_MARGIN_TICKS = 2;
+const OUTPUT_FEEDER_MARGIN_TICKS = 2;
 
 /**
  * The disabled stretch has to hold at least this many swings of the inserter back to back, or switching it off and
@@ -9,7 +9,7 @@ export const OUTPUT_FEEDER_MARGIN_TICKS = 2;
  */
 export const OUTPUT_FEEDER_MIN_SWINGS = 2;
 
-export interface OutputFeederWindows {
+interface OutputFeederWindows {
     /** Windows over the clock period in which the feeders are enabled */
     windows: OpenRange[];
     /** The latest tick after the end of an output window at which the output machine was back at its block */

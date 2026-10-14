@@ -51,8 +51,8 @@ export class SimulationContext {
     }
 }
 
-export type MachineStateMachineInterceptor = (entity_state: EntityState) => MachineStateMachine | null
-export type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterStateMachine | null
+type MachineStateMachineInterceptor = (entity_state: EntityState) => MachineStateMachine | null
+type InserterStateMachineInterceptor = (entity_state: EntityState) => InserterStateMachine | null
 
 /** The entities of a config: belts, machines, chests, inserters and drills, without any state */
 export function createEntityRegistryFromConfig(config: Config): EntityRegistry {

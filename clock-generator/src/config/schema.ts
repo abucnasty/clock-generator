@@ -87,10 +87,10 @@ const EnableControlOverrideClockedSchema = z.object({
 // Conditional Enable Control Configuration
 // ============================================================================
 
-export const EntityReferenceSchema = z.enum([EntityReference.SOURCE, EntityReference.SINK]);
+const EntityReferenceSchema = z.enum([EntityReference.SOURCE, EntityReference.SINK]);
 export { EntityReference };
 
-export const ComparisonOperatorSchema = z.enum([
+const ComparisonOperatorSchema = z.enum([
     ComparisonOperator.GREATER_THAN,
     ComparisonOperator.LESS_THAN,
     ComparisonOperator.GREATER_THAN_OR_EQUAL,
@@ -176,7 +176,7 @@ export const ConditionSchema = z.object({
 
 export type Condition = z.infer<typeof ConditionSchema>;
 
-export const RuleOperatorSchema = z.enum([RuleOperator.AND, RuleOperator.OR]);
+const RuleOperatorSchema = z.enum([RuleOperator.AND, RuleOperator.OR]);
 export { RuleOperator };
 
 interface RuleSetType {
@@ -193,7 +193,7 @@ export const RuleSetSchema: z.ZodType<RuleSetType> = z.lazy(() =>
 
 export type RuleSet = z.infer<typeof RuleSetSchema>;
 
-export const LatchConfigSchema = z.object({
+const LatchConfigSchema = z.object({
     release: RuleSetSchema
 });
 
@@ -225,7 +225,7 @@ const MiningDrillTypeSchema = z.enum([
     MiningDrillType.BIG_MINING_DRILL
 ]);
 
-export const DrillTargetMachineConfigSchema = z.object({
+const DrillTargetMachineConfigSchema = z.object({
     type: z.literal(TargetType.MACHINE),
     id: z.number().int().positive()
 });
@@ -233,7 +233,7 @@ export const DrillTargetMachineConfigSchema = z.object({
 /**
  * Overrides configuration for mining drills.
  */
-export const MiningDrillOverridesConfigSchema = z.object({
+const MiningDrillOverridesConfigSchema = z.object({
     enable_control: EnableControlOverrideConfigSchema.optional()
 });
 
@@ -266,7 +266,7 @@ export const DrillsConfigSchema = z.object({
 // Inserter Configuration
 // ============================================================================
 
-export const InserterBeltConfigSchema = z.object({
+const InserterBeltConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
     id: z.number().int().positive(),
     /**
@@ -278,12 +278,12 @@ export const InserterBeltConfigSchema = z.object({
     near_lane: z.union([z.literal(1), z.literal(2)]).optional()
 });
 
-export const InserterMachineConfigSchema = z.object({
+const InserterMachineConfigSchema = z.object({
     type: z.literal(TargetType.MACHINE),
     id: z.number().int().positive()
 });
 
-export const InserterChestConfigSchema = z.object({
+const InserterChestConfigSchema = z.object({
     type: z.literal(TargetType.CHEST),
     id: z.number().int().positive()
 });
@@ -300,7 +300,7 @@ export type InserterAnimationOverrideConfig = z.infer<typeof InserterAnimationOv
  * Overrides configuration for inserters.
  * Contains animation overrides and enable control overrides.
  */
-export const InserterOverridesConfigSchema = z.object({
+const InserterOverridesConfigSchema = z.object({
     animation: InserterAnimationOverrideConfigSchema.optional(),
     enable_control: EnableControlOverrideConfigSchema.optional()
 });
@@ -335,12 +335,12 @@ const BeltTypeSchema = z.enum([
     BeltType.TURBO_TRANSPORT_BELT
 ]);
 
-export const BeltLaneConfigSchema = z.object({
+const BeltLaneConfigSchema = z.object({
     ingredient: z.string(),
     stack_size: z.number().int().positive(),
 });
 
-export const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
+const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
     /** Items per second taken off this lane by consumers outside the config */
     consumption_per_second: z.number().positive().optional(),
 });

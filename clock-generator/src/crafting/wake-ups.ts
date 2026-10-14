@@ -16,7 +16,7 @@ import { StockRecording } from "./machine-stock";
  */
 
 /** The end of an inserter whose machine wakes it */
-export type WatchedEnd = "source" | "sink";
+type WatchedEnd = "source" | "sink";
 
 /**
  * The list an inserter sleeps on, by the state the game shows for it while it waits: on the machine it takes from
@@ -26,7 +26,7 @@ export type WatchedEnd = "source" | "sink";
  * lists an inserter is on ("Wakeup list count" in the debug tooltip, 0 for a disabled one); the count of a waiting
  * one has not been read yet. One list is assumed until it is.
  */
-export const WATCHED_END: Readonly<Record<string, WatchedEnd | undefined>> = {
+const WATCHED_END: Readonly<Record<string, WatchedEnd | undefined>> = {
     [FactorioInserterState.WAITING_FOR_SOURCE_ITEMS]: "source",
     [FactorioInserterState.WAITING_FOR_MORE_ITEMS]: "source",
     [FactorioInserterState.WAITING_FOR_SPACE_IN_DESTINATION]: "sink",

@@ -55,6 +55,6 @@ export class ImportPipeline {
     }
 }
 
-export function joinSentences(accumulated: string, next: string): string {
+function joinSentences(accumulated: string, next: string): string {
     return `${accumulated} ${next}`;
 }

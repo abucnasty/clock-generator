@@ -44,7 +44,7 @@ export interface DerivedWindows {
  * into a decider window. Windows are padded and accepted only if a clock-only simulation stays stable.
  * Drills keep their planned windows.
  */
-export function deriveClockWindows(
+function deriveClockWindows(
     config: Config,
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,

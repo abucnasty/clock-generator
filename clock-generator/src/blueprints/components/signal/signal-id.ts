@@ -7,7 +7,7 @@ export interface SignalId {
     quality?: QualityIdType
 }
 
-export class SignalIdBuilder {
+class SignalIdBuilder {
 
     private name?: string;
     private type?: SignalIdType;

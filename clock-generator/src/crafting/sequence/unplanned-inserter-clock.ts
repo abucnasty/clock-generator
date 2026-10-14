@@ -187,7 +187,7 @@ const CRAFTING_SHARE_MARGIN = 1.1;
  * With `shared_clock_ticks`, the ticks one clock counts for the period and every fuel clock, the window repeats every
  * divisor of that.
  */
-export function fuelClockFor(
+function fuelClockFor(
     inserter: Inserter,
     machine: Machine,
     entity_registry: ReadableEntityRegistry,
@@ -231,7 +231,7 @@ export function fuelDeliveryTicks(inserter: Inserter, entity_registry: ReadableE
 }
 
 /** Ticks the fuel a slot is sure to hold at a window lasts a machine that crafts `crafting_share` of the time */
-export function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, crafting_share: number = 1): number {
+function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, crafting_share: number = 1): number {
     const consumption = machine.fuel_consumption;
     const slot = machine.fuel_slot;
     if (!consumption || !slot) {
@@ -243,10 +243,10 @@ export function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, craf
 }
 
 /** Longest the one clock for the period and the fuel clocks is made to count: 10 minutes */
-export const MAX_SHARED_FUEL_CLOCK_TICKS = 36_000;
+const MAX_SHARED_FUEL_CLOCK_TICKS = 36_000;
 
 /** How many more enables than the fuel needs are taken for a shorter clock */
-export const SHARED_FUEL_CLOCK_TOLERANCE = 1.05;
+const SHARED_FUEL_CLOCK_TOLERANCE = 1.05;
 
 /**
  * The ticks one clock counts to hold the period and every fuel clock: a few periods, with each fuel clock a divisor of

@@ -15,7 +15,7 @@ export type StateTransitionEntityType = 'inserter' | 'machine' | 'drill';
 /**
  * Represents a single state transition for any entity type
  */
-export interface StateTransition {
+interface StateTransition {
     tick: number;
     from_status: EntityStatus;
     to_status: EntityStatus;
@@ -25,7 +25,7 @@ export interface StateTransition {
 /**
  * Collection of state transitions for a single entity
  */
-export interface EntityStateTransitions {
+interface EntityStateTransitions {
     entity_id: EntityId;
     entity_type: StateTransitionEntityType;
     transitions: StateTransition[];
@@ -34,7 +34,7 @@ export interface EntityStateTransitions {
 }
 
 /** A change of the state an entity would show in Factorio */
-export interface FactorioStateChange {
+interface FactorioStateChange {
     tick: number;
     state: string;
 }

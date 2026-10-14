@@ -199,7 +199,7 @@ function shiftEdgeNotes(
  * whose do not, the smallest shift of those (see search.ts). The report carries the ends of the range that works
  * around the pick, with what limits them. Null when no shift passes.
  */
-export function shiftedCycleWindows(
+function shiftedCycleWindows(
     config: Config,
     planned_windows: Map<string, OpenRange[]>,
     cycle_ticks: number,

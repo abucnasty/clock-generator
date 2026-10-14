@@ -2,7 +2,7 @@ import { EntityId } from "../../entities";
 import { TickProvider } from "../current-tick-provider";
 import { Mode, ModePlugin, Transition } from "../mode";
 
-export interface FactorioStateChange {
+interface FactorioStateChange {
     entity_id: EntityId;
     tick: number;
     state: string;

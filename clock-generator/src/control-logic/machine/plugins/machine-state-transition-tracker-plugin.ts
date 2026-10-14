@@ -7,7 +7,7 @@ import { MachineMode } from "../modes";
 /**
  * Represents a single state transition for a machine
  */
-export interface MachineStateTransition {
+interface MachineStateTransition {
     entity_id: EntityId;
     tick: number;
     from_status: MachineStatus;
@@ -15,7 +15,7 @@ export interface MachineStateTransition {
     reason: string;
 }
 
-export type MachineStateTransitionCallback = (transition: MachineStateTransition) => void;
+type MachineStateTransitionCallback = (transition: MachineStateTransition) => void;
 
 /**
  * Plugin that tracks state transitions for a machine state machine.

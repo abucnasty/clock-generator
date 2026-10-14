@@ -18,9 +18,9 @@ export interface PeriodRepeat {
 /** The first 1/n of the long run carries its start-up and is not judged */
 export const LONG_RUN_SETTLE_SHARE = 3;
 /** The long run is lengthened up to this many ticks so the judged part holds one whole repeat of a fractional period */
-export const LONG_RUN_MAX_TICKS = 108_000;
+const LONG_RUN_MAX_TICKS = 108_000;
 
-export interface LongRunVerdict {
+interface LongRunVerdict {
     keeps_up: boolean;
     /** Ticks in a bin; null when the judged span is compared as a whole (no repeat in whole ticks fits the run) */
     bin_ticks: number | null;

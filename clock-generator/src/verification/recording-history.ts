@@ -20,7 +20,7 @@ export interface RecordedTransfer {
 }
 
 /** Clock value per sample, or the sample index itself without a clock */
-export function clockValues(recording: Recording): number[] {
+function clockValues(recording: Recording): number[] {
     return recording.clock?.values ?? Array.from({ length: recording.sample_count }, (_, i) => i);
 }
 
