@@ -136,7 +136,8 @@ export function ChestFilterSlotSelector({
                             cursor: 'pointer',
                             bgcolor: 'background.paper',
                             position: 'relative',
-                            transition: 'all 0.2s',
+                            // not the outline: the focus ring appears at once, in its place
+                            transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
                             // the theme draws the focus ring; focus only tints the slot, so the ring does not move
                             '&:hover, &:focus': {
                                 borderColor: 'primary.light',
@@ -221,7 +222,8 @@ export function ChestFilterSlotSelector({
                         justifyContent: 'center',
                         cursor: 'pointer',
                         bgcolor: 'transparent',
-                        transition: 'all 0.2s',
+                        // not the outline: the focus ring appears at once, in its place
+                        transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
                         m: 0.5,
                         '&:hover, &:focus': {
                             borderColor: 'primary.light',

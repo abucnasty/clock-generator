@@ -116,7 +116,8 @@ export function FilterSlotSelector({
                                 bgcolor: 'background.paper',
                                 position: 'relative',
                                 opacity: isAutoAssigned ? 0.85 : 1,
-                                transition: 'all 0.2s',
+                                // not the outline: the focus ring appears at once, in its place
+                                transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
                                 // the theme draws the focus ring; focus only tints the slot, so the ring does not move
                                 '&:hover, &:focus': {
                                     borderColor: displayFilter
