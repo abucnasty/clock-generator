@@ -3,7 +3,7 @@ import { Box, Button, Paper, ToggleButton, ToggleButtonGroup, Typography } from 
 import { 
     RuleOperator, 
     TargetType 
-} from 'clock-generator/browser';
+} from 'clock-generator/light';
 import type { Condition, RuleSet } from '../hooks/useConfigForm';
 import { ConditionRow } from './ConditionRow';
 import { 

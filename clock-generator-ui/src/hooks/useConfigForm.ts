@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import type {
+    ChestType,
     Config,
     InserterCoverageIssue,
     InserterFixOption,
     SerializableTransferPlan,
 } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import * as formEdits from '../utils/configForm/edits';
 import type {

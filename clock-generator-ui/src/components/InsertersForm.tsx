@@ -9,7 +9,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { TargetType } from 'clock-generator/browser';
+import { TargetType } from 'clock-generator/light';
 import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ChestType, type SerializableTransferPlan } from 'clock-generator/browser';
+import type { SerializableTransferPlan } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import * as edits from './edits';
 import { createDefaultConfig, type ConfigFormData, type InserterFormData } from './formData';
 

@@ -1,6 +1,7 @@
 import { Delete } from '@mui/icons-material';
 import { Box, FormControl, IconButton, MenuItem, Select } from '@mui/material';
-import { ComparisonOperator, ValueReferenceType, TargetType } from 'clock-generator/browser';
+import type { TargetType } from 'clock-generator/browser';
+import { ComparisonOperator, ValueReferenceType } from 'clock-generator/light';
 import type { Condition, ValueReference } from '../hooks/useConfigForm';
 import { StatusConditionRow } from './StatusConditionRow';
 import { ValueReferenceSelector } from './ValueReferenceSelector';

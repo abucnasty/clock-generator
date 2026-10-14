@@ -4,7 +4,7 @@ import {
     ComparisonOperator,
     RuleOperator,
     MachineStatus,
-} from 'clock-generator/browser';
+} from 'clock-generator/light';
 import type { Condition, RuleSet } from '../hooks/useConfigForm';
 
 export function isCondition(rule: Condition | RuleSet): rule is Condition {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ChestType, type Config } from 'clock-generator/browser';
+import type { Config } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import { configToFormData, formDataToConfig } from './configMapping';
 
 const imported = {

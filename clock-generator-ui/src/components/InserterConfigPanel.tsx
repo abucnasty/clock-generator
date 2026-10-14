@@ -8,7 +8,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { EnableControlMode, TargetType } from 'clock-generator/browser';
+import { EnableControlMode, TargetType } from 'clock-generator/light';
 import { useMemo, useState } from 'react';
 import type {
     BeltFormData,
