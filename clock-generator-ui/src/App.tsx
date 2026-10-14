@@ -288,9 +288,11 @@ function App() {
         );
     }, [isInitialized, isRunning, config, checkedCoverageIssues]);
 
+    // Search deeper is a Generate, so it is disabled whenever the Generate button is
+    const canSearchDeeper = Boolean(canGenerate) && validationStatus === 'valid';
     // Generate with the slower searches: for this run only, or, kept on, by turning the switch on in the form
     const handleSearchDeeper = useCallback((keepOn: boolean) => {
-        if (!canGenerate) {
+        if (!canSearchDeeper) {
             return;
         }
         if (keepOn) {
@@ -302,7 +304,7 @@ function App() {
             runSimulation(exportConfig(), debugSteps, streamLogs, true);
         }
         setView('results');
-    }, [canGenerate, exportConfig, updateOverrides, runSimulation, debugSteps, streamLogs]);
+    }, [canSearchDeeper, exportConfig, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -522,7 +524,7 @@ function App() {
                                 skippedSearches={skippedSearches}
                                 searchedDeeper={searchedDeeper}
                                 keptOn={config.overrides?.search_for_fewer_wake_ups === true}
-                                canSearchDeeper={Boolean(canGenerate)}
+                                canSearchDeeper={canSearchDeeper}
                                 onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}
