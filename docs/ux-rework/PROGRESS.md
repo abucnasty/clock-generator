@@ -70,7 +70,7 @@ come from here.
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
-| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
+| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | impl | | | Started early on `feat/ux-rework-p2-diagram` (opus) with a capture writer, in the slot #155 freed. Takes the 1.10 node-line contrast and 1.13 diagram chip follow-ups |
 
 ## Phase 3: expert depth
 
