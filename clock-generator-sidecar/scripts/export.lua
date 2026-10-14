@@ -49,10 +49,31 @@ end
 
 -- Main Export Function
 
----Convert extraction result to clock-generator compatible JSON
+---Inserters that end up in the exported config, paired with their config id (index + 1 in export order)
 ---@param result ExtractionResult
----@return string
-function export.to_json(result)
+---@return {id: number, inserter: InserterData, source: table, sink: table}[]
+function export.exported_inserters(result)
+    local exported = {}
+    for _, inserter in ipairs(result.inserters) do
+        local source_config = resolve_target_id(inserter.source, result)
+        local sink_config = resolve_target_id(inserter.sink, result)
+        -- Only include inserter if both source and sink are known
+        if source_config and sink_config then
+            table.insert(exported, {
+                id = #exported + 1,
+                inserter = inserter,
+                source = source_config,
+                sink = sink_config
+            })
+        end
+    end
+    return exported
+end
+
+---Convert extraction result to a clock-generator compatible config table
+---@param result ExtractionResult
+---@return table
+function export.to_table(result)
     local output = {
         -- lets the clock generator tell when the mod is too old to export everything it can use
         sidecar_version = script.active_mods["clock-generator-sidecar"],
@@ -119,27 +140,22 @@ function export.to_json(result)
     end
     
     -- Format inserters for clock-generator
-    for _, inserter in ipairs(result.inserters) do
-        local source_config = resolve_target_id(inserter.source, result)
-        local sink_config = resolve_target_id(inserter.sink, result)
-        
-        -- Only include inserter if both source and sink are known
-        if source_config and sink_config then
-            local inserter_export = {
-                source = source_config,
-                sink = sink_config,
-                stack_size = inserter.stack_size
-            }
-            
-            -- Only the filters set on the inserter itself are exported. Which items it moves is worked out by the
-            -- clock generator from what its source provides and its sink accepts; guessing it here produces filters
-            -- the sink does not accept.
-            if #inserter.filters > 0 then
-                inserter_export.filters = inserter.filters
-            end
-            
-            table.insert(output.inserters, inserter_export)
+    for _, exported in ipairs(export.exported_inserters(result)) do
+        local inserter = exported.inserter
+        local inserter_export = {
+            source = exported.source,
+            sink = exported.sink,
+            stack_size = inserter.stack_size
+        }
+
+        -- Only the filters set on the inserter itself are exported. Which items it moves is worked out by the
+        -- clock generator from what its source provides and its sink accepts; guessing it here produces filters
+        -- the sink does not accept.
+        if #inserter.filters > 0 then
+            inserter_export.filters = inserter.filters
         end
+
+        table.insert(output.inserters, inserter_export)
     end
     
     -- Format chests for clock-generator
@@ -169,7 +185,14 @@ function export.to_json(result)
         end
     end
 
-    return helpers.table_to_json(output)
+    return output
+end
+
+---Convert extraction result to clock-generator compatible JSON
+---@param result ExtractionResult
+---@return string
+function export.to_json(result)
+    return helpers.table_to_json(export.to_table(result))
 end
 
 return export
