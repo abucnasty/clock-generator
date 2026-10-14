@@ -24,24 +24,30 @@ function resolveSource(from: string, specifier: string): string {
     return candidate;
 }
 
-/** Every Node built-in the module graph of the entry reaches, with the file that imports it */
-function nodeBuiltinsReachedFrom(entry: string): string[] {
-    const builtins = new Set(builtinModules);
+/** Every import in the module graph of the entry, with the file that makes it; the relative ones are followed */
+function importsReachedFrom(entry: string): { file: string, specifier: string }[] {
     const seen = new Set<string>();
-    const found: string[] = [];
+    const found: { file: string, specifier: string }[] = [];
     const visit = (file: string) => {
         if (seen.has(file)) return;
         seen.add(file);
         for (const specifier of importsOf(fs.readFileSync(file, "utf-8"))) {
+            found.push({ file: path.relative(__dirname, file), specifier });
             if (specifier.startsWith(".")) {
                 visit(resolveSource(file, specifier));
-            } else if (specifier.startsWith("node:") || builtins.has(specifier.split("/")[0])) {
-                found.push(`${path.relative(__dirname, file)} imports ${specifier}`);
             }
         }
     };
     visit(entry);
     return found;
+}
+
+/** Every Node built-in the module graph of the entry reaches, with the file that imports it */
+function nodeBuiltinsReachedFrom(entry: string): string[] {
+    const builtins = new Set(builtinModules);
+    return importsReachedFrom(entry)
+        .filter(({ specifier }) => specifier.startsWith("node:") || builtins.has(specifier.split("/")[0]))
+        .map(({ file, specifier }) => `${file} imports ${specifier}`);
 }
 
 describe("the browser entry", () => {
@@ -55,5 +61,23 @@ describe("the browser entry", () => {
 
     it("finds dynamic imports in single quotes", () => {
         expect(importsOf("export const inflate = () => import('zlib');")).toEqual(["zlib"]);
+    });
+});
+
+describe("the light entry", () => {
+    it("reaches only a few small modules and no package", () => {
+        const files = new Set(importsReachedFrom(path.join(__dirname, "light.ts")).map(({ file, specifier }) =>
+            specifier.startsWith(".") ? path.relative(__dirname, resolveSource(path.join(__dirname, file), specifier)) : specifier));
+        expect([...files].sort()).toEqual([
+            "common/assert.ts",
+            "common/enable-control-types.ts",
+            "common/entity-types.ts",
+            "crafting/rank.ts",
+            "data-types/map-extended.ts",
+            "data-types/option.ts",
+            "entities/entity-type.ts",
+            "state/entity-status.ts",
+            "state/status-category.ts",
+        ]);
     });
 });

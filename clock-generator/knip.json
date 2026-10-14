@@ -3,6 +3,7 @@
   "entry": [
     "src/index.ts",
     "src/browser.ts",
+    "src/light.ts",
     "src/record-in-factorio.ts",
     "src/verify-recording.ts",
     "src/rules-of-the-game.ts",

@@ -3,7 +3,7 @@
  * Uses a colorblind-friendly palette based on Wong (2011).
  */
 
-import { StatusCategory, InserterStatus, MachineStatus, DrillStatus, EntityType } from 'clock-generator/browser';
+import { StatusCategory, InserterStatus, MachineStatus, DrillStatus, EntityType } from 'clock-generator/light';
 
 // Colorblind-friendly palette (Wong, 2011)
 export const COLOR_BLIND_PALETTE = {

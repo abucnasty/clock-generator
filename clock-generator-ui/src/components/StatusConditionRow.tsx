@@ -14,7 +14,7 @@ import {
     ComparisonOperator, 
     TargetType,
     ValueReferenceType 
-} from 'clock-generator/browser';
+} from 'clock-generator/light';
 import type { Condition } from '../hooks/useConfigForm';
 import { useFullscreen } from './FullscreenContext';
 

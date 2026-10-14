@@ -2,27 +2,8 @@ import { ItemName } from "../data";
 import { Inserter } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState } from "./inventory-state";
+import { InserterStatus } from "./entity-status";
 
-
-export const InserterStatus = {
-    IDLE: "IDLE",
-    PICKUP: "PICKUP",
-    DROP_OFF: "DROP",
-    SWING: "SWING",
-    DISABLED: "DISABLED",
-    /**
-     * Inserter is waiting because its sink (chest) is full and it still has items in hand.
-     * The inserter will retry dropping until space becomes available.
-     */
-    TARGET_FULL: "TARGET_FULL",
-    /**
-     * A hand filling from a belt that the machine cannot take any more of for now (output at its block, or the
-     * ingredient at its insertion limit): the inserter keeps what it holds and waits at the belt.
-     */
-    WAITING_FOR_SINK: "WAITING_FOR_SINK",
-} as const;
-
-export type InserterStatus = typeof InserterStatus[keyof typeof InserterStatus];
 
 type InserterStatusState = {
     status: InserterStatus;

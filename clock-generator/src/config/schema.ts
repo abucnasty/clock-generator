@@ -8,7 +8,7 @@ import {
     RuleOperator,
     TargetType,
 } from "../common/enable-control-types";
-import { MachineStatus } from "../state/machine-state";
+import { MachineStatus } from "../state/entity-status";
 import { MachineType } from "../entities";
 
 // ============================================================================

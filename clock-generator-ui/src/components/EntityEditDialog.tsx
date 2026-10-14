@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { useMemo } from 'react';
 import { useMachineFacts } from '../hooks/useMachineFacts';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import type {
     BeltFormData,
     BeltLaneFormData,

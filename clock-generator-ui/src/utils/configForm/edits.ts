@@ -1,5 +1,5 @@
 import type { SerializableTransferPlan } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import {
     BELT_FORM_DEFAULT_STACK_SIZE,
     BELT_FORM_DEFAULT_TYPE,

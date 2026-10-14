@@ -239,15 +239,9 @@ export {
 
 export {
     InserterStatus,
-} from './state/inserter-state';
-
-export {
     MachineStatus,
-} from './state/machine-state';
-
-export {
     DrillStatus,
-} from './state/drill-state';
+} from './state/entity-status';
 
 export {
     StatusCategory,

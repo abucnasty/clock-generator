@@ -5,7 +5,7 @@ import {
     ComparisonOperator, 
     RuleOperator,
     MachineStatus 
-} from 'clock-generator/browser';
+} from 'clock-generator/light';
 import type { RuleSet } from '../hooks/useConfigForm';
 
 interface Template {

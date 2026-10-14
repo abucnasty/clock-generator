@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import type {
+    ChestType,
     Config,
     InserterCoverageIssue,
     InserterFixOption,
     SerializableTransferPlan,
 } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import * as formEdits from '../utils/configForm/edits';
 import type {
@@ -50,6 +50,8 @@ export { migrateChests } from './usePersistedConfigForm';
 
 interface UseConfigFormResult {
     config: ConfigFormData;
+    /** False until the config saved in localStorage is checked and loaded */
+    isLoaded: boolean;
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>;
     
     // Target output
@@ -103,6 +105,11 @@ interface UseConfigFormResult {
     // Import/Export
     importConfig: (config: Config) => void;
     exportConfig: () => Config;
+    /**
+     * The config Export gives: until the saved config is loaded, that one rather than the defaults, so it can be saved
+     * even when the engine's worker fails to start; null when it cannot be turned into a config
+     */
+    exportableConfig: Config | null;
     resetConfig: () => void;
 
     // Inserter fix auto-fill
@@ -110,7 +117,7 @@ interface UseConfigFormResult {
 }
 
 export function useConfigForm(): UseConfigFormResult {
-    const { config, setConfig, resetConfig } = usePersistedConfigForm();
+    const { config, setConfig, resetConfig, isLoaded, unchecked } = usePersistedConfigForm();
 
     // Each edit applies its plain function of the form state
     const edits = useMemo(() => {
@@ -162,12 +169,25 @@ export function useConfigForm(): UseConfigFormResult {
 
     const exportConfig = useCallback((): Config => formDataToConfig(config), [config]);
 
+    const exportableConfig = useMemo((): Config | null => {
+        if (unchecked === null) {
+            return exportConfig();
+        }
+        try {
+            return formDataToConfig(unchecked);
+        } catch {
+            return null;
+        }
+    }, [unchecked, exportConfig]);
+
     return {
         config,
+        isLoaded,
         setConfig,
         ...edits,
         importConfig,
         exportConfig,
+        exportableConfig,
         resetConfig,
     };
 }

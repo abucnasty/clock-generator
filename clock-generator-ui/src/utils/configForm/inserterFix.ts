@@ -1,5 +1,5 @@
 import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import { nextId } from './edits';
 import {
     BELT_FORM_DEFAULT_STACK_SIZE,

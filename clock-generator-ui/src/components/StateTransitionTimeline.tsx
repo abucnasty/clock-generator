@@ -26,7 +26,7 @@ import type {
     SerializableStateTransition,
     StatusCategory,
 } from 'clock-generator/browser';
-import { statusToCategory } from 'clock-generator/browser';
+import { statusToCategory } from 'clock-generator/light';
 import { FactorioIcon } from './FactorioIcon';
 import {
     getStatusColor,

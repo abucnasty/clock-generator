@@ -5,7 +5,7 @@ import type {
     RuleSet,
     ValueReference,
 } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 
 export interface MachineFormData {
     id: number;

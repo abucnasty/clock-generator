@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ChestType, type InserterCoverageIssue, type InserterFixOption } from 'clock-generator/browser';
+import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import * as edits from './edits';
 import { createDefaultConfig, type ConfigFormData } from './formData';
 import { applyInserterFix } from './inserterFix';

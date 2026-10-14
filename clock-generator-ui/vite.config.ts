@@ -13,7 +13,7 @@ export default defineConfig({
     __CHANGELOG__: JSON.stringify(changelog),
   },
   optimizeDeps: {
-    include: ['clock-generator', 'clock-generator/browser'],
+    include: ['clock-generator', 'clock-generator/browser', 'clock-generator/light'],
     force: true, // Force re-optimization after clock-generator changes
   },
   build: {

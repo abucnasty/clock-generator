@@ -6,7 +6,7 @@ import {
     Switch,
     Typography,
 } from '@mui/material';
-import { TargetType } from 'clock-generator/browser';
+import type { TargetType } from 'clock-generator/browser';
 import type { RuleSet } from '../hooks/useConfigForm';
 import { RuleSetEditor } from './RuleSetEditor';
 import { createDefaultRuleSet } from './ruleSetUtils';

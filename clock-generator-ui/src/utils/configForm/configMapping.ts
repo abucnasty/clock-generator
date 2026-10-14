@@ -1,5 +1,5 @@
 import type { Config, RuleSet } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import type {
     BeltLaneFormData,
     ChestFormData,

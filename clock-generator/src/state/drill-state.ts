@@ -1,13 +1,7 @@
 import { EntityId, MiningDrill } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState, WritableInventoryState } from "./inventory-state";
-
-export const DrillStatus = {
-    WORKING: 'WORKING',
-    DISABLED: 'DISABLED',
-} as const;
-
-export type DrillStatus = typeof DrillStatus[keyof typeof DrillStatus];
+import { DrillStatus } from "./entity-status";
 
 export interface DrillState extends EntityState {
     drill: MiningDrill

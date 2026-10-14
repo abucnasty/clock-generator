@@ -17,7 +17,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { EnableControlMode, TargetType } from 'clock-generator/browser';
+import { EnableControlMode, TargetType } from 'clock-generator/light';
 import { useState } from 'react';
 import type { EnableControlOverride, EnableControlRange, RuleSet } from '../hooks/useConfigForm';
 import { RuleSetEditor } from './RuleSetEditor';

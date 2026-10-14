@@ -1,6 +1,6 @@
-import { MapExtended } from "../data-types";
-import { EntityType } from "../entities";
-import { DrillStatus, InserterStatus, MachineStatus } from "./index";
+import { MapExtended } from "../data-types/map-extended";
+import { EntityType } from "../entities/entity-type";
+import { DrillStatus, InserterStatus, MachineStatus } from "./entity-status";
 
 /**
  * Simplified status categories for high-level visualization.

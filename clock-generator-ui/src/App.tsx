@@ -75,7 +75,7 @@ const darkTheme = createTheme({
 
 function App() {
     const {
-        isInitialized,
+        isInitialized: workersReady,
         isRunning,
         progressStore,
         recipeNames,
@@ -108,6 +108,7 @@ function App() {
 
     const {
         config,
+        isLoaded: isConfigLoaded,
         updateTargetOutput,
         addMachine,
         updateMachine,
@@ -137,6 +138,7 @@ function App() {
         updateIgnoredIngredients,
         importConfig,
         exportConfig,
+        exportableConfig,
         resetConfig,
         applyInserterFix,
         reorderMachines,
@@ -145,6 +147,9 @@ function App() {
         reorderChests,
         reorderDrills,
     } = useConfigForm();
+
+    // the page waits for the workers and for the saved config, which the engine's worker checks
+    const isInitialized = workersReady && isConfigLoaded;
 
     const [debugSteps, setDebugSteps] = useState<DebugSteps>({
         prepare: false,
@@ -158,7 +163,9 @@ function App() {
     const [changelogOpen, setChangelogOpen] = useState(false);
     const [view, setView] = useState<WorkflowView>('configure');
 
-    const coverageIssues = useInserterValidation(exportConfig, isInitialized);
+    // null until the config is checked; Generate waits for that
+    const checkedCoverageIssues = useInserterValidation(exportConfig, isInitialized);
+    const coverageIssues = checkedCoverageIssues ?? [];
 
     // Initialize worker on mount
     useEffect(() => {
@@ -261,9 +268,9 @@ function App() {
             config.target_output.copies > 0 &&
             config.machines.length > 0 &&
             config.machines.every((m) => m.recipe) &&
-            coverageIssues.length === 0
+            checkedCoverageIssues?.length === 0
         );
-    }, [isInitialized, isRunning, config, coverageIssues]);
+    }, [isInitialized, isRunning, config, checkedCoverageIssues]);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -278,7 +285,7 @@ function App() {
                             Factorio Clock Generator
                         </Typography>
                         <ConfigImportExport
-                            config={exportConfig()}
+                            config={exportableConfig}
                             onImport={handleImportConfig}
                             onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
                             onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}

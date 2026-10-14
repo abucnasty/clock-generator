@@ -3,16 +3,7 @@ import { FuelProgressState, ProgressState } from "./progress-state";
 import { EntityId, Machine } from "../entities";
 import { EntityState } from "./entity-state";
 import { Logger, defaultLogger } from "../common/logger";
-
-export const MachineStatus = {
-    INGREDIENT_SHORTAGE: 'INGREDIENT_SHORTAGE',
-    WORKING: 'WORKING',
-    OUTPUT_FULL: 'OUTPUT_FULL',
-    /** A burner machine with nothing to burn, whatever its ingredients and output hold */
-    NO_FUEL: 'NO_FUEL',
-} as const;
-
-export type MachineStatus = typeof MachineStatus[keyof typeof MachineStatus];
+import { MachineStatus } from "./entity-status";
 
 export class MachineState implements EntityState {
 
