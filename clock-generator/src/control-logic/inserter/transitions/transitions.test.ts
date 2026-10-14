@@ -7,6 +7,7 @@ import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
 import { InserterAnimationOverrideConfig } from "../../../config/schema"
 import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
+import { InserterDisabledMode } from "../modes/disabled-mode"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";
 
@@ -170,7 +171,8 @@ describe("transitions (belt to machine)", () => {
     // the recording of the evenly spaced windows (28 down to 12, block 21), and the cable and the plastic inserter of
     // that plant, waiting since 221 and 224, took their hands at 231.
     describe("an inserter that waits for space in a machine whose products another inserter takes", () => {
-        const setup = (source_state: EntityState) => {
+        /** `window_opens_at`: the tick a window of a clock of the game opens, before which the inserter is disabled */
+        const setup = (source_state: EntityState, window_opens_at?: number) => {
             const sink = MachineState.forMachine(createMachine("transport-belt"));
             const inserter_state = InserterState.createIdle(createInserter({
                 source: { entity_id: source_state.entity_id, item_names: new Set(["iron-gear-wheel"]) },
@@ -178,16 +180,22 @@ describe("transitions (belt to machine)", () => {
                 filters: ["iron-gear-wheel"],
             }));
             const pickup_mode = mock<InserterPickupMode>();
+            const disabled_mode = mock<InserterDisabledMode>();
             let tick = 0;
+            const window_control = window_opens_at === undefined ? AlwaysEnabledControl : {
+                is_game_clock: true,
+                isEnabled: () => tick >= window_opens_at,
+                isEnabledIn: (ticks: number) => tick + ticks >= window_opens_at,
+            };
             const evaluator = IdleModeTransitionEvaluator.create({
                 inserter_state, source_state, sink_state: sink, pickup_mode,
-                disabled_mode: mock(),
+                disabled_mode,
                 tick_provider: { getCurrentTick: () => tick },
-                enable_control: AlwaysEnabledControl,
+                enable_control: window_control,
             });
             const block = sink.machine.output.outputBlock;
             return {
-                sink, pickup_mode,
+                sink, pickup_mode, disabled_mode,
                 /** The inserter looks at its sink in a tick */
                 look: () => { tick += 1; return evaluator.evaluateTransition(); },
                 /** The machine ends a tick with its output at the block */
@@ -243,6 +251,50 @@ describe("transitions (belt to machine)", () => {
             // the machine was back at its block when that tick was done, and is emptied again
             endTickAtTheBlock(false);
             takeProducts();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        // An inserter whose window of a clock of the game opens in a tick shows as enabled in the tick before and waits in
+        // it. Recorded in Factorio 2.1.21 on the accumulator build of issue 152 and on the scaffolds, for inserters
+        // that take from a machine and whose window opens in the tick another inserter takes the products of the
+        // machine they put into down from its block: the first items a tick later in 1,158 cases of 1,170 where the
+        // inserter that took the products was enabled before, also where the machine finished a craft the tick before
+        // (44 of 44), and in the tick the products are taken in 852 of 888 where that inserter's window opened too.
+        test("takes its first items a tick later when its window opens in the tick the products are taken", () => {
+            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 2);
+            endTickAtTheBlock(false);
+            expect(look()?.toMode).toBe(disabled_mode);
+            takeProducts();
+            expect(look()).toBe(ModeTransition.NONE);
+            endTickUnderTheBlock();
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("takes its first items a tick later when its window opens as the products are taken, though a craft finished the tick before", () => {
+            const { look, endTickAtTheBlock, takeProducts, disabled_mode } = setup(machineWithGears(), 2);
+            endTickAtTheBlock(false);
+            expect(look()?.toMode).toBe(disabled_mode);
+            endTickAtTheBlock(true);
+            takeProducts();
+            expect(look()).toBe(ModeTransition.NONE);
+        })
+
+        test("takes them in the tick they are taken when the window of the inserter that takes them opens in that tick too", () => {
+            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(machineWithGears(), 2);
+            endTickAtTheBlock(false);
+            expect(look()?.toMode).toBe(disabled_mode);
+            takeProducts();
+            sink.productsTakenAsWindowOpened = true;
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
+
+        test("is not held up when its window opens after the machine was cleared", () => {
+            const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(machineWithGears(), 3);
+            endTickAtTheBlock(false);
+            expect(look()?.toMode).toBe(disabled_mode);
+            takeProducts();
+            endTickUnderTheBlock();
+            expect(look()?.toMode).toBe(disabled_mode);
             expect(look()?.toMode).toBe(pickup_mode);
         })
 

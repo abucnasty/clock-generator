@@ -61,6 +61,13 @@ export class MachineState implements EntityState {
     public finishedCraftInLastTick: boolean = false;
 
     /**
+     * Whether an inserter took the machine's products in this tick in the first tick of its window of a clock of the
+     * game. Set by that inserter, which is updated before the inserters that put into the machine, and cleared after
+     * the machine's tick.
+     */
+    public productsTakenAsWindowOpened: boolean = false;
+
+    /**
      * Ingredients that are also a product of the recipe (a pentapod egg makes pentapod eggs). The machine keeps what
      * it is given apart from what it makes, and never crafts from its own products.
      */
