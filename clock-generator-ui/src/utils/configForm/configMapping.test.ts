@@ -91,4 +91,23 @@ describe('formDataToConfig', () => {
         const form = { ...configToFormData(imported), next_ids: { machines: 9 } };
         expect('next_ids' in formDataToConfig(form)).toBe(false);
     });
+
+    it('leaves out the forced flag of an inserter and keeps its ALWAYS rule', () => {
+        const form = configToFormData(imported);
+        form.inserters[0] = { ...form.inserters[0], overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true };
+        const config = formDataToConfig(form);
+        expect(JSON.stringify(config)).not.toContain('_forced_always');
+        expect(config.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+    });
+});
+
+describe('configToFormData and the forced flag', () => {
+    it('never flags an inserter, even one with an ALWAYS rule', () => {
+        const always = {
+            ...imported,
+            inserters: imported.inserters.map((ins) => ({ ...ins, overrides: { enable_control: { mode: 'ALWAYS' } } })),
+        } as unknown as Config;
+        expect(configToFormData(always).inserters.some((ins) => '_forced_always' in ins)).toBe(false);
+        expect(configToFormData(imported).inserters.some((ins) => '_forced_always' in ins)).toBe(false);
+    });
 });

@@ -159,7 +159,7 @@ function TransferPlanPanelComponent({
                                                 title={
                                                     isExcluded
                                                         ? 'Click to include in LCM'
-                                                        : 'Click to exclude from LCM (inserter will be set to ALWAYS)'
+                                                        : 'Click to exclude from LCM (its inserters are set to ALWAYS unless they already have an enable rule of your own)'
                                                 }
                                             >
                                                 <Chip
@@ -183,7 +183,8 @@ function TransferPlanPanelComponent({
                     <Typography variant="caption" color="text.secondary">
                         Transfers per cycle are fractions of the LCM period. Excluded ingredients are omitted from the
                         LCM calculation — their inserters will be forced to{' '}
-                        <strong>ALWAYS</strong> enabled. Re-run the simulation after making changes.
+                        <strong>ALWAYS</strong> enabled, unless you gave them an enable rule of your own, which stays.
+                        Re-run the simulation after making changes.
                     </Typography>
                 </Box>
             </AccordionDetails>

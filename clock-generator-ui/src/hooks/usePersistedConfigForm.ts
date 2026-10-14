@@ -125,13 +125,18 @@ export function backUpSavedConfig(storage: Pick<Storage, 'setItem'>, text: strin
         + 'the browser console says what is wrong with it.';
 }
 
+/** The form state as saved in localStorage */
+export function serializeConfig(config: ConfigFormData): string {
+    // Strip internal _uuid fields — they are UI-only and shouldn't be in the exported config.
+    return JSON.stringify(config, (key, value) =>
+        key === '_uuid' ? undefined : value
+    );
+}
+
 /** Save config to localStorage */
 function saveConfigToStorage(config: ConfigFormData): void {
     try {
-        // Strip internal _uuid fields — they are UI-only and shouldn't be in the exported config.
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(config, (key, value) =>
-            key === '_uuid' ? undefined : value
-        ));
+        localStorage.setItem(STORAGE_KEY, serializeConfig(config));
     } catch (e) {
         console.warn('Failed to save config to localStorage:', e);
     }
