@@ -25,7 +25,7 @@ function Part({ label, text }: { label: string; text: string }) {
 function InsightCard({ insight }: { insight: ClockInsight }) {
     return (
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{insight.title}</Typography>
+            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>{insight.title}</Typography>
             <Part label="What" text={insight.what} />
             <Part label="Why" text={insight.why} />
             <Part label="Explanation" text={insight.explanation} />
@@ -70,7 +70,7 @@ export function InsightsPanel({ insights, clockLabel, children }: InsightsPanelP
 
     return (
         <Box>
-            <Typography variant="h6">About this clock{clockLabel ? `: ${clockLabel}` : ''}</Typography>
+            <Typography variant="h6" component="h2">About this clock{clockLabel ? `: ${clockLabel}` : ''}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 What is particular to the potential clock selected above.
             </Typography>
@@ -82,7 +82,7 @@ export function InsightsPanel({ insights, clockLabel, children }: InsightsPanelP
                 </Typography>
             )}
 
-            <Typography variant="h6" sx={{ mt: 3 }}>About this build</Typography>
+            <Typography variant="h6" component="h2" sx={{ mt: 3 }}>About this build</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 The limits every potential clock for this configuration has to work within.
             </Typography>

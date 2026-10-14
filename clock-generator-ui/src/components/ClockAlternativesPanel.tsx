@@ -1,4 +1,3 @@
-import { InfoOutlined } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
     Accordion,
@@ -23,7 +22,10 @@ import {
 import { useRef, useState, type ReactNode } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
+import { CLOCK_TABLE_NAME, clockHelpName } from '../utils/a11yLabels';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
+import { InfoPopoverButton } from './InfoPopoverButton';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, rateHeader } from '../utils/numberText';
 import {
     RECOMMENDED_COPY,
@@ -121,7 +123,12 @@ export function ClockAlternativesPanel({
         >
             <TableCell padding="checkbox">
                 <Radio
+                    // one native group, so the arrow keys move between the clocks; the row's own click selects too
+                    name="clock"
+                    value={index}
                     checked={index === selectedIndex}
+                    onChange={() => onSelect(index)}
+                    slotProps={{ input: { 'aria-label': alternative.label } }}
                     size="small"
                     inputRef={index === recommendedIndex ? recommendedRadioRef : undefined}
                 />
@@ -129,18 +136,12 @@ export function ClockAlternativesPanel({
             <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                     {alternative.label}
-                    <Tooltip
-                        title={<Typography variant="body2">{alternative.description}</Typography>}
-                        placement="right"
-                        arrow
-                    >
-                        <InfoOutlined
-                            fontSize="small"
-                            color="action"
-                            aria-label={`How ${alternative.label} is made`}
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                    </Tooltip>
+                    <InfoPopoverButton label={clockHelpName(alternative.label)}>
+                        <Typography variant="body2">{alternative.description}</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Status: {statusDetail(alternative)}
+                        </Typography>
+                    </InfoPopoverButton>
                     {index === recommendedIndex && (
                         <Chip
                             size="small"
@@ -168,8 +169,9 @@ export function ClockAlternativesPanel({
                     : '—'}
             </TableCell>
             <TableCell>
-                <Tooltip title={statusDetail(alternative)} arrow>
+                <Tooltip title={statusDetail(alternative)} arrow describeChild>
                     <Chip
+                        tabIndex={0}
                         size="small"
                         label={VERDICT_LABEL[alternative.verdict]}
                         color={VERDICT_COLOR[alternative.verdict]}
@@ -182,7 +184,7 @@ export function ClockAlternativesPanel({
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
-            <Typography variant="h6">Potential Clocks</Typography>
+            <Typography variant="h6" component="h2">Potential Clocks</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                 {RECOMMENDED_COPY.intro}
             </Typography>
@@ -218,14 +220,19 @@ export function ClockAlternativesPanel({
                     )}
                 </Typography>
             )}
-            <Accordion disableGutters elevation={0} sx={{ mb: 1, maxWidth: '72ch', '&::before': { display: 'none' } }}>
+            <Accordion
+                disableGutters
+                elevation={0}
+                slotProps={{ heading: { component: 'h3' } }}
+                sx={{ mb: 1, maxWidth: '72ch', '&::before': { display: 'none' } }}
+            >
                 <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     id="how-clocks-are-chosen-summary"
                     aria-controls="how-clocks-are-chosen-details"
                     sx={{ px: 0 }}
                 >
-                    <Typography variant="body2">{RECOMMENDED_COPY.disclosureTitle}</Typography>
+                    <Typography variant="body2" component="span">{RECOMMENDED_COPY.disclosureTitle}</Typography>
                 </AccordionSummary>
                 <AccordionDetails sx={{ px: 0, pt: 0 }}>
                     {RECOMMENDED_COPY.disclosure.map(paragraph => (
@@ -243,25 +250,29 @@ export function ClockAlternativesPanel({
                 </Alert>
             )}
             <TableContainer>
-                <Table size="small">
+                <Table size="small" aria-label={CLOCK_TABLE_NAME}>
                     <TableHead>
                         <TableRow>
-                            <TableCell padding="checkbox" />
+                            <TableCell padding="checkbox">
+                                <Box component="span" sx={VISUALLY_HIDDEN}>Select</Box>
+                            </TableCell>
                             <TableCell>Clock</TableCell>
                             <TableCell>
                                 <Tooltip
                                     title="The belt the clock is made for. Moving: each window of an inserter that picks up from a belt stays open the ticks shown longer (belt pickup slack), so a pickup that comes late on a moving belt can finish; a rule of thumb, not a simulated belt. Non-moving belt: the windows fit a belt that is full and does not move, which is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A subtick clock is always made for a non-moving belt, and is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt."
                                     arrow
+                                    describeChild
                                 >
-                                    <span>Belt</span>
+                                    <span tabIndex={0}>Belt</span>
                                 </Tooltip>
                             </TableCell>
                             <TableCell align="right">
                                 <Tooltip
                                     title="Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of cycles (the clock period)."
                                     arrow
+                                    describeChild
                                 >
-                                    <span>Output swings</span>
+                                    <span tabIndex={0}>Output swings</span>
                                 </Tooltip>
                             </TableCell>
                             <TableCell align="right">Clock period</TableCell>
@@ -270,8 +281,9 @@ export function ClockAlternativesPanel({
                                 <Tooltip
                                     title="How often a machine wakes an inserter that is enabled and waiting on it, per minute, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a check that moves little or nothing; fewer is better. Shown for clocks that were run long enough to count them. It is the count from one start of the clock; a clock can settle into another steady state from another start, with another count."
                                     arrow
+                                    describeChild
                                 >
-                                    <span>{WAKE_UPS_HEADER}</span>
+                                    <span tabIndex={0}>{WAKE_UPS_HEADER}</span>
                                 </Tooltip>
                             </TableCell>
                             <TableCell align="right">{rateHeader(copies)}</TableCell>
@@ -279,11 +291,15 @@ export function ClockAlternativesPanel({
                             <TableCell>Status</TableCell>
                         </TableRow>
                     </TableHead>
+                    <TableBody>{stable.map(renderRow)}</TableBody>
+                    {/* the unstable clocks and the ones still being computed: a group of rows of their own, under their header */}
                     <TableBody>
-                        {stable.map(renderRow)}
                         {stable.length > 0 && unstable.length > 0 && (
                             <TableRow>
                                 <TableCell
+                                    // a heading for the rows below it, not a cell of data
+                                    component="th"
+                                    scope="rowgroup"
                                     colSpan={10}
                                     sx={{ color: 'text.secondary', borderTop: 1, borderColor: 'divider', fontWeight: 'bold' }}
                                 >
@@ -295,7 +311,7 @@ export function ClockAlternativesPanel({
                         {pending.map(label => (
                             <TableRow key={`pending-${label}`}>
                                 <TableCell padding="checkbox">
-                                    <CircularProgress size={16} sx={{ ml: 1.5 }} />
+                                    <CircularProgress size={16} sx={{ ml: 1.5 }} aria-hidden />
                                 </TableCell>
                                 <TableCell colSpan={9} sx={{ color: 'text.secondary' }}>
                                     {label}: computing…

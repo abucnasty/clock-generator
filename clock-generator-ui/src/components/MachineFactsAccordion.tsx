@@ -52,7 +52,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     },
                 }}
             >
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" component="span" color="text.secondary">
                     Machine Facts
                 </Typography>
                 <Tooltip title={`The most this machine can make: ${facts.output_rate_per_second}/s`} arrow describeChild>
@@ -173,11 +173,11 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                             borderRadius: 1,
                                         }}
                                     >
-                                        <FactorioIcon name={input.item_name} size={24} />
+                                        <FactorioIcon name={input.item_name} size={24} alt="" />
                                         <Typography variant="body2" sx={{ minWidth: 120 }}>
                                             {input.item_name}
                                         </Typography>
-                                        <Tooltip title={`${input.consumption_rate_per_second}/s`} arrow>
+                                        <Tooltip title={`${input.consumption_rate_per_second}/s`} arrow describeChild>
                                             <span>
                                                 <Chip
                                                     size="small"
@@ -187,7 +187,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                 />
                                             </span>
                                         </Tooltip>
-                                        <Tooltip title="Required amount per craft" arrow>
+                                        <Tooltip title="Required amount per craft" arrow describeChild>
                                             <span>
                                                 <Chip
                                                     size="small"
@@ -197,7 +197,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                 />
                                             </span>
                                         </Tooltip>
-                                        <Tooltip title="Automated insertion limit quantity" arrow>
+                                        <Tooltip title="Automated insertion limit quantity" arrow describeChild>
                                             <span>
                                                 <Chip
                                                     size="small"
@@ -254,7 +254,7 @@ function FactItem({ icon, label, value, tooltip }: FactItemProps) {
         : tooltip ?? baseDescription;
     const content = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {icon && <FactorioIcon name={icon} size={18} />}
+            {icon && <FactorioIcon name={icon} size={18} alt="" />}
             <Typography variant="body2" color="text.secondary">
                 {label}:
             </Typography>
@@ -264,7 +264,7 @@ function FactItem({ icon, label, value, tooltip }: FactItemProps) {
         </Box>
     );
     return description ? (
-        <Tooltip title={description} arrow>
+        <Tooltip title={description} arrow describeChild>
             <span>{content}</span>
         </Tooltip>
     ) : content;

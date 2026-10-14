@@ -363,7 +363,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             {run && <RanOutAlert run={run} />}
 
             <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6">Fuel consumption</Typography>
+                <Typography variant="h6" component="h2">Fuel consumption</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A machine burns fuel only while it crafts, so it burns its crafting share of the rate over a clock period.
                 </Typography>
@@ -371,7 +371,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             </Paper>
 
             <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6">Fuel clocks</Typography>
+                <Typography variant="h6" component="h2">Fuel clocks</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A fuel inserter is enabled for a few ticks as often as the fuel slot's limit lasts, whatever the clock period is.
                     It only swings when the slot is below the limit, so most enables pass without a swing. {exportedClockText(fuel)}
@@ -381,7 +381,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
 
             {run && (
                 <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6">Fuel timeline</Typography>
+                    <Typography variant="h6" component="h2">Fuel timeline</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         The exported clock run for {run.periods} clock periods: {run.durationTicks} ticks ({(run.durationTicks / 60).toFixed(1)} seconds).
                         The dashed line is the fuel slot's limit.
