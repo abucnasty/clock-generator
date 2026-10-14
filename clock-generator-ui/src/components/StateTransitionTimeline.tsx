@@ -27,6 +27,7 @@ import type {
     StatusCategory,
 } from 'clock-generator/browser';
 import { statusToCategory } from 'clock-generator/light';
+import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import {
     getStatusColor,
@@ -986,7 +987,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
         <>
             <Paper sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         State Transition Timeline
                     </Typography>
                     <Tooltip title="Open fullscreen">
@@ -1025,7 +1026,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                             {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
                         </Typography>
                     </Box>
-                    <IconButton onClick={() => setIsModalOpen(false)} edge="end">
+                    <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen}>
                         <Close />
                     </IconButton>
                 </DialogTitle>
