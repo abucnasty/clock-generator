@@ -1,6 +1,6 @@
 import { Add, Close } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover } from '@mui/material';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 
@@ -31,6 +31,7 @@ export function FilterSlotSelector({
     const shouldShowInferred = !hasExplicitFilters && inferredFilters.length > 0;
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
+    const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     const handleSlotClick = (slotIndex: number, element: HTMLElement) => {
         setAnchorEl(element);
@@ -54,8 +55,14 @@ export function FilterSlotSelector({
         return filters[activeSlotIndex] || inferredFilters[activeSlotIndex] || null;
     };
 
+    const removeFilter = (slotIndex: number) => {
+        onRemoveFilter(slotIndex);
+        // the remove button goes with the filter; the slot stays, so the keyboard focus goes back to it
+        slotRefs.current[slotIndex]?.focus();
+    };
+
     return (
-        <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
                 Filters:
             </Typography>
@@ -69,112 +76,107 @@ export function FilterSlotSelector({
                 const isAutoAssigned = !explicitFilter && !!inferredFilter;
 
                 return (
-                    <Box
-                        key={slotIndex}
-                        tabIndex={0}
-                        role="button"
-                        margin={0.3}
-                        aria-label={
-                            displayFilter
-                                ? `Filter ${slotIndex + 1}: ${displayFilter}${isAutoAssigned ? ' (auto)' : ''}`
-                                : `Add filter ${slotIndex + 1}`
-                        }
-                        onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleSlotClick(slotIndex, e.currentTarget);
+                    // the slot and its remove button are siblings: a button inside a button cannot be reached or named
+                    <Box key={slotIndex} sx={{ position: 'relative', m: 0.3 }}>
+                        <Box
+                            ref={(element: HTMLDivElement | null) => { slotRefs.current[slotIndex] = element; }}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={
+                                displayFilter
+                                    ? `Filter ${slotIndex + 1}: ${displayFilter}${isAutoAssigned ? ' (auto)' : ''}`
+                                    : `Add filter ${slotIndex + 1}`
                             }
-                        }}
-                        sx={{
-                            width: 30,
-                            height: 30,
-                            border: '2px solid',
-                            borderStyle: isAutoAssigned ? 'hidden' : 'solid',
-                            borderColor: displayFilter
-                                ? isAutoAssigned
-                                    ? 'secondary.main'
-                                    : 'primary.main'
-                                : 'divider',
-                            borderRadius: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            bgcolor: 'background.paper',
-                            position: 'relative',
-                            opacity: isAutoAssigned ? 0.85 : 1,
-                            transition: 'all 0.2s',
-                            '&:hover, &:focus': {
+                            onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleSlotClick(slotIndex, e.currentTarget);
+                                } else if (e.key === 'Delete' && displayFilter) {
+                                    e.preventDefault();
+                                    onRemoveFilter(slotIndex);
+                                }
+                            }}
+                            sx={{
+                                width: 30,
+                                height: 30,
+                                border: '2px solid',
+                                // dashed, so an auto filter is told apart by more than its colour
+                                borderStyle: isAutoAssigned ? 'dashed' : 'solid',
                                 borderColor: displayFilter
                                     ? isAutoAssigned
-                                        ? 'secondary.dark'
-                                        : 'primary.light'
-                                    : 'primary.light',
-                                bgcolor: 'action.hover',
-                                opacity: 1,
-                                outline: 'none',
-                                transform: 'scale(1.05)',
-                            },
-                            '&:focus-visible': {
-                                boxShadow: '0 0 0 2px',
-                                boxShadowColor: 'primary.main',
-                            },
-                        }}
-                    >
-                        {displayFilter ? (
-                            <>
-                                <FactorioIcon name={displayFilter} size={22} />
-                                {/* Show auto badge for inferred filters */}
-                                {isAutoAssigned && (
-                                    <Box
-                                        sx={{
-                                            position: 'absolute',
-                                            bottom: -8,
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            bgcolor: 'common.black',
-                                            color: 'secondary.light',
-                                            fontSize: '8px',
-                                            fontWeight: 'bold',
-                                            px: 0.5,
-                                            py: 0.25,
-                                            borderRadius: 0.5,
-                                            lineHeight: 1,
-                                        }}
-                                    >
-                                        AUTO
-                                    </Box>
-                                )}
-                                {/* Show remove button for all filters (explicit and auto-assigned) */}
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onRemoveFilter(slotIndex);
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            onRemoveFilter(slotIndex);
-                                        }
-                                    }}
-                                    sx={{
-                                        position: 'absolute',
-                                        top: -8,
-                                        right: -8,
-                                        width: 16,
-                                        height: 16,
-                                        bgcolor: 'error.main',
-                                        '&:hover': { bgcolor: 'error.dark' },
-                                    }}
-                                >
-                                    <Close sx={{ fontSize: 12, color: 'white' }} />
-                                </IconButton>
-                            </>
-                        ) : (
-                            <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                        ? 'secondary.main'
+                                        : 'primary.main'
+                                    : 'divider',
+                                borderRadius: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                bgcolor: 'background.paper',
+                                position: 'relative',
+                                opacity: isAutoAssigned ? 0.85 : 1,
+                                transition: 'all 0.2s',
+                                // the theme draws the focus ring; focus only tints the slot, so the ring does not move
+                                '&:hover, &:focus': {
+                                    borderColor: displayFilter
+                                        ? isAutoAssigned
+                                            ? 'secondary.dark'
+                                            : 'primary.light'
+                                        : 'primary.light',
+                                    bgcolor: 'action.hover',
+                                    opacity: 1,
+                                },
+                                '&:hover': { transform: 'scale(1.05)' },
+                            }}
+                        >
+                            {displayFilter ? (
+                                <>
+                                    <FactorioIcon name={displayFilter} size={22} />
+                                    {/* Show auto badge for inferred filters */}
+                                    {isAutoAssigned && (
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -8,
+                                                left: '50%',
+                                                transform: 'translateX(-50%)',
+                                                bgcolor: 'common.black',
+                                                color: 'secondary.light',
+                                                fontSize: '0.7rem',
+                                                fontWeight: 'bold',
+                                                px: 0.5,
+                                                py: 0.25,
+                                                borderRadius: 0.5,
+                                                lineHeight: 1,
+                                            }}
+                                        >
+                                            AUTO
+                                        </Box>
+                                    )}
+                                </>
+                            ) : (
+                                <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
+                            )}
+                        </Box>
+                        {/* Show remove button for all filters (explicit and auto-assigned) */}
+                        {displayFilter && (
+                            <IconButton
+                                size="small"
+                                aria-label={`Remove filter ${slotIndex + 1}: ${displayFilter}`}
+                                onClick={() => removeFilter(slotIndex)}
+                                sx={{
+                                    position: 'absolute',
+                                    top: -10,
+                                    right: -10,
+                                    width: 24,
+                                    height: 24,
+                                    bgcolor: 'error.main',
+                                    '&:hover': { bgcolor: 'error.dark' },
+                                }}
+                            >
+                                <Close sx={{ fontSize: 14, color: 'white' }} />
+                            </IconButton>
                         )}
                     </Box>
                 );
