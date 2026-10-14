@@ -44,7 +44,7 @@ come from here.
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | merged | [#149](https://github.com/abucnasty/clock-generator/pull/149) | 2 | Code review opus PASS; UX audit FIX (focus under the header, 2.4.11) then PASS after round 1; a one-line minor in round 2. CI green |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | fix-1 | | 1 | Bundle with 1.5. Code review opus PASS (minors); UX audit opus FIX: Undo timed out for keyboard users (2.2.1) → owner: no timer. A18, C15 fixed; B2 fixed within the plan; B3 partly (delete buttons unnamed: fixed in round 1) |
-| [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | review | | | Bundle with 1.14 (`feat/ux-rework-p1-first-problem-warning`). Also the 1.7 and 1.2 follow-ups (Search deeper's reason, Validate's scroll). 257 tests; capture 901 PASS, 2 FAIL (pre-existing 390 sideways scroll when stale, 2.9) |
+| [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | fix-1 | | 1 | Bundle with 1.14 (`feat/ux-rework-p1-first-problem-warning`). Code review opus PASS, UX audit opus PASS (A6, B21, C10, C4 fixed); a minors round (8 cheap items). Also the 1.7 and 1.2 follow-ups (Search deeper's reason, Validate's scroll). 257 tests; capture 901 PASS, 2 FAIL (pre-existing 390 sideways scroll when stale, 2.9) |
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | fix-1 | | 1 | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`). Merged #151 in (import-line conflict only). A14, A29, B30, C6 fixed; C3 partly (one filled button per state is 1.4's). Round 1: the untimed Undo, focus after Undo/Close, one live region with `announce()`, named delete buttons, 9 minors |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.7. Code review opus PASS; UX audit opus minors only (A9, A11, B12, B14 fixed, C7 partly). Round 1: 13 cheap minors; orchestrator read the diff and shots. Runner re-ran checks after merging 1.9 in (235 tests). CI green |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.6. A22, B15, C27 fixed |
@@ -54,7 +54,7 @@ come from here.
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | impl | | | Two PRs. PR A (opus, `feat/ux-rework-p1-a11y-basics`) in impl with a capture writer, moved up by coach run 2; announcements go through 1.5's `announce()`. PR B (sonnet) stacks on A |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | A merged | [#153](https://github.com/abucnasty/clock-generator/pull/153) | 1 | Part A merged: code review opus PASS (re-ran checks in a clean copy), UX audit sonnet PASS (C30 fixed; A25, B32 partly, rest is Part B); one minors round (dialog row wraps at 390). CI green. Part B last in the phase, stacked on 1.11 B |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
-| [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | review | | | Bundle with 1.4 |
+| [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | fix-1 | | 1 | Bundle with 1.4. C4 fixed |
 
 ## Phase 2: newcomer-first structure
 
@@ -262,6 +262,12 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.12A → 1.11 PR B: other selects have no `labelId` either (`ChestsForm.tsx` type select, `ValueReferenceSelector.tsx`), and the List's Type select name includes the icon's alt text ("Type assembling-machine-3 Assembling machine").
 - 1.12A → 1.12B: "Validate again, then Generate, after making changes" could read "After making changes, validate again, then Generate"; the `'Type'` tooltip in `MachineFactsAccordion.tsx` never renders (no FactItem has that label).
 - 1.4 → 1.11: the fullscreen diagram renders a second `MissingInserterAlert`, so coverage-row ids are duplicated while it is open and a jump focuses the copy behind the modal. The Recipe inputs are all named just "Recipe".
+- 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
+  (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
+  and a click finds no element. Reset the coverage result to null when the build is replaced.
+- 1.4 → 2.8/2.5: "Machine 1 has no inserter bringing in inserter" reads like a typo (item names), and the bar's wording
+  differs from the coverage alert's ("missing input inserter for …").
+- 1.14: the "Copied. …" message is `warning.dark` #b29d35 (olive), not the spec's #ccb43d; text 6.8:1. Accepted.
 - 1.14 → 1.10/2.7: MUI's upper-casing turns "200/s" into "200/S" on the below-target Copy button.
 - 1.5 → 2.1: "No items selected for import." and the menu names (Reset Configuration, Import/Export Config) keep
   "configuration"/"config" until 2.1 renames them.
