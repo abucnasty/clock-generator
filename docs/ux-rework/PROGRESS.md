@@ -51,7 +51,7 @@ come from here.
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | spec | | | Spec final; moved up (10 files). Next free slot (no file in common with 1.1, 1.8, 1.13) |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | blocked | | | Part A (copy fixes) spec final, after 1.8. Part B waits for glossary approval |
-| [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | impl | | | Third slot, alongside 1.1 and 1.8. Wire the forced-ALWAYS note after 1.8 merges |
+| [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | review | | | Evidence verified (tests 80/80, build re-run; shots checked). Code review on opus, UX audit on sonnet. Wire the forced-ALWAYS note after 1.8 merges |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | spec | | | Spec final; moved up (7 files). After 1.1 and 1.2; not alongside 1.4, 1.5 |
 
 ## Phase 2: newcomer-first structure
@@ -123,6 +123,9 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.11 → 3.2: WCAG 2.5.7, the List's drag reorder needs a single-pointer alternative (e.g. Move up/down).
 - 1.11 → Phase 2 retro: WCAG 1.4.10 Reflow at 320px conflicts with the owner's Widths decision.
 - 1.11: the out-of-date plan's `opacity: 0.45` plus `pointer-events: none` (C21); hover-only override help (1.12).
+- Tooling: `npm run knip` reports `scripts/*.mjs` as unused when run inside `.claude/worktrees/`; it passes on the main
+  checkout. Judge knip on the main checkout or CI.
+- Tooling: Playwright's ES module resolution ignores `NODE_PATH`; copy a capture script into `/tmp/ux-capture` to run it.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
