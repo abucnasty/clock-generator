@@ -401,7 +401,7 @@ writeFileSync(join(OUT, 'INDEX.md'), [
     `# Item 1.13 capture (${MODE})`,
     '',
     `Headless Google Chrome, 1440x900 then 720x900, dev server on port ${PORT}.`,
-    AFTER ? 'Step 7 (forced ALWAYS) is skipped: item 1.8 is not on this branch.' : 'Before the change: only steps 1 to 3 run (the control is the gear icon).',
+    AFTER ? 'Step 7 (forced ALWAYS) is not run here: capture-renumber.mjs step 13 covers it, through a delete and a renumber.' : 'Before the change: only steps 1 to 3 run (the control is the gear icon).',
     '',
     '| File | What it shows |',
     '|---|---|',

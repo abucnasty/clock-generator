@@ -268,11 +268,12 @@ function App() {
         [updateDrillsConfig]
     );
     const handleExcludeChange = useCallback((items: string[]) => {
-        if (validation.status === 'valid') {
+        // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
+        if (validation.status === 'valid' && !isValidationOutOfDate) {
             revalidateOnChangeRef.current = true;
             updateIgnoredIngredients(items, validation.validation.transfer_plan);
         }
-    }, [validation, updateIgnoredIngredients]);
+    }, [validation, isValidationOutOfDate, updateIgnoredIngredients]);
 
     const handleImportConfig = useCallback((imported: Config) => {
         importConfig(imported);

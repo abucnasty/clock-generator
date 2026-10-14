@@ -20,6 +20,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { entityLabel } from '../utils/entityLabel';
 
 interface MachinesFormProps {
     machines: MachineFormData[];
@@ -112,7 +113,7 @@ function MachinesFormComponent({
 
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
-                    <SortableItem key={machine._uuid} stableKey={machine._uuid} displayId={index + 1}>
+                    <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
                         {(dragHandle) => (
                             <MachineRow
                                 machine={machine}

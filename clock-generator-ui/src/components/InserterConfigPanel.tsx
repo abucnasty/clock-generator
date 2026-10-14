@@ -19,6 +19,7 @@ import type {
 } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { entityLabel } from '../utils/entityLabel';
 import { inferInserterItems } from '../utils/inferInserterItems';
 import { changedConfigFields } from '../utils/inserterDraft';
 import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
@@ -64,7 +65,7 @@ function InserterEditSection({
         const options: EntityOption[] = [];
         machines.forEach(m => options.push({
             type: TargetType.MACHINE, id: m.id,
-            label: `Machine ${m.id}`,
+            label: entityLabel('machine', m.id),
             icon: m.recipe || 'assembling-machine-3',
             sublabel: m.recipe || 'No recipe',
         }));
@@ -72,13 +73,13 @@ function InserterEditSection({
             const ingredientIcons = b.lanes.map(l => l.ingredient).filter(Boolean);
             options.push({
                 type: TargetType.BELT, id: b.id,
-                label: `Belt ${b.id}`, icon: b.type,
+                label: entityLabel('belt', b.id), icon: b.type,
                 ingredientIcons: ingredientIcons.length > 0 ? ingredientIcons : undefined,
             });
         });
         chests.forEach(c => options.push({
             type: TargetType.CHEST, id: c.id,
-            label: `Chest ${c.id}`,
+            label: entityLabel('chest', c.id),
             icon: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest',
             sublabel: isBufferChest(c) ? (c.item_filter || 'No filter') : undefined,
         }));
@@ -194,7 +195,7 @@ function InserterEditSection({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <FactorioIcon name="stack-inserter" size={22} />
                 <Typography variant="body2" color="text.secondary">
-                    Inserter #{inserter.id} — Tile 2
+                    {entityLabel('inserter', inserter.id)} — Tile 2
                 </Typography>
                 <Box sx={{ flex: 1 }} />
                 <NumberField
@@ -350,7 +351,7 @@ export function InserterConfigPanel({
                 ins.overrides.enable_control.mode !== EnableControlMode.AUTO,
             )
             .map(ins => ({
-                label: `Inserter ${ins.id}`,
+                label: entityLabel('inserter', ins.id),
                 override: ins.overrides!.enable_control!,
             }));
     }, [inserter.id, inserters]);

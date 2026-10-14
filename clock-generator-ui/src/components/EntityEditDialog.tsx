@@ -37,6 +37,7 @@ import {
     isInfinityChest,
 } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { entityLabel } from '../utils/entityLabel';
 import type { EntityClickType } from './ConfigFlowDiagram';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
@@ -469,7 +470,7 @@ function DrillEditSection({
                         <MenuItem key={m.id} value={m.id}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name={m.recipe || 'assembling-machine-3'} size={20} />
-                                Machine {m.id}{m.recipe ? ` (${m.recipe})` : ''}
+                                {entityLabel('machine', m.id)}{m.recipe ? ` (${m.recipe})` : ''}
                             </Box>
                         </MenuItem>
                     ))}
@@ -515,31 +516,31 @@ export function EntityEditDialog({
                 const idx = machines.findIndex(m => m.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const m = machines[idx];
-                return { entity: m, entityIndex: idx, title: `Machine ${m.id}`, iconName: m.recipe || 'assembling-machine-3' };
+                return { entity: m, entityIndex: idx, title: entityLabel('machine', m.id), iconName: m.recipe || 'assembling-machine-3' };
             }
             case 'belt': {
                 const idx = belts.findIndex(b => b.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const b = belts[idx];
-                return { entity: b, entityIndex: idx, title: `Belt ${b.id}`, iconName: b.type };
+                return { entity: b, entityIndex: idx, title: entityLabel('belt', b.id), iconName: b.type };
             }
             case 'chest': {
                 const idx = chests.findIndex(c => c.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const c = chests[idx];
-                return { entity: c, entityIndex: idx, title: `Chest ${c.id}`, iconName: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest' };
+                return { entity: c, entityIndex: idx, title: entityLabel('chest', c.id), iconName: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest' };
             }
             case 'inserter': {
                 const idx = inserters.findIndex(i => i.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const ins = inserters[idx];
-                return { entity: ins, entityIndex: idx, title: `Inserter ${ins.id}`, iconName: 'stack-inserter' };
+                return { entity: ins, entityIndex: idx, title: entityLabel('inserter', ins.id), iconName: 'stack-inserter' };
             }
             case 'drill': {
                 const idx = (drills ?? []).findIndex(d => d.id === entityId);
                 if (idx === -1) return { entity: null, entityIndex: -1, title: '', iconName: '' };
                 const d = (drills ?? [])[idx];
-                return { entity: d, entityIndex: idx, title: `Drill ${d.id}`, iconName: d.type };
+                return { entity: d, entityIndex: idx, title: entityLabel('drill', d.id), iconName: d.type };
             }
         }
     }, [entityType, entityId, machines, inserters, belts, chests, drills]);
