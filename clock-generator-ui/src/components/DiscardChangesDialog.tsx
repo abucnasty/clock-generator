@@ -33,7 +33,8 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
             slotProps={{
                 // the plain paper colour, without the dark theme's elevation overlay (a background image), which
                 // lightens it to #474747 and leaves the buttons' text below 4.5:1
-                paper: { sx: { bgcolor: 'background.paper', backgroundImage: 'none' } },
+                // and a divider-grey edge, so that it stands out from the dimmed dialog behind it
+                paper: { sx: { bgcolor: 'background.paper', backgroundImage: 'none', border: 1, borderColor: 'divider' } },
                 // opened over another dialog, autoFocus alone loses the focus to the dialogs' focus traps
                 transition: { onEntered: () => keepEditingRef.current?.focus() },
             }}

@@ -259,11 +259,30 @@ interface InserterConfigPanelProps {
 
 // ---- Tab label with the unsaved mark ----
 
+/** Hidden from sight, read by screen readers */
+const VISUALLY_HIDDEN = {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    m: '-1px',
+    p: 0,
+    overflow: 'hidden',
+    clip: 'rect(0 0 0 0)',
+    whiteSpace: 'nowrap',
+    border: 0,
+} as const;
+
+/** The tab's text, then "•" when it holds unsaved edits; the tab's name says so in words ("Overrides, unsaved changes") */
 function TabLabel({ text, unsaved }: { text: string; unsaved: boolean }) {
     return (
         <span>
             {text}
-            {unsaved && <Box component="span" aria-hidden sx={{ ml: 0.5 }}>•</Box>}
+            {unsaved && (
+                <>
+                    <Box component="span" aria-hidden sx={{ ml: 0.5 }}>•</Box>
+                    <Box component="span" sx={VISUALLY_HIDDEN}>, unsaved changes</Box>
+                </>
+            )}
         </span>
     );
 }
@@ -371,13 +390,11 @@ export function InserterConfigPanel({
                 {/* a tab with unsaved edits is marked "•" (its chip still shows the saved rule) */}
                 <Tab
                     label={<TabLabel text="Config" unsaved={configDirty} />}
-                    aria-label={configDirty ? 'Config, unsaved changes' : undefined}
                     id={`${id}-tab-0`}
                     aria-controls={`${id}-tabpanel-0`}
                 />
                 <Tab
                     label={<TabLabel text="Overrides" unsaved={rule.changed} />}
-                    aria-label={rule.changed ? 'Overrides, unsaved changes' : undefined}
                     id={`${id}-tab-1`}
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
