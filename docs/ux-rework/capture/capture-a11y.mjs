@@ -5,7 +5,8 @@
 //   SAMPLES_DIR  the sample configs of another checkout or worktree
 //   WIDTHS       comma list, default "1440,960,720,390"
 //   STEPS        comma list of steps to run, default all. In the order they run:
-//                  landmarks, theme, slots, walk-configure, obscured, dialog, axe-configure, announce, walk-results, axe-results
+//                  landmarks, theme, slots, walk-configure, obscured, dialog, axe-configure, announce, walk-results, axe-results,
+//                  announce-dialog (last: it leaves the results out of date and imports a slower sample)
 //                (landmarks runs on first load, before the import; the import always runs after it; announce validates and
 //                generates, and walk-results / axe-results generate first if announce did not)
 //   WALK_MAX     most Tab stops recorded per view and width (default 250)
@@ -32,8 +33,8 @@ import { writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import {
-    forWidths, previewServer, SMALL_SAMPLE, importFile, goConfigure, goResults, validate, generate, waitReady, contrast,
-    tabTo, checkTabTo, focusNotObscured, checkFocusNotObscured,
+    forWidths, previewServer, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate, waitReady, contrast,
+    tabTo, checkTabTo, focusNotObscured, checkFocusNotObscured, checkAnnounced,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -501,6 +502,11 @@ const STEP_LIST = [
             let said = await announcedSince(page, mark);
             rec.check('Validate writes text into the polite status region', said.length > 0, said.length ? said.map((t) => `"${t}"`).join(', ') : 'nothing was announced');
             rec.check('Validate announces each message once', said.length === new Set(said).size, said.join(' | ') || 'nothing');
+            rec.check('Validate announces "The configuration is valid."', said.some((t) => /The configuration is valid\./.test(t)), said.join(' | ') || 'nothing');
+            // a check of a small build takes ~15 ms: the message host keeps only the latest announcement, so "Checking the
+            // configuration." is replaced before it is written, as a screen reader would drop it anyway. A slow check says it
+            rec.info('Validate: "Checking the configuration." written', said.some((t) => /Checking the configuration\./.test(t)) ? 'yes' : 'no (replaced by the result before it was written)');
+            await checkAnnounced(rec, page, 'The configuration is valid.', 'after Validate, in a region a screen reader can hear');
             const alerts = await page.evaluate(() => [...document.querySelectorAll('[role=alert]')].map((e) => (e.textContent ?? '').trim()).filter((t) => /configuration is valid/i.test(t)));
             rec.check('the "configuration is valid" panel is not a second announcement (no role=alert on it)', alerts.length === 0, alerts.length ? `role=alert: "${alerts[0].slice(0, 60)}"` : 'none'); // SELECTOR: confirm
 
@@ -511,6 +517,8 @@ const STEP_LIST = [
             said = await announcedSince(page, mark);
             rec.check('Generate finishing writes text into the polite status region', said.length > 0, said.length ? said.map((t) => `"${t}"`).join(', ') : 'nothing was announced');
             rec.check('Generate announces each message once', said.length === new Set(said).size, said.join(' | ') || 'nothing');
+            rec.check('Generate announces "Generating clocks." then "Finished generating. Selected clock: …"', said.some((t) => /Generating clocks\./.test(t)) && said.some((t) => /Finished generating\. Selected clock: .+\./.test(t)), said.join(' | ') || 'nothing');
+            await checkAnnounced(rec, page, /Finished generating\. Selected clock: .+\./, 'when Generate finishes, in a region a screen reader can hear');
             await goResults(page);
 
             // Copy
@@ -525,6 +533,8 @@ const STEP_LIST = [
             said = await announcedSince(page, mark);
             const alertText = await page.evaluate(() => [...document.querySelectorAll('[role=alert]')].map((e) => (e.textContent ?? '').trim().slice(0, 60)));
             rec.check('Copy writes text into the polite status region', said.length > 0, said.length ? said.map((t) => `"${t}"`).join(', ') : `nothing was announced${alertText.length ? ` (alerts on the page: ${alertText.join('; ')})` : ''}`);
+            if (alertText.some((t) => /^Copied\./.test(t))) rec.info('Copy', 'the clock is below target: the warning alert says "Copied." instead of the region');
+            else await checkAnnounced(rec, page, 'Blueprint copied.', 'after Copy, in a region a screen reader can hear');
             await checkFocusNotObscured(rec, page, 'on the Copy button with the message showing');
             await rec.shot(page, 'copied', { desc: 'After Copy: the message showing, the Copy button focused' });
             rec.info('every polite-region text of this width', brief((await page.evaluate(() => window.__announcements.map((a) => a.text))), 12) || 'none');
@@ -551,6 +561,57 @@ const STEP_LIST = [
             await ensureGenerated(page, state);
             await goResults(page);
             await axePass(page, rec, 'Results');
+        },
+    },
+    {
+        name: 'announce-dialog',
+        async run({ page, rec, state }) {
+            // a dialog hides the app root (aria-hidden) while it is open or closing: announcements must still be heard
+            await ensureGenerated(page, state);
+            await goConfigure(page);
+            let mark = await announceMark(page);
+            const field = page.getByLabel(/items per second/i).first(); // SELECTOR: confirm (the target rate field)
+            const before = await field.inputValue();
+            await field.fill(String(Number(before) - 1));
+            await page.waitForTimeout(600);
+            let said = await announcedSince(page, mark);
+            rec.check('an edit after Validate announces "The configuration changed since it was checked."', said.some((t) => /changed since it was checked/.test(t)), said.join(' | ') || 'nothing');
+
+            // Copy old clock: the copy happens as its confirm dialog closes
+            await goResults(page);
+            const copyOld = page.getByRole('button', { name: /^Copy old clock/ }).first();
+            if ((await copyOld.count()) === 0) {
+                rec.check('Copy old clock opens its dialog', false, 'no button named /^Copy old clock/');
+            } else {
+                await copyOld.click();
+                const dialog = page.getByRole('dialog').first();
+                await dialog.waitFor({ timeout: 5000 });
+                mark = await announceMark(page);
+                await dialog.getByRole('button', { name: /^Copy old clock/ }).click();
+                await checkAnnounced(rec, page, 'Blueprint copied.', 'after Copy old clock, as its dialog closes');
+                said = await announcedSince(page, mark);
+                rec.check('the copy from the dialog is announced once', said.filter((t) => /Blueprint copied/.test(t)).length === 1, said.join(' | ') || 'nothing');
+                await page.waitForTimeout(400);
+            }
+
+            // Generate finishing while a dialog is open (the changelog), on a slower sample so the dialog is open in time
+            await goConfigure(page);
+            await importFile(page, SLOW_SAMPLE);
+            await validate(page);
+            const gen = page.getByRole('button', { name: /^Generate/ }).first();
+            await gen.click();
+            await page.evaluate(() => [...document.querySelectorAll('footer [role=button]')].find((e) => /^v\d/.test(e.textContent ?? ''))?.click()); // SELECTOR: confirm (the version chip opens the changelog)
+            const changelog = page.getByRole('dialog').first();
+            await changelog.waitFor({ timeout: 5000 }).catch(() => {});
+            const openAtStart = (await changelog.count()) > 0;
+            mark = await announceMark(page);
+            await page.waitForFunction(() => ![...document.querySelectorAll('button')].some((b) => /^Generating/i.test(b.textContent ?? '')), null, { timeout: 120_000 });
+            const stillOpen = (await page.getByRole('dialog').count()) > 0;
+            rec.check('the changelog dialog was open while the run finished', openAtStart && stillOpen, `open at start ${openAtStart}, at the end ${stillOpen}`);
+            await checkAnnounced(rec, page, /Finished generating\. Selected clock: .+\./, 'when Generate finishes with a dialog open');
+            await rec.shot(page, 'announce-dialog', { desc: 'A generation finished with the changelog open' });
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(400);
         },
     },
 ];
