@@ -1,4 +1,4 @@
-import { Add, Delete, Info, Settings } from '@mui/icons-material';
+import { Add, Delete, Info } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -12,12 +12,12 @@ import {
     Select,
     Switch,
     TextField,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
 import { EnableControlModal } from './EnableControlModal';
+import { EnableRuleChip } from './EnableRuleChip';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
@@ -244,15 +244,11 @@ function DrillsFormComponent({
                                     ))}
                                 </Select>
                             </FormControl>
-                            {/* Enable Control Settings */}
-                            <Tooltip title="Configure Enable Control">
-                                <IconButton
-                                    onClick={() => setEnableControlModalDrillIndex(index)}
-                                    color={drill.overrides?.enable_control?.mode && drill.overrides.enable_control.mode !== 'AUTO' ? 'primary' : 'default'}
-                                >
-                                    <Settings />
-                                </IconButton>
-                            </Tooltip>
+                            <EnableRuleChip
+                                override={drill.overrides?.enable_control}
+                                entityLabel={`Drill ${drill.id}`}
+                                onClick={() => setEnableControlModalDrillIndex(index)}
+                            />
                             <IconButton onClick={() => onRemove(index)} color="error">
                                 <Delete />
                             </IconButton>
