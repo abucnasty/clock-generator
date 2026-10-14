@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { ValueReferenceType, EntityReference, TargetType } from 'clock-generator/light';
 import type { ValueReference } from '../hooks/useConfigForm';
+import { SELECT_NAMES } from '../utils/a11yLabels';
 import { useFullscreen } from './FullscreenContext';
 import { ItemSelector } from './ItemSelector';
 
@@ -129,6 +130,7 @@ export function ValueReferenceSelector({
             <FormControl size="small" sx={{ minWidth: typeSelectWidth }}>
                 <InputLabel>Type</InputLabel>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.valueType }}
                     value={value.type}
                     label="Type"
                     onChange={(e) => handleTypeChange(e.target.value as ValueReference['type'])}
@@ -165,6 +167,7 @@ export function ValueReferenceSelector({
                     size="small"
                     sx={{ width: constantFieldWidth }}
                     label="Value"
+                    slotProps={{ htmlInput: { 'aria-label': SELECT_NAMES.constantValue } }}
                 />
             )}
 

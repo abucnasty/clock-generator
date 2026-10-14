@@ -17,6 +17,7 @@ export const SELECT_NAMES = {
     quickTemplates: 'Quick templates',
     comparisonOperator: 'Comparison operator',
     valueType: 'Value type',
+    constantValue: 'Constant value',
     isOrIsNot: 'Is or is not',
     machineStatus: 'Machine status',
 } as const;
