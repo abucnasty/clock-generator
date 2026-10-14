@@ -40,7 +40,7 @@ come from here.
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
-| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | review | | | Evidence verified (tests 117/117, lint, icons, build re-run; merges cleanly; shots checked at 390). Code review and UX audit on opus |
+| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | fix-1 | | 1 | Code review opus PASS. UX audit opus FIX: focus hidden under the sticky header (2.4.11). A7, B25, C1 fixed. Round 1: scroll-padding, 720 action row, capture exit code |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Bundle with 1.5 (1.5 first in the branch). Needs 1.8 merged (`serializeConfig`) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Bundle with 1.14 |
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | spec | | | Bundle with 1.3. After 1.2 (reads `--app-header-height`, replaces its stop-gap) |
@@ -189,6 +189,8 @@ Minor and nit findings, and anything noticed outside an item's scope.
   check completes, or instantly; `--app-header-height` gives the margin.
 - 1.2 → 2.9: at 390 the Configure view scrolls sideways (459px) because of the "limit: 15" chip. Pre-existing.
 - 2.11: a saved `near_lane` can go invisible if a belt's lanes later hold the same item.
+- 1.2 → 1.12: in the ⋮ menu "Import Config" sits next to "Paste from Factorio"; consider "Import config file…".
+- 1.2: the logo's alt text "Logo" says nothing (1.11).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
