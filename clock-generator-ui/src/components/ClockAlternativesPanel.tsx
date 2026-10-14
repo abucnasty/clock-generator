@@ -20,7 +20,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { lossesOf } from '../utils/rateWarning';
@@ -72,12 +72,9 @@ interface ClockAlternativesPanelProps {
     isGenerating: boolean;
     /** Labels of alternatives still being generated */
     pending?: string[];
-    /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
-    skippedSearches?: string[];
+    /** Shown below the table: whether a deeper search is on offer */
+    notice?: ReactNode;
 }
-
-/** "a, b and c" */
-const listed = (names: string[]) => names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 
 export function ClockAlternativesPanel({
     alternatives,
@@ -88,7 +85,7 @@ export function ClockAlternativesPanel({
     pickRule,
     isGenerating,
     pending = [],
-    skippedSearches = [],
+    notice,
 }: ClockAlternativesPanelProps) {
     const [showUnstable, setShowUnstable] = useState(false);
     // where "Back to recommended" leaves the keyboard focus, as the link itself goes away
@@ -301,14 +298,7 @@ export function ClockAlternativesPanel({
                     </TableBody>
                 </Table>
             </TableContainer>
-            {skippedSearches.length > 0 && (
-                <Alert severity="info" sx={{ mt: 1 }}>
-                    Not searched: {listed(skippedSearches)}. A clock made without a search
-                    {deadlockRisk !== null ? ' holds the target rate' : ' is stable'}, so the searches, which take most of the
-                    time of a generation, could only find one with fewer wake-ups. To run them, turn on "Search for
-                    fewer wake-ups" under Advanced Overrides and generate again.
-                </Alert>
-            )}
+            {notice}
             {anyStable && (showUnstable ? unstableCount > 0 : hiddenCount > 0) && (
                 <Box sx={{ mt: 1 }}>
                     <Button size="small" onClick={() => setShowUnstable(shown => !shown)}>

@@ -13,6 +13,7 @@ import type { FuelViewData, ShiftOptionsView } from '../worker/types';
 import { BlueprintOutput } from './BlueprintOutput';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DebugPanel } from './DebugPanel';
+import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { FuelPanel } from './FuelPanel';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
@@ -23,6 +24,7 @@ import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
+import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 
 type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
@@ -39,6 +41,14 @@ interface ResultsWorkspaceProps {
     pickRule: PickRule | null;
     pending: string[];
     skippedSearches: string[];
+    /** The latest generation ran the slower searches because it asked for them */
+    searchedDeeper: boolean;
+    /** "Search for fewer wake-ups" is on in the form */
+    keptOn: boolean;
+    /** False whenever Generate would be disabled */
+    canSearchDeeper: boolean;
+    /** Generates again with the slower searches; `keepOn` also turns the switch on in the form */
+    onSearchDeeper: (keepOn: boolean) => void;
     blueprintString: string | null;
     simulationDurationTicks: number | null;
     transferHistory: SerializableTransferHistory | null;
@@ -110,7 +120,19 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 pickRule={props.pickRule}
                 isGenerating={props.isRunning}
                 pending={props.pending}
-                skippedSearches={props.skippedSearches}
+                notice={
+                    <DeeperSearchNotice
+                        kind={deeperSearchNoticeOf({
+                            searchesSkipped: props.skippedSearches.length > 0,
+                            searchedDeeper: props.searchedDeeper,
+                            keptOn: props.keptOn,
+                            isRunning: props.isRunning,
+                            stale: props.staleFor !== null,
+                        })}
+                        canSearchDeeper={props.canSearchDeeper}
+                        onSearchDeeper={props.onSearchDeeper}
+                    />
+                }
             />
 
             <Box sx={{ display: hasResults ? 'block' : 'none', mt: 2 }}>

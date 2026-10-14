@@ -40,6 +40,7 @@ import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
+import { withDeeperSearch } from './utils/deeperSearch';
 
 const darkTheme = createTheme({
     palette: {
@@ -101,6 +102,7 @@ function App() {
         pickRule,
         pendingAlternatives,
         skippedSearches,
+        searchedDeeper,
         validation,
         validate,
         error,
@@ -285,6 +287,22 @@ function App() {
             checkedCoverageIssues?.length === 0
         );
     }, [isInitialized, isRunning, config, checkedCoverageIssues]);
+
+    // Generate with the slower searches: for this run only, or, kept on, by turning the switch on in the form
+    const handleSearchDeeper = useCallback((keepOn: boolean) => {
+        if (!canGenerate) {
+            return;
+        }
+        if (keepOn) {
+            // the form's key once the switch is on, so the results are not taken for out of date
+            const kept = withDeeperSearch(exportConfig());
+            updateOverrides('search_for_fewer_wake_ups', true);
+            runSimulation(kept, debugSteps, streamLogs);
+        } else {
+            runSimulation(exportConfig(), debugSteps, streamLogs, true);
+        }
+        setView('results');
+    }, [canGenerate, exportConfig, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -502,6 +520,10 @@ function App() {
                                 pickRule={pickRule}
                                 pending={pendingAlternatives}
                                 skippedSearches={skippedSearches}
+                                searchedDeeper={searchedDeeper}
+                                keptOn={config.overrides?.search_for_fewer_wake_ups === true}
+                                canSearchDeeper={Boolean(canGenerate)}
+                                onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}
                                 transferHistory={transferHistory}
