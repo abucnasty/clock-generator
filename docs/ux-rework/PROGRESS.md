@@ -48,7 +48,7 @@ come from here.
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
-| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | review | | | Evidence verified (tests 101/101, lint, icons, build re-run; shots checked). Code review on Fable, UX audit on opus |
+| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | fix-1 | | | Code review (Fable) PASS, UX audit (opus) PASS. Cheap minors before merge: header brackets, "clock period", Copies helper, tests, README |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
@@ -143,6 +143,16 @@ Minor and nit findings, and anything noticed outside an item's scope.
   upper-cases button text, so the waits end at once. Use `textContent`.
 - Tooling: under the dev server, React StrictMode runs MUI's dialog focus trap twice, so an `autoFocus` button may not
   hold focus. Check dialog focus on a `vite preview` build.
+- 1.10 → 1.12 Part B: "Overload Multiplier" and the overload tooltip in `MachineFactsAccordion.tsx` while the diagram
+  says "insertion limit"; one number, two names.
+- 1.10 → 2.11: the diagram node line is `#666` at about 8.8px on `#232323` (about 2.7:1), failing 1.4.3. Use
+  `text.secondary` and at least 0.7rem. Also one precision for craft ticks (facts 5.224, node 5.2).
+- 1.10 → 1.6: Rate cells still read "240.00"; use `formatNumberText`.
+- 1.10 → 1.11: the full-value `title` doubles as the accessible description on fields with no helper text.
+- 1.1 → 2.3: the banner, dialog and tooltip say "Generate again", but after an edit Generate stays disabled until
+  Validate. When 2.3 removes that gate, check these strings hold. 1.4 shows "Validate the build first" meanwhile.
+- 1.1: the stale banner's `role="alert"` is inserted while Results is hidden, so it is rarely announced; consider
+  dropping the live role (1.11).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
