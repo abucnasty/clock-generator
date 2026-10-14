@@ -39,7 +39,7 @@ come from here.
 
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | impl | | | Spec final 2026-10-14 |
+| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | review | | | Evidence verified (tests 96/96, lint, icons, build re-run; shots checked). Code review on Fable, UX audit on opus |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Spec final; moved up (7 files). After 1.5 (uses `notify()`) and 1.8 (`serializeConfig`) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2; not alongside 1.3, 1.5 |
@@ -139,6 +139,10 @@ Minor and nit findings, and anything noticed outside an item's scope.
   '')`). When 1.9 changes the labels, pass `entityType: 'inserter' | 'drill'` instead. The 290px AUTO tooltip also
   covers the next row while open (`placement="top"` is an option).
 - 1.13: the capture README doesn't mention `SAMPLES_DIR`.
+- Tooling: `capture.mjs` `generate()` and `validate()` wait on `innerText` for "Generating..." / "Validating...", but MUI
+  upper-cases button text, so the waits end at once. Use `textContent`.
+- Tooling: under the dev server, React StrictMode runs MUI's dialog focus trap twice, so an `autoFocus` button may not
+  hold focus. Check dialog focus on a `vite preview` build.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
