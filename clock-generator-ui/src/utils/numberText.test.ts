@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     COPIES_HELPER,
     OUTPUT_PER_PERIOD_HEADER,
+    TICK_DECIMALS,
     WAKE_UPS_HEADER,
     formatNumberText,
     itemsPerSecondHelper,
@@ -112,9 +113,10 @@ describe('machineNodeCraftLine', () => {
         expect(machineNodeCraftLine(5.2, 15, locale)).toBe('5.2t craft · insertion limit ×15');
     });
 
-    it('rounds the ticks to one decimal', () => {
-        expect(machineNodeCraftLine(5.25, 15.5, locale)).toBe('5.3t craft · insertion limit ×15.5');
-        expect(machineNodeCraftLine(5.2244897959, 15, locale)).toBe('5.2t craft · insertion limit ×15');
+    it('rounds the ticks to the decimals Machine Facts shows them with', () => {
+        expect(machineNodeCraftLine(5.25, 15.5, locale)).toBe('5.25t craft · insertion limit ×15.5');
+        expect(machineNodeCraftLine(5.2244897959, 15, locale)).toBe(`${formatNumberText(5.2244897959, { maxDecimals: TICK_DECIMALS, locale })}t craft · insertion limit ×15`);
+        expect(machineNodeCraftLine(5.2244897959, 15, locale)).toBe('5.224t craft · insertion limit ×15');
     });
 });
 

@@ -57,6 +57,10 @@ preview unless you are debugging.
 - `capture-first-problem-warning.mjs <out dir>` (on `lib.mjs`) checks items 1.4 and 1.14 at 1440, 720 and 390px: the problem
   chip and reason in the bar, the jump to the first problem, the disabled buttons' reasons, the warning yellow and the
   below-target Copy. `STEPS` (a regexp: `^P` for 1.4, `^W` for 1.14) runs a part; `UI_DIR` names the checkout it greps.
+- `capture-diagram.mjs <out dir>` (on `lib.mjs`) checks the Diagram's readability (item 2.11) at 1440 and 720px: the split
+  "(in)"/"(out)" belt and the left-to-right order, arrowheads and their hover colour, 12px text and its contrast, overlaps,
+  the node chips against the List's, Enter on a focused node and the focus ring, the fullscreen fit, and the List's
+  "Nearest lane of the belt" select. `STEPS` (a regexp on the step numbers) runs a part.
 
 ## Shared helpers
 
