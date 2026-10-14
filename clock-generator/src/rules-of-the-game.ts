@@ -40,7 +40,11 @@ export { FuelSlot } from "./entities/machine/fuel/fuel-slot";
 /**
  * 5. When a waiting inserter acts (GOALS.md "When a waiting inserter acts"): a tick after the products are taken, in
  * the same tick when the machine finished a craft the tick before. Cases: `rules-of-the-game.test.ts` and
- * `control-logic/inserter/transitions/transitions.test.ts` (5,777 and 3,756 inserters, 843 and 248 belt hands).
+ * `control-logic/inserter/transitions/transitions.test.ts` (5,777 and 3,756 inserters, 843 and 248 belt hands). An
+ * inserter whose window opens in the tick the products are taken takes its first items a tick later too, unless the
+ * inserter that took them opened its window in that tick as well (1,158 of 1,170 and 852 of 888 cases): the idle
+ * transition of an inserter. A partial hand from a machine waits while the machine it puts into is at its block
+ * (20,701 of 20,701 samples): the pickup of an inserter.
  */
 export { actsInTheTickTheBlockIsLifted } from "./control-logic/inserter/waiting-inserter";
 

@@ -42,7 +42,7 @@ Conventions:
 
 | Build | Scaffold | Recorded | Note |
 |---|---|---|---|
-| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock is the one selected since 2026-10-10 | in `test:game`, both ways; with "Belts do not move" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
+| science/agriculture-science | yes | selected and 5-swing clocks exact over 300 periods before the idle-window rules of 2026-10-09; with them, recorded again that day: the 5-, 1- and 2-swing clocks with the same output in every period of 150, 150 and 75 (the 2-swing clock twice). The 2-swing clock was the one selected from 2026-10-10; since 2026-10-14 (issue 152) batched swings gets back from every loss and is selected again, and the game tests recorded it that day both ways, 400 in every period | in `test:game`, both ways; with "Belts do not move" on the simulator is off the game by an item a period on four inserters, see "Backpressure loss" |
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | intermediates/low-density-structure | yes | selected clock exact. Since 2026-10-11 the selected clock is batched swings with 6 output swings per cycle, 703 wake-ups a minute, where full-hand output swings (1,528) was selected while the ranking put it first on a machine with spare speed; recorded exact the same day, 36,000 ticks | in `test:game` |
@@ -51,6 +51,7 @@ Conventions:
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
 | intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Belts do not move" on | in `test:game` with the switch off; see below |
 | intermediates/advanced-circuit, 230 a second | the same scaffold | selected clock exact: 16,192 in each of 2 repeats of 12,672 ticks (23 periods of 550.957), the first clock of this sample that holds, found by the one search of 2026-10-11 | in `test:game`; see below |
+| intermediates/accumulator, 640 a second | yes | the clock 0.9.0 selected made 512 to 544 of 576 a period; the clock selected since 2026-10-14 made 576 in each of 58 periods after 3 at 544 while it settled (60,264 ticks), and in every period of the game test, which lets it settle 7,200 ticks | in `test:game`; see below |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | everything else | no | | |
 
@@ -251,6 +252,32 @@ Open:
   clock was recorded with it at 192 in each of 53 periods). With "Belts do not move" on they are listed as unstable:
   they were the last two clocks of any sample that were made again with the slack there, neither was selected, and
   that fallback was removed on 2026-10-10.
+
+## Accumulator
+
+The build of [issue 152](https://github.com/abucnasty/clock-generator/issues/152), 640 accumulators a second over 18
+copies: two electromagnetic plants make accumulators (50% productivity), two cryogenic plants batteries (200%), and two
+foundries cast the iron and the copper (150%), all from infinity pipes. The config is `accumulator-640.json`
+(`ACCUMULATOR_640`) and the scaffold `accumulator-640-scaffold.txt`, both as the issue gives them; the issue's config
+also has "Search for fewer wake-ups" on, which selects the same clock, since no clock made without a search is stable.
+
+The clock 0.9.0 selected (observed windows, 2 output swings per cycle) was stable in the simulator and made 528, 544,
+544, 544, 544, 528 and 512 of its 576 a period in the game, that cycle over and over. Started in the state the game
+was in (`.scratch/issue-152/` on the machine the work was done on), the simulator parted from the game at two rules,
+now in GOALS.md, "When a waiting inserter acts": an inserter whose window opens in the tick another inserter takes the
+products of the machine it puts into takes its first items a tick later, unless that other inserter's window opened in
+that tick too; and a hand from a machine does not fill while the machine it puts into is at its output block. With
+them the simulator has that clock at 512 and selects another observed windows clock, which the game held at 576.
+
+What is left between the simulator and the game on this build, a tick at a time, and changes no verdict found:
+- at one place of the seven-period cycle that the old clock settled into, the iron and copper inserters of a battery
+  plant whose window opened with that of the output inserter took their hands a tick later in the game (36 cases), where
+  the same window a period earlier took them in the tick, as the simulator does;
+- an inserter that waited 6 ticks or more for the battery plant took its first items a tick later in the game where the
+  plant finished a craft the tick before (16 of 16), against the rule recorded on the scaffolds (3,696 there); on the
+  scaffolds the inserter that took the products had been waiting at the machine, here it was on its way back;
+- a battery plant whose craft ends on a whole tick starts the next one in that tick in the game, with no progress, and
+  in the next tick in the simulator: its ingredients go a tick earlier in the game.
 
 ## Advanced circuit
 

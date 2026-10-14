@@ -46,7 +46,8 @@ describe("generateClockForConfig", () => {
             expect(selected.verdict).toBe("no recovery");
             expect(selected.assessment.backpressure_loss?.broken_by).toContain("tungsten-ore stops arriving");
             expect(full_hand.verdict).toBe("no recovery");
-            expect(full_hand.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["tungsten-ore stops arriving"] });
+            // since the rules of issue 152 a loss of the output breaks it too
+            expect(full_hand.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["tungsten-ore stops arriving", "metallurgic-science-pack is not taken away"] });
             expect(full_hand.description).toContain("It does not survive backpressure loss");
             expect(alternatives.some(a => a.verdict === "stable")).toBe(false);
         });
