@@ -47,7 +47,7 @@ come from here.
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | fix-1 | | 1 | Bundle with 1.7 (`feat/ux-rework-p1-clock-pick`). Code review PASS; UX audit minors only (A9, A11, B12, B14 fixed, C7 partly). Round 1: 13 cheap minors |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | fix-1 | | 1 | Bundle with 1.6. A22, B15, C27 fixed |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
-| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | fix-1 | | 1 | Code review and UX audit (opus) both FIX: the dimmed Transfer Plan still works from the keyboard and now hits the wrong inserter after a delete; the 720 row wraps to 3 lines. B4 fixed |
+| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | merged | [#150](https://github.com/abucnasty/clock-generator/pull/150) | 1 | Round 0: code review and UX audit FIX (keyboard on the stale plan; 720 row). Round 1: both PASS. CI green |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
@@ -221,6 +221,7 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.6 → 2.4: "Only if the belt stands still" on non-moving clock rows (C7).
 - 1.7 → 1.4: a disabled Search deeper gives no reason.
 - 1.6 → 1.11: the unstable divider cell is a plain data cell, not a group header.
+- 1.9 → 2.9: check the inserter row at 900-1200px (the chip is now 72px).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
