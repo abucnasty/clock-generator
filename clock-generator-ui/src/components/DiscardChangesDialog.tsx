@@ -8,6 +8,9 @@ import {
 } from '@mui/material';
 import { useId, useRef } from 'react';
 
+/** A focus outline instead of the focus ripple, which would lower the text's contrast */
+const FOCUS_OUTLINE = { '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } };
+
 interface DiscardChangesDialogProps {
     open: boolean;
     /** The whole question, e.g. "Discard changes to Inserter 3's rule?" */
@@ -28,9 +31,9 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
             aria-labelledby={`${id}-title`}
             aria-describedby={`${id}-description`}
             slotProps={{
-                // the plain paper colour, as the entity dialog's: the dark theme's elevation overlay would leave the
-                // buttons' text below 4.5:1
-                paper: { sx: { bgcolor: 'background.paper' } },
+                // the plain paper colour, without the dark theme's elevation overlay (a background image), which
+                // lightens it to #474747 and leaves the buttons' text below 4.5:1
+                paper: { sx: { bgcolor: 'background.paper', backgroundImage: 'none' } },
                 // opened over another dialog, autoFocus alone loses the focus to the dialogs' focus traps
                 transition: { onEntered: () => keepEditingRef.current?.focus() },
             }}
@@ -42,18 +45,10 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                {/* no focus ripple: it is focused on opening, and the ripple would lower its text's contrast; an
-                    outline shows the focus instead */}
-                <Button
-                    ref={keepEditingRef}
-                    onClick={onKeepEditing}
-                    autoFocus
-                    disableFocusRipple
-                    sx={{ '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}
-                >
+                <Button ref={keepEditingRef} onClick={onKeepEditing} autoFocus disableFocusRipple sx={FOCUS_OUTLINE}>
                     Keep editing
                 </Button>
-                <Button onClick={onDiscard} color="error">
+                <Button onClick={onDiscard} color="error" disableFocusRipple sx={FOCUS_OUTLINE}>
                     Discard
                 </Button>
             </DialogActions>
