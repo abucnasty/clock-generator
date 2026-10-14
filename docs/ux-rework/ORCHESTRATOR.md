@@ -125,8 +125,7 @@ Pass `model` on every Agent call. The defaults are below. `PROGRESS.md` lists ea
 | Lookups, running checks, evidence runs with no script changes | `haiku` | Mechanical work |
 | Implementer, contained items (labels, palette, snackbars, copy, single-component changes) | `sonnet` | Small, well-specified changes |
 | Implementer, cross-cutting or design-heavy items (state across hooks, Validate into Generate, renumbering, Results restructure, Wake windows, reskin, the sidecar's Lua, Phase 3) | `opus` | Many files, real design decisions, easy to get subtly wrong |
-| Code reviewer, items implemented on `opus` | `fable` (Claude Fable 5.1) | The most capable model, used at the step where bugs get caught on the riskiest items. Only a few calls, so its slower, pricier turns cost little |
-| Code reviewer, items implemented on `sonnet` | `opus` | Never weaker than the implementer |
+| Code reviewer, every item | `opus` | Never weaker than the implementer (the owner, 2026-10-14) |
 | UX auditor | `opus`; `sonnet` for small items whose diff touches one screen | Judgment and screenshot reading |
 | Phase-end three-designer review | `opus` | The same setup as the original review, so the results compare like for like |
 
