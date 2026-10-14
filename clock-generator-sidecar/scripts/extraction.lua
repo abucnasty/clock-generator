@@ -306,6 +306,11 @@ local function extract_machine_data(entity)
         return nil, nil
     end
 
+    -- Labs share the production-machine subgroup but have no recipe: get_recipe raises an error on them
+    if entity.type ~= "assembling-machine" and entity.type ~= "furnace" then
+        return nil, nil
+    end
+
     -- Handle crafting machines (assemblers, furnaces, etc.)
     return extract_crafting_machine_data(entity), "machine"
 end

@@ -130,7 +130,8 @@ function helpers.get_recipe_or_previous(entity)
     -- Get recipe (fallback to previous_recipe for furnaces that may not have an active recipe)
     local recipe = entity.get_recipe()
 
-    if not recipe and entity.previous_recipe then
+    -- previous_recipe exists on furnaces only: reading it on any other entity raises an error
+    if not recipe and entity.type == "furnace" and entity.previous_recipe then
         -- previous_recipe returns RecipeIDAndQualityIDPair with .name (RecipeID union) and .quality
         recipe = helpers.resolve_recipe_id(entity.previous_recipe.name)
     end
