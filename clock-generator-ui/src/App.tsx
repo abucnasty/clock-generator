@@ -44,15 +44,15 @@ import { CheckErrorAlert } from './components/CheckErrorAlert';
 import { CheckPlanSection } from './components/CheckPlanSection';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
-import { CHECK_TEXT, afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate, type CheckOutcome } from './utils/checkThenGenerate';
-import { useAnnounce } from './hooks/useMessages';
+import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate } from './utils/checkThenGenerate';
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
+import { a11yThemeComponents } from './utils/a11yTheme';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 
-const darkTheme = createTheme({
+const baseTheme = createTheme({
     palette: {
         mode: 'dark',
         primary: {
@@ -88,6 +88,8 @@ const darkTheme = createTheme({
     },
     spacing: (factor: number) => factor * 7,
 });
+// the focus ring and other accessibility rules take their colours from the palette above
+const darkTheme = createTheme(baseTheme, { components: a11yThemeComponents(baseTheme) });
 
 
 function App() {
@@ -239,8 +241,8 @@ function App() {
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
     const note = barNoteOf({ problems, busy, checkStatus });
-
-    const announce = useAnnounce();
+    // who started the running or last check, for the announcements: Generate leads on by itself
+    const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
     // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
     const goToTarget = useCallback((target: FocusTarget) => {
@@ -295,6 +297,7 @@ function App() {
                 return;
             case 'check-first':
                 setCheckingFor('generate');
+                setCheckedForGenerate(true);
                 validate(config).then((outcome) => {
                     setCheckingFor(null);
                     const next = afterCheck(outcome);
@@ -308,34 +311,25 @@ function App() {
         }
     }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, goToTarget, goToCheckError, validate, setCheckingFor]);
 
-    // a check started by Check only or the Exclude chips says how it ended, without moving the focus; one started by
-    // Generate leads on instead, to the clocks or to the reason (the focus on it reads it out)
-    const announceCheck = useCallback((outcome: CheckOutcome) => {
-        if (outcome.kind === 'valid') {
-            announce(`${CHECK_TEXT.chipPassed}.`);
-        } else if (outcome.kind === 'invalid') {
-            announce(`${CHECK_TEXT.chipFailed}. The reason is at the top of Configure.`);
-        }
-    }, [announce]);
-
     // checks without moving the page: the result shows as the chip, the alert and the swing plan
     const handleCheckOnly = useCallback(() => {
         const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
         if (decision.kind === 'show-problems') {
             focusBarNote();
         } else if (decision.kind === 'check') {
-            validate(exportConfig()).then(announceCheck);
+            setCheckedForGenerate(false);
+            validate(exportConfig());
         }
-    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, validate, exportConfig, announceCheck]);
+    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, validate, exportConfig]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
     useEffect(() => {
         if (revalidateOnChangeRef.current) {
             revalidateOnChangeRef.current = false;
-            validate(exportConfig()).then(announceCheck);
+            validate(exportConfig());
         }
-    }, [exportConfig, validate, announceCheck]);
+    }, [exportConfig, validate]);
 
     const handleGenerate = useCallback(() => runChecked((config) => {
         runSimulation(config, debugSteps, streamLogs);
@@ -409,6 +403,7 @@ function App() {
         // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
         if (validation.status === 'valid' && checkStatus === 'valid') {
             revalidateOnChangeRef.current = true;
+            setCheckedForGenerate(false);
             updateIgnoredIngredients(items, validation.validation.transfer_plan);
         }
     }, [validation, checkStatus, updateIgnoredIngredients]);
@@ -444,7 +439,7 @@ function App() {
                 <AppBar position="sticky" ref={headerRef}>
                     <Toolbar>
                         <Icon sx={{ mr: 3 }}>
-                            <img src="/big_biter_q5_right.png" alt="Logo" style={{ width: 26, height: 26 }} />
+                            <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
                         </Icon>
                         <Typography variant="h6" component="div" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
@@ -468,11 +463,14 @@ function App() {
                             view={view}
                             onViewChange={setView}
                             isLoading={isRunning}
+                            generationFailed={error !== null}
                             progressStore={progressStore}
                             onGenerate={handleGenerate}
                             onCheckOnly={handleCheckOnly}
                             busy={busy}
                             checking={checking}
+                            checkStatus={checkStatus}
+                            checkedForGenerate={checkedForGenerate}
                             chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
                             blueprintString={blueprintString}
                             selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
@@ -487,7 +485,7 @@ function App() {
                     )}
                 </AppBar>
 
-                <Container maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
+                <Container component="main" maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
                     {startupError ? (
                         <Alert severity="error" sx={{ mb: 2 }}>
                             The page could not start: {startupError}. Reload the page to try again.

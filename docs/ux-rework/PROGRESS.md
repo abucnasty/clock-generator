@@ -62,15 +62,15 @@ come from here.
 |---|---|---|---|---|---|---|
 | [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | merged (p2) | [#154](https://github.com/abucnasty/clock-generator/pull/154) | 0 | Into `feat/ux-rework-p2`. CI green. **In-game check: passed** (owner, 2026-10-14: "looks good"). Code review opus PASS (Lua read line by line; checks re-run); UX audit sonnet FIX on the owner steps only (fixed by the orchestrator). A17, Q3 fixed; A2, A3 partly (site side is 2.1); B19 to 2.1. Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
-| [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
+| [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | review | | | On `feat/ux-rework-p2-generate-checks`: 428 tests; capture 782 PASS + sweep 63, 0 FAIL; check takes 13–20 ms. UX audit opus FIX (major: a mouse click on Check only with problems shows nothing — the note's ring is focus-visible only and the tooltip covers it); A12, B10 fixed. Code review running |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
-| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A impl | | | Two PRs. A (opus, `feat/ux-rework-p2-results-answer`) started with a capture writer; also takes 2.6's follow-ups (shared `announce()`, footer margin, nits) and, if 2.3 is in, the failed-check alert's raw engine text. Checkpoint: owner tries the install steps in game. B after A merges |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | merged (p2) | [#156](https://github.com/abucnasty/clock-generator/pull/156) | 1 | Code review opus PASS (window maths correct; checks re-run), UX audit opus PASS (C2 fixed for the new chart; old charts → 2.5/2.10); one minors round, re-checked. CI green. Follow-up PR: switch to `announce()`, drop `scrollMarginBottom` |
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
-| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | fix-1 | | 1 | On `feat/ux-rework-p2-diagram`. Code review opus: code sound, ESCALATE on the 720 fullscreen fit ("No minZoom"); UX audit opus ESCALATE: smaller text at the default fit, 720 doesn't fit. Orchestrator clarified its own note: lowering minZoom is allowed. B17 fixed; B16, C20 partly. Round 1: minZoom, a compact layout, React Flow's descriptions, the in/out twins, tab order. Keeps a white node focus ring (an intended exception to 1.11's orange ring) |
+| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
 
 **Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
 
@@ -308,6 +308,13 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.11 A → 2.7: a focused unselected toggle gets an orange ring; recheck against "orange = selection" in 2.7.
 - 2.11: a top-to-bottom layout when the canvas is taller than wide (phones); an edit that splits or unsplits a belt
   drops focus to `body` when the dialog closes.
+- 2.3 → later: the failed-check alert disappears on the first keystroke of the fix, so the player loses the capacity
+  figure while choosing the new rate (B23): keep the last reason, dimmed, "from the last check".
+- 2.3: at 390 the swing plan scrolls in its own box with the "Exclude from LCM" column off-screen and no sign it
+  scrolls; a right-edge fade or stack the chip on xs.
+- 2.3 → 2.7: two kinds of red chip share the bar slot ("2 problems" filled, "Check failed" outlined).
+- 2.11: inside the 2 s refit window the twin outline's className re-measures the node, so the view can refit twice;
+  facts that load after 2 s don't refit; Tab order sorts by left x not centre; the lane select cuts long item names.
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.

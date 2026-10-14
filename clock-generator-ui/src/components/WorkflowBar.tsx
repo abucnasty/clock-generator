@@ -1,11 +1,12 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNotify } from '../hooks/useMessages';
+import { useAnnounce, useNotify } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
-import { CHECK_TEXT } from '../utils/checkThenGenerate';
+import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
+import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
 import { GenerationProgressStatus } from './BlueprintOutput';
 import { StaleCopyDialog } from './StaleCopyDialog';
 
@@ -15,6 +16,8 @@ interface WorkflowBarProps {
     view: WorkflowView;
     onViewChange: (view: WorkflowView) => void;
     isLoading: boolean;
+    /** The last generation stopped on an error */
+    generationFailed: boolean;
     progressStore: GenerationProgressStore;
     /** Checks the build, then generates; or goes to what stops it */
     onGenerate: () => void;
@@ -24,6 +27,10 @@ interface WorkflowBarProps {
     busy: boolean;
     /** Which button's check is running, for its label; null when none is */
     checking: 'generate' | 'check-only' | null;
+    /** Where the check stands for the build as it is now, for the announcements */
+    checkStatus: CheckStatus;
+    /** The running or last check was started by Generate, which leads on to the clocks or to the reason it failed */
+    checkedForGenerate: boolean;
     /** The result of the last check for this build, as a chip; null when there is none to show */
     chip: { label: string; color: 'success' | 'error' } | null;
     /** Blueprint of the selected potential clock, once one is generated */
@@ -71,11 +78,14 @@ export function WorkflowBar({
     view,
     onViewChange,
     isLoading,
+    generationFailed,
     progressStore,
     onGenerate,
     onCheckOnly,
     busy,
     checking,
+    checkStatus,
+    checkedForGenerate,
     chip,
     blueprintString,
     selectedLabel,
@@ -90,9 +100,10 @@ export function WorkflowBar({
     const [copied, setCopied] = useState(false);
     const [confirmingOld, setConfirmingOld] = useState(false);
     const notify = useNotify();
+    const announce = useAnnounce();
     // Check only is off while its check runs, which takes the keyboard focus from it: it gets the focus back after
-    // (unless the player has put it somewhere since)
-    // only for a check this button started: one from the swing plan in Advanced leaves the focus to the plan
+    // (unless the player has put it somewhere since), only for a check this button started: one from the swing plan in
+    // Advanced leaves the focus to the plan
     const checkOnlyRef = useRef<HTMLButtonElement>(null);
     const pressedAtRef = useRef<number | null>(null);
     const startedHereRef = useRef(false);
@@ -118,6 +129,19 @@ export function WorkflowBar({
     const warns = rateWarning !== null || staleFor !== null;
     const filled = belowTarget && staleFor === null;
 
+    // what changed in the workflow is read out in the app's one announcements region (checking, generating)
+    const hasBlueprint = blueprintString !== null;
+    const lastSnapshot = useRef<WorkflowSnapshot | null>(null);
+    useEffect(() => {
+        const snapshot: WorkflowSnapshot = { checkStatus, checkedForGenerate, isLoading, failed: generationFailed, hasBlueprint, selectedLabel };
+        const previous = lastSnapshot.current;
+        lastSnapshot.current = snapshot;
+        const text = previous && workflowAnnouncement(previous, snapshot);
+        if (text) {
+            announce(text);
+        }
+    }, [checkStatus, checkedForGenerate, isLoading, generationFailed, hasBlueprint, selectedLabel, announce]);
+
     const copyBlueprint = useCallback(async () => {
         if (!blueprintString) {
             return;
@@ -126,13 +150,16 @@ export function WorkflowBar({
             await navigator.clipboard.writeText(blueprintString);
             setCopied(true);
             if (rateWarning !== null) {
+                // the warning's own alert says that it was copied
                 notify({ severity: 'warning', text: `Copied. ${rateWarning}` });
+            } else {
+                announce(ANNOUNCEMENTS.copied);
             }
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
         }
-    }, [blueprintString, rateWarning, notify]);
+    }, [blueprintString, rateWarning, notify, announce]);
 
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
@@ -196,8 +223,6 @@ export function WorkflowBar({
                             sx={{
                                 color: '#000',
                                 '&:hover, &.Mui-focusVisible': { bgcolor: 'error.light' },
-                                // until 1.11's focus ring: an outline on the bar, off the red
-                                '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
                             }}
                         />
                     )}
@@ -227,7 +252,7 @@ export function WorkflowBar({
                                 }}
                                 disabled={busy}
                                 aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
-                                startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" /> : undefined}
+                                startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
                                 {checking === 'check-only' ? CHECK_TEXT.checking : CHECK_TEXT.checkOnly}
                             </Button>
@@ -242,7 +267,7 @@ export function WorkflowBar({
                                 color="secondary"
                                 disabled={busy}
                                 aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
-                                startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" /> : undefined}
+                                startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
                                 {isLoading ? CHECK_TEXT.generating : checking === 'generate' ? CHECK_TEXT.checking : CHECK_TEXT.generate}
                             </Button>
