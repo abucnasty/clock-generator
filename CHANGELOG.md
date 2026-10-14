@@ -13,7 +13,7 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ### Changed
 - An imported config file is now checked. One whose structure is broken, or that is not a config, is refused with what is wrong with it. Something left to fix, such as an inserter end left unset after its machine, belt or chest was removed, or 0 items per second, still imports and is marked red in the form.
 - The browser tab says "Factorio Clock Generator".
-- The sidecar mod is at 0.7.0, and the generator asks for that version. An inserter that takes from or drops into something not in the JSON, such as an empty belt or chest, a lab or a machine outside the selection, is left out of the JSON. It used to point at machine, belt or chest 1, which is some other entity. The window with the JSON lists the inserters left out and why. A paste from 0.6.0 still imports, with a note that nothing in it is affected and that the mod can be updated to 0.7.0.
+- The sidecar mod is at 0.7.0, and the generator asks for that version. An inserter that takes from or drops into something not in the JSON, such as an empty belt or chest, a lab or a machine outside the selection, is left out of the JSON. It used to point at machine, belt or chest 1, which is some other entity. The window with the JSON lists the inserters left out and why. Selecting an assembling machine without a recipe, or a lab, no longer crashes the game. A paste from 0.6.0 still imports, with a note that nothing in it is affected and that the mod can be updated to 0.7.0.
 
 ### Fixed
 - Removing a machine, belt or chest unsets the inserter ends and drill targets at it. They kept its id, which pointed at no entity, or at the next one added.
