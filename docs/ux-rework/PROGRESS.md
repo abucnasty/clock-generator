@@ -40,10 +40,10 @@ come from here.
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
-| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | merging | | 2 | Code review opus PASS. UX audit opus FIX: focus hidden under the sticky header (2.4.11). A7, B25, C1 fixed. Round 1: scroll-padding, 720 action row, capture exit code |
-| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Bundle with 1.5 (1.5 first in the branch). Needs 1.8 merged (`serializeConfig`) |
+| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | merged | [#149](https://github.com/abucnasty/clock-generator/pull/149) | 2 | Code review opus PASS; UX audit FIX (focus under the header, 2.4.11) then PASS after round 1; a one-line minor in round 2. CI green |
+| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | impl | | | Bundle with 1.5 (1.5 first in the branch) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Bundle with 1.14 |
-| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | spec | | | Bundle with 1.3. After 1.2 (reads `--app-header-height`, replaces its stop-gap) |
+| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | impl | | | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`), started after 1.2 merged, with a capture writer |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | impl | | | Bundle with 1.7, alongside 1.2 |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | impl | | | Bundle with 1.6, alongside 1.2 |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
