@@ -243,7 +243,7 @@ const FACT_DESCRIPTIONS: Record<string, string> = {
     'Overload Multiplier': 'Overload multiplier value',
     'Productivity': 'Productivity bonus percentage',
     'Crafting Speed': 'Machine crafting speed multiplier',
-    'Type': 'Machine type (machine or furnace)',
+    'Type': 'Machine type (assembling machine, furnace or biochamber)',
     'Recipe': 'Recipe name',
 };
 
