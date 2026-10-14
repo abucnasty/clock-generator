@@ -73,7 +73,9 @@ export function DeeperSearchNotice({ kind, recommendedLabel, canSearchDeeper, on
                 </Button>
             ) : undefined}
         >
-            <Typography ref={messageRef} variant="body2" role="status" tabIndex={-1}>{message}</Typography>
+            {/* not a live region of its own: Search deeper puts the focus here, which reads it, and the app's one
+                announcements region says when the run starts and ends */}
+            <Typography ref={messageRef} variant="body2" tabIndex={-1}>{message}</Typography>
             {kind === 'offer' && (
                 <>
                     <FormControlLabel
