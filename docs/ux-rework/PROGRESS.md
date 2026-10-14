@@ -70,7 +70,7 @@ come from here.
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
-| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | impl | | | Started early on `feat/ux-rework-p2-diagram` (opus) with a capture writer, in the slot #155 freed. Takes the 1.10 node-line contrast and 1.13 diagram chip follow-ups |
+| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | fix-1 | | 1 | On `feat/ux-rework-p2-diagram`. Code review opus: code sound, ESCALATE on the 720 fullscreen fit ("No minZoom"); UX audit opus ESCALATE: smaller text at the default fit, 720 doesn't fit. Orchestrator clarified its own note: lowering minZoom is allowed. B17 fixed; B16, C20 partly. Round 1: minZoom, a compact layout, React Flow's descriptions, the in/out twins, tab order. Keeps a white node focus ring (an intended exception to 1.11's orange ring) |
 
 **Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
 
@@ -297,6 +297,12 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
   spot-check its 100 ms write delay with NVDA and JAWS (1.11).
 - 2.6: nits left: "Between its windows the inserter is off" (say "it"), Escape clears only a selection in the focused
   row, a missing space in `ID_PATTERN =/`.
+- 2.11 → 1.11: the Diagram's node focus ring is white, not the theme's orange (nodes use orange for border, hover and
+  selection); an intended exception. After 1.11 A merges, check no double ring on nodes.
+- 2.11 → 1.5: the untimed "Build imported. Undo" message sits over the fullscreen Diagram and can cover a node; close it
+  or anchor it below the dialog's title bar when fullscreen opens.
+- 2.11: a top-to-bottom layout when the canvas is taller than wide (phones); an edit that splits or unsplits a belt
+  drops focus to `body` when the dialog closes.
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.
