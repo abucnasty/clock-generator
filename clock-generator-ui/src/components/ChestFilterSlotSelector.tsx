@@ -1,6 +1,7 @@
 import { Add, Close } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover, TextField, Button } from '@mui/material';
 import { useRef, useState } from 'react';
+import { removeFilterName } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 
@@ -179,7 +180,7 @@ export function ChestFilterSlotSelector({
                     {filter.item_name && (
                         <IconButton
                             size="small"
-                            aria-label={`Remove filter ${slotIndex + 1}: ${filter.item_name}`}
+                            aria-label={removeFilterName(slotIndex + 1, filter.item_name)}
                             onClick={() => removeFilter(slotIndex)}
                             sx={{
                                 position: 'absolute',

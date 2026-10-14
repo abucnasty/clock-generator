@@ -1,6 +1,7 @@
 import { Add, Close } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover } from '@mui/material';
 import { useRef, useState } from 'react';
+import { removeFilterName } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 
@@ -165,7 +166,7 @@ export function FilterSlotSelector({
                         {displayFilter && (
                             <IconButton
                                 size="small"
-                                aria-label={`Remove filter ${slotIndex + 1}: ${displayFilter}`}
+                                aria-label={removeFilterName(slotIndex + 1, displayFilter)}
                                 onClick={() => removeFilter(slotIndex)}
                                 sx={{
                                     position: 'absolute',
