@@ -30,9 +30,9 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.1 | Never offer a stale blueprint | opus | impl | | | Spec final 2026-10-14 |
 | 1.2 | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
 | 1.3 | Undo snackbar for destructive actions | sonnet | spec | | | |
-| 1.4 | Disabled actions say what is missing | sonnet | spec | | | |
+| 1.4 | Disabled actions say what is missing | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2; not alongside 1.3, 1.5 |
 | 1.5 | Messages above the footer; quieter Ko-fi | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2 |
-| 1.6 | Make the clock pick explainable | opus | spec | | | |
+| 1.6 | Make the clock pick explainable | opus | spec | | | Spec final. After 1.1; not alongside 1.7, 1.10 |
 | 1.7 | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | 1.9 | One number per entity, everywhere | opus | spec | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
@@ -92,6 +92,8 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.13: after 1.8 and 1.13 both merge, update the "Configure Enable Control" selectors in `capture-expert-bugs.mjs`.
 - 1.13: the Diagram node chips (`InserterFlowNode.tsx`, `EntityFlowNode.tsx`, `InserterConfigPanel.tsx`) still show
   the raw mode, and B7's "Show only overridden" filter is not built. For 2.11.
+- 1.6: left to later items: B12's "Not picked because" column, B14's sorting and sticky tabs.
+- 1.4: all Recipe inputs are labelled just "Recipe", so a jump to one announces only that. For 1.11.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
