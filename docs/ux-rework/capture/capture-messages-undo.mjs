@@ -621,12 +621,17 @@ try {
             // the repeat: second click 4 s after the first; the message must still be on screen 7 s after the first click and 5 s after the second
             await dismissMessage(page);
             await scrollTo(page, 0);
+            // a message under the pointer waits (its timer pauses on hover): below 900px Export is a menu item, which the
+            // message can open over, so the pointer moves off after each click
+            const pointerOff = () => page.mouse.move(5, page.viewportSize().height - 5);
             await exportConfig(page);
             const t0 = Date.now();
+            await pointerOff();
             await waitMessage(page, /^Build exported\./);
             await sleepUntil(t0 + 4000);
             await exportConfig(page);
             const t1 = Date.now();
+            await pointerOff();
             await sleepUntil(t0 + 7000);
             rec.check('export twice: the message is still on screen 7 s after the first click (the first one alone would be gone at 6 s)', (await snack(page).count()) === 1, `${Date.now() - t0} ms after the first click`);
             await sleepUntil(t1 + 5000);
@@ -1244,8 +1249,10 @@ try {
                 await copy.click({ timeout: 6000 });
                 await waitMessage(page, /^Copied\./, 4000);
             });
-            // the hovered Copy button's tooltip (z-index 1500) draws over the message, as the 1.5 spec accepts; move off it
+            // the Copy button's tooltip (z-index 1500), shown while it is hovered or focused, draws over the message, as the
+            // 1.5 spec accepts; move off it and take focus off the button
             await page.mouse.move(5, page.viewportSize().height - 5);
+            await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
             await page.waitForTimeout(500);
             const msg = await checkMessage(page, rec, 'msg-copy-warning', { re: /^Copied\./, label: 'Copied. {warning}', desc: 'Copy blueprint for a below-target clock: "Copied. {rate warning}"', contrastOn: true });
             rec.check('Copied.: shown for a below-target clock', !!msg);
