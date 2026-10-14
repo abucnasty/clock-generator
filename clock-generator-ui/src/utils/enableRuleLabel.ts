@@ -11,18 +11,27 @@ export const ENABLE_CHIP_MAX_CHARS = 32;
 // Every word the chip, its tooltip and its accessible name use is here, so a glossary pass changes them in one place.
 const ENABLE_CHIP_PREFIX = 'Enable: ';
 const MODE_AUTO = 'Auto';
-const MODE_ALWAYS = 'Always';
-const MODE_NEVER = 'Never';
+const MODE_ALWAYS = 'Always on';
+const MODE_NEVER = 'Never on';
 const MODE_CLOCKED = 'Clocked';
 const MODE_CONDITIONAL = 'Conditional';
+
+/** What each mode of an enable rule is called on screen (never the stored AUTO, ALWAYS, ...), for every place that shows one */
+export const ENABLE_MODE_LABELS: Record<EnableControlMode, string> = {
+    [EnableControlMode.AUTO]: MODE_AUTO,
+    [EnableControlMode.ALWAYS]: MODE_ALWAYS,
+    [EnableControlMode.NEVER]: MODE_NEVER,
+    [EnableControlMode.CLOCKED]: MODE_CLOCKED,
+    [EnableControlMode.CONDITIONAL]: MODE_CONDITIONAL,
+};
 const RANGE_DASH = '–';
 const RANGE_SEPARATOR = ', ';
 const PERIOD_JOINER = ' of ';
 const TICKS_SUFFIX = ' ticks';
-const NO_RANGES = ', no ranges';
+const NO_RANGES = ', no wake windows';
 const MORE_RANGES = (count: number) => ` +${count} more`;
-const RULE_COUNT_JOINER = ': ';
-const RULE_COUNT = (count: number) => (count === 0 ? 'no rules' : `${count} ${count === 1 ? 'rule' : 'rules'}`);
+const CONDITION_COUNT_JOINER = ': ';
+const CONDITION_COUNT = (count: number) => (count === 0 ? 'no conditions' : `${count} ${count === 1 ? 'condition' : 'conditions'}`);
 const LATCHED = ', latched';
 const FORCED_ALWAYS_NOTE = ' (set by Exclude from LCM)';
 const ELLIPSIS = '…';
@@ -100,8 +109,10 @@ export function describeEnableRule(
             };
         }
         case EnableControlMode.CONDITIONAL: {
-            const text = `${MODE_CONDITIONAL}${RULE_COUNT_JOINER}${RULE_COUNT(countConditions(override.rule_set))}${override.latch ? LATCHED : ''}`;
-            return { mode, quiet, chip: cut(text), summary: text };
+            const counted = `${MODE_CONDITIONAL}${CONDITION_COUNT_JOINER}${CONDITION_COUNT(countConditions(override.rule_set))}`;
+            const text = `${counted}${override.latch ? LATCHED : ''}`;
+            // the latch goes from the chip, not the end of a word, when both do not fit; the summary keeps it
+            return { mode, quiet, chip: text.length <= ENABLE_CHIP_MAX_CHARS ? text : cut(counted), summary: text };
         }
         default:
             return named(MODE_AUTO);

@@ -471,11 +471,11 @@ function InsertersFormComponent({
 
             {inserters.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                    No inserters configured. Add at least one inserter to transfer items.
+                    No inserters configured. Add at least one inserter to move items.
                 </Typography>
             )}
 
-            {/* Enable Control Modal */}
+            {/* the enable rule modal */}
             <EnableControlModal
                 open={enableControlModalInserterIndex !== null}
                 onClose={() => setEnableControlModalInserterIndex(null)}

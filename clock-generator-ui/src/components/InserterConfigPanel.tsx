@@ -21,6 +21,7 @@ import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { entityLabel } from '../utils/entityLabel';
 import { inferInserterItems } from '../utils/inferInserterItems';
+import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
 import { changedConfigFields } from '../utils/inserterDraft';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
@@ -383,13 +384,13 @@ export function InserterConfigPanel({
                     aria-controls={`${id}-tabpanel-0`}
                 />
                 <Tab
-                    label={<TabLabel text="Overrides" unsaved={rule.changed} />}
+                    label={<TabLabel text="Enable rule" unsaved={rule.changed} />}
                     id={`${id}-tab-1`}
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
                     icon={
                         hasNonDefaultOverride
-                            ? <Chip label={overrideMode} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
+                            ? <Chip label={ENABLE_MODE_LABELS[overrideMode]} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
                             : undefined
                     }
                 />

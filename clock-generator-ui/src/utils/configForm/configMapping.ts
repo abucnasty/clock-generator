@@ -8,7 +8,7 @@ import type {
     LatchConfig,
 } from './formData';
 
-// Helper to convert imported enable control override to form data
+// Helper to convert imported enable rule to form data
 function mapEnableControlOverride(ec: {
     mode: string;
     ranges?: { start: number; end: number }[];
