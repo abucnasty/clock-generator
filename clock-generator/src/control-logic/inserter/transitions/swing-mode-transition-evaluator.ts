@@ -46,6 +46,10 @@ export class InserterSwingModeTransitionEvaluator implements ModeTransitionEvalu
         this.from = null;
     }
 
+    public stateKey(tick: number): string {
+        return `${this.entered_tick === null ? null : this.entered_tick - tick},${this.from?.status ?? null}`;
+    }
+
     public evaluateTransition(): ModeTransition<InserterMode> {
 
         if (this.entered_tick === null) {

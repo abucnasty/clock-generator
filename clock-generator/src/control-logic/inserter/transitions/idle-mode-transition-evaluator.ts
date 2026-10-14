@@ -47,6 +47,10 @@ export class IdleModeTransitionEvaluator implements ModeTransitionEvaluator<Inse
     /** Whether the inserter found its sink taking nothing it brings when it last looked, and has not acted since */
     private saw_sink_blocked: boolean = false;
 
+    public stateKey(): string {
+        return String(this.saw_sink_blocked);
+    }
+
     public evaluateTransition(): ModeTransition<InserterMode> {
 
         if (!this.enable_control.isEnabled()) {
