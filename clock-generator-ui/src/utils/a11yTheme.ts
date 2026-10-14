@@ -27,6 +27,13 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
         // an accordion's title keeps the ring outside: some have no side padding, where a ring inside would touch the text
         MuiTab: { styleOverrides: { root: insetRing } },
         MuiMenuItem: { styleOverrides: { root: insetRing } },
+        MuiTypography: {
+            defaultProps: {
+                // MUI makes a subtitle an h6, which would put every small label ("Latched Mode") in the page's outline.
+                // The two that are headings of a card say so themselves. The other variants keep MUI's mapping
+                variantMapping: { subtitle1: 'p', subtitle2: 'p' },
+            },
+        },
         MuiAlert: {
             styleOverrides: {
                 root: {
