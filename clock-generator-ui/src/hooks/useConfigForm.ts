@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Config, InserterCoverageIssue, InserterFixOption, SerializableTransferPlan } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
+import type {
+    Condition,
+    Config,
+    EnableControlOverrideConfig,
+    EnableControlRange,
+    InserterCoverageIssue,
+    InserterFixOption,
+    RuleSet,
+    SerializableTransferPlan,
+    ValueReference,
+} from 'clock-generator/browser';
+import { ChestType, ConfigSchema } from 'clock-generator/browser';
 
 const STORAGE_KEY = 'clock-generator-config';
 
@@ -17,48 +27,10 @@ export interface MachineFormData {
     energy_consumption_bonus?: number;
 }
 
-// Enable control override types
-export interface EnableControlRange {
-    start: number;
-    end: number;
-}
-
-export type EntityReference = 'SOURCE' | 'SINK';
-export type ComparisonOperator = '>' | '<' | '>=' | '<=' | '==' | '!=';
-export type RuleOperator = 'AND' | 'OR';
-
-export type ValueReference =
-    | { type: 'CONSTANT'; value: number }
-    | { type: 'INVENTORY_ITEM'; entity: EntityReference; item_name: string }
-    | { type: 'AUTOMATED_INSERTION_LIMIT'; entity: EntityReference; item_name: string }
-    | { type: 'OUTPUT_BLOCK'; entity: EntityReference }
-    | { type: 'CRAFTING_PROGRESS'; entity: EntityReference }
-    | { type: 'BONUS_PROGRESS'; entity: EntityReference }
-    | { type: 'HAND_QUANTITY'; item_name?: string }
-    | { type: 'MACHINE_STATUS'; entity: EntityReference; status: 'INGREDIENT_SHORTAGE' | 'WORKING' | 'OUTPUT_FULL' | 'NO_FUEL' }
-    | { type: 'INSERTER_STACK_SIZE' };
-
-export interface Condition {
-    left: ValueReference;
-    operator: ComparisonOperator;
-    right: ValueReference;
-}
-
-export interface RuleSet {
-    operator: RuleOperator;
-    rules: (Condition | RuleSet)[];
-}
-
-export interface LatchConfig {
-    release: RuleSet;
-}
-
-export type EnableControlOverride =
-    | { mode: 'AUTO' }
-    | { mode: 'ALWAYS' }
-    | { mode: 'NEVER' }
-    | { mode: 'CLOCKED'; ranges: EnableControlRange[]; period_duration_ticks?: number }
-    | { mode: 'CONDITIONAL'; rule_set: RuleSet; latch?: LatchConfig };
+// Enable control override types come from the engine's config schema
+export type { Condition, EnableControlRange, RuleSet, ValueReference };
+export type EnableControlOverride = EnableControlOverrideConfig;
+type LatchConfig = NonNullable<Extract<EnableControlOverride, { mode: 'CONDITIONAL' }>['latch']>;
 
 export interface InserterOverrides {
     animation?: {
@@ -242,7 +214,7 @@ function migrateInserters(inserters: unknown[]): InserterFormData[] {
 }
 
 /** Migrate legacy chest data to include type field */
-function migrateChests(chests: unknown[]): ChestFormData[] {
+export function migrateChests(chests: unknown[]): ChestFormData[] {
     return chests.map((chest: unknown) => {
         const c = chest as { type?: string; id: number; _uuid?: string; storage_size?: number; item_filter?: string | InfinityFilterFormData[] };
         const uuid = c._uuid ?? crypto.randomUUID();
@@ -288,7 +260,12 @@ function loadConfigFromStorage(): ConfigFormData {
                     parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                         d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
                 }
-                return parsed as ConfigFormData;
+                const result = ConfigSchema.safeParse(parsed);
+                // The form can hold values the generator rejects (e.g. 0 items per second); only reject a broken structure
+                if (result.success || result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big')) {
+                    return parsed as ConfigFormData;
+                }
+                console.warn('Saved config in localStorage is invalid, using defaults:', result.error);
             }
         }
     } catch (e) {

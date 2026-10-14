@@ -2,14 +2,27 @@ import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons
 import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
-import { checkSidecarImport, Option, MachineConfigurationSchema, MiningDrillConfigSchema, InserterConfigSchema, BeltConfigSchema, ChestConfigSchema } from 'clock-generator/browser';
+import { checkSidecarImport, Option, parseConfigFromObject, MachineConfigurationSchema, MiningDrillConfigSchema, InserterConfigSchema, BeltConfigSchema, ChestConfigSchema } from 'clock-generator/browser';
 import type { z } from 'zod';
+import { migrateChests } from '../hooks/useConfigForm';
 
 type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 type MiningDrillConfiguration = z.infer<typeof MiningDrillConfigSchema>;
 type InserterConfiguration = z.infer<typeof InserterConfigSchema>;
 type BeltConfiguration = z.infer<typeof BeltConfigSchema>;
 type ChestConfiguration = z.infer<typeof ChestConfigSchema>;
+
+/** Validate each entry of a pasted list, throwing on the first one the schema rejects */
+function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: string): T[] {
+    if (!Array.isArray(entries)) return [];
+    return entries.map((entry, i) => {
+        const result = schema.safeParse(entry);
+        if (!result.success) {
+            throw new Error(`Invalid ${label} at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
+        }
+        return result.data;
+    });
+}
 
 interface PendingImport {
     machines: MachineConfiguration[];
@@ -105,7 +118,12 @@ export function ConfigImportExport({
             try {
                 const content = await file.text();
                 
-                const parsedConfig = JSON.parse(content) as Config;
+                const parsed = JSON.parse(content);
+                // Files from before chest types have chests without a type
+                if (Array.isArray(parsed?.chests)) {
+                    parsed.chests = migrateChests(parsed.chests);
+                }
+                const parsedConfig = parseConfigFromObject(parsed);
 
                 onImport(parsedConfig);
                 setSnackbar({
@@ -174,69 +192,19 @@ export function ConfigImportExport({
                 }
 
                 // Validate machines (IDs are already assigned by the mod)
-                const validatedMachines: MachineConfiguration[] = [];
-                if (Array.isArray(data.machines)) {
-                    for (let i = 0; i < data.machines.length; i++) {
-                        const entry = data.machines[i];
-                        const result = MachineConfigurationSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid machine at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedMachines.push(result.data);
-                    }
-                }
+                const validatedMachines = validateEntries(MachineConfigurationSchema, data.machines, 'machine');
 
                 // Validate drills (IDs are already assigned by the mod)
-                const validatedDrills: MiningDrillConfiguration[] = [];
-                if (Array.isArray(drillConfigs)) {
-                    for (let i = 0; i < drillConfigs.length; i++) {
-                        const entry = drillConfigs[i];
-                        const result = MiningDrillConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid drill at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedDrills.push(result.data);
-                    }
-                }
+                const validatedDrills = validateEntries(MiningDrillConfigSchema, drillConfigs, 'drill');
 
                 // Validate inserters
-                const validatedInserters: InserterConfiguration[] = [];
-                if (Array.isArray(data.inserters)) {
-                    for (let i = 0; i < data.inserters.length; i++) {
-                        const entry = data.inserters[i];
-                        const result = InserterConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid inserter at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedInserters.push(result.data);
-                    }
-                }
+                const validatedInserters = validateEntries(InserterConfigSchema, data.inserters, 'inserter');
 
                 // Validate belts
-                const validatedBelts: BeltConfiguration[] = [];
-                if (Array.isArray(data.belts)) {
-                    for (let i = 0; i < data.belts.length; i++) {
-                        const entry = data.belts[i];
-                        const result = BeltConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid belt at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedBelts.push(result.data);
-                    }
-                }
+                const validatedBelts = validateEntries(BeltConfigSchema, data.belts, 'belt');
 
                 // Validate chests
-                const validatedChests: ChestConfiguration[] = [];
-                if (Array.isArray(data.chests)) {
-                    for (let i = 0; i < data.chests.length; i++) {
-                        const entry = data.chests[i];
-                        const result = ChestConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid chest at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedChests.push(result.data);
-                    }
-                }
+                const validatedChests = validateEntries(ChestConfigSchema, data.chests, 'chest');
 
                 // Store pending import and show confirmation modal
                 setPendingImport({
@@ -269,16 +237,7 @@ export function ConfigImportExport({
             }
 
             // Validate each machine entry (IDs are already assigned by the mod)
-            const validatedMachines: MachineConfiguration[] = [];
-            
-            for (let i = 0; i < parsed.length; i++) {
-                const entry = parsed[i];
-                const result = MachineConfigurationSchema.safeParse(entry);
-                if (!result.success) {
-                    throw new Error(`Invalid machine at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                }
-                validatedMachines.push(result.data);
-            }
+            const validatedMachines = validateEntries(MachineConfigurationSchema, parsed, 'machine');
 
             // Store pending import and show confirmation modal (legacy format - machines only)
             setPendingImport({
