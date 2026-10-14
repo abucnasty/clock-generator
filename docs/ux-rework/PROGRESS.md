@@ -37,7 +37,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | 1.9 | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8 and 1.13. Id question answered 2026-10-14 |
 | 1.10 | Readable numbers and units | opus | spec | | | Spec final; moved up (10 files). Next free slot (no file in common with 1.1, 1.8, 1.13) |
-| 1.11 | Accessibility basics | sonnet | spec | | | |
+| 1.11 | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | 1.12 | Glossary and copy pass | sonnet | blocked | | | Part A (copy fixes) spec final, after 1.8. Part B waits for glossary approval |
 | 1.13 | Enable mode shown on the row | sonnet | impl | | | Third slot, alongside 1.1 and 1.8. Wire the forced-ALWAYS note after 1.8 merges |
 | 1.14 | Warning colour apart from the brand orange | opus | spec | | | Spec final; moved up (7 files). After 1.1 and 1.2; not alongside 1.4, 1.5 |
@@ -108,6 +108,9 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.9 → 1.3: whichever of the two merges second adds "the ones after it were renumbered" to a delete's Undo message.
 - 1.12: `OverridesForm.tsx:80` says "per output inserter" for Force Output Swings, while the note and
   `validate-config.ts` sum over the output machine's inserters.
+- 1.11 → 3.2: WCAG 2.5.7, the List's drag reorder needs a single-pointer alternative (e.g. Move up/down).
+- 1.11 → Phase 2 retro: WCAG 1.4.10 Reflow at 320px conflicts with the owner's Widths decision.
+- 1.11: the out-of-date plan's `opacity: 0.45` plus `pointer-events: none` (C21); hover-only override help (1.12).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
