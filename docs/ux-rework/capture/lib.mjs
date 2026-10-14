@@ -39,7 +39,7 @@ export const LOGISTIC = sample('science/logistic-science/logistic-science.json')
 /**
  * The build whose generation finishes fastest: use it where the build's size does not matter (a dialog, a header, a
  * chip, a colour). Timed once against `vite preview` on 2026-10-14, in the page, from the click on Generate to "Generating..."
- * gone (Validate takes 20 to 40 ms for every one of them):
+ * gone (the check, Check only, takes 20 to 40 ms for every one of them):
  *   science/logistic-science/logistic-science-sample.json                0.22 s  <- SMALL_SAMPLE (1.0 KB, the smallest)
  *   science/logistic-science/logistic-science-shared-inserter.json       0.22 s
  *   science/logistic-science/logistic-science.json (LOGISTIC)             0.23 s
@@ -389,12 +389,12 @@ export async function forWidths(widths, fn, { out, base = DEFAULT_BASE, goto = t
 
 // ------------------------------------------------------------------------------------------------------ app actions
 
-/** Imports a config through the hidden file input of the app bar, and waits until the Validate button is usable */
+/** Imports a config through the hidden file input of the app bar, and waits until the Check only button is usable */
 export async function importFile(page, path) {
     await page.setInputFiles('input[type=file]', path);
     await page.waitForTimeout(400);
     await page
-        .waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^validate/i.test(b.textContent ?? '') && !b.disabled), null, { timeout: 5000 })
+        .waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^check only/i.test(b.textContent ?? '') && !b.disabled), null, { timeout: 5000 })
         .catch(() => {});
     await page.waitForTimeout(300);
 }
@@ -440,39 +440,48 @@ function buttonLabelGone(page, label, timeout) {
     );
 }
 
-/** The status chip of the workflow bar ("Valid", "Invalid", "Changed since validation"), or '' */
-const validationChip = (page) =>
-    page.evaluate(() => [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '');
+/** The check's chip in the workflow bar ("Check passed", "Check failed"), or '' */
+const checkChip = (page) =>
+    page.evaluate(() => [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Check passed|Check failed)$/.test(t)) ?? '');
 
-/** Clicks Validate and waits until validating has finished (the status chip changed, or the busy label came and went) */
+/**
+ * Clicks "Check only" (the check without a generation, which used to be Validate) and waits until checking has finished
+ * (the chip changed, or the busy label "Checking..." came and went)
+ */
 export async function validate(page, { timeout = 120_000 } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
-    const before = await validationChip(page);
-    await page.getByRole('button', { name: 'Validate', exact: true }).first().click();
-    // A fast run may skip the busy label: then the chip changes, or (validating again) nothing does; give that 1 s.
+    const before = await checkChip(page);
+    await page.getByRole('button', { name: 'Check only', exact: true }).first().click();
+    // A fast run may skip the busy label: then the chip changes, or (checking again) nothing does; give that 1 s.
     await page
         .waitForFunction(
             ([text, chip]) => {
                 const busy = [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text));
-                const now = [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '';
+                const now = [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Check passed|Check failed)$/.test(t)) ?? '';
                 return busy || now !== chip;
             },
-            ['Validating...', before],
+            ['Checking...', before],
             { timeout: 1000 },
         )
         .catch(() => {});
-    await buttonLabelGone(page, 'Validating...', timeout);
+    await buttonLabelGone(page, 'Checking...', timeout);
     await page.waitForTimeout(300);
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
-/** Clicks Generate (which opens the Results tab) and waits until generating has finished */
+/**
+ * Clicks Generate and waits until generating has finished. Generate checks the build first when it has no passed check
+ * ("Checking..."), then generates ("Generating...", on the Results tab); it waits until neither label shows. A build with
+ * a problem or a failed check goes to Configure instead, and nothing is generated.
+ */
 export async function generate(page, { timeout = GEN_TIMEOUT } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole('button', { name: 'Generate', exact: true }).click();
-    await page
-        .waitForFunction((text) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text)), 'Generating...', { timeout: 5000 })
-        .catch(() => {}); // a fast run may skip the busy label
+    const busyLabel = (text) => page.waitForFunction((t) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(t)), text, { timeout: 5000 });
+    await Promise.any([busyLabel('Checking...'), busyLabel('Generating...')]).catch(() => {}); // a fast run may skip both
+    await buttonLabelGone(page, 'Checking...', timeout);
+    // after a check that passed, the generation follows at once
+    await busyLabel('Generating...').catch(() => {});
     await buttonLabelGone(page, 'Generating...', timeout);
     await page.waitForTimeout(500);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -481,7 +490,7 @@ export async function generate(page, { timeout = GEN_TIMEOUT } = {}) {
 /**
  * Shoots the state while a generation is running, without waiting for it to end: clicks Generate, waits until the
  * progress bar is on screen, shoots `name`, then reloads the page (which drops the run). The page is left on a fresh load
- * with the imported build restored by the app; validate again before generating again.
+ * with the imported build restored by the app (and no check: Generate checks it again first).
  *
  * Needs a run that lasts longer than the shot (about 0.1 s; CPU throttling slows the shot as much as the run, so it
  * does not help). The small samples finish in 0.25 s, too fast: import `SLOW_SAMPLE` (2.6 s) for this state. If
@@ -500,7 +509,7 @@ export async function captureInFlight(page, rec, name, { desc = '', fullPage = f
             () =>
                 new Promise((resolve, reject) => {
                     const button = [...document.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === 'Generate');
-                    if (!button || button.disabled) return reject(new Error('the Generate button is missing or disabled (validate first)'));
+                    if (!button || button.disabled) return reject(new Error('the Generate button is missing or disabled (something is running)'));
                     const barShown = () => [...document.querySelectorAll('.MuiLinearProgress-root')].some((bar) => bar.getBoundingClientRect().width > 0);
                     const timer = setTimeout(() => reject(new Error('no progress bar within 10 s of clicking Generate')), 10_000);
                     const observer = new MutationObserver(() => {
@@ -1116,4 +1125,90 @@ export async function checkFocusNotObscured(rec, page, label = '', { strict = fa
 export async function checkInertFromKeyboard(rec, page, locator, label) {
     const r = await inertFromKeyboardReport(page, locator);
     return rec.check(`inert from the keyboard ${label}`, r.inert, r.reason);
+}
+
+/**
+ * Records a check that `text` is announced by the page's live content: it appears in the accessibility tree
+ * (`page.locator('body').ariaSnapshot()`, which leaves out `aria-hidden` subtrees) inside an element with role status, log or
+ * alert, or with `aria-live` polite or assertive, and that element has no `aria-hidden="true"` ancestor (or itself) in the DOM.
+ * Polls for about 1.5 s, since a live region fills after the event. `text` is a string (whitespace and case ignored) or a RegExp.
+ * Returns whether it passed. The detail lists where the text was found, or which live regions exist and what they say.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {string | RegExp} text
+ * @param {string} [label]  how the check is named (default: the text)
+ */
+export async function checkAnnounced(rec, page, text, label = '') {
+    const source = text instanceof RegExp ? text.source : text.replace(/\s+/g, ' ').trim();
+    const flags = text instanceof RegExp ? text.flags : 'i';
+    const deadline = Date.now() + 1500;
+    let last = null;
+    for (;;) {
+        last = await announcedOnce(page, source, flags, text instanceof RegExp);
+        if (last.pass || Date.now() > deadline) break;
+        await page.waitForTimeout(100);
+    }
+    return rec.check(`announced ${label || JSON.stringify(String(text))}`, last.pass, last.detail);
+}
+
+async function announcedOnce(page, source, flags, isRegex) {
+    const re = isRegex ? new RegExp(source, flags) : null;
+    const norm = (t) => t.replace(/\s+/g, ' ').trim();
+    const matches = (t) => (re ? re.test(t) : norm(t).toLowerCase().includes(source.toLowerCase()));
+    // The DOM: live elements that hold the text, and whether anything above them is aria-hidden
+    const dom = await page.evaluate(
+        ({ src, fl, regex }) => {
+            const re = regex ? new RegExp(src, fl) : null;
+            const clean = (t) => t.replace(/\s+/g, ' ').trim();
+            const has = (t) => (re ? re.test(t) : clean(t).toLowerCase().includes(src.toLowerCase()));
+            const live = [...document.querySelectorAll('[role=status], [role=log], [role=alert], [aria-live=polite], [aria-live=assertive]')];
+            const all = live.map((el) => {
+                const hiddenBy = el.closest('[aria-hidden="true"]');
+                const role = el.getAttribute('role') ?? '';
+                return {
+                    role,
+                    ariaLive: el.getAttribute('aria-live') ?? '',
+                    text: clean(el.textContent ?? '').slice(0, 80),
+                    holds: has(el.textContent ?? ''),
+                    hidden: Boolean(hiddenBy),
+                    inert: Boolean(el.closest('[inert]')),
+                    off: el.getAttribute('aria-live') === 'off',
+                };
+            });
+            return all;
+        },
+        { src: source, fl: flags, regex: isRegex },
+    );
+    const holding = dom.filter((d) => d.holds);
+    const usable = holding.filter((d) => !d.hidden && !d.inert && !d.off);
+    const snapshot = await page.locator('body').ariaSnapshot();
+    // Roles that show in the snapshot: take the indented block under each `- status|log|alert` line
+    const lines = snapshot.split('\n');
+    const blocks = [];
+    lines.forEach((line, i) => {
+        const m = line.match(/^(\s*)- (status|log|alert)\b(.*)$/);
+        if (!m) return;
+        const indent = m[1].length;
+        let block = m[3];
+        for (let j = i + 1; j < lines.length; j++) {
+            const next = lines[j];
+            const ind = next.match(/^(\s*)/)[1].length;
+            if (next.trim() !== '' && ind <= indent) break;
+            block += ' ' + next;
+        }
+        blocks.push(block);
+    });
+    const inRoleBlock = blocks.some(matches);
+    const inTree = matches(snapshot);
+    const roleUsable = usable.some((d) => ['status', 'log', 'alert'].includes(d.role));
+    // A role=status/log/alert element must show the text in its own block of the tree; a bare aria-live element is not a node of its own,
+    // so the text has to be somewhere in the tree
+    const pass = usable.length > 0 && (roleUsable ? inRoleBlock : inTree);
+    const describe = (d) => `${d.role ? `[role=${d.role}]` : ''}${d.ariaLive ? `[aria-live=${d.ariaLive}]` : ''} "${d.text}"${d.hidden ? ' (aria-hidden ancestor)' : ''}${d.inert ? ' (inert)' : ''}${d.off ? ' (aria-live=off)' : ''}`;
+    let detail;
+    if (pass) detail = `in ${describe(usable.find((d) => ['status', 'log', 'alert'].includes(d.role)) ?? usable[0])}`;
+    else if (holding.length && usable.length === 0) detail = `held only by hidden live content: ${holding.map(describe).slice(0, 3).join('; ')}`;
+    else if (usable.length) detail = `a live element holds it but the accessibility tree does not show it there (${usable.map(describe).slice(0, 2).join('; ')})`;
+    else detail = `no live element holds it; ${dom.length} live element${dom.length === 1 ? '' : 's'} on the page${dom.length ? `: ${dom.slice(0, 4).map(describe).join('; ')}` : ''}`;
+    return { pass, detail };
 }
