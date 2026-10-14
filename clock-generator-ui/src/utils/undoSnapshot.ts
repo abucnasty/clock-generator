@@ -1,6 +1,7 @@
 import { ChestType } from 'clock-generator/light';
 import * as edits from './configForm/edits';
 import { isInfinityChest, type ConfigFormData, type EntityKind } from './configForm/formData';
+import { entityLabel, type LabelKind } from './entityLabel';
 
 // Every text of the Undo messages, so that the copy changes in one place
 export const UNDO_DURATION_MS = 10_000;
@@ -15,12 +16,13 @@ export const UNDO_KEY_HINT = { mac: 'Or press Cmd+Z to undo.', other: 'Or press 
 /** The same keys, for the Undo button's `aria-keyshortcuts` */
 export const UNDO_KEY_SHORTCUTS = 'Control+Z Meta+Z';
 
-const KIND_NAMES: Record<EntityKind, { one: string; many: string }> = {
-    machines: { one: 'Machine', many: 'Machines' },
-    inserters: { one: 'Inserter', many: 'Inserters' },
-    belts: { one: 'Belt', many: 'Belts' },
-    chests: { one: 'Chest', many: 'Chests' },
-    drills: { one: 'Drill', many: 'Drills' },
+/** One of a kind, for `entityLabel`, and the kind's name for several ("Inserters 3–5 are now 2–4") */
+const KINDS: Record<EntityKind, { one: LabelKind; many: string }> = {
+    machines: { one: 'machine', many: 'Machines' },
+    inserters: { one: 'inserter', many: 'Inserters' },
+    belts: { one: 'belt', many: 'Belts' },
+    chests: { one: 'chest', many: 'Chests' },
+    drills: { one: 'drill', many: 'Drills' },
 };
 
 const CHEST_TYPE_NAMES: Record<ChestType, string> = {
@@ -101,15 +103,15 @@ export function describeRemoval(before: ConfigFormData, after: ConfigFormData, k
     if (!removed) {
         return null;
     }
-    const names = KIND_NAMES[kind];
-    const sentences = [`Deleted ${names.one} ${removed.id}.`];
+    const names = KINDS[kind];
+    const sentences = [`Deleted ${entityLabel(names.one, removed.id)}.`];
 
     const newIds = new Map(itemsOf(after, kind).map((item) => [item._uuid, item.id]));
     const moved = itemsOf(before, kind).filter((item) => newIds.has(item._uuid) && newIds.get(item._uuid) !== item.id);
     if (moved.length > 0) {
         const from = idList(moved.map((item) => item.id));
         const to = idList(moved.map((item) => newIds.get(item._uuid)!));
-        sentences.push(moved.length === 1 ? `${names.one} ${from} is now ${to}.` : `${names.many} ${from} are now ${to}.`);
+        sentences.push(moved.length === 1 ? `${entityLabel(names.one, moved[0].id)} is now ${to}.` : `${names.many} ${from} are now ${to}.`);
     }
 
     // the links of the same inserter or drill that had a target before and have none after
@@ -155,7 +157,7 @@ export function describeChestSwitch(form: ConfigFormData, index: number, newType
         return null;
     }
     const type = isInfinityChest(chest) ? ChestType.INFINITY_CHEST : ChestType.BUFFER_CHEST;
-    return type === newType ? null : `Chest ${chest.id} changed to ${CHEST_TYPE_NAMES[newType]}.`;
+    return type === newType ? null : `${entityLabel('chest', chest.id)} changed to ${CHEST_TYPE_NAMES[newType]}.`;
 }
 
 /** Null when the drills are already off */

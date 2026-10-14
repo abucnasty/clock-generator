@@ -299,6 +299,14 @@ describe('the messages', () => {
         expect(describeRemoval(before, edits.removeInserter(before, 2), 'inserters', 2)).toBe('Deleted Inserter 3.');
     });
 
+    it('say what the delete itself renumbered and unlinked', () => {
+        expect(removalMessage(form(), 'inserters', 0)).toBe('Deleted Inserter 1. Inserters 2–3 are now 1–2.');
+        expect(removalMessage(form(), 'belts', 0)).toBe('Deleted Belt 1. 1 inserter end no longer has a target.');
+        expect(removalMessage(form(), 'machines', 0))
+            .toBe('Deleted Machine 1. Machines 2–3 are now 1–2. 1 inserter end and 1 drill no longer have a target.');
+        expect(removalMessage(form(), 'drills', 0)).toBe('Deleted Drill 1. Drill 2 is now 1.');
+    });
+
     it('say which links were cleared', () => {
         expect(removalMessage(form(), 'machines', 2)).toBe('Deleted Machine 3. 2 inserter ends and 1 drill no longer have a target.');
         expect(removalMessage(form(), 'chests', 1)).toBe('Deleted Chest 2. 1 inserter end no longer has a target.');
