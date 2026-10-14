@@ -32,7 +32,6 @@ export function EnableRuleChip({ override, entityLabel, entityType, forcedAlways
                         borderColor: 'grey.500',
                         '&:hover': { borderColor: 'text.primary' },
                     }),
-                    '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
                 }}
             />
         </Tooltip>
