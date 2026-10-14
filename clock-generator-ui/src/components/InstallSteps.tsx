@@ -70,8 +70,9 @@ function WiringList({ wiring }: { wiring: number[][] }) {
             }}
             data-wiring-list
         >
-            <Table size="small" stickyHeader={scrolls}>
-                <Typography component="caption" variant="body2" sx={{ captionSide: 'top', textAlign: 'left', px: 1, py: 0.5, color: 'text.secondary' }}>
+            {/* MUI puts a table's caption at the bottom; this one titles the list, so it goes on top */}
+            <Table size="small" stickyHeader={scrolls} sx={{ '& caption': { captionSide: 'top' } }}>
+                <Typography component="caption" variant="body2" sx={{ textAlign: 'left', px: 1, py: 0.5, color: 'text.secondary' }}>
                     {INSTALL_COPY.wiringCaption}
                 </Typography>
                 <TableHead>
@@ -117,7 +118,7 @@ export function InstallSteps({ install, hasDrills, stale }: InstallStepsProps) {
         >
             <AccordionSummary expandIcon={<ExpandMoreIcon />} id={summaryId} aria-controls={detailsId}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1.5 }}>
-                    <Typography component="span" variant="subtitle1" sx={{ fontWeight: 600 }}>{INSTALL_COPY.heading}</Typography>
+                    <Typography component="span" variant="subtitle1" sx={{ fontWeight: 600 }}>{INSTALL_COPY.heading}</Typography>{' '}
                     <Typography component="span" variant="body2" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
                 </Box>
             </AccordionSummary>

@@ -127,7 +127,7 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
     });
 
     return (
-        <Paper variant="outlined" sx={{ p: 2 }} data-wake-view>
+        <Paper variant="outlined" component="section" aria-labelledby={headingId} sx={{ p: 2 }} data-wake-view>
             <Typography id={headingId} component={headingLevel} variant="h6">{VIEW_HEADING}</Typography>
             <Typography variant="body2" color="text.secondary">{VIEW_INTRO}</Typography>
             <Typography variant="body2" sx={{ mt: 1 }} data-wake-summary>{summary}</Typography>

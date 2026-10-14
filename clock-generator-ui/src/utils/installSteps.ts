@@ -63,7 +63,7 @@ export const INSTALL_COPY = {
         detail: 'Open the inserter, find Circuit network connection, choose Enable/disable, and set the condition to '
             + 'Anything > 0. The combinator puts out one of the inserter\'s item only while the clock is in a wake '
             + 'window, so the inserter works only then.',
-        drills: ' A combinator described as "Drill 1 for …" switches that mining drill on: wire it and set it the same way.',
+        drills: ' A mining drill is wired and set the same way. Its combinator is described as "Drill 1 for …".',
     },
     others: {
         title: 'Leave the other inserters alone.',
