@@ -33,13 +33,13 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.4 | Disabled actions say what is missing | sonnet | spec | | | |
 | 1.5 | Messages above the footer; quieter Ko-fi | sonnet | spec | | | |
 | 1.6 | Make the clock pick explainable | opus | spec | | | |
-| 1.7 | "Search deeper" button | sonnet | spec | | | |
+| 1.7 | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | 1.9 | One number per entity, everywhere | opus | spec | | | Id question answered 2026-10-14: renumber on delete, drop `next_ids` |
 | 1.10 | Readable numbers and units | sonnet | spec | | | |
 | 1.11 | Accessibility basics | sonnet | spec | | | |
 | 1.12 | Glossary and copy pass | sonnet | spec | | | Checkpoint: glossary approval |
-| 1.13 | Enable mode shown on the row | sonnet | spec | | | |
+| 1.13 | Enable mode shown on the row | sonnet | impl | | | Third slot, alongside 1.1 and 1.8. Wire the forced-ALWAYS note after 1.8 merges |
 | 1.14 | Warning colour apart from the brand orange | sonnet | spec | | | |
 
 ## Phase 2: newcomer-first structure
@@ -87,6 +87,11 @@ None. (1.9's id question was answered on 2026-10-14; see the decisions log.)
 ## Follow-ups
 
 Minor and nit findings, and anything noticed outside an item's scope.
+
+- 1.13: after 1.8 and 1.13 both merge, update the "Configure Enable Control" selectors in `capture-expert-bugs.mjs`.
+- 1.13: the Diagram node chips (`InserterFlowNode.tsx`, `EntityFlowNode.tsx`, `InserterConfigPanel.tsx`) still show
+  the raw mode, and B7's "Show only overridden" filter is not built. For 2.11.
+- 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
 
