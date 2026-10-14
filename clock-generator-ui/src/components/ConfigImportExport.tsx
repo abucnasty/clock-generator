@@ -1,9 +1,10 @@
 import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons-material';
-import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
+import { useNotify } from '../hooks/useMessages';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -56,11 +57,7 @@ export function ConfigImportExport({
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 900px the app bar has room for the title and the menu only: Import and Export move into the menu
     const narrow = useMediaQuery(useTheme().breakpoints.down('md'));
-    const [snackbar, setSnackbar] = useState<{
-        open: boolean;
-        message: string;
-        severity: 'success' | 'error';
-    }>({ open: false, message: '', severity: 'success' });
+    const notify = useNotify();
 
     // State for the hamburger menu
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -89,12 +86,8 @@ export function ConfigImportExport({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        setSnackbar({
-            open: true,
-            message: 'Configuration exported successfully!',
-            severity: 'success',
-        });
-    }, [config]);
+        notify({ severity: 'success', text: 'Configuration exported successfully!' });
+    }, [config, notify]);
 
     const handleImportClick = useCallback(() => {
         fileInputRef.current?.click();
@@ -112,29 +105,17 @@ export function ConfigImportExport({
 
                 onImport(parsedConfig);
                 onBuildReplaced();
-                setSnackbar({
-                    open: true,
-                    message: 'Configuration imported successfully!',
-                    severity: 'success',
-                });
+                notify({ severity: 'success', text: 'Configuration imported successfully!' });
             } catch (error) {
                 console.error('Import error:', error);
-                setSnackbar({
-                    open: true,
-                    message: `Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    severity: 'error',
-                });
+                notify({ severity: 'error', text: `Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}` });
             }
 
             // Reset the input so the same file can be imported again
             event.target.value = '';
         },
-        [onImport, onBuildReplaced]
+        [onImport, onBuildReplaced, notify]
     );
-
-    const handleSnackbarClose = useCallback(() => {
-        setSnackbar((prev) => ({ ...prev, open: false }));
-    }, []);
 
     const handlePasteFromFactorio = useCallback(async () => {
         try {
@@ -232,13 +213,9 @@ export function ConfigImportExport({
             });
         } catch (error) {
             console.error('Paste from Factorio error:', error);
-            setSnackbar({
-                open: true,
-                message: `Failed to paste: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                severity: 'error',
-            });
+            notify({ severity: 'error', text: `Failed to paste: ${error instanceof Error ? error.message : 'Unknown error'}` });
         }
-    }, []);
+    }, [notify]);
 
     const handleConfirmImport = useCallback(() => {
         if (!pendingImport) return;
@@ -274,19 +251,12 @@ export function ConfigImportExport({
 
         if (parts.length > 0) {
             onBuildReplaced();
-            setSnackbar({
-                open: true,
-                message: `Imported ${parts.join(', ')} from Factorio!`,
-                severity: 'success',
-            });
+            notify({ severity: 'success', text: `Imported ${parts.join(', ')} from Factorio!` });
         } else {
-            setSnackbar({
-                open: true,
-                message: 'No items selected for import.',
-                severity: 'error',
-            });
+            // not a failure: nothing was ticked
+            notify({ severity: 'warning', text: 'No items selected for import.' });
         }
-    }, [pendingImport, importSelections, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced]);
+    }, [pendingImport, importSelections, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, notify]);
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);
@@ -414,17 +384,6 @@ export function ConfigImportExport({
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
             />
-
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={4000}
-                onClose={handleSnackbarClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
 
             {/* Import Confirmation Dialog */}
             <Dialog open={pendingImport !== null} onClose={handleCancelImport} maxWidth="sm" fullWidth>

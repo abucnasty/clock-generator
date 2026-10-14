@@ -36,6 +36,7 @@ import { ConfigImportExport } from './components/ConfigImportExport';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
+import { MessageHost } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
@@ -523,14 +524,14 @@ function App() {
                 <Box
                     component="footer"
                     sx={{
-                        position: 'sticky',
-                        bottom: 0,
-                        zIndex: (theme) => theme.zIndex.appBar,
                         py: 1,
+                        px: 2,
                         display: 'flex',
+                        flexWrap: 'wrap',
                         justifyContent: 'center',
                         alignItems: 'center',
                         gap: 1.5,
+                        rowGap: 0.5,
                         bgcolor: 'background.paper',
                         borderTop: 1,
                         borderColor: 'divider',
@@ -551,11 +552,12 @@ function App() {
                         href="https://ko-fi.com/J6D4284EZ5"
                         target="_blank"
                         rel="noopener noreferrer"
-                        variant="contained"
+                        variant="outlined"
+                        color="inherit"
                         size="small"
                         startIcon={<LocalCafe />}
                         title="Support me on ko-fi.com"
-                        sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 1 }}
+                        sx={{ textTransform: 'none', borderRadius: 1 }}
                     >
                         Support me on Ko-fi
                     </Button>
@@ -602,6 +604,8 @@ function App() {
                     )}
                 </Box>
             </Dialog>
+
+            <MessageHost />
         </ThemeProvider>
     );
 }

@@ -1,6 +1,7 @@
 import { Check, ContentCopy } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, CircularProgress, Portal, Snackbar, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
+import { useNotify } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { STALE_COPY_LABEL, STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { GenerationProgressStatus } from './BlueprintOutput';
@@ -55,8 +56,8 @@ export function WorkflowBar({
     staleFor,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
-    const [warned, setWarned] = useState(false);
     const [confirmingOld, setConfirmingOld] = useState(false);
+    const notify = useNotify();
 
     const copyBlueprint = useCallback(async () => {
         if (!blueprintString) {
@@ -65,12 +66,14 @@ export function WorkflowBar({
         try {
             await navigator.clipboard.writeText(blueprintString);
             setCopied(true);
-            setWarned(rateWarning !== null);
+            if (rateWarning !== null) {
+                notify({ severity: 'warning', text: `Copied. ${rateWarning}` });
+            }
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
         }
-    }, [blueprintString, rateWarning]);
+    }, [blueprintString, rateWarning, notify]);
 
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
@@ -107,19 +110,6 @@ export function WorkflowBar({
                                     {copied ? 'Copied' : staleFor ? STALE_COPY_LABEL : 'Copy blueprint'}
                                 </Button>
                             </Tooltip>
-                            {/* stop-gap until 1.5's shared message host: in a portal, to be drawn above the app bar this bar is part of, at the bottom to stay off the header */}
-                            <Portal>
-                                <Snackbar
-                                    open={warned && rateWarning !== null}
-                                    autoHideDuration={10000}
-                                    onClose={() => setWarned(false)}
-                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                                >
-                                    <Alert severity="warning" variant="filled" onClose={() => setWarned(false)}>
-                                        Copied. {rateWarning}
-                                    </Alert>
-                                </Snackbar>
-                            </Portal>
                             {staleFor && (
                                 <StaleCopyDialog
                                     open={confirmingOld && staleFor !== null}
