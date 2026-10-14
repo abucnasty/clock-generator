@@ -10,6 +10,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
+import type { ReactNode } from 'react';
 
 interface OverridesFormProps {
     lcm?: number;
@@ -18,6 +19,8 @@ interface OverridesFormProps {
     nonMovingBelts?: boolean;
     searchForFewerWakeUps?: boolean;
     onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'non_moving_belts' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
+    /** The swing plan of the last check, under the fields */
+    planSlot?: ReactNode;
 }
 
 export function OverridesForm({
@@ -27,6 +30,7 @@ export function OverridesForm({
     nonMovingBelts,
     searchForFewerWakeUps,
     onUpdate,
+    planSlot,
 }: OverridesFormProps) {
     return (
         <Accordion>
@@ -57,7 +61,7 @@ export function OverridesForm({
                         slotProps={{ htmlInput: { min: 1 } }}
                         sx={{ width: 200 }}
                         size="small"
-                        helperText="Override the calculated LCM"
+                        helperText="Override the calculated LCM. The swing plan below shows the calculated value."
                     />
                     <Tooltip
                         title="Uses exactly this many output swings per crafting cycle for every potential clock, even if the result is unstable. Leave empty to let the generator pick the count, lower it until the output is stable, and offer other counts as potential clocks."
@@ -147,6 +151,7 @@ export function OverridesForm({
                         />
                     </Tooltip>
                 </Box>
+                {planSlot && <Box sx={{ mt: 2 }}>{planSlot}</Box>}
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
                     Note: If the final output machine has more than one inserter, the output swings you force are divided equally between them.
                 </Typography>

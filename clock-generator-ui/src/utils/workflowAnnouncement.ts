@@ -1,9 +1,10 @@
+import type { CheckStatus } from './checkThenGenerate';
+
 /** What a screen reader is told as the workflow moves on; one place for the glossary pass (1.12) */
 export const ANNOUNCEMENTS = {
-    checking: 'Checking the configuration.',
-    valid: 'The configuration is valid.',
-    invalid: 'The configuration is not valid.',
-    outOfDate: 'The configuration changed since it was checked.',
+    checking: 'Checking the build.',
+    passed: 'Check passed.',
+    failed: 'Check failed. The reason is at the top of Configure.',
     generating: 'Generating clocks.',
     finished: (selectedLabel: string) => `Finished generating. Selected clock: ${selectedLabel}.`,
     finishedNoLabel: 'Finished generating.',
@@ -13,7 +14,12 @@ export const ANNOUNCEMENTS = {
 
 /** The parts of the workflow bar's state that are announced when they change */
 export interface WorkflowSnapshot {
-    validationStatus: 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
+    checkStatus: CheckStatus;
+    /**
+     * The running or last check was started by Generate. Generate leads on by itself: to "Generating clocks.", or to the
+     * reason it failed, which it moves the focus to (and the focus reads)
+     */
+    checkedForGenerate: boolean;
     isLoading: boolean;
     /** The run stopped on an error; clocks that arrived before it may still be on screen */
     failed: boolean;
@@ -26,8 +32,9 @@ export interface WorkflowSnapshot {
 
 /**
  * The one message a change of the workflow's state is announced with, or null when it is not news. Generation is looked
- * at before validation, and at most one message comes from a change. Progress is not announced: the progress bar has a
- * name and a value, and one message per step would interrupt the player dozens of times.
+ * at before the check, and at most one message comes from a change. Progress is not announced: the progress bar has a
+ * name and a value, and one message per step would interrupt the player dozens of times. An edit that makes a check out
+ * of date is not announced either: every edit would say it, and Generate checks again by itself.
  */
 export function workflowAnnouncement(prev: WorkflowSnapshot, next: WorkflowSnapshot): string | null {
     if (!prev.isLoading && next.isLoading) {
@@ -46,19 +53,22 @@ export function workflowAnnouncement(prev: WorkflowSnapshot, next: WorkflowSnaps
     if (!next.isLoading && prev.hasBlueprint && next.hasBlueprint && otherClock && next.selectedLabel) {
         return ANNOUNCEMENTS.showing(next.selectedLabel);
     }
-    if (prev.validationStatus === next.validationStatus) {
+    if (prev.checkStatus === next.checkStatus || next.checkedForGenerate) {
         return null;
     }
-    switch (next.validationStatus) {
-        case 'running':
-            return ANNOUNCEMENTS.checking;
+    if (next.checkStatus === 'running') {
+        return ANNOUNCEMENTS.checking;
+    }
+    // only the end of a check is news: putting an edit back also makes the last check current again
+    if (prev.checkStatus !== 'running') {
+        return null;
+    }
+    switch (next.checkStatus) {
         case 'valid':
-            return ANNOUNCEMENTS.valid;
+            return ANNOUNCEMENTS.passed;
         case 'invalid':
-            return ANNOUNCEMENTS.invalid;
-        case 'out-of-date':
-            return ANNOUNCEMENTS.outOfDate;
-        case 'none':
+            return ANNOUNCEMENTS.failed;
+        default:
             return null;
     }
 }

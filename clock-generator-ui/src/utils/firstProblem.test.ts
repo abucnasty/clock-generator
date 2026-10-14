@@ -5,7 +5,7 @@ import { updateTargetOutput } from './configForm/edits';
 import {
     ELEMENT_IDS,
     PROBLEM_TEXT,
-    blockedActionsOf,
+    barNoteOf,
     coverageIssueElementId,
     firstProblemOf,
     focusIdOf,
@@ -128,38 +128,30 @@ describe('problemsOf', () => {
     });
 });
 
-describe('blockedActionsOf', () => {
+describe('barNoteOf', () => {
     const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
-    const base = { problems: [] as Problem[], coverageChecked: true, isRunning: false, validationStatus: 'valid' as const };
+    const rateProblem: Problem = { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } };
+    const failed: Problem = { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } };
 
-    it('says nothing while a generation runs, whatever else is wrong', () => {
-        expect(blockedActionsOf({ ...base, problems: [recipeProblem], coverageChecked: false, isRunning: true, validationStatus: 'invalid' }))
-            .toEqual({ validate: null, generate: null });
+    it('says nothing while something runs, whatever else is wrong', () => {
+        expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'invalid' })).toBeNull();
+        expect(barNoteOf({ problems: [], busy: true, checkStatus: 'invalid' })).toBeNull();
     });
 
-    it('gives the first problem to both buttons, ahead of the validation status', () => {
-        for (const validationStatus of ['none', 'running', 'valid', 'invalid', 'out-of-date'] as const) {
-            expect(blockedActionsOf({ ...base, problems: [recipeProblem], validationStatus }))
-                .toEqual({ validate: recipeProblem, generate: recipeProblem });
+    it('gives the first problem with its target, ahead of a failed check', () => {
+        expect(barNoteOf({ problems: [recipeProblem, rateProblem], busy: false, checkStatus: 'none' })).toEqual(recipeProblem);
+        expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
+    });
+
+    it('points at the reason for a failed check when the build has no problem', () => {
+        expect(barNoteOf({ problems: [], busy: false, checkStatus: 'invalid' })).toEqual(failed);
+        expect(PROBLEM_TEXT.validationFailed).toBe('The last check failed. Show why');
+    });
+
+    it('says nothing for any other check status', () => {
+        for (const checkStatus of ['none', 'valid', 'out-of-date', 'running'] as const) {
+            expect(barNoteOf({ problems: [], busy: false, checkStatus })).toBeNull();
         }
-    });
-
-    it('waits for the coverage check, unless a problem is already known', () => {
-        const checking = { text: 'Checking the build…', target: null };
-        expect(blockedActionsOf({ ...base, coverageChecked: false })).toEqual({ validate: checking, generate: checking });
-        expect(blockedActionsOf({ ...base, problems: [recipeProblem], coverageChecked: false }))
-            .toEqual({ validate: recipeProblem, generate: recipeProblem });
-    });
-
-    it('asks for the Validate step before Generate', () => {
-        expect(blockedActionsOf({ ...base, validationStatus: 'none' }))
-            .toEqual({ validate: null, generate: { text: 'Validate the build first', target: null } });
-        expect(blockedActionsOf({ ...base, validationStatus: 'out-of-date' }))
-            .toEqual({ validate: null, generate: { text: 'The build changed since the last check. Validate again', target: null } });
-        expect(blockedActionsOf({ ...base, validationStatus: 'invalid' }))
-            .toEqual({ validate: null, generate: { text: 'The last check failed. See Validation for why', target: { kind: 'validation-error' } } });
-        expect(blockedActionsOf({ ...base, validationStatus: 'valid' })).toEqual({ validate: null, generate: null });
-        expect(blockedActionsOf({ ...base, validationStatus: 'running' })).toEqual({ validate: null, generate: null });
     });
 });
 
