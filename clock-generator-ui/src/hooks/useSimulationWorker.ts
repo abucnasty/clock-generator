@@ -5,13 +5,14 @@ import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-genera
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
 import type { GeneratedFor } from '../utils/resultsStaleness';
+import { PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
 import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
 import { planGenerationRun } from '../utils/deeperSearch';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
 /**
- * Where the Validate step stands. `config` is the config the result or error is for, so the page can tell when
+ * Where the check stands. `config` is the config the result or error is for, so the page can tell when
  * the user has changed something since.
  */
 export type ValidationState =
@@ -61,8 +62,11 @@ interface UseSimulationWorkerResult {
      */
     searchedDeeper: boolean;
     validation: ValidationState;
-    /** Checks the config and plans its transfers in a worker, without generating a clock */
-    validate: (config: Config) => void;
+    /**
+     * Checks the config and plans its transfers in a worker, without generating a clock. Resolves when the check ends;
+     * `dropped` when Import, Paste, Reset or a newer check replaced it. Never rejects
+     */
+    validate: (config: Config) => Promise<CheckOutcome>;
     error: string | null;
     initialize: () => void;
     /** Generates clocks for `config`; `searchDeeper` runs the slower searches this once, without changing what is recorded */
@@ -70,7 +74,7 @@ interface UseSimulationWorkerResult {
     /** What the last Generate was for; null when nothing is generated */
     generatedFor: GeneratedFor | null;
     /**
-     * Drops the clocks, the log, the Validate result and any generation still running, for when the build is
+     * Drops the clocks, the log, the check's result and any generation still running, for when the build is
      * replaced as a whole (Import, Paste, Reset). Answers still on their way for the dropped work are ignored.
      */
     clearResults: () => void;
@@ -167,6 +171,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [validation, setValidation] = useState<ValidationState>({ status: 'none' });
     // the latest validate request; answers to earlier ones are dropped
     const validationRef = useRef<{ requestId: number; config: Config } | null>(null);
+    // the promises of the checks still waiting for an answer
+    const [pendingChecks] = useState(() => new PendingChecks());
+    // whether a check is waiting for its answer, for a worker crash to end it
+    const checkRunningRef = useRef(false);
 
     const terminateWorkers = useCallback(() => {
         workersRef.current.forEach(worker => worker.terminate());
@@ -236,9 +244,13 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         if (response.type === 'validated' || response.type === 'validation-failed') {
             const requested = validationRef.current;
             if (requested && requested.requestId === response.requestId) {
+                checkRunningRef.current = false;
                 setValidation(response.type === 'validated'
                     ? { status: 'valid', config: requested.config, validation: response.validation }
                     : { status: 'invalid', config: requested.config, message: response.message });
+                pendingChecks.settle(response.requestId, response.type === 'validated'
+                    ? { kind: 'valid', validation: response.validation }
+                    : { kind: 'invalid', message: response.message });
             }
             return;
         }
@@ -293,7 +305,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 setIsRunning(false);
                 break;
         }
-    }, [dispatchTasks, progressStore, publishAlternatives, reportProgress]);
+    }, [dispatchTasks, pendingChecks, progressStore, publishAlternatives, reportProgress]);
 
     const initialize = useCallback(async () => {
         try {
@@ -314,6 +326,15 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                     handleResponse(worker, response);
                 };
                 worker.onerror = (event) => {
+                    // a check waiting for its answer on this worker ends as failed, so Generate and the alert do not
+                    // wait forever
+                    const check = validationRef.current;
+                    if (started && checkRunningRef.current && check && worker === workersRef.current[0]) {
+                        const message = event.message || 'The check stopped unexpectedly';
+                        checkRunningRef.current = false;
+                        setValidation({ status: 'invalid', config: check.config, message });
+                        pendingChecks.settle(check.requestId, { kind: 'invalid', message });
+                    }
                     // once started, a crash only matters to a generation still on screen; one dropped by Import,
                     // Paste or Reset must not put an error over the empty Results
                     if (started && !generationRef.current) {
@@ -343,7 +364,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             console.error('Failed to initialize:', err);
             setError(err instanceof Error ? err.message : 'Failed to initialize');
         }
-    }, [handleResponse, progressStore, terminateWorkers]);
+    }, [handleResponse, pendingChecks, progressStore, terminateWorkers]);
 
     const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper = false) => {
         const worker = workersRef.current[0];
@@ -376,17 +397,20 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         worker.postMessage({ type: 'plan', runId, config: engineConfig, debugSteps, streamLogs } satisfies WorkerRequest);
     }, [progressStore]);
 
-    const validate = useCallback((config: Config) => {
+    const validate = useCallback((config: Config): Promise<CheckOutcome> => {
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
-            return;
+            return Promise.resolve({ kind: 'dropped' });
         }
         const requestId = (validationRef.current?.requestId ?? 0) + 1;
         validationRef.current = { requestId, config };
+        checkRunningRef.current = true;
+        const outcome = pendingChecks.begin(requestId);
         setValidation({ status: 'running', config });
         worker.postMessage({ type: 'validate', requestId, config } satisfies WorkerRequest);
-    }, []);
+        return outcome;
+    }, [pendingChecks]);
 
     const clearResults = useCallback(() => {
         // the running generation's later answers no longer match it, so they are ignored
@@ -404,13 +428,16 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setLogs([]);
         setGeneratedFor(null);
         setValidation({ status: 'none' });
-        // a Validate answer still on its way matches no request; the next request gets a new id
+        // a check answer still on its way matches no request; the next request gets a new id
         validationRef.current = validationRef.current && { ...validationRef.current, requestId: validationRef.current.requestId + 1 };
+        checkRunningRef.current = false;
+        // a Generate waiting on a check does not start after the build was replaced
+        pendingChecks.dropAll();
         // until the workers are ready, the error is one that stopped them starting, and stays
         if (isInitialized) {
             setError(null);
         }
-    }, [progressStore, isInitialized]);
+    }, [pendingChecks, progressStore, isInitialized]);
 
     const selectAlternative = useCallback((index: number) => {
         userSelectionRef.current = alternatives[index]?.id ?? null;

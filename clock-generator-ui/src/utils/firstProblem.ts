@@ -1,9 +1,10 @@
 import type { InserterCoverageIssue } from 'clock-generator/browser';
+import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
 
 /**
- * Every sentence that says why Validate or Generate is off. The tooltips, the reason in the workflow bar, the problem
- * chip and the Validation panel's note all read from here, so the words are changed in one place.
+ * Every sentence that says what stops the build being clocked, and so where Generate goes. The tooltips, the note in the
+ * workflow bar and the problem chip all read from here, so the words are changed in one place.
  */
 export const PROBLEM_TEXT = {
     noRecipe: 'Set the recipe in Target Output',
@@ -13,10 +14,7 @@ export const PROBLEM_TEXT = {
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter bringing in ${item}`,
     missingOutput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter taking ${item} out`,
-    checking: 'Checking the build…',
-    needsValidation: 'Validate the build first',
-    validationOutOfDate: 'The build changed since the last check. Validate again',
-    validationFailed: 'The last check failed. See Validation for why',
+    validationFailed: 'The last check failed. Show why',
 } as const;
 
 /** The ids of the elements a problem moves the keyboard focus to; the forms set them from here */
@@ -25,8 +23,9 @@ export const ELEMENT_IDS = {
     targetRate: 'target-items-per-second',
     targetCopies: 'target-copies',
     addMachine: 'add-machine',
+    /** The alert at the top of Configure with the reason the last check failed */
     validationError: 'validation-error',
-    /** The reason in the workflow bar, which describes the disabled Validate and Generate buttons */
+    /** The note in the workflow bar, which describes Generate and Check only */
     blockReason: 'workflow-block-reason',
 } as const;
 
@@ -52,7 +51,7 @@ export type FocusTarget =
     | { kind: 'coverage-issue'; issue: CoverageIssueKey }
     | { kind: 'validation-error' };
 
-/** Something that keeps the build from being validated or generated, or the next step before Generate; and where to go for it */
+/** Something that keeps the build from being clocked, or the reason the last check failed; and where to go for it */
 export interface Problem {
     text: string;
     /** Null for a next step that has nowhere to go */
@@ -107,40 +106,25 @@ export function firstProblemOf(input: ProblemsInput): Problem | null {
     return problemsOf(input)[0] ?? null;
 }
 
-type ValidationStatus = 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
-
 /**
- * Why each of Validate and Generate is off, or null when it is on or says on its own label what it is doing. The
- * build's problems come first; with none, Generate waits for the coverage check and then for a valid, up-to-date
- * Validate step.
+ * The one note in the workflow bar, which says where Generate and Check only go: the first problem, else the reason the
+ * last check failed. Null while something runs (the buttons then say what it is) or when there is nothing to say.
  */
-export function blockedActionsOf({ problems, coverageChecked, isRunning, validationStatus }: {
+export function barNoteOf({ problems, busy, checkStatus }: {
     problems: Problem[];
-    coverageChecked: boolean;
-    isRunning: boolean;
-    validationStatus: ValidationStatus;
-}): { validate: Problem | null; generate: Problem | null } {
-    if (isRunning) {
-        return { validate: null, generate: null };
+    busy: boolean;
+    checkStatus: CheckStatus;
+}): Problem | null {
+    if (busy) {
+        return null;
     }
     if (problems.length > 0) {
-        return { validate: problems[0], generate: problems[0] };
+        return problems[0];
     }
-    if (!coverageChecked) {
-        const checking = { text: PROBLEM_TEXT.checking, target: null };
-        return { validate: checking, generate: checking };
+    if (checkStatus === 'invalid') {
+        return { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } };
     }
-    switch (validationStatus) {
-        case 'running':
-        case 'valid':
-            return { validate: null, generate: null };
-        case 'none':
-            return { validate: null, generate: { text: PROBLEM_TEXT.needsValidation, target: null } };
-        case 'out-of-date':
-            return { validate: null, generate: { text: PROBLEM_TEXT.validationOutOfDate, target: null } };
-        case 'invalid':
-            return { validate: null, generate: { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } } };
-    }
+    return null;
 }
 
 /** "1 problem", "3 problems" */
@@ -184,5 +168,18 @@ export function focusProblemTarget(target: FocusTarget): boolean {
     }
     element.focus({ preventScroll: true });
     element.scrollIntoView({ block: 'center' });
+    return true;
+}
+
+/**
+ * Moves the keyboard focus to the note in the workflow bar, without scrolling: the bar is sticky, so it is in view
+ * already. False when there is no note.
+ */
+export function focusBarNote(): boolean {
+    const element = document.getElementById(ELEMENT_IDS.blockReason);
+    if (!element) {
+        return false;
+    }
+    element.focus({ preventScroll: true });
     return true;
 }

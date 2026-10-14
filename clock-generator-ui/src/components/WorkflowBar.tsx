@@ -1,8 +1,9 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNotify } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { CHECK_TEXT } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { GenerationProgressStatus } from './BlueprintOutput';
@@ -10,24 +11,21 @@ import { StaleCopyDialog } from './StaleCopyDialog';
 
 export type WorkflowView = 'configure' | 'results';
 
-// a warning is filled and has the warning icon, so it is not taken for the outlined orange buttons beside it
-const VALIDATION_CHIP = {
-    'valid': { label: 'Valid', color: 'success', variant: 'outlined', warns: false },
-    'invalid': { label: 'Invalid', color: 'error', variant: 'outlined', warns: false },
-    'out-of-date': { label: 'Changed since validation', color: 'warning', variant: 'filled', warns: true },
-} as const;
-
 interface WorkflowBarProps {
     view: WorkflowView;
     onViewChange: (view: WorkflowView) => void;
     isLoading: boolean;
     progressStore: GenerationProgressStore;
+    /** Checks the build, then generates; or goes to what stops it */
     onGenerate: () => void;
-    generateDisabled: boolean;
-    onValidate: () => void;
-    validateDisabled: boolean;
-    /** Where the Validate step stands for the config as it is now */
-    validationStatus: 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
+    /** Checks the build without generating and without moving the page */
+    onCheckOnly: () => void;
+    /** A check or a generation is running: both buttons are off */
+    busy: boolean;
+    /** Which button's check is running, for its label; null when none is */
+    checking: 'generate' | 'check-only' | null;
+    /** The result of the last check for this build, as a chip; null when there is none to show */
+    chip: { label: string; color: 'success' | 'error' } | null;
     /** Blueprint of the selected potential clock, once one is generated */
     blueprintString: string | null;
     /** Name of the selected potential clock */
@@ -40,10 +38,10 @@ interface WorkflowBarProps {
     belowTarget: boolean;
     /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
-    /** What keeps the build from being validated and generated, first to fix first; empty when nothing does */
+    /** What keeps the build from being clocked, first to fix first; empty when nothing does */
     problems: Problem[];
-    /** Why each of Validate and Generate is off; null when it is on or says on its own label what it is doing */
-    blocked: { validate: Problem | null; generate: Problem | null };
+    /** Where Generate and Check only go instead of checking, said under them; null when they check */
+    note: Problem | null;
     /** Shows and focuses where a problem is fixed */
     onGoToProblem: (problem: Problem) => void;
 }
@@ -67,7 +65,7 @@ function CopyLabel({ label }: { label: string }) {
 
 /**
  * The second row of the app bar, so it stays in view with it: switches between configuring the build and its results,
- * and keeps the steps of the workflow (validate, generate, copy the blueprint) one click away from either.
+ * and keeps the steps of the workflow (check, generate, copy the blueprint) one click away from either.
  */
 export function WorkflowBar({
     view,
@@ -75,10 +73,10 @@ export function WorkflowBar({
     isLoading,
     progressStore,
     onGenerate,
-    generateDisabled,
-    onValidate,
-    validateDisabled,
-    validationStatus,
+    onCheckOnly,
+    busy,
+    checking,
+    chip,
     blueprintString,
     selectedLabel,
     rateWarning,
@@ -86,12 +84,24 @@ export function WorkflowBar({
     belowTarget,
     staleFor,
     problems,
-    blocked,
+    note,
     onGoToProblem,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
     const [confirmingOld, setConfirmingOld] = useState(false);
     const notify = useNotify();
+    // Check only is off while its check runs, which takes the keyboard focus from it: it gets the focus back after
+    // (unless the player has put it somewhere since)
+    const checkOnlyRef = useRef<HTMLButtonElement>(null);
+    const checkingRef = useRef(checking);
+    useEffect(() => {
+        const was = checkingRef.current;
+        checkingRef.current = checking;
+        const focused = document.activeElement;
+        if (was === 'check-only' && checking === null && (focused === null || focused === document.body)) {
+            checkOnlyRef.current?.focus({ preventScroll: true });
+        }
+    }, [checking]);
     // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
     // since a filled button invites the click, and the copy of an old clock is the one to think twice about
     const warns = rateWarning !== null || staleFor !== null;
@@ -180,57 +190,53 @@ export function WorkflowBar({
                             }}
                         />
                     )}
-                    {validationStatus !== 'none' && validationStatus !== 'running' && (
-                        <Chip
-                            size="small"
-                            variant={VALIDATION_CHIP[validationStatus].variant}
-                            label={VALIDATION_CHIP[validationStatus].label}
-                            color={VALIDATION_CHIP[validationStatus].color}
-                            icon={VALIDATION_CHIP[validationStatus].warns ? <Warning /> : undefined}
-                        />
+                    {chip && (
+                        <Chip size="small" variant="outlined" label={chip.label} color={chip.color} />
                     )}
-                    {/* the reason is also the text under the buttons, which describes them for the keyboard and screen readers */}
-                    <Tooltip title={blocked.validate?.text ?? ''} arrow describeChild>
+                    {/* the note under the buttons says where they go instead of checking; it describes both */}
+                    <Tooltip title={CHECK_TEXT.checkOnlyTooltip} arrow describeChild>
                         {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
                         <span>
                             <Button
+                                ref={checkOnlyRef}
                                 variant="outlined"
                                 size="small"
-                                onClick={onValidate}
-                                disabled={validateDisabled || isLoading || validationStatus === 'running'}
-                                aria-describedby={blocked.validate ? ELEMENT_IDS.blockReason : undefined}
+                                onClick={onCheckOnly}
+                                disabled={busy}
+                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
+                                startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" /> : undefined}
                             >
-                                {validationStatus === 'running' ? 'Validating...' : 'Validate'}
+                                {checking === 'check-only' ? CHECK_TEXT.checking : CHECK_TEXT.checkOnly}
                             </Button>
                         </span>
                     </Tooltip>
-                    <Tooltip title={blocked.generate?.text ?? ''} arrow describeChild>
+                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild>
                         <span>
                             <Button
                                 variant="contained"
                                 size="small"
                                 onClick={onGenerate}
                                 color="secondary"
-                                disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
-                                aria-describedby={blocked.generate ? ELEMENT_IDS.blockReason : undefined}
-                                startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                                disabled={busy}
+                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
+                                startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" /> : undefined}
                             >
-                                {isLoading ? 'Generating...' : 'Generate'}
+                                {isLoading ? CHECK_TEXT.generating : checking === 'generate' ? CHECK_TEXT.checking : CHECK_TEXT.generate}
                             </Button>
                         </span>
                     </Tooltip>
                 </Box>
             </Toolbar>
-            {blocked.generate && (
+            {note && (
                 // under the buttons it explains, from md up; under the toggle in a narrow window, where the bar wraps
                 <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1, mt: -0.5, minWidth: 0, display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, textAlign: { xs: 'left', md: 'right' } }}>
-                    {blocked.generate.target ? (
+                    {note.target ? (
                         <Button
                             id={ELEMENT_IDS.blockReason}
                             variant="text"
                             size="small"
                             color="error"
-                            onClick={() => blocked.generate && onGoToProblem(blocked.generate)}
+                            onClick={() => onGoToProblem(note)}
                             // the ripple would tint the text's background on focus; an outline marks the focus instead
                             disableRipple
                             // the lighter red: the error red is 3.9:1 on the bar, under the 4.5 text needs. A link's
@@ -247,11 +253,11 @@ export function WorkflowBar({
                                 '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
                             }}
                         >
-                            {blocked.generate.text}
+                            {note.text}
                         </Button>
                     ) : (
                         <Typography id={ELEMENT_IDS.blockReason} variant="body2" color="text.secondary">
-                            {blocked.generate.text}
+                            {note.text}
                         </Typography>
                     )}
                 </Box>
