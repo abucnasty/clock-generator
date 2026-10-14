@@ -16,7 +16,7 @@ const MIN_OFF_TARGET = 0.005;
 export const SUMMARY_COPY = {
     // plain names: what a clock is for, against the others of the same generation
     offTarget: (rate: string, target: string) => `Runs at ${rate}/s, not ${target}/s`,
-    noRecovery: 'Does not recover after a jam or when starved',
+    noRecovery: 'Does not recover when jammed or starved',
     unstable: 'Does not hold its rate',
     stillBelts: 'For belts that stand still',
     fewestWakeUps: 'Fewest wake-ups',

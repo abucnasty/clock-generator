@@ -108,7 +108,7 @@ const ACCORDION = 'Put it in your game';
 /** Plain names (spec `plainClockName`); the first matching rule wins */
 const PLAIN_NAME_RES = [
     /^Runs at .+\/s, not .+\/s$/,
-    /^Does not recover after a jam or when starved$/,
+    /^Does not recover when jammed or starved$/,
     /^Does not hold its rate$/,
     /^For belts that stand still$/,
     /^Fewest wake-ups$/,
@@ -517,7 +517,7 @@ async function wakeChecks({ page, rec }) {
         const wake = find(/^wake windows$/i);
         const section = wake ? wake.closest('section, [role=region], .MuiPaper-root') : null; // SELECTOR: confirm
         const live = section ? [...section.querySelectorAll('[aria-live],[role=status],[role=alert],[role=log]')].map((e) => `${e.getAttribute('role') || ''}[aria-live=${e.getAttribute('aria-live') || ''}] "${(e.textContent || '').trim().slice(0, 40)}"`) : null;
-        return { card: top(find(/^your clock$/i)), wake: top(wake), compare: top(find(/^(compare other clocks|potential clocks)$/i)), live };
+        return { card: top(find(/^your clock$/i)), wake: top(wake), compare: top(find(/^(compare other clocks|potential clocks|clocks)$/i)), live };
     });
     await chk(rec, 'wake windows: the "Wake windows" h2 sits between the card and "Compare other clocks" (the 2.6 slot)', async () => ({ pass: where.card !== null && where.wake !== null && where.compare !== null && where.card < where.wake && where.wake < where.compare, detail: `tops: card ${where.card}, wake windows ${where.wake}, compare ${where.compare}` }));
     await chk(rec, 'wake windows: the view has no aria-live / status region of its own (it announces through the page-level polite region)', async () => ({ pass: where.live !== null && where.live.length === 0, detail: where.live === null ? 'the view is not on the page' : `live elements inside the view: ${show(where.live)}` }));

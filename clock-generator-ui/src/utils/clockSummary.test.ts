@@ -83,7 +83,7 @@ describe('plainClockName', () => {
 
     it('names a clock that does not recover, or does not hold its rate', () => {
         const clocks = [clock('a'), clock('b', { verdict: 'no recovery', meets_target_rate: false }), clock('c', { verdict: 'unstable', meets_target_rate: false, holds_expected_output: false })];
-        expect(nameOf(clocks, 'b')).toBe('Does not recover after a jam or when starved');
+        expect(nameOf(clocks, 'b')).toBe('Does not recover when jammed or starved');
         expect(nameOf(clocks, 'c')).toBe('Does not hold its rate');
     });
 
