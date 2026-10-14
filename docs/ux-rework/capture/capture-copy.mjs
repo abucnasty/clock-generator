@@ -953,7 +953,7 @@ if (unknown.length) {
 
 // ----------------------------------------------------------------------------------------------------------- the run
 
-const stopPreview = process.env.BASE_URL ? null : await previewServer({ port: Number(process.env.PREVIEW_PORT ?? 5206) });
+const stopPreview = process.env.BASE_URL ? null : await previewServer({ port: Number(process.env.PREVIEW_PORT ?? 5221) });
 const base = process.env.BASE_URL ?? stopPreview.url;
 const started = Date.now();
 

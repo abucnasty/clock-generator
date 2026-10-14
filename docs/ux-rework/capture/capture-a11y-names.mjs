@@ -808,7 +808,7 @@ const STEP_LIST = [
             if ((await conditional.count()) > 0) {
                 await conditional.click();
                 await page.waitForTimeout(300);
-                const status = dialog.getByRole('button', { name: 'Add Status Check' }); // SELECTOR: confirm
+                const status = dialog.getByRole('button', { name: 'Add status condition' }); // SELECTOR: confirm
                 if ((await status.count()) > 0) {
                     await status.click();
                     await page.waitForTimeout(300);

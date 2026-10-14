@@ -15,7 +15,7 @@ interface UseMachineFactsResult {
     error: string | null;
 }
 
-// The facts of every machine settings asked for so far; machines configured alike share them
+// The facts of every machine setting asked for so far; machines configured alike share them
 const requests = new Map<string, Promise<SerializableMachineFacts | null>>();
 const known = new Map<string, SerializableMachineFacts | null>();
 

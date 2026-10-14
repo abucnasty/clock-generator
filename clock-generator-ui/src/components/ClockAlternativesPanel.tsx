@@ -52,11 +52,11 @@ function statusDetail(alternative: ClockAlternativeView): string {
         return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
             + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run that starves and jams the build.');
     }
-    const phases = `${check.start_phases_checked} clock start phase(s) simulated`;
+    const phases = `Checked from ${check.start_phases_checked} start point(s)`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
         return phases;
     }
-    return `${phases}. The build repeats every ${check.repeat_periods} periods, moving ${check.repeat_output_items} of `
+    return `${phases}. The build repeats every ${check.repeat_periods} clock periods, moving ${check.repeat_output_items} of `
         + `${alternative.expectedOutputItems * check.repeat_periods} items over them`;
 }
 
@@ -268,7 +268,7 @@ export function ClockAlternativesPanel({
                             </TableCell>
                             <TableCell align="right">
                                 <Tooltip
-                                    title="Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of cycles (the clock period)."
+                                    title="Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of crafting cycles (the clock period)."
                                     arrow
                                     describeChild
                                 >
@@ -287,7 +287,7 @@ export function ClockAlternativesPanel({
                             </TableCell>
                             <TableCell align="right">
                                 <Tooltip
-                                    title="How many times a minute a machine that finishes a craft wakes an inserter that is switched on and waiting for it, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a small check that moves little or nothing, so fewer wake-ups cost less UPS. The clock keeps an inserter off between its wake windows, so there is no one to wake then. Shown for clocks that were run long enough to count them. It is the count from one start point; a clock can settle into another steady state from another start point, with another count."
+                                    title="How many times a minute a machine that finishes a craft wakes an inserter that is switched on and waiting for it, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a small check that moves little or nothing, so fewer wake-ups cost less UPS. Shown for clocks that were run long enough to count them. It is the count from one start point; a clock can settle into another steady state from another start point, with another count."
                                     arrow
                                     describeChild
                                 >
