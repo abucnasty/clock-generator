@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseConfig, parseConfigSafe } from "./loader";
 import { ConfigValidationError } from "./errors";
-import { BeltType } from "./config";
+import { BeltType } from "../common/entity-types";
 import { MiningDrillType } from "../entities";
 
 describe("parseConfig", () => {

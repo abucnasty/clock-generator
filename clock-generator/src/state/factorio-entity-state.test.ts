@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { mock } from "vitest-mock-extended";
-import { InserterAnimationOverrideConfig } from "../config/config";
+import { InserterAnimationOverrideConfig } from "../config/schema";
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, MachineType, RecipeMetadata } from "../entities";
 import { InserterAnimation } from "../entities/inserter/inserter-animation";
 import { BeltState } from "./belt-state";

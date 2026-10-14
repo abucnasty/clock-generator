@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { InserterAnimationOverrideConfig } from "../../config/config";
+import { InserterAnimationOverrideConfig } from "../../config/schema";
 import { OpenRange, Duration } from "../../data-types";
 import { Belt, EntityId, Inserter, InserterMetadata, InserterStackSize, Machine, MachineType, RecipeMetadata } from "../../entities";
 import { InserterAnimation } from "../../entities/inserter/inserter-animation";

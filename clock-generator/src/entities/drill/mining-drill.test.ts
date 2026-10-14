@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest"
 import { MiningDrill } from "./mining-drill";
-import { MiningDrillConfig } from "../../config/config";
+import { MiningDrillConfig } from "../../config/schema";
 import { MiningProductivity } from "./mining-productivity";
 import { TICKS_PER_SECOND } from "../../data-types";
 import { FactorioDataService } from "../../data/factorio-data-service";
