@@ -35,12 +35,12 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
     return (
         <Paper ref={ref} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                <Typography variant="h6" sx={{ flexGrow: 1 }}>Validation</Typography>
+                <Typography variant="h6" component="h2" sx={{ flexGrow: 1 }}>Validation</Typography>
                 <Button
                     variant="outlined"
                     onClick={onValidate}
                     disabled={!canValidate || isRunning || isGenerating}
-                    startIcon={isRunning ? <CircularProgress size={16} color="inherit" /> : undefined}
+                    startIcon={isRunning ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                 >
                     {isRunning ? 'Validating...' : validation.status === 'none' ? 'Validate' : 'Validate again'}
                 </Button>
