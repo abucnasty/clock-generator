@@ -51,7 +51,7 @@ come from here.
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | merged | [#150](https://github.com/abucnasty/clock-generator/pull/150) | 1 | Round 0: code review and UX audit FIX (keyboard on the stale plan; 720 row). Round 1: both PASS. CI green |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
-| [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | impl | | | PR A (opus, `feat/ux-rework-p1-a11y-basics`): in review (code review: one major, `checkAnnounced` not committed, now fixed on p1; minors); UX audit running. PR B (sonnet, `feat/ux-rework-p1-a11y-names`, stacked on A): built, 347 tests, capture 411 PASS 0 FAIL; reviewed after A merges |
+| [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | A fix-1 | | 1 | PR A (opus, `feat/ux-rework-p1-a11y-basics`): code review FIX (major: `checkAnnounced` uncommitted, fixed on p1) + minors; UX audit FIX (major: the inserter dialog's sticky Save bar covers a focused field, 2.4.11); C8, C13, C22, C25 fixed (A's share). Round 1 running. PR B (sonnet, stacked on A): built, 347 tests, capture 411 PASS; reviewed after A merges |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | A merged; B impl | [#153](https://github.com/abucnasty/clock-generator/pull/153) | 1 | Part A merged: code review opus PASS (re-ran checks in a clean copy), UX audit sonnet PASS (C30 fixed; A25, B32 partly, rest is Part B); one minors round (dialog row wraps at 390). CI green. Part B last in the phase, stacked on 1.11 B. Part B (sonnet, `feat/ux-rework-p1-glossary-copy-2`) started, stacked on 1.11 B, with a capture writer |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | merged | [#155](https://github.com/abucnasty/clock-generator/pull/155) | 1 | Bundle with 1.4. C4 fixed Code re-check PASS; CI green |
@@ -301,6 +301,11 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
   selection); an intended exception. After 1.11 A merges, check no double ring on nodes.
 - 2.11 → 1.5: the untimed "Build imported. Undo" message sits over the fullscreen Diagram and can cover a node; close it
   or anchor it below the dialog's title bar when fullscreen opens.
+- 1.11 A → 2.9: at 390 a belt lane's Stack Size field is squeezed to 14px beside the lane delete button (unusable;
+  axe target-size); pre-existing `BeltsForm` layout.
+- 1.11 A → 1.5: at 390 the message host draws "Build imported / Undo" over an open dialog (the changelog) and covers its
+  text; stack messages below a modal's title bar or close them when a dialog opens.
+- 1.11 A → 2.7: a focused unselected toggle gets an orange ring; recheck against "orange = selection" in 2.7.
 - 2.11: a top-to-bottom layout when the canvas is taller than wide (phones); an edit that splits or unsplits a belt
   drops focus to `body` when the dialog closes.
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
