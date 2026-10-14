@@ -385,7 +385,7 @@ const started = Date.now();
 
 let code = 1;
 try {
-    const run = await forWidths(WIDTHS, async ({ page, rec }) => {
+    const run = await forWidths(WIDTHS, async ({ page, rec, width }) => {
         const state = { file: null, view: 'list' };
         const step = async (name, fn) => {
             if (STEPS && !STEPS.test(name)) return;
@@ -420,6 +420,25 @@ try {
 
             arrowChecks(rec, s, 'logistic');
             layoutChecks(rec, s, 'logistic, machine facts shown');
+
+            // fix round 1: the default fit draws the simplest build's labels at 12px or more on screen at 1440, and fits
+            // it whole in the inline canvas at every width, both Belt halves included
+            const fit = await page.evaluate(() => {
+                const viewport = document.querySelector('.react-flow__viewport');
+                const zoom = viewport ? new DOMMatrixReadOnly(getComputedStyle(viewport).transform).a : NaN;
+                const pane = document.querySelector('.react-flow')?.getBoundingClientRect();
+                const nodes = [...document.querySelectorAll('.react-flow__node')].map((n) => ({ id: n.getAttribute('data-id'), r: n.getBoundingClientRect() }));
+                const inside = (r) => pane && r.left >= pane.left - 1 && r.right <= pane.right + 1 && r.top >= pane.top - 1 && r.bottom <= pane.bottom + 1;
+                const labelPx = Math.min(...[...document.querySelectorAll('.react-flow__node .MuiTypography-caption')].map((e) => parseFloat(getComputedStyle(e).fontSize)));
+                return { zoom, labelPx, outside: nodes.filter((n) => !inside(n.r)).map((n) => n.id), halves: nodes.filter((n) => /^belt-1-(in|out)$/.test(n.id) && inside(n.r)).map((n) => n.id) };
+            });
+            const onScreen = fit.labelPx * fit.zoom;
+            if (width === 1440) {
+                rec.check('logistic at 1440: the smallest node text is 12px or more on screen at the default fit (font-size x zoom)', onScreen >= MIN_TEXT_PX - 0.01, `${fit.labelPx}px x zoom ${fit.zoom.toFixed(2)} = ${onScreen.toFixed(1)}px`);
+            } else {
+                rec.info('logistic: smallest node text on screen at the default fit', `${fit.labelPx}px x zoom ${fit.zoom.toFixed(2)} = ${onScreen.toFixed(1)}px`);
+            }
+            rec.check('logistic fits the inline canvas whole, both Belt halves visible', fit.outside.length === 0 && fit.halves.length === 2, `${fit.outside.length ? `outside: ${fit.outside.join(', ')}` : 'all nodes inside'}; halves inside: ${fit.halves.join(', ') || 'none'}`);
             await textContrastChecks(page, rec, 'logistic, machine facts shown');
 
             // names for assistive technology: every node's accessible name contains its label
@@ -598,6 +617,35 @@ try {
             const hotRatio = hot.length ? ratioOver(hot[0].stroke) : NaN;
             rec.check('the highlighted edge is 3:1 or more on the canvas', hotRatio >= 3, `${hotRatio}:1`);
             await page.mouse.move(0, 0);
+
+            // fix round 1: hovering or focusing one half of the belt outlines the other half, dashed and not orange
+            const twinOutline = (id) => page.locator(`.react-flow__node[data-id="${id}"] > .flow-node-box`).evaluate((box) => {
+                const cs = getComputedStyle(box);
+                return { style: cs.outlineStyle, width: parseFloat(cs.outlineWidth), color: cs.outlineColor };
+            });
+            await nodeLoc(page, 'belt-1-in').hover();
+            await page.waitForTimeout(200);
+            await rec.shot(page, 'diagram-hover-half', { desc: 'Belt 1 (in) hovered: Belt 1 (out), its other half, outlined dashed' });
+            const hovered = await twinOutline('belt-1-out');
+            rec.check('hovering Belt 1 (in) outlines Belt 1 (out) dashed, not orange', hovered.style === 'dashed' && hovered.width >= 2 && !sameColor(hovered.color, ORANGE), `${hovered.width}px ${hovered.style} ${hovered.color}`);
+            rec.check('the twin outline is 3:1 or more on the canvas', ratioOver(hovered.color) >= 3, `${ratioOver(hovered.color)}:1`);
+            await page.mouse.move(0, 0);
+            await page.waitForTimeout(200);
+            const after = await twinOutline('belt-1-out');
+            rec.check('the twin outline goes away when the pointer leaves', after.style === 'none' || after.width === 0, `${after.width}px ${after.style}`);
+            await resetFocus(page);
+            await checkTabTo(rec, page, nodeLoc(page, 'belt-1-out'), 'Belt 1 (out)', { max: 60 });
+            const focused = await twinOutline('belt-1-in');
+            rec.check('focusing Belt 1 (out) outlines Belt 1 (in) dashed', focused.style === 'dashed', `${focused.width}px ${focused.style} ${focused.color}`);
+            const title = await nodeLoc(page, 'belt-1-in').locator('[title]').first().getAttribute('title');
+            rec.check('the label of a half says why the belt is drawn twice (title)', /drawn twice/.test(title ?? ''), JSON.stringify(title));
+            const desc = await page.evaluate(() => {
+                const node = document.querySelector('.react-flow__node');
+                const edge = document.querySelector('.react-flow__edge');
+                const read = (el) => (el?.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
+                return { node: read(node), edge: read(edge) };
+            });
+            rec.check('the nodes\' and edges\' descriptions say nothing about delete or moving', !/delete|arrow keys|move/i.test(`${desc.node} ${desc.edge}`) && /Enter to edit/.test(desc.node), `node: "${desc.node}"; edge: "${desc.edge}"`);
         });
 
         // ============================================================================ 7 focus ring
@@ -736,6 +784,21 @@ try {
             }
             const side = await noSideScroll(page);
             rec.check('the rows do not scroll sideways and the page does not either', overflow.length === 0 && side.pass, `${overflow.length ? `${overflow.join(', ')} overflow; ` : ''}${side.detail}`);
+            // fix round 1: at 1440 a row with the select stays on one line (the Enable chip and the delete button do not wrap)
+            if (width === 1440) {
+                const wrapped = [];
+                for (const id of have) {
+                    const lines = await page.locator(`#entity-inserter-${id}`).evaluate((row) => {
+                        // laid-out children only: not hidden, absolute or fixed (a 1px hidden input sits at the top of the window)
+                        const kids = [...row.children].filter((c) => c.getBoundingClientRect().height > 1 && !['absolute', 'fixed'].includes(getComputedStyle(c).position));
+                        // the children are centred on their line: count the gaps of more than 20px between their centres
+                        const centres = kids.map((c) => { const r = c.getBoundingClientRect(); return r.top + r.height / 2; }).sort((a, b) => a - b);
+                        return 1 + centres.filter((c, i) => i > 0 && c - centres[i - 1] > 20).length;
+                    });
+                    if (lines > 1) wrapped.push(`row ${id}: ${lines} lines`);
+                }
+                rec.check('at 1440 the rows with the select stay on one line', have.length > 0 && wrapped.length === 0, wrapped.length ? wrapped.join(', ') : `${have.length} rows, one line each`);
+            }
         });
 
         // ============================================================================ 11 List <-> Diagram near lane
@@ -760,6 +823,12 @@ try {
             await clickNode(page, rec, node.id);
             const dialog = page.getByRole('dialog').first();
             await dialog.waitFor();
+            // the shot after the dialog's open transition has ended (fully opaque, not moving)
+            await page.waitForFunction(() => {
+                const paper = [...document.querySelectorAll('[role="dialog"]')].pop();
+                return paper && getComputedStyle(paper).opacity === '1' && getComputedStyle(paper.closest('.MuiDialog-container') ?? paper).opacity === '1';
+            }, null, { timeout: 5000 }).catch(() => {});
+            await page.waitForTimeout(250);
             const dlgSelect = dialog.getByRole('combobox', { name: /Nearest lane of the belt/ });
             const dlgText = ((await dlgSelect.first().textContent().catch(() => null)) ?? '').trim();
             await rec.shot(page, 'list-near-lane-edit', { desc: 'Inserter 1 opened from the Diagram after Lane 1 was set in the List: the dialog\'s near-lane select' });
