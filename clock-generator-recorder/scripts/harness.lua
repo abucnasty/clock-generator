@@ -482,7 +482,8 @@ local function movers(entities)
     return found
 end
 
----What a recording of the build would track: the exported config and the unit number of each inserter and machine.
+---What a recording of the build would track: the exported config and the unit number of each inserter and machine, and
+---the inserters the config leaves out, with why.
 ---Next to it, for the caller's own checks and in no recording: every inserter and loader with what is at its ends.
 ---@return table
 function harness.describe()
