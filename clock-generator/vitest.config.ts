@@ -8,6 +8,8 @@ const exclude = [
     // the game-backed tests record builds in Factorio and take a while: `npm run test:game` runs them
     '**/*.game.test.ts',
 ];
+// the tests read the game data from resources/, as the Node entry points do
+const setupFiles = ['src/data/factorio-data-file.ts'];
 
 /**
  * Two projects: `npm test` runs the unit tests, which take under a minute; `npm run test:generation` the generation
@@ -26,6 +28,7 @@ export default defineConfig({
                     name: 'generation',
                     include: ['src/**/*.generation.test.ts'],
                     exclude,
+                    setupFiles,
                     // one sample takes three minutes on a desktop, and the GitHub runner is two to three times slower
                     testTimeout: 900_000,
                     hookTimeout: 900_000,
@@ -36,6 +39,7 @@ export default defineConfig({
                     name: 'unit',
                     include: ['src/**/*.test.ts'],
                     exclude: [...exclude, '**/*.generation.test.ts'],
+                    setupFiles,
                     // a few tests simulate a build for seconds, longer on the GitHub runner with every core busy
                     testTimeout: 60_000,
                     hookTimeout: 60_000,

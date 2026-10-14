@@ -1,13 +1,17 @@
 // Shared by the scripts in this folder. They read the built generator (`npx tsc` first) from this checkout, or from
 // the checkout CLOCK_GENERATOR_ROOT names: a worktree of another commit, to sweep it as a baseline.
-const path = require("path");
+const path = require("path"), fs = require("fs");
 
 const ROOT = path.resolve(process.env.CLOCK_GENERATOR_ROOT ?? path.join(__dirname, ".."));
-// the generator reads resources/ relative to where it runs
+// older builds, swept as baselines, read resources/ relative to where they run
 const INVOKED_FROM = process.cwd();
 process.chdir(ROOT);
 
 const dist = file => require(path.join(ROOT, "dist", file));
+// newer ones read the game data from resources/ once this module is loaded
+if (fs.existsSync(path.join(ROOT, "dist", "data", "factorio-data-file.js"))) {
+    dist("data/factorio-data-file.js");
+}
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 /**

@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import { loadConfigFromFile } from "./config/loader";
+import "./data/factorio-data-file";
 import { EntityId } from "./entities";
 import { generateClockAlternatives } from "./crafting/generate-blueprint";
 import { compareWithExportedClocks, formatExportedClockReport } from "./verification/compare";
