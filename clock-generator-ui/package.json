@@ -2,6 +2,7 @@
   "name": "clock-generator-ui",
   "private": true,
   "version": "0.8.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-factorio-data.mjs",

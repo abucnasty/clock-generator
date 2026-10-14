@@ -37,7 +37,7 @@
     "generator"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "@types/node": "^22.15.29",
