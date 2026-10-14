@@ -189,7 +189,7 @@ function TransferPlanPanelComponent({
                         Swings per cycle can be fractions. The clock period is the number of crafting cycles (the LCM)
                         after which they all come out whole. Excluded ingredients are left out of that calculation, and an
                         inserter whose items are all excluded is forced to <strong>{ALWAYS_ON}</strong>, unless you gave
-                        it an enable rule of your own, which stays. After making changes, validate again, then Generate.
+                        it an enable rule of your own, which stays. Validate again, then Generate, after making changes.
                     </Typography>
                 </Box>
             </AccordionDetails>

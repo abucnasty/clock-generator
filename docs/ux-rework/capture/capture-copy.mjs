@@ -124,8 +124,9 @@ async function checkTypeSelect(page, rec, scope, shotName, viewName) {
     );
 
     // accessible name (WCAG 2.5.3): contains the visible text
-    await checkLabelInName(rec, page, value, `${viewName}: Type select`);
+    // the visible label of the field is "Type"; its value ("Assembling machine") is not a label
     const name = await accessibleName(page, value);
+    rec.check(`label in name ${viewName}: Type select`, /\bType\b/i.test(name), `label "Type", accessible name "${name}"`);
     rec.info(`${viewName}: accessible name of the Type select`, `"${name}" ${/\bType\b/i.test(name) ? '(includes the field label)' : '(does not include the field label "Type")'}`);
 
     // open: the options
@@ -251,17 +252,17 @@ const STEP_LIST = [
             await goConfigure(page);
             await validate(page);
             state.validated = true;
-            const plan = page.locator('.MuiAccordion-root').filter({ hasText: /^Transfer Plan/ }).first(); // SELECTOR: confirm (the accordion titled "Transfer Plan"; Part B renames it)
+            const plan = page.locator('.MuiAccordion-root').filter({ hasText: /^Swing Plan/ }).first(); // SELECTOR: confirm (the accordion titled "Swing Plan"; Part B renames it)
             await plan.waitFor();
             const note = plan.locator('.MuiTypography-caption').last(); // SELECTOR: confirm (the note is the last caption in the accordion)
             await note.scrollIntoViewIfNeeded();
             await page.waitForTimeout(400);
-            await snap(page, rec, 'transfer-note', { desc: 'Validation panel after Validate, the Transfer Plan note at the bottom (spec state 5)' });
+            await snap(page, rec, 'transfer-note', { desc: 'Validation panel after Validate, the Swing Plan note at the bottom (spec state 5)' });
             const t = await text(note);
             rec.info('transfer note text', t);
-            rec.check('the Transfer Plan note ends "Validate again, then Generate, after making changes."', t.endsWith('Validate again, then Generate, after making changes.'), `ends "...${t.slice(-70)}"`);
-            rec.check('the Transfer Plan note still contains item 1.8\'s clause ending "which stays."', /which stays\./.test(t), t);
-            rec.check('the Transfer Plan note no longer says "Re-run the simulation"', !/Re-run the simulation/i.test(t), t);
+            rec.check('the Swing Plan note ends "Validate again, then Generate, after making changes."', t.endsWith('Validate again, then Generate, after making changes.'), `ends "...${t.slice(-70)}"`);
+            rec.check('the Swing Plan note still contains item 1.8\'s clause "which stays."', /which stays\./.test(t), t);
+            rec.check('the Swing Plan note no longer says "Re-run the simulation"', !/Re-run the simulation/i.test(t), t);
         },
     },
     {
