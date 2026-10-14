@@ -25,7 +25,7 @@ function migrateInserters(inserters: unknown[]): InserterFormData[] {
 }
 
 /** Migrate legacy chest data to include type field */
-export function migrateChests(chests: unknown[]): ChestFormData[] {
+function migrateChests(chests: unknown[]): ChestFormData[] {
     return chests.map((chest: unknown) => {
         const c = chest as { type?: string; id: number; _uuid?: string; storage_size?: number; item_filter?: string | InfinityFilterFormData[] };
         const uuid = c._uuid ?? crypto.randomUUID();
@@ -42,6 +42,15 @@ export function migrateChests(chests: unknown[]): ChestFormData[] {
             item_filter: (typeof c.item_filter === 'string' ? c.item_filter : '') as string,
         };
     });
+}
+
+/** The config in an imported file, not yet checked against the config schema; files from before chest types have chests without a type */
+export function readConfigFile(content: string): unknown {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed?.chests)) {
+        parsed.chests = migrateChests(parsed.chests);
+    }
+    return parsed;
 }
 
 /** Read the config from localStorage with the legacy fields migrated; null if there is none or it lacks the required fields */

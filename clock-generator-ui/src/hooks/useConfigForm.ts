@@ -43,7 +43,7 @@ export type {
     RuleSet,
     ValueReference,
 } from '../utils/configForm/formData';
-export { migrateChests } from './usePersistedConfigForm';
+export { readConfigFile } from './usePersistedConfigForm';
 
 interface UseConfigFormResult {
     config: ConfigFormData;

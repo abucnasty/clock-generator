@@ -309,7 +309,10 @@ export type EngineQuery =
     | { kind: 'inserter-coverage'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
     | { kind: 'saved-config'; config: unknown }
-    /** An imported config file, with the chests of files from before chest types migrated */
+    /**
+     * An imported config file, with the chests of files from before chest types migrated; like the saved config, it may
+     * hold values out of bounds, which the form shows
+     */
     | { kind: 'config-file'; config: unknown }
     | {
         kind: 'pasted-entities';

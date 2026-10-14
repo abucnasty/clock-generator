@@ -8,6 +8,7 @@
 
 import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
+import { parseFormConfig } from './formConfig';
 import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
@@ -228,12 +229,17 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
 
 /** Why the saved form state cannot be loaded, or null when it can */
 function savedConfigProblem(config: unknown): string | null {
-    const result = clockGenerator.ConfigSchema.safeParse(config);
-    // The form can hold values the generator rejects (e.g. 0 items per second); only reject a broken structure
-    if (result.success || result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big')) {
-        return null;
+    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
+    return result.success ? null : result.error.message;
+}
+
+/** An imported config file, which can hold what the form exports, e.g. an inserter end left unset */
+function configFile(config: unknown): Config {
+    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
+    if (!result.success) {
+        throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return result.error.message;
+    return result.data;
 }
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
@@ -251,7 +257,7 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
         case 'saved-config':
             return savedConfigProblem(query.config);
         case 'config-file':
-            return clockGenerator.parseConfigFromObject(query.config);
+            return configFile(query.config);
         case 'pasted-entities':
             return pastedEntities(query);
     }
