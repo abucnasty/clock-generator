@@ -34,7 +34,7 @@ come from here.
 
 - **Phase:** 1 (started 2026-10-14)
 - **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** none
+- **Open checkpoints:** 2.2's in-game check (owner; gates the Phase 2 merge, not the child PR). Steps sent 2026-10-14
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
 ## Phase 1: stop the harm, quick wins
@@ -61,7 +61,7 @@ come from here.
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
 | [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
-| [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | review | | | Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
+| [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | merging | | | Code review opus PASS (Lua read line by line; checks re-run); UX audit sonnet FIX on the owner steps only (fixed by the orchestrator). A17, Q3 fixed; A2, A3 partly (site side is 2.1); B19 to 2.1. Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
@@ -219,6 +219,15 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 2.8: the pickers list mod and hidden entries (746 recipes, recycling and `ee-*`); engine prose keeps ids.
 - 2.2: Esc or E on the sidecar's copy popup closes the main window and orphans the popup (existing quirk).
 - Final PR: open the built 0.8.0 sidecar zip in game once more (2.2's owner steps 4 to 6).
+- 2.2: two final recipes that make the same item (casting iron in a foundry plus iron plate in a furnace) are ranked
+  per recipe, so the suggested ceiling is too low; sum final groups that share a product, in TS and Lua
+  (`suggested-target.ts:86-108`, `suggested-target.lua:69-130`).
+- 2.2 → 2.1: the Lua's rate can carry float noise (1.8000000000000003); format it when showing it. Also the B19
+  old-mod sentence (`sidecar-version.ts`), and saying Paste from Factorio is in the ⋮ menu.
+- 2.2: recipes missing from the site's data are skipped in TS but counted in Lua (only matters for exports from mods
+  older than 0.8.0, where the TS inference runs).
+- Final PR: release sidecar 0.8.0 only with 2.1 merged (its tooltip says the site fills the target). Align "the text" /
+  "JSON" / "build" wording in the mod.
 - 2.7 found contrast failures in today's theme: green hover 3.98:1, error text 3.0-4.4:1 on cards and dialogs, input
   outlines and switch tracks 2.1-2.6:1, an orange Undo on MUI's snackbar 1.96:1, empty filter slots 1.46:1. 2.7 PR A
   fixes them; 1.5's snackbar and 1.3's Undo should not ship the 1.96:1 combination (checked in their evidence gate).
