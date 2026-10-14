@@ -78,6 +78,8 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
         <Portal>
             <Snackbar
                 ref={rootRef}
+                // for whoever needs to tell focus in the message from focus on the page
+                data-message=""
                 open
                 autoHideDuration={message.durationMs}
                 // hovering or focusing it pauses the timer; leaving gives it its full time again, not MUI's half

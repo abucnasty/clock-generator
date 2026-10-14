@@ -154,7 +154,7 @@ export function useUndo(
                 return;
             }
             const record = returnRef.current;
-            if (record && record.next === null && target !== record.offeredFrom && !target.closest('.MuiSnackbar-root')) {
+            if (record && record.next === null && target !== record.offeredFrom && !target.closest('[data-message]')) {
                 record.next = target;
             }
         };
