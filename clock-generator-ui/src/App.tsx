@@ -27,6 +27,8 @@ import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
+import { useCopyBlueprint } from './hooks/useCopyBlueprint';
+import { useAnnounce, useNotify } from './hooks/useMessages';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -40,12 +42,15 @@ import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
+import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { blockedActionsOf, focusProblemTarget, needsListView, problemsOf, type Problem } from './utils/firstProblem';
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
+import { clockTechnicalName, plainClockName } from './utils/clockSummary';
+import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { a11yThemeComponents } from './utils/a11yTheme';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
@@ -225,6 +230,25 @@ function App() {
     // likewise the clocks on screen are for the build as it was when Generate was pressed
     const resultsAreStale = isStale(generatedFor, configKey);
     const staleFor = resultsAreStale ? generatedFor : null;
+
+    // the selected clock as the bar, the card and the announcements name it
+    const selectedClock = alternatives[selectedAlternativeIndex];
+    const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
+    const rateWarning = rateWarningOf(selectedClock);
+    const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale);
+
+    // one copy for every Copy button: the bar's, the card's and the string's
+    const notify = useNotify();
+    const announce = useAnnounce();
+    const handleCopied = useCallback((warning: string | null) => {
+        if (warning !== null) {
+            // the warning's own message says that it was copied
+            notify({ severity: 'warning', text: `Copied. ${warning}` });
+        } else {
+            announce(ANNOUNCEMENTS.copied);
+        }
+    }, [notify, announce]);
+    const copy = useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCopied: handleCopied });
 
     // what keeps the build from being validated and generated, and so why each of the two buttons is off
     const problems = useMemo(() => problemsOf({
@@ -463,11 +487,15 @@ function App() {
                             validateDisabled={!canGenerate}
                             validationStatus={validationStatus}
                             blueprintString={blueprintString}
-                            selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
-                            rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
-                            copyLabel={copyBlueprintLabelOf(alternatives[selectedAlternativeIndex], resultsAreStale)}
-                            belowTarget={isBelowTarget(alternatives[selectedAlternativeIndex])}
+                            selectedLabel={selectedName}
+                            selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
+                            selectedId={selectedClock?.id ?? null}
+                            rateWarning={rateWarning}
+                            copyLabel={copyLabel}
+                            belowTarget={isBelowTarget(selectedClock)}
                             staleFor={staleFor}
+                            copied={copy.copied}
+                            onCopy={copy.request}
                             problems={problems}
                             blocked={blocked}
                             onGoToProblem={handleGoToProblem}
@@ -667,6 +695,10 @@ function App() {
                                 onStreamLogsChange={setStreamLogs}
                                 onClearLogs={clearLogs}
                                 staleFor={staleFor}
+                                copied={copy.copied}
+                                onCopy={copy.request}
+                                copyLabel={copyLabel}
+                                hasDrills={drillConfigs.length > 0}
                             />
                         </Box>
                         </>
@@ -759,6 +791,15 @@ function App() {
                     )}
                 </Box>
             </Dialog>
+
+            {staleFor && (
+                <StaleCopyDialog
+                    open={copy.confirmingStale}
+                    generatedFor={staleFor}
+                    onCancel={copy.cancel}
+                    onConfirm={copy.confirm}
+                />
+            )}
 
             <MessageHost />
         </ThemeProvider>

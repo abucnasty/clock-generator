@@ -1,15 +1,17 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAnnounce, useNotify } from '../hooks/useMessages';
+import { useEffect, useRef } from 'react';
+import { useAnnounce } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
-import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
+import { workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
 import { GenerationProgressStatus } from './BlueprintOutput';
-import { StaleCopyDialog } from './StaleCopyDialog';
 
 export type WorkflowView = 'configure' | 'results';
+
+/** Before the selected clock's name in the bar */
+const SELECTED_CLOCK_PREFIX = 'Selected clock: ';
 
 // a warning is filled and has the warning icon, so it is not taken for the outlined orange buttons beside it
 const VALIDATION_CHIP = {
@@ -33,8 +35,12 @@ interface WorkflowBarProps {
     validationStatus: 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
     /** Blueprint of the selected potential clock, once one is generated */
     blueprintString: string | null;
-    /** Name of the selected potential clock */
+    /** Name of the selected clock by what it is for ("Fewest wake-ups") */
     selectedLabel: string | null;
+    /** The engine's name of the selected clock, which says how it is made; shown when the name is pointed at */
+    selectedEngineName: string | null;
+    /** Id of the selected clock, which tells apart two of the same name */
+    selectedId: string | null;
     /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
     rateWarning: string | null;
     /** What the Copy button says when it has not just been used: "Copy blueprint", "… below target", or "Copy old clock…" */
@@ -43,6 +49,10 @@ interface WorkflowBarProps {
     belowTarget: boolean;
     /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
+    /** Every Copy button says "Copied" for a moment after any of them copied */
+    copied: boolean;
+    /** Copies the blueprint, or asks first for the clock of an earlier build (the copy every Copy button shares) */
+    onCopy: () => void;
     /** What keeps the build from being validated and generated, first to fix first; empty when nothing does */
     problems: Problem[];
     /** Why each of Validate and Generate is off; null when it is on or says on its own label what it is doing */
@@ -55,7 +65,7 @@ interface WorkflowBarProps {
  * The Copy button's words. What comes after "Copy blueprint" ("(200/s, below target)") keeps its case: upper-cased, the
  * unit would read "200/S"
  */
-function CopyLabel({ label }: { label: string }) {
+export function CopyLabel({ label }: { label: string }) {
     const at = label.indexOf(' (');
     if (at < 0) {
         return label;
@@ -85,17 +95,18 @@ export function WorkflowBar({
     validationStatus,
     blueprintString,
     selectedLabel,
+    selectedEngineName,
+    selectedId,
     rateWarning,
     copyLabel,
     belowTarget,
     staleFor,
+    copied,
+    onCopy,
     problems,
     blocked,
     onGoToProblem,
 }: WorkflowBarProps) {
-    const [copied, setCopied] = useState(false);
-    const [confirmingOld, setConfirmingOld] = useState(false);
-    const notify = useNotify();
     const announce = useAnnounce();
     // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
     // since a filled button invites the click, and the copy of an old clock is the one to think twice about
@@ -106,33 +117,17 @@ export function WorkflowBar({
     const hasBlueprint = blueprintString !== null;
     const lastSnapshot = useRef<WorkflowSnapshot | null>(null);
     useEffect(() => {
-        const snapshot: WorkflowSnapshot = { validationStatus, isLoading, failed: generationFailed, hasBlueprint, selectedLabel };
+        const snapshot: WorkflowSnapshot = { validationStatus, isLoading, failed: generationFailed, hasBlueprint, selectedLabel, selectedId };
         const previous = lastSnapshot.current;
         lastSnapshot.current = snapshot;
         const text = previous && workflowAnnouncement(previous, snapshot);
         if (text) {
             announce(text);
         }
-    }, [validationStatus, isLoading, generationFailed, hasBlueprint, selectedLabel, announce]);
+    }, [validationStatus, isLoading, generationFailed, hasBlueprint, selectedLabel, selectedId, announce]);
 
-    const copyBlueprint = useCallback(async () => {
-        if (!blueprintString) {
-            return;
-        }
-        try {
-            await navigator.clipboard.writeText(blueprintString);
-            setCopied(true);
-            if (rateWarning !== null) {
-                // the warning's own alert says that it was copied
-                notify({ severity: 'warning', text: `Copied. ${rateWarning}` });
-            } else {
-                announce(ANNOUNCEMENTS.copied);
-            }
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
-    }, [blueprintString, rateWarning, notify, announce]);
+    // with fresh clocks on screen the answer is to copy one, so Generate steps back to an outlined button
+    const freshResults = blueprintString !== null && staleFor === null && !isLoading;
 
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
@@ -155,8 +150,15 @@ export function WorkflowBar({
                     {blueprintString && (
                         <>
                             {selectedLabel && (
-                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', sm: 'block' } }}>
-                                    {selectedLabel}
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    noWrap
+                                    title={selectedEngineName ?? undefined}
+                                    sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', sm: 'block' } }}
+                                    data-selected-clock
+                                >
+                                    {SELECTED_CLOCK_PREFIX}{selectedLabel}
                                 </Typography>
                             )}
                             {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
@@ -164,24 +166,13 @@ export function WorkflowBar({
                                 <Button
                                     variant={filled ? 'contained' : 'outlined'}
                                     size="small"
-                                    onClick={staleFor ? () => setConfirmingOld(true) : copyBlueprint}
+                                    onClick={onCopy}
                                     color={warns ? 'warning' : copied ? 'success' : 'primary'}
                                     startIcon={copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
                                 >
                                     {copied ? 'Copied' : <CopyLabel label={copyLabel} />}
                                 </Button>
                             </Tooltip>
-                            {staleFor && (
-                                <StaleCopyDialog
-                                    open={confirmingOld && staleFor !== null}
-                                    generatedFor={staleFor}
-                                    onCancel={() => setConfirmingOld(false)}
-                                    onConfirm={() => {
-                                        setConfirmingOld(false);
-                                        copyBlueprint();
-                                    }}
-                                />
-                            )}
                         </>
                     )}
                     {problems.length > 0 && (
@@ -226,7 +217,7 @@ export function WorkflowBar({
                     <Tooltip title={blocked.generate?.text ?? ''} arrow describeChild>
                         <span>
                             <Button
-                                variant="contained"
+                                variant={freshResults ? 'outlined' : 'contained'}
                                 size="small"
                                 onClick={onGenerate}
                                 color="secondary"

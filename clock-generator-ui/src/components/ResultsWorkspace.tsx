@@ -15,6 +15,7 @@ import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DebugPanel } from './DebugPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { FuelPanel } from './FuelPanel';
+import { ResultSummaryCard } from './ResultSummaryCard';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
 import { StaleResultsBanner } from './StaleResultsBanner';
@@ -26,10 +27,9 @@ import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
-import { VIEW_HEADING } from '../utils/wakeWindowCopy';
 import type { Problem } from '../utils/firstProblem';
 
-type ResultsTab = 'wakeWindows' | 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
+type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
 interface ResultsWorkspaceProps {
     isRunning: boolean;
@@ -74,6 +74,16 @@ interface ResultsWorkspaceProps {
     onClearLogs: () => void;
     /** What the clocks were made for, while the build has changed since. Null when not */
     staleFor: GeneratedFor | null;
+    /** Every Copy button says "Copied" for a moment after any of them copied */
+    copied: boolean;
+    /** The copy every Copy button shares */
+    onCopy: () => void;
+    /** What the Copy buttons say: "Copy blueprint", "… below target", or "Copy old clock…" */
+    copyLabel: string;
+    /** The build has mining drills on the clock */
+    hasDrills: boolean;
+    /** Shown in the card right after its belt line: the belt question (2.4) */
+    beltAction?: ReactNode;
 }
 
 function TabBody({ shown, children }: { shown: boolean; children: ReactNode }) {
@@ -82,21 +92,23 @@ function TabBody({ shown, children }: { shown: boolean; children: ReactNode }) {
 }
 
 /**
- * Everything a generation produced: the potential clocks to pick from, and one tabbed area of detail for the
- * selected clock, so the page stays one screen long.
+ * Everything a generation produced, the answer first: the selected clock with its install steps, its wake windows,
+ * the clocks to pick from, and one tabbed area of detail for the selected clock.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
-    const [tab, setTab] = useState<ResultsTab>('wakeWindows');
+    const [tab, setTab] = useState<ResultsTab>('timelines');
     const [timelineRun, setTimelineRun] = useState<'clock' | 'plan'>('clock');
 
     const hasClockOnlyRun = props.clockOnlyTransferHistory !== null && props.clockOnlyStateTransitionHistory !== null;
     const fuelView = props.fuelView;
     // the fuel tab is only there for a build with fuel inserters
-    const shownTab: ResultsTab = tab === 'fuel' && fuelView === null ? 'wakeWindows' : tab;
+    const shownTab: ResultsTab = tab === 'fuel' && fuelView === null ? 'timelines' : tab;
     const showClockOnlyRun = hasClockOnlyRun && timelineRun === 'clock';
     const transferHistory = showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
     const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
+    const selected = props.alternatives[props.selectedIndex];
+    const rateWarning = rateWarningOf(selected);
     const noticeKind = deeperSearchNoticeOf({
         searchesSkipped: props.skippedSearches.length > 0,
         searchedDeeper: props.searchedDeeper,
@@ -118,10 +130,29 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             {!hasResults && !props.isRunning && !props.error && (
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
                     <Typography variant="body1" color="text.secondary">
-                        Nothing generated yet. Press Generate to create clocks for your configuration.
+                        Nothing generated yet. Press Generate to make clocks for your build.
                     </Typography>
                 </Paper>
             )}
+
+            <ResultSummaryCard
+                alternatives={props.alternatives}
+                selectedIndex={props.selectedIndex}
+                recommendedIndex={props.recommendedIndex}
+                onSelectRecommended={props.onSelectRecommended}
+                pickRule={props.pickRule}
+                isGenerating={props.isRunning}
+                copied={props.copied}
+                onCopy={props.onCopy}
+                copyLabel={props.copyLabel}
+                rateWarning={rateWarning}
+                stale={props.staleFor !== null}
+                hasDrills={props.hasDrills}
+                beltAction={props.beltAction}
+            />
+
+            {/* 2.6's slot: the Wake windows section, between the card and the clocks to compare */}
+            {selected && <WakeWindowsView alternative={selected} headingLevel="h2" />}
 
             <ClockAlternativesPanel
                 alternatives={props.alternatives}
@@ -152,7 +183,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     scrollButtons="auto"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
-                    <Tab value="wakeWindows" label={VIEW_HEADING} />
                     <Tab value="timelines" label="Timelines" />
                     {fuelView !== null && <Tab value="fuel" label="Fuel" />}
                     <Tab value="insights" label="Insights" />
@@ -160,15 +190,11 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     <Tab value="log" label="Log" />
                 </Tabs>
 
-                <TabBody shown={shownTab === 'wakeWindows'}>
-                    <WakeWindowsView alternative={props.alternatives[props.selectedIndex] ?? null} />
-                </TabBody>
-
                 <TabBody shown={shownTab === 'insights'}>
                     <SwingBackoffReportDisplay report={props.swingBackoffReport} />
                     <InsightsPanel
-                        insights={props.alternatives[props.selectedIndex]?.insights ?? []}
-                        clockLabel={props.alternatives[props.selectedIndex]?.label ?? null}
+                        insights={selected?.insights ?? []}
+                        clockLabel={selected?.label ?? null}
                     >
                         {props.shiftOptions && <ShiftRangePanel options={props.shiftOptions} />}
                     </InsightsPanel>
@@ -217,10 +243,12 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
                 <TabBody shown={shownTab === 'blueprint'}>
                     <BlueprintOutput
-                        rateWarning={rateWarningOf(props.alternatives[props.selectedIndex])}
+                        rateWarning={rateWarning}
                         blueprintString={props.blueprintString}
                         simulationDurationTicks={props.simulationDurationTicks ?? undefined}
                         staleFor={props.staleFor}
+                        copied={props.copied}
+                        onCopy={props.onCopy}
                     />
                 </TabBody>
             </Box>
