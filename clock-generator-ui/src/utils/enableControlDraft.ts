@@ -67,3 +67,15 @@ export function buildEnableControlOverride(draft: EnableControlDraft): EnableCon
 export function enableControlDraftChanged(draft: EnableControlDraft, initial: EnableControlDraft): boolean {
     return JSON.stringify(buildEnableControlOverride(draft)) !== JSON.stringify(buildEnableControlOverride(initial));
 }
+
+/**
+ * Whether saving `override` (from Save, or none from Clear Override) would change the stored rule `current`, as the
+ * form built it when it opened. A Save that changes nothing is a Cancel, so it does not make a forced ALWAYS the
+ * player's own.
+ */
+export function enableControlOverrideChanged(
+    override: EnableControlOverride | undefined,
+    current: EnableControlOverride | undefined,
+): boolean {
+    return JSON.stringify(override) !== JSON.stringify(buildEnableControlOverride(enableControlDraftOf(current)));
+}

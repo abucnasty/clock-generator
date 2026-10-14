@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultRuleSet } from '../components/ruleSetUtils';
 import type { EnableControlOverride, RuleSet } from './configForm/formData';
-import { buildEnableControlOverride, enableControlDraftChanged, enableControlDraftOf } from './enableControlDraft';
+import {
+    buildEnableControlOverride,
+    enableControlDraftChanged,
+    enableControlDraftOf,
+    enableControlOverrideChanged,
+} from './enableControlDraft';
 
 const ruleSet = { operator: 'OR', rules: [] } as unknown as RuleSet;
 const release = { operator: 'AND', rules: [] } as unknown as RuleSet;
@@ -96,5 +101,20 @@ describe('enableControlDraftChanged', () => {
         const changed = { ...initial, periodDuration: '61' };
         expect(enableControlDraftChanged(changed, initial)).toBe(true);
         expect(enableControlDraftChanged({ ...changed, periodDuration: '60' }, initial)).toBe(false);
+    });
+});
+
+describe('enableControlOverrideChanged', () => {
+    it('is false for a Save of the rule as it was opened, so that Save changes nothing', () => {
+        expect(enableControlOverrideChanged({ mode: 'ALWAYS' }, { mode: 'ALWAYS' })).toBe(false);
+        expect(enableControlOverrideChanged(undefined, undefined)).toBe(false);
+        expect(enableControlOverrideChanged(undefined, { mode: 'AUTO' })).toBe(false);
+        expect(enableControlOverrideChanged(buildEnableControlOverride(enableControlDraftOf(clocked)), clocked)).toBe(false);
+    });
+
+    it('is true for another rule, and for Clear Override on a stored rule', () => {
+        expect(enableControlOverrideChanged({ mode: 'NEVER' }, { mode: 'ALWAYS' })).toBe(true);
+        expect(enableControlOverrideChanged(undefined, { mode: 'ALWAYS' })).toBe(true);
+        expect(enableControlOverrideChanged({ mode: 'ALWAYS' }, undefined)).toBe(true);
     });
 });
