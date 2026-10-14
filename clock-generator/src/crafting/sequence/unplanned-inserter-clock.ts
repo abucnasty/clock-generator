@@ -1,4 +1,4 @@
-import { Duration, OpenRange } from "../../data-types";
+import { OpenRange } from "../../data-types";
 import { Belt, Entity, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 
 /** Ticks added to the end of a window, so a late pickup from a busy belt or a machine still fills the hand */
@@ -395,8 +395,4 @@ export function clockWindowsOverPeriod(clock: InserterClock, period_ticks: numbe
         windows.push(OpenRange.from(start + clock.window.start_inclusive, start + clock.window.end_inclusive));
     }
     return windows;
-}
-
-export function clockPeriod(clock: InserterClock): Duration {
-    return Duration.ofTicks(clock.modulus);
 }

@@ -12,14 +12,6 @@ import { MachineStatus } from "../state/machine-state";
 import { MachineType } from "../entities";
 
 // ============================================================================
-// Primitive Types
-// ============================================================================
-
-export type RecipeName = string;
-export type ItemName = string;
-export type ResourceName = string;
-
-// ============================================================================
 // Machine Configuration
 // ============================================================================
 
@@ -57,22 +49,6 @@ export type TargetProductionRateConfig = z.infer<typeof TargetProductionRateConf
 // ============================================================================
 // Enable Control Override Configuration
 // ============================================================================
-
-/**
- * Mode for enable control override.
- * - AUTO: Use automatic control logic (default)
- * - ALWAYS: Always enabled
- * - NEVER: Never enabled
- * - CLOCKED: Use custom clocked ranges
- * - CONDITIONAL: Use rule-based conditions
- */
-export const EnableControlModeSchema = z.enum([
-    EnableControlMode.AUTO,
-    EnableControlMode.ALWAYS,
-    EnableControlMode.NEVER,
-    EnableControlMode.CLOCKED,
-    EnableControlMode.CONDITIONAL,
-]);
 
 export { EnableControlMode };
 
@@ -221,8 +197,6 @@ export const LatchConfigSchema = z.object({
     release: RuleSetSchema
 });
 
-export type LatchConfig = z.infer<typeof LatchConfigSchema>;
-
 const EnableControlOverrideConditionalSchema = z.object({
     mode: z.literal(EnableControlMode.CONDITIONAL),
     rule_set: RuleSetSchema,
@@ -256,16 +230,12 @@ export const DrillTargetMachineConfigSchema = z.object({
     id: z.number().int().positive()
 });
 
-export type DrillTargetMachineConfig = z.infer<typeof DrillTargetMachineConfigSchema>;
-
 /**
  * Overrides configuration for mining drills.
  */
 export const MiningDrillOverridesConfigSchema = z.object({
     enable_control: EnableControlOverrideConfigSchema.optional()
 });
-
-export type MiningDrillOverridesConfig = z.infer<typeof MiningDrillOverridesConfigSchema>;
 
 export const MiningDrillConfigSchema = z.object({
     id: z.number().int().positive(),
@@ -292,8 +262,6 @@ export const DrillsConfigSchema = z.object({
     configs: z.array(MiningDrillConfigSchema)
 });
 
-export type DrillsConfig = z.infer<typeof DrillsConfigSchema>;
-
 // ============================================================================
 // Inserter Configuration
 // ============================================================================
@@ -310,14 +278,10 @@ export const InserterBeltConfigSchema = z.object({
     near_lane: z.union([z.literal(1), z.literal(2)]).optional()
 });
 
-export type InserterBeltConfig = z.infer<typeof InserterBeltConfigSchema>;
-
 export const InserterMachineConfigSchema = z.object({
     type: z.literal(TargetType.MACHINE),
     id: z.number().int().positive()
 });
-
-export type InserterMachineConfig = z.infer<typeof InserterMachineConfigSchema>;
 
 export const InserterChestConfigSchema = z.object({
     type: z.literal(TargetType.CHEST),
@@ -325,8 +289,6 @@ export const InserterChestConfigSchema = z.object({
 });
 
 export { TargetType };
-
-export type InserterChestConfig = z.infer<typeof InserterChestConfigSchema>;
 
 export const InserterAnimationOverrideConfigSchema = z.object({
     pickup_duration_ticks: z.number().int().positive().optional()
@@ -342,8 +304,6 @@ export const InserterOverridesConfigSchema = z.object({
     animation: InserterAnimationOverrideConfigSchema.optional(),
     enable_control: EnableControlOverrideConfigSchema.optional()
 });
-
-export type InserterOverridesConfig = z.infer<typeof InserterOverridesConfigSchema>;
 
 export const InserterConfigSchema = z.object({
     id: z.number().int().positive().optional(),
@@ -364,10 +324,6 @@ export const InserterConfigSchema = z.object({
 
 export type InserterConfig = z.infer<typeof InserterConfigSchema>;
 
-// Legacy type aliases for backwards compatibility
-export type InserterStackSizeConfig = { stack_size: number };
-export type InserterFilterConfig = { filters: ItemName[] };
-
 // ============================================================================
 // Belt Configuration
 // ============================================================================
@@ -384,14 +340,10 @@ export const BeltLaneConfigSchema = z.object({
     stack_size: z.number().int().positive(),
 });
 
-export type BeltLaneConfig = z.infer<typeof BeltLaneConfigSchema>;
-
 export const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
     /** Items per second taken off this lane by consumers outside the config */
     consumption_per_second: z.number().positive().optional(),
 });
-
-export type ExportBeltLaneConfig = z.infer<typeof ExportBeltLaneConfigSchema>;
 
 const NormalBeltConfigSchema = z.object({
     id: z.number().int().positive(),

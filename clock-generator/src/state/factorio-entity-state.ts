@@ -33,8 +33,6 @@ export const FactorioDrillState = {
 } as const;
 export type FactorioDrillState = typeof FactorioDrillState[keyof typeof FactorioDrillState];
 
-export type FactorioEntityState = FactorioInserterState | FactorioMachineState | FactorioDrillState;
-
 /** True while the sink of an inserter takes nothing from anyone: a machine that takes no item, or a full chest */
 function sinkTakesNothing(sink: EntityState): boolean {
     if (EntityState.isMachine(sink)) {

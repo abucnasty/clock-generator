@@ -35,24 +35,6 @@ export type FactorioBlueprintFile = {
     blueprint?: FactorioBlueprint
 }
 
-export class BlueprintFileBuilder {
-    private blueprintFile: Partial<FactorioBlueprintFile> = {};
-
-    public setBlueprint(blueprint: FactorioBlueprint): BlueprintFileBuilder {
-        this.blueprintFile.blueprint = blueprint;
-        return this;
-    }
-
-    public setBlueprintBook(blueprintBook: FactorioBlueprintBook): BlueprintFileBuilder {
-        this.blueprintFile.blueprint_book = blueprintBook;
-        return this;
-    }
-
-    public build(): FactorioBlueprintFile {
-        return this.blueprintFile;
-    }
-}
-    
 export class BlueprintBuilder {
     private blueprint: Partial<FactorioBlueprint> = {};
     private entityNumbers = new Map<Entity, number>();
