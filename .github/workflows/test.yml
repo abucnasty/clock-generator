@@ -85,3 +85,6 @@ jobs:
 
       # installs and builds clock-generator first, then type-checks and bundles the UI
       - run: npm run build
+
+      - name: Lint
+        run: npm run lint
