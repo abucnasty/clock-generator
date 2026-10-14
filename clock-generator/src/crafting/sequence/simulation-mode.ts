@@ -31,7 +31,7 @@ export function simulationModeForInput(
     return SimulationMode.NORMAL;
 }
 
-export function simulationModeForOutput(
+function simulationModeForOutput(
     inserter: Inserter,
     entity_transfer_count: EntityTransferCount,
     source_machine: Machine

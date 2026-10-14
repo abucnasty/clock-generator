@@ -5,7 +5,7 @@ import { BeltState, ChestState, EntityState, InserterState, MachineState, Supply
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineMetadata, MachineType, RecipeMetadata } from "../../../entities"
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
-import { InserterAnimationOverrideConfig } from "../../../config/config"
+import { InserterAnimationOverrideConfig } from "../../../config/schema"
 import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";

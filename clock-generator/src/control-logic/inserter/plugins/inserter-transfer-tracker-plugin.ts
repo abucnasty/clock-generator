@@ -19,7 +19,7 @@ export interface TransferSnapshot {
     amount: number;
 }
 
-export type TransferStatusCallback = (snapshot: TransferSnapshot) => void
+type TransferStatusCallback = (snapshot: TransferSnapshot) => void
 
 interface InserterSnapshot {
     status: InserterStatus;

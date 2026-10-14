@@ -342,7 +342,7 @@ export interface RunOptions {
 }
 
 /** Everything one run of a build yields, for the planning run to read its windows off and for a trial to judge */
-export type BuildRun = ReturnType<typeof runBuild>;
+type BuildRun = ReturnType<typeof runBuild>;
 
 /**
  * Runs a build: the machines are filled until their output is blocked (the prepare step), the crafting cycle is
@@ -757,10 +757,10 @@ export function trialRunOf(run: BuildRun): TrialRun {
 }
 
 /** The options of GenerateClockOptions the planning run itself reads */
-export type PlanRunOptions = Pick<GenerateClockOptions, "debug" | "debug_steps" | "logger" | "factorio_states">;
+type PlanRunOptions = Pick<GenerateClockOptions, "debug" | "debug_steps" | "logger" | "factorio_states">;
 
 /** The planning run of a build, with what a clock and its export read off it */
-export interface PlanRun {
+interface PlanRun {
     config: Config;
     logger: Logger;
     run: BuildRun;
@@ -806,7 +806,7 @@ export function planRun(config: Config, options: PlanRunOptions = {}): PlanRun {
 }
 
 /** The clock of a plan: the plan's windows with the room they get, and the belt that makes it for */
-export interface PlannedClock {
+interface PlannedClock {
     windows: Map<string, OpenRange[]>;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
@@ -854,7 +854,7 @@ export function clockOfPlan(plan: PlanRun, options: Pick<GenerateClockOptions, "
 }
 
 /** What a clock's export carries beyond the plan and its windows */
-export interface ClockExportExtras {
+interface ClockExportExtras {
     /**
      * The run whose histories the result carries, when it is not the planning run: observed windows are what the
      * inserters did in a trial of the clock, so that trial is the run shown
@@ -1207,7 +1207,7 @@ const OUTPUT_WINDOW_LAST_PICKUP_TICKS = 4;
  *   come in one window a cycle that opens with the output window; into any other machine as windows of one hand
  *   spread evenly over the period. A hand its machine has no room for is not taken.
  */
-export function windowsOfThePlanWhereInsertersRunFree(
+function windowsOfThePlanWhereInsertersRunFree(
     history: InventoryTransferHistory,
     entity_registry: ReadableEntityRegistry,
     crafting_cycle_plan: CraftingCyclePlan,

@@ -113,17 +113,6 @@ export class InventoryState implements WritableInventoryState {
         this.inventory.set(itemName, amount);
     }
 
-    public remove(itemName: string, amount: number): void {
-        if (amount < 0) {
-            throw new Error(`Cannot remove negative amount: ${amount}`);
-        }
-        const current = this.getQuantity(itemName);
-        if (current < amount) {
-            throw new Error(`Insufficient inventory: have ${current}, need ${amount} of ${itemName}`);
-        }
-        this.inventory.set(itemName, current - amount);
-    }
-
     public hasQuantity(itemName: string, amount: number): boolean {
         return this.getQuantity(itemName) >= amount;
     }

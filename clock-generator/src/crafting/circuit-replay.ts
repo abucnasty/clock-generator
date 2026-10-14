@@ -6,7 +6,7 @@
  */
 import { FactorioBlueprint } from "../blueprints/blueprint";
 
-export type Signals = Map<string, number>;
+type Signals = Map<string, number>;
 
 type Networks = { red?: boolean; green?: boolean } | undefined;
 type Condition = {

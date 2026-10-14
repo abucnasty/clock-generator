@@ -159,7 +159,7 @@ function takesFuelOffABelt(config: Config): boolean {
  * that does not hold either way is offered as it is, without the slack: until 2026-10-10 it was made again with the
  * slack, which no selected clock of any sample needed once the simulator took from the nearest lane of a belt first.
  */
-export function withFuelHandRoomWhereNeeded(
+function withFuelHandRoomWhereNeeded(
     withoutRoom: () => BlueprintGenerationResult,
     withFuelHandRoom: () => BlueprintGenerationResult | undefined,
 ): BlueprintGenerationResult {

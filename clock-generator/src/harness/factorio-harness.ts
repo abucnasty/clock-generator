@@ -123,7 +123,7 @@ async function exists(file: string): Promise<boolean> {
 }
 
 /** The executable of an install folder, or the path itself when it already is a file */
-export async function resolveFactorioExecutable(factorio: string): Promise<string> {
+async function resolveFactorioExecutable(factorio: string): Promise<string> {
     const stat = await fs.stat(factorio).catch(() => null);
     if (!stat) {
         throw new Error(`Factorio not found at ${factorio}`);
@@ -311,7 +311,7 @@ export function matchBuiltInserters(described: any, config: Config): Map<number,
 }
 
 /** Something of the build that moves items of a machine of the config and that the config does not have */
-export interface BuildPartMissingFromConfig {
+interface BuildPartMissingFromConfig {
     kind: "inserter" | "machine" | "loader";
     /** For an error message */
     description: string;
@@ -508,9 +508,9 @@ function isRunning(child: ChildProcess): boolean {
 }
 
 /** What a session starts its game with */
-export type SessionOptions = Pick<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "timeout_seconds" | "log">;
+type SessionOptions = Pick<HarnessOptions, "factorio" | "save" | "work_dir" | "watch" | "timeout_seconds" | "log">;
 /** One build to record in the game of a session */
-export type BuildOptions = Omit<HarnessOptions, "factorio" | "save" | "work_dir" | "watch">;
+type BuildOptions = Omit<HarnessOptions, "factorio" | "save" | "work_dir" | "watch">;
 
 /** Throws when the build cannot be recorded as asked. Nothing of the game is needed to tell */
 function assertBuildOptions(options: BuildOptions): void {

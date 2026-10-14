@@ -2,7 +2,7 @@ import { InserterHandContents, InserterState } from "../../../state";
 import { ModePlugin, Transition } from "../../mode";
 import { InserterMode } from "../modes";
 
-export type OnHandContentsChanged = (previousHeldItem: InserterHandContents | null, currentHeldItem: InserterHandContents | null) => void;
+type OnHandContentsChanged = (previousHeldItem: InserterHandContents | null, currentHeldItem: InserterHandContents | null) => void;
 
 export class InserterHandContentsChangePlugin implements ModePlugin<InserterMode> {
 

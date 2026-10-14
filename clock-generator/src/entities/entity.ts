@@ -42,10 +42,6 @@ export function assertIsBelt(entity: Entity): asserts entity is Belt {
     assert(isBelt(entity), `Entity with id ${entity.entity_id} is not a belt`);
 }
 
-export function assertIsDrill(entity: Entity): asserts entity is MiningDrill {
-    assert(isDrill(entity), `Entity with id ${entity.entity_id} is not a drill`);
-}
-
 export function assertIsChest(entity: Entity): asserts entity is Chest {
     assert(isChest(entity), `Entity with id ${entity.entity_id} is not a chest`);
 }

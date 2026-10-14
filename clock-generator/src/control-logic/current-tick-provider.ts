@@ -48,7 +48,7 @@ export class OffsetTickProvider implements TickProvider {
     }
 }
 
-export function create(tickProvider: () => number): TickProvider {
+function create(tickProvider: () => number): TickProvider {
     return {
         getCurrentTick(): number {
             return tickProvider();

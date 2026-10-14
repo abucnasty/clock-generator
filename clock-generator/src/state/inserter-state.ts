@@ -24,7 +24,7 @@ export const InserterStatus = {
 
 export type InserterStatus = typeof InserterStatus[keyof typeof InserterStatus];
 
-export type InserterStatusState = {
+type InserterStatusState = {
     status: InserterStatus;
     tick: number;
 }

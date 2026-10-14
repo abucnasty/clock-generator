@@ -102,7 +102,7 @@ function rangeLookup(ranges: ReadonlyArray<OpenRange>): (position: number) => bo
     };
 }
 
-export class EnableControlLambda implements EnableControl {
+class EnableControlLambda implements EnableControl {
     constructor(
         private readonly enabledFn: () => boolean
     ) { }
@@ -112,7 +112,7 @@ export class EnableControlLambda implements EnableControl {
     }
 }
 
-export class ClockedEnableControl implements EnableControl, Resettable {
+class ClockedEnableControl implements EnableControl, Resettable {
 
     public static create(args: {
         periodDuration: Duration,
@@ -221,7 +221,7 @@ export class LatchedEnableControl implements EnableControl {
     }
 }
 
-export class AllEnableControl implements EnableControl {
+class AllEnableControl implements EnableControl {
 
     public static create(enable_controls: ReadonlyArray<EnableControl>): EnableControl {
         if (enable_controls.length === 0) {
@@ -242,7 +242,7 @@ export class AllEnableControl implements EnableControl {
     }
 }
 
-export class AnyEnableControl implements EnableControl {
+class AnyEnableControl implements EnableControl {
 
     public static create(enable_controls: ReadonlyArray<EnableControl>): EnableControl {
         if (enable_controls.length === 0) {
@@ -266,7 +266,7 @@ export class AnyEnableControl implements EnableControl {
 /**
  * Creates an EnableControl that enables for a specified duration within a repeating period, with an optional offset.
  */
-export function createPeriodicEnableControl(args: {
+function createPeriodicEnableControl(args: {
     /**
      * The total period in ticks for the enable/disable cycle.
      */
@@ -286,7 +286,7 @@ export function createPeriodicEnableControl(args: {
     );
 }
 
-export function createLambdaEnableControl(enabledFn: () => boolean): EnableControl {
+function createLambdaEnableControl(enabledFn: () => boolean): EnableControl {
     return new EnableControlLambda(enabledFn);
 }
 

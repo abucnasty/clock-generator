@@ -28,12 +28,11 @@ npm install
 ### Basic Usage
 
 1. Choose or create a configuration file in `resources/config-samples/` (JSON)
-2. Update `src/multi-machine-poc.ts` to use your desired config:
+2. Open it in the UI (`clock-generator-ui`), or generate its clock with the library in a file of your own under `src/`:
 
 ```typescript
 import { loadConfigFromFile } from './config/loader';
 import { ConfigPaths } from './config/config-paths';
-import { DebugSettingsProvider } from './crafting/sequence/debug/debug-settings-provider';
 import { generateClockForConfig } from './crafting/generate-blueprint';
 import { encodeBlueprintFile } from "./blueprints/serde";
 
@@ -41,8 +40,7 @@ async function main() {
     // Load a configuration file
     const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
 
-    const debug = DebugSettingsProvider.mutable();
-    const result = generateClockForConfig(config, debug);
+    const result = generateClockForConfig(config);
 
     console.log("----------------------");
     console.log(encodeBlueprintFile({
@@ -53,10 +51,10 @@ async function main() {
 main().catch(console.error);
 ```
 
-3. Run the generator:
+3. Build and run it:
 
 ```bash
-npm run dev
+npx tsc && node dist/<your file>.js
 ```
 
 4. Copy the output blueprint string and import it into Factorio
@@ -409,15 +407,13 @@ src/
 ├── config/           # Configuration loading and validation
 │   ├── schema.ts     # Zod schemas for config validation
 │   ├── loader.ts     # config file loader
-│   ├── config-paths.ts # Path constants for sample configs
-│   └── examples.ts   # Legacy TypeScript config examples
+│   └── config-paths.ts # Path constants for sample configs
 ├── crafting/         # Core simulation and blueprint generation
 │   ├── runner/       # Step-based execution framework
 │   └── sequence/     # Simulation logic and interceptors
 ├── control-logic/    # Entity behavior and state machines
 ├── entities/         # Machine, inserter, and belt models
-├── blueprints/       # Blueprint encoding/decoding
-└── types/            # Custom type declarations
+└── blueprints/       # Blueprint encoding/decoding
 
 resources/
 └── config-samples/   # sample configurations and scaffolds, by build
@@ -498,14 +494,10 @@ try {
 The configuration system is designed to work in browser environments:
 
 ```typescript
-import { createBrowserConfigLoader } from './config/loader';
+import { parseConfigFromJson } from 'clock-generator/browser';
 
-const loader = createBrowserConfigLoader(async (url) => {
-    const response = await fetch(url);
-    return response.text();
-});
-
-const config = await loader.loadFromUrl('/api/config');
+const response = await fetch('/api/config');
+const config = parseConfigFromJson(await response.text());
 ```
 
 

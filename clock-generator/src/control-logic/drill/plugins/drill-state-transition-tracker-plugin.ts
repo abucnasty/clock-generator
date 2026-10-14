@@ -7,7 +7,7 @@ import { DrillMode } from "../modes/drill-mode";
 /**
  * Represents a single state transition for a drill
  */
-export interface DrillStateTransition {
+interface DrillStateTransition {
     entity_id: EntityId;
     tick: number;
     from_status: DrillStatus;
@@ -15,7 +15,7 @@ export interface DrillStateTransition {
     reason: string;
 }
 
-export type DrillStateTransitionCallback = (transition: DrillStateTransition) => void;
+type DrillStateTransitionCallback = (transition: DrillStateTransition) => void;
 
 /**
  * Plugin that tracks state transitions for a drill state machine.

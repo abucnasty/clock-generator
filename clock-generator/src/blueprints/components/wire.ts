@@ -2,7 +2,7 @@ import { Entity } from "./entity";
 
 export type WireColor = "red" | "green";
 
-export type CircuitSide = "input" | "output";
+type CircuitSide = "input" | "output";
 
 export interface WireEndpoint {
     entity: Entity;

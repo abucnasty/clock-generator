@@ -1,5 +1,0 @@
-{
-  "watch": ["src", "resources/config-samples"],
-  "ext": "ts,conf",
-  "exec": "ts-node src/multi-machine-poc.ts"
-}

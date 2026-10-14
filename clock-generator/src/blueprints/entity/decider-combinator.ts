@@ -26,7 +26,7 @@ export interface DeciderCombinatorEntity extends Entity {
     readonly player_description?: string;
 }
 
-export class DeciderCombinatorEntityBuilder {
+class DeciderCombinatorEntityBuilder {
     private position: Position = Position.zero;
     private direction: Direction | undefined = undefined;
     private control_behavior: ControlBehavior = {};

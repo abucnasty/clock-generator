@@ -1,8 +1,7 @@
 import { InserterConfig } from "../../config";
 import { FactorioDataService, ItemName } from "../../data";
-import { BeltStackSize, Lane, ReadableBeltRegistry } from "../belt";
+import { BeltStackSize, Lane } from "../belt";
 import { EntityType } from "../entity-type";
-import { ReadableMachineRegistry } from "../machine";
 import { InserterMetadata } from "./metadata/inserter-metadata";
 import { InserterAnimation } from "./inserter-animation";
 import assert from "../../common/assert";

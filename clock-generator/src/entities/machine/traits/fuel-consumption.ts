@@ -3,7 +3,7 @@ import { TICKS_PER_SECOND } from "../../../data-types";
 import { BurnerEnergySource, Fuel } from "../fuel";
 
 /** Factorio clamps the energy consumption effect at -80%. */
-export const MIN_ENERGY_CONSUMPTION_BONUS_PERCENT = -80;
+const MIN_ENERGY_CONSUMPTION_BONUS_PERCENT = -80;
 
 export interface FuelConsumption {
     readonly item: ItemName;

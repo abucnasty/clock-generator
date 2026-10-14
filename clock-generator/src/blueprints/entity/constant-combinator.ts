@@ -17,7 +17,7 @@ export interface ConstantCombinatorEntity extends Entity {
     readonly player_description?: string;
 }
 
-export class ConstantCombinatorEntityBuilder {
+class ConstantCombinatorEntityBuilder {
     private position: Position = Position.zero;
     private control_behavior: ControlBehavior = {};
     private player_description: string | undefined = undefined;

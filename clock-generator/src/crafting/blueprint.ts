@@ -198,7 +198,7 @@ function formatRate(value: number): string {
  * The rate the clock was made for, so a blueprint says what it is meant to deliver:
  * "Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)"
  */
-export function targetRateDescription(cycle: CraftingCyclePlan): string {
+function targetRateDescription(cycle: CraftingCyclePlan): string {
     const target = cycle.production_rate;
     const item_icon = SignalId.toDescriptionString(SignalId.item(target.total_production_rate.item));
     const total = formatRate(target.total_production_rate.amount_per_second.toDecimal());
@@ -311,7 +311,7 @@ function wholeRanges(ranges: OpenRange[]): OpenRange[] {
 }
 
 /** A decider's clock windows as the part repeating every `modulus` ticks plus the remaining windows */
-export interface ModuloRanges {
+interface ModuloRanges {
     modulus: number;
     /** Positions in [0, modulus) enabled in every repeat */
     repeating: OpenRange[];

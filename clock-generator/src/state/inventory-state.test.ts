@@ -404,22 +404,6 @@ describe("InventoryState", () => {
         })
     })
 
-    describe("remove (alias for removeQuantity)", () => {
-        test("remove works identically to removeQuantity", () => {
-            const inventory = InventoryState.empty()
-            inventory.addQuantity("stone", 100)
-            inventory.remove("stone", 30)
-            expect(inventory.getQuantity("stone")).toBe(70)
-        })
-
-        test("remove throws when insufficient quantity", () => {
-            const inventory = InventoryState.empty()
-            inventory.addQuantity("stone", 30)
-            expect(() => inventory.remove("stone", 50))
-                .toThrow("Insufficient inventory")
-        })
-    })
-
     describe("edge cases and stress tests", () => {
         test("handles large quantities", () => {
             const inventory = InventoryState.empty()
