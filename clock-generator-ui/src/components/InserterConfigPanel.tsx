@@ -22,6 +22,7 @@ import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { entityLabel } from '../utils/entityLabel';
 import { inferInserterItems } from '../utils/inferInserterItems';
 import { changedConfigFields } from '../utils/inserterDraft';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
@@ -259,19 +260,6 @@ interface InserterConfigPanelProps {
 }
 
 // ---- Tab label with the unsaved mark ----
-
-/** Hidden from sight, read by screen readers */
-const VISUALLY_HIDDEN = {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    m: '-1px',
-    p: 0,
-    overflow: 'hidden',
-    clip: 'rect(0 0 0 0)',
-    whiteSpace: 'nowrap',
-    border: 0,
-} as const;
 
 /** The tab's text, then "•" when it holds unsaved edits; the tab's name says so in words ("Overrides, unsaved changes") */
 function TabLabel({ text, unsaved }: { text: string; unsaved: boolean }) {

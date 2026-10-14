@@ -600,6 +600,8 @@ export function EntityEditDialog({
             <Dialog
                 open={open}
                 onClose={requestClose}
+                // it edits an entity by its place in the list, which an Undo could move: it withdraws the offer
+                data-edits-build=""
                 maxWidth={entityType === 'inserter' ? 'md' : 'sm'}
                 fullWidth
                 PaperProps={{ sx: { bgcolor: 'background.paper' } }}
