@@ -60,6 +60,14 @@ const NOWIRE = (() => {
     writeFileSync(file, JSON.stringify(config, null, 2));
     return file;
 })();
+/** The drills build with every inserter ALWAYS enabled: a drill on the clock and no inserter to wire */
+const DRILLS_ONLY = (() => {
+    const config = JSON.parse(readFileSync(DRILLS, 'utf8'));
+    config.inserters = config.inserters.map((it) => ({ ...it, overrides: { ...(it.overrides ?? {}), enable_control: { mode: 'ALWAYS' } } }));
+    const file = join(mkdtempSync(join(tmpdir(), 'results-answer-')), 'drills-only.json');
+    writeFileSync(file, JSON.stringify(config, null, 2));
+    return file;
+})();
 const hasDrillsIn = (path) => (JSON.parse(readFileSync(path, 'utf8')).drills?.configs?.length ?? 0) > 0;
 
 const stopPreview = process.env.BASE_URL ? null : await previewServer({ port: Number(process.env.PREVIEW_PORT ?? 5206) });
@@ -69,7 +77,8 @@ const base = process.env.BASE_URL ?? stopPreview.url;
 
 /** The steps as the player reads them (spec "The steps as the player reads them"): titles exactly, wording by phrase */
 const STEP_TITLES = {
-    none: 'Nothing to wire.',
+    none: 'Nothing to place or wire.',
+    drills: "Wire each combinator's output to its mining drills, and set them to switch on with it.",
     import: 'Import it in Factorio 2.1.',
     book: 'Pick one blueprint from the book.',
     place: 'Place the combinators next to your build.',
@@ -80,15 +89,17 @@ const STEP_TITLES = {
 };
 const STEP_PHRASES = {
     import: ['Press Copy blueprint', 'open the blueprint library', 'Older versions cannot read these clocks'],
-    book: ['The book holds the same clock twice', '(modulo clock)'],
+    book: ['The book holds the same clock twice', '(modulo clock)', 'Use the first blueprint', 'the book opens on it'],
     place: ['It has only combinators: no inserters and no machines', 'do not rewire them', '9 tiles'],
-    wire: ['green wire', 'connect its output to each inserter in the list below', '500 bytes'],
+    wire: ['green wire', 'connect its output to each inserter in the list below', 'this list has all of it', 'Clock lock,'],
+    drills: ['Drill 1 for', 'green wire', 'Anything > 0'],
     enable: ['Circuit network connection', 'Enable/disable', 'Anything > 0'],
-    others: ['An inserter that is not in the list runs all the time', 'back to always enabled'],
-    none: ['This clock has no combinator for your inserters, so there is nothing to wire.'],
+    others: ['An inserter that is not in the list runs all the time', 'remove its wire, or untick Enable/disable'],
+    none: ['Every inserter runs all the time, so this build needs no clock.'],
     lock: ['The small constant combinator under the clock is the lock', 'a tick off'],
 };
-const NOTHING_TO_WIRE = 'This clock has no combinator for your inserters, so there is nothing to wire.';
+const NOTHING_TO_WIRE = 'Every inserter runs all the time, so this build needs no clock.';
+const WIRING_CAPTION = 'Combinator → what to wire to its output';
 const DRILL_SENTENCE = 'A mining drill is wired and set the same way.';
 const REQUIRES = 'Needs Factorio 2.1.';
 const STALE_STEPS_LINE = 'Generate again for a new clock and its steps.';
@@ -189,13 +200,15 @@ function readCard() {
             return { title, detail, full: clean(li.textContent) };
         })
         : [];
-    const table = card.querySelector('table'); // SELECTOR: confirm (the wiring list is the card's only table)
-    const region = table ? table.closest('[role=region]') : null;
-    const wiring = table
+    const region = card.querySelector('[data-wiring-list]');
+    const wiring = region
         ? {
-            caption: clean(table.querySelector('caption') ? table.querySelector('caption').textContent : ''),
-            headers: [...table.querySelectorAll('th')].map((th) => clean(th.textContent)),
-            rows: [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.children].map((c) => clean(c.textContent))),
+            caption: clean(region.querySelector('[data-wiring-caption]') ? region.querySelector('[data-wiring-caption]').textContent : ''),
+            headers: [],
+            // [the combinator as its description starts, what to wire to it]
+            rows: [...region.querySelectorAll('li[data-wiring-row]')].map((li) => [li.getAttribute('data-wiring-row'), clean(li.textContent)]),
+            // its lines: one per inserter or drill, and a heading line for a combinator of several
+            lines: region.querySelectorAll('li').length,
             regionName: region ? region.getAttribute('aria-label') : null,
             regionTabindex: region ? region.getAttribute('tabindex') : null,
             scrollH: region ? region.scrollHeight : null,
@@ -295,21 +308,28 @@ function decode(s) {
     const descriptions = bps.flatMap((b) => (b.entities ?? []).map((e) => e.player_description).filter(Boolean));
     const inserterNumbers = new Set();
     const fuelNumbers = new Set();
+    const drillNumbers = new Set();
     for (const d of descriptions) {
+        const drill = /^Drills? ([\d, ]+) for/.exec(d);
+        if (drill) drill[1].split(/[, ]+/).filter(Boolean).forEach((n) => drillNumbers.add(Number(n)));
         const m = /^Inserters? ([\d, ]+) for/.exec(d);
         if (!m) continue;
         const nums = m[1].split(/[, ]+/).filter(Boolean).map(Number);
         nums.forEach((n) => inserterNumbers.add(n));
         if (/\(fuel\)/.test(d.split('\n')[0])) nums.forEach((n) => fuelNumbers.add(n));
     }
-    return { book: Boolean(json.blueprint_book), labels: bps.map((b) => b.label), inserterNumbers, fuelNumbers };
+    return { book: Boolean(json.blueprint_book), labels: bps.map((b) => b.label), inserterNumbers, fuelNumbers, drillNumbers };
 }
 
-/** The inserter numbers named by the wiring list of the card */
-function wiringNumbers(card) {
+/** The inserter (or drill) numbers named by the wiring list of the card, by each combinator's name */
+function wiringNumbers(card, kind = 'Inserter') {
     const set = new Set();
     const rows = card.wiring ? card.wiring.rows : [];
-    for (const row of rows) for (const cell of row) for (const m of cell.matchAll(/Inserters? ([\d, ]+)/g)) m[1].split(/[, ]+/).filter(Boolean).forEach((n) => set.add(Number(n)));
+    const re = new RegExp(`^${kind}s? ([\\d, ]+)$`);
+    for (const row of rows) {
+        const m = re.exec(row[0] || '');
+        if (m) m[1].split(/[, ]+/).filter(Boolean).forEach((n) => set.add(Number(n)));
+    }
     return set;
 }
 const sameSet = (a, b) => a.size === b.size && [...a].every((x) => b.has(x));
@@ -408,14 +428,18 @@ async function cardChecks({ page, rec, tag = 'card', path = LOGISTIC }) {
 }
 
 /** The steps' titles and wording; `book` is whether the copied string is a book (undefined: not known here, so the book step is expected iff shown) */
-async function stepChecks({ rec, card, p, path, book, noWire = false }) {
+async function stepChecks({ rec, card, p, path, book, noWire = false, drillsOnly = false, drills }) {
     const titles = card.steps.map((s) => s.title);
-    const ids = ['import'];
-    if (book === true || (book === undefined && titles.includes(STEP_TITLES.book))) ids.push('book');
-    ids.push('place');
-    if (!noWire) ids.push('wire', 'enable', 'others');
-    else ids.push('none');
-    ids.push('lock');
+    const ids = [];
+    if (noWire) ids.push('none');
+    else {
+        ids.push('import');
+        if (book === true || (book === undefined && titles.includes(STEP_TITLES.book))) ids.push('book');
+        ids.push('place');
+        if (drillsOnly) ids.push('drills');
+        else ids.push('wire', 'enable');
+        ids.push('others', 'lock');
+    }
     await chk(rec, `${p} the steps are a numbered list (ol) with the spec's titles in the spec's order`, async () => {
         const want = ids.map((id) => STEP_TITLES[id]);
         return { pass: card.stepsList && JSON.stringify(titles) === JSON.stringify(want), detail: `titles ${show(titles)}; expected ${show(want)}` };
@@ -430,14 +454,15 @@ async function stepChecks({ rec, card, p, path, book, noWire = false }) {
         });
     }
     if (noWire) {
-        await chk(rec, `${p} "${NOTHING_TO_WIRE}" replaces steps 4 to 6, and there is no wiring list`, async () => ({ pass: card.text.includes(NOTHING_TO_WIRE) && !card.wiring && !titles.includes(STEP_TITLES.wire) && !titles.includes(STEP_TITLES.enable) && !titles.includes(STEP_TITLES.others), detail: `text has it: ${card.text.includes(NOTHING_TO_WIRE)}, wiring table: ${Boolean(card.wiring)}, titles ${show(titles)}` }));
+        await chk(rec, `${p} "${NOTHING_TO_WIRE}" is the one step, and there is no wiring list`, async () => ({ pass: card.text.includes(NOTHING_TO_WIRE) && !card.wiring && titles.length === 1, detail: `text has it: ${card.text.includes(NOTHING_TO_WIRE)}, wiring list: ${Boolean(card.wiring)}, titles ${show(titles)}` }));
     } else {
-        await chk(rec, `${p} the wiring list is a table with caption "Combinator → inserters" and columns "Combinator for", "Wire its output to"`, async () => ({ pass: Boolean(card.wiring) && card.wiring.caption === 'Combinator → inserters' && JSON.stringify(card.wiring.headers) === JSON.stringify(['Combinator for', 'Wire its output to']), detail: show(card.wiring && { caption: card.wiring.caption, headers: card.wiring.headers }) }));
-        await chk(rec, `${p} each wiring row names its inserters ("Inserter 3", "Inserters 1, 2")`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => r.some((c) => /^Inserters? [\d, ]+$/.test(c))), detail: show(card.wiring && card.wiring.rows.slice(0, 4)) }));
+        await chk(rec, `${p} the wiring list has its caption "${WIRING_CAPTION}"`, async () => ({ pass: Boolean(card.wiring) && card.wiring.caption === WIRING_CAPTION, detail: show(card.wiring && card.wiring.caption) }));
+        await chk(rec, `${p} each wiring row is a combinator ("Inserter 3", "Inserters 1, 2", "Drill 1") with what each of its inserters carries and between which ends`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => /^(Inserters?|Drills?) [\d, ]+$/.test(r[0] || '') && /(Inserter|Drill) \d+ — \S/.test(r[1] || '')), detail: show(card.wiring && card.wiring.rows.slice(0, 3)) }));
     }
-    if (path && !noWire) {
-        const drills = hasDrillsIn(path);
-        await chk(rec, `${p} the drill sentence is ${drills ? 'present' : 'absent'} (${drills ? 'the build has drills' : 'no drills'})`, async () => ({ pass: card.text.includes(DRILL_SENTENCE) === drills, detail: `in card: ${card.text.includes(DRILL_SENTENCE)}` }));
+    if ((path || drills !== undefined) && !noWire && !drillsOnly) {
+        // from the clock (its drill combinators) when the copied string is known; else from the build
+        const clocked = drills !== undefined ? drills.size > 0 : hasDrillsIn(path);
+        await chk(rec, `${p} the drill sentence is ${clocked ? 'present' : 'absent'} (${clocked ? 'a drill is on the clock' : 'no drill on the clock'})`, async () => ({ pass: card.text.includes(DRILL_SENTENCE) === clocked, detail: `in card: ${card.text.includes(DRILL_SENTENCE)}` }));
     }
 }
 
@@ -668,7 +693,13 @@ async function copyChecks({ page, rec, tag, path, expect = {}, withTab = false }
     if (decoded.book) {
         await chk(rec, `${p} the book's first blueprint label ends with "(modulo clock)"`, async () => ({ pass: /\(modulo clock\)$/.test(decoded.labels[0] || ''), detail: show(decoded.labels) }));
     }
-    const noWire = decoded.inserterNumbers.size === 0;
+    const noWire = decoded.inserterNumbers.size === 0 && decoded.drillNumbers.size === 0;
+    const drillsOnly = decoded.inserterNumbers.size === 0 && decoded.drillNumbers.size > 0;
+    rec.info(`${p} drills on the clock`, sorted(decoded.drillNumbers) || 'none');
+    await chk(rec, `${p} the drills in the wiring list equal the drills named by the descriptions (/^Drills? N for/)`, async () => {
+        const listed = wiringNumbers(fresh, 'Drill');
+        return { pass: sameSet(listed, decoded.drillNumbers), detail: `list [${sorted(listed)}], descriptions [${sorted(decoded.drillNumbers)}]` };
+    });
     await chk(rec, `${p} the numbers in the wiring list equal the inserters named by the descriptions (/^Inserters? N for/)`, async () => {
         const listed = wiringNumbers(fresh);
         return { pass: sameSet(listed, decoded.inserterNumbers), detail: `list [${sorted(listed)}], descriptions [${sorted(decoded.inserterNumbers)}]` };
@@ -679,15 +710,15 @@ async function copyChecks({ page, rec, tag, path, expect = {}, withTab = false }
     if (expect.book !== undefined) {
         await chk(rec, `${p} this build gives ${expect.book ? 'a book' : 'a single blueprint'}`, async () => ({ pass: decoded.book === expect.book, detail: `book: ${decoded.book}` }));
     }
-    await stepChecks({ rec, card: fresh, p, path, book: decoded.book, noWire });
+    await stepChecks({ rec, card: fresh, p, path, book: decoded.book, noWire, drillsOnly, drills: decoded.drillNumbers });
     if (expect.longList) {
         await chk(rec, `${p} a wiring list past 8 rows scrolls in its own box: role=region named "Wiring list", tabindex 0`, async () => {
             const w = fresh.wiring;
-            if (w && w.rows.length <= 8) {
+            if (w && w.lines <= 8) {
                 // merged inserters share a row, so this build gives 8 or fewer: then the list must not be a scroll box
-                return { pass: w.regionName === 'Wiring list' && w.regionTabindex === null && w.scrollH <= w.clientH + 1, detail: `only ${w.rows.length} rows (merged inserters share one), so no scroll box: ${show({ region: w.regionName, tabindex: w.regionTabindex, scrollH: w.scrollH, clientH: w.clientH })}` };
+                return { pass: w.regionName === 'Wiring list' && w.regionTabindex === null && w.scrollH <= w.clientH + 1, detail: `only ${w.lines} lines, so no scroll box: ${show({ region: w.regionName, tabindex: w.regionTabindex, scrollH: w.scrollH, clientH: w.clientH })}` };
             }
-            return { pass: Boolean(w) && w.rows.length > 8 && w.regionName === 'Wiring list' && w.regionTabindex === '0' && w.scrollH > w.clientH, detail: show(w && { rows: w.rows.length, region: w.regionName, tabindex: w.regionTabindex, scrollH: w.scrollH, clientH: w.clientH }) };
+            return { pass: Boolean(w) && w.lines > 8 && w.regionName === 'Wiring list' && w.regionTabindex === '0' && w.scrollH > w.clientH, detail: show(w && { lines: w.lines, combinators: w.rows.length, region: w.regionName, tabindex: w.regionTabindex, scrollH: w.scrollH, clientH: w.clientH }) };
         });
         const region = page.getByRole('main').getByRole('region', { name: 'Wiring list' });
         if ((await count(region)) > 0) rec.info('the wiring region', 'named "Wiring list" by aria-label; a scroll box has no visible label of its own, so label-in-name does not apply');
@@ -719,12 +750,13 @@ async function pickChecks({ page, rec }) {
         return { pass: chipRows.length === 1 && chipRows[0] === recRow.label && !card1.chips.includes('Recommended'), detail: `chip on ${show(chipRows)} (recommended was ${show(recRow.label)}); chips in the card ${show(card1.chips)}` };
     });
     await chk(rec, 'pick: "Back to recommended" appears in the card', async () => ({ pass: card1.back, detail: `button present: ${card1.back}` }));
-    await chk(rec, 'pick: the status region said "Showing {plain name}." once', async () => {
+    await chk(rec, 'pick: the status region said "Showing the clock: {plain name}." once', async () => {
         const log = await logSince(page, mark);
         const shown = log.filter((t) => /^Showing /.test(t));
-        return { pass: shown.length === 1 && Boolean(card1.h3) && shown[0] === `Showing ${card1.h3}.`, detail: `log ${show(log.slice(-3))}, card h3 ${show(card1.h3)}` };
+        return { pass: shown.length === 1 && Boolean(card1.h3) && shown[0] === `Showing the clock: ${card1.h3}.`, detail: `log ${show(log.slice(-3))}, card h3 ${show(card1.h3)}` };
     });
-    await checkAnnounced(rec, page, /Showing .+\./, '"Showing {name}." after choosing a row');
+    await checkAnnounced(rec, page, /Showing the clock: .+\./, '"Showing the clock: {name}." after choosing a row');
+    const markBack = await logMark(page);
     const back = page.getByRole('main').getByRole('button', { name: /^Back to (the )?(recommended|pick)/i }).first(); // SELECTOR: confirm
     if ((await count(back)) > 0) {
         await checkLabelInName(rec, page, back, 'Back to recommended');
@@ -737,6 +769,10 @@ async function pickChecks({ page, rec }) {
             return { tag: a && a.tagName, text: ((a && a.textContent) || '').trim().slice(0, 40), inHeading: Boolean(h), inCard: Boolean(card && [...card.querySelectorAll('h2')].some((x) => /your clock/i.test(x.textContent))) };
         });
         await chk(rec, "pick: after Back to recommended keyboard focus is in the card's heading (h3)", async () => ({ pass: focus.inHeading && focus.inCard, detail: show(focus) }));
+        await chk(rec, 'pick: the card\'s Back to recommended announces nothing (the focus on the name reads it)', async () => {
+            const log = await logSince(page, markBack);
+            return { pass: !log.some((t) => /^Showing /.test(t)), detail: `log since the press ${show(log)}` };
+        });
         const card2 = await cardOf(page);
         await chk(rec, 'pick: Back to recommended restores the card (the name and the engine name)', async () => ({ pass: card2.present && card2.h3 === card0.h3 && card2.chips.includes('Recommended'), detail: `h3 ${show(card2.h3)} (was ${show(card0.h3)}), chips ${show(card2.chips)}` }));
         await chk(rec, 'pick: the button is gone once it is pressed', async () => ({ pass: !card2.back, detail: `present: ${card2.back}` }));
@@ -958,11 +994,16 @@ try {
                 if (!card.present) return rec.check('nothing to wire: the card shows the "nothing to wire" step', false, NOT_THERE);
                 await stepChecks({ rec, card, p: 'nothing to wire:', path: null, book: undefined, noWire: true });
             }, page);
-            await rec.step('drills (the drill sentence)', async () => {
+            await rec.step('drills (from the clock)', async () => {
                 await build(page, DRILLS);
-                const card = await cardOf(page);
-                if (!card.present) return rec.check('drills: step 5 adds the drill sentence when the build has drills', false, NOT_THERE);
-                await chk(rec, 'drills: step 5 adds "A mining drill is wired and set the same way." only when the build has drills', async () => ({ pass: card.text.includes(DRILL_SENTENCE) === hasDrillsIn(DRILLS), detail: `build has drills: ${hasDrillsIn(DRILLS)}, sentence in card: ${card.text.includes(DRILL_SENTENCE)}; wiring rows ${card.wiring ? card.wiring.rows.length : 'none'}` }));
+                await copyChecks({ page, rec, tag: 'drills', path: DRILLS });
+                await page.waitForTimeout(2300);
+            }, page);
+            await rec.step('a drill on the clock, every inserter always on', async () => {
+                await build(page, DRILLS_ONLY);
+                await rec.shot(page, 'drills-only', { fullPage: true, desc: 'Every inserter Always on, a drill on the clock: the drill step and its wiring list' });
+                await copyChecks({ page, rec, tag: 'drills only', path: DRILLS_ONLY });
+                await page.waitForTimeout(2300);
             }, page);
         }
 
