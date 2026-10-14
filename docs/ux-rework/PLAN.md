@@ -70,7 +70,10 @@ master
 - **Child PRs:** small, one item per PR where practical (items that share files may be bundled; see
   `ORCHESTRATOR.md`), targeting the phase branch. **The agent may merge a child PR**
   once CI passes.
-- **Phase branches:** start each one from `feat/ux-rework` after the previous phase has merged. When the phase is done,
+- **Phase branches:** start each one from `feat/ux-rework` after the previous phase has merged. Exception (the owner,
+  2026-10-14): while the previous phase's tail leaves slots idle, the next phase's branch may be cut from the previous
+  phase branch's head and its unblocked items run in those slots (the four-unit cap counts both phases). It merges the
+  previous phase branch in after each of its merges, then `feat/ux-rework` once that phase lands. When the phase is done,
   its UX review has run (see Verification) and CI passes, **the agent may merge the phase PR into `feat/ux-rework`**.
 - **The final PR**, `feat/ux-rework` → `master`, is opened by the agent and **merged only by the owner**.
 - CI (`.github/workflows/test.yml`) runs on every pull request: the unit tests, knip, lint, `check:icons` and the build.
@@ -131,7 +134,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
     - the Paste from Factorio import
     - deleting any row (machine, inserter, belt, chest, drill)
     - deleting from the diagram
-  - Then show "{What happened}. Undo" for 10 seconds. Undo restores the snapshot, and the existing persistence saves it.
+  - Then show "{What happened}. Undo" until the next edit to the build, the next undoable action, Close or Escape (no
+    timer: the owner, 2026-10-14, for WCAG 2.2.1; this replaces "for 10 seconds"). Ctrl/Cmd+Z undoes while it is offered.
+    Undo restores the snapshot, and the existing persistence saves it.
   - In the ⋮ menu, put Reset below a divider, in the error colour.
 - **Done when:** there are vitest tests for snapshot and restore.
 
