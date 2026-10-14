@@ -296,6 +296,54 @@ for (const w of WIDTHS) {
     }
 }
 
+// ---------------------------------------------------------------- Focus Not Obscured (WCAG 2.4.11)
+/** Shift+Tab up from the end of Configure through `stops` focus stops, then Tab down through as many: none may be left under the header */
+async function checkFocusNotObscured(stops) {
+    await setView('Configure');
+    await page.evaluate(() => { window.scrollTo(0, 0); document.activeElement?.blur(); });
+    const hidden = [];
+    let seen = 0;
+    const visit = async (direction, n) => {
+        for (let i = 0; i < n; i++) {
+            await page.keyboard.press(direction === 'forward' ? 'Tab' : 'Shift+Tab');
+            await page.waitForTimeout(60);
+            const r = await page.evaluate(() => {
+                const el = document.activeElement;
+                if (!el || el === document.body) return null;
+                const appBar = document.querySelector('header');
+                const group = document.querySelector('[aria-label="Configure the build or look at its results"]');
+                const barEl = group.closest('.MuiToolbar-root, .MuiPaper-root');
+                const headerBottom = Math.max(appBar.getBoundingClientRect().bottom, barEl.getBoundingClientRect().bottom);
+                const box = el.getBoundingClientRect();
+                return {
+                    inHeader: appBar.contains(el) || barEl.contains(el),
+                    empty: box.width === 0 || box.height === 0,
+                    top: box.top,
+                    headerBottom,
+                    name: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30),
+                };
+            });
+            if (!r || r.inHeader || r.empty) continue;
+            seen++;
+            if (r.top < r.headerBottom - 0.5) hidden.push(`${direction} ${i + 1}: "${r.name}" top ${Math.round(r.top)} under header bottom ${Math.round(r.headerBottom)}`);
+        }
+    };
+    // Shift+Tab from the top of the page goes to the last stop and up from there: the way that leaves focus under a header
+    await visit('backward', stops);
+    await shot(`header-${width}-focus-after-shift-tabbing`, `Configure after Shift+Tab up through ${stops} focus stops from the end of the page: the focused element is not under the header`);
+    await visit('forward', stops);
+    await shot(`header-${width}-focus-after-tabbing`, `Configure after Tab down through ${stops} more focus stops`);
+    check(`focus is never under the header (WCAG 2.4.11): ${stops} stops with Shift+Tab, then ${stops} with Tab`, hidden.length === 0 && seen > stops, `${seen} focus stops outside the header, ${hidden.length} under it${hidden.length ? `: ${hidden.slice(0, 3).join('; ')}` : ''}`);
+    await page.evaluate(() => document.activeElement?.blur());
+    await toTop();
+}
+
+for (const w of [1440, 390]) {
+    width = w;
+    await page.setViewportSize({ width: w, height: HEIGHT(w) });
+    await step(`${w} focus not obscured`, () => checkFocusNotObscured(40));
+}
+
 // ---------------------------------------------------------------- 6. Validate scrolls the panel below the header
 for (const w of [390, 1440]) {
     width = w;
@@ -322,7 +370,7 @@ for (const w of [390, 1440]) {
         check('Validate switched to Configure', g.view === 'Configure', String(g.view));
         check('the Validation heading is not hidden under the header after Validate', g.headingTop >= g.headerBottom - 0.5, `heading top ${Math.round(g.headingTop)}, header bottom ${Math.round(g.headerBottom)}`);
         check('the click\'s own smooth scroll leaves the Validation panel just below the header (within 40px)', g.paperTop - g.headerBottom <= 40 && g.paperTop >= g.headerBottom - 0.5, `panel top ${Math.round(g.paperTop)}, header bottom ${Math.round(g.headerBottom)}`);
-        // what this item owns: the room kept above the panel, which is the header's height. Scroll there at once, after the page has settled
+        // what this item owns: the room kept above what is scrolled to, which is the header's height. Scroll there at once, after the page has settled
         const s = await page.evaluate(() => {
             const heading = [...document.querySelectorAll('h6')].find((el) => (el.textContent ?? '').trim() === 'Validation');
             const paper = heading.closest('.MuiPaper-root');
@@ -331,14 +379,14 @@ for (const w of [390, 1440]) {
             const barEl = group.closest('.MuiToolbar-root, .MuiPaper-root');
             paper.scrollIntoView({ behavior: 'instant', block: 'start' });
             const headerBottom = Math.max(appBar.getBoundingClientRect().bottom, barEl.getBoundingClientRect().bottom);
-            return { gap: paper.getBoundingClientRect().top - headerBottom, headingGap: heading.getBoundingClientRect().top - headerBottom, margin: getComputedStyle(paper).scrollMarginTop, variable: getComputedStyle(document.documentElement).getPropertyValue('--app-header-height'), headerBottom, atEnd: window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1 };
+            return { gap: paper.getBoundingClientRect().top - headerBottom, headingGap: heading.getBoundingClientRect().top - headerBottom, margin: getComputedStyle(document.documentElement).scrollPaddingTop, variable: getComputedStyle(document.documentElement).getPropertyValue('--app-header-height'), headerBottom, atEnd: window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1 };
         });
         await page.waitForTimeout(300);
         await shot(`header-${w}-validate-scrolled`, 'The Validation panel scrolled to at once: placed just below the header');
         check('--app-header-height holds the header\'s height', Math.abs(parseFloat(s.variable) - s.headerBottom) <= 1, `variable "${s.variable.trim()}", header bottom ${Math.round(s.headerBottom)}`);
-        check('the Validation panel keeps the header\'s height plus 8px above it when scrolled to', Math.abs(parseFloat(s.margin) - (s.headerBottom + 8)) <= 1, `scroll margin ${s.margin}, header bottom ${Math.round(s.headerBottom * 10) / 10}`);
+        check('the page\'s scroll-padding-top is the header\'s height plus 8px', Math.abs(parseFloat(s.margin) - (s.headerBottom + 8)) <= 1, `scroll-padding-top ${s.margin}, header bottom ${Math.round(s.headerBottom * 10) / 10}`);
         if (s.atEnd && s.gap > 9.5) note(`the page ends before the Validation panel can reach the header: scrolled to the end, the panel is ${Math.round(s.gap)}px below the header`);
-        else check('scrolling to the Validation panel leaves it 8px below the header', Math.abs(s.gap - 8) <= 1.5 && s.headingGap >= 8, `panel ${Math.round(s.gap * 10) / 10}px below the header, scroll margin ${s.margin}`);
+        else check('scrolling to the Validation panel leaves it 8px below the header', Math.abs(s.gap - 8) <= 1.5 && s.headingGap >= 8, `panel ${Math.round(s.gap * 10) / 10}px below the header, scroll-padding-top ${s.margin}`);
         await toTop();
     });
 }
@@ -406,7 +454,8 @@ await step('390 paste from Factorio', async () => {
     await page.evaluate((text) => navigator.clipboard.writeText(text), JSON.stringify({ machines }));
     await moreOptions().click();
     await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
-    await page.getByRole('dialog').getByText('Confirm Import from Factorio').waitFor({ timeout: 15_000 });
+    await page.getByRole('dialog').getByText('Confirm Import from Factorio').waitFor({ state: 'visible', timeout: 15_000 });
+    await page.waitForTimeout(300);
     await shot('header-390-paste-dialog', 'Paste from Factorio from the menu: the "Confirm Import from Factorio" dialog');
     check('the "Confirm Import from Factorio" dialog opens from Paste from Factorio', true);
     await page.getByRole('dialog').getByRole('button', { name: /^Cancel/ }).click();
@@ -473,4 +522,5 @@ writeFileSync(join(OUT, 'INDEX.md'), [
 ].join('\n'));
 
 console.log('failures:', failures.length);
+process.exitCode = failures.length ? 1 : 0;
 await browser.close();
