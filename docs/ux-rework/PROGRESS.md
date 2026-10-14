@@ -124,16 +124,13 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   in-game checks overlap other work, and `capture.mjs` is kept working as items merge.
 - 2026-10-14: The owner asked for distinct agent names. Agent descriptions now follow `<item> <role>: <topic>`
   ([ORCHESTRATOR.md](ORCHESTRATOR.md) "Staying responsive").
+- 2026-10-14: The rounded clock's non-integer decider constant (`decider-combinator.ts:82`, e.g. `signal-clock <
+  90.947…` for a clock labelled as rounded to 90): the owner chose to leave it as a known issue for after the rework.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
 
-- **A rounded clock's decider gets a non-integer constant (asked 2026-10-14).** Found while checking the subtick book.
-  For a fractional period, the rounded alternative's clock decider is exported as `signal-clock < 90.94736842105263`
-  (`clock-generator/src/blueprints/entity/decider-combinator.ts:82`, `clock(period)` gets `total_duration.ticks` with
-  no `Math.floor`), while its label says it is rounded to 90. A Factorio combinator constant is a whole number, so the
-  game truncates, rounds or rejects it. It is outside the plan (an engine change); the owner decides whether to check it
-  in game or fix it.
+None.
 
 ## Follow-ups
 
@@ -209,6 +206,9 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.9 → 1.11: dnd-kit's reorder announcements read the `_uuid`; the row isn't a named group.
 - 1.9: `useInserterValidation` keeps the previous config's issues for a moment after a delete, so a fix applied then can
   use old ids. Compare the issues to the config key, or check `machine_id` when applying.
+- After the rework (owner, 2026-10-14): a rounded clock's decider gets a non-integer constant
+  (`clock-generator/src/blueprints/entity/decider-combinator.ts:82`, `clock(period)` with no `Math.floor`). Check in
+  game and fix in the engine.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
