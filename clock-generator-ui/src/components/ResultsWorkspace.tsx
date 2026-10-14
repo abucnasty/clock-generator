@@ -13,6 +13,7 @@ import type { FuelViewData, ShiftOptionsView } from '../worker/types';
 import { BlueprintOutput } from './BlueprintOutput';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DebugPanel } from './DebugPanel';
+import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { FuelPanel } from './FuelPanel';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
@@ -22,6 +23,8 @@ import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
+import type { PickRule } from '../utils/recommendedClock';
+import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 
 type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
@@ -31,8 +34,21 @@ interface ResultsWorkspaceProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
+    /** The clock the selection rule picks; null while there are none */
+    recommendedIndex: number | null;
+    onSelectRecommended: () => void;
+    /** What the selection rule was given by the latest generation's config; null before one */
+    pickRule: PickRule | null;
     pending: string[];
     skippedSearches: string[];
+    /** The latest generation ran the slower searches because it asked for them */
+    searchedDeeper: boolean;
+    /** "Search for fewer wake-ups" is on in the form */
+    keptOn: boolean;
+    /** False whenever Generate would be disabled */
+    canSearchDeeper: boolean;
+    /** Generates again with the slower searches; `keepOn` also turns the switch on in the form */
+    onSearchDeeper: (keepOn: boolean) => void;
     blueprintString: string | null;
     simulationDurationTicks: number | null;
     transferHistory: SerializableTransferHistory | null;
@@ -76,6 +92,13 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const transferHistory = showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
     const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
+    const noticeKind = deeperSearchNoticeOf({
+        searchesSkipped: props.skippedSearches.length > 0,
+        searchedDeeper: props.searchedDeeper,
+        keptOn: props.keptOn,
+        isRunning: props.isRunning,
+        stale: props.staleFor !== null,
+    });
 
     return (
         <Box>
@@ -99,8 +122,20 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 alternatives={props.alternatives}
                 selectedIndex={props.selectedIndex}
                 onSelect={props.onSelect}
+                recommendedIndex={props.recommendedIndex}
+                onSelectRecommended={props.onSelectRecommended}
+                pickRule={props.pickRule}
+                isGenerating={props.isRunning}
                 pending={props.pending}
-                skippedSearches={props.skippedSearches}
+                notice={
+                    <DeeperSearchNotice
+                        kind={noticeKind}
+                        recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
+                        canSearchDeeper={props.canSearchDeeper}
+                        onSearchDeeper={props.onSearchDeeper}
+                    />
+                }
+                holdNotice={noticeKind === 'searching'}
             />
 
             <Box sx={{ display: hasResults ? 'block' : 'none', mt: 2 }}>

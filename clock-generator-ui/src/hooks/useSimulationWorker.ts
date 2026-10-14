@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
-import { generatedForOf, type GeneratedFor } from '../utils/resultsStaleness';
+import type { GeneratedFor } from '../utils/resultsStaleness';
+import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
+import { planGenerationRun } from '../utils/deeperSearch';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -43,16 +45,28 @@ interface UseSimulationWorkerResult {
     alternatives: ClockAlternativeView[];
     selectedAlternativeIndex: number;
     selectAlternative: (index: number) => void;
+    /** Index of the clock the selection rule picks, whichever is selected; null while there are no clocks */
+    recommendedIndex: number | null;
+    /** Selects the recommended clock and lets the selection follow it again */
+    selectRecommended: () => void;
+    /** What the selection rule was given by the config of the latest generation; null before one */
+    pickRule: PickRule | null;
     /** Labels of alternatives still being generated; the finished ones are already in `alternatives` */
     pendingAlternatives: string[];
     /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
     skippedSearches: string[];
+    /**
+     * True when the searches ran because the run asked for them, by the switch or by Search deeper, not because they
+     * were needed
+     */
+    searchedDeeper: boolean;
     validation: ValidationState;
     /** Checks the config and plans its transfers in a worker, without generating a clock */
     validate: (config: Config) => void;
     error: string | null;
     initialize: () => void;
-    runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean) => void;
+    /** Generates clocks for `config`; `searchDeeper` runs the slower searches this once, without changing what is recorded */
+    runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper?: boolean) => void;
     /** What the last Generate was for; null when nothing is generated */
     generatedFor: GeneratedFor | null;
     /**
@@ -138,9 +152,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
     const [pendingAlternatives, setPendingAlternatives] = useState<string[]>([]);
     const [skippedSearches, setSkippedSearches] = useState<string[]>([]);
+    const [searchedDeeper, setSearchedDeeper] = useState(false);
+    const [pickRule, setPickRule] = useState<PickRule | null>(null);
     const [generatedFor, setGeneratedFor] = useState<GeneratedFor | null>(null);
-    // set once the user picks an alternative, so results arriving later do not move the selection
+    // set once the user picks an alternative, so results arriving later do not move the selection; selectRecommended
+    // unsets it, so the selection follows the recommended clock again
     const userSelectionRef = useRef<string | null>(null);
+    // the latest list published, which a render may not show yet; selectRecommended picks from it
+    const alternativesRef = useRef<ClockAlternativeView[]>([]);
     const [error, setError] = useState<string | null>(null);
     const workersRef = useRef<Worker[]>([]);
     const generationRef = useRef<Generation | null>(null);
@@ -170,6 +189,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const publishAlternatives = useCallback((generation: Generation) => {
         const combined = combineClockAlternativeRuns(generation.runs, it => it.ranking);
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
+        alternativesRef.current = combined.alternatives;
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
         const not_started = [...generation.waiting, ...generation.skipped];
@@ -325,29 +345,35 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
     }, [handleResponse, progressStore, terminateWorkers]);
 
-    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean) => {
+    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper = false) => {
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
             return;
         }
 
-        setGeneratedFor(generatedForOf(config));
+        // the engine may get the deeper search for this run; the results are recorded as made for the form's config
+        const run = planGenerationRun(config, searchDeeper);
+        const engineConfig = run.engineConfig;
+        setGeneratedFor(run.generatedFor);
+        setSearchedDeeper(run.searchedDeeper);
         setIsRunning(true);
         progressStore.set(null);
+        alternativesRef.current = [];
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
         setPendingAlternatives([]);
         setSkippedSearches([]);
+        setPickRule(pickRuleOf(engineConfig));
         userSelectionRef.current = null;
         setError(null);
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [],
+            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [],
             running: new Map(), done: new Set(), idle: [], completed: 0,
         };
-        worker.postMessage({ type: 'plan', runId, config, debugSteps, streamLogs } satisfies WorkerRequest);
+        worker.postMessage({ type: 'plan', runId, config: engineConfig, debugSteps, streamLogs } satisfies WorkerRequest);
     }, [progressStore]);
 
     const validate = useCallback((config: Config) => {
@@ -367,10 +393,13 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         generationRef.current = null;
         progressStore.set(null);
         setIsRunning(false);
+        alternativesRef.current = [];
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
         setPendingAlternatives([]);
         setSkippedSearches([]);
+        setSearchedDeeper(false);
+        setPickRule(null);
         userSelectionRef.current = null;
         setLogs([]);
         setGeneratedFor(null);
@@ -387,6 +416,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         userSelectionRef.current = alternatives[index]?.id ?? null;
         setSelectedAlternativeIndex(index);
     }, [alternatives]);
+
+    const recommendedIndex = useMemo(() => recommendedIndexOf(alternatives), [alternatives]);
+
+    const selectRecommended = useCallback(() => {
+        userSelectionRef.current = null;
+        // from the latest list, not the rendered one: a clock that arrived just before the click can move the pick
+        setSelectedAlternativeIndex(recommendedIndexOf(alternativesRef.current) ?? 0);
+    }, []);
 
     const clearLogs = useCallback(() => {
         setLogs([]);
@@ -417,8 +454,12 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
+        recommendedIndex,
+        selectRecommended,
+        pickRule,
         pendingAlternatives,
         skippedSearches,
+        searchedDeeper,
         validation,
         validate,
         error,

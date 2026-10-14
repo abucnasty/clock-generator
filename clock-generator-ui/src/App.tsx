@@ -43,6 +43,7 @@ import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
+import { withDeeperSearch } from './utils/deeperSearch';
 import { describeChestSwitch, describeDrillsOff, removalMessage } from './utils/undoSnapshot';
 
 const darkTheme = createTheme({
@@ -100,8 +101,12 @@ function App() {
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
+        recommendedIndex,
+        selectRecommended,
+        pickRule,
         pendingAlternatives,
         skippedSearches,
+        searchedDeeper,
         validation,
         validate,
         error,
@@ -310,6 +315,24 @@ function App() {
             checkedCoverageIssues?.length === 0
         );
     }, [isInitialized, isRunning, config, checkedCoverageIssues]);
+
+    // Search deeper is a Generate, so it is disabled whenever the Generate button is
+    const canSearchDeeper = Boolean(canGenerate) && validationStatus === 'valid';
+    // Generate with the slower searches: for this run only, or, kept on, by turning the switch on in the form
+    const handleSearchDeeper = useCallback((keepOn: boolean) => {
+        if (!canSearchDeeper) {
+            return;
+        }
+        if (keepOn) {
+            // the form's key once the switch is on, so the results are not taken for out of date
+            const kept = withDeeperSearch(exportConfig());
+            updateOverrides('search_for_fewer_wake_ups', true);
+            runSimulation(kept, debugSteps, streamLogs);
+        } else {
+            runSimulation(exportConfig(), debugSteps, streamLogs, true);
+        }
+        setView('results');
+    }, [canSearchDeeper, exportConfig, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -520,8 +543,15 @@ function App() {
                                 alternatives={alternatives}
                                 selectedIndex={selectedAlternativeIndex}
                                 onSelect={selectAlternative}
+                                recommendedIndex={recommendedIndex}
+                                onSelectRecommended={selectRecommended}
+                                pickRule={pickRule}
                                 pending={pendingAlternatives}
                                 skippedSearches={skippedSearches}
+                                searchedDeeper={searchedDeeper}
+                                keptOn={config.overrides?.search_for_fewer_wake_ups === true}
+                                canSearchDeeper={canSearchDeeper}
+                                onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}
                                 transferHistory={transferHistory}
