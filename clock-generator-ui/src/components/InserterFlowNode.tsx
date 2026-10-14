@@ -1,7 +1,7 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
-import { INSERTER_NODE_WIDTH, type InserterNodeData } from '../utils/buildFlowGraph';
+import { INSERTER_NODE_CHIP_WIDTH, INSERTER_NODE_WIDTH, type InserterNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
 import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
@@ -23,7 +23,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     alignItems: 'center',
                     gap: 0.5,
                     cursor: 'pointer',
-                    width: INSERTER_NODE_WIDTH,
+                    width: data.enableChip ? INSERTER_NODE_CHIP_WIDTH : INSERTER_NODE_WIDTH,
                     boxSizing: 'border-box',
                     '&:hover': { bgcolor: '#2a2a2a', borderColor: '#999' },
                 }}

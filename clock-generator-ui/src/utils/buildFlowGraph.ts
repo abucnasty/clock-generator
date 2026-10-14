@@ -15,7 +15,9 @@ export const ENTITY_NODE_WIDTH = 200;
 const ENTITY_NODE_HEIGHT = 56;
 /** Room for the facts of a recipe with up to five inputs */
 const ENTITY_NODE_DETAIL_HEIGHT = 196;
-export const INSERTER_NODE_WIDTH = 180;
+/** An inserter without an enable chip; one with a chip is wider, so that a 32-character chip takes at most two lines */
+export const INSERTER_NODE_WIDTH = 140;
+export const INSERTER_NODE_CHIP_WIDTH = 180;
 const INSERTER_NODE_HEIGHT = 70;
 /** Added to an inserter's height by its enable chip, which may wrap onto two lines */
 const INSERTER_CHIP_HEIGHT = 44;
@@ -49,6 +51,8 @@ export type EntityNodeData = {
      * that feeds, and `out` on the right, the side that receives. Both stand for the same entity.
      */
     half?: 'in' | 'out';
+    /** For a half, the title of its label: why the entity is drawn twice */
+    halfTitle?: string;
 };
 
 export type InserterNodeData = {
@@ -152,10 +156,17 @@ function arrowEdge(source: string, target: string, handles?: { sourceHandle: str
 }
 
 const HALF_SUFFIX: Record<'in' | 'out', string> = { in: ' (in)', out: ' (out)' };
+/** What each half is, for its screen-reader name and its label's title */
+const HALF_ROLE: Record<'in' | 'out', string> = { in: 'the side inserters take from', out: 'the side inserters put items onto' };
+const HALF_TITLE = (label: string, half: 'in' | 'out') =>
+    `${label} is drawn twice: inserters ${half === 'in' ? 'take from this side' : 'put items onto this side'}`;
 
-/** "Belt 1 (in), transport-belt and inserter. Press Enter to edit": what a screen reader says for a node */
-function nodeAriaLabel(label: string, contents?: string): string {
-    return `${label}${contents ? `, ${contents}` : ''}. Press Enter to edit`;
+/**
+ * "Belt 1 (in), the side inserters take from, carries iron-plate": what a screen reader says for a node. The "Press Enter
+ * to edit it" that follows is the diagram's node description, said once for every node.
+ */
+function nodeAriaLabel(...parts: (string | undefined)[]): string {
+    return parts.filter(Boolean).join(', ');
 }
 
 function listText(items: string[] | undefined): string | undefined {
@@ -173,7 +184,8 @@ export function buildFlowGraph(
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: 'LR', nodesep: 50, ranksep: 100, ranker: 'longest-path' });
+    // close columns, so the fitted graph is drawn as large as it can be
+    g.setGraph({ rankdir: 'LR', nodesep: 40, ranksep: 55, ranker: 'longest-path' });
 
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -192,6 +204,7 @@ export function buildFlowGraph(
 
     /** A belt or a chest: one node, or two when it is on a loop */
     const pushEntityNode = (data: EntityNodeData, contents: string | undefined) => {
+        const base_label = data.label;
         const id = flowNodeId(data.entityType, data.entityId);
         const halves: ('in' | 'out' | undefined)[] = split_ids.has(id) ? ['in', 'out'] : [undefined];
         for (const half of halves) {
@@ -203,8 +216,8 @@ export function buildFlowGraph(
                 id: node_id,
                 type: 'entityNode',
                 position: { x: 0, y: 0 },
-                ariaLabel: nodeAriaLabel(label, contents),
-                data: { ...data, label, ...(half && { half }) } satisfies EntityNodeData,
+                ariaLabel: nodeAriaLabel(label, half && HALF_ROLE[half], contents),
+                data: { ...data, label, ...(half && { half, halfTitle: HALF_TITLE(base_label, half) }) } satisfies EntityNodeData,
             });
         }
     };
@@ -222,7 +235,7 @@ export function buildFlowGraph(
             id,
             type: 'entityNode',
             position: { x: 0, y: 0 },
-            ariaLabel: nodeAriaLabel(label, machine.recipe || 'no recipe'),
+            ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${machine.recipe}` : 'no recipe'),
             data: {
                 entityType: 'machine',
                 entityId: machine.id,
@@ -249,7 +262,7 @@ export function buildFlowGraph(
             label: entityLabel('belt', belt.id),
             iconName: belt.type,
             filterIcons: filterIcons.length > 0 ? filterIcons : undefined,
-        }, listText(filterIcons));
+        }, filterIcons.length > 0 ? `carries ${listText(filterIcons)}` : undefined);
     });
 
     chests.forEach(chest => {
@@ -269,7 +282,7 @@ export function buildFlowGraph(
             label: entityLabel('chest', chest.id),
             iconName,
             filterIcons,
-        }, listText(filterIcons));
+        }, filterIcons ? `holds ${listText(filterIcons)}` : undefined);
     });
 
     // --- Inserter nodes + edges ---
@@ -285,10 +298,11 @@ export function buildFlowGraph(
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const rule = describeEnableRule(inserter.overrides?.enable_control, { forcedAlways: inserter._forced_always });
         const height = INSERTER_NODE_HEIGHT + (rule.quiet ? 0 : INSERTER_CHIP_HEIGHT);
+        const width = rule.quiet ? INSERTER_NODE_WIDTH : INSERTER_NODE_CHIP_WIDTH;
         if (!in_loop) {
-            g.setNode(inserterNodeId, { width: INSERTER_NODE_WIDTH, height });
+            g.setNode(inserterNodeId, { width, height });
         }
-        drawn.set(inserterNodeId, { w: INSERTER_NODE_WIDTH, h: height });
+        drawn.set(inserterNodeId, { w: width, h: height });
         const label = entityLabel('inserter', inserter.id);
         const items = listText(filterIcons);
         const route = `from ${entityLabel(inserter.source.type, inserter.source.id)} to ${entityLabel(inserter.sink.type, inserter.sink.id)}`;
@@ -296,7 +310,7 @@ export function buildFlowGraph(
             id: inserterNodeId,
             type: 'inserterNode',
             position: { x: 0, y: 0 },
-            ariaLabel: nodeAriaLabel(label, `${items ? `takes ${items} ` : ''}${route}${rule.quiet ? '' : `, Enable: ${rule.summary}`}`),
+            ariaLabel: nodeAriaLabel(label, `${items ? `takes ${items} ` : ''}${route}`, rule.quiet ? undefined : `Enable: ${rule.summary}`),
             data: {
                 inserterId: inserter.id,
                 stackSize: inserter.stack_size,
@@ -378,17 +392,25 @@ export function buildFlowGraph(
         const goesDown = (it: InserterFormData) => g.node(flowNodeId('machine', it.source.id)).y <= g.node(flowNodeId('machine', it.sink.id)).y;
         const in_pair = loop_inserters.filter(it => pairKey(it) === pairKey(inserter));
         const index = in_pair.filter(it => goesDown(it) === down).indexOf(inserter) + (down ? 0 : in_pair.filter(goesDown).length);
-        const row_width = in_pair.length * INSERTER_NODE_WIDTH + (in_pair.length - 1) * 20;
-        const center_x = (source.x + sink.x) / 2 - row_width / 2 + index * (INSERTER_NODE_WIDTH + 20) + INSERTER_NODE_WIDTH / 2;
+        // in the row's order: those that carry down, then those that carry up
+        const row = [...in_pair.filter(goesDown), ...in_pair.filter(it => !goesDown(it))];
+        const widthOf = (it: InserterFormData) => drawn.get(flowNodeId('inserter', it.id))!.w;
+        const row_width = row.reduce((sum, it) => sum + widthOf(it), 0) + (row.length - 1) * 20;
+        const left = row.slice(0, index).reduce((sum, it) => sum + widthOf(it) + 20, 0);
+        const width = widthOf(inserter);
+        const center_x = (source.x + sink.x) / 2 - row_width / 2 + left + width / 2;
         const center_y = (source.y + sink.y) / 2;
         positionedNodes.push({
             ...node,
             data: { ...node.data, vertical: down ? 'down' : 'up' },
-            position: { x: center_x - INSERTER_NODE_WIDTH / 2, y: center_y - drawn.get(inserterNodeId)!.h / 2 },
+            position: { x: center_x - width / 2, y: center_y - drawn.get(inserterNodeId)!.h / 2 },
         });
         edges.push(arrowEdge(sourceNodeId, inserterNodeId, { sourceHandle: down ? 'bottom-out' : 'top-out', targetHandle: 'in' }));
         edges.push(arrowEdge(inserterNodeId, sinkNodeId, { sourceHandle: 'out', targetHandle: down ? 'top-in' : 'bottom-in' }));
     }
+
+    // Tab goes through the nodes in the order they are drawn: the flow, left to right, then top to bottom
+    positionedNodes.sort((a, b) => Math.round(a.position.x) - Math.round(b.position.x) || a.position.y - b.position.y);
 
     return { nodes: positionedNodes, edges };
 }

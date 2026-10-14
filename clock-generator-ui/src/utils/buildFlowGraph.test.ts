@@ -163,6 +163,25 @@ describe('buildFlowGraph', () => {
         expect(data('inserter-3').enableSummary).toBeUndefined();
     });
 
+    it('lists the nodes left to right, then top to bottom, which is the order Tab takes', () => {
+        for (const [name, fixture] of Object.entries(FIXTURES)) {
+            const positions = graph(fixture()).nodes.map(it => it.position);
+            for (let i = 1; i < positions.length; i++) {
+                const [a, b] = [positions[i - 1], positions[i]];
+                expect(Math.round(a.x) < Math.round(b.x) || (Math.round(a.x) === Math.round(b.x) && a.y <= b.y), `${name}: node ${i}`).toBe(true);
+            }
+        }
+    });
+
+    it('says which side each half of a belt drawn twice is, in its name and its label\'s title', () => {
+        const { nodes } = graph(FIXTURES['belt in and out']());
+        const half = (id: string) => nodes.find(it => it.id === id)!;
+        expect(half('belt-1-in').ariaLabel).toBe('Belt 1 (in), the side inserters take from, carries iron-plate and copper-plate');
+        expect(half('belt-1-out').ariaLabel).toBe('Belt 1 (out), the side inserters put items onto, carries iron-plate and copper-plate');
+        expect(half('belt-1-in').data.halfTitle).toBe('Belt 1 is drawn twice: inserters take from this side');
+        expect(half('belt-1-out').data.halfTitle).toBe('Belt 1 is drawn twice: inserters put items onto this side');
+    });
+
     it('names every node for assistive technology, starting with its label', () => {
         for (const [name, fixture] of Object.entries(FIXTURES)) {
             for (const node of graph(fixture()).nodes) {

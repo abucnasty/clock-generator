@@ -78,6 +78,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
+                            title={data.halfTitle}
                             sx={{
                                 fontWeight: 700,
                                 lineHeight: 1.2,
