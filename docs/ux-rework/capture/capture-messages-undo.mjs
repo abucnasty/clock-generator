@@ -17,8 +17,9 @@
 //      footer, top-centre, also with the page scrolled 600px; errors persist 15 s, clickaway does not close, Escape and Close do
 //   C  footer on a long page (not on screen at scroll 0, wraps at 390), forward Tab: no focus stop under the footer
 //   D  1.3 Undo: Reset menu (divider, error colour, contrast), Reset + Undo (+ reload), row deletes of every kind + Undo, two
-//      deletes (one slot), withdrawn on edit, ten seconds, Import + Undo, Paste + Undo, diagram delete (+ fullscreen), Drills off,
-//      chest type switch, no false offers, Ctrl/Cmd+Z (not in a text input), the "Build restored..." notice (1440 only: one Generate)
+//      deletes (one slot), withdrawn on edit and by an editing dialog, no timer (the owner, 2026-10-14), focus after Undo and
+//      Close, Import + Undo, Paste + Undo, diagram delete (+ fullscreen, and focus after), Drills off, chest type switch, no false
+//      offers, Ctrl/Cmd+Z (not in a text input), the "Build restored..." notice (1440 only: one Generate)
 //   E  1.5 "Copied. {warning}" for a below-target clock (one Generate per width)
 //
 // Where the new UI's exact text or role is unknown the selector is marked `// SELECTOR: confirm`; those are the lines to fix first.
@@ -494,6 +495,8 @@ async function deleteCycle(page, rec, kind, file, rowIndex) {
     const n = await buttons.count();
     if (!rec.check(`${label}: the ${k.title} section has trash buttons`, n > 0, `${n} found`)) return;
     const at = Math.min(rowIndex, n - 1);
+    const name = (await buttons.nth(at).getAttribute('aria-label')) ?? '';
+    rec.check(`${label}: the delete button is named for its row ("Delete ${k.title.replace(/s$/, '')} N")`, /^Delete (Machine|Inserter|Belt|Chest|Drill) \d+$/.test(name), name || 'no name');
     await buttons.nth(at).click();
     const focus = await focusAfterDelete(page, k.title);
     const want = n - 1 === 0 ? null : Math.min(at, n - 2);
@@ -564,14 +567,14 @@ try {
         }, page);
 
         await rec.step('B export, and a repeat restarts the timer', async () => {
-            await messageState(page, rec, 'msg-export', { re: /Configuration exported/, run: exportConfig, contrastOn: true, desc: 'Export Config: "Configuration exported successfully!"' });
-            await messageState(page, rec, 'msg-export', { re: /Configuration exported/, run: exportConfig, scrolled: true, desc: 'Export Config' });
+            await messageState(page, rec, 'msg-export', { re: /^Build exported\./, run: exportConfig, contrastOn: true, desc: 'Export Config: "Build exported."' });
+            await messageState(page, rec, 'msg-export', { re: /^Build exported\./, run: exportConfig, scrolled: true, desc: 'Export Config' });
             // the repeat: second click 4 s after the first; the message must still be on screen 7 s after the first click and 5 s after the second
             await dismissMessage(page);
             await scrollTo(page, 0);
             await exportConfig(page);
             const t0 = Date.now();
-            await waitMessage(page, /Configuration exported/);
+            await waitMessage(page, /^Build exported\./);
             await sleepUntil(t0 + 4000);
             await exportConfig(page);
             const t1 = Date.now();
@@ -631,7 +634,7 @@ try {
             await dismissMessage(page);
             await scrollTo(page, 0);
             await exportConfig(page);
-            await waitMessage(page, /Configuration exported/);
+            await waitMessage(page, /^Build exported\./);
             await page.setInputFiles('input[type=file]', BROKEN);
             await waitMessage(page, /Failed to import/);
             await page.waitForTimeout(400);
@@ -654,13 +657,20 @@ try {
                 if (kind === 'error') {
                     rec.check('aria (error): exactly one alert and no status', alerts === 1 && statuses === 0, `${alerts} alert, ${statuses} status`);
                 } else {
-                    rec.check('aria (success): exactly one status and no alert', statuses === 1 && alerts === 0, `${statuses} status, ${alerts} alert`);
+                    // read out by the page's one polite live region instead: a status mounted with its text is often not read out
+                    rec.check('aria (success): no alert and no status of its own', statuses === 0 && alerts === 0, `${statuses} status, ${alerts} alert`);
+                    const region = await page.evaluate(() => {
+                        // React Flow adds assertive status regions of its own (not the app's); the polite ones are the app's
+                        const regions = [...document.querySelectorAll('[role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')];
+                        return { count: regions.length, text: document.querySelector('[data-message-announcer]')?.textContent ?? '' };
+                    });
+                    rec.check('aria (success): the one polite live region on the page holds its text', region.count === 1 && /^Build exported\./.test(region.text), `${region.count} region(s), "${region.text}"`);
                 }
                 rec.check(`aria (${kind}): no aria-live wrapper around the host`, !live);
                 rec.check(`aria (${kind}): a close button named "Close"`, (await closeBtn(page).count()) === 1, `${await closeBtn(page).count()} found`);
             };
             await role('error', (p) => p.setInputFiles('input[type=file]', BROKEN), /Failed to import/);
-            await role('success', exportConfig, /Configuration exported/);
+            await role('success', exportConfig, /^Build exported\./);
             await dismissMessage(page);
         }, page);
 
@@ -831,39 +841,89 @@ try {
             await keeps('the List/Diagram toggle');
             await goResults(page);
             await keeps('the Results toggle');
+            // Validate and Generate: after a delete the build has a missing inserter and cannot be checked, so the Undo here
+            // is an Import's (the build is LOGISTIC again, which can)
+            await dismissMessage(page);
             await goConfigure(page);
-            await page.waitForTimeout(200);
-            const t = Date.now();
-            let validated = true;
-            await validate(page).catch(() => { validated = false; });
-            if (validated && Date.now() - t < 7500) await keeps('Validate');
-            else rec.info('kept: Validate', validated ? 'took too long to judge against the 10 s window' : 'Validate could not be clicked');
+            await importFile(page, LOGISTIC);
+            await waitMessage(page, /^Build imported\./);
+            await validate(page);
+            await keeps('Validate');
             const gen = page.getByRole('button', { name: 'Generate', exact: true });
-            if (validated && Date.now() - t < 6500 && (await gen.isEnabled().catch(() => false))) {
-                await generate(page, { timeout: 5000 }).catch(() => {});
-                if (Date.now() - t < 9500) await keeps('Generate');
-            } else {
-                rec.info('kept: Generate', 'skipped (button disabled for the edited build, or the 10 s window is too short to judge)');
-            }
+            rec.check('kept: Generate can be clicked after Validate', await gen.isEnabled().catch(() => false));
+            await generate(page);
+            await keeps('Generate');
+            await goConfigure(page);
             await dismissMessage(page);
         }, page);
 
-        await rec.step('D ten seconds: it goes by itself, and works at about 8 s', async () => {
-            await fresh(page, LOGISTIC);
-            await trash(page, 'Inserters').first().click();
-            const t0 = Date.now();
-            await waitMessage(page, /^Deleted /);
-            await sleepUntil(t0 + 9000);
-            rec.check('ten seconds: still on screen at 9 s', (await snack(page).count()) === 1, `${Date.now() - t0} ms`);
-            await sleepUntil(t0 + 11_000);
-            rec.check('ten seconds: gone about 10 s after the action', (await snack(page).count()) === 0, `${Date.now() - t0} ms`);
+        await rec.step('D no timer: the Undo message stays, Ctrl/Cmd+Z still works, Escape in a Select keeps it', async () => {
             await fresh(page, LOGISTIC);
             const before = await readState(page);
             await trash(page, 'Inserters').first().click();
-            const t1 = Date.now();
+            const t0 = Date.now();
             await waitMessage(page, /^Deleted /);
-            await sleepUntil(t1 + 8000);
-            if (await clickUndo(page, rec, 'undo at 8 s')) await expectRestored(page, rec, 'undo at 8 s', before);
+            await page.mouse.move(5, page.viewportSize().height - 5);
+            await sleepUntil(t0 + 15_000);
+            rec.check('no timer: the Undo message is still on screen after 15 s', (await undoBtn(page).count()) === 1, `${Date.now() - t0} ms`);
+            await page.locator('header .MuiTypography-h6').first().click().catch(() => {});
+            await page.keyboard.press('ControlOrMeta+z');
+            await page.waitForTimeout(600);
+            const now = await readState(page);
+            rec.check('no timer: Ctrl/Cmd+Z after 15 s (when the old timer had closed it) still undoes', now.saved === before.saved, `inserters ${counts(before.saved)?.inserters} -> ${counts(now.saved)?.inserters}`);
+
+            // Escape that closes an open Select is for the Select, not the message
+            await fresh(page, LOGISTIC);
+            await trash(page, 'Inserters').first().click();
+            await waitMessage(page, /^Deleted /);
+            // opened from the keyboard: a click would scroll it under the sticky header
+            await section(page, 'Machines').locator('.MuiSelect-select').first().focus();
+            await page.keyboard.press('Enter');
+            await page.getByRole('listbox').waitFor({ timeout: 3000 }).catch(() => {});
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(500);
+            rec.check('Escape in an open Select closes the Select only: the Undo message stays', (await page.getByRole('listbox').count()) === 0 && (await undoBtn(page).count()) === 1, `listbox ${await page.getByRole('listbox').count()}, Undo ${await undoBtn(page).count()}`);
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(500);
+            rec.check('a second Escape, on the page, closes the Undo message', (await snack(page).count()) === 0);
+            await page.keyboard.press('ControlOrMeta+z');
+            await page.waitForTimeout(500);
+            rec.check('once closed, Ctrl/Cmd+Z no longer undoes', (await trash(page, 'Inserters').count()) === counts(before.saved).inserters - 1, `${await trash(page, 'Inserters').count()} inserter rows`);
+        }, page);
+
+        await rec.step('D an editing dialog withdraws the offer', async () => {
+            await fresh(page, LOGISTIC);
+            await trash(page, 'Inserters').last().click();
+            await waitMessage(page, /^Deleted /);
+            await section(page, 'Inserters').locator('[aria-label*="Edit rule"]').first().click();
+            await page.getByRole('dialog').first().waitFor({ timeout: 3000 }).catch(() => {});
+            await page.waitForTimeout(500);
+            rec.check('opening an inserter\'s rule dialog withdraws the Undo message', (await undoBtn(page).count()) === 0, `${await undoBtn(page).count()} found`);
+            await rec.shot(page, 'undo-withdrawn-by-rule-dialog', { desc: 'An inserter\'s rule dialog opened after a delete: the Undo message is gone' });
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(600);
+            await dismissMessage(page);
+        }, page);
+
+        await rec.step('D focus after Undo and after Close, from inside the message', async () => {
+            const focused = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName ?? '');
+            await fresh(page, LOGISTIC);
+            await page.getByRole('button', { name: 'Delete Inserter 2' }).focus();
+            await page.keyboard.press('Enter');
+            await waitMessage(page, /^Deleted /);
+            await undoBtn(page).first().focus();
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(600);
+            rec.check('focus after Undo from the message: the restored row\'s delete button', (await focused()) === 'Delete Inserter 2', await focused());
+            await page.getByRole('button', { name: 'Delete Inserter 3' }).focus();
+            await page.keyboard.press('Enter');
+            await waitMessage(page, /^Deleted /);
+            const whereFrom = await focused();
+            await closeBtn(page).first().focus();
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(600);
+            rec.check('focus after Close from the message: back where it was (the row before the deleted last one)', whereFrom === 'Delete Inserter 2' && (await focused()) === whereFrom, `${whereFrom} -> ${await focused()}`);
+            await rec.shot(page, 'focus-after-close', { desc: 'Close from the Undo message: focus back on Delete Inserter 2' });
         }, page);
 
         await rec.step('D Import and Undo', async () => {
@@ -932,6 +992,12 @@ try {
             await rec.shot(page, 'undo-diagram-dialog', { desc: 'Diagram view: an inserter\'s edit dialog just before its Delete' });
             await page.getByRole('button', { name: 'Delete entity' }).click();
             await undoMessage(page, rec, 'undo-diagram-delete', /Deleted Inserter \d+/, 'diagram delete', { desc: 'Diagram dialog Delete: "Deleted Inserter N." with Undo' });
+            const focusAfter = async () => page.evaluate(() => {
+                const el = document.activeElement;
+                return { body: !el || el === document.body, inDiagram: !!el?.closest('.react-flow, [data-fullscreen-diagram]'), what: `${el?.tagName} ${(el?.textContent ?? '').trim().slice(0, 24)}` };
+            });
+            const inline = await focusAfter();
+            rec.check('diagram delete: focus stays in the diagram, not on the page\'s top', !inline.body && inline.inDiagram, inline.what);
             const after = await readState(page);
             rec.check('diagram delete: a node fewer', after.nodes < before.nodes, `${before.nodes} -> ${after.nodes} nodes`);
             if (await clickUndo(page, rec, 'diagram delete')) {
@@ -948,10 +1014,13 @@ try {
             await page.waitForTimeout(800);
             await page.getByRole('button', { name: 'Delete entity' }).click();
             await undoMessage(page, rec, 'undo-diagram-fullscreen', /Deleted Inserter \d+/, 'fullscreen diagram delete', { desc: 'Delete in the fullscreen diagram: the message above the dialog' });
-            if (await clickUndo(page, rec, 'fullscreen diagram delete')) {
-                const now = await readState(page);
-                rec.check('fullscreen diagram delete: Undo restores the saved config exactly', now.saved === before.saved);
-            }
+            const full = await focusAfter();
+            rec.check('fullscreen diagram delete: focus stays in the fullscreen diagram, not on the page\'s top', !full.body && full.inDiagram, full.what);
+            // Ctrl/Cmd+Z works in the fullscreen diagram, which is a view of the build, not an editing dialog
+            await page.keyboard.press('ControlOrMeta+z');
+            await page.waitForTimeout(600);
+            const now = await readState(page);
+            rec.check('fullscreen diagram delete: Ctrl/Cmd+Z there restores the saved config exactly', now.saved === before.saved);
             await page.keyboard.press('Escape');
             await page.waitForTimeout(500);
             await page.getByRole('button', { name: 'List view' }).click().catch(() => {});
@@ -1086,7 +1155,7 @@ try {
                     const notice = await checkMessage(page, rec, 'undo-notice', { re: /Build restored/, label: 'notice after Undo with clocks generated', desc: 'Undo of Reset after Generate: the "Build restored..." notice' });
                     if (notice) {
                         const text = (await notice.textContent()) ?? '';
-                        rec.check('notice: it says the clocks were cleared and to click Generate', /clocks you had generated were cleared/i.test(text) && /click Generate/i.test(text), text.slice(0, 120));
+                        rec.check('notice: it says the clocks were cleared and to Validate, then Generate', /clocks you had generated were cleared/i.test(text) && /Validate, then Generate/i.test(text), text.slice(0, 120));
                         rec.check('notice: no Undo button on it (message only)', (await undoBtn(page).count()) === 0);
                         await sleepUntil(tUndo + 6000);
                         rec.check('notice: still on screen at 6 s (it lasts about 8 s)', (await snack(page).filter({ hasText: /Build restored/ }).count()) === 1);
