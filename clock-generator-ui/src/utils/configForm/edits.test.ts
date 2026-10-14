@@ -27,9 +27,47 @@ function form(): ConfigFormData {
 }
 
 describe('nextId', () => {
-    it('is one past the highest id, or 1 when there is none', () => {
-        expect(edits.nextId([])).toBe(1);
-        expect(edits.nextId([{ id: 4 }, { id: 2 }])).toBe(5);
+    it('is one past the highest id, or 1 when there is none, for a form saved without next ids', () => {
+        expect(edits.nextId(createDefaultConfig(), 'belts')).toBe(1);
+        expect(edits.nextId(createDefaultConfig(), 'machines')).toBe(2);
+        expect(edits.nextId(form(), 'drills')).toBe(3);
+    });
+
+    it('is past the ids of removed entities', () => {
+        const config = edits.removeInserter(form(), 2);
+        expect(config.next_ids).toEqual({ inserters: 4 });
+        expect(edits.nextId(config, 'inserters')).toBe(4);
+        expect(edits.nextId(edits.removeInserter(config, 0), 'inserters')).toBe(4);
+    });
+});
+
+describe('ids', () => {
+    it('are not given out again after the entity with the highest one is removed', () => {
+        const removeLast = (config: ConfigFormData) => {
+            config = edits.removeMachine(config, config.machines.length - 1);
+            config = edits.removeInserter(config, config.inserters.length - 1);
+            config = edits.removeBelt(config, config.belts.length - 1);
+            config = edits.removeChest(config, config.chests.length - 1);
+            return edits.removeDrill(config, config.drills!.configs.length - 1);
+        };
+        let config = removeLast(form());
+        config = edits.addChest(edits.addBelt(edits.addInserter(edits.addMachine(config))));
+        config = edits.addDrill(config);
+        expect(config.machines.at(-1)!.id).toBe(4);
+        expect(config.inserters.at(-1)!.id).toBe(4);
+        expect(config.belts.at(-1)!.id).toBe(3);
+        expect(config.chests.at(-1)!.id).toBe(3);
+        expect(config.drills!.configs.at(-1)!.id).toBe(3);
+
+        config = edits.mergeMachines(removeLast(config), [config.machines[0]]);
+        expect(config.machines.at(-1)!.id).toBe(5);
+        config = edits.mergeDrills(removeLast(config), [config.drills!.configs[0]]);
+        expect(config.drills!.configs.at(-1)!.id).toBe(4);
+    });
+
+    it('are past those of entities that were put in without taking an id', () => {
+        const config = edits.replaceBelts(edits.addBelt(createDefaultConfig()), [{ ...form().belts[0], id: 9 }]);
+        expect(edits.addBelt(config).belts.map((b) => b.id)).toEqual([9, 10]);
     });
 });
 

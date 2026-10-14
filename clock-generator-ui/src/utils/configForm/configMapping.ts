@@ -120,7 +120,8 @@ export function configToFormData(imported: Config): ConfigFormData {
 function toConfig<T extends { _uuid: string }>({ _uuid: _, ...rest }: T) { void _; return rest; }
 
 /** The config of the form state, for export, validation and generation */
-export function formDataToConfig(config: ConfigFormData): Config {
+export function formDataToConfig({ next_ids: _, ...config }: ConfigFormData): Config {
+    void _;
     // Strip internal _uuid fields before handing the config to any external consumer.
     return {
         ...config,

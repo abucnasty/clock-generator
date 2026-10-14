@@ -134,6 +134,9 @@ export function isInfinityChest(chest: ChestFormData): chest is InfinityChestFor
     return chest.type === ChestType.INFINITY_CHEST;
 }
 
+/** The kinds of entity of the form, which number their entities each on their own */
+export type EntityKind = 'machines' | 'inserters' | 'belts' | 'chests' | 'drills';
+
 export interface ConfigFormData {
     target_output: {
         recipe: string;
@@ -157,6 +160,9 @@ export interface ConfigFormData {
         search_for_fewer_wake_ups?: boolean;
         ignored_lcm_ingredients?: string[];
     };
+    /** UI-only: of each kind, an id past those of the entities removed from it, so that a new entity does not get one
+     *  of them, which references to the removed entity may still hold. Missing in forms saved before it. */
+    next_ids?: Partial<Record<EntityKind, number>>;
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({

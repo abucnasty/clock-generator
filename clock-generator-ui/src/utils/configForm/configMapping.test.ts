@@ -85,4 +85,9 @@ describe('formDataToConfig', () => {
         expect(config.drills).toMatchObject(imported.drills!);
         expect(config.overrides).toEqual(imported.overrides);
     });
+
+    it('leaves out the next ids of the form', () => {
+        const form = { ...configToFormData(imported), next_ids: { machines: 9 } };
+        expect('next_ids' in formDataToConfig(form)).toBe(false);
+    });
 });

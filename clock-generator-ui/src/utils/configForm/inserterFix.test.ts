@@ -70,4 +70,16 @@ describe('applyInserterFix', () => {
         const output = applyInserterFix(form(), issue('missing_output_inserter'), { type: 'infinity_chest', item_name: 'copper-cable' });
         expect(output.inserters[2]).toMatchObject({ source: { type: 'machine', id: 2 }, sink: { type: 'chest', id: 1 } });
     });
+
+    it('does not give out the ids of removed entities again', () => {
+        let config = edits.removeChest(edits.addChest(form()), 0);
+        config = edits.removeBelt(edits.removeInserter(config, 1), 2);
+        const belt = applyInserterFix(config, issue('missing_input_inserter'), { type: 'new_belt', item_name: 'copper-cable' });
+        expect(belt.belts.at(-1)!.id).toBe(4);
+        expect(belt.inserters.at(-1)!.id).toBe(3);
+        expect(applyInserterFix(belt, issue('missing_input_inserter'), { type: 'machine_to_machine', source_machine_id: 1, item_name: 'x' }).inserters.at(-1)!.id).toBe(4);
+        const chest = applyInserterFix(config, issue('missing_input_inserter'), { type: 'infinity_chest', item_name: 'copper-cable' });
+        expect(chest.chests.at(-1)!.id).toBe(2);
+        expect(chest.inserters.at(-1)!.id).toBe(3);
+    });
 });

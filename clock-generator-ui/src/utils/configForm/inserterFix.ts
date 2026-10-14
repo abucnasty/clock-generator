@@ -51,7 +51,7 @@ export function applyInserterFix(
     if (fix.type === 'machine_to_machine') {
         const stackSize = inferStackSize(prev);
         const newInserter: InserterFormData = {
-            id: nextId(prev.inserters),
+            id: nextId(prev, 'inserters'),
             _uuid: crypto.randomUUID(),
             source: { type: 'machine', id: fix.source_machine_id },
             sink: { type: 'machine', id: issue.machine_id },
@@ -86,7 +86,7 @@ export function applyInserterFix(
 
     // ── new belt + new inserter ───────────────────────────────────────
     if (fix.type === 'new_belt') {
-        const newBeltId = nextId(prev.belts);
+        const newBeltId = nextId(prev, 'belts');
         const newBelt: BeltFormData = {
             id: newBeltId,
             _uuid: crypto.randomUUID(),
@@ -94,8 +94,8 @@ export function applyInserterFix(
             lanes: [{ ingredient: fix.item_name, stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] as [BeltLaneFormData],
         };
         const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
-            ? { id: nextId(prev.inserters), _uuid: crypto.randomUUID(), source: { type: 'belt', id: newBeltId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
-            : { id: nextId(prev.inserters), _uuid: crypto.randomUUID(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'belt', id: newBeltId }, stack_size: stackSize };
+            ? { id: nextId(prev, 'inserters'), _uuid: crypto.randomUUID(), source: { type: 'belt', id: newBeltId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
+            : { id: nextId(prev, 'inserters'), _uuid: crypto.randomUUID(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'belt', id: newBeltId }, stack_size: stackSize };
         return {
             ...prev,
             belts: [...prev.belts, newBelt],
@@ -105,7 +105,7 @@ export function applyInserterFix(
 
     // ── infinity chest + new inserter ────────────────────────────────
     if (fix.type === 'infinity_chest') {
-        const newChestId = nextId(prev.chests);
+        const newChestId = nextId(prev, 'chests');
         const newChest: InfinityChestFormData = {
             type: ChestType.INFINITY_CHEST,
             id: newChestId,
@@ -113,8 +113,8 @@ export function applyInserterFix(
             item_filter: [{ item_name: fix.item_name, request_count: 100 }],
         };
         const newInserter: InserterFormData = issue.kind === 'missing_input_inserter'
-            ? { id: nextId(prev.inserters), _uuid: crypto.randomUUID(), source: { type: 'chest', id: newChestId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
-            : { id: nextId(prev.inserters), _uuid: crypto.randomUUID(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'chest', id: newChestId }, stack_size: stackSize };
+            ? { id: nextId(prev, 'inserters'), _uuid: crypto.randomUUID(), source: { type: 'chest', id: newChestId }, sink: { type: 'machine', id: issue.machine_id }, stack_size: stackSize }
+            : { id: nextId(prev, 'inserters'), _uuid: crypto.randomUUID(), source: { type: 'machine', id: issue.machine_id }, sink: { type: 'chest', id: newChestId }, stack_size: stackSize };
         return {
             ...prev,
             chests: [...prev.chests, newChest],

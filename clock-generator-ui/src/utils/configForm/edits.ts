@@ -9,6 +9,7 @@ import {
     type ChestFormData,
     type ConfigFormData,
     type DrillFormData,
+    type EntityKind,
     type InfinityChestFormData,
     type InserterFormData,
     type MachineFormData,
@@ -16,9 +17,16 @@ import {
 
 // Plain edits of the form state: each takes the state and returns the edited state, for `setConfig`
 
-/** The id for a new entity after the given ones */
-export function nextId(items: { id: number }[]): number {
-    return Math.max(0, ...items.map((item) => item.id)) + 1;
+/** The id for a new entity of a kind: past those of the kind's entities and of those removed */
+export function nextId(prev: ConfigFormData, kind: EntityKind): number {
+    const items: { id: number }[] = kind === 'drills' ? prev.drills?.configs ?? [] : prev[kind];
+    return Math.max(prev.next_ids?.[kind] ?? 1, ...items.map((item) => item.id + 1));
+}
+
+/** Keeps the id of a removed entity from being given out again */
+function retireId(prev: ConfigFormData, kind: EntityKind, id: number | undefined): ConfigFormData['next_ids'] {
+    if (id === undefined) return prev.next_ids;
+    return { ...prev.next_ids, [kind]: Math.max(prev.next_ids?.[kind] ?? 1, id + 1) };
 }
 
 /** Rearrange an id-bearing array and reassign sequential ids (1-based). Returns the new array and an old→new id map. */
@@ -78,7 +86,7 @@ export function addMachine(prev: ConfigFormData): ConfigFormData {
         machines: [
             ...prev.machines,
             {
-                id: nextId(prev.machines),
+                id: nextId(prev, 'machines'),
                 _uuid: crypto.randomUUID(),
                 recipe: '',
                 productivity: 0,
@@ -106,6 +114,7 @@ export function removeMachine(prev: ConfigFormData, index: number): ConfigFormDa
     const id = prev.machines[index]?.id;
     return {
         ...prev,
+        next_ids: retireId(prev, 'machines', id),
         machines: prev.machines.filter((_, i) => i !== index),
         inserters: unsetInserterEndsAt(prev.inserters, 'machine', id),
         ...(prev.drills && {
@@ -119,7 +128,7 @@ export function removeMachine(prev: ConfigFormData, index: number): ConfigFormDa
 
 export function mergeMachines(prev: ConfigFormData, newMachines: MachineFormData[]): ConfigFormData {
     // Reassign IDs to avoid conflicts
-    const firstId = nextId(prev.machines);
+    const firstId = nextId(prev, 'machines');
     const machinesWithNewIds = newMachines.map((m, i) => ({
         ...m,
         id: firstId + i,
@@ -145,7 +154,7 @@ export function addInserter(prev: ConfigFormData): ConfigFormData {
         inserters: [
             ...prev.inserters,
             {
-                id: nextId(prev.inserters),
+                id: nextId(prev, 'inserters'),
                 _uuid: crypto.randomUUID(),
                 source: { type: 'machine', id: 1 },
                 sink: { type: 'belt', id: 1 },
@@ -167,6 +176,7 @@ export function updateInserter(prev: ConfigFormData, index: number, updates: Par
 export function removeInserter(prev: ConfigFormData, index: number): ConfigFormData {
     return {
         ...prev,
+        next_ids: retireId(prev, 'inserters', prev.inserters[index]?.id),
         inserters: prev.inserters.filter((_, i) => i !== index),
     };
 }
@@ -185,7 +195,7 @@ export function addBelt(prev: ConfigFormData): ConfigFormData {
         belts: [
             ...prev.belts,
             {
-                id: nextId(prev.belts),
+                id: nextId(prev, 'belts'),
                 _uuid: crypto.randomUUID(),
                 type: BELT_FORM_DEFAULT_TYPE,
                 lanes: [{ ingredient: '', stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] as [BeltLaneFormData],
@@ -206,6 +216,7 @@ export function updateBelt(prev: ConfigFormData, index: number, updates: Partial
 export function removeBelt(prev: ConfigFormData, index: number): ConfigFormData {
     return {
         ...prev,
+        next_ids: retireId(prev, 'belts', prev.belts[index]?.id),
         belts: prev.belts.filter((_, i) => i !== index),
         inserters: unsetInserterEndsAt(prev.inserters, 'belt', prev.belts[index]?.id),
     };
@@ -220,7 +231,7 @@ export function replaceBelts(prev: ConfigFormData, newBelts: BeltFormData[]): Co
 
 // Chests
 export function addChest(prev: ConfigFormData, chestType: ChestType = ChestType.BUFFER_CHEST): ConfigFormData {
-    const id = nextId(prev.chests);
+    const id = nextId(prev, 'chests');
     const newChest: ChestFormData = chestType === ChestType.BUFFER_CHEST
         ? {
             type: ChestType.BUFFER_CHEST,
@@ -279,6 +290,7 @@ export function switchChestType(prev: ConfigFormData, index: number, newType: Ch
 export function removeChest(prev: ConfigFormData, index: number): ConfigFormData {
     return {
         ...prev,
+        next_ids: retireId(prev, 'chests', prev.chests[index]?.id),
         chests: prev.chests.filter((_, i) => i !== index),
         inserters: unsetInserterEndsAt(prev.inserters, 'chest', prev.chests[index]?.id),
     };
@@ -328,7 +340,7 @@ export function addDrill(prev: ConfigFormData): ConfigFormData {
             configs: [
                 ...currentDrills.configs,
                 {
-                    id: nextId(currentDrills.configs),
+                    id: nextId(prev, 'drills'),
                     _uuid: crypto.randomUUID(),
                     type: 'electric-mining-drill' as const,
                     mined_item_name: '',
@@ -357,6 +369,7 @@ export function removeDrill(prev: ConfigFormData, index: number): ConfigFormData
     if (!prev.drills) return prev;
     return {
         ...prev,
+        next_ids: retireId(prev, 'drills', prev.drills.configs[index]?.id),
         drills: {
             ...prev.drills,
             configs: prev.drills.configs.filter((_, i) => i !== index),
@@ -372,7 +385,7 @@ export function mergeDrills(prev: ConfigFormData, newDrills: DrillFormData[]): C
     };
 
     // Reassign IDs to avoid conflicts
-    const firstId = nextId(currentDrills.configs);
+    const firstId = nextId(prev, 'drills');
     const drillsWithNewIds = newDrills.map((d, i) => ({
         ...d,
         id: firstId + i,
