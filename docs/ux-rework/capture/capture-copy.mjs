@@ -159,7 +159,14 @@ async function hoverTip(page, locator, wait = 700) {
         console.log('hoverTip: could not hover:', String(e.message).split('\n')[0]);
         return '';
     }
-    await page.getByRole('tooltip').first().waitFor({ timeout: 3000 }).catch(() => console.log('hoverTip: no tooltip appeared'));
+    const shown = await page.getByRole('tooltip').first().waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
+    if (!shown) {
+        // the header's tooltip target takes Tab and opens on keyboard focus: tab away and back
+        await locator.first().focus().catch(() => {});
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Shift+Tab');
+        await page.getByRole('tooltip').first().waitFor({ timeout: 3000 }).catch(() => console.log('hoverTip: no tooltip appeared'));
+    }
     await page.waitForTimeout(wait);
     return norm((await page.getByRole('tooltip').allTextContents()).join(' || '));
 }
@@ -596,7 +603,11 @@ const PART_B_AFTER_GENERATE = [
             rec.check('the header "Clock period" is there', names.includes('Clock period'), names.join(' | '));
             rec.check('the header "Wake windows" is there (was "Inserter windows")', names.some((n) => /^Wake windows/.test(n)), names.join(' | '));
             rec.check('the header "Wake-ups..." is there', names.some((n) => /^Wake-ups/.test(n)), names.join(' | '));
-            const tipOfHead = async (re) => hoverTip(page, heads.filter({ hasText: re }).locator('span').first().or(heads.filter({ hasText: re }).first()));
+            // the tooltip target is the span inside the cell; `.or()` would put the wider cell first, whose middle is not over the text
+            const tipOfHead = async (re) => {
+                const cell = heads.filter({ hasText: re });
+                return hoverTip(page, (await cell.locator('span').count()) > 0 ? cell.locator('span').first() : cell.first());
+            };
             const period = await tipOfHead(/^Clock period/);
             await snap(page, rec, 'clocks-table-period', { gate: true, desc: 'Clocks table, hover on Clock period (spec state 9)' });
             await unhover(page);
