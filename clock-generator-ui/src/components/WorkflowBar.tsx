@@ -1,6 +1,7 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, CircularProgress, Portal, Snackbar, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
+import { useNotify } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
@@ -89,8 +90,8 @@ export function WorkflowBar({
     onGoToProblem,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
-    const [warned, setWarned] = useState(false);
     const [confirmingOld, setConfirmingOld] = useState(false);
+    const notify = useNotify();
     // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
     // since a filled button invites the click, and the copy of an old clock is the one to think twice about
     const warns = rateWarning !== null || staleFor !== null;
@@ -103,12 +104,14 @@ export function WorkflowBar({
         try {
             await navigator.clipboard.writeText(blueprintString);
             setCopied(true);
-            setWarned(rateWarning !== null);
+            if (rateWarning !== null) {
+                notify({ severity: 'warning', text: `Copied. ${rateWarning}` });
+            }
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
         }
-    }, [blueprintString, rateWarning]);
+    }, [blueprintString, rateWarning, notify]);
 
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
@@ -119,6 +122,8 @@ export function WorkflowBar({
                     onChange={(_, value) => { if (value) onViewChange(value); }}
                     size="small"
                     aria-label="Configure the build or look at its results"
+                    // always in the header: where focus goes back to when what it was on has gone
+                    data-focus-fallback=""
                 >
                     <ToggleButton value="configure">Configure</ToggleButton>
                     <ToggleButton value="results">Results</ToggleButton>
@@ -145,19 +150,6 @@ export function WorkflowBar({
                                     {copied ? 'Copied' : <CopyLabel label={copyLabel} />}
                                 </Button>
                             </Tooltip>
-                            {/* stop-gap until 1.5's shared message host: in a portal, to be drawn above the app bar this bar is part of, at the bottom to stay off the header */}
-                            <Portal>
-                                <Snackbar
-                                    open={warned && rateWarning !== null}
-                                    autoHideDuration={10000}
-                                    onClose={() => setWarned(false)}
-                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                                >
-                                    <Alert severity="warning" variant="filled" onClose={() => setWarned(false)}>
-                                        Copied. {rateWarning}
-                                    </Alert>
-                                </Snackbar>
-                            </Portal>
                             {staleFor && (
                                 <StaleCopyDialog
                                     open={confirmingOld && staleFor !== null}

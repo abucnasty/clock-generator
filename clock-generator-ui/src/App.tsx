@@ -20,12 +20,13 @@ import {
     ToggleButtonGroup,
 } from '@mui/material';
 import { AccountTree, FullscreenExit, List, LocalCafe } from '@mui/icons-material';
-import type { Config, DebugSteps } from 'clock-generator/browser';
+import type { ChestType, Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
 import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
+import { useUndo } from './hooks/useUndo';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -37,6 +38,7 @@ import { ConfigImportExport } from './components/ConfigImportExport';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
+import { MessageHost } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
@@ -44,6 +46,8 @@ import { blockedActionsOf, focusProblemTarget, needsListView, problemsOf, type P
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
+import type { EntityKind } from './utils/configForm/formData';
+import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 
 const darkTheme = createTheme({
     palette: {
@@ -128,6 +132,7 @@ function App() {
         loadError: configLoadError,
         loadNotice,
         dismissLoadNotice,
+        setConfig,
         updateTargetOutput,
         addMachine,
         updateMachine,
@@ -166,6 +171,8 @@ function App() {
         reorderChests,
         reorderDrills,
     } = useConfigForm();
+
+    const { offerUndo } = useUndo(config, setConfig, isConfigLoaded);
 
     // the page waits for the workers and for the saved config, which the engine's worker checks
     const isInitialized = workersReady && isConfigLoaded;
@@ -297,6 +304,34 @@ function App() {
         setView('results');
     }, [exportConfig, runSimulation, debugSteps, streamLogs]);
 
+    // the actions that throw part of the build away offer Undo, just before they are applied
+    const undoable = useMemo(() => {
+        // a delete offers Undo, which brings the deleted row's delete button back for focus to go to
+        const removal = (kind: EntityKind, remove: (index: number) => void) => (index: number) => {
+            offerUndo((form) => removalMessage(form, kind, index), { restoredLabel: (form) => removedDeleteLabel(form, kind, index) });
+            remove(index);
+        };
+        return {
+            removeMachine: removal('machines', removeMachine),
+            removeInserter: removal('inserters', removeInserter),
+            removeBelt: removal('belts', removeBelt),
+            removeChest: removal('chests', removeChest),
+            removeDrill: removal('drills', removeDrill),
+            switchChestType: (index: number, type: ChestType) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type); },
+            disableDrills: () => { offerUndo(describeDrillsOff); disableDrills(); },
+        };
+    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, disableDrills]);
+    // Import, Paste and Reset clear the generated clocks, which their Undo does not bring back; read when the build is
+    // replaced, which for an import is after the file has been checked
+    const hasResultsRef = useRef(false);
+    useEffect(() => {
+        hasResultsRef.current = alternatives.length > 0 || isRunning;
+    }, [alternatives, isRunning]);
+    const offerUndoOfReplace = useCallback(
+        (message: string) => offerUndo(message, { resultsCleared: hasResultsRef.current }),
+        [offerUndo]
+    );
+
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
     const openDiagramFullscreen = useCallback(() => setDiagramFullscreen(true), []);
 
@@ -314,13 +349,13 @@ function App() {
         onUpdateInserter: updateInserter,
         onUpdateBelt: updateBelt,
         onUpdateChest: updateChest,
-        onSwitchChestType: switchChestType,
+        onSwitchChestType: undoable.switchChestType,
         onUpdateDrill: updateDrill,
-        onDeleteMachine: removeMachine,
-        onDeleteInserter: removeInserter,
-        onDeleteBelt: removeBelt,
-        onDeleteChest: removeChest,
-        onDeleteDrill: removeDrill,
+        onDeleteMachine: undoable.removeMachine,
+        onDeleteInserter: undoable.removeInserter,
+        onDeleteBelt: undoable.removeBelt,
+        onDeleteChest: undoable.removeChest,
+        onDeleteDrill: undoable.removeDrill,
         onAddMachine: addMachine,
         onAddInserter: addInserter,
         onAddBelt: addBelt,
@@ -409,6 +444,7 @@ function App() {
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
                             onBuildReplaced={handleBuildReplaced}
+                            onUndoable={offerUndoOfReplace}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -497,7 +533,7 @@ function App() {
                                         recipeNames={recipeNames}
                                         onAdd={addMachine}
                                         onUpdate={updateMachine}
-                                        onRemove={removeMachine}
+                                        onRemove={undoable.removeMachine}
                                         onReorder={reorderMachines}
                                     />
 
@@ -510,7 +546,7 @@ function App() {
                                         getRecipeInfo={getRecipeInfo}
                                         onAdd={addInserter}
                                         onUpdate={updateInserter}
-                                        onRemove={removeInserter}
+                                        onRemove={undoable.removeInserter}
                                         onReorder={reorderInserters}
                                     />
 
@@ -524,7 +560,7 @@ function App() {
                                         itemNames={itemNamesComposite}
                                         onAdd={addBelt}
                                         onUpdate={updateBelt}
-                                        onRemove={removeBelt}
+                                        onRemove={undoable.removeBelt}
                                         onReorder={reorderBelts}
                                     />
 
@@ -533,8 +569,8 @@ function App() {
                                         itemNames={itemNamesComposite}
                                         onAdd={addChest}
                                         onUpdate={updateChest}
-                                        onSwitchType={switchChestType}
-                                        onRemove={removeChest}
+                                        onSwitchType={undoable.switchChestType}
+                                        onRemove={undoable.removeChest}
                                         onReorder={reorderChests}
                                     />
                                 </>
@@ -559,11 +595,11 @@ function App() {
                                     resourceNames={resourceNames}
                                     machineIds={machineIds}
                                     onEnable={enableDrills}
-                                    onDisable={disableDrills}
+                                    onDisable={undoable.disableDrills}
                                     onUpdateProductivityLevel={updateMiningProductivityLevel}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
-                                    onRemove={removeDrill}
+                                    onRemove={undoable.removeDrill}
                                     onReorder={reorderDrills}
                                 />
                             </Box>
@@ -636,14 +672,14 @@ function App() {
                 <Box
                     component="footer"
                     sx={{
-                        position: 'sticky',
-                        bottom: 0,
-                        zIndex: (theme) => theme.zIndex.appBar,
                         py: 1,
+                        px: 2,
                         display: 'flex',
+                        flexWrap: 'wrap',
                         justifyContent: 'center',
                         alignItems: 'center',
                         gap: 1.5,
+                        rowGap: 0.5,
                         bgcolor: 'background.paper',
                         borderTop: 1,
                         borderColor: 'divider',
@@ -664,11 +700,12 @@ function App() {
                         href="https://ko-fi.com/J6D4284EZ5"
                         target="_blank"
                         rel="noopener noreferrer"
-                        variant="contained"
+                        variant="outlined"
+                        color="inherit"
                         size="small"
                         startIcon={<LocalCafe />}
                         title="Support me on ko-fi.com"
-                        sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 1 }}
+                        sx={{ textTransform: 'none', borderRadius: 1 }}
                     >
                         Support me on Ko-fi
                     </Button>
@@ -683,6 +720,8 @@ function App() {
                 open={diagramFullscreen}
                 onClose={() => setDiagramFullscreen(false)}
                 PaperProps={{ sx: { bgcolor: 'background.default' } }}
+                // a view of the build, not an edit of one entity: Ctrl/Cmd+Z undoes in it as on the page
+                data-fullscreen-diagram=""
             >
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
                     <Box
@@ -716,6 +755,8 @@ function App() {
                     )}
                 </Box>
             </Dialog>
+
+            <MessageHost />
         </ThemeProvider>
     );
 }
