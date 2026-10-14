@@ -60,7 +60,8 @@ const NOWIRE = (() => {
     writeFileSync(file, JSON.stringify(config, null, 2));
     return file;
 })();
-/** The drills build with every inserter ALWAYS enabled: a drill on the clock and no inserter to wire */
+/** The drills build with every inserter set to ALWAYS. Its one inserter (the output) stays on the clock all the same, so this
+ *  is a book with a drill and an inserter; the drills-only steps are covered by the unit tests (installSteps.test.ts) */
 const DRILLS_ONLY = (() => {
     const config = JSON.parse(readFileSync(DRILLS, 'utf8'));
     config.inserters = config.inserters.map((it) => ({ ...it, overrides: { ...(it.overrides ?? {}), enable_control: { mode: 'ALWAYS' } } }));
@@ -999,10 +1000,10 @@ try {
                 await copyChecks({ page, rec, tag: 'drills', path: DRILLS });
                 await page.waitForTimeout(2300);
             }, page);
-            await rec.step('a drill on the clock, every inserter always on', async () => {
+            await rec.step('the drills build with its inserter set to ALWAYS (the output inserter stays clocked)', async () => {
                 await build(page, DRILLS_ONLY);
-                await rec.shot(page, 'drills-only', { fullPage: true, desc: 'Every inserter Always on, a drill on the clock: the drill step and its wiring list' });
-                await copyChecks({ page, rec, tag: 'drills only', path: DRILLS_ONLY });
+                await rec.shot(page, 'drills-only', { fullPage: true, desc: 'Stone bricks with its inserter set to Always on: the output inserter stays on the clock, with the drill' });
+                await copyChecks({ page, rec, tag: 'drills, inserter set ALWAYS', path: DRILLS_ONLY });
                 await page.waitForTimeout(2300);
             }, page);
         }
