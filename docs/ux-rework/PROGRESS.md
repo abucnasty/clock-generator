@@ -24,6 +24,7 @@ come from here.
 | `evidence` | going through the evidence gate |
 | `review` | the code review and the UX audit are running |
 | `fix-1`, `fix-2` | fix rounds 1 and 2 |
+| `merging` | the PR is open and waiting for CI |
 | `blocked` | waiting on a checkpoint |
 | `merged` | merged into the phase branch |
 | `carried` | moved to a later phase |
@@ -41,18 +42,18 @@ come from here.
 |---|---|---|---|---|---|---|
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | merged | [#149](https://github.com/abucnasty/clock-generator/pull/149) | 2 | Code review opus PASS; UX audit FIX (focus under the header, 2.4.11) then PASS after round 1; a one-line minor in round 2. CI green |
-| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | impl | | | Bundle with 1.5 (1.5 first in the branch) |
-| [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Bundle with 1.14 |
-| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | impl | | | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`), started after 1.2 merged, with a capture writer |
-| [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | fix-1 | | 1 | Bundle with 1.7 (`feat/ux-rework-p1-clock-pick`). Code review PASS; UX audit minors only (A9, A11, B12, B14 fixed, C7 partly). Round 1: 13 cheap minors |
-| [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | fix-1 | | 1 | Bundle with 1.6. A22, B15, C27 fixed |
+| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | fix-1 | | 1 | Bundle with 1.5. Code review opus PASS (minors); UX audit opus FIX: Undo timed out for keyboard users (2.2.1) → owner: no timer. A18, C15 fixed; B2 fixed within the plan; B3 partly (delete buttons unnamed: fixed in round 1) |
+| [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | impl | | | Bundle with 1.14 (`feat/ux-rework-p1-first-problem-warning`), with a capture writer. Also takes the 1.7 and 1.2 follow-ups (Search deeper's reason, Validate's scroll) |
+| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | fix-1 | | 1 | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`). Merged #151 in (import-line conflict only). A14, A29, B30, C6 fixed; C3 partly (one filled button per state is 1.4's). Round 1: the untimed Undo, focus after Undo/Close, one live region with `announce()`, named delete buttons, 9 minors |
+| [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.7. Code review opus PASS; UX audit opus minors only (A9, A11, B12, B14 fixed, C7 partly). Round 1: 13 cheap minors; orchestrator read the diff and shots. Runner re-ran checks after merging 1.9 in (235 tests). CI green |
+| [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.6. A22, B15, C27 fixed |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | merged | [#150](https://github.com/abucnasty/clock-generator/pull/150) | 1 | Round 0: code review and UX audit FIX (keyboard on the stale plan; 720 row). Round 1: both PASS. CI green |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
-| [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
-| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
+| [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | impl | | | Two PRs. PR A (opus, `feat/ux-rework-p1-a11y-basics`) in impl with a capture writer, moved up by coach run 2; announcements go through 1.5's `announce()`. PR B (sonnet) stacks on A |
+| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | impl | | | Glossary approved 2026-10-14. Part A (copy fixes) in impl on `feat/ux-rework-p1-glossary-copy`, with a capture writer; Part B last in the phase |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
-| [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | spec | | | Bundle with 1.4 |
+| [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | impl | | | Bundle with 1.4 |
 
 ## Phase 2: newcomer-first structure
 
@@ -130,6 +131,21 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   owner. [PLAN.md](PLAN.md) "The final PR" gains step 0 (draft `ISSUES.md`, owner review, `gh issue create`). No
   issues are filed before then.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
+- 2026-10-14: **Undo has no timer** (the owner, on the 1.3 UX audit's WCAG 2.2.1 major): the Undo message stays until
+  the next edit, the next undoable action, Close or Escape, and Ctrl/Cmd+Z works while it is offered. Other messages
+  keep their timers. [PLAN.md](PLAN.md) 1.3 updated.
+- 2026-10-14: One polite announcements region for the whole app: 1.5's message host owns it and exposes `announce()`;
+  1.11 PR A routes its workflow announcements through it instead of adding a region in the workflow bar.
+- 2026-10-14: Process coach run 2 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated). Applied: (1) a freed slot goes to the
+  item at the head of the longest remaining chain, so 1.11 PR A starts now, and tail items stack on the one before;
+  (3) `lib.mjs` gains `tabTo`, `focusNotObscured` and `inertFromKeyboard`, and every capture script checks keyboard reach,
+  focus not obscured and keyboard-inert disabled states for what the item changes; (4) the handoff note is kept current
+  on every step, agent reports are capped at about 30 lines (details in EVIDENCE.md), and a minors-only fix round is
+  re-checked by the reviewer whose minors were fixed; (5) after each merge, `git merge-tree` checks every in-flight
+  branch and a conflicting one merges at once, and merge runners use `gh pr merge --squash` then
+  `git push origin --delete`. Suggestion 2 (start Phase 2 items before Phase 1 merges) changes a PLAN.md rule, so it
+  went to the owner, who approved it: `feat/ux-rework-p2` is cut from `feat/ux-rework-p1`'s head when a slot goes
+  idle, starting with 2.2 and 2.6 (then 2.11); [PLAN.md](PLAN.md) "Phase branches" updated.
 
 ## Open questions
 
@@ -223,6 +239,17 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.6 → 1.11: the unstable divider cell is a plain data cell, not a group header.
 - 1.9 → 2.9: check the inserter row at 900-1200px (the chip is now 72px).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
+- 1.5/1.3: Chrome's native Ctrl/Cmd+Z can revert a number field's last typed value when no Undo is offered (the
+  browser's own field undo; pre-existing). Consider `preventDefault` outside text fields. Repro: type in Items per
+  Second, Tab away, press Ctrl+Z.
+- 1.5: messages sit top-centre below the header and can cover the top of the form (1440: the Items per Second label;
+  390: a paste error covers Recipe until closed). Escape or Close reveals it; 2.4.11 passes. Optionally add the
+  message height to `scroll-padding-top` while one shows.
+- 1.5 → 2.1: the import error shows raw parser text ("Expected property name or '}' in JSON at position 2 …").
+- 1.3: after Reset, Target Output's Recipe still shows the old recipe text without its icon (stale Autocomplete text;
+  pre-existing, also in 1.1's before-shot).
+- 1.5 → 2.1: "No items selected for import." and the menu names (Reset Configuration, Import/Export Config) keep
+  "configuration"/"config" until 2.1 renames them.
 
 ## Retros
 
