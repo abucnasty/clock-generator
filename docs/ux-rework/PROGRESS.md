@@ -21,7 +21,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 
 - **Phase:** 1 (started 2026-10-14)
 - **Branch:** `feat/ux-rework-p1` (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** none
+- **Open checkpoints:** 1.12 glossary approval (asked 2026-10-14)
 
 ## Phase 1: stop the harm, quick wins
 
@@ -38,7 +38,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.9 | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8 and 1.13. Id question answered 2026-10-14 |
 | 1.10 | Readable numbers and units | opus | spec | | | Spec final; moved up (10 files). Next free slot (no file in common with 1.1, 1.8, 1.13) |
 | 1.11 | Accessibility basics | sonnet | spec | | | |
-| 1.12 | Glossary and copy pass | sonnet | spec | | | Checkpoint: glossary approval |
+| 1.12 | Glossary and copy pass | sonnet | blocked | | | Part A (copy fixes) spec final, after 1.8. Part B waits for glossary approval |
 | 1.13 | Enable mode shown on the row | sonnet | impl | | | Third slot, alongside 1.1 and 1.8. Wire the forced-ALWAYS note after 1.8 merges |
 | 1.14 | Warning colour apart from the brand orange | opus | spec | | | Spec final; moved up (7 files). After 1.1 and 1.2; not alongside 1.4, 1.5 |
 
@@ -86,7 +86,8 @@ Owner decisions made after the plan was written, and every change to `PLAN.md`, 
 
 ## Open questions
 
-None.
+- **1.12 glossary (asked 2026-10-14).** The table and the eight word choices are in `specs/1.12-glossary-copy.md`
+  ("Glossary proposal"). Also: engine text now or in 2.5; "Hand size" for Stack Size (A24); a Terms popover in 2.5.
 
 ## Follow-ups
 
@@ -105,6 +106,8 @@ Minor and nit findings, and anything noticed outside an item's scope.
   engine error at `plan-run.ts:1332-1333`; select-all on focus and silent fallbacks (B27); A16's live "per copy ·
   machine max" line.
 - 1.9 → 1.3: whichever of the two merges second adds "the ones after it were renumbered" to a delete's Undo message.
+- 1.12: `OverridesForm.tsx:80` says "per output inserter" for Force Output Swings, while the note and
+  `validate-config.ts` sum over the output machine's inserters.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
