@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import * as edits from './edits';
-import { createDefaultConfig, type ConfigFormData, type InserterFormData } from './formData';
+import { createDefaultConfig, type ConfigFormData, type EnableControlOverride, type InserterFormData } from './formData';
 
 const ids = (items: { id: number }[]) => items.map((item) => item.id);
 
@@ -283,18 +283,123 @@ describe('overrides', () => {
         expect('overrides' in edits.updateOverrides(config, 'lcm', undefined)).toBe(false);
     });
 
+    /** A transfer plan in which each inserter (by id) moves the given items */
+    const plan = (transfers: Record<number, string[]>) => ({
+        computed_lcm: 1,
+        entities: Object.entries(transfers).map(([id, items]) => ({
+            entity_id: `inserter:${id}`,
+            entity_type: 'inserter',
+            entity_number: Number(id),
+            item_transfers: items.map((item_name) => ({ item_name })),
+        })),
+    }) as unknown as SerializableTransferPlan;
+
+    const ironPlan = plan({ 1: ['iron-plate'] });
+
+    /** The form with the rule of inserter 1 replaced */
+    const withRule = (overrides: InserterFormData['overrides']) => edits.updateInserter(form(), 0, { overrides });
+
     it('forces inserters whose items are all ignored to always run, and reverts them when no longer', () => {
-        const plan = {
-            computed_lcm: 1,
-            entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', entity_number: 1, item_transfers: [{ item_name: 'iron-plate' }] }],
-        } as unknown as SerializableTransferPlan;
-        const ignored = edits.updateIgnoredIngredients(form(), ['iron-plate'], plan);
+        const ignored = edits.updateIgnoredIngredients(form(), ['iron-plate'], ironPlan);
         expect(ignored.overrides).toEqual({ ignored_lcm_ingredients: ['iron-plate'] });
         expect(ignored.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+        expect(ignored.inserters[0]._forced_always).toBe(true);
         expect(ignored.inserters[1].overrides).toBeUndefined();
+        expect('_forced_always' in ignored.inserters[1]).toBe(false);
 
-        const reverted = edits.updateIgnoredIngredients(ignored, [], plan);
+        const reverted = edits.updateIgnoredIngredients(ignored, [], ironPlan);
         expect('overrides' in reverted).toBe(false);
-        expect(reverted.inserters[0].overrides).toBeUndefined();
+        expect('overrides' in reverted.inserters[0]).toBe(false);
+        expect('_forced_always' in reverted.inserters[0]).toBe(false);
+    });
+
+    it('keeps the other overrides of an inserter when it reverts the forced ALWAYS', () => {
+        const animated = withRule({ animation: { pickup_duration_ticks: 12 } });
+        const ignored = edits.updateIgnoredIngredients(animated, ['iron-plate'], ironPlan);
+        expect(ignored.inserters[0].overrides).toEqual({ animation: { pickup_duration_ticks: 12 }, enable_control: { mode: 'ALWAYS' } });
+        const reverted = edits.updateIgnoredIngredients(ignored, [], ironPlan);
+        expect(reverted.inserters[0].overrides).toEqual({ animation: { pickup_duration_ticks: 12 } });
+        expect('_forced_always' in reverted.inserters[0]).toBe(false);
+    });
+
+    it.each([
+        ['CLOCKED', { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 }],
+        ['CONDITIONAL', { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [] } }],
+        ['NEVER', { mode: 'NEVER' }],
+    ])('leaves a %s rule alone when its items are excluded and included again', (_mode, rule) => {
+        const config = withRule({ enable_control: rule as EnableControlOverride });
+        const ignored = edits.updateIgnoredIngredients(config, ['iron-plate'], ironPlan);
+        expect(ignored.inserters[0]).toBe(config.inserters[0]);
+        expect('_forced_always' in ignored.inserters[0]).toBe(false);
+        const included = edits.updateIgnoredIngredients(ignored, [], ironPlan);
+        expect(included.inserters[0]).toBe(config.inserters[0]);
+    });
+
+    it('keeps an ALWAYS the player set when its items are excluded and included again', () => {
+        const config = withRule({ enable_control: { mode: 'ALWAYS' } });
+        const ignored = edits.updateIgnoredIngredients(config, ['iron-plate'], ironPlan);
+        expect(ignored.inserters[0]).toBe(config.inserters[0]);
+        const included = edits.updateIgnoredIngredients(ignored, [], ironPlan);
+        expect(included.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+        expect('_forced_always' in included.inserters[0]).toBe(false);
+    });
+
+    it('counts an explicit AUTO rule as AUTO', () => {
+        const config = withRule({ enable_control: { mode: 'AUTO' } });
+        const ignored = edits.updateIgnoredIngredients(config, ['iron-plate'], ironPlan);
+        expect(ignored.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+        expect(ignored.inserters[0]._forced_always).toBe(true);
+        const reverted = edits.updateIgnoredIngredients(ignored, [], ironPlan);
+        expect('overrides' in reverted.inserters[0]).toBe(false);
+        expect('_forced_always' in reverted.inserters[0]).toBe(false);
+    });
+
+    it('forces an inserter with two items only once both are excluded, and reverts it when one is included', () => {
+        const twoItems = plan({ 1: ['iron-plate', 'copper-plate'] });
+        const config = form();
+        const one = edits.updateIgnoredIngredients(config, ['iron-plate'], twoItems);
+        expect(one.inserters[0]).toBe(config.inserters[0]);
+        const both = edits.updateIgnoredIngredients(one, ['iron-plate', 'copper-plate'], twoItems);
+        expect(both.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+        expect(both.inserters[0]._forced_always).toBe(true);
+        const reverted = edits.updateIgnoredIngredients(both, ['copper-plate'], twoItems);
+        expect('overrides' in reverted.inserters[0]).toBe(false);
+        expect('_forced_always' in reverted.inserters[0]).toBe(false);
+    });
+
+    it('leaves a forced inserter forced when run again with the same items', () => {
+        const ignored = edits.updateIgnoredIngredients(form(), ['iron-plate'], ironPlan);
+        const again = edits.updateIgnoredIngredients(ignored, ['iron-plate'], ironPlan);
+        expect(again.inserters[0]).toBe(ignored.inserters[0]);
+        expect(again.inserters[0]._forced_always).toBe(true);
+    });
+
+    it('drops the flag but keeps the rule of a flagged inserter whose rule is not ALWAYS', () => {
+        const config = form();
+        const rule: EnableControlOverride = { mode: 'NEVER' };
+        config.inserters[0] = { ...config.inserters[0], overrides: { enable_control: rule }, _forced_always: true };
+        const included = edits.updateIgnoredIngredients(config, [], ironPlan);
+        expect(included.inserters[0].overrides).toEqual({ enable_control: rule });
+        expect('_forced_always' in included.inserters[0]).toBe(false);
+    });
+
+    it('unflags an inserter whose rule is replaced, and keeps the flag through other edits', () => {
+        const forced = edits.updateIgnoredIngredients(form(), ['iron-plate'], ironPlan);
+        const replaced = edits.updateInserter(forced, 0, { overrides: { enable_control: { mode: 'ALWAYS' } } });
+        expect('_forced_always' in replaced.inserters[0]).toBe(false);
+        expect(replaced.inserters[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
+        const restacked = edits.updateInserter(forced, 0, { stack_size: 12 });
+        expect(restacked.inserters[0]._forced_always).toBe(true);
+        expect(restacked.inserters[0].stack_size).toBe(12);
+    });
+
+    it('keeps the flag on the inserter, not its id, through a reorder', () => {
+        const forced = edits.updateIgnoredIngredients(form(), ['iron-plate'], ironPlan);
+        const reordered = edits.reorderInserters(forced, 0, 2);
+        expect(reordered.inserters.map((ins) => [ins._uuid, ins.id, ins._forced_always])).toEqual([
+            ['inserter-2', 1, undefined],
+            ['inserter-3', 2, undefined],
+            ['inserter-1', 3, true],
+        ]);
     });
 });

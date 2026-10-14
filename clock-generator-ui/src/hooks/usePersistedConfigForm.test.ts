@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChestType } from 'clock-generator/light';
-import { backUpSavedConfig, readSavedConfig } from './usePersistedConfigForm';
+import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
+import { backUpSavedConfig, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -25,6 +26,26 @@ describe('readSavedConfig', () => {
         expect(readSavedConfig('{ not json')).toBeNull();
         expect(readSavedConfig('{"machines": []}')).toBeNull();
         expect(readSavedConfig('{"target_output": {}, "machines": [], "chests": 3}')).toBeNull();
+    });
+});
+
+describe('serializeConfig', () => {
+    it('keeps the forced flag of an inserter through a save and a reload, and leaves out the uuids', () => {
+        const form: ConfigFormData = {
+            ...createDefaultConfig(),
+            inserters: [
+                {
+                    id: 1, _uuid: 'inserter-1', source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16,
+                    overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true,
+                },
+                { id: 2, _uuid: 'inserter-2', source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, stack_size: 16 },
+            ],
+        };
+        const text = serializeConfig(form);
+        expect(text).not.toContain('_uuid');
+        const reloaded = readSavedConfig(text);
+        expect(reloaded?.inserters[0]._forced_always).toBe(true);
+        expect('_forced_always' in reloaded!.inserters[1]).toBe(false);
     });
 });
 
