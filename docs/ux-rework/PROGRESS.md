@@ -262,7 +262,7 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.12A → 1.11 PR B: other selects have no `labelId` either (`ChestsForm.tsx` type select, `ValueReferenceSelector.tsx`), and the List's Type select name includes the icon's alt text ("Type assembling-machine-3 Assembling machine").
 - 1.12A → 1.12B: "Validate again, then Generate, after making changes" could read "After making changes, validate again, then Generate"; the `'Type'` tooltip in `MachineFactsAccordion.tsx` never renders (no FactItem has that label).
 - 1.4 → 1.11: the fullscreen diagram renders a second `MissingInserterAlert`, so coverage-row ids are duplicated while it is open and a jump focuses the copy behind the modal. The Recipe inputs are all named just "Recipe".
-- 1.5 → 1.11: no announcement when an editing dialog withdraws an Undo offer was added in round 2; check 1.11's `announce()` callers also land in an unhidden region (the 1.5 round-2 design).
+- 1.5 → 1.11: 1.11's `announce()` callers must also land in an unhidden region (the 1.5 round-2 design handles MUI modals hiding `#root`).
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.
