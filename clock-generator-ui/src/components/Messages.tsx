@@ -64,6 +64,8 @@ export function MessageHost() {
                 key={message.id}
                 open
                 autoHideDuration={message.durationMs}
+                // hovering or focusing it pauses the timer; leaving gives it its full time again, not MUI's half
+                resumeHideDuration={message.durationMs ?? undefined}
                 // a click elsewhere on the page does not close it: it goes after its time, with Escape or its close button
                 onClose={(_, reason) => { if (reason !== 'clickaway') close(); }}
                 anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
