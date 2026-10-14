@@ -40,7 +40,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.11 | Accessibility basics | sonnet | spec | | | |
 | 1.12 | Glossary and copy pass | sonnet | spec | | | Checkpoint: glossary approval |
 | 1.13 | Enable mode shown on the row | sonnet | impl | | | Third slot, alongside 1.1 and 1.8. Wire the forced-ALWAYS note after 1.8 merges |
-| 1.14 | Warning colour apart from the brand orange | sonnet | spec | | | |
+| 1.14 | Warning colour apart from the brand orange | opus | spec | | | Spec final; moved up (7 files). After 1.1 and 1.2; not alongside 1.4, 1.5 |
 
 ## Phase 2: newcomer-first structure
 
@@ -94,6 +94,10 @@ Minor and nit findings, and anything noticed outside an item's scope.
   the raw mode, and B7's "Show only overridden" filter is not built. For 2.11.
 - 1.6: left to later items: B12's "Not picked because" column, B14's sorting and sticky tabs.
 - 1.4: all Recipe inputs are labelled just "Recipe", so a jump to one announces only that. For 1.11.
+- 1.14: the no-recovery, unstable and deadlock-risk warnings put no words on the Copy button (only the colour, icon,
+  tooltip and snackbar). For the 1.12 glossary pass.
+- 1.14 → 1.11: a `#fca300` focus ring is 1.55:1 on the yellow fill; draw it with an offset on the dark surface.
+- 1.14 → 2.7: a warning-state yellow Copy replaces the green next-step button rather than sitting beside it.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
