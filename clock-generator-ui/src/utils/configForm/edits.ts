@@ -39,6 +39,23 @@ function reorderWithIdReassignment<T extends { id: number }>(
     return { items: reassigned, idMap };
 }
 
+/** No entity has id 0: a reference to it is one not chosen, which the form shows empty and the generator rejects */
+const UNSET_ID = 0;
+
+/** Unsets the inserter ends that reference the given entity, which is being removed */
+function unsetInserterEndsAt(inserters: InserterFormData[], type: InserterFormData['sink']['type'], id: number): InserterFormData[] {
+    return inserters.map((ins) => {
+        const source = ins.source.type === type && ins.source.id === id;
+        const sink = ins.sink.type === type && ins.sink.id === id;
+        if (!source && !sink) return ins;
+        return {
+            ...ins,
+            source: source ? { type, id: UNSET_ID } : ins.source,
+            sink: sink ? { type, id: UNSET_ID } : ins.sink,
+        };
+    });
+}
+
 // Target output
 export function updateTargetOutput(
     prev: ConfigFormData,
@@ -86,9 +103,17 @@ export function updateMachine(
 }
 
 export function removeMachine(prev: ConfigFormData, index: number): ConfigFormData {
+    const id = prev.machines[index]?.id;
     return {
         ...prev,
         machines: prev.machines.filter((_, i) => i !== index),
+        inserters: unsetInserterEndsAt(prev.inserters, 'machine', id),
+        ...(prev.drills && {
+            drills: {
+                ...prev.drills,
+                configs: prev.drills.configs.map((d) => d.target.id === id ? { ...d, target: { type: 'machine' as const, id: UNSET_ID } } : d),
+            },
+        }),
     };
 }
 
@@ -182,6 +207,7 @@ export function removeBelt(prev: ConfigFormData, index: number): ConfigFormData 
     return {
         ...prev,
         belts: prev.belts.filter((_, i) => i !== index),
+        inserters: unsetInserterEndsAt(prev.inserters, 'belt', prev.belts[index]?.id),
     };
 }
 
@@ -254,6 +280,7 @@ export function removeChest(prev: ConfigFormData, index: number): ConfigFormData
     return {
         ...prev,
         chests: prev.chests.filter((_, i) => i !== index),
+        inserters: unsetInserterEndsAt(prev.inserters, 'chest', prev.chests[index]?.id),
     };
 }
 

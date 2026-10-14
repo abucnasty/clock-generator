@@ -57,6 +57,18 @@ describe('machines', () => {
         expect(ids(edits.removeMachine(form(), 0).machines)).toEqual([2, 3]);
     });
 
+    it('unsets the inserter ends and drill targets at a removed machine', () => {
+        const config = edits.removeMachine(form(), 2);
+        expect(config.inserters.map((ins) => [ins.source, ins.sink])).toEqual([
+            [{ type: 'belt', id: 2, near_lane: 1 }, { type: 'machine', id: 0 }],
+            [{ type: 'machine', id: 0 }, { type: 'chest', id: 2 }],
+            [{ type: 'machine', id: 1 }, { type: 'belt', id: 1 }],
+        ]);
+        expect(config.drills!.configs.map((d) => d.target)).toEqual([{ type: 'machine', id: 1 }, { type: 'machine', id: 0 }]);
+        // and they stay unset when the machines are renumbered
+        expect(edits.reorderMachines(config, 1, 0).inserters[1].source).toEqual({ type: 'machine', id: 0 });
+    });
+
     it('merges machines in after the others with new ids and uuids', () => {
         const pasted = { ...form().machines[0], id: 1, recipe: 'pasted' };
         const config = edits.mergeMachines(form(), [pasted, pasted]);
@@ -128,6 +140,16 @@ describe('belts', () => {
         expect(ids(edits.removeBelt(form(), 0).belts)).toEqual([2]);
     });
 
+    it('unsets the inserter ends at a removed belt, with the lane they took from first', () => {
+        const config = edits.removeBelt(form(), 1);
+        expect(config.inserters.map((ins) => [ins.source, ins.sink])).toEqual([
+            [{ type: 'belt', id: 0 }, { type: 'machine', id: 3 }],
+            [{ type: 'machine', id: 3 }, { type: 'chest', id: 2 }],
+            [{ type: 'machine', id: 1 }, { type: 'belt', id: 1 }],
+        ]);
+        expect(edits.removeBelt(form(), 0).inserters[2].sink).toEqual({ type: 'belt', id: 0 });
+    });
+
     it('renumbers the belts on reorder and follows them in inserters', () => {
         const config = edits.reorderBelts(form(), 1, 0);
         expect(config.inserters[0].source).toEqual({ type: 'belt', id: 1, near_lane: 1 });
@@ -158,6 +180,12 @@ describe('chests', () => {
 
     it('removes the chest at an index', () => {
         expect(ids(edits.removeChest(form(), 1).chests)).toEqual([1]);
+    });
+
+    it('unsets the inserter ends at a removed chest', () => {
+        const config = edits.removeChest(form(), 1);
+        expect(config.inserters[1].sink).toEqual({ type: 'chest', id: 0 });
+        expect(edits.removeChest(form(), 0).inserters).toEqual(form().inserters);
     });
 
     it('renumbers the chests on reorder and follows them in inserters', () => {
