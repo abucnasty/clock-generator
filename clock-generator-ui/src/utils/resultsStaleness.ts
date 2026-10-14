@@ -7,7 +7,7 @@ export const STALE_COPY_LABEL = 'Copy old clock…';
 export const STALE_COPY_TOOLTIP = 'Your build has changed since this clock was made. Generate again for a new one.';
 
 /** Said in the Blueprint tab in place of the blueprint string while the clocks are for an earlier build */
-export const STALE_BLUEPRINT_NOTE = 'The blueprint is hidden because the build has changed since it was made.';
+export const STALE_BLUEPRINT_NOTE = 'The blueprint is hidden because your build has changed since it was made. Generate again for a new one.';
 
 /** What a generation was for: the key of its config, and the target recipe and rate the clocks were made for */
 export interface GeneratedFor {

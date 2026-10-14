@@ -282,9 +282,11 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             const workersReady = Promise.all(Array.from({ length: workerPoolSize() }, () => new Promise<void>((resolve, reject) => {
                 const worker = createSimulationWorker();
                 workersRef.current.push(worker);
+                let started = false;
                 worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
                     const response = event.data;
                     if (response.type === 'initialized') {
+                        started = true;
                         resolve();
                     } else if (response.type === 'error' && response.runId === undefined) {
                         reject(new Error(response.message));
@@ -292,6 +294,11 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                     handleResponse(worker, response);
                 };
                 worker.onerror = (event) => {
+                    // once started, a crash only matters to a generation still on screen; one dropped by Import,
+                    // Paste or Reset must not put an error over the empty Results
+                    if (started && !generationRef.current) {
+                        return;
+                    }
                     generationRef.current = null;
                     setError(event.message || 'Simulation worker failed');
                     progressStore.set(null);

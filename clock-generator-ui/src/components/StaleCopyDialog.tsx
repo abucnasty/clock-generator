@@ -1,4 +1,5 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { useId } from 'react';
 import { generatedForText, type GeneratedFor } from '../utils/resultsStaleness';
 
 interface StaleCopyDialogProps {
@@ -14,18 +15,20 @@ interface StaleCopyDialogProps {
  * Cancel is focused, so Enter copies nothing.
  */
 export function StaleCopyDialog({ open, generatedFor, onCancel, onConfirm }: StaleCopyDialogProps) {
+    const titleId = useId();
+    const textId = useId();
     return (
         <Dialog
             open={open}
             onClose={onCancel}
-            aria-labelledby="stale-copy-dialog-title"
-            aria-describedby="stale-copy-dialog-text"
+            aria-labelledby={titleId}
+            aria-describedby={textId}
         >
-            <DialogTitle id="stale-copy-dialog-title">Copy the old clock?</DialogTitle>
+            <DialogTitle id={titleId}>Copy the old clock?</DialogTitle>
             <DialogContent>
-                <DialogContentText id="stale-copy-dialog-text">
-                    This blueprint is for {generatedForText(generatedFor)}. Your build has changed since, so it may not
-                    fit it. Generate again to get a clock for the build you have now.
+                <DialogContentText id={textId}>
+                    This blueprint is for {generatedForText(generatedFor)}. Your build has changed since, so this clock
+                    may not work in it. Generate again to get a clock for the build you have now.
                 </DialogContentText>
             </DialogContent>
             <DialogActions>

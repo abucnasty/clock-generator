@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formDataToConfig } from './configForm/configMapping';
+import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import * as edits from './configForm/edits';
 import { createDefaultConfig, type ConfigFormData } from './configForm/formData';
 import { configKeyOf, generatedForOf, isStale, staleResultsMessage } from './resultsStaleness';
@@ -48,6 +48,15 @@ describe('isStale', () => {
         expect(isStale(generatedFor, keyOf(edited))).toBe(true);
         expect(isStale(generatedFor, keyOf(edits.updateTargetOutput(edited, 'items_per_second', 240)))).toBe(false);
     });
+
+    it('is false after a machine is added and removed again, since the form\'s own ids and next ids are not in the key', () => {
+        const generated = form();
+        const generatedFor = generatedForOf(formDataToConfig(generated));
+        const added = edits.addMachine(generated);
+        const removed = edits.removeMachine(added, added.machines.length - 1);
+        expect(removed.next_ids).toBeDefined();
+        expect(isStale(generatedFor, keyOf(removed))).toBe(false);
+    });
 });
 
 describe('generatedForOf', () => {
@@ -79,5 +88,10 @@ describe('configKeyOf', () => {
     it('is the same for a form exported twice, so a build is not stale right after Generate', () => {
         const config = form();
         expect(configKeyOf(formDataToConfig(config))).toBe(configKeyOf(formDataToConfig(config)));
+    });
+
+    it('is the same after the config goes back into a form and out again, as on Import', () => {
+        const key = configKeyOf(formDataToConfig(form()));
+        expect(configKeyOf(formDataToConfig(configToFormData(formDataToConfig(form()))))).toBe(key);
     });
 });

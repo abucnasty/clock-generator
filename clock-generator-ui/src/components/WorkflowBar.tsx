@@ -129,7 +129,7 @@ export function WorkflowBar({
                         </Snackbar>
                         {staleFor && (
                             <StaleCopyDialog
-                                open={confirmingOld}
+                                open={confirmingOld && staleFor !== null}
                                 generatedFor={staleFor}
                                 onCancel={() => setConfirmingOld(false)}
                                 onConfirm={() => {

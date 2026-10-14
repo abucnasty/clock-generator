@@ -73,7 +73,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         {copied ? 'Copied' : STALE_COPY_LABEL}
                     </Button>
                     <StaleCopyDialog
-                        open={confirmingOld}
+                        open={confirmingOld && staleFor !== null}
                         generatedFor={staleFor}
                         onCancel={() => setConfirmingOld(false)}
                         onConfirm={() => {
@@ -108,9 +108,11 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                     </IconButton>
                 </Box>
             )}
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Copy this string and paste it in Factorio (Ctrl+V while in blueprint library)
-            </Typography>
+            {!staleFor && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Copy this string and paste it in Factorio (Ctrl+V while in blueprint library)
+                </Typography>
+            )}
         </Paper>
     );
 }

@@ -198,6 +198,7 @@ function App() {
         : isValidationOutOfDate ? 'out-of-date' : validation.status;
     // likewise the clocks on screen are for the build as it was when Generate was pressed
     const resultsAreStale = isStale(generatedFor, configKey);
+    const staleFor = resultsAreStale ? generatedFor : null;
 
     const validationPanelRef = useRef<HTMLDivElement>(null);
     const handleValidate = useCallback(() => {
@@ -325,7 +326,7 @@ function App() {
                         blueprintString={blueprintString}
                         selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
                         rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
-                        staleFor={resultsAreStale ? generatedFor : null}
+                        staleFor={staleFor}
                     />
                 )}
 
@@ -511,7 +512,7 @@ function App() {
                                 streamLogs={streamLogs}
                                 onStreamLogsChange={setStreamLogs}
                                 onClearLogs={clearLogs}
-                                staleFor={resultsAreStale ? generatedFor : null}
+                                staleFor={staleFor}
                             />
                         </Box>
                         </>
