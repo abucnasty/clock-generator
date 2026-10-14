@@ -7,6 +7,7 @@ import {
     MachineStatus 
 } from 'clock-generator/light';
 import type { RuleSet } from '../hooks/useConfigForm';
+import { SELECT_NAMES } from '../utils/a11yLabels';
 
 interface Template {
     id: string;
@@ -89,6 +90,7 @@ export function QuickTemplateSelect({ onApply, defaultItemName }: QuickTemplateS
             <FormControl size="small" fullWidth>
                 <InputLabel shrink>Quick Templates</InputLabel>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.quickTemplates }}
                     value=""
                     label="Quick Templates"
                     onChange={(e) => handleSelect(e.target.value)}

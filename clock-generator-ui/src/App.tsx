@@ -48,6 +48,7 @@ import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, de
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
+import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { a11yThemeComponents } from './utils/a11yTheme';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
@@ -441,7 +442,7 @@ function App() {
                         <Icon sx={{ mr: 3 }}>
                             <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
                         </Icon>
-                        <Typography variant="h6" component="div" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography variant="h6" component="h1" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
                         <ConfigImportExport
@@ -492,7 +493,7 @@ function App() {
                         </Alert>
                     ) : !isInitialized ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
-                            <CircularProgress />
+                            <CircularProgress aria-label={PROGRESS_NAMES.loadingData} />
                             <Typography sx={{ ml: 2 }}>Loading Factorio data...</Typography>
                         </Box>
                     ) : (
@@ -731,6 +732,7 @@ function App() {
             {/* Fullscreen diagram dialog */}
             <Dialog
                 fullScreen
+                aria-labelledby="diagram-fullscreen-title"
                 open={diagramFullscreen}
                 onClose={() => setDiagramFullscreen(false)}
                 PaperProps={{ sx: { bgcolor: 'background.default' } }}
@@ -750,7 +752,7 @@ function App() {
                             borderColor: 'divider',
                         }}
                     >
-                        <Typography variant="h6" sx={{ flex: 1 }}>Flow Diagram</Typography>
+                        <Typography id="diagram-fullscreen-title" variant="h6" component="h2" sx={{ flex: 1 }}>Flow Diagram</Typography>
                         <IconButton onClick={() => setDiagramFullscreen(false)} size="small" aria-label="Exit fullscreen">
                             <FullscreenExit />
                         </IconButton>

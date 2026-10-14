@@ -26,6 +26,7 @@ import {
     enableControlDraftOf,
     enableControlOverrideChanged,
 } from '../utils/enableControlDraft';
+import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { RuleSetEditor } from './RuleSetEditor';
 import { createDefaultRuleSet } from './ruleSetUtils';
@@ -189,6 +190,7 @@ export function EnableControlFormContent({
                         <FormControl size="small" sx={{ minWidth: 250 }}>
                             <InputLabel shrink>Copy from another {entityType}</InputLabel>
                             <Select
+                                inputProps={{ 'aria-label': `Copy from another ${entityType}` }}
                                 value=""
                                 label={`Copy from another ${entityType}`}
                                 onChange={(e) => {
@@ -277,6 +279,7 @@ export function EnableControlFormContent({
                                     disabled={ranges.length <= 1}
                                     size="small"
                                     color="error"
+                                    aria-label={BUTTON_NAMES.removeRange}
                                 >
                                     <Delete fontSize="small" />
                                 </IconButton>
@@ -398,10 +401,12 @@ function EnableControlModalContent({
                 maxWidth={isFullscreen ? false : 'md'}
                 fullWidth
                 fullScreen={isFullscreen}
+                // named by the title text, not by the title bar with its buttons
+                aria-labelledby="enable-control-title"
             >
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Typography variant="h6">Enable Control Override</Typography>
+                <DialogTitle id="enable-control-bar" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box id="enable-control-title">
+                        <Typography variant="h6" component="span" sx={{ display: 'block' }}>Enable Control Override</Typography>
                         <Typography variant="body2" color="text.secondary">{entityLabel}</Typography>
                     </Box>
                     <Box>
@@ -410,7 +415,7 @@ function EnableControlModalContent({
                                 {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                             </IconButton>
                         </Tooltip>
-                        <IconButton onClick={requestClose} edge="end">
+                        <IconButton onClick={requestClose} edge="end" aria-label={BUTTON_NAMES.close}>
                             <Close />
                         </IconButton>
                     </Box>

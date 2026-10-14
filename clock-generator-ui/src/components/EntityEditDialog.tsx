@@ -38,6 +38,7 @@ import {
 } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { entityLabel } from '../utils/entityLabel';
+import { SELECT_NAMES } from '../utils/a11yLabels';
 import type { EntityClickType } from './ConfigFlowDiagram';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
@@ -147,10 +148,9 @@ function MachineEditSection({
                     size="small"
                 />
                 <FormControl size="small" sx={{ flex: 1, minWidth: { xs: '100%', sm: 200 } }}>
-                    <InputLabel id={`dialog-machine-type-label-${entityIndex}`}>Type</InputLabel>
+                    <InputLabel>Type</InputLabel>
                     <Select
-                        labelId={`dialog-machine-type-label-${entityIndex}`}
-                        SelectDisplayProps={{ id: `dialog-machine-type-select-${entityIndex}` }}
+                        inputProps={{ 'aria-label': SELECT_NAMES.machineType }}
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(entityIndex, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
@@ -204,12 +204,13 @@ function BeltEditSection({
             <FormControl size="small" fullWidth>
                 <InputLabel>Belt Type</InputLabel>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.beltType }}
                     value={belt.type}
                     label="Belt Type"
                     onChange={(e) => onUpdate(entityIndex, { type: e.target.value as BeltFormData['type'] })}
                     renderValue={(selected) => (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name={selected} size={20} />
+                            <FactorioIcon name={selected} size={20} alt="" />
                             {BELT_TYPES.find((bt) => bt.value === selected)?.label}
                         </Box>
                     )}
@@ -217,7 +218,7 @@ function BeltEditSection({
                     {BELT_TYPES.map((bt) => (
                         <MenuItem key={bt.value} value={bt.value}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={bt.value} size={20} />
+                                <FactorioIcon name={bt.value} size={20} alt="" />
                                 {bt.label}
                             </Box>
                         </MenuItem>
@@ -228,6 +229,7 @@ function BeltEditSection({
             <FormControl size="small" fullWidth>
                 <InputLabel>Strategy</InputLabel>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.beltStrategy }}
                     value={belt.strategy ?? 'normal'}
                     label="Strategy"
                     onChange={(e) => onUpdate(entityIndex, beltStrategyUpdate(belt, e.target.value as BeltStrategyFormValue))}
@@ -265,7 +267,7 @@ function BeltEditSection({
                         size="small"
                     />
                     {belt.strategy === 'export' && (
-                    <Tooltip title={LANE_CONSUMPTION_TOOLTIP}>
+                    <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
                         <Box>
                             <NumberField
                                 label="Consumed /s"
@@ -345,19 +347,20 @@ function ChestEditSection({
             <FormControl size="small" fullWidth>
                 <InputLabel>Chest Type</InputLabel>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.chestType }}
                     value={chest.type}
                     label="Chest Type"
                     onChange={(e) => onSwitchType(entityIndex, e.target.value as typeof ChestType[keyof typeof ChestType])}
                 >
                     <MenuItem value={ChestType.BUFFER_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name="iron-chest" size={20} />
+                            <FactorioIcon name="iron-chest" size={20} alt="" />
                             Buffer Chest
                         </Box>
                     </MenuItem>
                     <MenuItem value={ChestType.INFINITY_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name="infinity-chest" size={20} />
+                            <FactorioIcon name="infinity-chest" size={20} alt="" />
                             Infinity Chest
                         </Box>
                     </MenuItem>
@@ -422,12 +425,13 @@ function DrillEditSection({
             <FormControl size="small" fullWidth>
                 <InputLabel>Drill Type</InputLabel>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
                     value={drill.type}
                     label="Drill Type"
                     onChange={(e) => onUpdate(entityIndex, { type: e.target.value as DrillFormData['type'] })}
                     renderValue={(selected) => (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name={selected} size={20} />
+                            <FactorioIcon name={selected} size={20} alt="" />
                             {DRILL_TYPES.find((dt) => dt.value === selected)?.label}
                         </Box>
                     )}
@@ -435,7 +439,7 @@ function DrillEditSection({
                     {DRILL_TYPES.map((dt) => (
                         <MenuItem key={dt.value} value={dt.value}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={dt.value} size={20} />
+                                <FactorioIcon name={dt.value} size={20} alt="" />
                                 {dt.label}
                             </Box>
                         </MenuItem>
@@ -464,6 +468,7 @@ function DrillEditSection({
             <FormControl size="small" fullWidth>
                 <InputLabel>Target Machine</InputLabel>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
                     value={drill.target.id}
                     label="Target Machine"
                     onChange={(e) => onUpdate(entityIndex, { target: { type: 'machine', id: Number(e.target.value) } })}
@@ -471,7 +476,7 @@ function DrillEditSection({
                     {machines.map((m) => (
                         <MenuItem key={m.id} value={m.id}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={m.recipe || 'assembling-machine-3'} size={20} />
+                                <FactorioIcon name={m.recipe || 'assembling-machine-3'} size={20} alt="" />
                                 {entityLabel('machine', m.id)}{m.recipe ? ` (${m.recipe})` : ''}
                             </Box>
                         </MenuItem>
@@ -605,9 +610,11 @@ export function EntityEditDialog({
                 maxWidth={entityType === 'inserter' ? 'md' : 'sm'}
                 fullWidth
                 PaperProps={{ sx: { bgcolor: 'background.paper' } }}
-            >            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pr: 1, pb: 1 }}>
-                    {iconName && <FactorioIcon name={iconName} size={28} />}
-                    <Typography variant="h6" component="span" sx={{ flex: 1 }}>
+                // named by the title text, not by the title bar with its buttons
+                aria-labelledby="entity-edit-title"
+            >            <DialogTitle id="entity-edit-bar" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pr: 1, pb: 1 }}>
+                    {iconName && <FactorioIcon name={iconName} size={28} alt="" />}
+                    <Typography id="entity-edit-title" variant="h6" component="span" sx={{ flex: 1 }}>
                         {title}
                     </Typography>
                     {canDelete && (

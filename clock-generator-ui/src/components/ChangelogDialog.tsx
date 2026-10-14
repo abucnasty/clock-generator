@@ -81,7 +81,7 @@ export function ChangelogDialog({ open, onClose }: ChangelogDialogProps) {
                 {releases.map((release) => (
                     <Box key={release.version} sx={{ mb: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Typography variant="h6">v{release.version}</Typography>
+                            <Typography variant="h6" component="h3">v{release.version}</Typography>
                             {release.version === __APP_VERSION__ && <Chip label="current" size="small" color="primary" />}
                             <Typography variant="body2" color="text.secondary">{release.date}</Typography>
                         </Box>

@@ -95,6 +95,8 @@ export function NumberField({
     return (
         <BaseNumberField.Root
             {...other}
+            // the steppers' aria-controls point at the input by this id
+            id={id}
             min={min}
             max={max}
             format={effectiveFormat}

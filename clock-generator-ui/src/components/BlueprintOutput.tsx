@@ -12,6 +12,7 @@ import {
 import { useCallback, useState } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
 import { ANNOUNCEMENTS } from '../utils/workflowAnnouncement';
 import { StaleCopyDialog } from './StaleCopyDialog';
@@ -94,13 +95,14 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         rows={6}
                         fullWidth
                         value={blueprintString}
-                        InputProps={{
-                            readOnly: true,
-                            sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
+                        slotProps={{
+                            htmlInput: { 'aria-label': FIELD_NAMES.blueprintString },
+                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem' } },
                         }}
                     />
                     <IconButton
                         onClick={handleCopy}
+                        aria-label={copied ? BUTTON_NAMES.blueprintCopied : BUTTON_NAMES.copyBlueprintString}
                         sx={{
                             position: 'absolute',
                             top: 8,
@@ -127,6 +129,7 @@ export function GenerationProgressStatus({ store }: { store: GenerationProgressS
     return (
         <Box>
             <LinearProgress
+                aria-label={PROGRESS_NAMES.generating}
                 variant={progress?.total ? 'determinate' : 'indeterminate'}
                 value={progress?.total ? (progress.completed / progress.total) * 100 : undefined}
             />

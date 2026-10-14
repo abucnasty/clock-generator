@@ -50,14 +50,18 @@ function TransferPlanPanelComponent({
     const isLcmOverridden = usedLcm !== computed_lcm;
 
     return (
-        <Accordion defaultExpanded sx={{ mt: 1 }}>
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' } }} sx={{ mt: 1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Transfer Plan
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-                    <Tooltip title={`The least common multiple (LCM) that is computed based on the transfer fractions of all inserters. The clock will repeat every LCM cycles.`}>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 0 }}>
+                {/* here, not in the title: the title is a button, and a focusable chip in a button cannot be reached or named */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1 }}>
+                    <Tooltip title={`The least common multiple (LCM) that is computed based on the transfer fractions of all inserters. The clock will repeat every LCM cycles.`} describeChild>
                         <Chip
+                            tabIndex={0}
                             label={`LCM: ${computed_lcm}`}
                             size="small"
                             color="default"
@@ -66,8 +70,9 @@ function TransferPlanPanelComponent({
                     </Tooltip>
 
                     {isLcmOverridden && (
-                        <Tooltip title={`Manual LCM override active: ${usedLcm} (computed: ${computed_lcm})`}>
+                        <Tooltip title={`Manual LCM override active: ${usedLcm} (computed: ${computed_lcm})`} describeChild>
                             <Chip
+                                tabIndex={0}
                                 label={`Used: ${usedLcm}`}
                                 size="small"
                                 color="warning"
@@ -85,8 +90,6 @@ function TransferPlanPanelComponent({
                         />
                     )}
                 </Box>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 0 }}>
                 <Table size="small">
                     <TableHead>
                         <TableRow>
@@ -127,7 +130,7 @@ function TransferPlanPanelComponent({
                                         </TableCell>
                                         <TableCell>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                <FactorioIcon name={transfer.item_name} size={18} />
+                                                <FactorioIcon name={transfer.item_name} size={18} alt="" />
                                                 <Typography
                                                     variant="body2"
                                                     sx={{
@@ -157,8 +160,11 @@ function TransferPlanPanelComponent({
                                                         ? 'Click to include in LCM'
                                                         : 'Click to exclude from LCM (its inserters are set to ALWAYS unless they already have an enable rule of your own)'
                                                 }
+                                                describeChild
                                             >
                                                 <Chip
+                                                    // starts with the word on the chip, and says what it is about
+                                                    aria-label={`${isExcluded ? 'Excluded from' : 'Included in'} LCM: ${transfer.item_name}`}
                                                     icon={isExcluded ? <BlockIcon /> : undefined}
                                                     label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"

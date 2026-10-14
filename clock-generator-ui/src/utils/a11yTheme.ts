@@ -32,6 +32,13 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
         MuiSwitch: { styleOverrides: { switchBase: insetRing } },
         // in a group the next button, drawn after it, would cover the side of the ring that overlaps it
         MuiToggleButton: { styleOverrides: { root: { '&.Mui-focusVisible': { zIndex: 1 } } } },
+        MuiTypography: {
+            defaultProps: {
+                // MUI makes a subtitle an h6, which would put every small label ("Latched Mode") in the page's outline.
+                // The two that are headings of a card say so themselves. The other variants keep MUI's mapping
+                variantMapping: { subtitle1: 'p', subtitle2: 'p' },
+            },
+        },
         MuiAlert: {
             styleOverrides: {
                 root: {

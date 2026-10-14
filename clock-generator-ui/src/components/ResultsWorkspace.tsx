@@ -76,9 +76,24 @@ interface ResultsWorkspaceProps {
     staleFor: GeneratedFor | null;
 }
 
-function TabBody({ shown, children }: { shown: boolean; children: ReactNode }) {
+const tabId = (tab: ResultsTab) => `results-tab-${tab}`;
+const panelId = (tab: ResultsTab) => `results-panel-${tab}`;
+/** What a tab says about the panel it opens, and the panel about its tab */
+const tabProps = (tab: ResultsTab) => ({ id: tabId(tab), 'aria-controls': panelId(tab) });
+
+function TabBody({ tab, shown, children }: { tab: ResultsTab; shown: boolean; children: ReactNode }) {
     // kept mounted so a tab keeps its filters and scroll position while another is shown
-    return <Box sx={{ display: shown ? 'block' : 'none', pt: 2 }}>{children}</Box>;
+    return (
+        <Box
+            role="tabpanel"
+            id={panelId(tab)}
+            aria-labelledby={tabId(tab)}
+            hidden={!shown}
+            sx={{ display: shown ? 'block' : 'none', pt: 2 }}
+        >
+            {children}
+        </Box>
+    );
 }
 
 /**
@@ -152,19 +167,19 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     scrollButtons="auto"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
-                    <Tab value="wakeWindows" label={VIEW_HEADING} />
-                    <Tab value="timelines" label="Timelines" />
-                    {fuelView !== null && <Tab value="fuel" label="Fuel" />}
-                    <Tab value="insights" label="Insights" />
-                    <Tab value="blueprint" label="Blueprint" />
-                    <Tab value="log" label="Log" />
+                    <Tab value="wakeWindows" label={VIEW_HEADING} {...tabProps('wakeWindows')} />
+                    <Tab value="timelines" label="Timelines" {...tabProps('timelines')} />
+                    {fuelView !== null && <Tab value="fuel" label="Fuel" {...tabProps('fuel')} />}
+                    <Tab value="insights" label="Insights" {...tabProps('insights')} />
+                    <Tab value="blueprint" label="Blueprint" {...tabProps('blueprint')} />
+                    <Tab value="log" label="Log" {...tabProps('log')} />
                 </Tabs>
 
-                <TabBody shown={shownTab === 'wakeWindows'}>
+                <TabBody tab="wakeWindows" shown={shownTab === 'wakeWindows'}>
                     <WakeWindowsView alternative={props.alternatives[props.selectedIndex] ?? null} />
                 </TabBody>
 
-                <TabBody shown={shownTab === 'insights'}>
+                <TabBody tab="insights" shown={shownTab === 'insights'}>
                     <SwingBackoffReportDisplay report={props.swingBackoffReport} />
                     <InsightsPanel
                         insights={props.alternatives[props.selectedIndex]?.insights ?? []}
@@ -174,7 +189,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     </InsightsPanel>
                 </TabBody>
 
-                <TabBody shown={shownTab === 'timelines'}>
+                <TabBody tab="timelines" shown={shownTab === 'timelines'}>
                     {hasClockOnlyRun && (
                         <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                             <ToggleButtonGroup
@@ -211,11 +226,13 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     )}
                 </TabBody>
 
-                <TabBody shown={shownTab === 'fuel'}>
-                    {fuelView !== null && <FuelPanel fuel={fuelView} />}
-                </TabBody>
+                {fuelView !== null && (
+                    <TabBody tab="fuel" shown={shownTab === 'fuel'}>
+                        <FuelPanel fuel={fuelView} />
+                    </TabBody>
+                )}
 
-                <TabBody shown={shownTab === 'blueprint'}>
+                <TabBody tab="blueprint" shown={shownTab === 'blueprint'}>
                     <BlueprintOutput
                         rateWarning={rateWarningOf(props.alternatives[props.selectedIndex])}
                         blueprintString={props.blueprintString}
@@ -226,7 +243,14 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             </Box>
 
             {/* reachable before anything is generated: it holds the debug options a generation runs with */}
-            <Box sx={{ display: !hasResults || shownTab === 'log' ? 'block' : 'none', pt: 2 }}>
+            <Box
+                // the Log tab's panel; with no results there are no tabs, and the options are plain content
+                role={hasResults ? 'tabpanel' : undefined}
+                id={panelId('log')}
+                aria-labelledby={hasResults ? tabId('log') : undefined}
+                hidden={hasResults && shownTab !== 'log'}
+                sx={{ display: !hasResults || shownTab === 'log' ? 'block' : 'none', pt: 2 }}
+            >
                 <DebugPanel
                     logs={props.logs}
                     debugSteps={props.debugSteps}
