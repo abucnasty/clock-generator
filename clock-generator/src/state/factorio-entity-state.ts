@@ -1,8 +1,9 @@
 import { handSizeFor } from "../entities";
 import { EntityState } from "./entity-state";
-import { InserterState, InserterStatus } from "./inserter-state";
-import { MachineState, MachineStatus } from "./machine-state";
-import { DrillState, DrillStatus } from "./drill-state";
+import { InserterState } from "./inserter-state";
+import { MachineState } from "./machine-state";
+import { DrillState } from "./drill-state";
+import { DrillStatus, InserterStatus, MachineStatus } from "./entity-status";
 
 /**
  * The state an entity would show in Factorio, named as the game names it (`defines.entity_status`, as the recorder

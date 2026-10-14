@@ -2,6 +2,7 @@ export * from "./belt-state";
 export * from "./chest-state";
 export * from "./constant-inventory-state";
 export * from "./entity-state";
+export * from "./entity-status";
 export * from "./entity-state-registry";
 export * from "./entity-state-factory";
 export * from "./infinity-chest-state";

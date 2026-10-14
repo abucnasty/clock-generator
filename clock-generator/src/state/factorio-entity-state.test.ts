@@ -6,7 +6,8 @@ import { InserterAnimation } from "../entities/inserter/inserter-animation";
 import { BeltState } from "./belt-state";
 import { EntityState } from "./entity-state";
 import { factorioInserterState, FactorioInserterState } from "./factorio-entity-state";
-import { InserterState, InserterStatus } from "./inserter-state";
+import { InserterStatus } from "./entity-status";
+import { InserterState } from "./inserter-state";
 import { MachineState } from "./machine-state";
 
 function machineState(recipe: string): MachineState {
