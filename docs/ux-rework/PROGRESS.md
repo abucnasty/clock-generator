@@ -34,7 +34,8 @@ come from here.
 
 - **Phase:** 1 (started 2026-10-14)
 - **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** none (2.2's in-game check passed: the owner tested the built mod, 2026-10-14)
+- **Open checkpoints:** none yet; the Phase 1 merge into `feat/ux-rework` will need the owner's approval
+- **Phase 1:** all 14 items merged (#145–#164); phase end (three-designer review, retro) running
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
 ## Phase 1: stop the harm, quick wins
@@ -52,7 +53,7 @@ come from here.
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | merged | [#150](https://github.com/abucnasty/clock-generator/pull/150) | 1 | Round 0: code review and UX audit FIX (keyboard on the stale plan; 720 row). Round 1: both PASS. CI green |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | merged | A [#160](https://github.com/abucnasty/clock-generator/pull/160), B [#162](https://github.com/abucnasty/clock-generator/pull/162) | A 1, B 1 | A (opus): round 0 both FIX (`checkAnnounced` uncommitted; the inserter editor's Save bar covered a field), round 1, re-review both PASS. B (sonnet, stacked on A): round 0 code PASS, UX FIX (focusable chips inside the Transfer Plan's accordion button; no axe run), round 1 (+ an axe step that found a stepper id bug), re-review both PASS. C8, C9, C10, C13, C22, C25 fixed. CI green |
-| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | A merged; B fix-1 | [#153](https://github.com/abucnasty/clock-generator/pull/153) | A 1, B 1 | Part A [#153] merged. Part B (sonnet): code review opus FIX (missed the clock status detail's "start phase"/"periods"); UX audit opus FIX (the Validation panel still says hands/transfer plan beside "Swings / cycle", and 2.3's spec copies that sentence forward); B32, C30 fixed, A25 partly. Round 1 renames them. After merge: its implementer does the p1→p2 merge with the glossary on Phase 2's copy |
+| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | merged | A [#153](https://github.com/abucnasty/clock-generator/pull/153), B [#164](https://github.com/abucnasty/clock-generator/pull/164) | A 1, B 1 | A (sonnet): one minors round. B (sonnet, 40 files, stacked on 1.11 B): round 0 both FIX (the clock status detail; the Validation panel's hands/transfer plan), round 1, re-review both PASS. A25, B32, C30 fixed. README "Words in the UI" adds two rows for the owner (swing plan, start point). CI green |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | merged | [#155](https://github.com/abucnasty/clock-generator/pull/155) | 1 | Bundle with 1.4. C4 fixed Code re-check PASS; CI green |
 
