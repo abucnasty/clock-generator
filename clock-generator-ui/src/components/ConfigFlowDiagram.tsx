@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, memo, type KeyboardEvent } from 'react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -6,6 +6,9 @@ import {
     Controls,
     BackgroundVariant,
     Panel,
+    useReactFlow,
+    useStore,
+    type EdgeMarker,
     type NodeTypes,
     type NodeMouseHandler,
     type Connection,
@@ -22,12 +25,20 @@ import { DrillFlowNode } from './DrillFlowNode';
 import type { FlowNodeEntity } from '../utils/buildFlowGraph';
 import { EntityEditDialog } from './EntityEditDialog';
 import type { EntityEditDialogProps } from './EntityEditDialog';
+import { FLOW_NODE_BOX_CLASS } from './flowNodeStyle';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
     inserterNode: InserterFlowNode,
     drillNode: DrillFlowNode,
 };
+
+/** The edges of a hovered node, and their arrowheads */
+const HIGHLIGHT_COLOR = '#fca300';
+const DIMMED_COLOR = '#555';
+
+/** The canvas's size as one value, so the diagram re-renders only when it changes */
+const canvasSizeSelector = (s: { width: number; height: number }) => `${s.width}x${s.height}`;
 
 const ENTITY_TYPES = new Set<FlowNodeEntity['type']>(['machine', 'belt', 'chest']);
 
@@ -96,6 +107,21 @@ function FlowContent({
     const [detailedMode, setDetailedMode] = useState(true);
     const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+    const { fitView } = useReactFlow();
+    // the fullscreen diagram is the one without a Fullscreen button: it has the room, so less margin
+    const fitViewOptions = useMemo(() => ({ padding: onRequestFullscreen ? 0.2 : 0.1 }), [onRequestFullscreen]);
+
+    // Fit the graph again when the canvas changes size (the fullscreen dialog opening, a window resize), since the first
+    // fit can run before the canvas has its final size. Never on an edit, which would move the map while you work on it.
+    const canvasSize = useStore(canvasSizeSelector);
+    const fittedSize = useRef<string | null>(null);
+    useEffect(() => {
+        const previous = fittedSize.current;
+        fittedSize.current = canvasSize;
+        if (previous !== null && previous !== canvasSize && !canvasSize.startsWith('0x') && !canvasSize.endsWith('x0')) {
+            void fitView(fitViewOptions);
+        }
+    }, [canvasSize, fitView, fitViewOptions]);
 
     const { nodes, edges } = useMemo(
         () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode),
@@ -128,13 +154,15 @@ function FlowContent({
             }
         }
 
+        // the arrowhead takes its edge's colour, or it stays the default grey on an orange edge
+        const marker = (e: Edge, color: string) => ({ ...(e.markerEnd as EdgeMarker), color });
         return edges.map(e => {
             const isConnected = highlightedEdgeIds?.has(e.id) ?? false;
             const isSelected = selectedEdgeIds.has(e.id);
             if (anyHovered) {
                 return isConnected
-                    ? { ...e, selected: isSelected, style: { stroke: '#fca300', strokeWidth: 2.5 } }
-                    : { ...e, selected: isSelected, style: { stroke: '#555', strokeWidth: 1, opacity: 0.2 } };
+                    ? { ...e, selected: isSelected, markerEnd: marker(e, HIGHLIGHT_COLOR), style: { stroke: HIGHLIGHT_COLOR, strokeWidth: 2.5 } }
+                    : { ...e, selected: isSelected, markerEnd: marker(e, DIMMED_COLOR), style: { stroke: DIMMED_COLOR, strokeWidth: 1, opacity: 0.2 } };
             }
             return isSelected ? { ...e, selected: true } : e;
         });
@@ -199,6 +227,18 @@ function FlowContent({
         onNodeSelect(entity.type, entity.id);
     };
 
+    // Enter on a focused node opens it, as a click does (React Flow only selects it). Only on the node itself, so Enter
+    // on a handle, a Controls button or the Add button keeps its own meaning. The dialog gives focus back to the node.
+    const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+        const target = event.target;
+        if (event.key !== 'Enter' || !(target instanceof HTMLElement) || !target.classList.contains('react-flow__node')) return;
+        const node = nodes.find(it => it.id === target.dataset.id);
+        if (!node) return;
+        event.preventDefault();
+        const entity = flowNodeEntity(node);
+        onNodeSelect(entity.type, entity.id);
+    };
+
     const hasAddCallbacks = onAddMachine || onAddInserter || onAddBelt || onAddChest || onAddDrill;
 
     if (!hasEntities) {
@@ -239,6 +279,7 @@ function FlowContent({
             edges={edgesWithSelection}
             nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
+            onKeyDown={handleKeyDown}
             onNodeMouseEnter={(_e, node) => setHoveredNodeId(node.id)}
             onNodeMouseLeave={() => setHoveredNodeId(null)}
             onEdgesChange={handleEdgesChange}
@@ -252,7 +293,7 @@ function FlowContent({
             deleteKeyCode={null}
             isValidConnection={isValidConnection}
             fitView
-            fitViewOptions={{ padding: 0.2 }}
+            fitViewOptions={fitViewOptions}
             proOptions={{ hideAttribution: true }}
         >
             <Background color="#333" variant={BackgroundVariant.Dots} gap={20} size={1} />
@@ -397,6 +438,12 @@ function ConfigFlowDiagramComponent({
                     },
                     '& .react-flow__controls-button:last-child': {
                         borderBottom: 'none',
+                    },
+                    // React Flow's CSS removes the focused node's outline; white is far above 3:1 on the canvas, and
+                    // is not the orange that hover and selection use
+                    [`& .react-flow__node:focus-visible > .${FLOW_NODE_BOX_CLASS}`]: {
+                        outline: '2px solid #fff',
+                        outlineOffset: 2,
                     },
                 }}
             >

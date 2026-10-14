@@ -1,18 +1,17 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
-import type { InserterNodeData } from '../utils/buildFlowGraph';
+import { INSERTER_NODE_WIDTH, type InserterNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
+import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
 type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
 
 export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
     return (
         <>
-            {data.vertical
-                ? <Handle type="target" id="in" position={data.vertical === 'down' ? Position.Top : Position.Bottom} />
-                : <Handle type="target" position={Position.Left} />}
             <Box
+                className={FLOW_NODE_BOX_CLASS}
                 sx={{
                     px: 1.5,
                     py: 1,
@@ -24,7 +23,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     alignItems: 'center',
                     gap: 0.5,
                     cursor: 'pointer',
-                    width: 136,
+                    width: INSERTER_NODE_WIDTH,
                     boxSizing: 'border-box',
                     '&:hover': { bgcolor: '#2a2a2a', borderColor: '#999' },
                 }}
@@ -34,13 +33,13 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     <Box>
                         <Typography
                             variant="caption"
-                            sx={{ fontWeight: 700, fontSize: '0.68rem', display: 'block', lineHeight: 1.2, color: '#ccc' }}
+                            sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: '#ccc' }}
                         >
                             {entityLabel('inserter', data.inserterId)}
                         </Typography>
                         <Typography
                             variant="caption"
-                            sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1.2, display: 'block' }}
+                            sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2, display: 'block' }}
                         >
                             Stack: {data.stackSize}
                         </Typography>
@@ -53,23 +52,30 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                         ))}
                     </Box>
                 )}
-                {data.overrideMode && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25 }}>
+                {data.enableChip && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25, maxWidth: '100%' }}>
+                        {/* the List row's chip text; a long rule wraps onto a second line rather than widen the node */}
                         <Chip
-                            label={data.overrideMode}
+                            label={data.enableChip}
+                            title={data.enableSummary}
                             size="small"
                             sx={{
-                                height: 14,
-                                fontSize: '0.55rem',
+                                height: 'auto',
+                                minHeight: 20,
+                                maxWidth: '100%',
+                                fontSize: FLOW_NODE_FONT_SIZE,
                                 fontWeight: 700,
                                 bgcolor: '#fca300',
                                 color: '#000',
-                                '& .MuiChip-label': { px: 0.75 },
+                                '& .MuiChip-label': { px: 0.75, py: 0.25, whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.2 },
                             }}
                         />
                     </Box>
                 )}
             </Box>
+            {data.vertical
+                ? <Handle type="target" id="in" position={data.vertical === 'down' ? Position.Top : Position.Bottom} />
+                : <Handle type="target" position={Position.Left} />}
             {data.vertical
                 ? <Handle type="source" id="out" position={data.vertical === 'down' ? Position.Bottom : Position.Top} />
                 : <Handle type="source" position={Position.Right} />}

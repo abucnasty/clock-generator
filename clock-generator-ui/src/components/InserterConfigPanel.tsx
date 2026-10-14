@@ -19,6 +19,7 @@ import type {
 } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { describeEnableRule } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
 import { inferInserterItems } from '../utils/inferInserterItems';
 import { changedConfigFields } from '../utils/inserterDraft';
@@ -312,10 +313,9 @@ export function InserterConfigPanel({
     const [draft, setDraft] = useState(inserter);
     const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false });
 
-    // the tab's chip shows the saved rule
+    // the tab's chip shows the saved rule, in the words of the List row's chip
     const currentOverride = inserter.overrides?.enable_control;
-    const overrideMode = currentOverride?.mode ?? EnableControlMode.AUTO;
-    const hasNonDefaultOverride = overrideMode !== EnableControlMode.AUTO;
+    const savedRule = describeEnableRule(currentOverride, { forcedAlways: inserter._forced_always });
 
     const availableItems = useMemo<string[]>(() => {
         const items = new Set<string>();
@@ -400,9 +400,9 @@ export function InserterConfigPanel({
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
                     icon={
-                        hasNonDefaultOverride
-                            ? <Chip label={overrideMode} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
-                            : undefined
+                        savedRule.quiet
+                            ? undefined
+                            : <Chip label={savedRule.chip} title={savedRule.summary} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
                     }
                 />
             </Tabs>

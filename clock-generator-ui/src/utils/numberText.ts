@@ -84,8 +84,8 @@ export function rateHeader(copies: number): string {
     return copies > 1 ? `Rate (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : 'Rate (items/s)';
 }
 
-/** The diagram machine node's last line: "5.2t craft · insertion limit ×15" */
+/** The diagram machine node's last line: "5.224t craft · insertion limit ×15", the ticks at the precision Machine Facts uses */
 export function machineNodeCraftLine(ticksPerCraft: number, overloadMultiplier: number, locale?: Intl.LocalesArgument): string {
-    const ticks = formatNumberText(ticksPerCraft, { maxDecimals: 1, locale });
+    const ticks = formatNumberText(ticksPerCraft, { maxDecimals: TICK_DECIMALS, locale });
     return `${ticks}t craft · insertion limit ×${formatNumberText(overloadMultiplier, { locale })}`;
 }
