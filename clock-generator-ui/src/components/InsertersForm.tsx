@@ -229,7 +229,7 @@ function InsertersFormComponent({
     return (
         <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
+                <Typography variant="h6" component="h2">
                     Inserters ({inserters.length})
                 </Typography>
                 <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
@@ -237,12 +237,14 @@ function InsertersFormComponent({
                 </Button>
             </Box>
 
-            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
                 <SortableItem key={inserter._uuid} stableKey={inserter._uuid} label={entityLabel('inserter', inserter.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-inserter-${inserter.id}`}
+                    role="group"
+                    aria-label={entityLabel('inserter', inserter.id)}
                     sx={{
                         display: 'flex',
                         gap: 2,

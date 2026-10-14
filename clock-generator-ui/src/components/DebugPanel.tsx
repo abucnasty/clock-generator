@@ -64,9 +64,9 @@ export function DebugPanel({
     };
 
     return (
-        <Accordion defaultExpanded={false}>
+        <Accordion defaultExpanded={false} slotProps={{ heading: { component: 'h2' } }}>
             <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="h6">
+                <Typography variant="h6" component="span">
                     Debug Output {logs.length > 0 && `(${logs.length} messages)`}
                 </Typography>
             </AccordionSummary>

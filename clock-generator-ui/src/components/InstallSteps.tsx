@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { useId, useState } from 'react';
 import type { ClockInstallFacts } from '../worker/installFacts';
+import { WIRING_LIST_NAME } from '../utils/a11yLabels';
 import { INSTALL_COPY, REQUIRES_FACTORIO, installSteps, wiringRows, wiringTargets } from '../utils/installSteps';
 
 /** Where the steps being folded away is remembered, so a player who knows them is not shown them again */
@@ -57,7 +58,7 @@ function WiringList({ wiring }: { wiring: number[][] }) {
     return (
         <Box
             role="region"
-            aria-label={INSTALL_COPY.wiringRegion}
+            aria-label={WIRING_LIST_NAME}
             // a box that scrolls takes the focus, so that it scrolls from the keyboard
             tabIndex={scrolls ? 0 : undefined}
             sx={{

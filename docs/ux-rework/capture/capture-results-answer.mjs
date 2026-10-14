@@ -630,7 +630,7 @@ async function copyChecks({ page, rec, tag, path, expect = {}, withTab = false }
     if (withTab) {
         await page.waitForTimeout(2300);
         const tab = page.getByRole('tab', { name: /^Blueprint( string)?$/ }); // SELECTOR: confirm (Blueprint tab in PR A; "Blueprint string" in Details after PR B)
-        const tabCopy = page.getByRole('main').getByRole('button', { name: 'Copy the string', exact: true }).first(); // the icon button over the string
+        const tabCopy = page.getByRole('main').getByRole('button', { name: /^(Copy blueprint string|Blueprint copied)$/ }).first(); // the icon button over the string (1.11 B's BUTTON_NAMES)
         if ((await count(tab)) > 0) {
             await tab.first().click();
             await page.waitForTimeout(300);
@@ -641,7 +641,7 @@ async function copyChecks({ page, rec, tag, path, expect = {}, withTab = false }
             await page.waitForTimeout(350);
             const viaTab = await clipboard(page);
             // the string's icon button says Copied by its check icon, and has no text
-            const after = await page.evaluate(() => [...document.querySelectorAll('button')].filter((b) => b.getBoundingClientRect().width > 0 && (/^(Copy|Copied)/.test((b.textContent || '').trim()) || b.getAttribute('aria-label') === 'Copy the string')).map((b) => (b.textContent || '').trim() || (b.querySelector('[data-testid=CheckIcon]') ? 'Copied (icon)' : 'Copy (icon)')));
+            const after = await page.evaluate(() => [...document.querySelectorAll('button')].filter((b) => b.getBoundingClientRect().width > 0 && (/^(Copy|Copied)/.test((b.textContent || '').trim()) || /^(Copy blueprint string|Blueprint copied)$/.test(b.getAttribute('aria-label') || ''))).map((b) => (b.textContent || '').trim() || (b.querySelector('[data-testid=CheckIcon]') ? 'Copied (icon)' : 'Copy (icon)')));
             await chk(rec, `${p} the string tab's Copy puts the same text on the clipboard`, async () => ({ pass: !noCard && viaTab === viaCard, detail: `equal: ${viaTab === viaCard}` }));
             await chk(rec, `${p} all visible Copy buttons (bar, card, string tab) show "Copied" together`, async () => ({ pass: after.length >= 3 && after.every((t) => /Copied/i.test(t)), detail: show(after) }));
             await page.waitForTimeout(2300);

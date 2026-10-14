@@ -16,6 +16,7 @@ import {
     ValueReferenceType 
 } from 'clock-generator/light';
 import type { Condition } from '../hooks/useConfigForm';
+import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useFullscreen } from './FullscreenContext';
 
 const MACHINE_STATUSES = [
@@ -113,6 +114,7 @@ export function StatusConditionRow({
 
             <FormControl size="small" sx={{ minWidth: isNotSelectWidth }}>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.isOrIsNot }}
                     value={isNegated ? 'is-not' : 'is'}
                     onChange={(e) => handleNegationChange(e.target.value === 'is-not')}
                 >
@@ -123,6 +125,7 @@ export function StatusConditionRow({
 
             <FormControl size="small" sx={{ minWidth: statusSelectWidth }}>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.machineStatus }}
                     value={currentStatus}
                     onChange={(e) => handleStatusChange(e.target.value as MachineStatus)}
                 >
@@ -139,6 +142,7 @@ export function StatusConditionRow({
                 disabled={!canDelete}
                 size="small"
                 color="error"
+                aria-label={BUTTON_NAMES.removeStatusCheck}
             >
                 <Delete fontSize="small" />
             </IconButton>

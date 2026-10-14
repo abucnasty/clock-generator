@@ -6,6 +6,7 @@ import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
 import { useNotify } from '../hooks/useMessages';
 import { countOf, describePaste, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
+import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -346,6 +347,8 @@ export function ConfigImportExport({
                         onClick={handleMenuOpen}
                         size="small"
                         color="inherit"
+                        aria-haspopup="menu"
+                        aria-expanded={menuOpen}
                     >
                         <MoreVert />
                     </IconButton>
@@ -364,7 +367,7 @@ export function ConfigImportExport({
                     }}
                     // the plain paper colour, without the dark theme's elevation overlay (a background image), which
                     // lightens it so far that Reset's red is below 4.5:1 when hovered or focused
-                    slotProps={{ paper: { sx: { backgroundImage: 'none' } } }}
+                    slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions }, paper: { sx: { backgroundImage: 'none' } } }}
                 >
                     <MenuItem onClick={handleMenuPasteFromFactorio}>
                         <ListItemIcon>

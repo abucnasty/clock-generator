@@ -10,6 +10,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
 
 interface BlueprintOutputProps {
@@ -30,8 +31,6 @@ interface BlueprintOutputProps {
 
 /** Under the string */
 const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. The steps are at the top of Results.';
-/** The name of the button over the string, which has only an icon */
-const COPY_STRING_LABEL = 'Copy the string';
 
 /** The selected potential clock's blueprint string, for reading or copying by hand */
 export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor, copied, onCopy }: BlueprintOutputProps) {
@@ -72,14 +71,14 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         rows={6}
                         fullWidth
                         value={blueprintString}
-                        InputProps={{
-                            readOnly: true,
-                            sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
+                        slotProps={{
+                            htmlInput: { 'aria-label': FIELD_NAMES.blueprintString },
+                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem' } },
                         }}
                     />
                     <IconButton
                         onClick={onCopy}
-                        aria-label={COPY_STRING_LABEL}
+                        aria-label={copied ? BUTTON_NAMES.blueprintCopied : BUTTON_NAMES.copyBlueprintString}
                         sx={{
                             position: 'absolute',
                             top: 8,
@@ -106,6 +105,7 @@ export function GenerationProgressStatus({ store }: { store: GenerationProgressS
     return (
         <Box>
             <LinearProgress
+                aria-label={PROGRESS_NAMES.generating}
                 variant={progress?.total ? 'determinate' : 'indeterminate'}
                 value={progress?.total ? (progress.completed / progress.total) * 100 : undefined}
             />

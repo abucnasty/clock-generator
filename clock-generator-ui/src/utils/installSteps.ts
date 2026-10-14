@@ -29,7 +29,6 @@ export const INSTALL_COPY = {
     heading: 'Put it in your game',
     stale: 'Generate again for a new clock and its steps.',
     wiringCaption: 'Combinator → inserters',
-    wiringRegion: 'Wiring list',
     wiringCombinatorColumn: 'Combinator for',
     wiringInsertersColumn: 'Wire its output to',
     import: {
