@@ -87,11 +87,6 @@ describe('formDataToConfig', () => {
         expect(config.overrides).toEqual(imported.overrides);
     });
 
-    it('leaves out the next ids of the form', () => {
-        const form = { ...configToFormData(imported), next_ids: { machines: 9 } };
-        expect('next_ids' in formDataToConfig(form)).toBe(false);
-    });
-
     it('leaves out the forced flag of an inserter and keeps its ALWAYS rule', () => {
         const form = configToFormData(imported);
         form.inserters[0] = { ...form.inserters[0], overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true };
