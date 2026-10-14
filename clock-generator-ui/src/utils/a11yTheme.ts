@@ -25,7 +25,8 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
             },
         },
         // an accordion's title keeps the ring outside: some have no side padding, where a ring inside would touch the text
-        MuiTab: { styleOverrides: { root: insetRing } },
+        // the ring marks a tab moved to with the arrow keys; its focus ripple on top would be a second marker
+        MuiTab: { defaultProps: { disableFocusRipple: true }, styleOverrides: { root: insetRing } },
         MuiMenuItem: { styleOverrides: { root: insetRing } },
         MuiTypography: {
             defaultProps: {
@@ -34,6 +35,10 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
                 variantMapping: { subtitle1: 'p', subtitle2: 'p' },
             },
         },
+        // a Switch clips what is drawn outside its thumb's box (overflow: hidden on its root): the ring goes inside it
+        MuiSwitch: { styleOverrides: { switchBase: insetRing } },
+        // in a group the next button, drawn after it, would cover the side of the ring that overlaps it
+        MuiToggleButton: { styleOverrides: { root: { '&.Mui-focusVisible': { zIndex: 1 } } } },
         MuiAlert: {
             styleOverrides: {
                 root: {

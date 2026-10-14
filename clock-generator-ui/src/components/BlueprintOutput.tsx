@@ -10,9 +10,11 @@ import {
     Typography,
 } from '@mui/material';
 import { useCallback, useState } from 'react';
+import { useAnnounce } from '../hooks/useMessages';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { BUTTON_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
+import { ANNOUNCEMENTS } from '../utils/workflowAnnouncement';
 import { StaleCopyDialog } from './StaleCopyDialog';
 
 /** The name of the read-only field holding the blueprint string, which has no visible label */
@@ -34,6 +36,7 @@ interface BlueprintOutputProps {
 export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor }: BlueprintOutputProps) {
     const [copied, setCopied] = useState(false);
     const [confirmingOld, setConfirmingOld] = useState(false);
+    const announce = useAnnounce();
 
     const handleCopy = useCallback(async () => {
         if (!blueprintString) return;
@@ -41,11 +44,13 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
         try {
             await navigator.clipboard.writeText(blueprintString);
             setCopied(true);
+            // the rate warning, if any, is the alert above, already on screen
+            announce(ANNOUNCEMENTS.copied);
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
         }
-    }, [blueprintString]);
+    }, [blueprintString, announce]);
 
     if (!blueprintString) {
         return null;

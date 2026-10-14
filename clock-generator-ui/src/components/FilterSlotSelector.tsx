@@ -120,8 +120,9 @@ export function FilterSlotSelector({
                                 opacity: isAutoAssigned ? 0.85 : 1,
                                 // not the outline: the focus ring appears at once, in its place
                                 transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
-                                // the theme draws the focus ring; focus only tints the slot, so the ring does not move
-                                '&:hover, &:focus': {
+                                // the pointer tints the slot; focus is the theme's ring alone, so an empty slot does
+                                // not take a filled slot's orange border when focused
+                                '&:hover': {
                                     borderColor: displayFilter
                                         ? isAutoAssigned
                                             ? 'secondary.dark'
@@ -129,8 +130,8 @@ export function FilterSlotSelector({
                                         : 'primary.light',
                                     bgcolor: 'action.hover',
                                     opacity: 1,
+                                    transform: 'scale(1.05)',
                                 },
-                                '&:hover': { transform: 'scale(1.05)' },
                             }}
                         >
                             {displayFilter ? (

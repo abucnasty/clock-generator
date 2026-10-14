@@ -61,7 +61,8 @@ export function DeeperSearchNotice({ kind, recommendedLabel, canSearchDeeper, bl
         <Alert
             severity="info"
             role="note"
-            sx={{ mt: 1, maxWidth: '72ch' }}
+            // the message box clips what overflows it, which cut the checkbox's focus ring in half
+            sx={{ mt: 1, maxWidth: '72ch', '& .MuiAlert-message': { overflow: 'visible' } }}
             action={kind === 'offer' || kind === 'searching' ? (
                 // the reason is also the text under the workflow bar's buttons, which describes this one for the keyboard
                 <Tooltip title={kind === 'offer' ? blockedBy?.text ?? '' : ''} arrow describeChild>

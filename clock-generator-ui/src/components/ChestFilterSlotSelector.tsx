@@ -101,7 +101,8 @@ export function ChestFilterSlotSelector({
     const showAddButton = canAddMore && filters.length < maxSlots;
 
     return (
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+        // the gap keeps a remove button, which sticks out past its slot's corner, a few pixels off the next slot
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Render existing filter slots */}
             {displayedFilters.map((filter, slotIndex) => (
                 // the slot and its remove button are siblings: a button inside a button cannot be reached or named
@@ -139,12 +140,13 @@ export function ChestFilterSlotSelector({
                             position: 'relative',
                             // not the outline: the focus ring appears at once, in its place
                             transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
-                            // the theme draws the focus ring; focus only tints the slot, so the ring does not move
-                            '&:hover, &:focus': {
+                            // the pointer tints the slot; focus is the theme's ring alone, so an empty slot does not
+                            // take a filled slot's orange border when focused
+                            '&:hover': {
                                 borderColor: 'primary.light',
                                 bgcolor: 'action.hover',
+                                transform: 'scale(1.05)',
                             },
-                            '&:hover': { transform: 'scale(1.05)' },
                         }}
                     >
                         {filter.item_name ? (
@@ -226,7 +228,7 @@ export function ChestFilterSlotSelector({
                         // not the outline: the focus ring appears at once, in its place
                         transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
                         m: 0.5,
-                        '&:hover, &:focus': {
+                        '&:hover': {
                             borderColor: 'primary.light',
                             bgcolor: 'action.hover',
                         },

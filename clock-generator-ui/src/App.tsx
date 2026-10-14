@@ -456,6 +456,7 @@ function App() {
                             view={view}
                             onViewChange={setView}
                             isLoading={isRunning}
+                            generationFailed={error !== null}
                             progressStore={progressStore}
                             onGenerate={handleGenerate}
                             generateDisabled={!canGenerate}
