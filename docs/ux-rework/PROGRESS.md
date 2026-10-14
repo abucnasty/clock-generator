@@ -65,7 +65,7 @@ come from here.
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
-| [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | impl | | | Started early on `feat/ux-rework-p2-wake-windows` (opus) with a capture writer. Uses 1.5's `announce()` once p1 is merged into p2 |
+| [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | review | | | On `feat/ux-rework-p2-wake-windows`. 328 tests; capture 335 PASS + sweep 21 PASS, 0 FAIL at 1440/720/390 and 960/800/720. Opus code review and UX audit running. Switches its own polite region to 1.5's `announce()` once p1 (with 1.5+1.3) is merged into p2 |
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
@@ -266,6 +266,8 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.4: Validate's late re-scroll skips when `scrollY` moved more than 2px; browser scroll anchoring after the header
   changes height (reason row going away, chip wrapping at 390) might trip it and leave the panel's top under the header.
   Not seen in the capture (P12 passes at 390); allow the header's change in height, or detect real player scrolling.
+- 2.6 → 1.11: the sticky footer can hide anything focused near the window's bottom across the app (moot once 1.5's
+  static footer merges); MUI's Switch vanishes in forced colours app-wide.
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.
