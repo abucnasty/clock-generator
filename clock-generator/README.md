@@ -21,7 +21,39 @@ The generated blueprints use circuit network clocks to control when inserters ar
 
 ```bash
 npm install
+npm run build   # tsc, into dist/
 ```
+
+## Scripts
+
+| Script | What it does |
+|--------|--------------|
+| `npm run build` | Compiles `src/` into `dist/` |
+| `npm test` | The unit tests |
+| `npm run test:generation` | The generation tests (`*.generation.test.ts`): the clocks of whole samples, a few minutes |
+| `npm run test:all` | Both |
+| `npm run test:game` | Records the sample scaffolds in a headless Factorio; needs Factorio (see below) |
+| `npm run test:game:watch` | The same, with the game open to watch |
+| `npm run record` | Records a blueprint in a headless Factorio (see below) |
+| `npm run verify` | Compares a recording with the simulator (see below) |
+
+`record` and `verify` build first. Run either without arguments for its options.
+
+## Entries and the Game Data
+
+The package has three entries (`exports` in `package.json`):
+
+- `clock-generator` (`src/index.ts`): everything in the browser entry, for Node. Importing it makes the game data be
+  read from `resources/data-filtered.json` on first use (`src/data/factorio-data-file.ts`).
+- `clock-generator/browser` (`src/browser.ts`): the config schema and parsers, the generator, the blueprint encoding and
+  the types, without Node built-ins. It does not read the game data: call `FactorioDataService.initialize(data)` with
+  the contents of `data-filtered.json` (the UI fetches it) before generating.
+- `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking and `Option`, without the
+  simulation, the game data or zod. The UI's main thread takes its values from here and only types from `browser`, so
+  the generator is bundled once, in its web worker.
+
+A file of your own under `src/` that imports modules directly, not through `index.ts`, imports
+`./data/factorio-data-file` itself, as `verify-recording.ts` and `record-in-factorio.ts` do.
 
 ## Usage
 
@@ -31,21 +63,16 @@ npm install
 2. Open it in the UI (`clock-generator-ui`), or generate its clock with the library in a file of your own under `src/`:
 
 ```typescript
+import './data/factorio-data-file';
 import { loadConfigFromFile } from './config/loader';
 import { ConfigPaths } from './config/config-paths';
-import { generateClockForConfig } from './crafting/generate-blueprint';
-import { encodeBlueprintFile } from "./blueprints/serde";
+import { generateClockForConfig, blueprintFileFor } from './crafting/generate-blueprint';
+import { encodeBlueprintFile } from './blueprints/serde';
 
 async function main() {
-    // Load a configuration file
     const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
-
     const result = generateClockForConfig(config);
-
-    console.log("----------------------");
-    console.log(encodeBlueprintFile({
-        blueprint: result.blueprint
-    }));
+    console.log(encodeBlueprintFile(blueprintFileFor(result)));
 }
 
 main().catch(console.error);
@@ -201,20 +228,20 @@ The tool generates a Factorio blueprint containing:
 
 ### Mining Drill Support
 
-For direct-insertion mining setups:
+For direct-insertion mining setups. A drill's `speed_bonus` comes from `/c game.print(game.player.selected.speed_bonus)`:
 
-```typescript
-drills: {
-    mining_productivity_level: 50,
-    configs: [
-        {
-            id: 1,
-            type: "electric-mining-drill",
-            mined_item_name: "stone",
-            speed_bonus: 2.5,  // Get from: /c game.print(game.player.selected.speed_bonus)
-            target: { type: "machine", id: 1 }
-        }
-    ]
+```json
+"drills": {
+  "mining_productivity_level": 50,
+  "configs": [
+    {
+      "id": 1,
+      "type": "electric-mining-drill",
+      "mined_item_name": "stone",
+      "speed_bonus": 2.5,
+      "target": { "type": "machine", "id": 1 }
+    }
+  ]
 }
 ```
 
@@ -224,13 +251,11 @@ Chests can be used as intermediate buffers between inserters. This is useful whe
 
 #### Basic Chest Configuration
 
-```conf
-chests = [
-    {
-        id = 1
-        storage_size = 1        # Number of inventory slots
-        item_filter = "iron-ore" # Single item type allowed in this chest
-    }
+A buffer chest has a number of inventory slots (`storage_size`) and the one item it takes (`item_filter`):
+
+```json
+"chests": [
+  { "type": "buffer-chest", "id": 1, "storage_size": 1, "item_filter": "iron-ore" }
 ]
 ```
 
@@ -238,20 +263,18 @@ chests = [
 
 Reference chests in inserter source/sink configurations:
 
-```conf
-inserters = [
-    # Inserter dropping items into a chest buffer
-    {
-        source { type = "machine", id = 1 }
-        sink { type = "chest", id = 1 }
-        stack_size = 16
-    },
-    # Inserter picking up items from the chest buffer
-    {
-        source { type = "chest", id = 1 }
-        sink { type = "machine", id = 2 }
-        stack_size = 16
-    }
+```json
+"inserters": [
+  {
+    "source": { "type": "machine", "id": 1 },
+    "sink": { "type": "chest", "id": 1 },
+    "stack_size": 16
+  },
+  {
+    "source": { "type": "chest", "id": 1 },
+    "sink": { "type": "machine", "id": 2 },
+    "stack_size": 16
+  }
 ]
 ```
 
@@ -286,52 +309,46 @@ You can override the automatic enable control logic for individual inserters and
 | `ALWAYS` | Entity is always enabled, and gets no combinator in the blueprint |
 | `NEVER` | Entity is never enabled |
 | `CLOCKED` | Entity is enabled during specified tick ranges |
+| `CONDITIONAL` | Entity is enabled while a rule set (`rule_set`, with an optional `latch`) holds |
 
 #### Inserter Override Example
 
-```conf
-inserters = [
-    {
-        source { type = "belt", id = 1 }
-        sink { type = "machine", id = 1 }
-        stack_size = 16
-        overrides {
-            # Animation timing overrides (optional)
-            animation {
-                pickup_duration_ticks = 15
-            }
-            # Enable control override (optional)
-            enable_control {
-                mode = "CLOCKED"
-                ranges = [
-                    { start = 0, end = 100 },
-                    { start = 200, end = 300 }
-                ]
-                # Optional: custom period duration (defaults to crafting cycle duration)
-                period_duration_ticks = 500
-            }
-        }
+Both overrides are optional; `period_duration_ticks` defaults to the crafting cycle duration.
+
+```json
+{
+  "source": { "type": "belt", "id": 1 },
+  "sink": { "type": "machine", "id": 1 },
+  "stack_size": 16,
+  "overrides": {
+    "animation": { "pickup_duration_ticks": 15 },
+    "enable_control": {
+      "mode": "CLOCKED",
+      "ranges": [
+        { "start": 0, "end": 100 },
+        { "start": 200, "end": 300 }
+      ],
+      "period_duration_ticks": 500
     }
-]
+  }
+}
 ```
 
 #### Drill Override Example
 
-```conf
-drills {
-    mining_productivity_level = 50
-    configs = [
-        {
-            id = 1
-            type = "electric-mining-drill"
-            mined_item_name = "iron-ore"
-            speed_bonus = 0.5
-            target { type = "machine", id = 1 }
-            overrides {
-                enable_control { mode = "ALWAYS" }
-            }
-        }
-    ]
+```json
+"drills": {
+  "mining_productivity_level": 50,
+  "configs": [
+    {
+      "id": 1,
+      "type": "electric-mining-drill",
+      "mined_item_name": "iron-ore",
+      "speed_bonus": 0.5,
+      "target": { "type": "machine", "id": 1 },
+      "overrides": { "enable_control": { "mode": "ALWAYS" } }
+    }
+  ]
 }
 ```
 
@@ -350,12 +367,19 @@ drills {
 
 ### Configuration Overrides
 
-```typescript
-overrides: {
-    terminal_swing_count: 4,    // Force the output swings per cycle, instead of the count the plan works out
-    lcm: 12,                    // Override LCM calculation for cycle length
-    non_moving_belts: true,     // The belts the inserters pick up from do not move (default false)
-    search_for_fewer_wake_ups: true // Run the four searches for every build (default false)
+- `terminal_swing_count`: force the output swings per cycle, instead of the count the plan works out
+- `lcm`: override the LCM calculation for the cycle length
+- `non_moving_belts`: the belts the inserters pick up from do not move (default false)
+- `search_for_fewer_wake_ups`: run the four searches for every build (default false)
+
+`src/config/schema.ts` (`ConfigOverridesSchema`) lists the others.
+
+```json
+"overrides": {
+  "terminal_swing_count": 4,
+  "lcm": 12,
+  "non_moving_belts": true,
+  "search_for_fewer_wake_ups": true
 }
 ```
 
@@ -393,7 +417,6 @@ A search can still find a stable clock with fewer wake-ups than the one selected
 - Ensure ingredients are available on belts
 
 **Issue**: Unstable production in-game
-- The tool automatically detects fast-crafting instability (threshold: 3.0)
 - Review console output for stability warnings
 - Consider adjusting configuration parameters
 
@@ -403,19 +426,33 @@ A search can still find a stable clock with fewer wake-ups than the one selected
 
 ```
 src/
-├── common/           # Shared constants (entity types)
+├── index.ts          # Node entry: the browser entry plus the game data from resources/
+├── browser.ts        # Browser entry
+├── light.ts          # Light entry: constants, status categories, clock ranking
+├── record-in-factorio.ts # npm run record
+├── verify-recording.ts   # npm run verify
+├── common/           # Shared constants (entity types, enable control types), logger
 ├── config/           # Configuration loading and validation
 │   ├── schema.ts     # Zod schemas for config validation
-│   ├── loader.ts     # config file loader
+│   ├── loader.ts     # config file loader (Node)
+│   ├── config-browser.ts # config parsers without Node built-ins
 │   └── config-paths.ts # Path constants for sample configs
+├── data/             # The game data: FactorioDataService, and factorio-data-file.ts that reads resources/
 ├── crafting/         # Core simulation and blueprint generation
+│   ├── plan/         # The planning run
+│   ├── candidates/   # The clocks made from another clock, and their search
 │   ├── runner/       # Step-based execution framework
 │   └── sequence/     # Simulation logic and interceptors
 ├── control-logic/    # Entity behavior and state machines
-├── entities/         # Machine, inserter, and belt models
-└── blueprints/       # Blueprint encoding/decoding
+├── entities/         # Machine, inserter, belt, chest and drill models
+├── state/            # Entity states and status categories
+├── blueprints/       # Blueprint encoding/decoding
+├── harness/          # Running a build in a headless Factorio (record, test:game)
+└── verification/     # Comparing a recording with the simulator (verify)
 
 resources/
+├── data-filtered.json # The game data
+├── clock_generator_staging.zip # The save test:game builds in
 └── config-samples/   # sample configurations and scaffolds, by build
 ```
 
@@ -445,16 +482,18 @@ npm run record -- --blueprint=build.txt --out=recording.json --ticks=3600 --warm
 - `--clock` replaces the clock the build came with: its combinators are built below the build and wired to the inserters their descriptions name. The inserters are found by matching the build to `--config`, the config the clock was generated from. Belt inserters are matched by what lies on their belt, so give belts a `--warmup` to fill.
 - `--unclocked` removes the build's clock and lets its inserters run freely. Without either, the build is recorded as it is.
 - `--settle` runs the build for a number of ticks on its new clock and seeds before the recording starts, so its start-up is not counted.
+- `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
+- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed. Whoever watches is an admin of the game, with alt mode on, and the game shows the FPS/UPS counter and the wake-up lists (`show-fps` and `show-wakeup-lists`, set to always, so debug mode need not be on).
+
+The save is never written to; Factorio gets a temporary write-data folder (`--work-dir` keeps it). The save needs a place where the blueprint can be built and powered, such as an editor map with a global electric network. Run `npm run record` without arguments for all options.
+
+### Recording the Samples: `npm run test:game`
 
 `npm run test:game` records the scaffold builds under `resources/config-samples` the same way and checks that the clock the generator selects moves the expected output in every clock period of ten minutes of game time (`src/harness/scaffold-recordings.game.test.ts`). It needs `FACTORIO_PATH` and `FACTORIO_HARNESS_SAVE`, skips with the reason when they are missing, and is not part of `npm test`, since each recording takes about ten seconds in a game of its own.
 
 Copy `.env.example` to `.env` and set `FACTORIO_PATH` to your Factorio executable or install folder; `vitest.game.config.ts` loads it automatically, so `npm run test:game` picks it up without exporting anything by hand. `FACTORIO_HARNESS_SAVE` already defaults to the staging save committed at `resources/clock_generator_staging.zip`. `.env` is not read by `npm run record` or `npm run verify`, which still take `FACTORIO_PATH`/`FACTORIO_HARNESS_SAVE` from the shell environment or `--factorio=`/`--save=`.
 
 `npm run test:game:watch` runs the same tests with the game also open with graphics, joined as a spectator over the build, to watch them. All builds then run in one game, each built in the place of the one before it, so there is one window and the game with graphics starts once; it closes by itself after the last build. The builds run at `WATCH_SPEED` (in `src/harness/scaffold-recordings.game.test.ts`) instead of the 1000 they run at unwatched, slow enough to follow over a remote connection. That speed is only where the first build starts: whoever watches is an admin of the game, so they can set its speed (`/c game.speed = 16`), pause it or open the editor (`/editor`) for its time controls, and the builds after keep what they set. Close the window early and the builds left run unwatched at full speed. Narrow it to some builds with `npm run test:game:watch -- -t "automation science"`. Without `:watch` every build still gets a game of its own, so it starts from the save as it is.
-- `--lua` runs a Lua chunk right before the recording starts, called with `(entities, surface, area)`, for anything a seed cannot express.
-- `--watch` also opens the game with graphics, joined to the run as a spectator over the build. The game then runs at speed 1 unless `--speed` says otherwise, and the run ends when that window is closed. Whoever watches is an admin of the game, with alt mode on, and the game shows the FPS/UPS counter and the wake-up lists (`show-fps` and `show-wakeup-lists`, set to always, so debug mode need not be on).
-
-The save is never written to; Factorio gets a temporary write-data folder (`--work-dir` keeps it). The save needs a place where the blueprint can be built and powered, such as an editor map with a global electric network. Run `npm run record` without arguments for all options.
 
 ### Verifying a Recording
 
@@ -465,6 +504,7 @@ npm run verify -- --config=config.json --recording=recording.json [--alternative
 ```
 
 - `--alternative` names the clock that was recorded, by its id, label or index in the list of potential clocks. Without it, the clock the generator selects is taken.
+- `--overrides` merges config overrides (JSON) into the config, e.g. the swing count of the clock that was built; `--items-tolerance` and `--state-agreement` set how close the two have to be. Run `npm run verify` without arguments for the defaults.
 - The report gives, game against simulator: the output of every clock period, the wake-ups a minute, what every inserter moved and every machine finished in a period, and how much of the time each showed the same state at the same place in the period. A build that takes several periods to repeat, or a loop of machines the clock does not hold to a place in the period, shows other states at the same place without being any different, so that figure comes with how alike the two are wherever in the period.
 - It exits with 1 when the two moved something else: a clock period off the expected output, an inserter or a machine that moves another amount in a period, or a recorded clock that is not the clock of the config. States that differ are listed and do not fail it.
 - A build with fuel is also checked for the fuel its machines burned against the energy consumption of the config, and its fuel inserters against their fuel clocks.
@@ -478,29 +518,31 @@ Configurations are validated at runtime using [Zod](https://zod.dev/) schemas. I
 
 ```typescript
 import { parseConfig } from './config/loader';
+import { ConfigValidationError } from './config/errors';
 
 try {
     const config = await parseConfig(jsonString);
 } catch (error) {
     if (error instanceof ConfigValidationError) {
         console.error(error.getFormattedIssues());
-        // Output: target_output.items_per_second: Expected number, received string
+        // Output: target_output.items_per_second: Invalid input: expected number, received string (expected number)
     }
 }
 ```
 
 ### Browser Compatibility
 
-The configuration system is designed to work in browser environments:
+The browser entry works without Node built-ins. It does not read the game data itself, so initialize it first:
 
 ```typescript
-import { parseConfigFromJson } from 'clock-generator/browser';
+import { FactorioDataService, parseConfigFromJson, generateClockForConfig } from 'clock-generator/browser';
 
-const response = await fetch('/api/config');
-const config = parseConfigFromJson(await response.text());
+FactorioDataService.initialize(await (await fetch('/data-filtered.json')).json());
+const config = parseConfigFromJson(await (await fetch('/my-config.json')).text());
+const result = generateClockForConfig(config);
 ```
 
 
 ## License
 
-MIT
+MIT, see [LICENSE](../LICENSE).
