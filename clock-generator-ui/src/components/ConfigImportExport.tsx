@@ -1,5 +1,5 @@
 import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons-material';
-import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
@@ -54,6 +54,8 @@ export function ConfigImportExport({
     onBuildReplaced,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    // below 900px the app bar has room for the title and the menu only: Import and Export move into the menu
+    const narrow = useMediaQuery(useTheme().breakpoints.down('md'));
     const [snackbar, setSnackbar] = useState<{
         open: boolean;
         message: string;
@@ -310,6 +312,17 @@ export function ConfigImportExport({
         handlePasteFromFactorio();
     }, [handleMenuClose, handlePasteFromFactorio]);
 
+    // the file picker and the download are only allowed from the click itself: no await or timer before them
+    const handleMenuImport = useCallback(() => {
+        handleMenuClose();
+        handleImportClick();
+    }, [handleMenuClose, handleImportClick]);
+
+    const handleMenuExport = useCallback(() => {
+        handleMenuClose();
+        handleExport();
+    }, [handleMenuClose, handleExport]);
+
     const handleMenuReset = useCallback(() => {
         handleMenuClose();
         onReset();
@@ -319,23 +332,27 @@ export function ConfigImportExport({
     return (
         <>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Button
-                    startIcon={<Upload />}
-                    onClick={handleImportClick}
-                    variant="outlined"
-                    size="small"
-                >
-                    Import Config
-                </Button>
-                <Button
-                    startIcon={<Download />}
-                    onClick={handleExport}
-                    disabled={!config}
-                    variant="outlined"
-                    size="small"
-                >
-                    Export Config
-                </Button>
+                {!narrow && (
+                    <Button
+                        startIcon={<Upload />}
+                        onClick={handleImportClick}
+                        variant="outlined"
+                        size="small"
+                    >
+                        Import Config
+                    </Button>
+                )}
+                {!narrow && (
+                    <Button
+                        startIcon={<Download />}
+                        onClick={handleExport}
+                        disabled={!config}
+                        variant="outlined"
+                        size="small"
+                    >
+                        Export Config
+                    </Button>
+                )}
                 <Tooltip title="More options">
                     <IconButton
                         onClick={handleMenuOpen}
@@ -364,6 +381,23 @@ export function ConfigImportExport({
                         </ListItemIcon>
                         <ListItemText>Paste from Factorio</ListItemText>
                     </MenuItem>
+                    {narrow && (
+                        <MenuItem onClick={handleMenuImport}>
+                            <ListItemIcon>
+                                <Upload fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText>Import Config</ListItemText>
+                        </MenuItem>
+                    )}
+                    {narrow && (
+                        <MenuItem onClick={handleMenuExport} disabled={!config}>
+                            <ListItemIcon>
+                                <Download fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText>Export Config</ListItemText>
+                        </MenuItem>
+                    )}
+                    {narrow && <Divider />}
                     <MenuItem onClick={handleMenuReset}>
                         <ListItemIcon>
                             <RestartAlt fontSize="small" />

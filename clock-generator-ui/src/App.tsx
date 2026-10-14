@@ -24,6 +24,7 @@ import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
 import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
+import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -173,6 +174,9 @@ function App() {
 
     // null until the config is checked; Generate waits for that
     const checkedCoverageIssues = useInserterValidation(exportConfig, isInitialized);
+    // the header's height, for scrolling to a panel so that it is not left under the header
+    const headerRef = useRef<HTMLElement>(null);
+    useStickyHeaderHeight(headerRef);
     const coverageIssues = checkedCoverageIssues ?? [];
 
     // Initialize worker on mount
@@ -287,13 +291,13 @@ function App() {
         <ThemeProvider theme={darkTheme}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                <AppBar position="fixed">
+                <AppBar position="sticky" ref={headerRef}>
                     <Toolbar>
                         <Icon sx={{ mr: 3 }}>
                             <img src="/big_biter_q5_right.png" alt="Logo" style={{ width: 26, height: 26 }} />
                         </Icon>
-                        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                            Factorio Clock Generator
+                        <Typography variant="h6" component="div" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
                         <ConfigImportExport
                             config={exportableConfig}
@@ -308,27 +312,24 @@ function App() {
                             onBuildReplaced={clearResults}
                         />
                     </Toolbar>
+                    {isInitialized && (
+                        <WorkflowBar
+                            view={view}
+                            onViewChange={setView}
+                            isLoading={isRunning}
+                            progressStore={progressStore}
+                            onGenerate={handleGenerate}
+                            generateDisabled={!canGenerate}
+                            onValidate={handleValidate}
+                            validateDisabled={!canGenerate}
+                            validationStatus={validationStatus}
+                            blueprintString={blueprintString}
+                            selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
+                            rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
+                            staleFor={staleFor}
+                        />
+                    )}
                 </AppBar>
-                {/* Spacer to account for fixed AppBar */}
-                <Toolbar />
-
-                {isInitialized && (
-                    <WorkflowBar
-                        view={view}
-                        onViewChange={setView}
-                        isLoading={isRunning}
-                        progressStore={progressStore}
-                        onGenerate={handleGenerate}
-                        generateDisabled={!canGenerate}
-                        onValidate={handleValidate}
-                        validateDisabled={!canGenerate}
-                        validationStatus={validationStatus}
-                        blueprintString={blueprintString}
-                        selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
-                        rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
-                        staleFor={staleFor}
-                    />
-                )}
 
                 <Container maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
                     {startupError ? (
