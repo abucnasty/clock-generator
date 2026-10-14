@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [Unreleased]
+
+### Fixed
+- A clock could hold the target rate in the simulator and fall short in the game on builds where machines feed machines directly, such as accumulators at 640 a second ([#152](https://github.com/abucnasty/clock-generator/issues/152)): the clock 0.9.0 selected for that build made 512 to 544 of its 576 accumulators a period in the game. The simulator now follows two rules of the game it had wrong. An inserter whose window opens in the tick another inserter takes the products of the machine it puts into takes its first items a tick later, unless that other inserter's window opened in the same tick. An inserter holding part of a hand from a machine takes no more while the machine it puts into is full at its output. Such a clock is now unstable, and the clock selected instead holds the rate in the game.
+
+### Changed
+- Agricultural science selects batched swings (5 output swings per cycle) again, with fewer wake-ups than the 2-swing clock it selected since 0.6.0: under the corrected rules it gets back to its rate after the nutrients run out. The inserters that bring eggs to the science biochamber are no longer clocked in that build; they stay always enabled.
+- Other builds can get another selected clock or other wake-up figures. On the sample builds, utility science with direct-insert low density structures and the chain always on selects uneven output swings, since batched swings no longer gets back after the coal runs out.
+
 ## [0.9.0] - 2026-10-14
 
 ### Changed
