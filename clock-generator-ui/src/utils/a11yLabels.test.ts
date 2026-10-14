@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     BUTTON_NAMES,
     CLOCK_TABLE_NAME,
+    FIELD_NAMES,
     PROGRESS_NAMES,
     SELECT_NAMES,
     clockHelpName,
@@ -45,6 +46,7 @@ describe('the constant names', () => {
         const all = [
             ...Object.values(SELECT_NAMES),
             ...Object.values(BUTTON_NAMES),
+            ...Object.values(FIELD_NAMES),
             ...Object.values(PROGRESS_NAMES),
             CLOCK_TABLE_NAME,
         ];
@@ -58,15 +60,17 @@ describe('the constant names', () => {
 
 describe('reorderAnnouncements', () => {
     const keys = ['uuid-a', 'uuid-b', 'uuid-c'];
-    const announcements = reorderAnnouncements('inserter', keys);
+    // the chips' own names, which need not run 1, 2, 3: an imported build can have other ids
+    const labels = new Map([['uuid-a', 'Inserter 1'], ['uuid-b', 'Inserter 5'], ['uuid-c', 'Inserter 6']]);
+    const announcements = reorderAnnouncements(labels, keys);
     const rect = { id: '' } as never;
     const event = (active: string, over?: string) =>
         ({ active: { id: active, data: rect, rect: rect }, over: over ? { id: over, data: rect, rect, disabled: false } : null }) as never;
 
     it('names the row and its position at the start, over and end of a drag', () => {
-        expect(announcements.onDragStart?.(event('uuid-b'))).toBe('Picked up Inserter 2.');
-        expect(announcements.onDragOver?.(event('uuid-b', 'uuid-c'))).toBe('Inserter 2 is over position 3.');
-        expect(announcements.onDragEnd?.(event('uuid-b', 'uuid-a'))).toBe('Inserter 2 was dropped at position 1.');
+        expect(announcements.onDragStart?.(event('uuid-b'))).toBe('Picked up Inserter 5.');
+        expect(announcements.onDragOver?.(event('uuid-b', 'uuid-c'))).toBe('Inserter 5 is over position 3.');
+        expect(announcements.onDragEnd?.(event('uuid-b', 'uuid-a'))).toBe('Inserter 5 was dropped at position 1.');
     });
 
     it('says something sensible when the row is dropped, or hovered, over nothing', () => {
@@ -75,7 +79,7 @@ describe('reorderAnnouncements', () => {
     });
 
     it('says where the row is back when the drag is cancelled', () => {
-        expect(announcements.onDragCancel?.(event('uuid-c'))).toBe('Reordering cancelled; Inserter 3 is back at position 3.');
+        expect(announcements.onDragCancel?.(event('uuid-c'))).toBe('Reordering cancelled; Inserter 6 is back at position 3.');
     });
 
     it('never reads out a key', () => {

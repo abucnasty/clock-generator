@@ -7,7 +7,7 @@
 //   WIDTHS       comma list, default "1440,720,390"
 //   STEPS        comma list of steps to run, default all. In the order they run:
 //                  startup, headings-configure, transfer-plan, results-names, clock-table, tabs, headings-results, info-button,
-//                  blueprint-fullscreen, configure-names, rows, selects, slots, menu, enable-modal, dnd, progress
+//                  blueprint-fullscreen, axe, configure-names, rows, selects, slots, menu, enable-modal, dnd, progress
 //                (startup runs on first load, before the import; the import, Validate and Generate always run after it,
 //                once per width; configure-names, rows, selects and slots first add a Buffer Chest and a Mining Drill so every
 //                row kind exists; progress is last because it imports the slow build and reloads the page)
@@ -17,7 +17,7 @@
 //   - names: every focusable or disabled control in the accessibility tree has a name (one rolled-up check per view: Configure,
 //     each Results tab, the enable-rule modal, the info popover); a visible text is contained in the name (WCAG 2.5.3); no element
 //     has aria-label together with aria-hidden="true"; no name reads a raw 4+ decimal number
-//   - rows: each row is a group named "Inserter 2", holds "Reorder inserter 2" and "Delete inserter 2"; "Delete lane 2 of belt 1";
+//   - rows: each row is a group named "Inserter 2", holds "Reorder Inserter 2" and "Delete Inserter 2"; "Delete lane 2 of Belt 1";
 //     Recipe inputs of a machine row are named by the row ("Recipe, Machine 2")
 //   - selects: "Machine type", "Belt type", "Belt strategy", "Chest type", "Drill type", "Target machine"; every select's name
 //     contains its visible label and no icon file name (not "assembling-machine-3")
@@ -36,6 +36,7 @@
 // Fast pattern (README): forWidths runs every width at once, one generation per width, the small sample, waits on textContent.
 // Against today's UI most new checks FAIL by design; no step may crash (a missing element is a FAIL line).
 import { writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import {
     forWidths, previewServer, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate, waitReady,
@@ -563,6 +564,7 @@ const STEP_LIST = [
             const box = await dialog.first().boundingBox().catch(() => null);
             const vw = page.viewportSize().width;
             rec.check('the dialog fits inside the window', Boolean(box) && box.x >= 0 && box.x + box.width <= vw + 0.5, box ? `x ${Math.round(box.x)} to ${Math.round(box.x + box.width)} of ${vw}` : 'no dialog to measure');
+            await page.waitForTimeout(450); // past MUI's open transition, so the shot is not a fading popover
             await rec.shot(page, 'clock-popover', { aria: true, desc: 'The (i) popover open, opened with Enter' });
             judgeNames(rec, 'the (i) popover', await inventory(page, '[role=dialog]'), { allowEmpty: true });
             await page.keyboard.press('Escape');
@@ -628,6 +630,31 @@ const STEP_LIST = [
                 if (i === 0) await rec.shot(page, 'timeline-fullscreen', { aria: true, desc: 'Timeline fullscreen' });
                 await page.keyboard.press('Escape');
                 await page.waitForTimeout(400);
+            }
+        },
+    },
+    {
+        name: 'axe',
+        async run({ page, rec }) {
+            // axe-core is installed beside playwright-core (cd /tmp/ux-capture && npm i axe-core), never in the repo
+            let axePath = null;
+            try { axePath = createRequire(import.meta.url).resolve('axe-core/axe.min.js'); } catch { /* skipped below */ }
+            if (!axePath) { rec.info('axe', 'axe-core not installed: skipped'); return; }
+            const rules = ['nested-interactive', 'landmark-one-main', 'target-size', 'empty-table-header', 'button-name', 'select-name', 'label',
+                'aria-input-field-name', 'aria-valid-attr-value', 'aria-allowed-role', 'heading-order', 'empty-heading'];
+            for (const view of ['Configure', 'Results']) {
+                if (view === 'Configure') await goConfigure(page); else await goResults(page);
+                await page.waitForTimeout(300);
+                await page.addScriptTag({ path: axePath });
+                const found = await page.evaluate(
+                    (ids) => window.axe.run(document, { runOnly: { type: 'rule', values: ids }, exclude: [['canvas'], ['.react-flow']], resultTypes: ['violations'] })
+                        .then((r) => r.violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.map((n) => n.target.join(' ') + ' ' + n.html.slice(0, 120)) }))),
+                    rules,
+                );
+                for (const rule of rules) {
+                    const v = found.find((x) => x.id === rule);
+                    rec.check(`axe ${view}: ${rule}`, !v, v ? `${v.nodes.length} node(s) (${v.impact}): ${brief(v.nodes, 3)}` : 'no violation');
+                }
             }
         },
     },
@@ -715,7 +742,7 @@ const STEP_LIST = [
                 if ((await page.getByRole('button', { name: new RegExp(`^${esc(name)}( \\(auto\\))?$`, 'i') }).count()) < 1) missing.push(name);
             }
             rec.check('each filled slot has a remove button named "Remove filter 1: iron-plate"', filled.length > 0 && missing.length === 0, missing.length ? `${missing.length} of ${wanted.length} missing: ${brief(missing, 4)}` : `${wanted.length} buttons`);
-            const nested = await page.evaluate(() => [...document.querySelectorAll('[role=button] button, [role=button] [role=button]')].length);
+            const nested = await page.evaluate(() => [...document.querySelectorAll('[role=button] button, [role=button] [role=button], [role=button] [tabindex="0"]')].length);
             rec.check('no control is nested in a control (the remove button is a sibling of its slot)', nested === 0, `${nested} nested`);
         },
     },

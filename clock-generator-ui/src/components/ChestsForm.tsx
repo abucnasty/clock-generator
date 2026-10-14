@@ -123,7 +123,7 @@ function ChestsFormComponent({
                 </Typography>
             )}
 
-            <SortableList kind="chest" itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={chests.map((c) => c._uuid)} itemLabels={chests.map((c) => entityLabel('chest', c.id))} onReorder={onReorder}>
             {chests.map((chest, index) => (
                 <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)}>
                     {(dragHandle) => (

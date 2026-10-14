@@ -110,7 +110,7 @@ function BeltsFormComponent({
                 </Button>
             </Box>
 
-            <SortableList kind="belt" itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={belts.map((b) => b._uuid)} itemLabels={belts.map((b) => entityLabel('belt', b.id))} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
                 <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)}>
                     {(dragHandle) => (

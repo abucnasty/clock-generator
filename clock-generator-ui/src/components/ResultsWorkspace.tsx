@@ -219,9 +219,11 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     )}
                 </TabBody>
 
-                <TabBody tab="fuel" shown={shownTab === 'fuel'}>
-                    {fuelView !== null && <FuelPanel fuel={fuelView} />}
-                </TabBody>
+                {fuelView !== null && (
+                    <TabBody tab="fuel" shown={shownTab === 'fuel'}>
+                        <FuelPanel fuel={fuelView} />
+                    </TabBody>
+                )}
 
                 <TabBody tab="blueprint" shown={shownTab === 'blueprint'}>
                     <BlueprintOutput

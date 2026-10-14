@@ -55,7 +55,10 @@ function TransferPlanPanelComponent({
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Transfer Plan
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 0 }}>
+                {/* here, not in the title: the title is a button, and a focusable chip in a button cannot be reached or named */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1 }}>
                     <Tooltip title={`The least common multiple (LCM) that is computed based on the transfer fractions of all inserters. The clock will repeat every LCM cycles.`} describeChild>
                         <Chip
                             tabIndex={0}
@@ -87,8 +90,6 @@ function TransferPlanPanelComponent({
                         />
                     )}
                 </Box>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 0 }}>
                 <Table size="small">
                     <TableHead>
                         <TableRow>

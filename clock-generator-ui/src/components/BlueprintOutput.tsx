@@ -12,13 +12,10 @@ import {
 import { useCallback, useState } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
-import { BUTTON_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
+import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
 import { ANNOUNCEMENTS } from '../utils/workflowAnnouncement';
 import { StaleCopyDialog } from './StaleCopyDialog';
-
-/** The name of the read-only field holding the blueprint string, which has no visible label */
-const BLUEPRINT_STRING_NAME = 'Blueprint string';
 
 interface BlueprintOutputProps {
     blueprintString: string | null;
@@ -98,10 +95,9 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         rows={6}
                         fullWidth
                         value={blueprintString}
-                        slotProps={{ htmlInput: { 'aria-label': BLUEPRINT_STRING_NAME } }}
-                        InputProps={{
-                            readOnly: true,
-                            sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
+                        slotProps={{
+                            htmlInput: { 'aria-label': FIELD_NAMES.blueprintString },
+                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem' } },
                         }}
                     />
                     <IconButton

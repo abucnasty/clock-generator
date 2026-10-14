@@ -23,6 +23,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, clockHelpName } from '../utils/a11yLabels';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
 import { InfoPopoverButton } from './InfoPopoverButton';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, rateHeader } from '../utils/numberText';
@@ -252,7 +253,9 @@ export function ClockAlternativesPanel({
                 <Table size="small" aria-label={CLOCK_TABLE_NAME}>
                     <TableHead>
                         <TableRow>
-                            <TableCell padding="checkbox" />
+                            <TableCell padding="checkbox">
+                                <Box component="span" sx={VISUALLY_HIDDEN}>Select</Box>
+                            </TableCell>
                             <TableCell>Clock</TableCell>
                             <TableCell>
                                 <Tooltip
@@ -288,8 +291,9 @@ export function ClockAlternativesPanel({
                             <TableCell>Status</TableCell>
                         </TableRow>
                     </TableHead>
+                    <TableBody>{stable.map(renderRow)}</TableBody>
+                    {/* the unstable clocks and the ones still being computed: a group of rows of their own, under their header */}
                     <TableBody>
-                        {stable.map(renderRow)}
                         {stable.length > 0 && unstable.length > 0 && (
                             <TableRow>
                                 <TableCell

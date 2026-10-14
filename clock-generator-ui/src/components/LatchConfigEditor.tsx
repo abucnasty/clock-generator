@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import type { TargetType } from 'clock-generator/browser';
 import type { RuleSet } from '../hooks/useConfigForm';
+import { FIELD_NAMES } from '../utils/a11yLabels';
 import { RuleSetEditor } from './RuleSetEditor';
 import { createDefaultRuleSet } from './ruleSetUtils';
 
@@ -55,7 +56,7 @@ export function LatchConfigEditor({
                             checked={enabled}
                             onChange={(e) => handleToggle(e.target.checked)}
                             // the label is empty: the heading beside the switch is what it is called
-                            slotProps={{ input: { 'aria-label': 'Latched mode' } }}
+                            slotProps={{ input: { 'aria-label': FIELD_NAMES.latchedMode } }}
                         />
                     }
                     label=""

@@ -610,9 +610,11 @@ export function EntityEditDialog({
                 maxWidth={entityType === 'inserter' ? 'md' : 'sm'}
                 fullWidth
                 PaperProps={{ sx: { bgcolor: 'background.paper' } }}
-            >            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pr: 1, pb: 1 }}>
+                // named by the title text, not by the title bar with its buttons
+                aria-labelledby="entity-edit-title"
+            >            <DialogTitle id="entity-edit-bar" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pr: 1, pb: 1 }}>
                     {iconName && <FactorioIcon name={iconName} size={28} alt="" />}
-                    <Typography variant="h6" component="span" sx={{ flex: 1 }}>
+                    <Typography id="entity-edit-title" variant="h6" component="span" sx={{ flex: 1 }}>
                         {title}
                     </Typography>
                     {canDelete && (

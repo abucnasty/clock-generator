@@ -118,7 +118,7 @@ function MachinesFormComponent({
                 </Button>
             </Box>
 
-            <SortableList kind="machine" itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={machines.map((m) => m._uuid)} itemLabels={machines.map((m) => entityLabel('machine', m.id))} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
                         {(dragHandle) => (

@@ -165,7 +165,7 @@ function DrillsFormComponent({
                         />
                     </Box>
 
-                    <SortableList kind="drill" itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
+                    <SortableList itemKeys={drills.map((d) => d._uuid)} itemLabels={drills.map((d) => entityLabel('drill', d.id))} onReorder={onReorder}>
                     {drills.map((drill, index) => (
                         <SortableItem key={drill._uuid} stableKey={drill._uuid} label={entityLabel('drill', drill.id)}>
                             {(dragHandle) => (
