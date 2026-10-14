@@ -21,7 +21,7 @@ export type ValidationState =
     | { status: 'valid'; config: Config; validation: ConfigValidation }
     | { status: 'invalid'; config: Config; message: string };
 
-export interface UseSimulationWorkerResult {
+interface UseSimulationWorkerResult {
     isInitialized: boolean;
     isRunning: boolean;
     /** Progress lives outside React state so its frequent updates only re-render what reads it */

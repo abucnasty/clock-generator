@@ -97,7 +97,7 @@ export interface BeltFormData {
     lanes: [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
 }
 
-export const BELT_FORM_DEFAULT_TYPE = 'turbo-transport-belt';
+const BELT_FORM_DEFAULT_TYPE = 'turbo-transport-belt';
 export const BELT_FORM_DEFAULT_STACK_SIZE = 4;
 
 export const BELT_STRATEGIES: { value: BeltStrategyFormValue; label: string; description: string }[] = [
@@ -133,7 +133,7 @@ export interface DrillFormData {
 }
 
 // Infinity chest filter for item_name + request_count pairs
-export interface InfinityFilterFormData {
+interface InfinityFilterFormData {
     item_name: string;
     request_count: number;
 }
@@ -169,7 +169,7 @@ export function isInfinityChest(chest: ChestFormData): chest is InfinityChestFor
     return chest.type === ChestType.INFINITY_CHEST;
 }
 
-export interface ConfigFormData {
+interface ConfigFormData {
     target_output: {
         recipe: string;
         items_per_second: number;
@@ -312,7 +312,7 @@ function saveConfigToStorage(config: ConfigFormData): void {
     }
 }
 
-export interface UseConfigFormResult {
+interface UseConfigFormResult {
     config: ConfigFormData;
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>;
     

@@ -19,7 +19,7 @@ function SSRInitialFilled(_props: BaseNumberField.Root.Props) {
 }
 SSRInitialFilled.muiName = 'Input';
 
-export interface NumberFieldProps extends BaseNumberField.Root.Props {
+interface NumberFieldProps extends BaseNumberField.Root.Props {
     label?: React.ReactNode;
     size?: 'small' | 'medium';
     error?: boolean;

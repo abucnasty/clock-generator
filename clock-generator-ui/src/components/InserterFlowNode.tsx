@@ -3,7 +3,7 @@ import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import type { InserterNodeData } from '../utils/buildFlowGraph';
 
-export type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
+type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
 
 export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
     return (
