@@ -3,6 +3,7 @@ import type { AsBuiltStabilityCheck, FuelInserterPlan, SerializableEntityStateTr
 import type { FuelViewData } from '../worker/types';
 import {
     axisTicks,
+    barsToDraw,
     buildWakeWindowRows,
     coverage,
     drawnSpans,
@@ -179,6 +180,24 @@ describe('drawnSpans', () => {
             { start: 99, end: 99, slack: true },
             { start: 0, end: 1, slack: true },
         ]);
+    });
+});
+
+describe('barsToDraw', () => {
+    it('draws each segment of a window as a bar, the slack in it', () => {
+        const windows = normalizeWindows([{ start: 0, end: 1 }, { start: 10, end: 19 }, { start: 96, end: 99 }], 100)
+            .map(window => ({ ...window, slackTicks: 2 }));
+        expect(barsToDraw(windows, 0, null).map(bar => [bar.windowIndex, bar.start, bar.end, bar.spans.map(span => span.slack)]))
+            .toEqual([[1, 0, 1, [true]], [0, 10, 19, [false, true]], [1, 96, 99, [false]]]);
+    });
+
+    it('merges windows under a pixel wide that lie within a pixel of each other, but never the selected one', () => {
+        const windows = normalizeWindows([{ start: 0, end: 0 }, { start: 2, end: 2 }, { start: 4, end: 4 }, { start: 50, end: 50 }], 1000);
+        const bars = barsToDraw(windows, 5, null);
+        expect(bars.map(bar => [bar.windowIndex, bar.merged, bar.start, bar.end])).toEqual([[0, true, 0, 4], [3, false, 50, 50]]);
+        expect(bars[0].spans).toEqual([{ start: 0, end: 4, slack: false }]);
+        expect(barsToDraw(windows, 5, 1).map(bar => [bar.windowIndex, bar.merged])).toEqual([[0, false], [1, false], [2, false], [3, false]]);
+        expect(barsToDraw(windows, 1, null)).toHaveLength(4);
     });
 });
 

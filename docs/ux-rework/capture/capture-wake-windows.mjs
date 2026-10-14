@@ -799,8 +799,9 @@ try {
                     const words = /wake window/i.test(s.text) && /belt slack/i.test(s.text);
                     return { pass: legendSolid.length >= 1 && legendHatched.length >= 1 && words, detail: `outside the rows: ${legendSolid.length} solid and ${legendHatched.length} hatched painted swatches; words "wake window" and "belt slack" ${words ? 'present' : 'missing'}` };
                 });
-                await chk(rec, 'keyboard hint: "Left and right arrow keys step through the windows of a row. Tap a bar for details."', async () => ({
-                    pass: /Left and right arrow keys step through the windows of a row\. Tap a bar for details\./i.test(need(s).text),
+                // the review asked for "Click or tap a bar" in place of the spec's "Tap a bar"
+                await chk(rec, 'keyboard hint: "Left and right arrow keys step through the windows of a row. Click or tap a bar for details."', async () => ({
+                    pass: /Left and right arrow keys step through the windows of a row\. Click or tap a bar for details\./i.test(need(s).text),
                     detail: /arrow keys[^.]*\.[^.]*\./i.exec(s.text)?.[0] ?? 'hint not found',
                 }));
                 await chk(rec, 'the chart is a group named by its heading and described by the hint', async () => {

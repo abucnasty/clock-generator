@@ -7,6 +7,7 @@ import {
     WAKE_UPS_COLUMN_HELP,
     WAKE_WINDOW_DEFINITION,
     lengthText,
+    onForText,
     periodText,
     rowSummary,
     summaryText,
@@ -46,6 +47,12 @@ describe('periodText and lengthText', () => {
         expect(periodText(550.957)).toBe('550.96 ticks (9.18 s)');
         expect(lengthText(29)).toBe('29 ticks, 0.48 s');
         expect(lengthText(1)).toBe('1 tick, 0.02 s');
+    });
+});
+
+describe('onForText', () => {
+    it('says it is a share of the period', () => {
+        expect(onForText(0.17)).toBe('On for 17% of the period');
     });
 });
 
@@ -91,6 +98,12 @@ describe('rowSummary', () => {
             ownClock: { windowTicks: 6, everyTicks: 400, perMinute: 9, item: 'coal' },
             onShare: 6 / 400,
         }), 600)).toContain('Own clock: on 6 ticks every 400 (fuel).');
+    });
+
+    it('ends with the row\'s notes, so a screen reader hears them with the row', () => {
+        const text = rowSummary(row({ windows: windowsOf([{ start: 212, end: 240 }], 600, 4) }), 600, { mostWakeUpsId: 'inserter:3' });
+        expect(text).toMatch(/Wake-ups\/min: 12\.3\. Note: \+4 ticks: the last 4 ticks of each window are belt slack, .* Note: Woken most of all the inserters of this clock\.$/);
+        expect(rowSummary(row(), 600)).not.toContain('Note:');
     });
 
     it('says when wake-ups were not counted', () => {

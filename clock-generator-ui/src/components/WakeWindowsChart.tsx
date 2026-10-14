@@ -1,9 +1,18 @@
 import { Box, Typography } from '@mui/material';
 import { InfoOutlined, Loop, MoreTime, TimerOutlined, TrendingUp } from '@mui/icons-material';
-import { Fragment, useCallback, useRef, useState, type ComponentType, type KeyboardEvent, type MouseEvent } from 'react';
+import {
+    memo,
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    type ComponentType,
+    type KeyboardEvent,
+    type MouseEvent,
+} from 'react';
 import {
     axisTicks,
-    drawnSpans,
+    barsToDraw,
     nearestWindowIndex,
     stepWindow,
     tickAtFraction,
@@ -32,6 +41,13 @@ export const WAKE_SELECTED_COLOR = '#fca300';
 const GRID_COLOR = 'rgba(255, 255, 255, 0.12)';
 /** Belt slack: the bar's colour as 45° stripes, 3px on and 3px off */
 export const SLACK_BACKGROUND = `repeating-linear-gradient(45deg, ${WAKE_BAR_COLOR} 0 3px, transparent 3px 6px)`;
+/**
+ * In forced colours the browser would paint over the bars' backgrounds and they would vanish, so the chart keeps its
+ * own painting (`forced-color-adjust: none`) in the system's colours: bars, stripes and tracks in CanvasText, the
+ * selection in Highlight
+ */
+export const FORCED_COLORS = '@media (forced-colors: active)';
+export const SLACK_BACKGROUND_FORCED = 'repeating-linear-gradient(45deg, CanvasText 0 3px, transparent 3px 6px)';
 
 const TRACK_HEIGHT = 32;
 const BAR_HEIGHT = 16;
@@ -44,9 +60,10 @@ const TAP_TOLERANCE_PX = 12;
 /** From this width of the chart the label, the track and the numbers sit side by side */
 const WIDE_PX = 900;
 const LABEL_COLUMN_PX = 220;
+const NUMBERS_COLUMN_PX = 150;
+const COLUMN_GAP_PX = 14;
 /** Room kept below a focused row for the page's sticky footer */
 const FOOTER_CLEARANCE_PX = 72;
-const NUMBERS_COLUMN_PX = 150;
 
 /** Width of an element, kept up to date */
 function useWidth(): [(element: HTMLElement | null) => (() => void) | undefined, number] {
@@ -65,8 +82,7 @@ function useWidth(): [(element: HTMLElement | null) => (() => void) | undefined,
 
 const percent = (ticks: number, period: number) => `${(ticks / period) * 100}%`;
 
-function Axis({ periodTicks, maxMarks }: { periodTicks: number; maxMarks: number }) {
-    const marks = axisTicks(periodTicks, maxMarks);
+function Axis({ periodTicks, marks }: { periodTicks: number; marks: number[] }) {
     return (
         <Box aria-hidden sx={{ pb: 0.5 }}>
             <Typography variant="caption" color="text.secondary" component="div" sx={{ textAlign: 'right' }} data-wake-axis-end>
@@ -82,11 +98,10 @@ function Axis({ periodTicks, maxMarks }: { periodTicks: number; maxMarks: number
                         <Box
                             key={mark}
                             data-wake-axis-mark
+                            style={{ left: percent(mark, periodTicks), transform: `translateX(${shift})` }}
                             sx={{
                                 position: 'absolute',
-                                left: percent(mark, periodTicks),
                                 top: 0,
-                                transform: `translateX(${shift})`,
                                 borderLeft: fraction === 0 ? '1px solid' : 'none',
                                 borderColor: 'text.secondary',
                                 pl: fraction === 0 ? 0.5 : 0,
@@ -107,15 +122,49 @@ function Axis({ periodTicks, maxMarks }: { periodTicks: number; maxMarks: number
     );
 }
 
+const trackSx = {
+    position: 'relative',
+    height: TRACK_HEIGHT,
+    border: `1px solid ${WAKE_TRACK_COLOR}`,
+    boxSizing: 'border-box',
+    cursor: 'pointer',
+    forcedColorAdjust: 'none',
+    [FORCED_COLORS]: { borderColor: 'CanvasText' },
+} as const;
+const gridLineSx = {
+    position: 'absolute', top: 0, bottom: 0, width: '1px', bgcolor: GRID_COLOR, [FORCED_COLORS]: { bgcolor: 'GrayText' },
+} as const;
+const barSx = {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    display: 'flex',
+    outlineOffset: '2px',
+    '&[data-selected]': { outline: `2px solid ${WAKE_SELECTED_COLOR}`, zIndex: 1 },
+    [FORCED_COLORS]: { '&[data-selected]': { outlineColor: 'Highlight' } },
+} as const;
+const solidSx = {
+    minWidth: '1px', boxSizing: 'border-box', bgcolor: WAKE_BAR_COLOR, [FORCED_COLORS]: { bgcolor: 'CanvasText' },
+} as const;
+const slackSx = {
+    minWidth: '1px',
+    boxSizing: 'border-box',
+    background: SLACK_BACKGROUND,
+    border: `1px solid ${WAKE_BAR_COLOR}`,
+    [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
+} as const;
+
 interface TrackProps {
     row: WakeWindowRow;
     periodTicks: number;
     marks: number[];
     selectedIndex: number | null;
+    /** Ticks in one pixel of the track: windows narrower than that are merged in the drawing */
+    ticksPerPx: number;
     onTap: (event: MouseEvent<HTMLElement>) => void;
 }
 
-function Track({ row, periodTicks, marks, selectedIndex, onTap }: TrackProps) {
+function Track({ row, periodTicks, marks, selectedIndex, ticksPerPx, onTap }: TrackProps) {
     const words = modeText(row);
     if (words !== null) {
         return (
@@ -125,69 +174,36 @@ function Track({ row, periodTicks, marks, selectedIndex, onTap }: TrackProps) {
         );
     }
     return (
-        <Box
-            data-wake-track
-            onClick={onTap}
-            sx={{
-                position: 'relative',
-                height: TRACK_HEIGHT,
-                border: `1px solid ${WAKE_TRACK_COLOR}`,
-                boxSizing: 'border-box',
-                cursor: 'pointer',
-                // in forced colours the bars' backgrounds would be painted over and vanish; keep the chart's own colours
-                forcedColorAdjust: 'none',
-            }}
-        >
+        <Box data-wake-track onClick={onTap} sx={trackSx}>
             {marks.filter(mark => mark > 0).map(mark => (
-                <Box
-                    key={mark}
-                    aria-hidden
-                    sx={{ position: 'absolute', top: 0, bottom: 0, left: percent(mark, periodTicks), width: '1px', bgcolor: GRID_COLOR }}
-                />
+                <Box key={mark} aria-hidden style={{ left: percent(mark, periodTicks) }} sx={gridLineSx} />
             ))}
-            {row.windows.map((window, index) => {
-                const selected = index === selectedIndex;
-                const spans = drawnSpans(window);
-                return window.segments.map((segment, segmentIndex) => {
-                    const length = segment.end - segment.start + 1;
-                    const parts = spans.filter(span => span.start >= segment.start && span.end <= segment.end);
-                    return (
-                        <Box
-                            key={`${index}-${segmentIndex}`}
-                            aria-hidden
-                            data-wake-bar
-                            data-window-index={index}
-                            data-selected={selected ? 'true' : undefined}
-                            sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                left: `min(${percent(segment.start, periodTicks)}, calc(100% - ${MIN_BAR_PX}px))`,
-                                width: `max(${MIN_BAR_PX}px, ${percent(length, periodTicks)})`,
-                                height: selected ? SELECTED_BAR_HEIGHT : BAR_HEIGHT,
-                                display: 'flex',
-                                outline: selected ? `2px solid ${WAKE_SELECTED_COLOR}` : 'none',
-                                outlineOffset: '2px',
-                                zIndex: selected ? 1 : 0,
-                            }}
-                        >
-                            {parts.map(part => (
-                                <Box
-                                    key={part.start}
-                                    data-wake-slack={part.slack ? 'true' : undefined}
-                                    sx={{
-                                        flex: `${part.end - part.start + 1} 1 0`,
-                                        minWidth: '1px',
-                                        boxSizing: 'border-box',
-                                        ...(part.slack
-                                            ? { background: SLACK_BACKGROUND, border: `1px solid ${WAKE_BAR_COLOR}` }
-                                            : { bgcolor: WAKE_BAR_COLOR }),
-                                    }}
-                                />
-                            ))}
-                        </Box>
-                    );
-                });
+            {barsToDraw(row.windows, ticksPerPx, selectedIndex).map(bar => {
+                const selected = !bar.merged && bar.windowIndex === selectedIndex;
+                return (
+                    <Box
+                        key={`${bar.windowIndex}-${bar.start}`}
+                        aria-hidden
+                        data-wake-bar
+                        data-window-index={bar.windowIndex}
+                        data-selected={selected ? 'true' : undefined}
+                        style={{
+                            left: `min(${percent(bar.start, periodTicks)}, calc(100% - ${MIN_BAR_PX}px))`,
+                            width: `max(${MIN_BAR_PX}px, ${percent(bar.end - bar.start + 1, periodTicks)})`,
+                            height: selected ? SELECTED_BAR_HEIGHT : BAR_HEIGHT,
+                        }}
+                        sx={barSx}
+                    >
+                        {bar.spans.map(span => (
+                            <Box
+                                key={span.start}
+                                data-wake-slack={span.slack ? 'true' : undefined}
+                                style={{ flex: `${span.end - span.start + 1} 1 0` }}
+                                sx={span.slack ? slackSx : solidSx}
+                            />
+                        ))}
+                    </Box>
+                );
             })}
         </Box>
     );
@@ -228,48 +244,41 @@ function WatchNotes(props: { row: WakeWindowRow; periodTicks: number; mostWakeUp
     );
 }
 
-export interface WakeWindowsChartProps {
-    rows: WakeWindowRow[];
+type Selection = { rowId: string; windowIndex: number };
+
+interface RowProps {
+    row: WakeWindowRow;
+    rowIndex: number;
     periodTicks: number;
-    selected: { rowId: string; windowIndex: number } | null;
-    /** A window of a row, or null to clear the selection */
-    onSelect: (selection: { rowId: string; windowIndex: number } | null) => void;
+    marks: number[];
+    ticksPerPx: number;
+    /** The selected window, when it is in this row */
+    selectedIndex: number | null;
+    /** The row the chart's one tab stop is on */
+    isActive: boolean;
+    wide: boolean;
     mostWakeUpsId: string | null;
-    /** Id of the heading that names the chart */
-    labelledBy: string;
-    /** Id of the keyboard hint */
-    describedBy: string;
+    onSelect: (selection: Selection | null) => void;
+    /** Moves the tab stop and focus `delta` rows on */
+    onMoveRow: (rowIndex: number, delta: number) => void;
+    /** Makes this row the tab stop, and focuses it when asked */
+    onActivate: (rowId: string, focus: boolean) => void;
+    registerElement: (rowId: string, element: HTMLElement | null) => void;
 }
 
-/**
- * The wake windows of every row on one axis of one clock period. The chart is one tab stop: the rows are a roving
- * tabindex, Up and Down move between them, Left, Right, Home and End step through a row's windows, Escape clears.
- */
-export function WakeWindowsChart(props: WakeWindowsChartProps) {
-    const { rows, periodTicks, selected, onSelect } = props;
-    const [rootRef, width] = useWidth();
-    const [activeRowId, setActiveRowId] = useState<string | null>(null);
-    const rowElements = useRef(new Map<string, HTMLElement>());
+const gridColumnsOf = (wide: boolean) => (wide ? `${LABEL_COLUMN_PX}px minmax(0, 1fr) ${NUMBERS_COLUMN_PX}px` : 'minmax(0, 1fr) auto');
 
-    const wide = width >= WIDE_PX;
-    const trackWidth = wide ? width - LABEL_COLUMN_PX - NUMBERS_COLUMN_PX - 2 * 14 : width;
-    const maxMarks = trackWidth >= 640 ? 10 : trackWidth >= 360 ? 6 : 4;
-    const marks = axisTicks(periodTicks, maxMarks);
-    const activeId = rows.some(row => row.id === activeRowId) ? activeRowId : rows[0]?.id ?? null;
+/** One inserter or drill: its name, track and numbers, the details of its selected window, its notes */
+const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
+    const { row, periodTicks, selectedIndex, onSelect } = props;
+    const indent = props.wide ? `${LABEL_COLUMN_PX + COLUMN_GAP_PX}px` : 0;
 
-    const focusRow = (rowId: string) => {
-        setActiveRowId(rowId);
-        rowElements.current.get(rowId)?.focus();
-    };
-
-    const onKeyDown = (event: KeyboardEvent<HTMLElement>, rowIndex: number) => {
+    const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
         if (event.target !== event.currentTarget) {
             return;
         }
-        const row = rows[rowIndex];
-        const current = selected?.rowId === row.id ? selected.windowIndex : null;
         const step = (key: 'next' | 'previous' | 'first' | 'last') => {
-            const next = stepWindow(current, row.windows.length, key);
+            const next = stepWindow(selectedIndex, row.windows.length, key);
             if (next !== null) {
                 onSelect({ rowId: row.id, windowIndex: next });
             }
@@ -288,16 +297,13 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
                 step('last');
                 break;
             case 'ArrowDown':
-            case 'ArrowUp': {
-                const target = rows[Math.min(rows.length - 1, Math.max(0, rowIndex + (event.key === 'ArrowDown' ? 1 : -1)))];
-                if (target.id !== row.id) {
-                    onSelect(null);
-                    focusRow(target.id);
-                }
+                props.onMoveRow(props.rowIndex, 1);
                 break;
-            }
+            case 'ArrowUp':
+                props.onMoveRow(props.rowIndex, -1);
+                break;
             case 'Escape':
-                if (selected === null) {
+                if (selectedIndex === null) {
                     return;
                 }
                 onSelect(null);
@@ -308,7 +314,7 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
         event.preventDefault();
     };
 
-    const onTap = (event: MouseEvent<HTMLElement>, row: WakeWindowRow) => {
+    const onTap = (event: MouseEvent<HTMLElement>) => {
         const rect = event.currentTarget.getBoundingClientRect();
         if (rect.width <= 0) {
             return;
@@ -316,94 +322,153 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
         const tick = tickAtFraction((event.clientX - rect.left) / rect.width, periodTicks);
         const index = nearestWindowIndex(row.windows, tick, (TAP_TOLERANCE_PX / rect.width) * periodTicks);
         onSelect(index === null ? null : { rowId: row.id, windowIndex: index });
-        setActiveRowId(row.id);
-        rowElements.current.get(row.id)?.focus({ preventScroll: true });
+        props.onActivate(row.id, true);
     };
 
-    const gridColumns = wide ? `${LABEL_COLUMN_PX}px minmax(0, 1fr) ${NUMBERS_COLUMN_PX}px` : 'minmax(0, 1fr) auto';
-    const indent = wide ? `${LABEL_COLUMN_PX + 14}px` : 0;
+    const gridColumns = gridColumnsOf(props.wide);
+    return (
+        <>
+            <Box
+                ref={(element: HTMLElement | null) => props.registerElement(row.id, element)}
+                role="group"
+                aria-label={rowSummary(row, periodTicks, { mostWakeUpsId: props.mostWakeUpsId })}
+                tabIndex={props.isActive ? 0 : -1}
+                onKeyDown={onKeyDown}
+                onFocus={event => {
+                    if (event.target === event.currentTarget) {
+                        props.onActivate(row.id, false);
+                    }
+                }}
+                data-wake-row={row.id}
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: gridColumns,
+                    gridTemplateAreas: props.wide ? '"label track numbers"' : '"label numbers" "track track"',
+                    columnGap: `${COLUMN_GAP_PX}px`,
+                    rowGap: 0.5,
+                    alignItems: 'center',
+                    py: 0.75,
+                    borderTop: 1,
+                    borderColor: 'divider',
+                    outline: 'none',
+                    // the page's sticky footer would cover a row focused at the bottom of the window
+                    scrollMarginBottom: FOOTER_CLEARANCE_PX,
+                    '&:focus-visible': { outline: `2px solid ${WAKE_SELECTED_COLOR}`, outlineOffset: '2px' },
+                }}
+            >
+                <Box sx={{ gridArea: 'label', minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.label}</Typography>
+                    {row.detail && (
+                        <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: 'anywhere' }}>
+                            {row.detail}
+                        </Typography>
+                    )}
+                </Box>
+                <Box sx={{ gridArea: 'track', minWidth: 0 }}>
+                    <Track
+                        row={row}
+                        periodTicks={periodTicks}
+                        marks={props.marks}
+                        selectedIndex={selectedIndex}
+                        ticksPerPx={props.ticksPerPx}
+                        onTap={onTap}
+                    />
+                </Box>
+                <Box sx={{ gridArea: 'numbers', textAlign: 'right' }}>
+                    <Typography variant="body2">{onForText(row.onShare)}</Typography>
+                    <Typography variant="body2" color="text.secondary" data-wake-ups={row.wakeUpsPerMinute ?? ''}>
+                        {wakeUpsRowText(row)}
+                    </Typography>
+                </Box>
+            </Box>
+            {selectedIndex !== null && selectedIndex < row.windows.length && (
+                <Box data-wake-details sx={{ ml: indent, mb: 1, pl: 1.5, py: 0.5, borderLeft: 2, borderColor: 'divider' }}>
+                    <Typography variant="body2">{windowDetails(row, selectedIndex, periodTicks)}</Typography>
+                </Box>
+            )}
+            <WatchNotes row={row} periodTicks={periodTicks} mostWakeUpsId={props.mostWakeUpsId} indent={indent} />
+        </>
+    );
+});
+
+export interface WakeWindowsChartProps {
+    rows: WakeWindowRow[];
+    periodTicks: number;
+    selected: Selection | null;
+    /** A window of a row, or null to clear the selection; keep it stable, the rows are memoised */
+    onSelect: (selection: Selection | null) => void;
+    mostWakeUpsId: string | null;
+    /** Id of the heading that names the chart */
+    labelledBy: string;
+    /** Id of the keyboard hint */
+    describedBy: string;
+}
+
+/**
+ * The wake windows of every row on one axis of one clock period. The chart is one tab stop: the rows are a roving
+ * tabindex, Up and Down move between them, Left, Right, Home and End step through a row's windows, Escape clears.
+ */
+export function WakeWindowsChart(props: WakeWindowsChartProps) {
+    const { rows, periodTicks, selected, onSelect } = props;
+    const [rootRef, width] = useWidth();
+    const [activeRowId, setActiveRowId] = useState<string | null>(null);
+    const rowElements = useRef(new Map<string, HTMLElement>());
+
+    const wide = width >= WIDE_PX;
+    const trackWidth = wide ? width - LABEL_COLUMN_PX - NUMBERS_COLUMN_PX - 2 * COLUMN_GAP_PX : width;
+    const maxMarks = trackWidth >= 640 ? 10 : trackWidth >= 360 ? 6 : 4;
+    const marks = useMemo(() => axisTicks(periodTicks, maxMarks), [periodTicks, maxMarks]);
+    // nothing is merged before the chart has been measured
+    const ticksPerPx = trackWidth > 0 ? periodTicks / trackWidth : 0;
+    const activeId = rows.some(row => row.id === activeRowId) ? activeRowId : rows[0]?.id ?? null;
+
+    const registerElement = useCallback((rowId: string, element: HTMLElement | null) => {
+        if (element) {
+            rowElements.current.set(rowId, element);
+        } else {
+            rowElements.current.delete(rowId);
+        }
+    }, []);
+    const onActivate = useCallback((rowId: string, focus: boolean) => {
+        setActiveRowId(rowId);
+        if (focus) {
+            rowElements.current.get(rowId)?.focus({ preventScroll: true });
+        }
+    }, []);
+    const onMoveRow = useCallback((rowIndex: number, delta: number) => {
+        const target = rows[Math.min(rows.length - 1, Math.max(0, rowIndex + delta))];
+        if (target && target.id !== rows[rowIndex]?.id) {
+            onSelect(null);
+            setActiveRowId(target.id);
+            rowElements.current.get(target.id)?.focus();
+        }
+    }, [rows, onSelect]);
 
     return (
         <Box ref={rootRef} role="group" aria-labelledby={props.labelledBy} aria-describedby={props.describedBy} data-wake-chart>
-            <Box sx={{ display: 'grid', gridTemplateColumns: gridColumns, columnGap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: gridColumnsOf(wide), columnGap: `${COLUMN_GAP_PX}px` }}>
                 <Box sx={{ gridColumn: wide ? '2' : '1 / -1' }}>
-                    <Axis periodTicks={periodTicks} maxMarks={maxMarks} />
+                    <Axis periodTicks={periodTicks} marks={marks} />
                 </Box>
             </Box>
-            {rows.map((row, rowIndex) => {
-                const selectedIndex = selected?.rowId === row.id ? selected.windowIndex : null;
-                return (
-                    <Fragment key={row.id}>
-                        <Box
-                            ref={(element: HTMLElement | null) => {
-                                if (element) {
-                                    rowElements.current.set(row.id, element);
-                                } else {
-                                    rowElements.current.delete(row.id);
-                                }
-                            }}
-                            role="group"
-                            aria-label={rowSummary(row, periodTicks)}
-                            tabIndex={row.id === activeId ? 0 : -1}
-                            onKeyDown={event => onKeyDown(event, rowIndex)}
-                            onFocus={event => {
-                                if (event.target === event.currentTarget) {
-                                    setActiveRowId(row.id);
-                                }
-                            }}
-                            data-wake-row={row.id}
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: gridColumns,
-                                gridTemplateAreas: wide ? '"label track numbers"' : '"label numbers" "track track"',
-                                columnGap: 2,
-                                rowGap: 0.5,
-                                alignItems: 'center',
-                                py: 0.75,
-                                borderTop: 1,
-                                borderColor: 'divider',
-                                outline: 'none',
-                                // the page's sticky footer would cover a row focused at the bottom of the window
-                                scrollMarginBottom: FOOTER_CLEARANCE_PX,
-                                '&:focus-visible': { outline: `2px solid ${WAKE_SELECTED_COLOR}`, outlineOffset: '2px' },
-                            }}
-                        >
-                            <Box sx={{ gridArea: 'label', minWidth: 0 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.label}</Typography>
-                                {row.detail && (
-                                    <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: 'anywhere' }}>
-                                        {row.detail}
-                                    </Typography>
-                                )}
-                            </Box>
-                            <Box sx={{ gridArea: 'track', minWidth: 0 }}>
-                                <Track
-                                    row={row}
-                                    periodTicks={periodTicks}
-                                    marks={marks}
-                                    selectedIndex={selectedIndex}
-                                    onTap={event => onTap(event, row)}
-                                />
-                            </Box>
-                            <Box sx={{ gridArea: 'numbers', textAlign: 'right' }}>
-                                <Typography variant="body2">{onForText(row.onShare)}</Typography>
-                                <Typography variant="body2" color="text.secondary" data-wake-ups={row.wakeUpsPerMinute ?? ''}>
-                                    {wakeUpsRowText(row)}
-                                </Typography>
-                            </Box>
-                        </Box>
-                        {selectedIndex !== null && (
-                            <Box
-                                data-wake-details
-                                sx={{ ml: indent, mb: 1, pl: 1.5, py: 0.5, borderLeft: 2, borderColor: 'divider' }}
-                            >
-                                <Typography variant="body2">{windowDetails(row, selectedIndex, periodTicks)}</Typography>
-                            </Box>
-                        )}
-                        <WatchNotes row={row} periodTicks={periodTicks} mostWakeUpsId={props.mostWakeUpsId} indent={indent} />
-                    </Fragment>
-                );
-            })}
+            {rows.map((row, rowIndex) => (
+                <WakeWindowsRow
+                        key={row.id}
+                        row={row}
+                        rowIndex={rowIndex}
+                        periodTicks={periodTicks}
+                        marks={marks}
+                        ticksPerPx={ticksPerPx}
+                        selectedIndex={selected?.rowId === row.id ? selected.windowIndex : null}
+                        isActive={row.id === activeId}
+                        wide={wide}
+                        mostWakeUpsId={props.mostWakeUpsId}
+                        onSelect={onSelect}
+                        onMoveRow={onMoveRow}
+                        onActivate={onActivate}
+                        registerElement={registerElement}
+                    />
+            ))}
         </Box>
     );
 }

@@ -1,11 +1,12 @@
 import { Box, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
-import { WAKE_UPS_HEADER, formatNumberText } from '../utils/numberText';
+import { formatNumberText } from '../utils/numberText';
 import { ticksToSeconds, type WakeWindowRow } from '../utils/wakeWindows';
 import {
     NO_WINDOWS_TEXT,
     ROWS_TABLE_CAPTION,
     ROWS_TABLE_HEADERS,
     ROWS_TABLE_LABEL,
+    ROWS_TABLE_WAKE_UPS_HEADER,
     WINDOWS_TABLE_CAPTION,
     WINDOWS_TABLE_HEADERS,
     WINDOWS_TABLE_LABEL,
@@ -46,7 +47,7 @@ export function WakeWindowsTable({ rows, periodTicks, mostWakeUpsId }: WakeWindo
                             <TableCell scope="col">{ROWS_TABLE_HEADERS.moves}</TableCell>
                             <TableCell scope="col" align="right">{ROWS_TABLE_HEADERS.onFor}</TableCell>
                             <TableCell scope="col" align="right">{ROWS_TABLE_HEADERS.windows}</TableCell>
-                            <TableCell scope="col" align="right">{WAKE_UPS_HEADER}</TableCell>
+                            <TableCell scope="col" align="right">{ROWS_TABLE_WAKE_UPS_HEADER}</TableCell>
                             <TableCell scope="col">{ROWS_TABLE_HEADERS.notes}</TableCell>
                         </TableRow>
                     </TableHead>

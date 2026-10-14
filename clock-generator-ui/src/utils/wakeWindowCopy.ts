@@ -10,7 +10,8 @@ import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 // ---- Definitions that can change ------------------------------------------------------------------------------------
 
 /** Glossary, "wake window" */
-export const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock switches an inserter on.';
+export const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock switches an inserter or drill on. '
+    + 'Between its windows the inserter is off, so the game has nothing to wake.';
 
 /** Glossary, "wake-up" (option (b), approved provisionally on 2026-10-14) */
 export const WAKE_UP_DEFINITION =
@@ -29,7 +30,7 @@ export const MOSTLY_ON_SHARE = 0.8;
 /** A window this many ticks long or shorter is called very short */
 export const SHORT_WINDOW_TICKS = 4;
 /** Ticks between the clock reaching a window and the inserter acting on it (the engine's CIRCUIT_LATENCY_TICKS) */
-export const CIRCUIT_LATENCY_TICKS = 2;
+const CIRCUIT_LATENCY_TICKS = 2;
 /** Windows a row's accessible name lists before "and N more" */
 const SUMMARY_WINDOWS = 4;
 /** Short windows a note names before "and N more" */
@@ -45,7 +46,6 @@ export const TERMS = [
     { term: 'Wake-up', definition: WAKE_UP_DEFINITION },
     { term: 'Wake-ups/min', definition: WAKE_UPS_COLUMN_HELP },
 ] as const;
-export const TERMS_LABEL = 'Terms';
 
 export const LEGEND_LABEL = 'Legend';
 export const LEGEND_WINDOW = 'Wake window';
@@ -54,9 +54,8 @@ export const LEGEND_SELECTED = 'Selected window';
 export const LEGEND_TRACK = 'One clock period';
 
 export const KEYBOARD_HINT = 'Up and down arrow keys move between rows. Left and right arrow keys step through the windows '
-    + 'of a row. Tap a bar for details. Home and End jump to the first and last window, and Escape clears the selection.';
+    + 'of a row. Click or tap a bar for details. Home and End jump to the first and last window, and Escape clears the selection.';
 export const SHOW_AS_TABLE = 'Show as table';
-export const CHART_LABEL = 'Wake windows of the selected clock';
 
 export const ALWAYS_ON_TEXT = 'Always on: not on the clock';
 export const NEVER_TEXT = 'Never switched on';
@@ -69,6 +68,8 @@ export const NOT_COUNTED_REASON = 'This clock was not run long enough to count w
 
 export const ROWS_TABLE_CAPTION = 'Wake windows by inserter and drill';
 export const ROWS_TABLE_LABEL = 'Wake windows by inserter and drill, scrolls sideways';
+/** Table 1's wake-ups: each row is one inserter's share of the clock's figure */
+export const ROWS_TABLE_WAKE_UPS_HEADER = 'Wake-ups/min per inserter (1\u00a0copy)';
 export const ROWS_TABLE_HEADERS = {
     name: 'Name',
     moves: 'Moves',
@@ -151,9 +152,9 @@ export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock'>): string 
     }
 }
 
-/** "On for 14%" */
+/** "On for 14% of the period" */
 export function onForText(share: number): string {
-    return `On for ${percentText(share)}`;
+    return `On for ${percentText(share)} of the period`;
 }
 
 /** The share alone, for the table: "14%" */
@@ -180,7 +181,7 @@ export function windowCountText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | '
 }
 
 /** "212–240"; a wrapped window "590–4 (next period)" */
-export function windowTicksText(window: Pick<WakeWindow, 'start' | 'end' | 'wraps'>): string {
+function windowTicksText(window: Pick<WakeWindow, 'start' | 'end' | 'wraps'>): string {
     return `${num(window.start)}–${num(window.end)}${window.wraps ? ' (next period)' : ''}`;
 }
 
@@ -212,7 +213,11 @@ export function summaryText(args: { periodTicks: number; inserters: number; dril
  * A row's accessible name, everything the row shows: "Inserter 3, iron-plate: Belt 1 to Machine 2. 2 windows: ticks
  * 0–28 and 212–240, the last 4 ticks of each are belt slack. On for 10% of the clock period. Wake-ups/min: 12.3."
  */
-export function rowSummary(row: WakeWindowRow, periodTicks: number): string {
+export function rowSummary(
+    row: WakeWindowRow,
+    periodTicks: number,
+    ctx: { mostWakeUpsId: string | null } = { mostWakeUpsId: null },
+): string {
     const parts = [row.detail ? `${row.label}, ${row.detail}.` : `${row.label}.`];
     const mode = modeText(row);
     if (mode !== null) {
@@ -223,8 +228,12 @@ export function rowSummary(row: WakeWindowRow, periodTicks: number): string {
         const slackText = slack > 0 ? `, the last ${ticksText(slack)} of each are belt slack` : '';
         parts.push(`${plural(row.windows.length, 'window', 'windows')}: ticks ${ticks}${slackText}.`);
     }
-    parts.push(`${onForText(row.onShare)} of the clock period of ${periodText(periodTicks)}.`);
+    parts.push(`On for ${percentText(row.onShare)} of the clock period of ${periodText(periodTicks)}.`);
     parts.push(`${wakeUpsRowText(row)}.`);
+    // the notes too, so a screen reader in focus mode hears them with the row
+    for (const note of watchNotes(row, { periodTicks, mostWakeUpsId: ctx.mostWakeUpsId })) {
+        parts.push(`Note: ${note.text}`);
+    }
     return parts.join(' ');
 }
 

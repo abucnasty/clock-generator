@@ -142,7 +142,48 @@ export function drawnSpans(window: WakeWindow): (TickSpan & { slack: boolean })[
     return spans;
 }
 
-const ID_PATTERN = /^(inserter|drill):(\d+)$/;
+/** One bar of a track: a segment of a window, or several windows too narrow to tell apart, merged */
+interface DrawnBar {
+    /** The window it draws; the first of them for merged windows */
+    windowIndex: number;
+    merged: boolean;
+    start: number;
+    end: number;
+    spans: (TickSpan & { slack: boolean })[];
+}
+
+/**
+ * The bars of a track, in tick order. Windows shorter than `minTicks` (under a pixel wide) that lie within `minTicks` of
+ * each other are drawn as one solid bar, so a clock with thousands of windows stays cheap to draw; the selected window
+ * (`keep`) is never merged. Only the drawing merges: the windows and their text are unchanged.
+ */
+export function barsToDraw(windows: readonly WakeWindow[], minTicks: number, keep: number | null): DrawnBar[] {
+    const pieces = windows.flatMap((window, windowIndex) => {
+        const spans = drawnSpans(window);
+        return window.segments.map(segment => ({
+            windowIndex,
+            merged: false,
+            start: segment.start,
+            end: segment.end,
+            spans: spans.filter(span => span.start >= segment.start && span.end <= segment.end),
+        }));
+    }).sort((a, b) => a.start - b.start);
+    const tiny = (bar: DrawnBar) => bar.windowIndex !== keep && bar.end - bar.start + 1 < minTicks;
+    const bars: DrawnBar[] = [];
+    for (const piece of pieces) {
+        const previous = bars[bars.length - 1];
+        if (previous && tiny(previous) && tiny(piece) && piece.start - previous.end - 1 < minTicks) {
+            previous.merged = true;
+            previous.end = piece.end;
+            previous.spans = [{ start: previous.start, end: piece.end, slack: false }];
+        } else {
+            bars.push(piece);
+        }
+    }
+    return bars;
+}
+
+const ID_PATTERN =/^(inserter|drill):(\d+)$/;
 const LABEL_KINDS: Record<string, LabelKind> = {
     machine: 'machine',
     furnace: 'machine',

@@ -1,5 +1,5 @@
 import { Box, FormControlLabel, Paper, Switch, Typography } from '@mui/material';
-import { useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
 import { buildWakeWindowRows, mostWokenRowId, sumWakeUps, wakeUpsCounted } from '../utils/wakeWindows';
 import {
@@ -13,13 +13,20 @@ import {
     NOT_COUNTED_REASON,
     SHOW_AS_TABLE,
     TERMS,
-    TERMS_LABEL,
     VIEW_HEADING,
     VIEW_INTRO,
     selectionAnnouncement,
     summaryText,
 } from '../utils/wakeWindowCopy';
-import { SLACK_BACKGROUND, WAKE_BAR_COLOR, WAKE_SELECTED_COLOR, WAKE_TRACK_COLOR, WakeWindowsChart } from './WakeWindowsChart';
+import {
+    FORCED_COLORS,
+    SLACK_BACKGROUND,
+    SLACK_BACKGROUND_FORCED,
+    WAKE_BAR_COLOR,
+    WAKE_SELECTED_COLOR,
+    WAKE_TRACK_COLOR,
+    WakeWindowsChart,
+} from './WakeWindowsChart';
 import { WakeWindowsTable } from './WakeWindowsTable';
 
 interface WakeWindowsViewProps {
@@ -43,20 +50,42 @@ const visuallyHidden = {
 
 /** The shape each mark of the chart has, so the legend tells them apart without colour */
 function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track' }) {
-    const base = { width: 28, height: 12, boxSizing: 'border-box', flexShrink: 0 } as const;
+    // in forced colours, the system colours the chart uses (see FORCED_COLORS)
+    const base = { width: 28, height: 12, boxSizing: 'border-box', flexShrink: 0, forcedColorAdjust: 'none' } as const;
+    const solid = { bgcolor: WAKE_BAR_COLOR, [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
     switch (kind) {
         case 'window':
-            return <Box aria-hidden sx={{ ...base, bgcolor: WAKE_BAR_COLOR }} />;
+            return <Box aria-hidden sx={{ ...base, ...solid }} />;
         case 'slack':
-            return <Box aria-hidden sx={{ ...base, background: SLACK_BACKGROUND, border: `1px solid ${WAKE_BAR_COLOR}` }} />;
+            return (
+                <Box
+                    aria-hidden
+                    sx={{
+                        ...base,
+                        background: SLACK_BACKGROUND,
+                        border: `1px solid ${WAKE_BAR_COLOR}`,
+                        [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
+                    }}
+                />
+            );
         case 'selected':
             return (
-                <Box aria-hidden sx={{ p: '2px', outline: `2px solid ${WAKE_SELECTED_COLOR}`, outlineOffset: 0, display: 'flex' }}>
-                    <Box sx={{ ...base, width: 24, height: 14, bgcolor: WAKE_BAR_COLOR }} />
+                <Box
+                    aria-hidden
+                    sx={{
+                        p: '2px',
+                        outline: `2px solid ${WAKE_SELECTED_COLOR}`,
+                        outlineOffset: 0,
+                        display: 'flex',
+                        forcedColorAdjust: 'none',
+                        [FORCED_COLORS]: { outlineColor: 'Highlight' },
+                    }}
+                >
+                    <Box sx={{ ...base, ...solid, width: 24, height: 14 }} />
                 </Box>
             );
         case 'track':
-            return <Box aria-hidden sx={{ ...base, border: `1px solid ${WAKE_TRACK_COLOR}` }} />;
+            return <Box aria-hidden sx={{ ...base, border: `1px solid ${WAKE_TRACK_COLOR}`, [FORCED_COLORS]: { borderColor: 'CanvasText' } }} />;
     }
 }
 
@@ -73,10 +102,15 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
  */
 export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindowsViewProps) {
     const [asTable, setAsTable] = useState(false);
-    const [selection, setSelection] = useState<{ alternativeId: string; rowId: string; windowIndex: number } | null>(null);
+    // keyed on the clock object, not its id: a new generation repeats the ids, and its selection must start empty
+    const [selection, setSelection] = useState<{ alternative: ClockAlternativeView; rowId: string; windowIndex: number } | null>(null);
     const headingId = useId();
     const hintId = useId();
     const rows = useMemo(() => (alternative ? buildWakeWindowRows(alternative) : []), [alternative]);
+    // stable for the clock, so the chart's memoised rows only render again when their own selection changes
+    const onSelect = useCallback((next: { rowId: string; windowIndex: number } | null) => {
+        setSelection(next === null || alternative === null ? null : { alternative, ...next });
+    }, [alternative]);
 
     if (alternative === null) {
         return null;
@@ -84,8 +118,10 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
 
     const periodTicks = alternative.simulationDurationTicks;
     // a selection belongs to the clock it was made on, so another clock starts with none
-    const selected = selection !== null && selection.alternativeId === alternative.id ? selection : null;
-    const selectedRow = selected ? rows.find(row => row.id === selected.rowId) : undefined;
+    const selectedRow = selection !== null && selection.alternative === alternative
+        ? rows.find(row => row.id === selection.rowId && selection.windowIndex < row.windows.length)
+        : undefined;
+    const selected = selectedRow && selection ? { rowId: selection.rowId, windowIndex: selection.windowIndex } : null;
     const announcement = selected && selectedRow ? selectionAnnouncement(selectedRow, selected.windowIndex, periodTicks) : '';
     const counted = wakeUpsCounted(alternative);
     const mostWakeUpsId = mostWokenRowId(rows);
@@ -109,7 +145,6 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
 
             <Box
                 component="dl"
-                aria-label={TERMS_LABEL}
                 sx={{ m: 0, mt: 1, display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', columnGap: 1.5, rowGap: 0.25 }}
             >
                 {TERMS.map(({ term, definition }) => (
@@ -140,8 +175,6 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
                         aria-label={LEGEND_LABEL}
                         sx={{
                             listStyle: 'none', m: 0, p: 0, display: 'flex', flexWrap: 'wrap', columnGap: 2.5, rowGap: 0.5,
-                            // the swatches keep the chart's colours in forced colours, as the bars do
-                            '& [aria-hidden="true"]': { forcedColorAdjust: 'none' },
                         }}
                         data-wake-legend
                     >
@@ -173,7 +206,7 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
                             rows={rows}
                             periodTicks={periodTicks}
                             selected={selected}
-                            onSelect={next => setSelection(next === null ? null : { alternativeId: alternative.id, ...next })}
+                            onSelect={onSelect}
                             mostWakeUpsId={mostWakeUpsId}
                             labelledBy={headingId}
                             describedBy={hintId}
