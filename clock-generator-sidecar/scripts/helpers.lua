@@ -39,9 +39,6 @@ function helpers.get_target_type(entity)
     if entity_type == "lab" then
         return "machine"
     end
-    if entity_type == "biochamber" then
-        return "machine"
-    end
     
     -- Belts
     if entity_type == "transport-belt" or entity_type == "underground-belt" or 
