@@ -62,7 +62,7 @@ come from here.
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | spec | | | Spec final. Goes first in Phase 2. Checkpoint: owner runs the in-game steps in the spec |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
-| 2.5 | Results lead with the answer | opus | spec | | | Goes first in Phase 2. Checkpoint: install steps reviewed |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug being confirmed |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
 | 2.7 | Factorio GUI grammar pass | opus | spec | | | |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
