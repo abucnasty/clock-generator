@@ -47,11 +47,11 @@ come from here.
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | spec | | | Spec final. After 1.1; not alongside 1.7, 1.10 |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
-| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8 and 1.13. Id question answered 2026-10-14 |
-| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | spec | | | Spec final; moved up (10 files). Next free slot (no file in common with 1.1, 1.8, 1.13) |
+| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
+| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | impl | | | Spec final; moved up (10 files). Took 1.13's slot (no file in common with 1.1, 1.8) |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
-| [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | review | | | Evidence verified (tests 80/80, build re-run; shots checked). Code review on opus, UX audit on sonnet. Wire the forced-ALWAYS note after 1.8 merges |
+| [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | spec | | | Spec final; moved up (7 files). After 1.1 and 1.2; not alongside 1.4, 1.5 |
 
 ## Phase 2: newcomer-first structure
@@ -110,7 +110,9 @@ None.
 
 Minor and nit findings, and anything noticed outside an item's scope.
 
-- 1.13: after 1.8 and 1.13 both merge, update the "Configure Enable Control" selectors in `capture/capture-expert-bugs.mjs` (on 1.8's branch until it merges).
+- 1.13 → 1.9: wire `forcedAlways={inserter._forced_always}` in `InsertersForm` and add capture step 7 of
+  `capture-enable-chip.mjs` (1.13 merged before 1.8).
+- 1.13: after 1.8 merges, update the "Configure Enable Control" selectors in `capture/capture-expert-bugs.mjs` (on 1.8's branch until it merges).
 - 1.13: the Diagram node chips ([InserterFlowNode.tsx](../../clock-generator-ui/src/components/InserterFlowNode.tsx), [EntityFlowNode.tsx](../../clock-generator-ui/src/components/EntityFlowNode.tsx), [InserterConfigPanel.tsx](../../clock-generator-ui/src/components/InserterConfigPanel.tsx)) still show
   the raw mode, and B7's "Show only overridden" filter is not built. For 2.11.
 - 1.6: left to later items: B12's "Not picked because" column, B14's sorting and sticky tabs.
