@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
 import { FactorioIcon } from './FactorioIcon';
@@ -73,8 +74,15 @@ function DrillsFormComponent({
         setCopied(true);
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, focusAfterRemove } = useFocusAfterRemove(drills.length);
+    const remove = (index: number) => {
+        focusAfterRemove(index);
+        onRemove(index);
+    };
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="h6">
@@ -138,7 +146,7 @@ function DrillsFormComponent({
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" disabled={!enabled}>
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" disabled={!enabled} data-row-add="">
                     Add Drill
                 </Button>
             </Box>
@@ -249,7 +257,7 @@ function DrillsFormComponent({
                                 entityLabel={`Drill ${drill.id}`}
                                 onClick={() => setEnableControlModalDrillIndex(index)}
                             />
-                            <IconButton onClick={() => onRemove(index)} color="error" sx={{ ml: 'auto' }}>
+                            <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} data-row-delete="">
                                 <Delete />
                             </IconButton>
                         </Box>

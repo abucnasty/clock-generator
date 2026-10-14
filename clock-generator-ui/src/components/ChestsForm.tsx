@@ -19,6 +19,7 @@ import { useState, memo } from 'react';
 import { ChestType } from 'clock-generator/light';
 import type { ChestFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
@@ -95,14 +96,21 @@ function ChestsFormComponent({
         });
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, focusAfterRemove } = useFocusAfterRemove(chests.length);
+    const remove = (index: number) => {
+        focusAfterRemove(index);
+        onRemove(index);
+    };
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                     Chests ({chests.length})
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button startIcon={<Add />} onClick={() => onAdd(ChestType.BUFFER_CHEST)} variant="text" size="small">
+                    <Button startIcon={<Add />} onClick={() => onAdd(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
                         Buffer Chest
                     </Button>
                     <Button startIcon={<Add />} onClick={() => onAdd(ChestType.INFINITY_CHEST)} variant="text" size="small">
@@ -205,7 +213,7 @@ function ChestsFormComponent({
 
                         <Box sx={{ flex: 1 }} />
 
-                        <IconButton onClick={() => onRemove(index)} color="error">
+                        <IconButton onClick={() => remove(index)} color="error" data-row-delete="">
                             <Delete />
                         </IconButton>
                     </Box>

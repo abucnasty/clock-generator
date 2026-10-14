@@ -19,12 +19,13 @@ import {
     ToggleButtonGroup,
 } from '@mui/material';
 import { AccountTree, FullscreenExit, List, LocalCafe } from '@mui/icons-material';
-import type { Config, DebugSteps } from 'clock-generator/browser';
+import type { ChestType, Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
 import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
+import { useUndo } from './hooks/useUndo';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -42,6 +43,7 @@ import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
+import { describeChestSwitch, describeDrillsOff, removalMessage } from './utils/undoSnapshot';
 
 const darkTheme = createTheme({
     palette: {
@@ -117,6 +119,7 @@ function App() {
         loadError: configLoadError,
         loadNotice,
         dismissLoadNotice,
+        setConfig,
         updateTargetOutput,
         addMachine,
         updateMachine,
@@ -155,6 +158,8 @@ function App() {
         reorderChests,
         reorderDrills,
     } = useConfigForm();
+
+    const { offerUndo } = useUndo(config, setConfig, isConfigLoaded);
 
     // the page waits for the workers and for the saved config, which the engine's worker checks
     const isInitialized = workersReady && isConfigLoaded;
@@ -229,6 +234,23 @@ function App() {
         setView('results');
     }, [exportConfig, runSimulation, debugSteps, streamLogs]);
 
+    // the actions that throw part of the build away offer Undo, just before they are applied
+    const undoable = useMemo(() => ({
+        removeMachine: (index: number) => { offerUndo((form) => removalMessage(form, 'machines', index)); removeMachine(index); },
+        removeInserter: (index: number) => { offerUndo((form) => removalMessage(form, 'inserters', index)); removeInserter(index); },
+        removeBelt: (index: number) => { offerUndo((form) => removalMessage(form, 'belts', index)); removeBelt(index); },
+        removeChest: (index: number) => { offerUndo((form) => removalMessage(form, 'chests', index)); removeChest(index); },
+        removeDrill: (index: number) => { offerUndo((form) => removalMessage(form, 'drills', index)); removeDrill(index); },
+        switchChestType: (index: number, type: ChestType) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type); },
+        disableDrills: () => { offerUndo(describeDrillsOff); disableDrills(); },
+    }), [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, disableDrills]);
+    // Import, Paste and Reset clear the generated clocks, which their Undo does not bring back
+    const hasResults = alternatives.length > 0 || isRunning;
+    const offerUndoOfReplace = useCallback(
+        (message: string) => offerUndo(message, { resultsCleared: hasResults }),
+        [offerUndo, hasResults]
+    );
+
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
     const openDiagramFullscreen = useCallback(() => setDiagramFullscreen(true), []);
 
@@ -246,13 +268,13 @@ function App() {
         onUpdateInserter: updateInserter,
         onUpdateBelt: updateBelt,
         onUpdateChest: updateChest,
-        onSwitchChestType: switchChestType,
+        onSwitchChestType: undoable.switchChestType,
         onUpdateDrill: updateDrill,
-        onDeleteMachine: removeMachine,
-        onDeleteInserter: removeInserter,
-        onDeleteBelt: removeBelt,
-        onDeleteChest: removeChest,
-        onDeleteDrill: removeDrill,
+        onDeleteMachine: undoable.removeMachine,
+        onDeleteInserter: undoable.removeInserter,
+        onDeleteBelt: undoable.removeBelt,
+        onDeleteChest: undoable.removeChest,
+        onDeleteDrill: undoable.removeDrill,
         onAddMachine: addMachine,
         onAddInserter: addInserter,
         onAddBelt: addBelt,
@@ -311,6 +333,7 @@ function App() {
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
                             onBuildReplaced={clearResults}
+                            onUndoable={offerUndoOfReplace}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -394,7 +417,7 @@ function App() {
                                         recipeNames={recipeNames}
                                         onAdd={addMachine}
                                         onUpdate={updateMachine}
-                                        onRemove={removeMachine}
+                                        onRemove={undoable.removeMachine}
                                         onReorder={reorderMachines}
                                     />
 
@@ -407,7 +430,7 @@ function App() {
                                         getRecipeInfo={getRecipeInfo}
                                         onAdd={addInserter}
                                         onUpdate={updateInserter}
-                                        onRemove={removeInserter}
+                                        onRemove={undoable.removeInserter}
                                         onReorder={reorderInserters}
                                     />
 
@@ -421,7 +444,7 @@ function App() {
                                         itemNames={itemNamesComposite}
                                         onAdd={addBelt}
                                         onUpdate={updateBelt}
-                                        onRemove={removeBelt}
+                                        onRemove={undoable.removeBelt}
                                         onReorder={reorderBelts}
                                     />
 
@@ -430,8 +453,8 @@ function App() {
                                         itemNames={itemNamesComposite}
                                         onAdd={addChest}
                                         onUpdate={updateChest}
-                                        onSwitchType={switchChestType}
-                                        onRemove={removeChest}
+                                        onSwitchType={undoable.switchChestType}
+                                        onRemove={undoable.removeChest}
                                         onReorder={reorderChests}
                                     />
                                 </>
@@ -456,11 +479,11 @@ function App() {
                                     resourceNames={resourceNames}
                                     machineIds={machineIds}
                                     onEnable={enableDrills}
-                                    onDisable={disableDrills}
+                                    onDisable={undoable.disableDrills}
                                     onUpdateProductivityLevel={updateMiningProductivityLevel}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
-                                    onRemove={removeDrill}
+                                    onRemove={undoable.removeDrill}
                                     onReorder={reorderDrills}
                                 />
                             </Box>

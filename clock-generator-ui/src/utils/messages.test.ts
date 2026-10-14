@@ -7,7 +7,7 @@ const notify = (state: MessageState, id: number, message: MessageInput) =>
 describe('messagesReducer', () => {
     it('shows a notified message with its text and id, as info when no severity is given', () => {
         const state = notify(NO_MESSAGE, 1, { text: 'Hello' });
-        expect(state.current).toEqual({ id: 1, text: 'Hello', severity: 'info', durationMs: 6000, action: undefined });
+        expect(state.current).toEqual({ id: 1, text: 'Hello', severity: 'info', durationMs: 6000, action: undefined, hint: undefined });
     });
 
     it.each([

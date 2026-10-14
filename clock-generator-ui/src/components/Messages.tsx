@@ -1,8 +1,21 @@
 import { Close } from '@mui/icons-material';
-import { Alert, Button, IconButton, Portal, Snackbar } from '@mui/material';
-import { useCallback, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import { Alert, Box, Button, IconButton, Portal, Snackbar } from '@mui/material';
+import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
 import { MessageActionsContext, MessageStateContext, useCurrentMessage, useDismissMessage } from '../hooks/useMessages';
 import { messagesReducer, NO_MESSAGE, type MessageInput } from '../utils/messages';
+
+/** Hidden from sight, read by screen readers */
+const VISUALLY_HIDDEN = {
+    position: 'absolute',
+    width: '1px',
+    height: '1px',
+    m: '-1px',
+    p: 0,
+    overflow: 'hidden',
+    clip: 'rect(0 0 0 0)',
+    whiteSpace: 'nowrap',
+    border: 0,
+} as const;
 
 /** Holds the one message shown, for any component to raise with `useNotify()`; goes above `App`, which raises some */
 export function MessageProvider({ children }: { children: ReactNode }) {
@@ -14,7 +27,13 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         return id;
     }, []);
     const dismiss = useCallback((id: number) => dispatch({ type: 'dismiss', id }), []);
-    const actions = useMemo(() => ({ notify, dismiss }), [notify, dismiss]);
+    // the id of the message on screen, for isShown, which must not make its callers render again
+    const shownId = useRef<number | null>(null);
+    useEffect(() => {
+        shownId.current = state.current?.id ?? null;
+    }, [state]);
+    const isShown = useCallback((id: number) => shownId.current === id, []);
+    const actions = useMemo(() => ({ notify, dismiss, isShown }), [notify, dismiss, isShown]);
 
     return (
         <MessageActionsContext.Provider value={actions}>
@@ -66,6 +85,7 @@ export function MessageHost() {
                             <Button
                                 color="inherit"
                                 size="small"
+                                aria-keyshortcuts={message.action.keyShortcuts}
                                 onClick={() => {
                                     message.action?.onClick();
                                     close();
@@ -80,6 +100,7 @@ export function MessageHost() {
                     )}
                 >
                     {message.text}
+                    {message.hint && <Box component="span" sx={VISUALLY_HIDDEN}> {message.hint}</Box>}
                 </Alert>
             </Snackbar>
         </Portal>

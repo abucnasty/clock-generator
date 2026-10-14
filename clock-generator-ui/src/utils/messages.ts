@@ -4,6 +4,8 @@ export type MessageSeverity = 'success' | 'info' | 'warning' | 'error';
 export interface MessageAction {
     label: string;
     onClick: () => void;
+    /** The keys that do the same, as `aria-keyshortcuts` gives them ("Control+Z Meta+Z") */
+    keyShortcuts?: string;
 }
 
 export interface MessageInput {
@@ -13,6 +15,8 @@ export interface MessageInput {
     /** How long the message stays, by its severity when left out; null keeps it until it is closed */
     durationMs?: number | null;
     action?: MessageAction;
+    /** Read out after the text, and not shown: what a screen reader user needs besides, such as a key to press */
+    hint?: string;
 }
 
 export interface Message {
@@ -21,6 +25,7 @@ export interface Message {
     severity: MessageSeverity;
     durationMs: number | null;
     action?: MessageAction;
+    hint?: string;
 }
 
 export interface MessageState {
@@ -54,6 +59,7 @@ export function messagesReducer(state: MessageState, event: MessageEvent): Messa
                     severity,
                     durationMs: event.message.durationMs !== undefined ? event.message.durationMs : DEFAULT_DURATION_MS[severity],
                     action: event.message.action,
+                    hint: event.message.hint,
                 },
             };
         }

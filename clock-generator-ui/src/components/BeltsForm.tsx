@@ -14,6 +14,7 @@ import {
     Typography,
 } from '@mui/material';
 import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
@@ -70,8 +71,15 @@ function BeltsFormComponent({
         }
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, focusAfterRemove } = useFocusAfterRemove(belts.length);
+    const remove = (index: number) => {
+        focusAfterRemove(index);
+        onRemove(index);
+    };
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="h6">
@@ -99,7 +107,7 @@ function BeltsFormComponent({
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Belt
                 </Button>
             </Box>
@@ -170,7 +178,7 @@ function BeltsFormComponent({
                                 Add Lane
                             </Button>
                         )}
-                        <IconButton onClick={() => onRemove(beltIndex)} color="error">
+                        <IconButton onClick={() => remove(beltIndex)} color="error" data-row-delete="">
                             <Delete />
                         </IconButton>
                     </Box>

@@ -5,6 +5,7 @@ import type { Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
 import { useNotify } from '../hooks/useMessages';
+import { describePaste, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -40,6 +41,8 @@ interface ConfigImportExportProps {
     onReset: () => void;
     /** Called after Import, Paste or Reset replaced the build, so the clocks and validation of the old one go */
     onBuildReplaced: () => void;
+    /** Call just before the build is replaced, so the app can snapshot it for Undo; the message says what happened */
+    onUndoable: (message: string) => void;
 }
 
 export function ConfigImportExport({
@@ -53,6 +56,7 @@ export function ConfigImportExport({
     onUpdateMiningProductivityLevel,
     onReset,
     onBuildReplaced,
+    onUndoable,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 900px the app bar has room for the title and the menu only: Import and Export move into the menu
@@ -103,9 +107,10 @@ export function ConfigImportExport({
                 // values out of bounds are kept, for the form to show; only a broken file is rejected
                 const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(content) });
 
+                // its Undo message says it was imported
+                onUndoable(UNDO_IMPORT_MESSAGE);
                 onImport(parsedConfig);
                 onBuildReplaced();
-                notify({ severity: 'success', text: 'Configuration imported successfully!' });
             } catch (error) {
                 console.error('Import error:', error);
                 notify({ severity: 'error', text: `Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}` });
@@ -114,7 +119,7 @@ export function ConfigImportExport({
             // Reset the input so the same file can be imported again
             event.target.value = '';
         },
-        [onImport, onBuildReplaced, notify]
+        [onImport, onBuildReplaced, onUndoable, notify]
     );
 
     const handlePasteFromFactorio = useCallback(async () => {
@@ -220,43 +225,50 @@ export function ConfigImportExport({
     const handleConfirmImport = useCallback(() => {
         if (!pendingImport) return;
 
-        const parts: string[] = [];
+        const machines = importSelections.machines && pendingImport.machines.length > 0;
+        const drills = importSelections.drills && pendingImport.drills.length > 0;
+        const inserters = importSelections.inserters && pendingImport.inserters.length > 0;
+        const belts = importSelections.belts && pendingImport.belts.length > 0;
+        const chests = importSelections.chests && pendingImport.chests.length > 0;
+        const parts = [
+            machines && `${pendingImport.machines.length} machines`,
+            drills && `${pendingImport.drills.length} drills`,
+            inserters && `${pendingImport.inserters.length} inserters`,
+            belts && `${pendingImport.belts.length} belts`,
+            chests && `${pendingImport.chests.length} chests`,
+        ].filter((part) => part !== false);
 
-        if (importSelections.machines && pendingImport.machines.length > 0) {
-            onReplaceMachines(pendingImport.machines);
-            parts.push(`${pendingImport.machines.length} machines`);
+        setPendingImport(null);
+
+        if (parts.length === 0) {
+            // not a failure: nothing was ticked
+            notify({ severity: 'warning', text: 'No items selected for import.' });
+            return;
         }
-        if (importSelections.drills && pendingImport.drills.length > 0) {
+
+        // one Undo for the whole paste, taken before any of it is applied; its message says what was imported
+        onUndoable(describePaste(parts));
+        if (machines) {
+            onReplaceMachines(pendingImport.machines);
+        }
+        if (drills) {
             onReplaceDrills(pendingImport.drills);
-            parts.push(`${pendingImport.drills.length} drills`);
             // Also update mining productivity level when importing drills
             if (pendingImport.miningProductivityLevel !== undefined) {
                 onUpdateMiningProductivityLevel(pendingImport.miningProductivityLevel);
             }
         }
-        if (importSelections.inserters && pendingImport.inserters.length > 0) {
+        if (inserters) {
             onReplaceInserters(pendingImport.inserters);
-            parts.push(`${pendingImport.inserters.length} inserters`);
         }
-        if (importSelections.belts && pendingImport.belts.length > 0) {
+        if (belts) {
             onReplaceBelts(pendingImport.belts);
-            parts.push(`${pendingImport.belts.length} belts`);
         }
-        if (importSelections.chests && pendingImport.chests.length > 0) {
+        if (chests) {
             onReplaceChests(pendingImport.chests);
-            parts.push(`${pendingImport.chests.length} chests`);
         }
-
-        setPendingImport(null);
-
-        if (parts.length > 0) {
-            onBuildReplaced();
-            notify({ severity: 'success', text: `Imported ${parts.join(', ')} from Factorio!` });
-        } else {
-            // not a failure: nothing was ticked
-            notify({ severity: 'warning', text: 'No items selected for import.' });
-        }
-    }, [pendingImport, importSelections, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, notify]);
+        onBuildReplaced();
+    }, [pendingImport, importSelections, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, notify]);
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);
@@ -295,9 +307,10 @@ export function ConfigImportExport({
 
     const handleMenuReset = useCallback(() => {
         handleMenuClose();
+        onUndoable(UNDO_RESET_MESSAGE);
         onReset();
         onBuildReplaced();
-    }, [handleMenuClose, onReset, onBuildReplaced]);
+    }, [handleMenuClose, onReset, onBuildReplaced, onUndoable]);
 
     return (
         <>
@@ -367,9 +380,10 @@ export function ConfigImportExport({
                             <ListItemText>Export Config</ListItemText>
                         </MenuItem>
                     )}
-                    {narrow && <Divider />}
-                    <MenuItem onClick={handleMenuReset}>
-                        <ListItemIcon>
+                    <Divider />
+                    {/* in the error colour: it throws the build away (Undo brings it back) */}
+                    <MenuItem onClick={handleMenuReset} sx={{ color: 'error.main' }}>
+                        <ListItemIcon sx={{ color: 'inherit' }}>
                             <RestartAlt fontSize="small" />
                         </ListItemIcon>
                         <ListItemText>Reset Configuration</ListItemText>
