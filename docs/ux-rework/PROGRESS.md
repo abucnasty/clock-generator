@@ -72,6 +72,17 @@ come from here.
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | impl | | | Started early on `feat/ux-rework-p2-diagram` (opus) with a capture writer, in the slot #155 freed. Takes the 1.10 node-line contrast and 1.13 diagram chip follow-ups |
 
+**Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
+
+| Chain | Length | Next unblocked |
+|---|---|---|
+| 2.3 → 2.4 → 2.7 B → 2.9 → 2.10 | 5 | 2.3 (now) |
+| 2.6 → 2.5 A → 2.7 A (also after 2.3) → 2.7 B | 4 | 2.5 A once 2.6 merges |
+| 2.1 (two units; after 1.5 + 1.3) → 2.7 B | 3 | 2.1 once 1.5 + 1.3 is in p2 |
+| 2.5 A → 2.5 B | 2 | after 2.5 A |
+| 2.8 a → 2.8 b (late) | 2 | 2.8 a, any idle slot |
+| 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | in progress |
+
 ## Phase 3: expert depth
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
@@ -135,6 +146,15 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
 - 2026-10-14: **Undo has no timer** (the owner, on the 1.3 UX audit's WCAG 2.2.1 major): the Undo message stays until
   the next edit, the next undoable action, Close or Escape, and Ctrl/Cmd+Z works while it is offered. Other messages
   keep their timers. [PLAN.md](PLAN.md) 1.3 updated.
+- 2026-10-14: Process coach run 3 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated). Throughput rose from one merge per
+  23.7 min to one per 19.2 min. Applied: (1) a unit that only waits on another branch counts as zero units, a stacked
+  item starts once its predecessor's interface is committed (1.11 B started on 1.11 A's head), and a cross-item API
+  decided mid-flight is written into both specs as an exact export; (2) a Phase 2 chain table drives slot choice (2.3
+  next), and 2.11 merges when ready with 2.9 re-sweeping the diagram; (3) an implementer sends the code reviewer a
+  short design note before building a new mechanism in a fix round, and `lib.mjs` gains `checkAnnounced`; (4) an
+  implementer skips merging the phase branch when only the ledger moved, and ledger updates are batched with merges.
+  Note on run 2's rule: 1.12 A's minors round was re-checked by the orchestrator reading the 3-line diff, not by the
+  reviewer.
 - 2026-10-14: 2.2 checkpoint closed: the owner installed the built sidecar from `feat/ux-rework-p2` and reported "looks good".
 - 2026-10-14: One polite announcements region for the whole app: 1.5's message host owns it and exposes `announce()`;
   1.11 PR A routes its workflow announcements through it instead of adding a region in the workflow bar.
