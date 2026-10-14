@@ -2,6 +2,7 @@ import { Alert, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHe
 import { memo } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
+import { CHART_NAMES } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { COLOR_BLIND_PALETTE } from './colors';
@@ -174,7 +175,7 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
 }
 
 /** The fuel a machine held: the highest of each sample as an area, the lowest as a line, and the insertion limit dashed */
-function FuelLevelChart({ levels, durationTicks, insertionLimit }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number }) {
+function FuelLevelChart({ levels, durationTicks, insertionLimit, label }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number; label: string }) {
     const top = Math.max(levels.max_level, insertionLimit) * 1.08;
     const y = (level: number) => (1 - level / top) * LEVEL_HEIGHT;
     const x = (sample: number) => Math.min(sample * levels.ticks_per_sample, durationTicks);
@@ -185,6 +186,8 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit }: { levels: Fue
     return (
         <Box
             component="svg"
+            role="img"
+            aria-label={CHART_NAMES.fuelLevel(label)}
             viewBox={`0 0 ${durationTicks} ${LEVEL_HEIGHT}`}
             preserveAspectRatio="none"
             sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: 'action.hover', borderRadius: 0.5 }}
@@ -250,6 +253,8 @@ function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInser
             <Box sx={{ flex: 1, height: ROW_HEIGHT, position: 'relative', bgcolor: 'action.hover', borderRadius: 0.5 }}>
                 <Box
                     component="svg"
+                    role="img"
+                    aria-label={CHART_NAMES.fuelClock(entityLabel('inserter', inserter.inserter_number))}
                     viewBox={`0 0 ${durationTicks} 1`}
                     preserveAspectRatio="none"
                     sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -333,7 +338,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                                     </Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} />
+                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} label={entityLabel('machine', machine.machine_number)} />
                                 </Box>
                             </Box>
                         )}

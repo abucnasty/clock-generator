@@ -27,7 +27,8 @@ import type {
     StatusCategory,
 } from 'clock-generator/browser';
 import { statusToCategory } from 'clock-generator/light';
-import { BUTTON_NAMES } from '../utils/a11yLabels';
+import { BUTTON_NAMES, CHART_NAMES } from '../utils/a11yLabels';
+import { MIN_MARK_PX, markSpan, paintLayer } from '../utils/timelineGeometry';
 import { FactorioIcon } from './FactorioIcon';
 import {
     getStatusColor,
@@ -42,6 +43,8 @@ import {
     MACHINE_STATUS_COLORS,
     DRILL_STATUS_COLORS,
     COLOR_BLIND_PALETTE,
+    TIMELINE_TRACK_COLOR,
+    factorioStatesIn,
 } from './colors';
 import { sortByRelationship, sortByType } from './topological-sort';
 
@@ -88,14 +91,26 @@ interface TimelineBarProps {
     entityType: 'inserter' | 'machine' | 'drill';
     viewMode: ViewMode;
     isFiltered: (transition: SerializableStateTransition) => boolean;
+    /** The row's name, for the canvas's accessible name */
+    label: string;
 }
 
 /** Drawn on a canvas: an element per transition does not scale to tens of thousands of transitions */
-function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered }: TimelineBarProps) {
+function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered, label }: TimelineBarProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableStateTransition | null>(null);
     const sorted = useMemo(() => [...transitions].sort((a, b) => a.tick - b.tick), [transitions]);
+
+    // Wide marks first, then narrow ones, Blocked last so a narrow Blocked mark is never the one covered.
+    // Built once per width, not per hover: a build can have tens of thousands of transitions.
+    const marks = useMemo(() => sorted
+        .map(transition => {
+            const span = markSpan(transition.tick, transition.duration_ticks, totalDuration, width);
+            const layer = paintLayer(span, statusToCategory(entityType, transition.to_status) === 'BLOCKED');
+            return { transition, span, layer };
+        })
+        .sort((a, b) => a.layer - b.layer), [sorted, totalDuration, width, entityType]);
 
     const colorOf = useCallback((transition: SerializableStateTransition) => viewMode === 'detailed'
         ? getStatusColor(entityType, transition.to_status)
@@ -122,24 +137,18 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         canvas.height = height * ratio;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
         context.clearRect(0, 0, width, height);
-        for (const transition of sorted) {
-            const x = (transition.tick / totalDuration) * width;
-            const w = Math.max((transition.duration_ticks / totalDuration) * width, 1);
+        for (const { transition, span } of marks) {
             context.globalAlpha = isFiltered(transition) ? 0.15 : 1;
             context.fillStyle = colorOf(transition);
-            context.fillRect(x, 0, w, height);
+            context.fillRect(span.x, 0, span.width, height);
         }
         if (hovered) {
+            const span = markSpan(hovered.tick, hovered.duration_ticks, totalDuration, width);
             context.globalAlpha = 1;
             context.strokeStyle = '#ffffff';
-            context.strokeRect(
-                (hovered.tick / totalDuration) * width + 0.5,
-                0.5,
-                Math.max((hovered.duration_ticks / totalDuration) * width, 1) - 1,
-                height - 1,
-            );
+            context.strokeRect(span.x + 0.5, 0.5, span.width - 1, height - 1);
         }
-    }, [sorted, totalDuration, width, height, colorOf, isFiltered, hovered]);
+    }, [marks, totalDuration, width, height, colorOf, isFiltered, hovered]);
 
     const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
         const rect = event.currentTarget.getBoundingClientRect();
@@ -156,8 +165,8 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
                 high = mid - 1;
             }
         }
-        // narrow transitions are drawn at least a pixel wide
-        const min_ticks = totalDuration / Math.max(rect.width, 1);
+        // narrow transitions are drawn at least MIN_MARK_PX wide
+        const min_ticks = (MIN_MARK_PX / Math.max(rect.width, 1)) * totalDuration;
         const hit = found && tick <= found.tick + Math.max(found.duration_ticks, min_ticks) ? found : null;
         if (hit !== hovered) {
             setHovered(hit);
@@ -193,6 +202,8 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         >
             <canvas
                 ref={canvasRef}
+                role="img"
+                aria-label={CHART_NAMES.stateTimeline(label, transitions.length)}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setHovered(null)}
                 style={{ position: 'absolute', left: 0, top: 2, width: '100%', height, cursor: 'pointer' }}
@@ -205,14 +216,23 @@ interface FactorioStateStripProps {
     states: SerializableFactorioState[];
     totalDuration: number;
     height: number;
+    /** The row's name, for the canvas's accessible name */
+    label: string;
 }
 
 /** The state the entity would show in Factorio, under the simulator's phases: the shared language with a recording */
-function FactorioStateStrip({ states, totalDuration, height }: FactorioStateStripProps) {
+function FactorioStateStrip({ states, totalDuration, height, label }: FactorioStateStripProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableFactorioState | null>(null);
     const sorted = useMemo(() => [...states].sort((a, b) => a.tick - b.tick), [states]);
+    // wide marks first, then the narrow ones, so a narrow mark is not buried under a wide neighbour
+    const marks = useMemo(() => sorted
+        .map(state => {
+            const span = markSpan(state.tick, state.duration_ticks, totalDuration, width);
+            return { state, span, layer: paintLayer(span, false) };
+        })
+        .sort((a, b) => a.layer - b.layer), [sorted, totalDuration, width]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -235,13 +255,11 @@ function FactorioStateStrip({ states, totalDuration, height }: FactorioStateStri
         canvas.height = height * ratio;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
         context.clearRect(0, 0, width, height);
-        for (const state of sorted) {
-            const x = (state.tick / totalDuration) * width;
-            const w = Math.max((state.duration_ticks / totalDuration) * width, 1);
+        for (const { state, span } of marks) {
             context.fillStyle = getFactorioStateColor(state.state);
-            context.fillRect(x, 0, w, height);
+            context.fillRect(span.x, 0, span.width, height);
         }
-    }, [sorted, totalDuration, width, height]);
+    }, [marks, width, height]);
 
     const stateAt = useCallback((clientX: number): SerializableFactorioState | null => {
         const canvas = canvasRef.current;
@@ -269,6 +287,8 @@ function FactorioStateStrip({ states, totalDuration, height }: FactorioStateStri
         >
             <canvas
                 ref={canvasRef}
+                role="img"
+                aria-label={CHART_NAMES.factorioStrip(label, states.length)}
                 style={{ width: '100%', height, display: 'block' }}
                 onMouseMove={event => setHovered(stateAt(event.clientX))}
                 onMouseLeave={() => setHovered(null)}
@@ -395,7 +415,7 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                     flex: 1,
                     height: rowHeight,
                     position: 'relative',
-                    bgcolor: 'action.hover',
+                    bgcolor: TIMELINE_TRACK_COLOR,
                     borderRadius: 0.5,
                 }}
             >
@@ -406,8 +426,10 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                     entityType={entity.entity_type}
                     viewMode={viewMode}
                     isFiltered={isTransitionFiltered}
+                    label={entity.label}
                 />
                 <FactorioStateStrip
+                    label={entity.label}
                     states={entity.factorio_states ?? []}
                     totalDuration={totalDuration}
                     height={FACTORIO_STATE_STRIP_HEIGHT}
@@ -475,9 +497,37 @@ interface LegendProps {
     filters: EntityFilters;
     statusFilters: StatusFilters;
     showClockWindows: boolean;
+    /** The Factorio states in the data, for the legend of the strip under each row */
+    factorioStates: string[];
 }
 
-function Legend({ viewMode, filters, statusFilters, showClockWindows }: LegendProps) {
+/** A swatch and its label, the swatch on the same surface as the marks it names */
+function LegendChip({ label, color, active = true, swatch = { width: 12, height: 12 } }: {
+    label: string;
+    color: string;
+    active?: boolean;
+    swatch?: { width: number; height: number };
+}) {
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1,
+                py: 0.25,
+                bgcolor: TIMELINE_TRACK_COLOR,
+                borderRadius: 1,
+                opacity: active ? 1 : 0.4,
+            }}
+        >
+            <Box sx={{ width: swatch.width, height: swatch.height, bgcolor: color, borderRadius: 0.25 }} />
+            <Typography variant="caption">{label}</Typography>
+        </Box>
+    );
+}
+
+function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioStates }: LegendProps) {
     const items: { label: string; color: string; active: boolean }[] = [];
 
     if (viewMode === 'simplified') {
@@ -521,36 +571,21 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows }: LegendPr
     }
 
     return (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-            {items.map(({ label, color, active }) => (
-                <Box
-                    key={label}
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        px: 1,
-                        py: 0.25,
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
-                        opacity: active ? 1 : 0.4,
-                    }}
-                >
-                    <Box
-                        sx={{
-                            width: 12,
-                            height: 12,
-                            bgcolor: color,
-                            borderRadius: 0.25,
-                        }}
-                    />
-                    <Typography variant="caption">{label}</Typography>
-                </Box>
-            ))}
-            {showClockWindows && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, bgcolor: 'action.hover', borderRadius: 1 }}>
-                    <Box sx={{ width: 12, height: 3, bgcolor: CLOCK_WINDOW_COLOR }} />
-                    <Typography variant="caption">{CLOCK_WINDOW_LABEL}</Typography>
+        <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {items.map(({ label, color, active }) => (
+                    <LegendChip key={label} label={label} color={color} active={active} />
+                ))}
+                {showClockWindows && (
+                    <LegendChip label={CLOCK_WINDOW_LABEL} color={CLOCK_WINDOW_COLOR} swatch={{ width: 12, height: 3 }} />
+                )}
+            </Box>
+            {factorioStates.length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">Bottom strip: the state the game shows</Typography>
+                    {factorioStates.map(state => (
+                        <LegendChip key={state} label={getFactorioStateLabel(state)} color={getFactorioStateColor(state)} />
+                    ))}
                 </Box>
             )}
         </Box>
@@ -558,6 +593,10 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows }: LegendPr
 }
 
 function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows }: StateTransitionTimelineProps) {
+    const factorioStates = useMemo(
+        () => factorioStatesIn(stateTransitionHistory.entities.flatMap(entity => (entity.factorio_states ?? []).map(state => state.state))),
+        [stateTransitionHistory.entities],
+    );
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>('simplified');
     const [sortMode, setSortMode] = useState<SortMode>('byType');
@@ -900,7 +939,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
             </Box>
 
             {/* Legend */}
-            <Legend viewMode={viewMode} filters={filters} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} />
+            <Legend viewMode={viewMode} filters={filters} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} factorioStates={factorioStates} />
 
             {/* Tick markers */}
             <Box sx={{ display: 'flex', mb: 0.5 }}>

@@ -19,14 +19,39 @@ export const COLOR_BLIND_PALETTE = {
     white: "#FFFFFF",
 } as const;
 
-export const COLOR_BLIND_PALETTE_ALL: string[] = Object.values(COLOR_BLIND_PALETTE);
+/**
+ * The track under the marks of both timelines. Every colour drawn on it needs 3:1 (WCAG 1.4.11);
+ * colors.test.ts checks it.
+ */
+export const TIMELINE_TRACK_COLOR = '#1b1b1b';
+
+/** Disabled grey: darkGrey (#585858) was 1.5:1 on the old track; this is 3.48:1 on TIMELINE_TRACK_COLOR */
+const DISABLED_GREY = '#707070';
+
+/**
+ * Item colours of the Transfer chart. Kept apart from the state colours (no green, yellow or grey), each at least 3:1
+ * on the track and distinct for colour-blind viewers. The numbers are in docs/ux-rework/specs/2.10-timelines.md.
+ */
+const ITEM_COLORS = ['#E0298B', '#8BE3F9', '#E9C9C4', '#873DF5', '#8B92F9', '#BC884E'] as const;
+
+/** Items beyond this many share a colour with an earlier one */
+export const ITEM_COLOR_COUNT = ITEM_COLORS.length;
+
+/** One colour per distinct item, in alphabetical order, repeating after ITEM_COLORS.length items */
+export function itemColorMap(itemNames: Iterable<string>): Map<string, string> {
+    const colorMap = new Map<string, string>();
+    [...new Set(itemNames)].sort().forEach((item, index) => {
+        colorMap.set(item, ITEM_COLORS[index % ITEM_COLORS.length]);
+    });
+    return colorMap;
+}
 
 // Status category colors (colorblind-friendly)
 export const CATEGORY_COLORS: Record<StatusCategory, string> = {
     [StatusCategory.ACTIVE]: COLOR_BLIND_PALETTE.green,       // actively working
     [StatusCategory.WAITING]: COLOR_BLIND_PALETTE.yellow,     // waiting for something
     [StatusCategory.BLOCKED]: COLOR_BLIND_PALETTE.reddishPurple,     // blocked/cannot proceed
-    [StatusCategory.DISABLED]: COLOR_BLIND_PALETTE.darkGrey,  // disabled by control
+    [StatusCategory.DISABLED]: DISABLED_GREY,  // disabled by control
     [StatusCategory.IDLE]: COLOR_BLIND_PALETTE.lightGrey,     // nothing to do
 };
 
@@ -36,23 +61,23 @@ export const INSERTER_STATUS_COLORS: Record<InserterStatus, string> = {
     [InserterStatus.DROP_OFF]: COLOR_BLIND_PALETTE.skyBlue,       // dropping items
     [InserterStatus.SWING]: COLOR_BLIND_PALETTE.blue,        // in motion
     [InserterStatus.IDLE]: COLOR_BLIND_PALETTE.lightGrey,     // waiting
-    [InserterStatus.DISABLED]: COLOR_BLIND_PALETTE.darkGrey,  // disabled
+    [InserterStatus.DISABLED]: DISABLED_GREY,  // disabled
     [InserterStatus.TARGET_FULL]: COLOR_BLIND_PALETTE.reddishPurple, // waiting for sink (chest) to have space
-    [InserterStatus.WAITING_FOR_SINK]: COLOR_BLIND_PALETTE.reddishPurple, // a partly filled hand waits for the machine to take its item again
+    [InserterStatus.WAITING_FOR_SINK]: COLOR_BLIND_PALETTE.vermillion, // a partly filled hand waits for the machine to take its item again
 };
 
 // Detailed status colors for machines
 export const MACHINE_STATUS_COLORS: Record<MachineStatus, string> = {
     [MachineStatus.WORKING]: COLOR_BLIND_PALETTE.green,      // actively crafting
     [MachineStatus.INGREDIENT_SHORTAGE]: COLOR_BLIND_PALETTE.yellow, // waiting for ingredients
-    [MachineStatus.NO_FUEL]: COLOR_BLIND_PALETTE.yellow, // waiting for fuel
+    [MachineStatus.NO_FUEL]: COLOR_BLIND_PALETTE.orange, // waiting for fuel
     [MachineStatus.OUTPUT_FULL]: COLOR_BLIND_PALETTE.reddishPurple, // output blocked
 };
 
 // Detailed status colors for drills
 export const DRILL_STATUS_COLORS: Record<DrillStatus, string> = {
     [DrillStatus.WORKING]: COLOR_BLIND_PALETTE.green,      // actively mining
-    [DrillStatus.DISABLED]: COLOR_BLIND_PALETTE.darkGrey,  // disabled
+    [DrillStatus.DISABLED]: DISABLED_GREY,  // disabled
 };
 
 /**
@@ -138,11 +163,18 @@ const FACTORIO_STATE_COLORS: Record<string, string> = {
     waiting_for_source_items: COLOR_BLIND_PALETTE.lightGrey,
     waiting_for_more_items: COLOR_BLIND_PALETTE.skyBlue,
     waiting_for_space_in_destination: COLOR_BLIND_PALETTE.reddishPurple,
-    disabled_by_control_behavior: COLOR_BLIND_PALETTE.darkGrey,
+    disabled_by_control_behavior: DISABLED_GREY,
     item_ingredient_shortage: COLOR_BLIND_PALETTE.yellow,
     full_output: COLOR_BLIND_PALETTE.vermillion,
     no_fuel: COLOR_BLIND_PALETTE.orange,
 };
+
+/** The distinct states, in the legend order of the table above, then any state it does not know, first seen first */
+export function factorioStatesIn(states: Iterable<string>): string[] {
+    const seen = new Set(states);
+    const known = Object.keys(FACTORIO_STATE_COLORS).filter(state => seen.has(state));
+    return [...known, ...[...seen].filter(state => !(state in FACTORIO_STATE_COLORS))];
+}
 
 export function getFactorioStateColor(state: string): string {
     return FACTORIO_STATE_COLORS[state] ?? COLOR_BLIND_PALETTE.white;

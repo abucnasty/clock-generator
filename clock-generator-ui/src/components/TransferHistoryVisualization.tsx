@@ -4,27 +4,11 @@ import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
-import { COLOR_BLIND_PALETTE, COLOR_BLIND_PALETTE_ALL } from './colors';
+import { COLOR_BLIND_PALETTE, ITEM_COLOR_COUNT, TIMELINE_TRACK_COLOR, itemColorMap } from './colors';
+import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
     transferHistory: SerializableTransferHistory;
-}
-
-/** Build a map of item names to colors, assigning each unique item a distinct color */
-function buildItemColorMap(entities: SerializableEntityTransferHistory[]): Map<string, string> {
-    const itemSet = new Set<string>();
-    entities.forEach(entity => {
-        entity.transfers.forEach(transfer => {
-            itemSet.add(transfer.item_name);
-        });
-    });
-
-    const colorMap = new Map<string, string>();
-    const sortedItems = Array.from(itemSet).sort();
-    sortedItems.forEach((item, index) => {
-        colorMap.set(item, COLOR_BLIND_PALETTE_ALL[index % COLOR_BLIND_PALETTE_ALL.length]);
-    });
-    return colorMap;
 }
 
 interface TransferBarProps {
@@ -37,7 +21,7 @@ interface TransferBarProps {
 function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferBarProps) {
     const startPercent = (transfer.start_tick / totalDuration) * 100;
     const widthPercent = ((transfer.end_tick - transfer.start_tick) / totalDuration) * 100;
-    const color = colorMap.get(transfer.item_name) ?? COLOR_BLIND_PALETTE_ALL[0];
+    const color = colorMap.get(transfer.item_name) ?? 'currentColor'; // unreachable: the map is built from these same transfers
 
     return (
         <Tooltip
@@ -64,8 +48,8 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
             <Box
                 sx={{
                     position: 'absolute',
-                    left: `${startPercent}%`,
-                    width: `${Math.max(widthPercent, 0.5)}%`,
+                    left: `min(${startPercent}%, calc(100% - ${MIN_MARK_PX}px))`,
+                    width: `max(${widthPercent}%, ${MIN_MARK_PX}px)`,
                     height: rowHeight - 4,
                     top: 2,
                     bgcolor: color,
@@ -169,7 +153,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                     flex: 1,
                     height: rowHeight,
                     position: 'relative',
-                    bgcolor: 'action.hover',
+                    bgcolor: TIMELINE_TRACK_COLOR,
                     borderRadius: 0.5,
                 }}
             >
@@ -197,7 +181,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
     const drills = transferHistory.entities.filter(e => e.entity_type === 'drill');
 
     // Build color map - assign each unique item a distinct color
-    const colorMap = buildItemColorMap(transferHistory.entities);
+    const colorMap = itemColorMap(transferHistory.entities.flatMap(e => e.transfers.map(t => t.item_name)));
     const allItems = Array.from(colorMap.keys());
 
     // Calculate tick markers
@@ -220,7 +204,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                             gap: 0.5,
                             px: 1,
                             py: 0.25,
-                            bgcolor: 'action.hover',
+                            bgcolor: TIMELINE_TRACK_COLOR,
                             borderRadius: 1,
                         }}
                     >
@@ -237,6 +221,11 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                     </Box>
                 ))}
             </Box>
+            {allItems.length > ITEM_COLOR_COUNT && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: -1, mb: 2 }}>
+                    Colours repeat after {ITEM_COLOR_COUNT} items; the icons name each item.
+                </Typography>
+            )}
 
             {/* Tick markers */}
             <Box sx={{ display: 'flex', mb: 0.5 }}>
