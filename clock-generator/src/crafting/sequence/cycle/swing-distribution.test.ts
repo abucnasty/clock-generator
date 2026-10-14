@@ -29,11 +29,37 @@ describe('computeMaxSwingsPerSubCycle', () => {
         const result = computeMaxSwingsPerSubCycle(constraints);
         // Items consumed per swing = 0.5 * 12 = 6
         // Net items per swing = 16 - 6 = 10
-        // Peak after swing 1: 16 items
-        // Peak after swing 2: 16 + 10 = 26 items (ok)
-        // Peak after swing 3: 16 + 20 = 36 items (exceeds 32)
-        // Max swings = 1 + floor((32 - 16) / 10) = 2
-        expect(result).toBe(2);
+        // A swing is taken while the stock before it is under the limit of 32, and goes in whole:
+        // before swing 2: 10, swing 3: 20, swing 4: 30 (all under 32), swing 5: 40 (not)
+        expect(result).toBe(4);
+    });
+
+    // Factorio 2.1.21 (factorio-benchmarks docs/mechanics, machines.md rules 1 and 3 and section 5, "A swung hand is
+    // inserted whole"): a machine takes an ingredient while it is under its insertion limit, and a hand goes in whole.
+    // The accumulator plant of the ACCUMULATOR_640 sample: iron limit 32, 24.925 iron a second, hands of 16 in a cycle
+    // of 8 ticks. The third hand finds 2 * (16 - 3.32) = 25.4 under the limit and goes in; the fourth would find 38.
+    // Counted with the limit as a cap on the stock after the drop it was 2, and the plan of 8/3 hands a cycle could
+    // not be spread (3 in two of every three cycles).
+    it('allows a hand while the stock before it is under the insertion limit, the hand going in whole', () => {
+        const constraints: SwingCapacityConstraints = {
+            automated_insertion_limit: 32,
+            consumption_rate_per_tick: 24.925 / 60,
+            stack_size: 16,
+            animation_total_ticks: 8
+        };
+
+        expect(computeMaxSwingsPerSubCycle(constraints)).toBe(3);
+    });
+
+    it('takes no second hand when the first leaves the stock at the limit', () => {
+        const constraints: SwingCapacityConstraints = {
+            automated_insertion_limit: 16,
+            consumption_rate_per_tick: 0,
+            stack_size: 16,
+            animation_total_ticks: 8
+        };
+
+        expect(computeMaxSwingsPerSubCycle(constraints)).toBe(1);
     });
 
     it('should return 1 when insertion limit equals stack size', () => {
