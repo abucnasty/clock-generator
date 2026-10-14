@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
     AppBar,
     Box,
@@ -39,7 +40,8 @@ import { ChangelogDialog } from './components/ChangelogDialog';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
-import { rateWarningOf } from './utils/rateWarning';
+import { blockedActionsOf, focusProblemTarget, needsListView, problemsOf, type Problem } from './utils/firstProblem';
+import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 
@@ -63,7 +65,12 @@ const darkTheme = createTheme({
         },
         error: {
             main: '#ff5958'
-        }
+        },
+        // a lemon yellow, told apart from the brand orange at a glance; black text on it
+        warning: {
+            main: '#ffe14d',
+            contrastText: '#000000',
+        },
     },
     typography: {
         fontFamily: '"Titillium Web", "Helvetica", "Arial", sans-serif',
@@ -209,13 +216,70 @@ function App() {
     const resultsAreStale = isStale(generatedFor, configKey);
     const staleFor = resultsAreStale ? generatedFor : null;
 
+    // what keeps the build from being validated and generated, and so why each of the two buttons is off
+    const problems = useMemo(() => problemsOf({
+        targetOutput: config.target_output,
+        machines: config.machines,
+        coverageIssues: checkedCoverageIssues ?? [],
+    }), [config.target_output, config.machines, checkedCoverageIssues]);
+    const blocked = useMemo(() => blockedActionsOf({
+        problems,
+        coverageChecked: checkedCoverageIssues !== null,
+        isRunning,
+        validationStatus,
+    }), [problems, checkedCoverageIssues, isRunning, validationStatus]);
+
     const validationPanelRef = useRef<HTMLDivElement>(null);
+    // the Validation panel's top just below the header, at once: a smooth scroll stops short when the page changes under it
+    const scrollToValidationPanel = useCallback(() => {
+        const panel = validationPanelRef.current;
+        if (!panel) {
+            return;
+        }
+        // the header's height as it is now, as the page's scroll padding follows it only a frame later; and its 8px gap
+        const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 0;
+        window.scrollTo({ top: window.scrollY + panel.getBoundingClientRect().top - headerHeight - 8 });
+    }, []);
+    // set while a Validate pressed in the bar is running: its answer changes the page's length and the header's height,
+    // so the panel is scrolled to again once it is in. `scrollY` is where the first scroll left the page, `sawRunning`
+    // that the check started (a Validate that could not start leaves nothing to wait for)
+    const pendingValidationScrollRef = useRef<{ scrollY: number | null; sawRunning: boolean } | null>(null);
     const handleValidate = useCallback(() => {
+        // set first: the check's start may be seen while the view is shown, below
+        const pending = { scrollY: null as number | null, sawRunning: false };
+        pendingValidationScrollRef.current = pending;
         validate(exportConfig());
-        setView('configure');
-        // the panel sits below the forms; wait for the Configure view to be shown again before scrolling to it
-        setTimeout(() => validationPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
-    }, [exportConfig, validate]);
+        // the panel sits below the forms; show the Configure view now, so that it can be scrolled to
+        flushSync(() => setView('configure'));
+        scrollToValidationPanel();
+        pending.scrollY = window.scrollY;
+    }, [exportConfig, validate, scrollToValidationPanel]);
+    useEffect(() => {
+        const pending = pendingValidationScrollRef.current;
+        if (!pending) {
+            return;
+        }
+        if (validation.status === 'running') {
+            pending.sawRunning = true;
+            return;
+        }
+        if (!pending.sawRunning) {
+            return;
+        }
+        pendingValidationScrollRef.current = null;
+        // not when the panel is hidden (Results), nor when the player has scrolled since
+        const panel = validationPanelRef.current;
+        const scrolledAway = pending.scrollY !== null && Math.abs(window.scrollY - pending.scrollY) > 2;
+        if (panel && panel.offsetParent !== null && !scrolledAway) {
+            scrollToValidationPanel();
+        }
+    }, [validation.status, scrollToValidationPanel]);
+    // switching views drops a scroll still waiting for the check
+    useEffect(() => {
+        if (view !== 'configure') {
+            pendingValidationScrollRef.current = null;
+        }
+    }, [view]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -279,22 +343,33 @@ function App() {
         importConfig(imported);
     }, [importConfig]);
 
-    // Check if config is valid enough to generate
-    const canGenerate = useMemo(() => {
-        return (
-            isInitialized &&
-            !isRunning &&
-            config.target_output.recipe &&
-            config.target_output.items_per_second > 0 &&
-            config.target_output.copies > 0 &&
-            config.machines.length > 0 &&
-            config.machines.every((m) => m.recipe) &&
-            checkedCoverageIssues?.length === 0
-        );
-    }, [isInitialized, isRunning, config, checkedCoverageIssues]);
+    // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown
+    const handleBuildReplaced = useCallback(() => {
+        clearResults();
+        setView('configure');
+    }, [clearResults]);
+
+    // the build can be generated once it is checked and has no problems; Generate also waits for the Validate step
+    const canGenerate = isInitialized && !isRunning && checkedCoverageIssues !== null && problems.length === 0;
+
+    // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
+    const handleGoToProblem = useCallback((problem: Problem) => {
+        const { target } = problem;
+        if (target === null) {
+            return;
+        }
+        // shown before the focus moves: a hidden element takes no focus
+        flushSync(() => {
+            if (needsListView(target)) {
+                setConfigView('list');
+            }
+            setView('configure');
+        });
+        focusProblemTarget(target);
+    }, []);
 
     // Search deeper is a Generate, so it is disabled whenever the Generate button is
-    const canSearchDeeper = Boolean(canGenerate) && validationStatus === 'valid';
+    const canSearchDeeper = canGenerate && validationStatus === 'valid';
     // Generate with the slower searches: for this run only, or, kept on, by turning the switch on in the form
     const handleSearchDeeper = useCallback((keepOn: boolean) => {
         if (!canSearchDeeper) {
@@ -333,7 +408,7 @@ function App() {
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
                             onReset={resetConfig}
-                            onBuildReplaced={clearResults}
+                            onBuildReplaced={handleBuildReplaced}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -350,7 +425,12 @@ function App() {
                             blueprintString={blueprintString}
                             selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
                             rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
+                            copyLabel={copyBlueprintLabelOf(alternatives[selectedAlternativeIndex], resultsAreStale)}
+                            belowTarget={isBelowTarget(alternatives[selectedAlternativeIndex])}
                             staleFor={staleFor}
+                            problems={problems}
+                            blocked={blocked}
+                            onGoToProblem={handleGoToProblem}
                         />
                     )}
                 </AppBar>
@@ -505,7 +585,8 @@ function App() {
                                 validation={validation}
                                 isOutOfDate={isValidationOutOfDate}
                                 onValidate={handleValidate}
-                                canValidate={Boolean(canGenerate)}
+                                canValidate={canGenerate}
+                                problem={problems[0] ?? null}
                                 isGenerating={isRunning}
                                 excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
                                 onExcludeChange={handleExcludeChange}
@@ -527,6 +608,7 @@ function App() {
                                 searchedDeeper={searchedDeeper}
                                 keptOn={config.overrides?.search_for_fewer_wake_ups === true}
                                 canSearchDeeper={canSearchDeeper}
+                                searchDeeperBlockedBy={canSearchDeeper ? null : blocked.generate}
                                 onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}
@@ -628,7 +710,8 @@ function App() {
                     </Box>
                     {coverageIssues.length > 0 && (
                         <Box sx={{ flexShrink: 0, px: 2, pb: 1 }}>
-                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} />
+                            {/* the page's own alert behind this dialog has the ids a problem's jump looks for */}
+                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} focusTargets={false} />
                         </Box>
                     )}
                 </Box>
