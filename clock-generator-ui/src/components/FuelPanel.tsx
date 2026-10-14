@@ -2,6 +2,7 @@ import { Alert, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHe
 import { memo } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
+import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { COLOR_BLIND_PALETTE } from './colors';
 
@@ -13,8 +14,8 @@ const LABEL_WIDTH = 200;
 const LEVEL_HEIGHT = 56;
 const ROW_HEIGHT = 20;
 
-const machineLabel = (machineNumber: number) => `Machine ${machineNumber}`;
-const inserterLabel = (inserterNumber: number) => `Inserter ${inserterNumber}`;
+const machineLabel = (machineNumber: number) => entityLabel('machine', machineNumber);
+const inserterLabel = (inserterNumber: number) => entityLabel('inserter', inserterNumber);
 const ticksAndSeconds = (ticks: number) => `${Math.round(ticks)} ticks (${(ticks / 60).toFixed(1)} s)`;
 const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
 

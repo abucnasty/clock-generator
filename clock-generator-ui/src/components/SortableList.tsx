@@ -73,14 +73,14 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
 interface SortableItemProps {
     /** Stable UUID — used as the dnd-kit sortable ID. */
     stableKey: string;
-    /** The 1-based display position shown in the #N chip. */
-    displayId: number;
+    /** The entity's name shown in the row's chip, e.g. "Inserter 3". */
+    label: string;
     /** Render prop: receives the composed drag-handle+ID element to place inside the row. */
     children: (dragHandle: React.ReactNode) => React.ReactNode;
 }
 
 /** Wraps a single row with sortable drag behaviour and injects a drag handle. */
-export function SortableItem({ stableKey, displayId, children }: SortableItemProps) {
+export function SortableItem({ stableKey, label, children }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -123,9 +123,9 @@ export function SortableItem({ stableKey, displayId, children }: SortableItemPro
                 <DragIndicator fontSize="small" />
             </Box>
             <Chip
-                label={`#${displayId}`}
+                label={label}
                 size="small"
-                sx={{ minWidth: 38, fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
+                sx={{ fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
             />
         </Box>
     );

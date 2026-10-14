@@ -18,6 +18,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { entityLabel } from '../utils/entityLabel';
 import { BELT_TYPES } from './entityTypes';
 
 interface BeltsFormProps {
@@ -106,7 +107,7 @@ function BeltsFormComponent({
 
             <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
-                <SortableItem key={belt._uuid} stableKey={belt._uuid} displayId={beltIndex + 1}>
+                <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-belt-${belt.id}`}

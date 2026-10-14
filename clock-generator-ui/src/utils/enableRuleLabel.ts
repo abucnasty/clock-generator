@@ -2,6 +2,9 @@ import { EnableControlMode } from 'clock-generator/light';
 import { isCondition } from '../components/ruleSetUtils';
 import type { EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
 
+/** The entities that have an enable rule */
+export type EnableRuleEntityType = 'inserter' | 'drill';
+
 /** The longest text the chip shows; the tooltip and the accessible name always have the whole rule */
 export const ENABLE_CHIP_MAX_CHARS = 32;
 
@@ -25,8 +28,8 @@ const FORCED_ALWAYS_NOTE = ' (set by Exclude from LCM)';
 const ELLIPSIS = '…';
 // The accessible name starts with the visible text (WCAG 2.5.3), then says which entity and what the click does
 const ARIA_LABEL = (chip: string, entityLabel: string) => `${chip}, ${entityLabel}. Edit rule`;
-const AUTO_TOOLTIP = (entityNoun: string) =>
-    `Auto: the generator decides when this ${entityNoun} runs. You don't need to change it. Click to set your own rule.`;
+const AUTO_TOOLTIP = (entityType: EnableRuleEntityType) =>
+    `Auto: the generator decides when this ${entityType} runs. You don't need to change it. Click to set your own rule.`;
 
 interface EnableRuleDescription {
     /** AUTO when there is no override */
@@ -111,6 +114,6 @@ export function enableChipAriaLabel(entityLabel: string, description: EnableRule
 }
 
 /** The whole rule in ticks ("Clocked 0–7 ticks"), or what Auto means for AUTO; the chip's accessible description */
-export function enableChipTooltip(entityLabel: string, description: EnableRuleDescription): string {
-    return description.quiet ? AUTO_TOOLTIP(entityLabel.replace(/ \d+$/, '').toLowerCase()) : description.summary;
+export function enableChipTooltip(entityType: EnableRuleEntityType, description: EnableRuleDescription): string {
+    return description.quiet ? AUTO_TOOLTIP(entityType) : description.summary;
 }

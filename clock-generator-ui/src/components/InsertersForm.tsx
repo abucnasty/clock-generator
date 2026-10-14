@@ -19,6 +19,7 @@ import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { entityLabel } from '../utils/entityLabel';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
@@ -67,7 +68,7 @@ function InsertersFormComponent({
             options.push({
                 type: TargetType.MACHINE,
                 id: machine.id,
-                label: `Machine ${machine.id}`,
+                label: entityLabel('machine', machine.id),
                 icon: machine.recipe || 'assembling-machine-3',
                 sublabel: machine.recipe || 'No recipe',
             });
@@ -79,7 +80,7 @@ function InsertersFormComponent({
             options.push({
                 type: TargetType.BELT,
                 id: belt.id,
-                label: `Belt ${belt.id}`,
+                label: entityLabel('belt', belt.id),
                 icon: belt.type,
                 ingredientIcons: ingredientIcons.length > 0 ? ingredientIcons : undefined,
             });
@@ -103,7 +104,7 @@ function InsertersFormComponent({
             options.push({
                 type: TargetType.CHEST,
                 id: chest.id,
-                label: `Chest ${chest.id}`,
+                label: entityLabel('chest', chest.id),
                 icon: isInfinityChest(chest) ? 'infinity-chest' : 'iron-chest',
                 sublabel,
                 ingredientIcons,
@@ -229,7 +230,7 @@ function InsertersFormComponent({
 
             <SortableList itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <SortableItem key={inserter._uuid} stableKey={inserter._uuid} displayId={index + 1}>
+                <SortableItem key={inserter._uuid} stableKey={inserter._uuid} label={entityLabel('inserter', inserter.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-inserter-${inserter.id}`}
@@ -446,7 +447,9 @@ function InsertersFormComponent({
 
                     <EnableRuleChip
                         override={inserter.overrides?.enable_control}
-                        entityLabel={`Inserter ${index + 1}`}
+                        entityLabel={entityLabel('inserter', inserter.id)}
+                        entityType="inserter"
+                        forcedAlways={inserter._forced_always}
                         onClick={() => setEnableControlModalInserterIndex(index)}
                     />
 
@@ -470,7 +473,7 @@ function InsertersFormComponent({
                 open={enableControlModalInserterIndex !== null}
                 onClose={() => setEnableControlModalInserterIndex(null)}
                 entityType="inserter"
-                entityLabel={enableControlModalInserterIndex !== null ? `Inserter ${enableControlModalInserterIndex + 1}` : ''}
+                entityLabel={enableControlModalInserterIndex !== null && inserters[enableControlModalInserterIndex] ? entityLabel('inserter', inserters[enableControlModalInserterIndex].id) : ''}
                 currentOverride={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.overrides?.enable_control : undefined}
                 sourceType={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.source?.type : undefined}
                 sinkType={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.sink?.type : undefined}
@@ -481,8 +484,8 @@ function InsertersFormComponent({
                         inserter.overrides?.enable_control && 
                         inserter.overrides.enable_control.mode !== 'AUTO'
                     )
-                    .map(({ inserter, index }) => ({
-                        label: `Inserter ${index + 1}`,
+                    .map(({ inserter }) => ({
+                        label: entityLabel('inserter', inserter.id),
                         override: inserter.overrides!.enable_control!,
                     }))
                 }

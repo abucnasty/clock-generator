@@ -2,6 +2,7 @@ import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import type { DrillNodeData } from '../utils/buildFlowGraph';
+import { entityLabel } from '../utils/entityLabel';
 
 type DrillFlowNodeType = Node<DrillNodeData, 'drillNode'>;
 
@@ -32,7 +33,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                             variant="caption"
                             sx={{ fontWeight: 700, fontSize: '0.68rem', display: 'block', lineHeight: 1.2, color: '#c47a45' }}
                         >
-                            Drill #{data.drillId}
+                            {entityLabel('drill', data.drillId)}
                         </Typography>
                         {data.minedItem ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
