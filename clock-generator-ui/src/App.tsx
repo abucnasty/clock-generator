@@ -577,6 +577,7 @@ function App() {
                                 searchedDeeper={searchedDeeper}
                                 keptOn={config.overrides?.search_for_fewer_wake_ups === true}
                                 canSearchDeeper={canSearchDeeper}
+                                searchDeeperBlockedBy={canSearchDeeper ? null : blocked.generate}
                                 onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}
