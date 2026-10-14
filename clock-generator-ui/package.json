@@ -4,7 +4,9 @@
   "version": "0.8.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copy-factorio-data.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-factorio-data.mjs",
     "build": "npm run build:deps && tsc -b && vite build",
     "build:deps": "cd ../clock-generator && npm ci && npm run build",
     "lint": "eslint .",

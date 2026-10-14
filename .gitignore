@@ -155,3 +155,6 @@ vite.config.ts.timestamp-*
 .env*
 !clock-generator/.env
 !clock-generator/.env.example
+
+# copied from clock-generator/resources by `npm run dev` and `npm run build` in the UI
+clock-generator-ui/public/data-filtered.json
