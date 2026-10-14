@@ -30,7 +30,7 @@ export const BUTTON_NAMES = {
     closeFullscreen: 'Close fullscreen',
     removeCondition: 'Remove condition',
     removeStatusCheck: 'Remove status check',
-    removeRange: 'Remove range',
+    removeRange: 'Remove wake window',
     close: 'Close',
 } as const;
 
@@ -39,7 +39,7 @@ export const PROGRESS_NAMES = {
     loadingData: 'Loading Factorio data',
 } as const;
 
-export const CLOCK_TABLE_NAME = 'Potential clocks';
+export const CLOCK_TABLE_NAME = 'Clocks';
 
 /** The name of the (i) button beside a clock in the table */
 export function clockHelpName(clockLabel: string): string {

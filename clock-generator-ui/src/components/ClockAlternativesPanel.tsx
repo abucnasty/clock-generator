@@ -49,7 +49,7 @@ function statusDetail(alternative: ClockAlternativeView): string {
     if (alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
         return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
-            + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run the losses are tried on.');
+            + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run that starves and jams the build.');
     }
     const phases = `${check.start_phases_checked} clock start phase(s) simulated`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
@@ -183,7 +183,7 @@ export function ClockAlternativesPanel({
 
     return (
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
-            <Typography variant="h6" component="h2">Potential Clocks</Typography>
+            <Typography variant="h6" component="h2">Clocks</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                 {RECOMMENDED_COPY.intro}
             </Typography>
@@ -211,11 +211,11 @@ export function ClockAlternativesPanel({
             {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                     {anyHolds ? (
-                        <>None of the clocks tried survives backpressure loss, which can be a limit of the build and not
-                            of its clocks. They are listed for what they are: one that holds the target rate has to be
-                            restarted after a loss.</>
+                        <>None of the clocks tried recovers when the build is starved or jammed, which can be a limit of
+                            the build and not of its clocks. They are listed for what they are: a clock that holds the
+                            target rate has to be restarted after the build is starved or jammed.</>
                     ) : (
-                        <>None of the clocks tried holds the target rate, so the unstable ones are listed.</>
+                        <>None of the clocks tried holds the target rate, so they are all listed.</>
                     )}
                 </Typography>
             )}
@@ -244,7 +244,7 @@ export function ClockAlternativesPanel({
             </Accordion>
             {deadlockRisk !== null && (
                 <Alert severity="warning" sx={{ mb: 1 }}>
-                    {deadlockRisk} The trials for backpressure loss do not see this, so on this build they do not decide
+                    {deadlockRisk} The tests that starve and jam the build do not see this, so on this build they do not decide
                     which clock is selected for you: the clocks that hold the target rate are ranked by their wake-ups.
                 </Alert>
             )}
@@ -256,7 +256,7 @@ export function ClockAlternativesPanel({
                             <TableCell>Clock</TableCell>
                             <TableCell>
                                 <Tooltip
-                                    title="The belt the clock is made for. Moving: each window of an inserter that picks up from a belt stays open the ticks shown longer (belt pickup slack), so a pickup that comes late on a moving belt can finish; a rule of thumb, not a simulated belt. Non-moving belt: the windows fit a belt that is full and does not move, which is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A subtick clock is always made for a non-moving belt, and is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt."
+                                    title="The belt the clock is made for. Moving: each wake window of an inserter that picks up from a belt stays open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of thumb, not a simulated belt. Non-moving belt: the wake windows fit a belt that is full and does not move, which is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A subtick clock is always made for a non-moving belt, and is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt."
                                     arrow
                                     describeChild
                                 >
@@ -273,10 +273,18 @@ export function ClockAlternativesPanel({
                                 </Tooltip>
                             </TableCell>
                             <TableCell align="right">Clock period</TableCell>
-                            <TableCell align="right">Inserter windows</TableCell>
                             <TableCell align="right">
                                 <Tooltip
-                                    title="How often a machine wakes an inserter that is enabled and waiting on it, per minute, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a check that moves little or nothing; fewer is better. Shown for clocks that were run long enough to count them. It is the count from one start of the clock; a clock can settle into another steady state from another start, with another count."
+                                    title="How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on."
+                                    arrow
+                                    describeChild
+                                >
+                                    <span tabIndex={0}>Wake windows</span>
+                                </Tooltip>
+                            </TableCell>
+                            <TableCell align="right">
+                                <Tooltip
+                                    title="How many times a minute a machine that finishes a craft wakes an inserter that is switched on and waiting for it, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a small check that moves little or nothing, so fewer wake-ups cost less UPS. The clock keeps an inserter off between its wake windows, so there is no one to wake then. Shown for clocks that were run long enough to count them. It is the count from one start point; a clock can settle into another steady state from another start point, with another count."
                                     arrow
                                     describeChild
                                 >

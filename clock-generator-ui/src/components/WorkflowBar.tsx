@@ -29,9 +29,9 @@ interface WorkflowBarProps {
     validateDisabled: boolean;
     /** Where the Validate step stands for the config as it is now */
     validationStatus: 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
-    /** Blueprint of the selected potential clock, once one is generated */
+    /** Blueprint of the selected clock, once one is generated */
     blueprintString: string | null;
-    /** Name of the selected potential clock */
+    /** Name of the selected clock */
     selectedLabel: string | null;
     /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
     rateWarning: string | null;

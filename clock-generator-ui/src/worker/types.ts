@@ -79,7 +79,7 @@ export interface ShiftRangeEdge {
     notes: string[];
 }
 
-/** Every place tried for the swings a potential clock moved off their planned start */
+/** Every place tried for the swings a clock moved off their planned start */
 
 export interface ShiftOptionsView {
     moved: 'swings' | 'output-swing';
