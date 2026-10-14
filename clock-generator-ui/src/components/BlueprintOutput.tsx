@@ -11,8 +11,12 @@ import {
 } from '@mui/material';
 import { useCallback, useState } from 'react';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { BUTTON_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
 import { StaleCopyDialog } from './StaleCopyDialog';
+
+/** The name of the read-only field holding the blueprint string, which has no visible label */
+const BLUEPRINT_STRING_NAME = 'Blueprint string';
 
 interface BlueprintOutputProps {
     blueprintString: string | null;
@@ -89,6 +93,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         rows={6}
                         fullWidth
                         value={blueprintString}
+                        slotProps={{ htmlInput: { 'aria-label': BLUEPRINT_STRING_NAME } }}
                         InputProps={{
                             readOnly: true,
                             sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
@@ -96,6 +101,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                     />
                     <IconButton
                         onClick={handleCopy}
+                        aria-label={copied ? BUTTON_NAMES.blueprintCopied : BUTTON_NAMES.copyBlueprintString}
                         sx={{
                             position: 'absolute',
                             top: 8,
@@ -122,6 +128,7 @@ export function GenerationProgressStatus({ store }: { store: GenerationProgressS
     return (
         <Box>
             <LinearProgress
+                aria-label={PROGRESS_NAMES.generating}
                 variant={progress?.total ? 'determinate' : 'indeterminate'}
                 value={progress?.total ? (progress.completed / progress.total) * 100 : undefined}
             />
