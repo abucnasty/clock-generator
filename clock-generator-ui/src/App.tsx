@@ -109,6 +109,9 @@ function App() {
     const {
         config,
         isLoaded: isConfigLoaded,
+        loadError: configLoadError,
+        loadNotice,
+        dismissLoadNotice,
         updateTargetOutput,
         addMachine,
         updateMachine,
@@ -150,6 +153,8 @@ function App() {
 
     // the page waits for the workers and for the saved config, which the engine's worker checks
     const isInitialized = workersReady && isConfigLoaded;
+    // until the workers are ready, an error is one that stopped them starting
+    const startupError = (!workersReady && error) || configLoadError;
 
     const [debugSteps, setDebugSteps] = useState<DebugSteps>({
         prepare: false,
@@ -318,7 +323,11 @@ function App() {
                 )}
 
                 <Container maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
-                    {!isInitialized ? (
+                    {startupError ? (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            The page could not start: {startupError}. Reload the page to try again.
+                        </Alert>
+                    ) : !isInitialized ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                             <CircularProgress />
                             <Typography sx={{ ml: 2 }}>Loading Factorio data...</Typography>
@@ -327,6 +336,11 @@ function App() {
                         <>
                         {/* both views stay mounted so switching keeps what was expanded, filtered or scrolled */}
                         <Box sx={{ display: view === 'configure' ? 'block' : 'none' }}>
+                            {loadNotice && (
+                                <Alert severity="warning" sx={{ mb: 2 }} onClose={dismissLoadNotice}>
+                                    {loadNotice}
+                                </Alert>
+                            )}
                             {error && (
                                 <Alert severity="error" sx={{ mb: 2 }}>
                                     {error}

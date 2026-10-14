@@ -273,6 +273,7 @@ function InsertersFormComponent({
                                     <TextField
                                         {...params}
                                         label="Source"
+                                        error={!selectedOption}
                                         slotProps={{
                                             input: {
                                                 ...params.InputProps,
@@ -364,6 +365,7 @@ function InsertersFormComponent({
                                     <TextField
                                         {...params}
                                         label="Destination"
+                                        error={!selectedOption}
                                         slotProps={{
                                             input: {
                                                 ...params.InputProps,
@@ -425,7 +427,7 @@ function InsertersFormComponent({
                         label="Stack Size"
                         value={inserter.stack_size}
                         onValueChange={(val) =>
-                            onUpdate(index, { stack_size: val ?? 16 })
+                            onUpdate(index, { stack_size: parseInt(val?.toString() || '') || 16 })
                         }
                         min={1}
                         sx={{ width: 100 }}

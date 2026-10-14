@@ -71,6 +71,8 @@ export function TargetOutputForm({
                     step={0.1}
                     sx={{ width: 150 }}
                     required
+                    error={itemsPerSecond <= 0}
+                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : undefined}
                 />
                 <NumberField
                     label="Copies"

@@ -199,7 +199,7 @@ function InserterEditSection({
                 <NumberField
                     label="Stack Size"
                     value={inserter.stack_size}
-                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: val ?? 1 })}
+                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 1 })}
                     min={1}
                     sx={{ width: 130 }}
                     size="small"

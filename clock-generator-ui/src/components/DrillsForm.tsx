@@ -226,7 +226,7 @@ function DrillsFormComponent({
                                 sx={{ width: 120 }}
                                 size="small"
                             />
-                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                            <FormControl size="small" sx={{ minWidth: 120 }} error={!machineIds.includes(drill.target.id)}>
                                 <InputLabel>Target Machine</InputLabel>
                                 <Select
                                     value={drill.target.id}

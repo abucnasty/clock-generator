@@ -3,7 +3,7 @@ import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogConte
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
-import { migrateChests } from '../hooks/useConfigForm';
+import { readConfigFile } from '../hooks/useConfigForm';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -102,13 +102,8 @@ export function ConfigImportExport({
 
             try {
                 const content = await file.text();
-                
-                const parsed = JSON.parse(content);
-                // Files from before chest types have chests without a type
-                if (Array.isArray(parsed?.chests)) {
-                    parsed.chests = migrateChests(parsed.chests);
-                }
-                const parsedConfig = await askEngine({ kind: 'config-file', config: parsed });
+                // values out of bounds are kept, for the form to show; only a broken file is rejected
+                const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(content) });
 
                 onImport(parsedConfig);
                 setSnackbar({
