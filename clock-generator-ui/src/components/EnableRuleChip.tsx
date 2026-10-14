@@ -15,7 +15,7 @@ interface EnableRuleChipProps {
 export function EnableRuleChip({ override, entityLabel, forcedAlways, onClick }: EnableRuleChipProps) {
     const description = describeEnableRule(override, { forcedAlways });
     return (
-        <Tooltip title={enableChipTooltip(description)} describeChild>
+        <Tooltip title={enableChipTooltip(entityLabel, description)} describeChild>
             <Chip
                 size="small"
                 label={description.chip}
@@ -25,7 +25,11 @@ export function EnableRuleChip({ override, entityLabel, forcedAlways, onClick }:
                 aria-label={enableChipAriaLabel(entityLabel, description)}
                 sx={{
                     maxWidth: '100%',
-                    ...(description.quiet && { color: 'text.secondary' }),
+                    ...(description.quiet && {
+                        color: 'text.secondary',
+                        borderColor: 'grey.500',
+                        '&:hover': { borderColor: 'text.primary' },
+                    }),
                     '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
                 }}
             />

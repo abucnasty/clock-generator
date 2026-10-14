@@ -23,8 +23,10 @@ const RULE_COUNT = (count: number) => (count === 0 ? 'no rules' : `${count} ${co
 const LATCHED = ', latched';
 const FORCED_ALWAYS_NOTE = ' (set by Exclude from LCM)';
 const ELLIPSIS = '…';
-const ARIA_LABEL = (entityLabel: string, summary: string) => `Enable rule for ${entityLabel}: ${summary}. Edit`;
-const TOOLTIP = (summary: string) => `Enable rule: ${summary}. Click to edit.`;
+// The accessible name starts with the visible text (WCAG 2.5.3), then says which entity and what the click does
+const ARIA_LABEL = (chip: string, entityLabel: string) => `${chip}, ${entityLabel}. Edit rule`;
+const AUTO_TOOLTIP = (entityNoun: string) =>
+    `Auto: the generator decides when this ${entityNoun} runs. You don't need to change it. Click to set your own rule.`;
 
 interface EnableRuleDescription {
     /** AUTO when there is no override */
@@ -103,12 +105,12 @@ export function describeEnableRule(
     }
 }
 
-/** "Enable rule for Inserter 3: Clocked 0–7 ticks. Edit" */
+/** "Clocked 0–7, Inserter 3. Edit rule": starts with the chip's text so the visible label is part of the name */
 export function enableChipAriaLabel(entityLabel: string, description: EnableRuleDescription): string {
-    return ARIA_LABEL(entityLabel, description.summary);
+    return ARIA_LABEL(description.chip, entityLabel);
 }
 
-/** "Enable rule: Clocked 0–7 ticks. Click to edit." */
-export function enableChipTooltip(description: EnableRuleDescription): string {
-    return TOOLTIP(description.summary);
+/** The whole rule in ticks ("Clocked 0–7 ticks"), or what Auto means for AUTO; the chip's accessible description */
+export function enableChipTooltip(entityLabel: string, description: EnableRuleDescription): string {
+    return description.quiet ? AUTO_TOOLTIP(entityLabel.replace(/ \d+$/, '').toLowerCase()) : description.summary;
 }

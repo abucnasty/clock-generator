@@ -42,6 +42,9 @@ const ALL_CASES: (EnableControlOverride | undefined)[] = [
     clocked([[0, 100], [150, 250], [300, 400], [450, 550]]),
     clocked([[1000, 1450], [1740, 1890]], 2240),
     clocked([[1234567890, 12345678901234]]),
+    clocked([[1000, 1450], [1740, 1890], [2000, 2100]]),
+    clocked([[1234567890, 12345678901234], [1, 2]]),
+    clocked([[7, 0]]),
     clocked([]),
     clocked([[0, 7]], 0),
     conditional(ruleSet(condition())),
@@ -114,6 +117,24 @@ describe('describeEnableRule', () => {
         });
     });
 
+    it('keeps one range and a count when two do not fit', () => {
+        const description = describeEnableRule(clocked([[1000, 1450], [1740, 1890], [2000, 2100]]));
+        expect(description.chip).toBe('Clocked 1000–1450 +2 more');
+        expect(description.summary).toBe('Clocked 1000–1450, 1740–1890, 2000–2100 ticks');
+    });
+
+    it('cuts a rule of several ranges as a last resort when even one range and its count do not fit', () => {
+        const description = describeEnableRule(clocked([[1234567890, 12345678901234], [1, 2]]));
+        expect(description.chip).toHaveLength(ENABLE_CHIP_MAX_CHARS);
+        expect(description.chip.startsWith('Clocked 1234567890–')).toBe(true);
+        expect(description.chip.endsWith('…')).toBe(true);
+        expect(description.summary).toBe('Clocked 1234567890–12345678901234, 1–2 ticks');
+    });
+
+    it('prints a range that ends before it starts as stored', () => {
+        expect(describeEnableRule(clocked([[7, 0]]))).toMatchObject({ chip: 'Clocked 7–0', summary: 'Clocked 7–0 ticks' });
+    });
+
     it('cuts the text with an ellipsis as a last resort, and keeps the summary whole', () => {
         const description = describeEnableRule(clocked([[1234567890, 12345678901234]]));
         expect(description.chip).toHaveLength(ENABLE_CHIP_MAX_CHARS);
@@ -153,12 +174,26 @@ describe('describeEnableRule', () => {
 describe('enableChipAriaLabel and enableChipTooltip', () => {
     const description = describeEnableRule(clocked([[0, 7]]));
 
-    it('names the entity and the whole rule', () => {
-        expect(enableChipAriaLabel('Inserter 3', description)).toBe('Enable rule for Inserter 3: Clocked 0–7 ticks. Edit');
-        expect(enableChipAriaLabel('Drill 2', describeEnableRule(undefined))).toBe('Enable rule for Drill 2: Auto. Edit');
+    it('starts the accessible name with the chip text, then names the entity', () => {
+        expect(enableChipAriaLabel('Inserter 3', description)).toBe('Clocked 0–7, Inserter 3. Edit rule');
+        expect(enableChipAriaLabel('Drill 2', describeEnableRule(undefined))).toBe('Enable: Auto, Drill 2. Edit rule');
+        for (const override of ALL_CASES) {
+            const described = describeEnableRule(override);
+            expect(enableChipAriaLabel('Inserter 1', described).startsWith(described.chip)).toBe(true);
+        }
     });
 
-    it('shows the whole rule in the tooltip', () => {
-        expect(enableChipTooltip(description)).toBe('Enable rule: Clocked 0–7 ticks. Click to edit.');
+    it('describes a rule by the whole rule in ticks, without repeating the action', () => {
+        expect(enableChipTooltip('Inserter 3', description)).toBe('Clocked 0–7 ticks');
+        expect(enableChipTooltip('Inserter 3', describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true }))).toBe('Always (set by Exclude from LCM)');
+    });
+
+    it('explains Auto, for an inserter and for a drill', () => {
+        expect(enableChipTooltip('Inserter 3', describeEnableRule(undefined))).toBe(
+            "Auto: the generator decides when this inserter runs. You don't need to change it. Click to set your own rule.",
+        );
+        expect(enableChipTooltip('Drill 2', describeEnableRule(undefined))).toBe(
+            "Auto: the generator decides when this drill runs. You don't need to change it. Click to set your own rule.",
+        );
     });
 });

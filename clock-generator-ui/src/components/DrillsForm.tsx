@@ -249,7 +249,7 @@ function DrillsFormComponent({
                                 entityLabel={`Drill ${drill.id}`}
                                 onClick={() => setEnableControlModalDrillIndex(index)}
                             />
-                            <IconButton onClick={() => onRemove(index)} color="error">
+                            <IconButton onClick={() => onRemove(index)} color="error" sx={{ ml: 'auto' }}>
                                 <Delete />
                             </IconButton>
                         </Box>

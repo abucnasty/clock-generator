@@ -450,7 +450,7 @@ function InsertersFormComponent({
                         onClick={() => setEnableControlModalInserterIndex(index)}
                     />
 
-                    <IconButton onClick={() => onRemove(index)} color="error">
+                    <IconButton onClick={() => onRemove(index)} color="error" sx={{ ml: 'auto' }}>
                         <Delete />
                     </IconButton>
                 </Box>
