@@ -99,9 +99,15 @@ judgement (verdicts, fix batches, specs, the merge decision) and hands the mecha
 | Step | Who does it | What the orchestrator keeps |
 |---|---|---|
 | Re-running the checks for the evidence gate | `haiku` runner | It opens two or three screenshots, and reads the runner's result lines |
-| Opening the PR, waiting for CI, squash-merging, deleting the branch and the worktree | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge |
+| Opening the PR, waiting for CI, squash-merging, deleting the branch and the worktree | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge, and the branch sweep below |
 | Rebasing a child branch on the moved phase branch, and resolving conflicts | The item's implementer (`SendMessage`), or a `sonnet` agent if it has finished | Which side wins when a conflict changes behaviour |
 | Anything that waits, such as `gh pr checks --watch` | A background agent or a background command | Nothing waits in the foreground |
+
+**Branch sweep.** Every merge removes the item's remote branch (`--delete-branch`), its worktree, its local branch and
+the worktree's placeholder branch (`worktree-agent-*`). After each merge the orchestrator runs
+`git fetch --prune` and `git branch --merged origin/<phase branch>`, and deletes any local `feat/ux-rework-p<N>-*` or
+`worktree-agent-*` branch that is merged and has no live worktree. A dropped or carried item's branches go too, once
+the ledger says so.
 
 Delegate only when it frees the orchestrator. A one-line `gh` or `git` call is quicker to run directly.
 
