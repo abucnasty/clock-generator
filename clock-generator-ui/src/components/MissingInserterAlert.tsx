@@ -1,5 +1,6 @@
 import { Alert, AlertTitle, Box, Button, Stack, Typography } from '@mui/material';
 import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
+import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 
 interface Props {
@@ -10,9 +11,9 @@ interface Props {
 function fixLabel(fix: InserterFixOption): string {
     switch (fix.type) {
         case 'machine_to_machine':
-            return `From Machine ${fix.source_machine_id}`;
+            return `From ${entityLabel('machine', fix.source_machine_id)}`;
         case 'add_lane_to_existing_belt':
-            return `Add to Belt ${fix.belt_id}`;
+            return `Add to ${entityLabel('belt', fix.belt_id)}`;
         case 'new_belt':
             return 'Add New Belt';
         case 'infinity_chest':
@@ -34,7 +35,7 @@ export function MissingInserterAlert({ issues, onApplyFix }: Props) {
                     >
                         <FactorioIcon name={issue.item_name} size={20} />
                         <Typography variant="body2" sx={{ flexShrink: 0 }}>
-                            <strong>Machine {issue.machine_id}</strong> ({issue.recipe}):{' '}
+                            <strong>{entityLabel('machine', issue.machine_id)}</strong> ({issue.recipe}):{' '}
                             missing{' '}
                             {issue.kind === 'missing_input_inserter' ? 'input' : 'output'}{' '}
                             inserter for <strong>{issue.item_name}</strong>

@@ -15,7 +15,8 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BlockIcon from '@mui/icons-material/Block';
-import type { SerializableEntityTransferCount, SerializableTransferPlan } from 'clock-generator/browser';
+import type { SerializableTransferPlan } from 'clock-generator/browser';
+import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 
 interface TransferPlanPanelProps {
@@ -29,11 +30,6 @@ interface TransferPlanPanelProps {
 function formatFraction(numerator: number, denominator: number): string {
     if (denominator === 1) return String(numerator);
     return `${numerator}/${denominator}`;
-}
-
-function formatEntityLabel(entity: SerializableEntityTransferCount): string {
-    const capitalised = entity.entity_type.charAt(0).toUpperCase() + entity.entity_type.slice(1);
-    return `${capitalised} #${entity.entity_number}`;
 }
 
 function TransferPlanPanelComponent({
@@ -124,7 +120,7 @@ function TransferPlanPanelComponent({
                                                         sx={{ fontSize: '0.65rem', height: 18 }}
                                                     />
                                                     <Typography variant="body2">
-                                                        {formatEntityLabel(entity)}
+                                                        {entityLabel(entity.entity_type, entity.entity_number)}
                                                     </Typography>
                                                 </Box>
                                             ) : null}

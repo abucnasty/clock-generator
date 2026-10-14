@@ -22,6 +22,7 @@ import { EnableRuleChip } from './EnableRuleChip';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
+import { entityLabel } from '../utils/entityLabel';
 import { DRILL_TYPES } from './entityTypes';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
@@ -169,7 +170,7 @@ function DrillsFormComponent({
 
                     <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
                     {drills.map((drill, index) => (
-                        <SortableItem key={drill._uuid} stableKey={drill._uuid} displayId={index + 1}>
+                        <SortableItem key={drill._uuid} stableKey={drill._uuid} label={entityLabel('drill', drill.id)}>
                             {(dragHandle) => (
                         <Box
                             sx={{
@@ -247,14 +248,15 @@ function DrillsFormComponent({
                                 >
                                     {machineIds.map((id) => (
                                         <MenuItem key={id} value={id}>
-                                            Machine {id}
+                                            {entityLabel('machine', id)}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                             <EnableRuleChip
                                 override={drill.overrides?.enable_control}
-                                entityLabel={`Drill ${drill.id}`}
+                                entityLabel={entityLabel('drill', drill.id)}
+                                entityType="drill"
                                 onClick={() => setEnableControlModalDrillIndex(index)}
                             />
                             <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} data-row-delete="">
@@ -287,7 +289,7 @@ function DrillsFormComponent({
                 open={enableControlModalDrillIndex !== null}
                 onClose={() => setEnableControlModalDrillIndex(null)}
                 entityType="drill"
-                entityLabel={enableControlModalDrillIndex !== null ? `Drill ${drills[enableControlModalDrillIndex]?.id}` : ''}
+                entityLabel={enableControlModalDrillIndex !== null && drills[enableControlModalDrillIndex] ? entityLabel('drill', drills[enableControlModalDrillIndex].id) : ''}
                 currentOverride={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.overrides?.enable_control : undefined}
                 sinkType="machine"
                 availableItems={(() => {

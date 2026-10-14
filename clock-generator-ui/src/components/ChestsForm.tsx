@@ -23,6 +23,7 @@ import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
+import { entityLabel } from '../utils/entityLabel';
 
 interface ChestsFormProps {
     chests: ChestFormData[];
@@ -127,7 +128,7 @@ function ChestsFormComponent({
 
             <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
             {chests.map((chest, index) => (
-                <SortableItem key={chest._uuid} stableKey={chest._uuid} displayId={index + 1}>
+                <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-chest-${chest.id}`}

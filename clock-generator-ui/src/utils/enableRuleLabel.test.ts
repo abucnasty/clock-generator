@@ -184,15 +184,15 @@ describe('enableChipAriaLabel and enableChipTooltip', () => {
     });
 
     it('describes a rule by the whole rule in ticks, without repeating the action', () => {
-        expect(enableChipTooltip('Inserter 3', description)).toBe('Clocked 0–7 ticks');
-        expect(enableChipTooltip('Inserter 3', describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true }))).toBe('Always (set by Exclude from LCM)');
+        expect(enableChipTooltip('inserter', description)).toBe('Clocked 0–7 ticks');
+        expect(enableChipTooltip('inserter', describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true }))).toBe('Always (set by Exclude from LCM)');
     });
 
     it('explains Auto, for an inserter and for a drill', () => {
-        expect(enableChipTooltip('Inserter 3', describeEnableRule(undefined))).toBe(
+        expect(enableChipTooltip('inserter', describeEnableRule(undefined))).toBe(
             "Auto: the generator decides when this inserter runs. You don't need to change it. Click to set your own rule.",
         );
-        expect(enableChipTooltip('Drill 2', describeEnableRule(undefined))).toBe(
+        expect(enableChipTooltip('drill', describeEnableRule(undefined))).toBe(
             "Auto: the generator decides when this drill runs. You don't need to change it. Click to set your own rule.",
         );
     });

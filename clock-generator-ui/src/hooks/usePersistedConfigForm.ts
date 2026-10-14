@@ -80,6 +80,8 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
                 parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                     d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
             }
+            // forms saved before ids were renumbered on delete carry a UI-only `next_ids`; it is no longer used
+            delete parsed.next_ids;
             return parsed as ConfigFormData;
         }
     } catch (e) {

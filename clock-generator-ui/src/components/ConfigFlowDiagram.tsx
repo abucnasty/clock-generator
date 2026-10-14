@@ -365,6 +365,13 @@ function ConfigFlowDiagramComponent({
         setDialogOpen(true);
     };
 
+    // a delete renumbers the kind, so while the dialog fades out its id would name the next entity
+    const deselectOnDelete = (onDelete?: (index: number) => void) =>
+        onDelete && ((index: number) => {
+            setSelectedId(null);
+            onDelete(index);
+        });
+
     return (
         <>
             <Box
@@ -415,6 +422,11 @@ function ConfigFlowDiagramComponent({
 
             <EntityEditDialog
                 {...dialogProps}
+                onDeleteMachine={deselectOnDelete(dialogProps.onDeleteMachine)}
+                onDeleteInserter={deselectOnDelete(dialogProps.onDeleteInserter)}
+                onDeleteBelt={deselectOnDelete(dialogProps.onDeleteBelt)}
+                onDeleteChest={deselectOnDelete(dialogProps.onDeleteChest)}
+                onDeleteDrill={deselectOnDelete(dialogProps.onDeleteDrill)}
                 open={dialogOpen}
                 onClose={() => setDialogOpen(false)}
                 entityType={selectedType}

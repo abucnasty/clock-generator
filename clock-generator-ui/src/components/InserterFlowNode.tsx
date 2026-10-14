@@ -2,6 +2,7 @@ import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import type { InserterNodeData } from '../utils/buildFlowGraph';
+import { entityLabel } from '../utils/entityLabel';
 
 type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
 
@@ -35,7 +36,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                             variant="caption"
                             sx={{ fontWeight: 700, fontSize: '0.68rem', display: 'block', lineHeight: 1.2, color: '#ccc' }}
                         >
-                            Inserter #{data.inserterId}
+                            {entityLabel('inserter', data.inserterId)}
                         </Typography>
                         <Typography
                             variant="caption"
