@@ -5,22 +5,60 @@
 // and run it from there:
 //
 //   cp docs/ux-rework/capture/{lib.mjs,my-item.mjs} /tmp/ux-capture/
-//   BASE_URL=http://localhost:5204 node /tmp/ux-capture/my-item.mjs /tmp/ux-capture/out/my-item
+//   node /tmp/ux-capture/my-item.mjs /tmp/ux-capture/out/my-item      # starts its own `vite preview` (see example-item.mjs)
 //
-// Environment: BASE_URL (default http://localhost:5199), SAMPLES_DIR (the sample configs of another checkout or worktree).
+// Environment: BASE_URL (default http://localhost:5199), SAMPLES_DIR (the sample configs of another checkout or worktree),
+// UI_DIR (the clock-generator-ui folder `previewServer` runs in).
+//
+// Fast by default (README "Shared helpers"): run against a production build (`previewServer`), run the widths at once
+// (`forWidths`), generate once per width and shoot every Results state from that run, use SMALL_SAMPLE where the build's
+// size does not matter, and shoot a running generation with `captureInFlight` instead of waiting for it to end.
 import { chromium } from 'playwright-core';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const DEFAULT_BASE = process.env.BASE_URL ?? 'http://localhost:5199';
 export const DEFAULT_WIDTHS = [1440, 720];
 /** Where the sample configs are. Set SAMPLES_DIR to read them from a worktree. */
 export const SAMPLES = process.env.SAMPLES_DIR ?? '/Users/abucnasty/dev/factorio-scripts/clock-generator/resources/config-samples';
+/** The clock-generator-ui folder (for previewServer). Set UI_DIR to build and preview a worktree. */
+export const UI_DIR = process.env.UI_DIR ?? '/Users/abucnasty/dev/factorio-scripts/clock-generator-ui';
 /** Generating a big build can take minutes */
 export const GEN_TIMEOUT = 8 * 60_000;
 
 /** Absolute path of a sample config, e.g. sample('science/logistic-science/logistic-science.json') */
 export const sample = (relPath) => join(SAMPLES, relPath);
+
+/**
+ * The default build: logistic science (11 copies at 240/s). Use it for states whose layout depends on the build's size
+ * (a long table, a tall diagram, the narrow window), where a tiny build would hide the problem.
+ */
+export const LOGISTIC = sample('science/logistic-science/logistic-science.json');
+
+/**
+ * The build whose generation finishes fastest: use it where the build's size does not matter (a dialog, a header, a
+ * chip, a colour). Timed once against `vite preview` on 2026-10-14 (net Generate time, click to "Generating..." gone;
+ * Validate is ~0.2 s for all of them):
+ *   logistic-science-sample.json                 0.25 s   <- SMALL_SAMPLE (1.0 KB; the smallest)
+ *   logistic-science.json (LOGISTIC)             0.26 s
+ *   logistic-science-shared-inserter.json        0.26 s
+ *   chemical-science.json                        0.28 s
+ *   stone-bricks-direct-insert.json              0.35 s
+ *   processing-units.json                        0.40 s
+ *   automation-science.json                      0.90 s
+ *   automation-science-belted-buffer.json        2.4 s
+ *   military-science-1-inserter.json             2.7 s
+ * The first four are within noise of each other; what costs time is the fixed waits, not the generation (see the README
+ * for the full table). The build is small enough that its Results tabs are short; use LOGISTIC for layout checks.
+ */
+export const SMALL_SAMPLE = sample('science/logistic-science/logistic-science-sample.json');
+
+/**
+ * A build whose generation takes about 2.6 s (military science, 5 copies at 120/s): long enough for `captureInFlight` to
+ * shoot the running state. Do not use it elsewhere.
+ */
+export const SLOW_SAMPLE = sample('science/military-science/military-science-1-inserter.json');
 
 /** The viewport height used with a width: 844 at 390 (a phone), 900 otherwise */
 export const heightFor = (width) => (width === 390 ? 844 : 900);
@@ -30,20 +68,26 @@ const firstLine = (e) => String(e?.message ?? e).split('\n')[0];
 
 // ---------------------------------------------------------------------------------------------------------- session
 
+async function openContext(browser, { base, width, height }) {
+    const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, locale: 'en-US' });
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(base).origin });
+    const page = await context.newPage();
+    page.setDefaultTimeout(15_000);
+    return { context, page };
+}
+
 /**
  * Launches the installed Google Chrome (headless), grants the clipboard permissions, opens a page and, unless
  * `goto: false`, loads `base` and waits until the app has loaded the game data.
  * `out` is created if missing. Close with `await browser.close()` when done.
+ * For several widths at once use `forWidths` instead.
  * @param {{ out?: string, base?: string, width?: number, height?: number, goto?: boolean }} [options]
  * @returns {Promise<{ browser: import('playwright-core').Browser, context: import('playwright-core').BrowserContext, page: import('playwright-core').Page, base: string }>}
  */
 export async function openSession({ out, base = DEFAULT_BASE, width = 1440, height = heightFor(width), goto = true } = {}) {
     if (out) mkdirSync(out, { recursive: true });
     const browser = await chromium.launch({ channel: 'chrome', headless: true });
-    const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, locale: 'en-US' });
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(base).origin });
-    const page = await context.newPage();
-    page.setDefaultTimeout(15_000);
+    const { context, page } = await openContext(browser, { base, width, height });
     if (goto) {
         await page.goto(base, { waitUntil: 'commit' });
         await waitReady(page);
@@ -54,15 +98,100 @@ export async function openSession({ out, base = DEFAULT_BASE, width = 1440, heig
 /** Waits until the app has loaded the game data (the Configure tab is there) */
 export async function waitReady(page) {
     await page.getByRole('button', { name: 'Configure', exact: true }).waitFor({ timeout: 60_000 });
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(300);
+}
+
+/**
+ * Serves the production build of `clock-generator-ui` with `npx vite preview --port <port> --strictPort` and waits until
+ * it answers. Returns a stop function (`await stop()`), with the address in `stop.url`.
+ *
+ * Capture against the preview, not the dev server: React StrictMode (dev only) mounts every component twice, which
+ * breaks the autofocus of a dialog's field; the production build behaves like the released app. It is also faster to load.
+ * The build must exist: pass `build: true` to run `npm run build` first (it also runs `npm ci` in `clock-generator`, so
+ * it takes a while; build once per item, not per run). `dir` is the clock-generator-ui folder (default `UI_DIR`).
+ * @param {{ port?: number, build?: boolean, dir?: string }} [options]
+ * @returns {Promise<(() => Promise<void>) & { url: string }>}
+ */
+export async function previewServer({ port = 5206, build = false, dir = UI_DIR } = {}) {
+    if (build) {
+        const built = spawnSync('npm', ['run', 'build'], { cwd: dir, stdio: 'inherit' });
+        if (built.status !== 0) throw new Error(`npm run build failed in ${dir}`);
+    }
+    if (!existsSync(join(dir, 'dist', 'index.html'))) {
+        throw new Error(`no build in ${join(dir, 'dist')}: run \`npm run build\` in ${dir}, or pass { build: true }`);
+    }
+    const child = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: dir, stdio: 'ignore', detached: true });
+    let exited = false;
+    child.on('exit', () => {
+        exited = true;
+    });
+    const url = `http://localhost:${port}`;
+    const stop = async () => {
+        if (exited) return;
+        try {
+            process.kill(-child.pid); // the whole group: npx starts vite as a child
+        } catch {
+            /* already gone */
+        }
+    };
+    stop.url = url;
+    process.once('exit', () => {
+        try {
+            process.kill(-child.pid); // a crashed script must not leave the server behind
+        } catch {
+            /* already gone */
+        }
+    });
+    const deadline = Date.now() + 30_000;
+    for (;;) {
+        if (exited) throw new Error(`vite preview exited at once (is port ${port} taken?)`);
+        try {
+            if ((await fetch(url)).ok) return stop;
+        } catch {
+            /* not up yet */
+        }
+        if (Date.now() > deadline) {
+            await stop();
+            throw new Error(`vite preview did not answer on ${url} within 30 s`);
+        }
+        await new Promise((r) => setTimeout(r, 150));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------- recorder
 
+const shotRow = ({ files, desc }, prefix = '') => `| ${files.map((f) => prefix + f).join('<br>')} | ${desc} |`;
+
+function renderIndex({ title, note, passes, fails, failedSteps, sections, checks }) {
+    const code = fails > 0 || failedSteps.length > 0 ? 1 : 0;
+    const lines = [
+        `# ${title}`,
+        '',
+        note || 'Headless Google Chrome. PASS/FAIL lines are read from the page; INFO lines record a value without a verdict.',
+        '',
+        `**${passes} PASS, ${fails} FAIL, ${failedSteps.length} failed step${failedSteps.length === 1 ? '' : 's'}**`,
+        '',
+    ];
+    for (const { heading, shots, prefix } of sections) {
+        lines.push(heading ?? '## Shots', '', '| File | What it shows |', '|---|---|', ...shots.map((s) => shotRow(s, prefix)), '');
+    }
+    lines.push(
+        '## Checks',
+        '',
+        ...(checks.length ? checks.map((c) => `- ${c}`) : ['- none']),
+        '',
+        '## Steps that failed during capture',
+        '',
+        ...(failedSteps.length ? failedSteps.map((f) => `- ${f}`) : ['- none']),
+        '',
+    );
+    return { code, text: lines.join('\n') };
+}
+
 /**
  * Collects shots, checks and failed steps, and writes INDEX.md.
  *  - shot(page, name, { fullPage, aria, locator, desc })  numbered PNG (and .aria.yml); the name gets `-<width>` once
- *    `rec.width` is set (eachWidth does that)
+ *    `rec.width` is set (eachWidth and forWidths do that)
  *  - step(name, fn)     runs fn; a throw is recorded as a failed step and the script carries on
  *  - check(name, pass, detail)  a PASS/FAIL line; a FAIL makes the exit code non-zero
  *  - info(name, detail) a value without a verdict
@@ -83,6 +212,8 @@ export function createRecorder(out, { start = 1 } = {}) {
     const rec = {
         /** The viewport width of the current pass, or null. Tags shots and checks. */
         width: null,
+        /** The output folder */
+        out,
 
         /**
          * Saves `NN-<name>[-<width>].png`. `fullPage: true` cuts the whole page into viewport-high slices (at most 12)
@@ -111,11 +242,11 @@ export function createRecorder(out, { start = 1 } = {}) {
                 if (locator) await locator.screenshot({ path: join(out, files[0]) });
                 else await page.screenshot({ path: join(out, files[0]) });
             }
-            shots.push(`| ${files.join('<br>')} | ${desc || name}${tag} |`);
+            shots.push({ files, desc: `${desc || name}${tag}` });
             if (aria) {
                 const file = `${base}.aria.yml`;
                 writeFileSync(join(out, file), await (locator ?? page.locator('body')).ariaSnapshot());
-                shots.push(`| ${file} | Accessibility tree of the shot above${tag} |`);
+                shots.push({ files: [file], desc: `Accessibility tree of the shot above${tag}` });
             }
             console.log('shot', files[0]);
             return files[0];
@@ -152,34 +283,16 @@ export function createRecorder(out, { start = 1 } = {}) {
 
         /** Records uncaught page errors as failed steps */
         watch(page) {
-            page.on('pageerror', (e) => failedSteps.push(`pageerror: ${firstLine(e)}`));
+            page.on('pageerror', (e) => failedSteps.push(`${rec.width ? `(${rec.width}px) ` : ''}pageerror: ${firstLine(e)}`));
         },
+
+        /** What was recorded so far (forWidths merges the snapshots of its recorders) */
+        snapshot: () => ({ shots: [...shots], checks: [...checks], failedSteps: [...failedSteps], passes, fails }),
 
         /** Writes INDEX.md and returns the exit code: `process.exitCode = rec.finish({ title })` */
         finish({ title = 'Capture', note = '' } = {}) {
-            const code = fails > 0 || failedSteps.length > 0 ? 1 : 0;
-            writeFileSync(join(out, 'INDEX.md'), [
-                `# ${title}`,
-                '',
-                note || 'Headless Google Chrome. PASS/FAIL lines are read from the page; INFO lines record a value without a verdict.',
-                '',
-                `**${passes} PASS, ${fails} FAIL, ${failedSteps.length} failed step${failedSteps.length === 1 ? '' : 's'}**`,
-                '',
-                '## Shots',
-                '',
-                '| File | What it shows |',
-                '|---|---|',
-                ...shots,
-                '',
-                '## Checks',
-                '',
-                ...(checks.length ? checks.map((c) => `- ${c}`) : ['- none']),
-                '',
-                '## Steps that failed during capture',
-                '',
-                ...(failedSteps.length ? failedSteps.map((f) => `- ${f}`) : ['- none']),
-                '',
-            ].join('\n'));
+            const { code, text } = renderIndex({ title, note, passes, fails, failedSteps, sections: [{ shots }], checks });
+            writeFileSync(join(out, 'INDEX.md'), text);
             console.log(`${passes} PASS, ${fails} FAIL, ${failedSteps.length} failed steps`);
             return code;
         },
@@ -188,9 +301,10 @@ export function createRecorder(out, { start = 1 } = {}) {
 }
 
 /**
- * Runs `fn(width)` once per width: sets the viewport (height 900, or 844 at 390), sets `rec.width` so shots and checks
- * are tagged, and calls fn. Put the steps for one pass inside fn. Default widths are 1440 and 720; add 390 when the item
- * affects reachability. (Not `eachWidth(widths, fn)`: it needs the page to resize and the recorder to tag.)
+ * Runs `fn(width)` once per width, one after the other: sets the viewport (height 900, or 844 at 390), sets `rec.width`
+ * so shots and checks are tagged, and calls fn. Put the steps for one pass inside fn. Default widths are 1440 and 720;
+ * add 390 when the item affects reachability. It re-uses one page, so each width repeats the import and generation;
+ * `forWidths` runs the widths at once and is much faster.
  * @param {import('playwright-core').Page} page
  * @param {ReturnType<typeof createRecorder>} rec
  * @param {number[] | null} widths  null for the default [1440, 720]
@@ -200,31 +314,115 @@ export async function eachWidth(page, rec, widths, fn) {
     for (const width of widths ?? DEFAULT_WIDTHS) {
         rec.width = width;
         await page.setViewportSize({ width, height: heightFor(width) });
-        await page.waitForTimeout(600);
+        await page.waitForTimeout(300);
         await fn(width);
     }
     rec.width = null;
 }
 
+/**
+ * Runs `fn({ page, rec, width })` for every width **at once**: one browser, and per width one browser context (so its own localStorage)
+ * and one recorder per width. Each width writes its shots into `<out>/w<width>/` (named `NN-<name>-<width>.png`, with its
+ * own INDEX.md); when all have finished the INDEX.md files are merged into `<out>/INDEX.md`. The browser is closed for you.
+ *
+ *   const run = await forWidths(null, async ({ page, rec, width }) => { ...steps... }, { out: OUT, base: BASE });
+ *   process.exitCode = run.finish({ title: 'Item 1.2 capture' });
+ *
+ * A throw inside `fn` is recorded as a failed step of that width. The pages load `base` and wait for the game data unless
+ * `goto: false`. Do not share state between the widths (each has its own page, config and generation).
+ * @param {number[] | null} widths  null for the default [1440, 720]
+ * @param {(ctx: { page: import('playwright-core').Page, rec: ReturnType<typeof createRecorder>, width: number, context: import('playwright-core').BrowserContext }) => Promise<void>} fn
+ * @param {{ out: string, base?: string, goto?: boolean, start?: number }} options
+ * @returns {Promise<{ recorders: Record<number, ReturnType<typeof createRecorder>>, finish: (options?: { title?: string, note?: string }) => number }>}
+ */
+export async function forWidths(widths, fn, { out, base = DEFAULT_BASE, goto = true, start = 1 } = {}) {
+    if (!out) throw new Error('forWidths needs { out }');
+    mkdirSync(out, { recursive: true });
+    const list = widths ?? DEFAULT_WIDTHS;
+    const browser = await chromium.launch({ channel: 'chrome', headless: true });
+    const recorders = {};
+    try {
+        await Promise.all(
+            list.map(async (width) => {
+                const rec = createRecorder(join(out, `w${width}`), { start });
+                rec.width = width;
+                recorders[width] = rec;
+                const { context, page } = await openContext(browser, { base, width, height: heightFor(width) });
+                rec.watch(page);
+                await rec.step('open the app', async () => {
+                    if (goto) {
+                        await page.goto(base, { waitUntil: 'commit' });
+                        await waitReady(page);
+                    }
+                });
+                await rec.step('steps', () => fn({ page, rec, width, context }), page);
+                await context.close().catch(() => {});
+            }),
+        );
+    } finally {
+        await browser.close();
+    }
+    return {
+        recorders,
+        /** Writes each width's INDEX.md and the merged `<out>/INDEX.md`; returns the exit code */
+        finish({ title = 'Capture', note = '' } = {}) {
+            const merged = { passes: 0, fails: 0, failedSteps: [], checks: [], sections: [] };
+            for (const width of list) {
+                const rec = recorders[width];
+                rec.finish({ title: `${title} (${width}px)`, note });
+                const snap = rec.snapshot();
+                merged.passes += snap.passes;
+                merged.fails += snap.fails;
+                merged.failedSteps.push(...snap.failedSteps);
+                merged.checks.push(...snap.checks);
+                merged.sections.push({ heading: `## Shots at ${width}px (in \`w${width}/\`)`, shots: snap.shots, prefix: `w${width}/` });
+            }
+            const { code, text } = renderIndex({ title, note, ...merged });
+            writeFileSync(join(out, 'INDEX.md'), text);
+            console.log(`all widths: ${merged.passes} PASS, ${merged.fails} FAIL, ${merged.failedSteps.length} failed steps`);
+            return code;
+        },
+    };
+}
+
 // ------------------------------------------------------------------------------------------------------ app actions
 
-/** Imports a config through the hidden file input of the app bar */
+/** Imports a config through the hidden file input of the app bar, and waits until the Validate button is usable */
 export async function importFile(page, path) {
     await page.setInputFiles('input[type=file]', path);
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(400);
+    await page
+        .waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^validate/i.test(b.textContent ?? '') && !b.disabled), null, { timeout: 5000 })
+        .catch(() => {});
+    await page.waitForTimeout(300);
+}
+
+/**
+ * Clicks a view tab ("Configure" or "Results"). If another element covers it (a header that wraps over the tabs at 390 px),
+ * the click is forced and a note is printed, so the capture goes on; check `isClickable` where reachability is the point.
+ */
+async function clickTab(page, name) {
+    const tab = page.getByRole('button', { name, exact: true });
+    try {
+        await tab.click({ timeout: 3000 });
+    } catch (e) {
+        if (!/intercepts pointer events/.test(String(e?.message))) throw e;
+        console.log(`NOTE the ${name} tab is covered by another element at ${page.viewportSize()?.width}px: forced click`);
+        await tab.click({ force: true });
+    }
 }
 
 /** Opens the Configure tab and scrolls to the top */
 export async function goConfigure(page) {
-    await page.getByRole('button', { name: 'Configure', exact: true }).click();
-    await page.waitForTimeout(400);
+    await clickTab(page, 'Configure');
+    await page.waitForTimeout(300);
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
 /** Opens the Results tab and scrolls to the top */
 export async function goResults(page) {
-    await page.getByRole('button', { name: 'Results', exact: true }).click();
-    await page.waitForTimeout(600);
+    await clickTab(page, 'Results');
+    await page.waitForTimeout(400);
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
@@ -240,24 +438,29 @@ function buttonLabelGone(page, label, timeout) {
     );
 }
 
-/** Waits for a button to show `label` for up to `ms`; true if it did (a fast run may skip the busy label) */
-async function buttonLabelSeen(page, label, ms) {
-    return page
-        .waitForFunction(
-            (text) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text)),
-            label,
-            { timeout: ms },
-        )
-        .then(() => true, () => false);
-}
+/** The status chip of the workflow bar ("Valid", "Invalid", "Changed since validation"), or '' */
+const validationChip = (page) =>
+    page.evaluate(() => [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '');
 
-/** Clicks Validate and waits until validating has finished */
+/** Clicks Validate and waits until validating has finished (the status chip changed, or the busy label came and went) */
 export async function validate(page, { timeout = 120_000 } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
+    const before = await validationChip(page);
     await page.getByRole('button', { name: 'Validate', exact: true }).first().click();
-    await buttonLabelSeen(page, 'Validating...', 2000);
+    // A fast run may skip the busy label: then the chip changes, or (validating again) nothing does; give that 1 s.
+    await page
+        .waitForFunction(
+            ([text, chip]) => {
+                const busy = [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text));
+                const now = [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '';
+                return busy || now !== chip;
+            },
+            ['Validating...', before],
+            { timeout: 1000 },
+        )
+        .catch(() => {});
     await buttonLabelGone(page, 'Validating...', timeout);
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(300);
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
@@ -265,33 +468,99 @@ export async function validate(page, { timeout = 120_000 } = {}) {
 export async function generate(page, { timeout = GEN_TIMEOUT } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole('button', { name: 'Generate', exact: true }).click();
-    await buttonLabelSeen(page, 'Generating...', 5000);
+    await page
+        .waitForFunction((text) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text)), 'Generating...', { timeout: 5000 })
+        .catch(() => {}); // a fast run may skip the busy label
     await buttonLabelGone(page, 'Generating...', timeout);
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(500);
     await page.evaluate(() => window.scrollTo(0, 0));
+}
+
+/**
+ * Shoots the state while a generation is running, without waiting for it to end: clicks Generate, waits until the
+ * progress bar is on screen, shoots `name`, then reloads the page (which drops the run). The page is left on a fresh load
+ * with the imported build restored by the app; validate again before generating again.
+ *
+ * Needs a run that lasts longer than the shot (about 0.1 s; CPU throttling slows the shot as much as the run, so it
+ * does not help). The small samples finish in 0.25 s, too fast: import `SLOW_SAMPLE` (2.6 s) for this state. If
+ * the run ends before the shot, the step throws (the shot is then not the in-flight state).
+ * @param {import('playwright-core').Page} page
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {string} name  shot name
+ * @param {{ desc?: string, fullPage?: boolean, aria?: boolean }} [options]
+ */
+export async function captureInFlight(page, rec, name, { desc = '', fullPage = false, aria = false } = {}) {
+    let stillRunning = false;
+    try {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        // Click and wait for the bar in one call, so the shot follows at once
+        await page.evaluate(
+            () =>
+                new Promise((resolve, reject) => {
+                    const button = [...document.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === 'Generate');
+                    if (!button || button.disabled) return reject(new Error('the Generate button is missing or disabled (validate first)'));
+                    const barShown = () => [...document.querySelectorAll('.MuiLinearProgress-root')].some((bar) => bar.getBoundingClientRect().width > 0);
+                    const timer = setTimeout(() => reject(new Error('no progress bar within 10 s of clicking Generate')), 10_000);
+                    const observer = new MutationObserver(() => {
+                        if (barShown()) {
+                            observer.disconnect();
+                            clearTimeout(timer);
+                            resolve();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true });
+                    button.click();
+                }),
+        );
+        await rec.shot(page, name, { fullPage, aria, desc: desc || `${name}: Generate clicked, the run still going` });
+        stillRunning = await page.evaluate(() => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes('Generating...')));
+    } finally {
+        await page.reload({ waitUntil: 'commit' });
+        await waitReady(page);
+    }
+    if (!stillRunning) throw new Error(`captureInFlight "${name}": the run had finished before the shot; import SLOW_SAMPLE for this state`);
 }
 
 /** Opens the app bar's ⋮ menu (the button named "More options") */
 export async function openMenu(page) {
     await page.getByRole('button', { name: 'More options' }).click();
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(300);
 }
 
 // -------------------------------------------------------------------------------------------------- measurements
 
+/** WCAG AA: 3:1 for large text (24 px, or 18.66 px and bold), 4.5:1 for the rest */
+export const requiredContrast = (fontSize, fontWeight) => (fontSize >= 24 || (fontSize >= 18.66 && Number(fontWeight) >= 700) ? 3 : 4.5);
+
 /**
  * Text contrast of an element: its text colour against the effective background, found by walking up the ancestors and
- * blending every non-transparent `background-color` until an opaque one. It ignores MUI's Paper elevation overlay (a
- * `background-image` in dark mode), so ratios on a Paper are close to, not exactly, what is painted.
- * @returns {Promise<{ ratio: number, color: string, background: string, fontSize: number, fontWeight: string }>}
+ * blending, bottom to top, every layer until an opaque one. A layer is a `background-color`, and, above it, the
+ * `background-image` of MUI's dark Paper elevation overlay (`linear-gradient(rgba(255,255,255,.05), …)`), so the ratio is what
+ * is painted, not what the colour alone says. Other images (photos, patterns) are not measured.
+ *
+ * `sample: true` also measures the real pixels: the element's text is made transparent, its box is shot, and the most common
+ * pixel is the background; then `ratio` is computed against that, `analyticRatio` keeps the computed one, and the two
+ * should agree within about 0.1. Use it to confirm a surprising number.
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @param {{ sample?: boolean }} [options]
+ * @returns {Promise<{ ratio: number, color: string, background: string, fontSize: number, fontWeight: string, required: number, pass: boolean, overlay: boolean, analyticRatio?: number, sampledBackground?: string }>}
  */
-export async function contrast(page, locator) {
-    return locator.first().evaluate((el) => {
+export async function contrast(page, locator, { sample = false } = {}) {
+    const target = locator.first();
+    const measured = await target.evaluate((el) => {
         const parse = (c) => {
-            const m = /rgba?\(([^)]+)\)/.exec(c);
-            if (!m) return null;
-            const [r, g, b, a] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
-            return { r, g, b, a: a === undefined ? 1 : a };
+            const rgb = /rgba?\(([^)]+)\)/.exec(c);
+            if (rgb) {
+                const [r, g, b, a] = rgb[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+                return { r, g, b, a: a === undefined ? 1 : a };
+            }
+            const srgb = /color\(srgb ([^)]+)\)/.exec(c);
+            if (srgb) {
+                const [r, g, b, a] = srgb[1].split(/[ /]+/).filter(Boolean).map(Number);
+                return { r: r * 255, g: g * 255, b: b * 255, a: a === undefined ? 1 : a };
+            }
+            return null;
         };
         const blend = (top, under) => ({
             r: top.r * top.a + under.r * (1 - top.a),
@@ -306,9 +575,23 @@ export async function contrast(page, locator) {
             };
             return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
         };
+        // Layers from the element up; each node adds its image overlay above its colour
         const layers = [];
-        for (let node = el; node; node = node.parentElement) {
-            const c = parse(getComputedStyle(node).backgroundColor);
+        let overlay = false;
+        walk: for (let node = el; node; node = node.parentElement) {
+            const style = getComputedStyle(node);
+            const image = style.backgroundImage;
+            if (image && image.startsWith('linear-gradient')) {
+                const stops = (image.match(/rgba?\([^)]+\)|color\(srgb [^)]+\)/g) ?? []).map(parse).filter(Boolean);
+                if (stops.length) {
+                    // MUI's overlay is one colour in both stops; for a real gradient the average is a fair stand-in
+                    const avg = stops.reduce((s, c) => ({ r: s.r + c.r / stops.length, g: s.g + c.g / stops.length, b: s.b + c.b / stops.length, a: s.a + c.a / stops.length }), { r: 0, g: 0, b: 0, a: 0 });
+                    layers.push(avg);
+                    overlay = true;
+                    if (avg.a >= 1) break walk;
+                }
+            }
+            const c = parse(style.backgroundColor);
             if (c && c.a > 0) {
                 layers.push(c);
                 if (c.a === 1) break;
@@ -317,18 +600,154 @@ export async function contrast(page, locator) {
         let bg = { r: 255, g: 255, b: 255, a: 1 };
         for (const layer of layers.reverse()) bg = blend(layer, bg);
         const style = getComputedStyle(el);
-        const fg = blend(parse(style.color), bg);
-        const l1 = lum(fg);
-        const l2 = lum(bg);
+        const text = parse(style.color);
+        const fg = blend(text, bg);
+        const ratioOf = (a, b) => {
+            const l1 = lum(a);
+            const l2 = lum(b);
+            return Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100;
+        };
         const round = (v) => Math.round(v);
         return {
-            ratio: Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100,
+            ratio: ratioOf(fg, bg),
             color: style.color,
             background: `rgb(${round(bg.r)}, ${round(bg.g)}, ${round(bg.b)})`,
             fontSize: parseFloat(style.fontSize),
             fontWeight: style.fontWeight,
+            overlay,
+            text,
+            bg,
         };
     });
+    const { text, bg, ...result } = measured;
+    result.required = requiredContrast(result.fontSize, result.fontWeight);
+    if (sample) {
+        const px = await sampleBackground(page, target);
+        const lum = ({ r, g, b }) => {
+            const f = (v) => ((v / 255) <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+            return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+        };
+        const fg = { r: text.r * text.a + px.r * (1 - text.a), g: text.g * text.a + px.g * (1 - text.a), b: text.b * text.a + px.b * (1 - text.a) };
+        const [l1, l2] = [lum(fg), lum(px)];
+        result.analyticRatio = result.ratio;
+        result.sampledBackground = `rgb(${px.r}, ${px.g}, ${px.b})`;
+        result.ratio = Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100;
+    }
+    result.pass = result.ratio >= result.required;
+    return result;
+}
+
+/** The most common pixel behind an element's text: hides the text, shoots the box, counts the pixels in the page */
+async function sampleBackground(page, target) {
+    if (!(await target.isVisible())) throw new Error('the element is not visible (cannot sample its pixels)');
+    await target.scrollIntoViewIfNeeded();
+    const hide = await target.evaluateHandle((el) => {
+        el.setAttribute('data-ux-sample', '');
+        const style = document.createElement('style');
+        style.textContent = '[data-ux-sample], [data-ux-sample] * { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; caret-color: transparent !important; }';
+        document.head.append(style);
+        return style;
+    });
+    try {
+        const png = await target.screenshot({ animations: 'disabled' });
+        return await page.evaluate(async (b64) => {
+            const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0);
+            const data = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
+            const counts = new Map();
+            for (let i = 0; i < data.length; i += 4) {
+                const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+                counts.set(key, (counts.get(key) ?? 0) + 1);
+            }
+            const [key] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+            return { r: key >> 16, g: (key >> 8) & 255, b: key & 255 };
+        }, png.toString('base64'));
+    } finally {
+        await target.evaluate((el) => el.removeAttribute('data-ux-sample'));
+        await hide.evaluate((style) => style.remove());
+    }
+}
+
+/**
+ * Records one check per pair against WCAG AA: 4.5:1 for text, 3:1 for text of at least 24 px (or 18.66 px and bold).
+ * `required` on a pair overrides that (3 for a non-text colour such as an icon or a border, whose `color` is read the same
+ * way). A pair whose element is not there is a FAIL. Returns the contrast results, in order.
+ * @param {import('playwright-core').Page} page
+ * @param {{ name: string, locator: import('playwright-core').Locator, required?: number, sample?: boolean }[]} pairs
+ * @param {ReturnType<typeof createRecorder>} rec
+ */
+export async function contrastPairs(page, pairs, rec) {
+    const results = [];
+    for (const { name, locator, required, sample = false } of pairs) {
+        try {
+            const r = await contrast(page, locator, { sample });
+            const need = required ?? r.required;
+            const ok = r.ratio >= need;
+            rec.check(
+                `contrast ${name}`,
+                ok,
+                `${r.ratio}:1 (needs ${need}:1; ${r.fontSize}px, weight ${r.fontWeight}; ${r.color} on ${r.sampledBackground ?? r.background}${r.overlay ? ', with the Paper overlay' : ''})`,
+            );
+            results.push({ name, ...r, required: need, pass: ok });
+        } catch (e) {
+            rec.check(`contrast ${name}`, false, `could not measure: ${firstLine(e)}`);
+            results.push({ name, error: firstLine(e), pass: false });
+        }
+    }
+    return results;
+}
+
+const cdpSessions = new WeakMap();
+
+/**
+ * The accessible name of an element, as Chrome computes it for the accessibility tree (`aria-label`, `aria-labelledby`,
+ * the content, `title` as a last resort). '' if it has none.
+ */
+export async function accessibleName(page, locator) {
+    let cdp = cdpSessions.get(page);
+    if (!cdp) {
+        cdp = await page.context().newCDPSession(page);
+        cdpSessions.set(page, cdp);
+    }
+    const target = locator.first();
+    await target.evaluate((el) => el.setAttribute('data-ux-ax', ''));
+    try {
+        const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
+        const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '[data-ux-ax]' });
+        const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+        return nodes[0]?.name?.value ?? '';
+    } finally {
+        await target.evaluate((el) => el.removeAttribute('data-ux-ax')).catch(() => {});
+    }
+}
+
+/**
+ * Records a check that the element's accessible name contains its visible text (WCAG 2.5.3 Label in Name; case and spacing
+ * are ignored, since CSS upper-cases button labels). The visible text is the text content without `aria-hidden` parts.
+ * An element with no visible text (an icon button) passes with a note. Returns whether it passed.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @param {string} [label]  how the check is named (default: the accessible name)
+ */
+export async function checkLabelInName(rec, page, locator, label = '') {
+    const name = await accessibleName(page, locator);
+    const visible = await locator.first().evaluate((el) => {
+        const copy = el.cloneNode(true);
+        copy.querySelectorAll('[aria-hidden="true"], svg, style, script').forEach((n) => n.remove());
+        return (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+    });
+    const norm = (t) => t.replace(/\s+/g, ' ').trim().toLowerCase();
+    const ok = visible === '' ? name !== '' : norm(name).includes(norm(visible));
+    return rec.check(
+        `label in name ${label || `"${name}"`}`,
+        ok,
+        visible === '' ? `no visible text; accessible name "${name}"` : `visible "${visible}", accessible name "${name}"`,
+    );
 }
 
 /**

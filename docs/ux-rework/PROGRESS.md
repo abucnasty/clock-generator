@@ -40,14 +40,14 @@ come from here.
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
-| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | impl | | | Started after 1.1 merged |
-| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Bundle with 1.5 (1.5 first in the branch). Needs 1.8 merged (`serializeConfig`) |
+| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | merged | [#149](https://github.com/abucnasty/clock-generator/pull/149) | 2 | Code review opus PASS; UX audit FIX (focus under the header, 2.4.11) then PASS after round 1; a one-line minor in round 2. CI green |
+| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | impl | | | Bundle with 1.5 (1.5 first in the branch) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Bundle with 1.14 |
-| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | spec | | | Bundle with 1.3. After 1.2 (reads `--app-header-height`, replaces its stop-gap) |
+| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | impl | | | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`), started after 1.2 merged, with a capture writer |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | impl | | | Bundle with 1.7, alongside 1.2 |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | impl | | | Bundle with 1.6, alongside 1.2 |
-| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | fix-1 | | 1 | Code review Fable PASS (minors); UX audit opus FIX: discard prompt contrast 3.0:1 (major). B5, B6, B16 fixed. Round 1: contrast, unchanged Save, fade staleness, draft util, tab marker |
-| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
+| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
+| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | fix-1 | | 1 | Code review and UX audit (opus) both FIX: the dimmed Transfer Plan still works from the keyboard and now hits the wrong inserter after a delete; the 720 row wraps to 3 lines. B4 fixed |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
@@ -58,17 +58,17 @@ come from here.
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| 2.1 | First visit and the way in | opus | todo | | | |
-| 2.2 | Sidecar mod changes | opus | todo | | | Checkpoint: owner tries it in Factorio 2.1 |
-| 2.3 | Fold Validate into Generate | opus | todo | | | |
-| 2.4 | Ask the belt question | sonnet | todo | | | |
-| 2.5 | Results lead with the answer | opus | todo | | | Checkpoint: install steps reviewed |
-| 2.6 | Wake windows view | opus | todo | | | |
-| 2.7 | Factorio GUI grammar pass | opus | todo | | | |
-| 2.8 | In-game item names | sonnet | todo | | | |
-| 2.9 | Half-width layout | sonnet | todo | | | |
-| 2.10 | Developer timelines: light fixes | sonnet | todo | | | |
-| 2.11 | Diagram readability | sonnet | todo | | | |
+| [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
+| [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | spec | | | Spec final. Goes first in Phase 2. Checkpoint: owner runs the in-game steps in the spec |
+| [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
+| [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
+| [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
+| [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
+| [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
+| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
+| [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
 
 ## Phase 3: expert depth
 
@@ -122,6 +122,13 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   `sonnet` capture writer alongside each implementer; contrast and accessible names in the evidence gate. The
   orchestrator also applied suggestion 5: Phase 2 specs are drafted now, 2.2 and 2.5 go first in Phase 2 so the owner's
   in-game checks overlap other work, and `capture.mjs` is kept working as items merge.
+- 2026-10-14: The owner asked for distinct agent names. Agent descriptions now follow `<item> <role>: <topic>`
+  ([ORCHESTRATOR.md](ORCHESTRATOR.md) "Staying responsive").
+- 2026-10-14: The rounded clock's non-integer decider constant (`decider-combinator.ts:82`, e.g. `signal-clock <
+  90.947…` for a clock labelled as rounded to 90): the owner chose to leave it as a known issue for after the rework.
+- 2026-10-14: The owner wants every issue found filed on GitHub, in one pass at the end with a review step by the
+  owner. [PLAN.md](PLAN.md) "The final PR" gains step 0 (draft `ISSUES.md`, owner review, `gh issue create`). No
+  issues are filed before then.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
@@ -130,7 +137,8 @@ None.
 
 ## Follow-ups
 
-Minor and nit findings, and anything noticed outside an item's scope.
+Minor and nit findings, and anything noticed outside an item's scope. Whatever is still open at the end becomes a
+GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The final PR", step 0).
 
 - 1.13 → 1.9: wire `forcedAlways={inserter._forced_always}` in `InsertersForm` and add capture step 7 of
   `capture-enable-chip.mjs` (1.13 merged before 1.8).
@@ -185,6 +193,26 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.8 → 1.12: the Transfer Plan chip tooltip says "its inserters are set to ALWAYS", true only for inserters whose
   items are all excluded.
 - 1.8 → 1.11: "Unsaved changes" has no live region; the modal's "Clear Override" is 3.0:1 on #474747.
+- 1.2 → 1.4: `handleValidate`'s smooth scroll stops short because the page grows while Validate runs. Scroll after the
+  check completes, or instantly; `--app-header-height` gives the margin.
+- 1.2 → 2.9: at 390 the Configure view scrolls sideways (459px) because of the "limit: 15" chip. Pre-existing.
+- 2.11: a saved `near_lane` can go invisible if a belt's lanes later hold the same item.
+- 1.2 → 1.12: in the ⋮ menu "Import Config" sits next to "Paste from Factorio"; consider "Import config file…".
+- 1.2: the logo's alt text "Logo" says nothing (1.11).
+- 2.8: the pickers list mod and hidden entries (746 recipes, recycling and `ee-*`); engine prose keeps ids.
+- 2.2: Esc or E on the sidecar's copy popup closes the main window and orphans the popup (existing quirk).
+- Final PR: open the built 0.8.0 sidecar zip in game once more (2.2's owner steps 4 to 6).
+- 2.7 found contrast failures in today's theme: green hover 3.98:1, error text 3.0-4.4:1 on cards and dialogs, input
+  outlines and switch tracks 2.1-2.6:1, an orange Undo on MUI's snackbar 1.96:1, empty filter slots 1.46:1. 2.7 PR A
+  fixes them; 1.5's snackbar and 1.3's Undo should not ship the 1.96:1 combination (checked in their evidence gate).
+- Engine guard: in `alternatives.ts` (around line 483) clear `modulo_blueprint`/`modulo_schedule` in the subtick spread,
+  with a test that every `-subtick` alternative exports a single blueprint. Changes no current output.
+- 1.9 → 1.11: dnd-kit's reorder announcements read the `_uuid`; the row isn't a named group.
+- 1.9: `useInserterValidation` keeps the previous config's issues for a moment after a delete, so a fix applied then can
+  use old ids. Compare the issues to the config key, or check `machine_id` when applying.
+- After the rework (owner, 2026-10-14): a rounded clock's decider gets a non-integer constant
+  (`clock-generator/src/blueprints/entity/decider-combinator.ts:82`, `clock(period)` with no `Math.floor`). Check in
+  game and fix in the engine.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros

@@ -122,11 +122,12 @@ function toConfig<T extends { _uuid: string }>({ _uuid: _, ...rest }: T) { void 
 /** The config of the form state, for export, validation and generation */
 export function formDataToConfig({ next_ids: _, ...config }: ConfigFormData): Config {
     void _;
-    // Strip internal _uuid fields before handing the config to any external consumer.
+    // Strip the UI-only fields (every entity's _uuid, an inserter's _forced_always) before handing the config to any
+    // external consumer.
     return {
         ...config,
         machines: config.machines.map(toConfig),
-        inserters: config.inserters.map(toConfig),
+        inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => { void _f; return toConfig(ins); }),
         belts: config.belts.map(toConfig),
         chests: config.chests.map(toConfig),
         ...(config.drills && {

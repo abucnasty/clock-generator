@@ -79,6 +79,8 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      - for every text or control colour pair the item adds or changes, a measured `contrast()` ratio, and for every new
        control an aria snapshot showing its accessible name (which must contain its visible label). Below WCAG AA
        (4.5:1 text, 3:1 large text and non-text) the gate fails.
+     - for an item that adds or rebuilds a view, the half-width geometry sweep at 960, 800 and 720 (no sideways scroll;
+       wide tables and charts scroll inside their own box), with `lib.mjs`.
      - a short evidence note: the commands and their result lines, the contrast ratios, and the list of screenshots.
    - **You verify this. Don't trust the report.** Re-run at least `npm test` and the build yourself, or through a haiku
      runner, and open two or three of the screenshots.
@@ -133,6 +135,11 @@ the worktree's placeholder branch (`worktree-agent-*`). After each merge the orc
 `git fetch --prune` and `git branch --merged origin/<phase branch>`, and deletes any local `feat/ux-rework-p<N>-*` or
 `worktree-agent-*` branch that is merged and has no live worktree. A dropped or carried item's branches go too, once
 the ledger says so.
+
+**Agent names.** Every Agent call's `description` follows `<item> <role>: <topic>`, so the agent map tells them apart
+at a glance: `1.9 implement: renumber`, `1.9 capture: renumber`, `1.9 code review`, `1.9 UX audit`, `1.9 checks`,
+`1.9 merge`, `2.5 scout: results answer`, `Coach run 2`, `Tooling: capture lib`. A bundle uses its items, e.g.
+`1.6+1.7 implement: clock pick`. A fix round reuses the same agent, so its name doesn't change.
 
 Delegate only when it frees the orchestrator. A one-line `gh` or `git` call is quicker to run directly.
 
@@ -223,6 +230,13 @@ Be short and factual, and **only report what you verified**. If something failed
   approval request.
 - **If the owner asks for status:** run the session-start summary again.
 - **Only stay silent during long runs.** No narration between steps.
+
+## Issues found
+
+Every finding that isn't fixed in its item goes into the ledger's Follow-ups, with enough detail to file it later
+(where, what, how to reproduce, which finding or review it came from). Don't open GitHub issues during the work. At the
+end, before the final PR, they're filed in one pass after the owner reviews the draft (`PLAN.md`, "The final PR",
+step 0).
 
 ## Hard rules
 

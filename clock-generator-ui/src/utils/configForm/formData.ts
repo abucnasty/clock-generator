@@ -42,6 +42,10 @@ export interface InserterFormData {
     stack_size: number;
     filters?: string[];
     overrides?: InserterOverrides;
+    /** UI-only, never part of the exported config: set when Exclude from LCM forced this inserter's rule to ALWAYS
+     *  (its items are all excluded), so that including one of them again may take that ALWAYS away. Replacing the
+     *  rule clears it. */
+    _forced_always?: true;
 }
 
 export interface BeltLaneFormData {
