@@ -1,7 +1,7 @@
 -- GUI Management for Clock Generator Sidecar
 -- Handles creation and destruction of the extraction results GUI and copy popup.
 
-require("scripts.types")
+require("__clock-generator-sidecar__.scripts.types")
 
 local gui = {}
 

@@ -1,9 +1,11 @@
 -- Entity Extraction for Clock Generator Sidecar
 -- Functions for extracting data from Factorio entities (machines, drills,
 -- inserters, belts).
+-- The recorder mod loads this module too, so the sidecar requires its modules by their full path: a path without the
+-- mod name may be looked up in the mod that is running, and a module required under two names is loaded twice.
 
-require("scripts.types")
-local helpers = require("scripts.helpers")
+require("__clock-generator-sidecar__.scripts.types")
+local helpers = require("__clock-generator-sidecar__.scripts.helpers")
 
 local debug = false
 

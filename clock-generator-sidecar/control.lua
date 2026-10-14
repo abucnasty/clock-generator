@@ -2,10 +2,10 @@
 -- Entry point for the mod. Handles player storage, event handlers, and
 -- event registration. All heavy lifting is delegated to modules in scripts/.
 
-require("scripts.types")
-local extraction = require("scripts.extraction")
-local export = require("scripts.export")
-local gui = require("scripts.gui")
+require("__clock-generator-sidecar__.scripts.types")
+local extraction = require("__clock-generator-sidecar__.scripts.extraction")
+local export = require("__clock-generator-sidecar__.scripts.export")
+local gui = require("__clock-generator-sidecar__.scripts.gui")
 
 -- Player Storage
 

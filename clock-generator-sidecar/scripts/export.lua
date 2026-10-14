@@ -1,7 +1,7 @@
 -- JSON Export for Clock Generator Sidecar
 -- Converts extraction results to clock-generator compatible JSON format.
 
-require("scripts.types")
+require("__clock-generator-sidecar__.scripts.types")
 
 local export = {}
 
