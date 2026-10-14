@@ -1,7 +1,7 @@
 import { Config } from "../config";
 import { simulateClockOnly, SerializableClockWindows } from "../crafting/generate-blueprint";
 import { StockRecording } from "../crafting/machine-stock";
-import { Machine } from "../entities";
+import { EntityId, Machine } from "../entities";
 import { FACTORIO_MACHINE_STATE } from "../state/factorio-entity-state";
 import { MachineStatus } from "../state";
 import { EntityMatch } from "./entity-matching";
@@ -28,8 +28,6 @@ function changeList<T>(values: readonly T[]): [number, T][] {
     return changes;
 }
 
-const numberOf = (entity_id: string): number => Number(entity_id.slice(entity_id.indexOf(":") + 1));
-
 /**
  * A simulated run in the format of the recorder, so that what reads a recording of the game reads a run of the
  * simulator too, and the two are laid against each other by one set of functions. Its inserters and machines carry
@@ -39,6 +37,11 @@ const numberOf = (entity_id: string): number => Number(entity_id.slice(entity_id
 export function recordingOfStock(stock: StockRecording, config: Config, clock_ticks: number): Recording {
     const inserter_configs = new Map(config.inserters.map((inserter, index) => [inserter.id ?? index + 1, inserter]));
     const fuel_items = new Map(config.machines.map(machine => [machine.id, Machine.fromConfig(machine).fuel_slot?.fuel.item_name]));
+    // the config id of each series, by the key of its entity id
+    const inserter_ids = new Map(Array.from(inserter_configs.keys(), id => [EntityId.forInserter(id).id, id]));
+    const machine_ids = new Map(config.machines.map(machine => [EntityId.forMachine(machine.id).id, machine.id]));
+    const inserterIdOf = (series: { inserter_id: string }) => inserter_ids.get(series.inserter_id)!;
+    const machineIdOf = (series: { machine_id: string }) => machine_ids.get(series.machine_id)!;
     return {
         format: "clock-generator-recording",
         version: 1,
@@ -54,8 +57,8 @@ export function recordingOfStock(stock: StockRecording, config: Config, clock_ti
             })),
             belts: config.belts.map(belt => ({ id: belt.id, lanes: belt.lanes.map(lane => ({ ingredient: lane.ingredient })) })),
         },
-        inserters: [...stock.inserters].sort((a, b) => numberOf(a.inserter_id) - numberOf(b.inserter_id)).map(series => {
-            const id = numberOf(series.inserter_id);
+        inserters: [...stock.inserters].sort((a, b) => inserterIdOf(a) - inserterIdOf(b)).map(series => {
+            const id = inserterIdOf(series);
             const inserter = inserter_configs.get(id)!;
             return {
                 id,
@@ -70,8 +73,8 @@ export function recordingOfStock(stock: StockRecording, config: Config, clock_ti
                 },
             };
         }),
-        machines: [...stock.machines].sort((a, b) => numberOf(a.machine_id) - numberOf(b.machine_id)).map(series => {
-            const id = numberOf(series.machine_id);
+        machines: [...stock.machines].sort((a, b) => machineIdOf(a) - machineIdOf(b)).map(series => {
+            const id = machineIdOf(series);
             const fuel_item = fuel_items.get(id);
             return {
                 id,

@@ -5,7 +5,7 @@ import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator
 import { ArithmeticCombinatorEntity } from "../blueprints/entity/arithmetic-combinator";
 import { ConstantCombinatorEntity } from "../blueprints/entity/constant-combinator";
 import { Duration, OpenRange } from "../data-types";
-import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities";
+import { ReadableEntityRegistry, Inserter, EntityId, EntityType, Entity } from "../entities";
 import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
 import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
@@ -25,8 +25,7 @@ function createDeciderCombinatorForTransfers(
     merged_entity_ids: EntityId[] = [],
 ): DeciderCombinatorEntity {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
-    const entity_number = entity_id.id.split(":")[1]
-    let outputSignalId = SignalId.virtual(`signal-${entity_number}`);
+    let outputSignalId = SignalId.virtual(`signal-${entity_id.number}`);
 
     let description_lines: string[] = []
 
@@ -108,15 +107,14 @@ export function entityDescriptionHeaderLines(
     item_icons: string,
     kind?: string,
 ): string[] {
-    const numberOf = (entity_id: EntityId) => Number(entity_id.id.split(":")[1]);
-    const sorted_ids = entity_ids.slice().sort((a, b) => numberOf(a) - numberOf(b));
+    const sorted_ids = entity_ids.slice().sort((a, b) => a.number - b.number);
     const name = EntityId.isDrill(entity_ids[0]) ? "Drill" : "Inserter";
     const numbers_by_machines = new Map<string, number[]>();
     sorted_ids.forEach(entity_id => {
         const machines = machineRecipesText(entity_id, entity_registry);
-        numbers_by_machines.set(machines, (numbers_by_machines.get(machines) ?? []).concat(numberOf(entity_id)));
+        numbers_by_machines.set(machines, (numbers_by_machines.get(machines) ?? []).concat(entity_id.number));
     });
-    const header = `${name}${sorted_ids.length > 1 ? "s" : ""} ${sorted_ids.map(numberOf).join(", ")} for ${item_icons}`;
+    const header = `${name}${sorted_ids.length > 1 ? "s" : ""} ${sorted_ids.map(it => it.number).join(", ")} for ${item_icons}`;
     const suffix = kind ? ` (${kind})` : "";
     if (numbers_by_machines.size === 1) {
         const [machines] = numbers_by_machines.keys();
@@ -465,7 +463,7 @@ export function createSignalPerInserterBlueprint(
     // A subtick clock, or a count too long for a signal, keeps separate fuel clocks instead.
     const fuel_inserter_clocks = Array.from(inserter_clocks.values())
         .filter(inserter_clock => inserter_clock.own_clock)
-        .sort((a, b) => a.inserter_id.localeCompare(b.inserter_id, undefined, { numeric: true }));
+        .sort((a, b) => a.inserter_id.number - b.inserter_id.number);
     const fuel_moduli = Array.from(new Set(fuel_inserter_clocks.map(inserter_clock => inserter_clock.modulus))).sort((a, b) => a - b);
     const merged_clock_ticks = subtick_clock || fuel_moduli.length === 0 ? null : mergedClockTicks(total_duration.ticks, fuel_moduli);
     // the clock of the period is a modulo of the one clock, unless every fuel clock already fits the period
@@ -524,9 +522,9 @@ export function createSignalPerInserterBlueprint(
         fuel_clocks_by_modulus.set(inserter_clock.modulus, (fuel_clocks_by_modulus.get(inserter_clock.modulus) ?? []).concat(inserter_clock)));
     // What reads each modulo of the clock, so its combinator can say what it is there for
     const namesOf = (entity_ids: EntityId[]): string => {
-        const numbers = (prefix: string) => entity_ids.filter(it => it.id.startsWith(prefix)).map(it => Number(it.id.split(":")[1])).sort((x, y) => x - y);
-        const inserters = numbers("inserter:");
-        const drills = numbers("drill:");
+        const numbers = (type: EntityType) => entity_ids.filter(it => it.type === type).map(it => it.number).sort((x, y) => x - y);
+        const inserters = numbers(EntityType.INSERTER);
+        const drills = numbers(EntityType.DRILL);
         return [
             inserters.length > 0 ? `inserter${inserters.length > 1 ? "s" : ""} ${inserters.join(", ")}` : "",
             drills.length > 0 ? `drill${drills.length > 1 ? "s" : ""} ${drills.join(", ")}` : "",
@@ -545,7 +543,7 @@ export function createSignalPerInserterBlueprint(
             lines.push(`- Read by ${namesOf(window_readers)}, whose windows repeat every ${modulus} ticks: one set of windows instead of ${total_duration.ticks / modulus}`);
         }
         if (merged_clock_ticks !== null && fuel_moduli.includes(modulus)) {
-            const fuel_readers = (fuel_clocks_by_modulus.get(modulus) ?? []).map(it => EntityId.forInserter(Number(it.inserter_id.split(":")[1])));
+            const fuel_readers = (fuel_clocks_by_modulus.get(modulus) ?? []).map(it => it.inserter_id);
             lines.push(`- Fuel clock: ${namesOf(fuel_readers)} may fill a fuel slot once every ${modulus} ticks`);
         }
         return lines;
@@ -635,7 +633,7 @@ export function createSignalPerInserterBlueprint(
         const inserters_by_window = new Map<string, { inserter_clock: InserterClock; inserters: Inserter[] }>();
         for (const inserter_clock of fuel_clocks.get(modulus) ?? []) {
             const window_key = `${inserter_clock.window.start_inclusive}-${inserter_clock.window.end_inclusive}`;
-            const inserter = entityRegistry.getEntityById(EntityId.forInserter(Number(inserter_clock.inserter_id.split(":")[1])));
+            const inserter = entityRegistry.getEntityById(inserter_clock.inserter_id);
             if (inserter === null || !Entity.isInserter(inserter)) {
                 continue;
             }

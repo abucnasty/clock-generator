@@ -65,7 +65,7 @@ export function serializeTransferHistory(
 
         if (entity && Entity.isInserter(entity)) {
             entity_type = 'inserter';
-            label = `Inserter ${entityId.id.split(':')[1]}`;
+            label = `Inserter ${entityId.number}`;
             
             const sourceEntity = entity_registry.getEntityById(entity.source.entity_id);
             const sinkEntity = entity_registry.getEntityById(entity.sink.entity_id);
@@ -80,7 +80,7 @@ export function serializeTransferHistory(
             };
         } else if (entity && Entity.isDrill(entity)) {
             entity_type = 'drill';
-            label = `Drill ${entityId.id.split(':')[1]}`;
+            label = `Drill ${entityId.number}`;
             
             const targetEntity = entity_registry.getEntityById(entity.sink_id);
             sink = {
@@ -125,16 +125,16 @@ export function serializeTransferHistory(
 
 function getEntityLabel(entity: Entity): string {
     if (Entity.isMachine(entity)) {
-        return `Machine ${entity.entity_id.id.split(':')[1]} (${entity.metadata.recipe.name})`;
+        return `Machine ${entity.entity_id.number} (${entity.metadata.recipe.name})`;
     }
     if (Entity.isBelt(entity)) {
-        return `Belt ${entity.entity_id.id.split(':')[1]}`;
+        return `Belt ${entity.entity_id.number}`;
     }
     if (Entity.isDrill(entity)) {
-        return `Drill ${entity.entity_id.id.split(':')[1]} (${entity.item.name})`;
+        return `Drill ${entity.entity_id.number} (${entity.item.name})`;
     }
     if (Entity.isInserter(entity)) {
-        return `Inserter ${entity.entity_id.id.split(':')[1]}`;
+        return `Inserter ${entity.entity_id.number}`;
     }
     return entity.entity_id.id;
 }

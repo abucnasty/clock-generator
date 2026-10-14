@@ -37,6 +37,8 @@ export interface SerializableItemTransfer {
 export interface SerializableEntityTransferCount {
     entity_id: string;
     entity_type: 'inserter' | 'drill';
+    /** The id of the inserter or drill in the config */
+    entity_number: number;
     item_transfers: SerializableItemTransfer[];
     stack_size: number;
 }
@@ -720,6 +722,7 @@ function serializeTransferPlan(
         entities.push({
             entity_id: entityId.id,
             entity_type: Entity.isInserter(count.entity) ? 'inserter' : 'drill',
+            entity_number: entityId.number,
             item_transfers: count.item_transfers.map(it => ({
                 item_name: it.item_name,
                 numerator: it.transfer_count.getNumerator,

@@ -1544,7 +1544,7 @@ function assertBeltFillersPlanned(entity_registry: ReadableEntityRegistry, swing
         }
         const items = Array.from(inserter.filtered_items).join(", ");
         throw new Error(
-            `Inserter ${inserter.entity_id.id.replace("inserter:", "")} puts ${items} onto belt ${inserter.sink.entity_id.id.replace("belt:", "")}, `
+            `Inserter ${inserter.entity_id.number} puts ${items} onto belt ${inserter.sink.entity_id.number}, `
             + `but nothing in the config takes it off. Make it an export belt with a consumption rate (items/s) on that lane.`
         );
     }
@@ -1828,7 +1828,7 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
 
     // Process inserter overrides (1-based array index as entity ID)
     config.inserters.forEach((inserter_config, index) => {
-        const entity_id = `inserter:${inserter_config.id ?? index + 1}`;
+        const entity_id = EntityId.forInserter(inserter_config.id ?? index + 1).id;
         const enable_control_override = inserter_config.overrides?.enable_control;
         if (enable_control_override !== undefined) {
             map.set(entity_id, enable_control_override);
@@ -1838,7 +1838,7 @@ function buildEnableControlOverrideMap(config: Config): EntityEnableControlOverr
     // Process drill overrides (explicit id field)
     if (config.drills !== undefined) {
         config.drills.configs.forEach((drill_config) => {
-            const entity_id = `drill:${drill_config.id}`; // Explicit id with type prefix
+            const entity_id = EntityId.forDrill(drill_config.id).id;
             const enable_control_override = drill_config.overrides?.enable_control;
             if (enable_control_override !== undefined) {
                 map.set(entity_id, enable_control_override);

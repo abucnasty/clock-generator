@@ -454,9 +454,8 @@ export function updateIgnoredIngredients(
     const prevIgnored = prev.overrides?.ignored_lcm_ingredients ?? [];
 
     const updatedInserters = prev.inserters.map((ins) => {
-        const entityKey = `inserter:${ins.id}`;
         const planEntry = transferPlan.entities.find(
-            (e) => e.entity_id === entityKey && e.entity_type === 'inserter'
+            (e) => e.entity_type === 'inserter' && e.entity_number === ins.id
         );
         if (!planEntry || planEntry.item_transfers.length === 0) return ins;
 

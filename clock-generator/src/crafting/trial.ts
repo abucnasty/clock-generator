@@ -462,7 +462,7 @@ function buildAsBuiltConfig(
             ...inserter,
             overrides: {
                 ...inserter.overrides,
-                enable_control: asBuiltControl(`inserter:${inserter.id ?? index + 1}`, inserter.overrides?.enable_control),
+                enable_control: asBuiltControl(EntityId.forInserter(inserter.id ?? index + 1).id, inserter.overrides?.enable_control),
             },
         })),
         drills: config.drills === undefined ? undefined : {
@@ -471,7 +471,7 @@ function buildAsBuiltConfig(
                 ...drill,
                 overrides: {
                     ...drill.overrides,
-                    enable_control: asBuiltControl(`drill:${drill.id}`, drill.overrides?.enable_control),
+                    enable_control: asBuiltControl(EntityId.forDrill(drill.id).id, drill.overrides?.enable_control),
                 },
             })),
         },

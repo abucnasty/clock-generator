@@ -1172,7 +1172,7 @@ export class EnableControlFactory {
         if (!transfer_count) {
             const items = Array.from(inserter.filtered_items).join(", ");
             throw new Error(
-                `Inserter ${inserter.entity_id.id.replace("inserter:", "")} (${inserter.source.entity_id.id} to ${inserter.sink.entity_id.id}, carrying ${items}) `
+                `Inserter ${inserter.entity_id.number} (${inserter.source.entity_id.id} to ${inserter.sink.entity_id.id}, carrying ${items}) `
                 + `is missing from the transfer plan, so no clock windows can be made for it.`
             );
         }

@@ -328,7 +328,7 @@ export function compareRecordings(
     };
     const [game_wake_ups, sim_wake_ups] = [wakeUpsBy(game), wakeUpsBy(sim)];
     const wakeUpsOfInserter = (wake_ups: typeof game_wake_ups, config_id: number) =>
-        wake_ups.inserters.find(it => it.inserter_id === `inserter:${config_id}`)?.wake_ups_per_minute ?? 0;
+        wake_ups.inserters.find(it => it.inserter_id === EntityId.forInserter(config_id).id)?.wake_ups_per_minute ?? 0;
 
     const game_inserters = by_config_id(game, game.recording.inserters, game.match.inserters);
     const sim_inserters = by_config_id(sim, sim.recording.inserters, sim.match.inserters);

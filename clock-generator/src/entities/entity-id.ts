@@ -1,9 +1,13 @@
 import { EntityType } from "./entity-type";
 
+/**
+ * An entity of the config: its type and its id there. `id` is the one string both make, as "inserter:3", for keys of
+ * maps and records; read the type and number from the fields, not from that string.
+ */
 export class EntityId {
 
     public static forEntity(id: number, type: EntityType): EntityId {
-        return new EntityId(`${type}:${id}`, type);
+        return new EntityId(`${type}:${id}`, type, id);
     }
 
     public static forBelt(id: number): EntityId {
@@ -48,7 +52,9 @@ export class EntityId {
 
     private constructor(
         public readonly id: string,
-        public readonly type: EntityType
+        public readonly type: EntityType,
+        /** The id of the entity in the config */
+        public readonly number: number,
     ) { }
 
     compareTo(other: EntityId): number {

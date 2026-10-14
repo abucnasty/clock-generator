@@ -285,7 +285,7 @@ describe('overrides', () => {
     it('forces inserters whose items are all ignored to always run, and reverts them when no longer', () => {
         const plan = {
             computed_lcm: 1,
-            entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', item_transfers: [{ item_name: 'iron-plate' }] }],
+            entities: [{ entity_id: 'inserter:1', entity_type: 'inserter', entity_number: 1, item_transfers: [{ item_name: 'iron-plate' }] }],
         } as unknown as SerializableTransferPlan;
         const ignored = edits.updateIgnoredIngredients(form(), ['iron-plate'], plan);
         expect(ignored.overrides).toEqual({ ignored_lcm_ingredients: ['iron-plate'] });

@@ -1,6 +1,7 @@
 import { Config } from "../../config";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
+import { EntityId } from "../../entities";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
 import { DerivedWindows, deriveWithOutputWindows } from "../candidates/observed-windows";
@@ -88,7 +89,8 @@ export function deriveUnevenOutputClockWindows(
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
-    const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
+    const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
+    const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
     const candidates = unevenOutputCandidates(output_windows, period, step_ticks);
     const describe = (candidate: UnevenOutputCandidate) => `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
