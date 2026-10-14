@@ -17,6 +17,7 @@ import { useState, memo } from 'react';
 import type { MachineFormData } from '../hooks/useConfigForm';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
@@ -241,35 +242,37 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                         size="small"
                     />
                 )}
-                <FormControl size="small" sx={{ minWidth: 140 }}>
-                    <InputLabel>Type</InputLabel>
+                <FormControl size="small" sx={{ minWidth: 220 }}>
+                    <InputLabel id={`machine-type-label-${index}`}>Type</InputLabel>
                     <Select
+                        labelId={`machine-type-label-${index}`}
+                        SelectDisplayProps={{ id: `machine-type-select-${index}` }}
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
                         renderValue={(selected) => (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} />
-                                {selected === 'furnace' ? 'Furnace' : selected === 'biochamber' ? 'Biochamber' : 'Machine'}
+                                {MACHINE_TYPE_LABELS[selected]}
                             </Box>
                         )}
                     >
                         <MenuItem value="machine">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name="assembling-machine-3" size={20} />
-                                Machine
+                                {MACHINE_TYPE_LABELS.machine}
                             </Box>
                         </MenuItem>
                         <MenuItem value="furnace">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name="electric-furnace" size={20} />
-                                Furnace
+                                {MACHINE_TYPE_LABELS.furnace}
                             </Box>
                         </MenuItem>
                         <MenuItem value="biochamber">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name="biochamber" size={20} />
-                                Biochamber
+                                {MACHINE_TYPE_LABELS.biochamber}
                             </Box>
                         </MenuItem>
                     </Select>

@@ -35,6 +35,7 @@ come from here.
 - **Phase:** 1 (started 2026-10-14)
 - **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
 - **Open checkpoints:** none
+- **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
 ## Phase 1: stop the harm, quick wins
 
@@ -42,16 +43,16 @@ come from here.
 |---|---|---|---|---|---|---|
 | [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | merged | [#149](https://github.com/abucnasty/clock-generator/pull/149) | 2 | Code review opus PASS; UX audit FIX (focus under the header, 2.4.11) then PASS after round 1; a one-line minor in round 2. CI green |
-| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | review | | | Bundle with 1.5 (1.5 first in the branch). Built with the extra asks (delete message says what moved, focus after delete); capture 1369 PASS, 0 FAIL at 1440/720/390 |
+| [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | fix-1 | | 1 | Bundle with 1.5. Code review opus PASS (minors); UX audit opus FIX: Undo timed out for keyboard users (2.2.1) → owner: no timer. A18, C15 fixed; B2 fixed within the plan; B3 partly (delete buttons unnamed: fixed in round 1) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | impl | | | Bundle with 1.14 (`feat/ux-rework-p1-first-problem-warning`), with a capture writer. Also takes the 1.7 and 1.2 follow-ups (Search deeper's reason, Validate's scroll) |
-| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | review | | | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`). Opus code review and opus UX audit running. Must merge 1.6 + 1.7 first (`App.tsx` conflict) |
+| [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | fix-1 | | 1 | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`). Merged #151 in (import-line conflict only). A14, A29, B30, C6 fixed; C3 partly (one filled button per state is 1.4's). Round 1: the untimed Undo, focus after Undo/Close, one live region with `announce()`, named delete buttons, 9 minors |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.7. Code review opus PASS; UX audit opus minors only (A9, A11, B12, B14 fixed, C7 partly). Round 1: 13 cheap minors; orchestrator read the diff and shots. Runner re-ran checks after merging 1.9 in (235 tests). CI green |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | merged | [#151](https://github.com/abucnasty/clock-generator/pull/151) | 1 | Bundle with 1.6. A22, B15, C27 fixed |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | merged | [#150](https://github.com/abucnasty/clock-generator/pull/150) | 1 | Round 0: code review and UX audit FIX (keyboard on the stale plan; 720 row). Round 1: both PASS. CI green |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
-| [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
-| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | impl | | | Glossary approved 2026-10-14. Part A (copy fixes) in impl on `feat/ux-rework-p1-glossary-copy`, with a capture writer; Part B last in the phase |
+| [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | impl | | | Two PRs. PR A (opus, `feat/ux-rework-p1-a11y-basics`) in impl with a capture writer, moved up by coach run 2; announcements go through 1.5's `announce()`. PR B (sonnet) stacks on A |
+| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | A merged | [#153](https://github.com/abucnasty/clock-generator/pull/153) | 1 | Part A merged: code review opus PASS (re-ran checks in a clean copy), UX audit sonnet PASS (C30 fixed; A25, B32 partly, rest is Part B); one minors round (dialog row wraps at 390). CI green. Part B last in the phase, stacked on 1.11 B |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | impl | | | Bundle with 1.4 |
 
@@ -60,7 +61,7 @@ come from here.
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
 | [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
-| [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | spec | | | Spec final. Goes first in Phase 2. Checkpoint: owner runs the in-game steps in the spec |
+| [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | impl | | | Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
 | [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
@@ -131,6 +132,21 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   owner. [PLAN.md](PLAN.md) "The final PR" gains step 0 (draft `ISSUES.md`, owner review, `gh issue create`). No
   issues are filed before then.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
+- 2026-10-14: **Undo has no timer** (the owner, on the 1.3 UX audit's WCAG 2.2.1 major): the Undo message stays until
+  the next edit, the next undoable action, Close or Escape, and Ctrl/Cmd+Z works while it is offered. Other messages
+  keep their timers. [PLAN.md](PLAN.md) 1.3 updated.
+- 2026-10-14: One polite announcements region for the whole app: 1.5's message host owns it and exposes `announce()`;
+  1.11 PR A routes its workflow announcements through it instead of adding a region in the workflow bar.
+- 2026-10-14: Process coach run 2 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated). Applied: (1) a freed slot goes to the
+  item at the head of the longest remaining chain, so 1.11 PR A starts now, and tail items stack on the one before;
+  (3) `lib.mjs` gains `tabTo`, `focusNotObscured` and `inertFromKeyboard`, and every capture script checks keyboard reach,
+  focus not obscured and keyboard-inert disabled states for what the item changes; (4) the handoff note is kept current
+  on every step, agent reports are capped at about 30 lines (details in EVIDENCE.md), and a minors-only fix round is
+  re-checked by the reviewer whose minors were fixed; (5) after each merge, `git merge-tree` checks every in-flight
+  branch and a conflicting one merges at once, and merge runners use `gh pr merge --squash` then
+  `git push origin --delete`. Suggestion 2 (start Phase 2 items before Phase 1 merges) changes a PLAN.md rule, so it
+  went to the owner, who approved it: `feat/ux-rework-p2` is cut from `feat/ux-rework-p1`'s head when a slot goes
+  idle, starting with 2.2 and 2.6 (then 2.11); [PLAN.md](PLAN.md) "Phase branches" updated.
 
 ## Open questions
 
@@ -224,6 +240,19 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.6 → 1.11: the unstable divider cell is a plain data cell, not a group header.
 - 1.9 → 2.9: check the inserter row at 900-1200px (the chip is now 72px).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
+- 1.5/1.3: Chrome's native Ctrl/Cmd+Z can revert a number field's last typed value when no Undo is offered (the
+  browser's own field undo; pre-existing). Consider `preventDefault` outside text fields. Repro: type in Items per
+  Second, Tab away, press Ctrl+Z.
+- 1.5: messages sit top-centre below the header and can cover the top of the form (1440: the Items per Second label;
+  390: a paste error covers Recipe until closed). Escape or Close reveals it; 2.4.11 passes. Optionally add the
+  message height to `scroll-padding-top` while one shows.
+- 1.5 → 2.1: the import error shows raw parser text ("Expected property name or '}' in JSON at position 2 …").
+- 1.3: after Reset, Target Output's Recipe still shows the old recipe text without its icon (stale Autocomplete text;
+  pre-existing, also in 1.1's before-shot).
+- 1.12A → 1.11 PR B: other selects have no `labelId` either (`ChestsForm.tsx` type select, `ValueReferenceSelector.tsx`), and the List's Type select name includes the icon's alt text ("Type assembling-machine-3 Assembling machine").
+- 1.12A → 1.12B: "Validate again, then Generate, after making changes" could read "After making changes, validate again, then Generate"; the `'Type'` tooltip in `MachineFactsAccordion.tsx` never renders (no FactItem has that label).
+- 1.5 → 2.1: "No items selected for import." and the menu names (Reset Configuration, Import/Export Config) keep
+  "configuration"/"config" until 2.1 renames them.
 
 ## Retros
 
