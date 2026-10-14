@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import type { Config, InserterCoverageIssue } from 'clock-generator/browser';
 import { validateInserterCoverage } from 'clock-generator/browser';
 
@@ -15,15 +15,8 @@ export function useInserterValidation(
     exportConfig: () => Config,
     isInitialized: boolean,
 ): InserterCoverageIssue[] {
-    const [issues, setIssues] = useState<InserterCoverageIssue[]>([]);
-
-    useEffect(() => {
-        if (!isInitialized) {
-            setIssues([]);
-            return;
-        }
-        setIssues(validateInserterCoverage(exportConfig()));
-    }, [isInitialized, exportConfig]);
-
-    return issues;
+    return useMemo(
+        () => (isInitialized ? validateInserterCoverage(exportConfig()) : []),
+        [isInitialized, exportConfig],
+    );
 }
