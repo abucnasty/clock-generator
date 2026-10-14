@@ -65,7 +65,7 @@ come from here.
 | 2.5 | Results lead with the answer | opus | spec | | | Goes first in Phase 2. Checkpoint: install steps reviewed |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
 | 2.7 | Factorio GUI grammar pass | opus | spec | | | |
-| 2.8 | In-game item names | sonnet | spec | | | |
+| [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | 2.9 | Half-width layout | sonnet | spec | | | |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
@@ -191,6 +191,7 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 2.11: a saved `near_lane` can go invisible if a belt's lanes later hold the same item.
 - 1.2 → 1.12: in the ⋮ menu "Import Config" sits next to "Paste from Factorio"; consider "Import config file…".
 - 1.2: the logo's alt text "Logo" says nothing (1.11).
+- 2.8: the pickers list mod and hidden entries (746 recipes, recycling and `ee-*`); engine prose keeps ids.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
