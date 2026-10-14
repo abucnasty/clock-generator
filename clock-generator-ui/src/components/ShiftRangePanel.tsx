@@ -81,7 +81,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
 
     return (
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>
                 {options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
