@@ -1,13 +1,7 @@
-import { EntityId, MiningDrill } from "../entities";
+import { MiningDrill } from "../entities";
 import { EntityState } from "./entity-state";
 import { InventoryState, WritableInventoryState } from "./inventory-state";
-
-export const DrillStatus = {
-    WORKING: 'WORKING',
-    DISABLED: 'DISABLED',
-} as const;
-
-export type DrillStatus = typeof DrillStatus[keyof typeof DrillStatus];
+import { DrillStatus } from "./entity-status";
 
 export interface DrillState extends EntityState {
     drill: MiningDrill
@@ -25,6 +19,12 @@ function fromMiningDrillEntity(drill: MiningDrill): DrillState {
     }
 }
 
+/** What drives the drill's next ticks besides its inventory (see simulationStateKey) */
+function stateKey(state: DrillState): string {
+    return state.status;
+}
+
 export const DrillState = {
-    fromEntity: fromMiningDrillEntity
+    fromEntity: fromMiningDrillEntity,
+    stateKey: stateKey,
 }

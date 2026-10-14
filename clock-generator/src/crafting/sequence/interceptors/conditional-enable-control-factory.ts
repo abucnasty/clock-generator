@@ -8,7 +8,7 @@ import {
     ValueReference
 } from "../../../config/schema";
 import { EntityId, Inserter } from "../../../entities";
-import { assertIsInserterState, assertIsMachineState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
+import { assertIsInserterState, assertIsMachineState, EntityState, MachineState, ReadableEntityStateRegistry } from "../../../state";
 import assert from "../../../common/assert";
 
 interface EvaluationContext {

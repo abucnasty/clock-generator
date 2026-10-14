@@ -16,7 +16,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useState, memo } from 'react';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import type { ChestFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';

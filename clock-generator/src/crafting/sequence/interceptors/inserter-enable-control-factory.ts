@@ -637,37 +637,44 @@ export class EnableControlFactory {
     private enabledAfterOutputInserter(inserter_state: InserterState, sink_state: MachineState): EnableControl {
         const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
 
-        // Find output inserters for the sink machine (inserters pulling FROM the sink machine)
+        // Create enable ranges that start after each output inserter range ends until end of cycle
+        const enabled_ranges = this.rangesAfterOutputInserters(sink_state, range => {
+            const start_tick = range.end_inclusive - 2;
+            return OpenRange.from(start_tick, base_cycle_duration);
+        });
+
+        // If no output inserters, enable for the entire cycle
+        if (enabled_ranges.length === 0) {
+            return AlwaysEnabledControl
+        }
+
+        return this.clockedForCycle(enabled_ranges);
+    }
+
+    /**
+     * Maps the merged enable ranges of the output inserters of a machine (the inserters pulling FROM it) to the ranges
+     * of one of its input inserters, merged and sorted. Empty when the machine has no output inserters.
+     */
+    private rangesAfterOutputInserters(
+        sink_state: MachineState,
+        rangeAfter: (output_inserter_range: OpenRange) => OpenRange,
+    ): OpenRange[] {
         const output_inserters_for_sink = this.entity_state_registry
             .getAllStates()
             .filter(EntityState.isInserter)
             .filter(i => i.inserter.source.entity_id.id === sink_state.machine.entity_id.id);
 
-        // If no output inserters, enable for the entire cycle
-        if (output_inserters_for_sink.length === 0) {
-            return AlwaysEnabledControl
-        }
-
-        // Get the enable ranges for all output inserters and merge them
         const output_inserter_enable_ranges = OpenRange.reduceRanges(
             output_inserters_for_sink.map(output_inserter_state => {
                 return this.computeEnableRangeFromMachine(
                     output_inserter_state,
                     sink_state,
-                );
+                )
             })
         );
 
-        // Create enable ranges that start after each output inserter range ends until end of cycle
-        const enabled_ranges: OpenRange[] = output_inserter_enable_ranges.map(range => {
-            const start_tick = range.end_inclusive - 2;
-            return OpenRange.from(start_tick, base_cycle_duration);
-        });
-
-        const merged_ranges = OpenRange.reduceRanges(enabled_ranges);
-        const sorted_ranges = merged_ranges.sort((a, b) => a.start_inclusive - b.start_inclusive);
-
-        return this.clockedForCycle(sorted_ranges.length > 0 ? sorted_ranges : [OpenRange.from(0, base_cycle_duration)]);
+        const merged_ranges = OpenRange.reduceRanges(output_inserter_enable_ranges.map(rangeAfter));
+        return merged_ranges.sort((a, b) => a.start_inclusive - b.start_inclusive);
     }
 
     private computeEnableRangesToMachine(
@@ -746,21 +753,7 @@ export class EnableControlFactory {
             animation.total.ticks * Math.ceil(transfer_count.total_transfer_count.toDecimal())
         );
 
-        const output_inserters_for_sink = this.entity_state_registry
-            .getAllStates()
-            .filter(EntityState.isInserter)
-            .filter(i => i.inserter.source.entity_id.id === sink_state.machine.entity_id.id);
-
-        const output_inserter_enable_ranges = OpenRange.reduceRanges(
-            output_inserters_for_sink.map(output_inserter_state => {
-                return this.computeEnableRangeFromMachine(
-                    output_inserter_state,
-                    sink_state,
-                )
-            })
-        );
-
-        const enabled_ranges: OpenRange[] = output_inserter_enable_ranges.map(range => {
+        return this.rangesAfterOutputInserters(sink_state, range => {
             const output_inserter_end = range.end_inclusive;
             const end_of_cycle = this.crafting_cycle_plan.total_duration.ticks;
 
@@ -772,11 +765,7 @@ export class EnableControlFactory {
                 end_tick = end_of_cycle;
             }
             return OpenRange.from(start_tick, end_tick);
-        })
-        const merged_ranges = OpenRange.reduceRanges(enabled_ranges);
-        const sorted_ranges = merged_ranges.sort((a, b) => a.start_inclusive - b.start_inclusive);
-
-        return sorted_ranges;
+        });
     }
 
     /**
@@ -1183,7 +1172,7 @@ export class EnableControlFactory {
         if (!transfer_count) {
             const items = Array.from(inserter.filtered_items).join(", ");
             throw new Error(
-                `Inserter ${inserter.entity_id.id.replace("inserter:", "")} (${inserter.source.entity_id.id} to ${inserter.sink.entity_id.id}, carrying ${items}) `
+                `Inserter ${inserter.entity_id.number} (${inserter.source.entity_id.id} to ${inserter.sink.entity_id.id}, carrying ${items}) `
                 + `is missing from the transfer plan, so no clock windows can be made for it.`
             );
         }

@@ -1,5 +1,4 @@
-import { MachineStatus } from "../state";
-import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, RecordedMachine, Recording, recordedClockPeriod } from "./recording";
+import { CLOCK_TO_WINDOW_TICKS, expandChangeList, RecordedInserter, Recording, recordedClockPeriod } from "./recording";
 
 export interface RecordedTransfer {
     item_name: string;
@@ -20,7 +19,7 @@ export interface RecordedTransfer {
 }
 
 /** Clock value per sample, or the sample index itself without a clock */
-export function clockValues(recording: Recording): number[] {
+function clockValues(recording: Recording): number[] {
     return recording.clock?.values ?? Array.from({ length: recording.sample_count }, (_, i) => i);
 }
 

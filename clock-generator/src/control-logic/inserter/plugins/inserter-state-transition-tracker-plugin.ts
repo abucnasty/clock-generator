@@ -7,7 +7,7 @@ import { InserterMode } from "../modes";
 /**
  * Represents a single state transition for an inserter
  */
-export interface InserterStateTransition {
+interface InserterStateTransition {
     entity_id: EntityId;
     tick: number;
     from_status: InserterStatus;
@@ -15,7 +15,7 @@ export interface InserterStateTransition {
     reason: string;
 }
 
-export type InserterStateTransitionCallback = (transition: InserterStateTransition) => void;
+type InserterStateTransitionCallback = (transition: InserterStateTransition) => void;
 
 /**
  * Plugin that tracks state transitions for an inserter state machine.

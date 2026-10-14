@@ -7,6 +7,8 @@ local recorder = require("scripts.recorder")
 local harness = {}
 
 local CLOCK_DESCRIPTION_PREFIX = "Clock for"
+-- the tag the caller gives each schedule combinator of a generated clock: the config ids of the inserters it enables
+local INSERTERS_TAG = "clock_generator_inserters"
 local COMBINATOR_TYPES = {
     ["decider-combinator"] = true,
     ["arithmetic-combinator"] = true,
@@ -93,7 +95,7 @@ end
 ---@param force LuaForce
 ---@param blueprint string
 ---@param position_for fun(half_width: number, half_height: number): MapPosition where the middle of the blueprint goes
----@return LuaEntity[] entities, string[] failed names of the entities that could not be built
+---@return LuaEntity[] entities, string[] failed names of the entities that could not be built, table<uint, Tags> tags of the blueprint's entities by unit number
 local function build_blueprint(surface, force, blueprint, position_for)
     local inventory = game.create_inventory(1)
     local stack = inventory[1]
@@ -121,16 +123,21 @@ local function build_blueprint(surface, force, blueprint, position_for)
     })
     inventory.destroy()
 
-    local entities, failed = {}, {}
+    local entities, failed, tags = {}, {}, {}
     for _, ghost in pairs(ghosts) do
         if ghost.valid and ghost.type == "entity-ghost" then
             local name = ghost.ghost_name
+            -- a ghost has the tags of its blueprint entity, which the entity it is revived as does not keep
+            local ghost_tags = ghost.tags
             local _, entity, proxy = ghost.revive({ raise_revive = true })
             if entity then
                 if proxy and proxy.valid then
                     fulfil_item_requests(entity, proxy)
                 end
                 table.insert(entities, entity)
+                if ghost_tags and entity.unit_number then
+                    tags[entity.unit_number] = ghost_tags
+                end
             else
                 table.insert(failed, name)
             end
@@ -138,7 +145,7 @@ local function build_blueprint(surface, force, blueprint, position_for)
             ghost.revive()
         end
     end
-    return entities, failed
+    return entities, failed, tags
 end
 
 ---@param entities LuaEntity[]
@@ -189,14 +196,14 @@ local function run_without_circuit(inserter)
     end
 end
 
----Wire the schedule combinators of a generated clock to the inserters their descriptions name
+---Wire the schedule combinators of a generated clock to the inserters their tags name
 ---@param state table storage.harness
----@param clock {blueprint: string, inserters: table<string, uint>} inserters: config inserter id -> unit number
+---@param clock {blueprint: string, inserters: table<string, uint>} blueprint: each schedule combinator tagged with the config ids of its inserters; inserters: config inserter id -> unit number
 ---@return table report
 local function wire_clock(state, clock)
     local surface = game.surfaces[state.surface_index]
     local area = state.area
-    local combinators, failed = build_blueprint(surface, game.forces[state.force_name], clock.blueprint, function(_, half_height)
+    local combinators, failed, tags = build_blueprint(surface, game.forces[state.force_name], clock.blueprint, function(_, half_height)
         return {
             x = math.floor((area.left_top.x + area.right_bottom.x) / 2),
             y = math.ceil(area.right_bottom.y) + 2 + half_height,
@@ -217,12 +224,11 @@ local function wire_clock(state, clock)
     local wired_units = {}
     for _, combinator in pairs(combinators) do
         table.insert(state.entities, combinator)
-        local description = description_of(combinator)
-        local ids = string.match(description, "^Inserters? ([%d, ]+) for")
+        local ids = tags[combinator.unit_number] and tags[combinator.unit_number][INSERTERS_TAG]
         if ids then
             local output = combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
-            for id in string.gmatch(ids, "%d+") do
-                local inserter = by_unit_number[clock.inserters[id] or -1]
+            for _, id in ipairs(ids) do
+                local inserter = by_unit_number[clock.inserters[tostring(id)] or -1]
                 if not inserter then
                     error("the clock names inserter " .. id .. ", which was not matched to an inserter of the build")
                 end
@@ -234,11 +240,14 @@ local function wire_clock(state, clock)
                     behavior.circuit_condition = ANYTHING_POSITIVE
                 end
                 wired_units[inserter.unit_number] = true
-                table.insert(report.wired, { inserter = tonumber(id), unit_number = inserter.unit_number })
+                table.insert(report.wired, { inserter = id, unit_number = inserter.unit_number })
             end
-        elseif string.sub(description, 1, #CLOCK_DESCRIPTION_PREFIX) ~= CLOCK_DESCRIPTION_PREFIX then
-            -- helpers of the clock (modulo, subtick) are wired inside the blueprint; anything else is listed for the caller
-            table.insert(report.not_wired, string.match(description, "^[^\n]*") or "")
+        else
+            local description = description_of(combinator)
+            if string.sub(description, 1, #CLOCK_DESCRIPTION_PREFIX) ~= CLOCK_DESCRIPTION_PREFIX then
+                -- helpers of the clock (modulo, subtick) are wired inside the blueprint; anything else is listed for the caller
+                table.insert(report.not_wired, string.match(description, "^[^\n]*") or "")
+            end
         end
     end
 
@@ -473,7 +482,8 @@ local function movers(entities)
     return found
 end
 
----What a recording of the build would track: the exported config and the unit number of each inserter and machine.
+---What a recording of the build would track: the exported config and the unit number of each inserter and machine, and
+---the inserters the config leaves out, with why.
 ---Next to it, for the caller's own checks and in no recording: every inserter and loader with what is at its ends.
 ---@return table
 function harness.describe()

@@ -2,9 +2,9 @@
 -- Samples inserters and machines every tick, aligned to the generated clock combinator,
 -- and writes the raw samples to script-output so the simulation can be verified offline.
 
-require("scripts.types")
-local extraction = require("scripts.extraction")
-local export = require("scripts.export")
+require("__clock-generator-sidecar__.scripts.types")
+local extraction = require("__clock-generator-sidecar__.scripts.extraction")
+local export = require("__clock-generator-sidecar__.scripts.export")
 
 local recorder = {}
 
@@ -388,7 +388,34 @@ function recorder.finish(reason)
     notify(recording.player_index, "Recorded " .. recording.sample_count .. " ticks (" .. reason .. "). Saved to script-output/" .. filename)
 end
 
----What a recording of these entities would track, without samples: the config and the id of each inserter and machine
+local LEFT_OUT_REASONS = {
+    machine = "it is not in the config: it is a lab, has no recipe or is outside the selection",
+    belt = "it is not in the config: it is empty or outside the selection",
+    chest = "it is not in the config: it is empty or outside the selection",
+}
+
+---The inserters the export leaves out, each with the end it is left out for and why
+---@param result ExtractionResult
+---@return table[]
+local function left_out_inserters(result)
+    local out = {}
+    for _, left in ipairs(export.left_out_inserters(result)) do
+        local inserter = left.inserter
+        local target = left.target
+        table.insert(out, {
+            unit_number = inserter.entity.valid and inserter.entity.unit_number or nil,
+            name = inserter.inserter_type,
+            position = inserter.position,
+            at = left.pickup and "pickup" or "drop",
+            target = target and { type = target.type, unit_number = target.unit_number, name = target.name } or nil,
+            reason = target and LEFT_OUT_REASONS[target.type] or "the sidecar has no type for what is there (the ground, a wagon)",
+        })
+    end
+    return out
+end
+
+---What a recording of these entities would track, without samples: the config and the id of each inserter and machine,
+---and the inserters the config leaves out, with why
 ---@param force LuaForce
 ---@param entities LuaEntity[]
 ---@return table
@@ -402,7 +429,13 @@ function recorder.describe(force, entities)
         end
         return out
     end
-    return { config = export.to_table(result), inserters = infos(inserters), machines = infos(machines), drills = infos(drills) }
+    return {
+        config = export.to_table(result),
+        inserters = infos(inserters),
+        machines = infos(machines),
+        drills = infos(drills),
+        left_out = left_out_inserters(result),
+    }
 end
 
 ---Start a recording for the selected entities

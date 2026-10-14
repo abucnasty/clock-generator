@@ -1,8 +1,9 @@
 import { handSizeFor } from "../entities";
 import { EntityState } from "./entity-state";
-import { InserterState, InserterStatus } from "./inserter-state";
-import { MachineState, MachineStatus } from "./machine-state";
-import { DrillState, DrillStatus } from "./drill-state";
+import { InserterState } from "./inserter-state";
+import { MachineState } from "./machine-state";
+import { DrillState } from "./drill-state";
+import { DrillStatus, InserterStatus, MachineStatus } from "./entity-status";
 
 /**
  * The state an entity would show in Factorio, named as the game names it (`defines.entity_status`, as the recorder
@@ -32,8 +33,6 @@ export const FactorioDrillState = {
     DISABLED_BY_CONTROL_BEHAVIOR: "disabled_by_control_behavior",
 } as const;
 export type FactorioDrillState = typeof FactorioDrillState[keyof typeof FactorioDrillState];
-
-export type FactorioEntityState = FactorioInserterState | FactorioMachineState | FactorioDrillState;
 
 /** True while the sink of an inserter takes nothing from anyone: a machine that takes no item, or a full chest */
 function sinkTakesNothing(sink: EntityState): boolean {

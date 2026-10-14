@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";
-import { byProductClockFor, byProductOnlyInserters, clockWindowsOverPeriod, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, largestDivisorAtMost, loopInserters, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
+import { byProductClockFor, byProductOnlyInserters, fuelDeliveryTicks, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, largestDivisorAtMost, loopInserters, sharedFuelClockTicks, unplannedInserterClocks } from "./unplanned-inserter-clock";
 import { Entity, Machine } from "../../entities";
 import { SimulationContext } from "./simulation-context";
 
@@ -195,7 +195,7 @@ describe("inserters of a loop of machines", () => {
 
     it("are left always enabled, as are the inserters taking eggs from the loop to the science machine", async () => {
         const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE)).entity_registry;
-        expect(alwaysEnabledInserters(registry).map(inserter => Number(inserter.entity_id.id.replace("inserter:", ""))).sort((a, b) => a - b))
+        expect(alwaysEnabledInserters(registry).map(inserter => inserter.entity_id.number).sort((a, b) => a - b))
             .toEqual([5, 8, 9, 10]);
     });
 

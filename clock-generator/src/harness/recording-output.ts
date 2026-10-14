@@ -8,7 +8,7 @@ export interface PeriodRange {
     end: number;
 }
 
-export interface PeriodOutput extends PeriodRange {
+interface PeriodOutput extends PeriodRange {
     /** Items the output inserters dropped during the period */
     items: number;
 }

@@ -1,7 +1,6 @@
 import Fraction, { fraction } from "fractionability";
 import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
-import * as math from "mathjs"
 import { MapExtended } from "../../../data-types";
 import { Logger, defaultLogger } from "../../../common/logger";
 
@@ -38,6 +37,8 @@ export interface SerializableItemTransfer {
 export interface SerializableEntityTransferCount {
     entity_id: string;
     entity_type: 'inserter' | 'drill';
+    /** The id of the inserter or drill in the config */
+    entity_number: number;
     item_transfers: SerializableItemTransfer[];
     stack_size: number;
 }
@@ -708,7 +709,8 @@ function computeLCM(swing_counts: EntityTransferCountMap, ignored_items?: string
 
     const denominators = ratios.map(it => it.getDenominator);
 
-    return denominators.reduce((lcm, denominator) => math.lcm(lcm, denominator), 1);
+    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+    return denominators.reduce((lcm, denominator) => lcm / gcd(lcm, denominator) * denominator, 1);
 }
 
 function serializeTransferPlan(
@@ -720,6 +722,7 @@ function serializeTransferPlan(
         entities.push({
             entity_id: entityId.id,
             entity_type: Entity.isInserter(count.entity) ? 'inserter' : 'drill',
+            entity_number: entityId.number,
             item_transfers: count.item_transfers.map(it => ({
                 item_name: it.item_name,
                 numerator: it.transfer_count.getNumerator,

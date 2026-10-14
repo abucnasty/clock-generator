@@ -2,14 +2,14 @@ import { Duration, OpenRange } from "../../../data-types";
 import { MachineState, MachineStatus } from "../../../state";
 import { TickProvider } from "../../current-tick-provider";
 import { ModePlugin, Transition } from "../../mode";
-import { MachineMode, MachineWorkingMode } from "../modes";
+import { MachineMode } from "../modes";
 
-export interface CraftEventListenerArgs {
+interface CraftEventListenerArgs {
     readonly craft_index: number,
     readonly state: Readonly<MachineState>
     readonly craft_ticks: OpenRange
 }
-export type CraftEventListener = (args: CraftEventListenerArgs) => void;
+type CraftEventListener = (args: CraftEventListenerArgs) => void;
 
 export class CraftEventListenerPlugin implements ModePlugin<MachineMode> {
     constructor(

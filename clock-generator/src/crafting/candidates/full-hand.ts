@@ -48,7 +48,7 @@ interface TimingTrial extends QuickTrial {
 }
 
 /** What the full-hand search yields: the windows, the confirming check and its run, and what it tried */
-export interface FullHandWindows {
+interface FullHandWindows {
     windows: Map<string, OpenRange[]>;
     result: TrialRun;
     check: AsBuiltStabilityCheck;
@@ -69,7 +69,7 @@ export interface FullHandWindows {
  * windows already fill most hands in one grab (and, with count_waits, when most pickups do not wait at the machine
  * either), unless the build moves more than the expected output under them.
  */
-export function fullHandOutputWindows(
+function fullHandOutputWindows(
     config: Config,
     windows: Map<string, OpenRange[]>,
     output_swings: Map<string, number>,

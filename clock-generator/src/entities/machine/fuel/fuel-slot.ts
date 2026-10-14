@@ -5,7 +5,7 @@ import { FuelConsumption } from "../traits/fuel-consumption";
  * Inserters top a burner's fuel slot up to a few items rather than to an overload multiple of what a craft needs: at
  * least this many. A burner machine only holds the one fuel it is configured with.
  */
-export const FUEL_AUTOMATED_INSERTION_LIMIT = 5;
+const FUEL_AUTOMATED_INSERTION_LIMIT = 5;
 
 /**
  * A burner machine works from a buffer of energy that holds this many ticks of work: a tick of work draws a tick of
@@ -26,7 +26,7 @@ export const ENERGY_BUFFER_TICKS = 16 / 15;
  * - https://forums.factorio.com/viewtopic.php?p=705411#p705411 (abuc's report of the biochamber limits measured above;
  *   expected to be answered as working as intended, given the rule in the first thread)
  */
-export const FUEL_INSERTION_BUFFERS = 180;
+const FUEL_INSERTION_BUFFERS = 180;
 
 export interface FuelSlot {
     readonly fuel: Fuel;

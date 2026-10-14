@@ -3,7 +3,7 @@
  * Uses a colorblind-friendly palette based on Wong (2011).
  */
 
-import { StatusCategory, InserterStatus, MachineStatus, DrillStatus, EntityType } from 'clock-generator/browser';
+import { StatusCategory, InserterStatus, MachineStatus, DrillStatus, EntityType } from 'clock-generator/light';
 
 // Colorblind-friendly palette (Wong, 2011)
 export const COLOR_BLIND_PALETTE = {
@@ -79,24 +79,6 @@ export function getStatusColor(
  */
 export function getCategoryColor(category: StatusCategory): string {
     return CATEGORY_COLORS[category] ?? CATEGORY_COLORS.IDLE;
-}
-
-/**
- * Get all status colors for an entity type
- */
-export function getStatusColorsForEntityType(
-    entityType: EntityType
-): Record<string, string> {
-    switch (entityType) {
-        case EntityType.INSERTER:
-            return INSERTER_STATUS_COLORS;
-        case EntityType.MACHINE:
-            return MACHINE_STATUS_COLORS;
-        case EntityType.DRILL:
-            return DRILL_STATUS_COLORS;
-        default:
-            throw new Error(`Unknown entity type: ${entityType}`);
-    }
 }
 
 /**

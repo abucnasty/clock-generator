@@ -3,16 +3,7 @@ import { FuelProgressState, ProgressState } from "./progress-state";
 import { EntityId, Machine } from "../entities";
 import { EntityState } from "./entity-state";
 import { Logger, defaultLogger } from "../common/logger";
-
-export const MachineStatus = {
-    INGREDIENT_SHORTAGE: 'INGREDIENT_SHORTAGE',
-    WORKING: 'WORKING',
-    OUTPUT_FULL: 'OUTPUT_FULL',
-    /** A burner machine with nothing to burn, whatever its ingredients and output hold */
-    NO_FUEL: 'NO_FUEL',
-} as const;
-
-export type MachineStatus = typeof MachineStatus[keyof typeof MachineStatus];
+import { MachineStatus } from "./entity-status";
 
 export class MachineState implements EntityState {
 
@@ -29,6 +20,7 @@ export class MachineState implements EntityState {
     public static takesTurnForOutput = takesTurnForOutput
     public static waitsForOutput = waitsForOutput
     public static print = printMachineState
+    public static stateKey = stateKey
 
     constructor(
         public readonly entity_id: EntityId,
@@ -137,6 +129,23 @@ function clone(machineState: MachineState): MachineState {
     machineState.outputWaiters.forEach((waiters, item_name) => cloned.outputWaiters.set(item_name, new Map(waiters)));
     machineState.lastOutputTaker.forEach((inserter_id, item_name) => cloned.lastOutputTaker.set(item_name, inserter_id));
     return cloned;
+}
+
+/**
+ * What drives the machine's next ticks besides its inventory (see simulationStateKey). The running totals only grow,
+ * so they never repeat.
+ */
+function stateKey(machineState: MachineState): string {
+    return [
+        machineState.status,
+        machineState.pendingOutput,
+        machineState.outputBlockedAfterLastTick,
+        machineState.finishedCraftInLastTick,
+        JSON.stringify(machineState.selfIngredients.export()),
+        JSON.stringify(Array.from(machineState.lastOutputTaker)),
+        machineState.craftingProgress.progress,
+        machineState.bonusProgress.progress,
+    ].join(";");
 }
 
 /** Where a machine keeps an ingredient: with its output, or apart from it when the recipe also makes that item */

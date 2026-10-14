@@ -2,10 +2,10 @@
 -- Entry point for the mod. Handles player storage, event handlers, and
 -- event registration. All heavy lifting is delegated to modules in scripts/.
 
-require("scripts.types")
-local extraction = require("scripts.extraction")
-local export = require("scripts.export")
-local gui = require("scripts.gui")
+require("__clock-generator-sidecar__.scripts.types")
+local extraction = require("__clock-generator-sidecar__.scripts.extraction")
+local export = require("__clock-generator-sidecar__.scripts.export")
+local gui = require("__clock-generator-sidecar__.scripts.gui")
 
 -- Player Storage
 
@@ -74,7 +74,7 @@ local function on_gui_click(event)
             local result = player_data.extraction_result
             if #result.machines > 0 or #result.drills > 0 or #result.inserters > 0 or #result.belts > 0 or #result.chests > 0 then
                 local json = export.to_json(result)
-                gui.create_copy_popup(player, json)
+                gui.create_copy_popup(player, json, export.left_out_inserters(result))
             else
                 player.print("[Clock Generator Sidecar] No data found. Please select entities first.")
             end

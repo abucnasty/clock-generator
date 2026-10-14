@@ -1,4 +1,5 @@
 ---@class MachineData
+---@field entity LuaEntity
 ---@field name string Machine entity name
 ---@field recipe string Recipe name (for machines/furnaces)
 ---@field crafting_speed number Effective crafting speed with bonuses (for machines/furnaces)
@@ -7,6 +8,7 @@
 ---@field energy_consumption_bonus number|nil Energy consumption effect as a percentage (biochambers only)
 
 ---@class DrillData
+---@field entity LuaEntity The drill itself
 ---@field drill_type string The specific drill type (e.g., "electric-mining-drill")
 ---@field mined_item_name string The resource being mined
 ---@field speed_bonus number The speed bonus from modules/beacons
@@ -25,6 +27,7 @@
 ---@class InserterTargetRef
 ---@field type "machine"|"belt"|"chest" The target type
 ---@field unit_number number The unit number of the target entity
+---@field name string The target entity's name
 
 ---@class InfinityFilterData
 ---@field item_name string The item name
@@ -44,7 +47,9 @@
 ---@alias ChestData BufferChestData|InfinityChestData
 
 ---@class InserterData
+---@field entity LuaEntity
 ---@field inserter_type string The inserter entity name
+---@field position MapPosition Where the inserter stands
 ---@field stack_size number The inserter stack size
 ---@field filters string[] Item filters set on the inserter
 ---@field source InserterTargetRef|nil The pickup target

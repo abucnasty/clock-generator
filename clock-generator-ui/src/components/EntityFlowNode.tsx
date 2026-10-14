@@ -42,7 +42,7 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
     );
 }
 
-export type EntityFlowNodeType = Node<EntityNodeData, 'entityNode'>;
+type EntityFlowNodeType = Node<EntityNodeData, 'entityNode'>;
 
 export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
     const borderColor = BORDER_COLORS[data.entityType];

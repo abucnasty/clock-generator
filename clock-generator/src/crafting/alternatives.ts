@@ -1,5 +1,6 @@
 import assert from "../common/assert";
 import { Config } from "../config";
+import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
@@ -159,7 +160,7 @@ function takesFuelOffABelt(config: Config): boolean {
  * that does not hold either way is offered as it is, without the slack: until 2026-10-10 it was made again with the
  * slack, which no selected clock of any sample needed once the simulator took from the nearest lane of a belt first.
  */
-export function withFuelHandRoomWhereNeeded(
+function withFuelHandRoomWhereNeeded(
     withoutRoom: () => BlueprintGenerationResult,
     withFuelHandRoom: () => BlueprintGenerationResult | undefined,
 ): BlueprintGenerationResult {
@@ -214,7 +215,9 @@ function beltNote(config: Config, result: BlueprintGenerationResult, made_withou
         + "does not move, without belt pickup slack. On a moving belt an inserter can be switched off holding a partial hand.";
     if (config.overrides?.non_moving_belts === true) {
         const room = Object.entries(result.fuel_hand_room_ticks);
-        const ids = room.map(([key]) => key.slice(key.indexOf(":") + 1));
+        const config_ids = config.inserters.map((inserter, index) => inserter.id ?? index + 1);
+        const inserter_ids = new Map(config_ids.map(id => [EntityId.forInserter(id).id, id]));
+        const ids = room.map(([key]) => inserter_ids.get(key));
         const fuel = room.length === 0 ? ""
             : ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
             + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each window, the ticks a hand of fuel takes to fill: `
@@ -419,16 +422,16 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const { id } = definition;
     const label = withOutputSwings(definition, result.used_terminal_swing_count);
     const signature = JSON.stringify([result.simulation_duration.ticks, result.clock_windows]);
-    const inserter_window_count = Object.entries(result.clock_windows)
-        .filter(([key]) => key.startsWith("inserter:"))
-        .reduce((sum, [, ranges]) => sum + ranges.length, 0);
+    const entity_registry = createEntityRegistryFromConfig(config);
+    const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
+        .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
     const ranking_window_count = rankingWindowCount(inserter_window_count, result.clock_windows, result.output_feeders);
     // the planning simulation drives inserters from inventory levels and can over- or undershoot
     // where the exported clock does not; in game, recordings matched the clock-only check
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
     const held = holds(result);
     const backpressure_loss = held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
-    const deadlock_risks = sharedItemDeadlockRisks(createEntityRegistryFromConfig(config));
+    const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
         + "stability is judged by the clock-only check, which runs the exported clock windows.";
@@ -437,7 +440,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
         : ` Output swing ${search.picked!.row} starts ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const shifted_note = search?.kind !== "shifted cycle" ? ""
         : ` The swings planned in clock ticks ${search.planned_ticks!.start}–${search.planned_ticks!.end} (`
-        + search.moved!.map(it => `${it.entity_id.replace(":", " ")}: ${it.item_names.join(", ")}`).join("; ")
+        + search.moved!.map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(", ")}`).join("; ")
         + `) start ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
@@ -477,7 +480,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                     + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
                     + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
                     + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
-                result: { ...result, blueprint: result.subtick.blueprint },
+                result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
             }),
             alternativeAt(rounded, {
                 id,

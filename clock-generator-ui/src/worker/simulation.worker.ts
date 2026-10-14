@@ -3,10 +3,13 @@
  *
  * The main thread runs a pool of these: one plans a generation (the primary alternative and the task list),
  * then every worker takes tasks (one alternative each) until all are done. Logs and progress stream back.
+ * One more answers the main thread's queries (see EngineQuery), as only the workers load the engine.
  */
 
+import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
-import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
+import { parseFormConfig } from './formConfig';
+import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
@@ -21,15 +24,12 @@ function postResponse(response: WorkerResponse): void {
     ctx.postMessage(response);
 }
 
-async function handleInitialize(factorioDataUrl: string): Promise<void> {
+async function handleInitialize(factorioData: string): Promise<void> {
     try {
         // Dynamically import the clock-generator browser module
         clockGenerator = await import('clock-generator/browser');
 
-        // Fetch and initialize Factorio data
-        const response = await fetch(factorioDataUrl);
-        const data = await response.json();
-        clockGenerator.FactorioDataService.initialize(data);
+        clockGenerator.FactorioDataService.initialize(JSON.parse(factorioData));
 
         postResponse({ type: 'initialized' });
     } catch (error) {
@@ -59,7 +59,7 @@ function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['res
         chosenIndex: search.picked.row,
         chosenShiftTicks: search.picked.setting,
         movedDescription: shifted
-            ? (search.moved ?? []).map(it => `${it.entity_id.replace(':', ' ')}: ${it.item_names.join(', ')}`).join('; ')
+            ? (search.moved ?? []).map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(', ')}`).join('; ')
             : `output swing ${search.picked.row}`,
         plannedTicks: shifted ? search.planned_ticks ?? null : null,
         rows: Array.from(rows.values()),
@@ -121,8 +121,6 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
-        transferPlan: result.serializable_transfer_plan,
-        usedLcm: result.used_lcm,
     }));
     return { signature: run.signature, alternatives };
 }
@@ -186,6 +184,97 @@ function handleValidate(requestId: number, config: Config): void {
     }
 }
 
+function lookups(): FactorioLookups {
+    const data = clockGenerator.FactorioDataService;
+    const recipeNames = data.getAllRecipeNames();
+    const recipes: FactorioLookups['recipes'] = new Map();
+    for (const name of recipeNames) {
+        try {
+            const recipe = data.findRecipeOrThrow(name);
+            recipes.set(name, {
+                ingredients: recipe.ingredients.map(ing => ing.name),
+                results: recipe.results.map(res => res.name),
+            });
+        } catch {
+            // a recipe the generator cannot use has no info
+        }
+    }
+    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes };
+}
+
+/** Validate each entry of a pasted list, throwing on the first one the schema rejects */
+function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: string): T[] {
+    if (!Array.isArray(entries)) return [];
+    return entries.map((entry, i) => {
+        const result = schema.safeParse(entry);
+        if (!result.success) {
+            throw new Error(`Invalid ${label} at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
+        }
+        return result.data;
+    });
+}
+
+function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
+    // IDs are already assigned by the mod
+    const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
+    return {
+        machines,
+        drills: validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill'),
+        inserters: validateEntries(clockGenerator.InserterConfigSchema, pasted.inserters, 'inserter'),
+        belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
+        chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
+        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines),
+    };
+}
+
+/** Why the saved form state cannot be loaded, or null when it can */
+function savedConfigProblem(config: unknown): string | null {
+    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
+    return result.success ? null : result.error.message;
+}
+
+/** An imported config file, which can hold what the form exports, e.g. an inserter end left unset */
+function configFile(config: unknown): Config {
+    const result = parseFormConfig(clockGenerator.ConfigSchema, config);
+    if (!result.success) {
+        throw new clockGenerator.ConfigValidationError(result.error);
+    }
+    return result.data;
+}
+
+function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
+    switch (query.kind) {
+        case 'lookups':
+            return lookups();
+        case 'machine-facts':
+            try {
+                return clockGenerator.Machine.computeMachineFacts(query.params);
+            } catch {
+                return null;
+            }
+        case 'inserter-coverage':
+            return clockGenerator.validateInserterCoverage(query.config);
+        case 'saved-config':
+            return savedConfigProblem(query.config);
+        case 'config-file':
+            return configFile(query.config);
+        case 'pasted-entities':
+            return pastedEntities(query);
+    }
+}
+
+function handleQuery(requestId: number, query: EngineQuery): void {
+    try {
+        postResponse({ type: 'answer', requestId, answer: answer(query) });
+    } catch (error) {
+        postResponse({
+            type: 'query-failed',
+            requestId,
+            message: error instanceof Error ? error.message : 'The engine could not answer',
+        });
+    }
+}
+
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
         const plan = clockGenerator.planClockAlternatives(config, options);
@@ -212,7 +301,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
     switch (request.type) {
         case 'initialize':
-            await handleInitialize(request.factorioDataUrl);
+            await handleInitialize(request.factorioData);
             break;
         case 'validate':
             handleValidate(request.requestId, request.config);
@@ -222,6 +311,9 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             break;
         case 'task':
             handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId);
+            break;
+        case 'query':
+            handleQuery(request.requestId, request.query);
             break;
     }
 };

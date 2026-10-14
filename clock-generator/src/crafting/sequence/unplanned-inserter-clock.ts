@@ -1,5 +1,5 @@
-import { Duration, OpenRange } from "../../data-types";
-import { Belt, Entity, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
+import { OpenRange } from "../../data-types";
+import { Belt, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 
 /** Ticks added to the end of a window, so a late pickup from a busy belt or a machine still fills the hand */
 const WINDOW_SLACK_TICKS = 4;
@@ -15,7 +15,7 @@ const WINDOW_SLACK_TICKS = 4;
  *   of the clock period, so the clock of the period holds a whole number of repeats.
  */
 export interface InserterClock {
-    inserter_id: string;
+    inserter_id: EntityId;
     kind: "fuel" | "by-product";
     /** Ticks between the starts of two windows; divides the clock period unless the inserter has a clock of its own */
     modulus: number;
@@ -147,7 +147,7 @@ function clockEvery(
         : largestDivisorAtMost(period_ticks, interval_ticks, swing_ticks);
     if (modulus === null) {
         throw new Error(
-            `Inserter ${inserter.entity_id.id.replace("inserter:", "")} cannot keep up: ${cannot_keep_up()} lasts ${interval_ticks} ticks `
+            `Inserter ${inserter.entity_id.number} cannot keep up: ${cannot_keep_up()} lasts ${interval_ticks} ticks `
             + `and a swing takes ${swing_ticks}`
             + (interval_ticks >= swing_ticks && period_ticks !== null ? ` (and no divisor of the ${period_ticks} tick clock fits between them)` : "")
             + ". Add another inserter or raise its stack size."
@@ -158,7 +158,7 @@ function clockEvery(
     const stagger = index * (window_ticks + 1);
     const start = stagger + window_ticks <= modulus ? stagger : 0;
     return {
-        inserter_id: inserter.entity_id.id,
+        inserter_id: inserter.entity_id,
         kind,
         modulus,
         own_clock: period_ticks === null,
@@ -187,7 +187,7 @@ const CRAFTING_SHARE_MARGIN = 1.1;
  * With `shared_clock_ticks`, the ticks one clock counts for the period and every fuel clock, the window repeats every
  * divisor of that.
  */
-export function fuelClockFor(
+function fuelClockFor(
     inserter: Inserter,
     machine: Machine,
     entity_registry: ReadableEntityRegistry,
@@ -231,7 +231,7 @@ export function fuelDeliveryTicks(inserter: Inserter, entity_registry: ReadableE
 }
 
 /** Ticks the fuel a slot is sure to hold at a window lasts a machine that crafts `crafting_share` of the time */
-export function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, crafting_share: number = 1): number {
+function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, crafting_share: number = 1): number {
     const consumption = machine.fuel_consumption;
     const slot = machine.fuel_slot;
     if (!consumption || !slot) {
@@ -243,10 +243,10 @@ export function fuelBurnIntervalTicks(inserter: Inserter, machine: Machine, craf
 }
 
 /** Longest the one clock for the period and the fuel clocks is made to count: 10 minutes */
-export const MAX_SHARED_FUEL_CLOCK_TICKS = 36_000;
+const MAX_SHARED_FUEL_CLOCK_TICKS = 36_000;
 
 /** How many more enables than the fuel needs are taken for a shorter clock */
-export const SHARED_FUEL_CLOCK_TOLERANCE = 1.05;
+const SHARED_FUEL_CLOCK_TOLERANCE = 1.05;
 
 /**
  * The ticks one clock counts to hold the period and every fuel clock: a few periods, with each fuel clock a divisor of
@@ -395,8 +395,4 @@ export function clockWindowsOverPeriod(clock: InserterClock, period_ticks: numbe
         windows.push(OpenRange.from(start + clock.window.start_inclusive, start + clock.window.end_inclusive));
     }
     return windows;
-}
-
-export function clockPeriod(clock: InserterClock): Duration {
-    return Duration.ofTicks(clock.modulus);
 }

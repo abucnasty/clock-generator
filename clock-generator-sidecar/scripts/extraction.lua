@@ -1,9 +1,11 @@
 -- Entity Extraction for Clock Generator Sidecar
 -- Functions for extracting data from Factorio entities (machines, drills,
 -- inserters, belts).
+-- The recorder mod loads this module too, so the sidecar requires its modules by their full path: a path without the
+-- mod name may be looked up in the mod that is running, and a module required under two names is loaded twice.
 
-require("scripts.types")
-local helpers = require("scripts.helpers")
+require("__clock-generator-sidecar__.scripts.types")
+local helpers = require("__clock-generator-sidecar__.scripts.helpers")
 
 local debug = false
 
@@ -39,6 +41,7 @@ local function extract_mining_drill_data(entity)
 
     ---@type DrillData
     local data = {
+        entity = entity,
         drill_type = entity.name,
         mined_item_name = mining_target.name,
         speed_bonus = speed_bonus,
@@ -167,7 +170,8 @@ local function extract_inserter_data(entity)
         if target_type then
             source = {
                 type = target_type,
-                unit_number = pickup_target.unit_number
+                unit_number = pickup_target.unit_number,
+                name = pickup_target.name
             }
             if target_type == "belt" then
                 source.near_lane = helpers.get_near_lane(entity, pickup_target)
@@ -184,14 +188,17 @@ local function extract_inserter_data(entity)
         if target_type then
             sink = {
                 type = target_type,
-                unit_number = drop_target.unit_number
+                unit_number = drop_target.unit_number,
+                name = drop_target.name
             }
         end
     end
 
     ---@type InserterData
     local data = {
+        entity = entity,
         inserter_type = entity.name,
+        position = entity.position,
         stack_size = stack_size,
         filters = filters,
         source = source,
@@ -253,6 +260,7 @@ local function extract_crafting_machine_data(entity)
     -- Extract data
     ---@type MachineData
     local data = {
+        entity = entity,
         name = entity.name,
         recipe = recipe.name,
         crafting_speed = entity.crafting_speed,
@@ -295,6 +303,11 @@ local function extract_machine_data(entity)
     end
 
     if subgroup == "agriculture" and entity.name ~= "biochamber" then
+        return nil, nil
+    end
+
+    -- Labs share the production-machine subgroup but have no recipe: get_recipe raises an error on them
+    if entity.type ~= "assembling-machine" and entity.type ~= "furnace" then
         return nil, nil
     end
 
@@ -469,7 +482,8 @@ function extraction.extract_all_entities(entities, force)
             table.insert(ingredients, ingredient)
         end
         table.sort(ingredients)
-        -- a belt with nothing on it is not described, as before; its inserters are matched by their other end
+        -- a belt with nothing on it is not described, as before: an inserter that takes from it is left out of the export,
+        -- and one that drops onto it points at the first belt (see resolve_target_id in export.lua)
         if #ingredients > 0 then
             local lanes = {}
             if not lane_ingredient[1] and not lane_ingredient[2] then

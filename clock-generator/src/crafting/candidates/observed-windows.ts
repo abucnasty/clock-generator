@@ -2,6 +2,7 @@ import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
+import { EntityId } from "../../entities";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
 import { withBeltPickupSlack } from "../clock";
@@ -44,7 +45,7 @@ export interface DerivedWindows {
  * into a decider window. Windows are padded and accepted only if a clock-only simulation stays stable.
  * Drills keep their planned windows.
  */
-export function deriveClockWindows(
+function deriveClockWindows(
     config: Config,
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
@@ -57,7 +58,8 @@ export function deriveClockWindows(
     const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     // drills only report WORKING/DISABLED, so their activity gives no useful window to derive
-    const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => key.startsWith("drill:")));
+    const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
+    const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
     const planned = deriveWithOutputWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "planned output", logger, report);
     if (planned.windows !== null || planned.even_output_windows === null) {

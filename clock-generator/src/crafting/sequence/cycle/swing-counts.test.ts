@@ -167,7 +167,7 @@ describe("an item needed at two levels of a chain", () => {
 describe("output machines with several inserters taking from them", async () => {
     const registry = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION)).entity_registry;
     const machines = registry.getAll().filter(Entity.isMachine);
-    const ids = (machine: Machine) => outputInsertersOf(machine, registry).map(it => Number(it.entity_id.id.replace("inserter:", ""))).sort((a, b) => a - b);
+    const ids = (machine: Machine) => outputInsertersOf(machine, registry).map(it => it.entity_id.number).sort((a, b) => a - b);
     // 3 hands of bacteria a machine a cycle
     const swings = EntityTransferCountMap.create(machines, registry, fraction(3), 16);
     const transfers = (inserter_id: number) => Object.fromEntries(

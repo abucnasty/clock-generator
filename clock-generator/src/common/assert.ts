@@ -3,7 +3,7 @@
  * A simple assertion function that works in both Node.js and browser environments.
  */
 
-export class AssertionError extends Error {
+class AssertionError extends Error {
     constructor(message?: string) {
         super(message ?? 'Assertion failed');
         this.name = 'AssertionError';

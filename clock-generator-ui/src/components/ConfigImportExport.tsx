@@ -2,24 +2,20 @@ import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons
 import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
-import { checkSidecarImport, Option, MachineConfigurationSchema, MiningDrillConfigSchema, InserterConfigSchema, BeltConfigSchema, ChestConfigSchema } from 'clock-generator/browser';
-import type { z } from 'zod';
+import { Option } from 'clock-generator/light';
+import { readConfigFile } from '../hooks/useConfigForm';
+import { askEngine } from '../worker/engineClient';
+import type {
+    BeltConfiguration,
+    ChestConfiguration,
+    InserterConfiguration,
+    MachineConfiguration,
+    MiningDrillConfiguration,
+    PastedEntities,
+} from '../worker/types';
 
-type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
-type MiningDrillConfiguration = z.infer<typeof MiningDrillConfigSchema>;
-type InserterConfiguration = z.infer<typeof InserterConfigSchema>;
-type BeltConfiguration = z.infer<typeof BeltConfigSchema>;
-type ChestConfiguration = z.infer<typeof ChestConfigSchema>;
-
-interface PendingImport {
-    machines: MachineConfiguration[];
-    drills: MiningDrillConfiguration[];
-    inserters: InserterConfiguration[];
-    belts: BeltConfiguration[];
-    chests: ChestConfiguration[];
+interface PendingImport extends PastedEntities {
     miningProductivityLevel?: number;
-    /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
-    guidance?: Option<string>;
 }
 
 interface ImportSelections {
@@ -31,7 +27,8 @@ interface ImportSelections {
 }
 
 interface ConfigImportExportProps {
-    config: Config;
+    /** Null disables Export */
+    config: Config | null;
     onImport: (config: Config) => void;
     onReplaceMachines: (machines: MachineConfiguration[]) => void;
     onReplaceDrills: (drills: MiningDrillConfiguration[]) => void;
@@ -75,6 +72,7 @@ export function ConfigImportExport({
     });
 
     const handleExport = useCallback(() => {
+        if (!config) return;
         const target_recipe_name = config.target_output.recipe
         const jsonString = JSON.stringify(config, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
@@ -104,8 +102,8 @@ export function ConfigImportExport({
 
             try {
                 const content = await file.text();
-                
-                const parsedConfig = JSON.parse(content) as Config;
+                // values out of bounds are kept, for the form to show; only a broken file is rejected
+                const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(content) });
 
                 onImport(parsedConfig);
                 setSnackbar({
@@ -173,88 +171,26 @@ export function ConfigImportExport({
                     throw new Error('No machines, drills, inserters, belts, or chests found in clipboard data.');
                 }
 
-                // Validate machines (IDs are already assigned by the mod)
-                const validatedMachines: MachineConfiguration[] = [];
-                if (Array.isArray(data.machines)) {
-                    for (let i = 0; i < data.machines.length; i++) {
-                        const entry = data.machines[i];
-                        const result = MachineConfigurationSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid machine at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedMachines.push(result.data);
-                    }
-                }
-
-                // Validate drills (IDs are already assigned by the mod)
-                const validatedDrills: MiningDrillConfiguration[] = [];
-                if (Array.isArray(drillConfigs)) {
-                    for (let i = 0; i < drillConfigs.length; i++) {
-                        const entry = drillConfigs[i];
-                        const result = MiningDrillConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid drill at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedDrills.push(result.data);
-                    }
-                }
-
-                // Validate inserters
-                const validatedInserters: InserterConfiguration[] = [];
-                if (Array.isArray(data.inserters)) {
-                    for (let i = 0; i < data.inserters.length; i++) {
-                        const entry = data.inserters[i];
-                        const result = InserterConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid inserter at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedInserters.push(result.data);
-                    }
-                }
-
-                // Validate belts
-                const validatedBelts: BeltConfiguration[] = [];
-                if (Array.isArray(data.belts)) {
-                    for (let i = 0; i < data.belts.length; i++) {
-                        const entry = data.belts[i];
-                        const result = BeltConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid belt at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedBelts.push(result.data);
-                    }
-                }
-
-                // Validate chests
-                const validatedChests: ChestConfiguration[] = [];
-                if (Array.isArray(data.chests)) {
-                    for (let i = 0; i < data.chests.length; i++) {
-                        const entry = data.chests[i];
-                        const result = ChestConfigSchema.safeParse(entry);
-                        if (!result.success) {
-                            throw new Error(`Invalid chest at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                        }
-                        validatedChests.push(result.data);
-                    }
-                }
+                // Validate each list against its schema
+                const validated = await askEngine({
+                    kind: 'pasted-entities',
+                    machines: data.machines,
+                    drills: drillConfigs,
+                    inserters: data.inserters,
+                    belts: data.belts,
+                    chests: data.chests,
+                    sidecar_version: data.sidecar_version,
+                });
 
                 // Store pending import and show confirmation modal
-                setPendingImport({
-                    machines: validatedMachines,
-                    drills: validatedDrills,
-                    inserters: validatedInserters,
-                    belts: validatedBelts,
-                    chests: validatedChests,
-                    miningProductivityLevel,
-                    guidance: checkSidecarImport(data.sidecar_version, validatedMachines),
-                });
+                setPendingImport({ ...validated, miningProductivityLevel });
                 // Reset selections to include all available items
                 setImportSelections({
-                    machines: validatedMachines.length > 0,
-                    drills: validatedDrills.length > 0,
-                    inserters: validatedInserters.length > 0,
-                    belts: validatedBelts.length > 0,
-                    chests: validatedChests.length > 0,
+                    machines: validated.machines.length > 0,
+                    drills: validated.drills.length > 0,
+                    inserters: validated.inserters.length > 0,
+                    belts: validated.belts.length > 0,
+                    chests: validated.chests.length > 0,
                 });
                 return;
             }
@@ -268,27 +204,19 @@ export function ConfigImportExport({
                 throw new Error('No machines found in clipboard data.');
             }
 
-            // Validate each machine entry (IDs are already assigned by the mod)
-            const validatedMachines: MachineConfiguration[] = [];
-            
-            for (let i = 0; i < parsed.length; i++) {
-                const entry = parsed[i];
-                const result = MachineConfigurationSchema.safeParse(entry);
-                if (!result.success) {
-                    throw new Error(`Invalid machine at index ${i}: ${result.error.issues[0]?.message || 'Unknown error'}`);
-                }
-                validatedMachines.push(result.data);
-            }
-
-            // Store pending import and show confirmation modal (legacy format - machines only)
-            setPendingImport({
-                machines: validatedMachines,
+            // Validate each machine entry
+            const validated = await askEngine({
+                kind: 'pasted-entities',
+                machines: parsed,
                 drills: [],
                 inserters: [],
                 belts: [],
                 chests: [],
-                guidance: checkSidecarImport(undefined, validatedMachines),
+                sidecar_version: undefined,
             });
+
+            // Store pending import and show confirmation modal (legacy format - machines only)
+            setPendingImport(validated);
             setImportSelections({
                 machines: true,
                 drills: false,
@@ -375,12 +303,12 @@ export function ConfigImportExport({
     const handleMenuPasteFromFactorio = useCallback(() => {
         handleMenuClose();
         handlePasteFromFactorio();
-    }, [handlePasteFromFactorio]);
+    }, [handleMenuClose, handlePasteFromFactorio]);
 
     const handleMenuReset = useCallback(() => {
         handleMenuClose();
         onReset();
-    }, [onReset]);
+    }, [handleMenuClose, onReset]);
 
     return (
         <>
@@ -396,6 +324,7 @@ export function ConfigImportExport({
                 <Button
                     startIcon={<Download />}
                     onClick={handleExport}
+                    disabled={!config}
                     variant="outlined"
                     size="small"
                 >

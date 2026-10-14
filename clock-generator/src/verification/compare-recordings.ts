@@ -8,14 +8,14 @@ import { extractTransfers } from "./recording-history";
 import { wakeUpsOfRecording } from "./recording-wake-ups";
 
 /** A recording with which of the config's entities each of its own is, and the sample it is read from */
-export interface ComparedRecording {
+interface ComparedRecording {
     recording: Recording;
     match: EntityMatch;
     /** Samples before this one are left out: the start-up of a simulated run */
     from_sample?: number;
 }
 
-export interface CompareRecordingsOptions {
+interface CompareRecordingsOptions {
     /** Items the build is expected to put out in each clock period */
     expected_output_per_period?: number;
     /**
@@ -33,20 +33,20 @@ export interface CompareRecordingsOptions {
     state_agreement: number;
 }
 
-export const DEFAULT_COMPARE_RECORDINGS_OPTIONS: CompareRecordingsOptions = {
+const DEFAULT_COMPARE_RECORDINGS_OPTIONS: CompareRecordingsOptions = {
     items_tolerance: 0.5,
     state_agreement: 0.95,
 };
 
 /** A stretch of clock positions at which the two show the same state less than half the time, with the state each mostly shows */
-export interface StateDifference {
+interface StateDifference {
     from: number;
     to: number;
     game: string;
     sim: string;
 }
 
-export interface StateComparison {
+interface StateComparison {
     /** Share of the time the two show the same state, laid over each other clock position by clock position */
     agreement: number;
     /**
@@ -61,13 +61,13 @@ export interface StateComparison {
     differences: StateDifference[];
 }
 
-export interface PeriodCount {
+interface PeriodCount {
     mean: number;
     min: number;
     max: number;
 }
 
-export interface InserterComparison {
+interface InserterComparison {
     config_id: number;
     /** Its ends, e.g. "belt 2 -> machine 3" */
     label: string;
@@ -82,7 +82,7 @@ export interface InserterComparison {
     states: StateComparison;
 }
 
-export interface MachineComparison {
+interface MachineComparison {
     config_id: number;
     recipe: string;
     /** Crafts and productivity bars finished in a clock period */
@@ -91,14 +91,14 @@ export interface MachineComparison {
     states: StateComparison;
 }
 
-export interface OutputComparison {
+interface OutputComparison {
     expected_per_period: number | null;
     /** Items put out in each complete clock period */
     game: number[];
     sim: number[];
 }
 
-export interface RecordingComparison {
+interface RecordingComparison {
     /** Positions the clock counts, the same in both */
     clock_ticks: number;
     game_periods: number;
@@ -298,7 +298,7 @@ export function compareRecordings(
     config: Config,
     options: Partial<CompareRecordingsOptions> = {},
 ): RecordingComparison {
-    const { expected_output_per_period, free_running_inserter_ids, items_tolerance, state_agreement } = { ...DEFAULT_COMPARE_RECORDINGS_OPTIONS, ...options };
+    const { expected_output_per_period, free_running_inserter_ids, items_tolerance } = { ...DEFAULT_COMPARE_RECORDINGS_OPTIONS, ...options };
     const game = sideOf(game_recording);
     const sim = sideOf(sim_recording);
     const issues: string[] = buildDifferences(game.recording, game.match, config)
@@ -328,7 +328,7 @@ export function compareRecordings(
     };
     const [game_wake_ups, sim_wake_ups] = [wakeUpsBy(game), wakeUpsBy(sim)];
     const wakeUpsOfInserter = (wake_ups: typeof game_wake_ups, config_id: number) =>
-        wake_ups.inserters.find(it => it.inserter_id === `inserter:${config_id}`)?.wake_ups_per_minute ?? 0;
+        wake_ups.inserters.find(it => it.inserter_id === EntityId.forInserter(config_id).id)?.wake_ups_per_minute ?? 0;
 
     const game_inserters = by_config_id(game, game.recording.inserters, game.match.inserters);
     const sim_inserters = by_config_id(sim, sim.recording.inserters, sim.match.inserters);

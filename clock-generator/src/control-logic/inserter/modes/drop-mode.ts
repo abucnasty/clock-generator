@@ -20,6 +20,10 @@ export class InserterDropMode implements InserterMode {
 
     public onExit(toMode: InserterMode): void { }
 
+    public stateKey(): string {
+        return String(this.current_tick);
+    }
+
     public executeForTick(): void {
         if (EntityState.isBelt(this.sink_entity_state)) {
             // the belt is full of what the hand holds (a run in which the output is not taken away): the hand waits

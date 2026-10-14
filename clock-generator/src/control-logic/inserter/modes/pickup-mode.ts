@@ -1,7 +1,7 @@
 import { handSizeFor } from "../../../entities";
 import assert from "../../../common/assert";
 import { ItemName } from "../../../data";
-import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState, ReadableEntityStateRegistry } from "../../../state";
+import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState } from "../../../state";
 import { InserterMode } from "./inserter-mode";
 import { TickProvider } from "../../current-tick-provider";
 import { actsInTheTickTheBlockIsLifted } from "../waiting-inserter";
@@ -58,6 +58,10 @@ export class InserterPickupMode implements InserterMode {
      * the middle; the stacks after that come a tick apart. True once that tick has passed.
      */
     private belt_grab_decided: boolean = true;
+
+    public stateKey(): string {
+        return `${this.current_tick},${this.belt_grab_decided}`;
+    }
 
     public onExit(toMode: InserterMode): void {
         // No action needed on exit

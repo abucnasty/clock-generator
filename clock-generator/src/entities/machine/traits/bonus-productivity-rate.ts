@@ -1,4 +1,3 @@
-import Fraction, { fraction } from "fractionability";
 import { CraftingRate } from "./crafting-rate";
 import { Percentage } from "../../../data-types";
 

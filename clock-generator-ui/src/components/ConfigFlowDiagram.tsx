@@ -15,11 +15,11 @@ import {
 import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { Add, Fullscreen, InfoOutlined } from '@mui/icons-material';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
-import { buildFlowGraph } from '../utils/buildFlowGraph';
+import { buildFlowGraph, flowNodeEntity } from '../utils/buildFlowGraph';
 import { EntityFlowNode } from './EntityFlowNode';
 import { InserterFlowNode } from './InserterFlowNode';
 import { DrillFlowNode } from './DrillFlowNode';
-import type { EntityNodeData, InserterNodeData, DrillNodeData } from '../utils/buildFlowGraph';
+import type { FlowNodeEntity } from '../utils/buildFlowGraph';
 import { EntityEditDialog } from './EntityEditDialog';
 import type { EntityEditDialogProps } from './EntityEditDialog';
 
@@ -29,18 +29,9 @@ const nodeTypes: NodeTypes = {
     drillNode: DrillFlowNode,
 };
 
-function parseFlowNodeId(id: string | null | undefined): { type: string; numId: number } | null {
-    if (!id) return null;
-    const match = id.match(/^(machine|belt|chest|inserter)-(\d+)$/);
-    if (!match) return null;
-    return { type: match[1], numId: parseInt(match[2]) };
-}
+const ENTITY_TYPES = new Set<FlowNodeEntity['type']>(['machine', 'belt', 'chest']);
 
-const ENTITY_TYPES = new Set(['machine', 'belt', 'chest']);
-
-function isInserterEntityConnection(source: string | null, target: string | null): boolean {
-    const src = parseFlowNodeId(source);
-    const tgt = parseFlowNodeId(target);
+function isInserterEntityConnection(src: FlowNodeEntity | null, tgt: FlowNodeEntity | null): boolean {
     if (!src || !tgt) return false;
     return (
         (src.type === 'inserter' && ENTITY_TYPES.has(tgt.type)) ||
@@ -48,11 +39,9 @@ function isInserterEntityConnection(source: string | null, target: string | null
     );
 }
 
-function isValidFlowConnection(source: string | null, target: string | null): boolean {
-    const src = parseFlowNodeId(source);
-    const tgt = parseFlowNodeId(target);
+function isValidFlowConnection(src: FlowNodeEntity | null, tgt: FlowNodeEntity | null): boolean {
     if (!src || !tgt) return false;
-    if (isInserterEntityConnection(source, target)) return true;
+    if (isInserterEntityConnection(src, tgt)) return true;
     // entity → entity: will auto-create an inserter
     return ENTITY_TYPES.has(src.type) && ENTITY_TYPES.has(tgt.type);
 }
@@ -60,7 +49,7 @@ function isValidFlowConnection(source: string | null, target: string | null): bo
 export type EntityClickType = 'machine' | 'belt' | 'chest' | 'inserter' | 'drill';
 
 // Editing props derived from the dialog — diagram manages open/close/entityType/entityId internally
-export type ConfigFlowDiagramProps = Omit<EntityEditDialogProps, 'open' | 'onClose' | 'entityType' | 'entityId'> & {
+type ConfigFlowDiagramProps = Omit<EntityEditDialogProps, 'open' | 'onClose' | 'entityType' | 'entityId'> & {
     onAddMachine?: () => void;
     onAddInserter?: () => void;
     onAddBelt?: () => void;
@@ -114,6 +103,9 @@ function FlowContent({
         () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode),
         [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode],
     );
+    // the entity behind each node, by node id, for the ends of a connection or an edge
+    const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
+    const entityOf = useCallback((id: string | null | undefined) => (id ? nodeEntities.get(id) : undefined) ?? null, [nodeEntities]);
 
     const edgesWithSelection = useMemo(() => {
         const anyHovered = hoveredNodeId !== null;
@@ -127,8 +119,8 @@ function FlowContent({
             for (const edge of edges) {
                 if (edge.source === hoveredNodeId || edge.target === hoveredNodeId) {
                     highlightedEdgeIds.add(edge.id);
-                    if (edge.source.startsWith('inserter-')) connectedInserterIds.add(edge.source);
-                    if (edge.target.startsWith('inserter-')) connectedInserterIds.add(edge.target);
+                    if (entityOf(edge.source)?.type === 'inserter') connectedInserterIds.add(edge.source);
+                    if (entityOf(edge.target)?.type === 'inserter') connectedInserterIds.add(edge.target);
                 }
             }
             for (const edge of edges) {
@@ -148,7 +140,7 @@ function FlowContent({
             }
             return isSelected ? { ...e, selected: true } : e;
         });
-    }, [edges, selectedEdgeIds, hoveredNodeId]);
+    }, [edges, selectedEdgeIds, hoveredNodeId, entityOf]);
 
     const handleEdgesChange = useCallback((changes: EdgeChange<Edge>[]) => {
         setSelectedEdgeIds(prev => {
@@ -165,27 +157,27 @@ function FlowContent({
     }, []);
 
     const applyInserterConnection = useCallback((source: string | null, target: string | null) => {
-        const src = parseFlowNodeId(source);
-        const tgt = parseFlowNodeId(target);
+        const src = entityOf(source);
+        const tgt = entityOf(target);
         if (!src || !tgt) return;
         if (tgt.type === 'inserter' && ENTITY_TYPES.has(src.type)) {
             if (!onUpdateInserter) return;
-            const idx = inserters.findIndex(i => i.id === tgt.numId);
-            if (idx !== -1) onUpdateInserter(idx, { source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.numId } });
+            const idx = inserters.findIndex(i => i.id === tgt.id);
+            if (idx !== -1) onUpdateInserter(idx, { source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.id } });
         } else if (src.type === 'inserter' && ENTITY_TYPES.has(tgt.type)) {
             if (!onUpdateInserter) return;
-            const idx = inserters.findIndex(i => i.id === src.numId);
-            if (idx !== -1) onUpdateInserter(idx, { sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.numId } });
+            const idx = inserters.findIndex(i => i.id === src.id);
+            if (idx !== -1) onUpdateInserter(idx, { sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.id } });
         } else if (ENTITY_TYPES.has(src.type) && ENTITY_TYPES.has(tgt.type)) {
             if (!onAddInserter || !onUpdateInserter) return;
             const newIndex = inserters.length;
             onAddInserter();
             onUpdateInserter(newIndex, {
-                source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.numId },
-                sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.numId },
+                source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.id },
+                sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.id },
             });
         }
-    }, [inserters, onUpdateInserter, onAddInserter]);
+    }, [inserters, onUpdateInserter, onAddInserter, entityOf]);
 
     const handleConnect = useCallback(
         (connection: Connection) => applyInserterConnection(connection.source, connection.target),
@@ -198,18 +190,18 @@ function FlowContent({
     );
 
     const isValidConnection = useCallback(
-        (connection: Connection | Edge) => isValidFlowConnection(connection.source, connection.target),
-        [],
+        (connection: Connection | Edge) => isValidFlowConnection(entityOf(connection.source), entityOf(connection.target)),
+        [entityOf],
     );
 
     const handleEdgesDelete = useCallback((deletedEdges: Edge[]) => {
         if (!onDeleteInserter) return;
         const inserterIds = new Set<number>();
         for (const edge of deletedEdges) {
-            const src = parseFlowNodeId(edge.source);
-            const tgt = parseFlowNodeId(edge.target);
-            if (src?.type === 'inserter') inserterIds.add(src.numId);
-            if (tgt?.type === 'inserter') inserterIds.add(tgt.numId);
+            const src = entityOf(edge.source);
+            const tgt = entityOf(edge.target);
+            if (src?.type === 'inserter') inserterIds.add(src.id);
+            if (tgt?.type === 'inserter') inserterIds.add(tgt.id);
         }
         // Delete highest indices first so earlier indices stay valid
         const indices = [...inserterIds]
@@ -219,19 +211,13 @@ function FlowContent({
         for (const idx of indices) {
             onDeleteInserter(idx);
         }
-    }, [inserters, onDeleteInserter]);
+    }, [inserters, onDeleteInserter, entityOf]);
 
     const hasEntities = machines.length > 0 || belts.length > 0 || chests.length > 0 || drills.length > 0;
 
     const handleNodeClick: NodeMouseHandler = (_event, node) => {
-        const data = node.data as EntityNodeData | InserterNodeData | DrillNodeData;
-        if ('entityType' in data) {
-            onNodeSelect(data.entityType, data.entityId);
-        } else if ('drillId' in data) {
-            onNodeSelect('drill', data.drillId);
-        } else {
-            onNodeSelect('inserter', (data as InserterNodeData).inserterId);
-        }
+        const entity = flowNodeEntity(node);
+        onNodeSelect(entity.type, entity.id);
     };
 
     const hasAddCallbacks = onAddMachine || onAddInserter || onAddBelt || onAddChest || onAddDrill;

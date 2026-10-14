@@ -33,7 +33,7 @@ export class DebugPluginFactory {
                 return;
             }
 
-            let message = `held_item "${newContents?.item_name}"=${newContents?.quantity}`
+            const message = `held_item "${newContents?.item_name}"=${newContents?.quantity}`
 
             debugLog(chalk.dim(message));
         })
@@ -48,7 +48,7 @@ export class DebugPluginFactory {
                     return;
                 }
                 const new_status = transition.toMode.status;
-                let message = `status=${new_status} \t reason="${transition.reason}"`;
+                const message = `status=${new_status} \t reason="${transition.reason}"`;
 
                 debugLog(chalk.dim(message));
             },

@@ -15,7 +15,7 @@ export interface MiningDrillMetadata {
     type: MiningDrillType;
 }
 
-export interface MiningDrillOutput {
+interface MiningDrillOutput {
     item: Item;
     resource: Resource;
     production_rate: ProductionRate;

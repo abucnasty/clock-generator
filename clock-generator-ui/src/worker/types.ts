@@ -1,5 +1,8 @@
+import type { z } from 'zod';
 import type {
     AsBuiltStabilityCheck,
+    BeltConfigSchema,
+    ChestConfigSchema,
     ClockAssessment,
     ClockRanking,
     ClockVerdict,
@@ -7,16 +10,22 @@ import type {
     ConfigValidation,
     FuelLevelSeries,
     FuelPlan,
+    InserterConfigSchema,
+    InserterCoverageIssue,
+    MachineConfigurationSchema,
+    MiningDrillConfigSchema,
+    Option,
     ClockAlternativeContext,
     ClockAlternativeRun,
     ClockAlternativeTask,
+    ComputeMachineFactsParams,
     Config,
     DebugSteps,
     LogMessage,
     SerializableClockWindows,
+    SerializableMachineFacts,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
-    SerializableTransferPlan,
     SwingBackoffReport,
 } from 'clock-generator/browser';
 
@@ -134,8 +143,6 @@ export interface ClockAlternativeView {
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     swingBackoffReport: SwingBackoffReport | null;
-    transferPlan: SerializableTransferPlan;
-    usedLcm: number;
 }
 
 export type ClockAlternativeRunView = ClockAlternativeRun<ClockAlternativeView>;
@@ -148,7 +155,8 @@ export type WorkerRequest =
     | InitializeRequest
     | ValidateRequest
     | PlanRequest
-    | TaskRequest;
+    | TaskRequest
+    | QueryRequest;
 
 /** Checks a config and plans its transfers without generating a clock; answered by 'validated' or 'validation-failed' */
 export interface ValidateRequest {
@@ -159,7 +167,8 @@ export interface ValidateRequest {
 
 export interface InitializeRequest {
     type: 'initialize';
-    factorioDataUrl: string;
+    /** The text of data-filtered.json; the main thread fetches it once for every worker */
+    factorioData: string;
 }
 
 export interface PlanRequest {
@@ -192,6 +201,8 @@ export type WorkerResponse =
     | ProgressResponse
     | PlannedResponse
     | TaskCompletedResponse
+    | AnswerResponse
+    | QueryFailedResponse
     | ErrorResponse;
 
 export interface InitializedResponse {
@@ -238,9 +249,95 @@ export interface TaskCompletedResponse {
     run: ClockAlternativeRunView | null;
 }
 
+export interface AnswerResponse {
+    type: 'answer';
+    requestId: number;
+    answer: EngineAnswers[EngineQuery['kind']];
+}
+
+export interface QueryFailedResponse {
+    type: 'query-failed';
+    requestId: number;
+    message: string;
+}
+
 export interface ErrorResponse {
     type: 'error';
     runId?: number;
     message: string;
     stack?: string;
+}
+
+export interface RecipeInfo {
+    ingredients: string[];
+    results: string[];
+}
+
+/** The names the forms offer and what each recipe takes and makes, from the game data */
+export interface FactorioLookups {
+    recipeNames: string[];
+    itemNames: string[];
+    resourceNames: string[];
+    /** By recipe name; a recipe the generator cannot use is left out */
+    recipes: Map<string, RecipeInfo>;
+}
+
+export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
+export type MiningDrillConfiguration = z.infer<typeof MiningDrillConfigSchema>;
+export type InserterConfiguration = z.infer<typeof InserterConfigSchema>;
+export type BeltConfiguration = z.infer<typeof BeltConfigSchema>;
+export type ChestConfiguration = z.infer<typeof ChestConfigSchema>;
+
+/** The entities pasted from the sidecar mod, each list checked against its schema */
+export interface PastedEntities {
+    machines: MachineConfiguration[];
+    drills: MiningDrillConfiguration[];
+    inserters: InserterConfiguration[];
+    belts: BeltConfiguration[];
+    chests: ChestConfiguration[];
+    /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
+    guidance: Option<string>;
+}
+
+/**
+ * What the main thread, which loads none of the engine, asks of it. One worker answers these, so they are not held
+ * up by a generation running on the others.
+ */
+export type EngineQuery =
+    | { kind: 'lookups' }
+    | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
+    | { kind: 'inserter-coverage'; config: Config }
+    /** The form state saved in localStorage, migrated but not yet checked against the config schema */
+    | { kind: 'saved-config'; config: unknown }
+    /**
+     * An imported config file, with the chests of files from before chest types migrated; like the saved config, it may
+     * hold values out of bounds, which the form shows
+     */
+    | { kind: 'config-file'; config: unknown }
+    | {
+        kind: 'pasted-entities';
+        machines: unknown;
+        drills: unknown;
+        inserters: unknown;
+        belts: unknown;
+        chests: unknown;
+        sidecar_version: unknown;
+    };
+
+export interface EngineAnswers {
+    'lookups': FactorioLookups;
+    /** Null when they cannot be worked out, e.g. for an unknown recipe */
+    'machine-facts': SerializableMachineFacts | null;
+    'inserter-coverage': InserterCoverageIssue[];
+    /** Why the saved config cannot be used; null when it can */
+    'saved-config': string | null;
+    'config-file': Config;
+    'pasted-entities': PastedEntities;
+}
+
+/** Answered by 'answer', or by 'query-failed' with the message of what the engine threw */
+export interface QueryRequest {
+    type: 'query';
+    requestId: number;
+    query: EngineQuery;
 }

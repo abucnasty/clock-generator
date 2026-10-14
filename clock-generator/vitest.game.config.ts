@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     include: ['src/**/*.game.test.ts'],
     exclude: [...configDefaults.exclude, 'dist/*'],
+    // the game data from resources/, as the Node entry points read it
+    setupFiles: ['src/data/factorio-data-file.ts'],
     fileParallelism: false,
     silent: true,
   },

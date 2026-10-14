@@ -3,13 +3,31 @@ name: Test
 # Pull requests run the unit tests and build the UI. Pull requests to master, which are what gets released, run the
 # generation tests as well: they generate the clock alternatives of whole samples and take minutes, most of it one test.
 # "Run workflow" (or `gh workflow run test.yml --ref <branch>`) runs all three on any branch.
+# release.yml and publish-sidecar.yml call this workflow and do nothing unless it passes; a release runs the generation
+# tests too, publishing the sidecar does not.
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      generation:
+        description: Run the generation tests as well
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      generation:
+        description: Run the generation tests as well
+        type: boolean
+        default: false
 
-# a new run on a branch replaces the one before it
+permissions:
+  contents: read
+
+# A new run of a pull request replaces the one before it. Any other run is a group of its own: a called run has the
+# github context of its caller (its event, ref and run id), and grouped by ref the tests of a release and of the
+# sidecar for the same push to master, or a run by hand on master, would cancel each other and skip what waits for them.
 concurrency:
-  group: test-${{ github.ref }}
+  group: test-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -31,8 +49,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Unused files, exports and dependencies
+        run: npm run knip
+
       - name: Build
         run: npm run build
+
+      - name: Lint
+        run: npm run lint
 
       # the game-backed tests need a Factorio install and are not part of this: `npm run test:game`
       - name: Unit tests
@@ -40,7 +64,8 @@ jobs:
 
   generation:
     name: Generation tests
-    if: github.event_name == 'workflow_dispatch' || github.base_ref == 'master'
+    # the input rather than the event, since a called run has the event of its caller: a push or a run by hand
+    if: inputs.generation || github.base_ref == 'master'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -85,3 +110,17 @@ jobs:
 
       # installs and builds clock-generator first, then type-checks and bundles the UI
       - run: npm run build
+
+      # after the build, which knip needs to see the engine as the dependency it is
+      - name: Unused files, exports and dependencies
+        run: npm run knip
+
+      - name: Lint
+        run: npm run lint
+
+      # public/icons holds the icons the page always draws, and no file it never asks for
+      - name: Icons
+        run: npm run check:icons
+
+      - name: Unit tests
+        run: npm test -- --reporter=default

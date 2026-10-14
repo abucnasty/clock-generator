@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { useMemo } from 'react';
 import { useMachineFacts } from '../hooks/useMachineFacts';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType } from 'clock-generator/light';
 import type {
     BeltFormData,
     BeltLaneFormData,
@@ -44,21 +44,7 @@ import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
-
-// ---- Constants ----
-
-const BELT_TYPES = [
-    { value: 'transport-belt', label: 'Transport Belt' },
-    { value: 'fast-transport-belt', label: 'Fast Transport Belt' },
-    { value: 'express-transport-belt', label: 'Express Transport Belt' },
-    { value: 'turbo-transport-belt', label: 'Turbo Transport Belt' },
-];
-
-const DRILL_TYPES = [
-    { value: 'electric-mining-drill', label: 'Electric Mining Drill' },
-    { value: 'burner-mining-drill', label: 'Burner Mining Drill' },
-    { value: 'big-mining-drill', label: 'Big Mining Drill' },
-];
+import { BELT_TYPES, DRILL_TYPES } from './entityTypes';
 
 // ---- Props ----
 

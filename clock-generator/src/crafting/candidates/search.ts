@@ -1,5 +1,6 @@
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
+import { EntityId } from "../../entities";
 import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
 import { TrialRun } from "../plan/plan-run";
@@ -21,10 +22,10 @@ import { AS_BUILT_START_PHASES, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, 
  */
 
 /** How many of the ranked candidates are confirmed before the search gives up */
-export const MAX_CONFIRMATIONS = 5;
+const MAX_CONFIRMATIONS = 5;
 
 /** One candidate with what its quick trial found */
-export interface Tried<C, Q extends QuickTrial> {
+interface Tried<C, Q extends QuickTrial> {
     candidate: C;
     index: number;
     quick: Q;
@@ -35,7 +36,7 @@ export interface QuickTrial {
     holds: boolean;
 }
 
-export interface Search<C, Q extends QuickTrial, R> {
+interface Search<C, Q extends QuickTrial, R> {
     candidates: readonly C[];
     /** The quick trial of a candidate: `quickTrial`, or a search of its own whose pick is the candidate's windows */
     quick: (candidate: C, index: number) => Q;
@@ -51,7 +52,7 @@ export interface Search<C, Q extends QuickTrial, R> {
     confirm: (pick: Tried<C, Q>) => R | null;
 }
 
-export interface SearchResult<C, Q extends QuickTrial, R> {
+interface SearchResult<C, Q extends QuickTrial, R> {
     /** What the first confirmed candidate yielded, or null when none passed */
     picked: R | null;
     /** The candidate that was picked, when one was */
@@ -87,7 +88,7 @@ function neighboursPassing<C, Q extends QuickTrial>(tried: readonly Tried<C, Q>[
 }
 
 /** The margin of a candidate: the fewer of its passing neighbours on either side */
-export function marginOf<C, Q extends QuickTrial>(tried: readonly Tried<C, Q>[], index: number, neighbours: (a: C, b: C) => boolean, wraps = false): number {
+function marginOf<C, Q extends QuickTrial>(tried: readonly Tried<C, Q>[], index: number, neighbours: (a: C, b: C) => boolean, wraps = false): number {
     return Math.min(neighboursPassing(tried, index, 1, neighbours, wraps), neighboursPassing(tried, index, -1, neighbours, wraps));
 }
 
@@ -173,5 +174,5 @@ export interface SearchReport {
     latest?: SearchRangeEdge;
     /** For a shifted cycle: the clock ticks the moved windows were planned in, and what moved */
     planned_ticks?: { start: number; end: number };
-    moved?: { entity_id: string; item_names: string[] }[];
+    moved?: { entity_id: EntityId; item_names: string[] }[];
 }

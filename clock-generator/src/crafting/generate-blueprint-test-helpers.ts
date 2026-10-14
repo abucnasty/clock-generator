@@ -1,5 +1,6 @@
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
+import { EntityId } from "../entities";
 import { generateClockAlternatives, type ClockAlternative } from "./generate-blueprint";
 
 /** A logger for the generations whose log the test does not read */
@@ -29,7 +30,7 @@ export interface RocketFuelSample {
 export const rocketFuelSample = async (path: string): Promise<RocketFuelSample> => {
     const config = await loadConfigFromFile(path);
     const ids = (matches: (inserter: Config["inserters"][number]) => boolean) =>
-        config.inserters.filter(matches).map(inserter => `inserter:${inserter.id}`);
+        config.inserters.filter(matches).map(inserter => EntityId.forInserter(inserter.id!).id);
     // with the searches, whose clocks the tests of these samples read as well: batched swings is stable on both
     const { alternatives } = generateClockAlternatives(withSearches(config));
     const alternative = (id: string) => alternatives.find(a => a.id === id)!;

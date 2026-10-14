@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.9.0] - 2026-10-14
+
+### Changed
+- An imported config file is now checked. One whose structure is broken, or that is not a config, is refused with what is wrong with it. Something left to fix, such as an inserter end left unset after its machine, belt or chest was removed, or 0 items per second, still imports and is marked red in the form.
+- The browser tab says "Factorio Clock Generator".
+- The sidecar mod is at 0.7.0, and the generator asks for that version. An inserter that takes from or drops into something not in the JSON, such as an empty belt or chest, a lab or a machine outside the selection, is left out of the JSON. It used to point at machine, belt or chest 1, which is some other entity. The window with the JSON lists the inserters left out and why. Selecting an assembling machine without a recipe, or a lab, no longer crashes the game. A paste from 0.6.0 still imports, with a note that nothing in it is affected and that the mod can be updated to 0.7.0.
+
+### Fixed
+- Removing a machine, belt or chest unsets the inserter ends and drill targets at it. They kept its id, which pointed at no entity, or at the next one added.
+- The id of a removed entity is no longer given to the next one added.
+- A saved configuration that cannot be loaded is no longer lost. It is kept in the browser's localStorage under `clock-generator-config.backup`, and the page says so.
+- The page shows an error when it cannot start, instead of staying on "Loading Factorio data..." for good.
+
 ## [0.8.0] - 2026-10-12
 
 ### Added

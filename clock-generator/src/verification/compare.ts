@@ -5,7 +5,7 @@ import { EntityMatch } from "./entity-matching";
 import { expandChangeList, RecordedMachine, Recording } from "./recording";
 import { extractTransfers, RecordedTransfer, windowPositions } from "./recording-history";
 
-export interface CompareOptions {
+interface CompareOptions {
     /** Ticks before its window opens that a recorded swing may start and still count as inside it */
     tolerance_ticks: number;
     /** Ticks after its window closes that a recorded swing may start and still count as inside it */
@@ -15,13 +15,13 @@ export interface CompareOptions {
 /** How far the fuel burned in game may be from what the configured energy consumption predicts before it is flagged */
 const FUEL_RATIO_TOLERANCE = 0.1;
 
-export const DEFAULT_COMPARE_OPTIONS: CompareOptions = {
+const DEFAULT_COMPARE_OPTIONS: CompareOptions = {
     tolerance_ticks: 2,
     match_window_ticks: 32,
 };
 
 /** An inserter outside the plan (fuel, or taking a by-product away): its swings checked against the clock it is enabled by */
-export interface ClockedInserterComparison {
+interface ClockedInserterComparison {
     config_id: number;
     recorded_id: number;
     kind: "fuel" | "by-product";
@@ -39,7 +39,7 @@ export interface ClockedInserterComparison {
 }
 
 /** What a burner machine burned, against what its energy consumption predicts */
-export interface FuelComparison {
+interface FuelComparison {
     config_id: number;
     recorded_id: number;
     fuel_item: string;
@@ -64,7 +64,7 @@ export interface FuelComparison {
  * does not tell (for that see compare-recordings.ts): the swings of the inserters outside the plan against the
  * clocks they are on, and the fuel burned against the energy consumption of the config.
  */
-export interface ExportedClockReport {
+interface ExportedClockReport {
     clocked_inserters: ClockedInserterComparison[];
     fuel: FuelComparison[];
     issues: string[];

@@ -3,7 +3,7 @@ export interface Position {
     readonly y: number;
 }
 
-export class PositionBuilder {
+class PositionBuilder {
     private x: number = 0;
     private y: number = 0;
 

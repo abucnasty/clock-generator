@@ -1,11 +1,11 @@
-import { describe, test, expect, vi, beforeEach } from "vitest"
+import { describe, test, expect, vi } from "vitest"
 import { mock } from 'vitest-mock-extended';
 import { IdleModeTransitionEvaluator } from "./idle-mode-transition-evaluator"
 import { BeltState, ChestState, EntityState, InserterState, MachineState, SupplyGate } from "../../../state"
 import { EntityId, Inserter, InserterMetadata, InserterStackSize, InserterTarget, Machine, MachineMetadata, MachineType, RecipeMetadata } from "../../../entities"
 import { ItemName } from "../../../data/factorio-data-types"
 import { InserterAnimation } from "../../../entities/inserter/inserter-animation"
-import { InserterAnimationOverrideConfig } from "../../../config/config"
+import { InserterAnimationOverrideConfig } from "../../../config/schema"
 import { InserterPickupMode, InserterWaitForSinkMode } from "../modes"
 import { ModeTransition } from "../../mode";
 import { AlwaysEnabledControl } from "../../enable-control";

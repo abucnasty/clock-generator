@@ -1,7 +1,8 @@
 -- GUI Management for Clock Generator Sidecar
 -- Handles creation and destruction of the extraction results GUI and copy popup.
 
-require("scripts.types")
+require("__clock-generator-sidecar__.scripts.types")
+local export = require("__clock-generator-sidecar__.scripts.export")
 
 local gui = {}
 
@@ -97,10 +98,67 @@ end
 
 -- Copy Popup
 
+---What is at the end an inserter is left out for, as a locale table
+---@param target InserterTargetRef|nil
+---@return table
+local function left_out_target(target)
+    if not target then
+        return { "clock-generator-sidecar.left-out-nothing" }
+    end
+    if target.type == "belt" or target.type == "chest" then
+        return { "clock-generator-sidecar.left-out-" .. target.type }
+    end
+    local prototype = target.name and prototypes.entity[target.name]
+    if not prototype then
+        return { "clock-generator-sidecar.left-out-machine", { "clock-generator-sidecar.left-out-a-machine" } }
+    end
+    return { "clock-generator-sidecar.left-out-machine", { "", "[entity=" .. target.name .. "] ", prototype.localised_name } }
+end
+
+---Add the inserters left out of the export to the copy popup, each with why
+---@param frame LuaGuiElement
+---@param left_out {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[]
+local function add_left_out_inserters(frame, left_out)
+    local heading = frame.add({
+        type = "label",
+        caption = { "clock-generator-sidecar.left-out-inserters", #left_out },
+        style = "bold_label"
+    })
+    heading.style.top_margin = 8
+    heading.style.single_line = false
+    heading.style.maximal_width = 600
+
+    local scroll = frame.add({
+        type = "scroll-pane",
+        direction = "vertical",
+        vertical_scroll_policy = "auto",
+        horizontal_scroll_policy = "never"
+    })
+    scroll.style.maximal_height = 150
+
+    for _, left in ipairs(left_out) do
+        local inserter = left.inserter
+        local position = inserter.position
+        local where = position and string.format("%g, %g", position.x, position.y) or "?"
+        local label = scroll.add({
+            type = "label",
+            caption = {
+                "clock-generator-sidecar.left-out-inserter",
+                inserter.inserter_type,
+                where,
+                { left.pickup and "clock-generator-sidecar.left-out-takes-from" or "clock-generator-sidecar.left-out-drops-into", left_out_target(left.target) }
+            }
+        })
+        label.style.single_line = false
+        label.style.maximal_width = 600
+    end
+end
+
 ---Create the copy/paste popup with selectable JSON text
 ---@param player LuaPlayer
 ---@param json string
-function gui.create_copy_popup(player, json)
+---@param left_out {inserter: InserterData, pickup: boolean, target: InserterTargetRef|nil}[] Inserters left out of the JSON
+function gui.create_copy_popup(player, json, left_out)
     -- Remove any existing copy popup
     local existing = player.gui.screen[gui.COPY_GUI_NAME]
     if existing and existing.valid then
@@ -135,6 +193,10 @@ function gui.create_copy_popup(player, json)
     -- Select all text automatically
     textbox.select_all()
     textbox.focus()
+
+    if #left_out > 0 then
+        add_left_out_inserters(frame, left_out)
+    end
 
     -- Button flow
     local button_flow = frame.add({
@@ -274,9 +336,18 @@ function gui.create(player, player_data, result)
                 { [1] = "center", [2] = "left", [3] = "left", [4] = "center", [5] = "left" }
             )
 
-            -- Inserter rows
-            for i, inserter in ipairs(result.inserters) do
-                inserter_table.add({ type = "label", caption = tostring(i) })
+            -- Inserter rows, numbered by their id in the JSON; one left out of it has none
+            local inserter_ids = {}
+            for _, exported in ipairs(export.exported_inserters(result)) do
+                inserter_ids[exported.inserter] = exported.id
+            end
+            for _, inserter in ipairs(result.inserters) do
+                local id = inserter_ids[inserter]
+                if id then
+                    inserter_table.add({ type = "label", caption = tostring(id) })
+                else
+                    inserter_table.add({ type = "label", caption = "-", tooltip = { "clock-generator-sidecar.left-out-tooltip" } })
+                end
                 inserter_table.add({ type = "label", caption = inserter.inserter_type })
                 
                 -- Source description

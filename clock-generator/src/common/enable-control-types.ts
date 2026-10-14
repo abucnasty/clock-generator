@@ -1,4 +1,4 @@
-import { EntityType } from "../entities";
+import { EntityType } from "../entities/entity-type";
 
 export const EnableControlMode = {
     AUTO: "AUTO",

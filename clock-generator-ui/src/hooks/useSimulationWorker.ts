@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Config, ConfigValidation, DebugSteps, LogMessage, FactorioData, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, SerializableTransferPlan, GenerationProgress } from 'clock-generator/browser';
-import { initializeMachineFacts } from './useMachineFacts';
+import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
+import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
-import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
+import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
+import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
 
-export type { ClockAlternativeView } from '../worker/types';
-
-export interface RecipeInfo {
-    ingredients: string[];
-    results: string[];
-}
+export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
 /**
  * Where the Validate step stands. `config` is the config the result or error is for, so the page can tell when
@@ -21,7 +17,7 @@ export type ValidationState =
     | { status: 'valid'; config: Config; validation: ConfigValidation }
     | { status: 'invalid'; config: Config; message: string };
 
-export interface UseSimulationWorkerResult {
+interface UseSimulationWorkerResult {
     isInitialized: boolean;
     isRunning: boolean;
     /** Progress lives outside React state so its frequent updates only re-render what reads it */
@@ -43,8 +39,6 @@ export interface UseSimulationWorkerResult {
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number | null;
     swingBackoffReport: SwingBackoffReport | null;
-    transferPlan: SerializableTransferPlan | null;
-    usedLcm: number | null;
     alternatives: ClockAlternativeView[];
     selectedAlternativeIndex: number;
     selectAlternative: (index: number) => void;
@@ -62,12 +56,6 @@ export interface UseSimulationWorkerResult {
     getRecipeInfo: (recipeName: string) => RecipeInfo | null;
 }
 
-// Dynamic imports for the clock-generator library
-let FactorioDataService: typeof import('clock-generator/browser').FactorioDataService | null = null;
-let combineClockAlternativeRuns: typeof import('clock-generator/browser').combineClockAlternativeRuns | null = null;
-let searchesAreNeeded: typeof import('clock-generator/browser').searchesAreNeeded | null = null;
-
-const FACTORIO_DATA_URL = '/data-filtered.json';
 const PRIMARY_STEP = 'Batched swings';
 // the slowest alternatives start first so they overlap the most
 const SLOW_TASKS = ['full-hand', 'uneven-output', 'derived', 'fractional'];
@@ -136,6 +124,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
+    const [recipes, setRecipes] = useState<Map<string, RecipeInfo>>(() => new Map());
     const [logs, setLogs] = useState<LogMessage[]>([]);
     const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
     const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
@@ -170,7 +159,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore]);
 
     const publishAlternatives = useCallback((generation: Generation) => {
-        const combined = combineClockAlternativeRuns!(generation.runs, it => it.ranking);
+        const combined = combineClockAlternativeRuns(generation.runs, it => it.ranking);
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
         setAlternatives(combined.alternatives);
         setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
@@ -184,7 +173,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             // every clock made without a search is in: the searches run when none of them can be selected as stable
             const searches = generation.waiting;
             generation.waiting = [];
-            if (searchesAreNeeded!(generation.runs, it => it.ranking)) {
+            if (searchesAreNeeded(generation.runs, it => it.ranking)) {
                 generation.queue = slowestFirst(searches);
             } else {
                 generation.skipped = searches;
@@ -222,6 +211,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                     ? { status: 'valid', config: requested.config, validation: response.validation }
                     : { status: 'invalid', config: requested.config, message: response.message });
             }
+            return;
+        }
+        // queries go to the query worker (see askEngine), not to the pool
+        if (response.type === 'answer' || response.type === 'query-failed') {
             return;
         }
         const generation = generationRef.current;
@@ -275,10 +268,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     const initialize = useCallback(async () => {
         try {
-            // Generation runs in a pool of workers; the main thread only needs the data for forms and machine facts
+            // Generation runs in a pool of workers; the names and recipes for the forms come from the query worker
             terminateWorkers();
             const workersReady = Promise.all(Array.from({ length: workerPoolSize() }, () => new Promise<void>((resolve, reject) => {
-                const worker = new Worker(new URL('../worker/simulation.worker.ts', import.meta.url), { type: 'module' });
+                const worker = createSimulationWorker();
                 workersRef.current.push(worker);
                 worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
                     const response = event.data;
@@ -296,27 +289,17 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                     setIsRunning(false);
                     reject(new Error(event.message));
                 };
-                worker.postMessage({ type: 'initialize', factorioDataUrl: FACTORIO_DATA_URL } satisfies WorkerRequest);
+                loadFactorioData().then(
+                    data => worker.postMessage({ type: 'initialize', factorioData: data } satisfies WorkerRequest),
+                    reject,
+                );
             })));
 
-            // Dynamically import the clock-generator browser module
-            const clockGenerator = await import('clock-generator/browser');
-            
-            FactorioDataService = clockGenerator.FactorioDataService;
-            combineClockAlternativeRuns = clockGenerator.combineClockAlternativeRuns;
-            searchesAreNeeded = clockGenerator.searchesAreNeeded;
-
-            // Fetch and initialize Factorio data
-            const response = await fetch(FACTORIO_DATA_URL);
-            const data: FactorioData = await response.json();
-            FactorioDataService.initialize(data);
-
-            setRecipeNames(FactorioDataService.getAllRecipeNames());
-            setItemNames(FactorioDataService.getAllItemNames());
-            setResourceNames(FactorioDataService.getAllResourceNames());
-            
-            // Initialize machine facts module
-            await initializeMachineFacts();
+            const lookups = await askEngine({ kind: 'lookups' });
+            setRecipeNames(lookups.recipeNames);
+            setItemNames(lookups.itemNames);
+            setResourceNames(lookups.resourceNames);
+            setRecipes(lookups.recipes);
             await workersReady;
             
             setIsInitialized(true);
@@ -371,18 +354,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setLogs([]);
     }, []);
 
-    const getRecipeInfo = useCallback((recipeName: string): RecipeInfo | null => {
-        if (!FactorioDataService) return null;
-        try {
-            const recipe = FactorioDataService.findRecipeOrThrow(recipeName);
-            return {
-                ingredients: recipe.ingredients.map(ing => ing.name),
-                results: recipe.results.map(res => res.name),
-            };
-        } catch {
-            return null;
-        }
-    }, []);
+    const getRecipeInfo = useCallback((recipeName: string): RecipeInfo | null => recipes.get(recipeName) ?? null, [recipes]);
 
     const selected: ClockAlternativeView | undefined = alternatives[selectedAlternativeIndex];
 
@@ -404,8 +376,6 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         shiftOptions: selected?.shiftOptions ?? null,
         simulationDurationTicks: selected?.simulationDurationTicks ?? null,
         swingBackoffReport: selected?.swingBackoffReport ?? null,
-        transferPlan: selected?.transferPlan ?? null,
-        usedLcm: selected?.usedLcm ?? null,
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,

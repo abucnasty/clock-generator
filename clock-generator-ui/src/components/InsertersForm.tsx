@@ -9,7 +9,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { TargetType } from 'clock-generator/browser';
+import { TargetType } from 'clock-generator/light';
 import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
@@ -273,6 +273,7 @@ function InsertersFormComponent({
                                     <TextField
                                         {...params}
                                         label="Source"
+                                        error={!selectedOption}
                                         slotProps={{
                                             input: {
                                                 ...params.InputProps,
@@ -364,6 +365,7 @@ function InsertersFormComponent({
                                     <TextField
                                         {...params}
                                         label="Destination"
+                                        error={!selectedOption}
                                         slotProps={{
                                             input: {
                                                 ...params.InputProps,
@@ -425,7 +427,7 @@ function InsertersFormComponent({
                         label="Stack Size"
                         value={inserter.stack_size}
                         onValueChange={(val) =>
-                            onUpdate(index, { stack_size: val ?? 16 })
+                            onUpdate(index, { stack_size: parseInt(val?.toString() || '') || 16 })
                         }
                         min={1}
                         sx={{ width: 100 }}

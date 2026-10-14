@@ -3,7 +3,7 @@ import { Entity } from "../../../entities";
 import { DebugMessageBuilder } from "./debug-message-builder";
 import { DebugSettingsProvider } from "./debug-settings-provider";
 
-export type Logger = (message: string) => void;
+type Logger = (message: string) => void;
 
 export class DebugLoggerFactory {
     constructor(

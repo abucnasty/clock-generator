@@ -36,26 +36,3 @@ export function FactorioIcon({ name, size = 24, fallback: _fallback = null }: Fa
         />
     );
 }
-
-interface FactorioIconWithLabelProps extends FactorioIconProps {
-    label?: string;
-    gap?: number;
-}
-
-/**
- * Displays a Factorio icon with a label next to it.
- */
-export function FactorioIconWithLabel({ 
-    name, 
-    label, 
-    size = 24, 
-    gap = 1,
-    fallback = null 
-}: FactorioIconWithLabelProps) {
-    return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap }}>
-            <FactorioIcon name={name} size={size} fallback={fallback} />
-            {label && <span>{label}</span>}
-        </Box>
-    );
-}

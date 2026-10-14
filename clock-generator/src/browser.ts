@@ -3,8 +3,6 @@
  * 
  * This module provides all the necessary exports for using clock-generator
  * in a browser environment, including React applications.
- * 
- * Note: HOCON parsing is NOT available in the browser. Use JSON format instead.
  */
 
 // ============================================================================
@@ -24,6 +22,12 @@ export {
     BufferChestConfigSchema,
     InfinityChestConfigSchema,
     ConfigOverridesSchema,
+    // Enable Control Types
+    EnableControlOverrideConfig,
+    EnableControlRange,
+    RuleSet,
+    Condition,
+    ValueReference,
     // Enable Control Enums
     EnableControlMode,
     EntityReference,
@@ -129,7 +133,7 @@ export {
 export {
     encodeBlueprintFileBrowser,
     decodeBlueprintFileBrowser,
-} from './blueprints/serde';
+} from './blueprints/serde-browser';
 
 export {
     FactorioBlueprint,
@@ -235,15 +239,9 @@ export {
 
 export {
     InserterStatus,
-} from './state/inserter-state';
-
-export {
     MachineStatus,
-} from './state/machine-state';
-
-export {
     DrillStatus,
-} from './state/drill-state';
+} from './state/entity-status';
 
 export {
     StatusCategory,

@@ -26,7 +26,7 @@ import type {
     SerializableStateTransition,
     StatusCategory,
 } from 'clock-generator/browser';
-import { statusToCategory } from 'clock-generator/browser';
+import { statusToCategory } from 'clock-generator/light';
 import { FactorioIcon } from './FactorioIcon';
 import {
     getStatusColor,
@@ -424,6 +424,45 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                     />
                 ))}
             </Box>
+        </Box>
+    );
+}
+
+interface EntitySectionProps {
+    title: string;
+    entities: SerializableEntityStateTransitions[];
+    counts: { visible: number; total: number };
+    mb?: number;
+    totalDuration: number;
+    rowHeight: number;
+    viewMode: ViewMode;
+    statusFilters: StatusFilters;
+    clockWindows?: SerializableClockWindows;
+}
+
+/** One entity type's rows in the "by type" view, under a header with its transition count */
+function EntitySection({ title, entities, counts, mb, totalDuration, rowHeight, viewMode, statusFilters, clockWindows }: EntitySectionProps) {
+    if (entities.length === 0) {
+        return null;
+    }
+    return (
+        <Box sx={{ mb }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                {title} ({entities.length}) · {counts.visible !== counts.total 
+                    ? `${counts.visible}/${counts.total} transitions` 
+                    : `${counts.total} transitions`}
+            </Typography>
+            {entities.map(entity => (
+                <EntityRow
+                    key={entity.entity_id}
+                    entity={entity}
+                    totalDuration={totalDuration}
+                    rowHeight={rowHeight}
+                    viewMode={viewMode}
+                    statusFilters={statusFilters}
+                    clockWindows={clockWindows?.[entity.entity_id]}
+                />
+            ))}
         </Box>
     );
 }
@@ -885,70 +924,43 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
             {/* Timeline content */}
             {sortMode === 'byType' ? (
                 <>
-                    {/* Machines section */}
-                    {machines.length > 0 && filters.machine && (
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                                Machines ({machines.length}) · {transitionCounts.machines.visible !== transitionCounts.machines.total 
-                                    ? `${transitionCounts.machines.visible}/${transitionCounts.machines.total} transitions` 
-                                    : `${transitionCounts.machines.total} transitions`}
-                            </Typography>
-                            {machines.map(entity => (
-                                <EntityRow
-                                    key={entity.entity_id}
-                                    entity={entity}
-                                    totalDuration={totalDuration}
-                                    rowHeight={isFullscreen ? 32 : rowHeight}
-                                    viewMode={viewMode}
-                                    statusFilters={statusFilters}
-                                    clockWindows={clockWindows?.[entity.entity_id]}
-                                />
-                            ))}
-                        </Box>
+                    {filters.machine && (
+                        <EntitySection
+                            title="Machines"
+                            entities={machines}
+                            counts={transitionCounts.machines}
+                            mb={2}
+                            totalDuration={totalDuration}
+                            rowHeight={isFullscreen ? 32 : rowHeight}
+                            viewMode={viewMode}
+                            statusFilters={statusFilters}
+                            clockWindows={clockWindows}
+                        />
                     )}
-
-                    {/* Inserters section */}
-                    {inserters.length > 0 && filters.inserter && (
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                                Inserters ({inserters.length}) · {transitionCounts.inserters.visible !== transitionCounts.inserters.total 
-                                    ? `${transitionCounts.inserters.visible}/${transitionCounts.inserters.total} transitions` 
-                                    : `${transitionCounts.inserters.total} transitions`}
-                            </Typography>
-                            {inserters.map(entity => (
-                                <EntityRow
-                                    key={entity.entity_id}
-                                    entity={entity}
-                                    totalDuration={totalDuration}
-                                    rowHeight={isFullscreen ? 32 : rowHeight}
-                                    viewMode={viewMode}
-                                    statusFilters={statusFilters}
-                                    clockWindows={clockWindows?.[entity.entity_id]}
-                                />
-                            ))}
-                        </Box>
+                    {filters.inserter && (
+                        <EntitySection
+                            title="Inserters"
+                            entities={inserters}
+                            counts={transitionCounts.inserters}
+                            mb={2}
+                            totalDuration={totalDuration}
+                            rowHeight={isFullscreen ? 32 : rowHeight}
+                            viewMode={viewMode}
+                            statusFilters={statusFilters}
+                            clockWindows={clockWindows}
+                        />
                     )}
-
-                    {/* Drills section */}
-                    {drills.length > 0 && filters.drill && (
-                        <Box>
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                                Mining Drills ({drills.length}) · {transitionCounts.drills.visible !== transitionCounts.drills.total 
-                                    ? `${transitionCounts.drills.visible}/${transitionCounts.drills.total} transitions` 
-                                    : `${transitionCounts.drills.total} transitions`}
-                            </Typography>
-                            {drills.map(entity => (
-                                <EntityRow
-                                    key={entity.entity_id}
-                                    entity={entity}
-                                    totalDuration={totalDuration}
-                                    rowHeight={isFullscreen ? 32 : rowHeight}
-                                    viewMode={viewMode}
-                                    statusFilters={statusFilters}
-                                    clockWindows={clockWindows?.[entity.entity_id]}
-                                />
-                            ))}
-                        </Box>
+                    {filters.drill && (
+                        <EntitySection
+                            title="Mining Drills"
+                            entities={drills}
+                            counts={transitionCounts.drills}
+                            totalDuration={totalDuration}
+                            rowHeight={isFullscreen ? 32 : rowHeight}
+                            viewMode={viewMode}
+                            statusFilters={statusFilters}
+                            clockWindows={clockWindows}
+                        />
                     )}
                 </>
             ) : (

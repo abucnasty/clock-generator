@@ -5,13 +5,13 @@ import { isBufferChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { inferInserterItems } from './inferInserterItems';
 
-export const ENTITY_NODE_WIDTH = 180;
-export const ENTITY_NODE_HEIGHT = 80;
-export const ENTITY_NODE_DETAIL_HEIGHT = 200;
-export const INSERTER_NODE_WIDTH = 140;
-export const INSERTER_NODE_HEIGHT = 70;
-export const DRILL_NODE_WIDTH = 140;
-export const DRILL_NODE_HEIGHT = 70;
+const ENTITY_NODE_WIDTH = 180;
+const ENTITY_NODE_HEIGHT = 80;
+const ENTITY_NODE_DETAIL_HEIGHT = 200;
+const INSERTER_NODE_WIDTH = 140;
+const INSERTER_NODE_HEIGHT = 70;
+const DRILL_NODE_WIDTH = 140;
+const DRILL_NODE_HEIGHT = 70;
 
 export type MachineNodeParams = {
     recipe: string;
@@ -73,6 +73,21 @@ export type DrillNodeData = {
     minedItem: string;
 };
 
+/** The entity of the config a node of the flow graph stands for */
+export type FlowNodeEntity = { type: 'machine' | 'belt' | 'chest' | 'inserter' | 'drill'; id: number };
+
+/** The id of the node of an entity; read the entity back from the node with `flowNodeEntity`, not from this */
+function flowNodeId(type: FlowNodeEntity['type'], id: number): string {
+    return `${type}-${id}`;
+}
+
+export function flowNodeEntity(node: Node): FlowNodeEntity {
+    const data = node.data as EntityNodeData | InserterNodeData | DrillNodeData;
+    if ('entityType' in data) return { type: data.entityType, id: data.entityId };
+    if ('drillId' in data) return { type: 'drill', id: data.drillId };
+    return { type: 'inserter', id: data.inserterId };
+}
+
 export function buildFlowGraph(
     machines: MachineFormData[],
     inserters: InserterFormData[],
@@ -94,7 +109,7 @@ export function buildFlowGraph(
 
     // --- Entity nodes ---
     machines.forEach(machine => {
-        const id = `machine-${machine.id}`;
+        const id = flowNodeId('machine', machine.id);
         const nodeHeight = detailMode ? ENTITY_NODE_DETAIL_HEIGHT : ENTITY_NODE_HEIGHT;
         const in_loop = loop_machine_ids.has(machine.id);
         // taller in the layout than it is drawn, which leaves room above and below for the inserters of its loop
@@ -122,7 +137,7 @@ export function buildFlowGraph(
     });
 
     belts.forEach(belt => {
-        const id = `belt-${belt.id}`;
+        const id = flowNodeId('belt', belt.id);
         g.setNode(id, { width: ENTITY_NODE_WIDTH, height: ENTITY_NODE_HEIGHT });
         const filterIcons = belt.lanes.map(l => l.ingredient).filter(Boolean);
         nodes.push({
@@ -140,7 +155,7 @@ export function buildFlowGraph(
     });
 
     chests.forEach(chest => {
-        const id = `chest-${chest.id}`;
+        const id = flowNodeId('chest', chest.id);
         g.setNode(id, { width: ENTITY_NODE_WIDTH, height: ENTITY_NODE_HEIGHT });
         let iconName: string;
         let filterIcons: string[] | undefined;
@@ -168,9 +183,9 @@ export function buildFlowGraph(
 
     // --- Inserter nodes + edges ---
     inserters.forEach(inserter => {
-        const inserterNodeId = `inserter-${inserter.id}`;
-        const sourceNodeId = `${inserter.source.type}-${inserter.source.id}`;
-        const sinkNodeId = `${inserter.sink.type}-${inserter.sink.id}`;
+        const inserterNodeId = flowNodeId('inserter', inserter.id);
+        const sourceNodeId = flowNodeId(inserter.source.type, inserter.source.id);
+        const sinkNodeId = flowNodeId(inserter.sink.type, inserter.sink.id);
         const in_loop = loop_ids.has(inserter.id);
         if (!in_loop) {
             g.setNode(inserterNodeId, { width: INSERTER_NODE_WIDTH, height: INSERTER_NODE_HEIGHT });
@@ -222,8 +237,8 @@ export function buildFlowGraph(
 
     // --- Drill nodes + edges ---
     (drills ?? []).forEach(drill => {
-        const drillNodeId = `drill-${drill.id}`;
-        const targetNodeId = `machine-${drill.target.id}`;
+        const drillNodeId = flowNodeId('drill', drill.id);
+        const targetNodeId = flowNodeId('machine', drill.target.id);
         g.setNode(drillNodeId, { width: DRILL_NODE_WIDTH, height: DRILL_NODE_HEIGHT });
         nodes.push({
             id: drillNodeId,
@@ -270,15 +285,18 @@ export function buildFlowGraph(
     // The inserters of a loop go between their two machines: side by side when several connect the same pair
     const pairKey = (inserter: InserterFormData) => [inserter.source.id, inserter.sink.id].sort((a, b) => a - b).join('-');
     for (const inserter of loop_inserters) {
-        const node = nodes.find(it => it.id === `inserter-${inserter.id}`)!;
-        const source = g.node(`machine-${inserter.source.id}`);
-        const sink = g.node(`machine-${inserter.sink.id}`);
+        const inserterNodeId = flowNodeId('inserter', inserter.id);
+        const sourceNodeId = flowNodeId('machine', inserter.source.id);
+        const sinkNodeId = flowNodeId('machine', inserter.sink.id);
+        const node = nodes.find(it => it.id === inserterNodeId)!;
+        const source = g.node(sourceNodeId);
+        const sink = g.node(sinkNodeId);
         if (!source || !sink) {
             continue;
         }
         const down = source.y <= sink.y;
         // the ones that carry down on the left, under the handle they take from, the ones that carry up on the right
-        const goesDown = (it: InserterFormData) => g.node(`machine-${it.source.id}`).y <= g.node(`machine-${it.sink.id}`).y;
+        const goesDown = (it: InserterFormData) => g.node(flowNodeId('machine', it.source.id)).y <= g.node(flowNodeId('machine', it.sink.id)).y;
         const in_pair = loop_inserters.filter(it => pairKey(it) === pairKey(inserter));
         const index = in_pair.filter(it => goesDown(it) === down).indexOf(inserter) + (down ? 0 : in_pair.filter(goesDown).length);
         const row_width = in_pair.length * INSERTER_NODE_WIDTH + (in_pair.length - 1) * 20;
@@ -290,18 +308,18 @@ export function buildFlowGraph(
             position: { x: center_x - INSERTER_NODE_WIDTH / 2, y: center_y - INSERTER_NODE_HEIGHT / 2 },
         });
         edges.push({
-            id: `edge-machine-${inserter.source.id}-to-inserter-${inserter.id}`,
-            source: `machine-${inserter.source.id}`,
+            id: `edge-${sourceNodeId}-to-${inserterNodeId}`,
+            source: sourceNodeId,
             sourceHandle: down ? 'bottom-out' : 'top-out',
-            target: `inserter-${inserter.id}`,
+            target: inserterNodeId,
             targetHandle: 'in',
             type: 'smoothstep',
         });
         edges.push({
-            id: `edge-inserter-${inserter.id}-to-machine-${inserter.sink.id}`,
-            source: `inserter-${inserter.id}`,
+            id: `edge-${inserterNodeId}-to-${sinkNodeId}`,
+            source: inserterNodeId,
             sourceHandle: 'out',
-            target: `machine-${inserter.sink.id}`,
+            target: sinkNodeId,
             targetHandle: down ? 'top-in' : 'bottom-in',
             type: 'smoothstep',
         });

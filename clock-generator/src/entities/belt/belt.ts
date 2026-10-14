@@ -233,7 +233,7 @@ function createSplitLaneBelt(beltSpeed: BeltSpeed, ingredientA: ItemName, ingred
     return builder
 }
 
-export const buildersForBeltSpeed = (beltSpeed: BeltSpeed) => ({
+const buildersForBeltSpeed = (beltSpeed: BeltSpeed) => ({
     createSingleLaneBelt: (
         ingredient: ItemName,
         stackSize: BeltStackSize = BeltStackSize.FOUR,

@@ -1,5 +1,5 @@
-import { Entity, ReadableEntityRegistry } from "../../entities";
-import { StateTransitionHistory, StateTransitionEntityType, EntityStatus } from "./state-transition-history";
+import { Entity, EntityType, ReadableEntityRegistry } from "../../entities";
+import { StateTransitionHistory, StateTransitionEntityType } from "./state-transition-history";
 
 /**
  * A single state transition entry that is JSON-serializable
@@ -26,11 +26,13 @@ export interface SerializableEntityStateTransitions {
     /** The source entity info (for inserters) */
     source?: {
         entity_id: string;
+        entity_type: EntityType;
         label: string;
     };
     /** The sink/target entity info (for inserters, drills) */
     sink?: {
         entity_id: string;
+        entity_type: EntityType;
         label: string;
     };
     /** Item names associated with this entity (recipe output for machines, resource for drills, filtered items for inserters) */
@@ -83,17 +85,19 @@ export function serializeStateTransitionHistory(
         let items: string[] = [];
 
         if (Entity.isInserter(entity)) {
-            label = `Inserter ${entityId.id.split(':')[1]}`;
+            label = `Inserter ${entityId.number}`;
             
             const sourceEntity = entity_registry.getEntityById(entity.source.entity_id);
             const sinkEntity = entity_registry.getEntityById(entity.sink.entity_id);
             
             source = {
                 entity_id: entity.source.entity_id.id,
+                entity_type: entity.source.entity_id.type,
                 label: sourceEntity ? getEntityLabel(sourceEntity) : entity.source.entity_id.id,
             };
             sink = {
                 entity_id: entity.sink.entity_id.id,
+                entity_type: entity.sink.entity_id.type,
                 label: sinkEntity ? getEntityLabel(sinkEntity) : entity.sink.entity_id.id,
             };
 
@@ -106,15 +110,16 @@ export function serializeStateTransitionHistory(
                 items = Array.from(sinkEntity.inputs.keys());
             }
         } else if (Entity.isMachine(entity)) {
-            label = `Machine ${entityId.id.split(':')[1]} (${entity.metadata.recipe.name})`;
+            label = `Machine ${entityId.number} (${entity.metadata.recipe.name})`;
             items = [entity.output.item_name];
         } else if (Entity.isDrill(entity)) {
-            label = `Drill ${entityId.id.split(':')[1]} (${entity.item.name})`;
+            label = `Drill ${entityId.number} (${entity.item.name})`;
             items = [entity.item.name];
             
             const targetEntity = entity_registry.getEntityById(entity.sink_id);
             sink = {
                 entity_id: entity.sink_id.id,
+                entity_type: entity.sink_id.type,
                 label: targetEntity ? getEntityLabel(targetEntity) : entity.sink_id.id,
             };
         } else {
@@ -191,16 +196,16 @@ export function serializeStateTransitionHistory(
 
 function getEntityLabel(entity: Entity): string {
     if (Entity.isMachine(entity)) {
-        return `Machine ${entity.entity_id.id.split(':')[1]} (${entity.metadata.recipe.name})`;
+        return `Machine ${entity.entity_id.number} (${entity.metadata.recipe.name})`;
     }
     if (Entity.isBelt(entity)) {
-        return `Belt ${entity.entity_id.id.split(':')[1]}`;
+        return `Belt ${entity.entity_id.number}`;
     }
     if (Entity.isDrill(entity)) {
-        return `Drill ${entity.entity_id.id.split(':')[1]} (${entity.item.name})`;
+        return `Drill ${entity.entity_id.number} (${entity.item.name})`;
     }
     if (Entity.isInserter(entity)) {
-        return `Inserter ${entity.entity_id.id.split(':')[1]}`;
+        return `Inserter ${entity.entity_id.number}`;
     }
     return entity.entity_id.id;
 }

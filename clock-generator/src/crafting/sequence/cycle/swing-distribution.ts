@@ -172,7 +172,7 @@ export function createAlternatingDistribution(
  * @param cycle_multiplier The LCM-derived multiplier for the number of sub-cycles
  * @returns Map of entity ID to swing distribution
  */
-export function computeSwingDistributions(
+function computeSwingDistributions(
     entity_transfer_map: EntityTransferCountMap,
     entity_registry: ReadableEntityRegistry,
     cycle_multiplier: number

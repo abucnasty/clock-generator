@@ -75,7 +75,7 @@ const darkTheme = createTheme({
 
 function App() {
     const {
-        isInitialized,
+        isInitialized: workersReady,
         isRunning,
         progressStore,
         recipeNames,
@@ -108,6 +108,10 @@ function App() {
 
     const {
         config,
+        isLoaded: isConfigLoaded,
+        loadError: configLoadError,
+        loadNotice,
+        dismissLoadNotice,
         updateTargetOutput,
         addMachine,
         updateMachine,
@@ -137,6 +141,7 @@ function App() {
         updateIgnoredIngredients,
         importConfig,
         exportConfig,
+        exportableConfig,
         resetConfig,
         applyInserterFix,
         reorderMachines,
@@ -145,6 +150,11 @@ function App() {
         reorderChests,
         reorderDrills,
     } = useConfigForm();
+
+    // the page waits for the workers and for the saved config, which the engine's worker checks
+    const isInitialized = workersReady && isConfigLoaded;
+    // until the workers are ready, an error is one that stopped them starting
+    const startupError = (!workersReady && error) || configLoadError;
 
     const [debugSteps, setDebugSteps] = useState<DebugSteps>({
         prepare: false,
@@ -158,7 +168,9 @@ function App() {
     const [changelogOpen, setChangelogOpen] = useState(false);
     const [view, setView] = useState<WorkflowView>('configure');
 
-    const coverageIssues = useInserterValidation(exportConfig, isInitialized);
+    // null until the config is checked; Generate waits for that
+    const checkedCoverageIssues = useInserterValidation(exportConfig, isInitialized);
+    const coverageIssues = checkedCoverageIssues ?? [];
 
     // Initialize worker on mount
     useEffect(() => {
@@ -208,6 +220,34 @@ function App() {
 
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
     const openDiagramFullscreen = useCallback(() => setDiagramFullscreen(true), []);
+
+    // Shared by the inline and fullscreen diagrams
+    const flowDiagramProps = {
+        machines: config.machines,
+        inserters: config.inserters,
+        belts: config.belts,
+        chests: config.chests,
+        drills: drillConfigs,
+        recipeNames,
+        itemNames: itemNamesComposite,
+        getRecipeInfo,
+        onUpdateMachine: updateMachine,
+        onUpdateInserter: updateInserter,
+        onUpdateBelt: updateBelt,
+        onUpdateChest: updateChest,
+        onSwitchChestType: switchChestType,
+        onUpdateDrill: updateDrill,
+        onDeleteMachine: removeMachine,
+        onDeleteInserter: removeInserter,
+        onDeleteBelt: removeBelt,
+        onDeleteChest: removeChest,
+        onDeleteDrill: removeDrill,
+        onAddMachine: addMachine,
+        onAddInserter: addInserter,
+        onAddBelt: addBelt,
+        onAddChest: addChest,
+        onAddDrill: addDrill,
+    };
     const updateMiningProductivityLevel = useCallback(
         (value: number) => updateDrillsConfig('mining_productivity_level', value),
         [updateDrillsConfig]
@@ -233,9 +273,9 @@ function App() {
             config.target_output.copies > 0 &&
             config.machines.length > 0 &&
             config.machines.every((m) => m.recipe) &&
-            coverageIssues.length === 0
+            checkedCoverageIssues?.length === 0
         );
-    }, [isInitialized, isRunning, config, coverageIssues]);
+    }, [isInitialized, isRunning, config, checkedCoverageIssues]);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -250,7 +290,7 @@ function App() {
                             Factorio Clock Generator
                         </Typography>
                         <ConfigImportExport
-                            config={exportConfig()}
+                            config={exportableConfig}
                             onImport={handleImportConfig}
                             onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
                             onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
@@ -283,7 +323,11 @@ function App() {
                 )}
 
                 <Container maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
-                    {!isInitialized ? (
+                    {startupError ? (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            The page could not start: {startupError}. Reload the page to try again.
+                        </Alert>
+                    ) : !isInitialized ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                             <CircularProgress />
                             <Typography sx={{ ml: 2 }}>Loading Factorio data...</Typography>
@@ -292,6 +336,11 @@ function App() {
                         <>
                         {/* both views stay mounted so switching keeps what was expanded, filtered or scrolled */}
                         <Box sx={{ display: view === 'configure' ? 'block' : 'none' }}>
+                            {loadNotice && (
+                                <Alert severity="warning" sx={{ mb: 2 }} onClose={dismissLoadNotice}>
+                                    {loadNotice}
+                                </Alert>
+                            )}
                             {error && (
                                 <Alert severity="error" sx={{ mb: 2 }}>
                                     {error}
@@ -379,30 +428,7 @@ function App() {
                             ) : (
                                 <Box sx={{ mb: 2 }}>
                                     <ConfigFlowDiagram
-                                        machines={config.machines}
-                                        inserters={config.inserters}
-                                        belts={config.belts}
-                                        chests={config.chests}
-                                        drills={drillConfigs}
-                                        recipeNames={recipeNames}
-                                        itemNames={itemNamesComposite}
-                                        getRecipeInfo={getRecipeInfo}
-                                        onUpdateMachine={updateMachine}
-                                        onUpdateInserter={updateInserter}
-                                        onUpdateBelt={updateBelt}
-                                        onUpdateChest={updateChest}
-                                        onSwitchChestType={switchChestType}
-                                        onUpdateDrill={updateDrill}
-                                        onDeleteMachine={removeMachine}
-                                        onDeleteInserter={removeInserter}
-                                        onDeleteBelt={removeBelt}
-                                        onDeleteChest={removeChest}
-                                        onDeleteDrill={removeDrill}
-                                        onAddMachine={addMachine}
-                                        onAddInserter={addInserter}
-                                        onAddBelt={addBelt}
-                                        onAddChest={addChest}
-                                        onAddDrill={addDrill}
+                                        {...flowDiagramProps}
                                         onRequestFullscreen={openDiagramFullscreen}
                                     />
                                     <MissingInserterAlert
@@ -555,30 +581,7 @@ function App() {
                     </Box>
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                         <ConfigFlowDiagram
-                            machines={config.machines}
-                            inserters={config.inserters}
-                            belts={config.belts}
-                            chests={config.chests}
-                            drills={drillConfigs}
-                            recipeNames={recipeNames}
-                            itemNames={itemNamesComposite}
-                            getRecipeInfo={getRecipeInfo}
-                            onUpdateMachine={updateMachine}
-                            onUpdateInserter={updateInserter}
-                            onUpdateBelt={updateBelt}
-                            onUpdateChest={updateChest}
-                            onSwitchChestType={switchChestType}
-                            onUpdateDrill={updateDrill}
-                            onDeleteMachine={removeMachine}
-                            onDeleteInserter={removeInserter}
-                            onDeleteBelt={removeBelt}
-                            onDeleteChest={removeChest}
-                            onDeleteDrill={removeDrill}
-                            onAddMachine={addMachine}
-                            onAddInserter={addInserter}
-                            onAddBelt={addBelt}
-                            onAddChest={addChest}
-                            onAddDrill={addDrill}
+                            {...flowDiagramProps}
                             height="100%"
                         />
                     </Box>

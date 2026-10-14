@@ -11,6 +11,7 @@ name: Release
 #   on master before it is released.
 # "Run workflow" (or `gh workflow run release.yml`) deploys the current version to production again, for a run that
 # failed part way.
+# Nothing is released or deployed unless the tests pass: the unit and generation tests and the UI build of test.yml.
 #
 # The deployments need three secrets: VERCEL_TOKEN (a token of the Vercel account), VERCEL_ORG_ID and
 # VERCEL_PROJECT_ID (both in .vercel/repo.json or .vercel/project.json after `vercel link`). See "Versioning" in the README.
@@ -30,7 +31,16 @@ env:
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
+  tests:
+    name: Tests
+    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+    with:
+      generation: true
+
   release:
+    needs: tests
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -98,7 +108,7 @@ jobs:
 
       - name: Build and deploy
         run: |
-          npm install --global vercel@latest
+          npm install --global vercel@61.1.0
           vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
           vercel build --prod --token="$VERCEL_TOKEN"
           URL=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
@@ -107,6 +117,7 @@ jobs:
   preview:
     # What is on master, released or not, at an address of its own
     name: Deploy master as a preview
+    needs: tests
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
@@ -133,7 +144,7 @@ jobs:
       - name: Build and deploy
         if: steps.vercel.outputs.ready == 'true'
         run: |
-          npm install --global vercel@latest
+          npm install --global vercel@61.1.0
           vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
           vercel build --token="$VERCEL_TOKEN"
           URL=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")

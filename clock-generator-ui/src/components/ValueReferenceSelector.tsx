@@ -8,7 +8,7 @@ import {
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
-import { ValueReferenceType, EntityReference, TargetType } from 'clock-generator/browser';
+import { ValueReferenceType, EntityReference, TargetType } from 'clock-generator/light';
 import type { ValueReference } from '../hooks/useConfigForm';
 import { useFullscreen } from './FullscreenContext';
 import { ItemSelector } from './ItemSelector';

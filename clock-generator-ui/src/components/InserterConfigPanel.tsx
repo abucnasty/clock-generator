@@ -8,7 +8,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { EnableControlMode, TargetType } from 'clock-generator/browser';
+import { EnableControlMode, TargetType } from 'clock-generator/light';
 import { useMemo, useState } from 'react';
 import type {
     BeltFormData,
@@ -173,7 +173,8 @@ function InserterEditSection({
                     value={inserter.source.near_lane ?? 0}
                     onChange={(e) => {
                         const lane = Number(e.target.value);
-                        const { near_lane: _unset, ...source } = inserter.source;
+                        const source = { ...inserter.source };
+                        delete source.near_lane;
                         onUpdate(entityIndex, { source: lane === 1 || lane === 2 ? { ...source, near_lane: lane } : source });
                     }}
                 >
@@ -198,7 +199,7 @@ function InserterEditSection({
                 <NumberField
                     label="Stack Size"
                     value={inserter.stack_size}
-                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: val ?? 1 })}
+                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 1 })}
                     min={1}
                     sx={{ width: 130 }}
                     size="small"
@@ -238,7 +239,7 @@ function InserterEditSection({
 
 // ---- Panel props ----
 
-export interface InserterConfigPanelProps {
+interface InserterConfigPanelProps {
     inserter: InserterFormData;
     entityIndex: number;
     machines: MachineFormData[];

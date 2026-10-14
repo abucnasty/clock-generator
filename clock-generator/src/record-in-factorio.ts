@@ -1,7 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
 import { loadConfigFromFile } from "./config/loader";
-import { recordInFactorio, Seed } from "./harness/factorio-harness";
+import "./data/factorio-data-file";
+import { clockOfBlueprintString, recordInFactorio, Seed } from "./harness/factorio-harness";
 import { summarizeRecording } from "./harness/recording-summary";
 
 function argValue(name: string): string | undefined {
@@ -78,7 +79,7 @@ async function main() {
         warmup_ticks: Number(argValue("warmup") ?? 0),
         settle_ticks: Number(argValue("settle") ?? 0),
         seed: seed ? JSON.parse(await fileOrText(seed)) as Seed[] : [],
-        clock: clock ? await fileOrText(clock) : undefined,
+        clock: clock ? clockOfBlueprintString(await fileOrText(clock)) : undefined,
         config: config_path ? await loadConfigFromFile(config_path) : undefined,
         unclocked: argFlag("unclocked"),
         surface: argValue("surface"),

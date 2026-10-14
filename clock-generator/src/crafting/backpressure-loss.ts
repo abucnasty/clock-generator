@@ -46,7 +46,7 @@ export function lossLabel(loss: BackpressureLoss): string {
 }
 
 /** One trial of a loss: where in the clock period it starts, in ticks from the start of a period, and when it ends */
-export type LossTrialPlan =
+type LossTrialPlan =
     /** The loss lasts until the build has stopped, and ends at this place in the period */
     | { cut_at: number; restore_at: number }
     /** The loss lasts this many ticks, whatever the build is doing by then */
@@ -91,7 +91,7 @@ export const MAX_RECOVERY_PERIODS = 40;
  * Where the state cannot be compared (a fuel inserter on a clock of its own does not repeat with the period), the
  * build has recovered when this many periods at the end of the recovery are all at the expected output.
  */
-export const RECOVERY_HOLD_PERIODS = 8;
+const RECOVERY_HOLD_PERIODS = 8;
 
 export interface BackpressureLossOptions {
     loss: BackpressureLoss;
