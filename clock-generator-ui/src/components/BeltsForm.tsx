@@ -22,6 +22,8 @@ import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
 import { BELT_TYPES } from './entityTypes';
+import { BeltAssumption } from './BeltAssumption';
+import type { BeltAnswer, BeltQuestion } from '../utils/beltQuestion';
 
 interface BeltsFormProps {
     belts: BeltFormData[];
@@ -30,6 +32,9 @@ interface BeltsFormProps {
     onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
+    /** Asked when an inserter takes from one of these belts */
+    beltQuestion: BeltQuestion;
+    onBeltAnswer: (answer: BeltAnswer) => void;
 }
 
 function BeltsFormComponent({
@@ -39,6 +44,8 @@ function BeltsFormComponent({
     onUpdate,
     onRemove,
     onReorder,
+    beltQuestion,
+    onBeltAnswer,
 }: BeltsFormProps) {
     const [infoAnchor, setInfoAnchor] = useState<HTMLButtonElement | null>(null);
 
@@ -109,6 +116,12 @@ function BeltsFormComponent({
                     Add Belt
                 </Button>
             </Box>
+
+            {beltQuestion.ask && (
+                <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2, mb: 2 }}>
+                    <BeltAssumption answer={beltQuestion.answer} onChange={onBeltAnswer} />
+                </Box>
+            )}
 
             <SortableList itemKeys={belts.map((b) => b._uuid)} itemLabels={belts.map((b) => entityLabel('belt', b.id))} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (

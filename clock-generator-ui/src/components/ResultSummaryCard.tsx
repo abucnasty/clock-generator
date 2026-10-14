@@ -1,6 +1,6 @@
 import { Cancel, Check, CheckCircle, ContentCopy, HelpOutline, Warning } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, Paper, Typography } from '@mui/material';
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
 import {
     beltLine,
@@ -52,7 +52,10 @@ interface ResultSummaryCardProps {
     stale: boolean;
     /** The build has mining drills on the clock */
     hasDrills: boolean;
-    /** Shown right after the belt line: the belt question (2.4) */
+    /**
+     * What the clocks assume of the belts, with the action for the other answer (2.4), in place of the card's own belt
+     * line; shown also before the first clock arrives
+     */
     beltAction?: ReactNode;
 }
 
@@ -76,40 +79,11 @@ const RECOVERS_ICON = {
     'not-tested': <HelpOutline fontSize="small" aria-hidden sx={{ color: 'text.secondary' }} />,
 } as const;
 
-/**
- * The answer at the top of Results: the selected clock by name, why it was picked, its facts, the button that copies
- * it and the steps that put it into the game.
- */
-export function ResultSummaryCard(props: ResultSummaryCardProps) {
-    const { alternatives, selectedIndex, recommendedIndex, isGenerating } = props;
-    const headingId = useId();
-    const nameRef = useRef<HTMLHeadingElement>(null);
-    const selected = alternatives[selectedIndex];
+type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView };
 
-    // a generation that ends with the focus on nothing (Generate was off while it ran) leaves it on the answer
-    const wasGenerating = useRef(isGenerating);
-    useEffect(() => {
-        const finished = wasGenerating.current && !isGenerating;
-        wasGenerating.current = isGenerating;
-        const name = nameRef.current;
-        const lost = document.activeElement === null || document.activeElement === document.body;
-        if (finished && lost && name && name.offsetParent !== null) {
-            name.focus();
-        }
-    }, [isGenerating]);
-
-    if (!selected) {
-        if (!isGenerating) {
-            return null;
-        }
-        return (
-            <Paper variant="outlined" component="section" aria-labelledby={headingId} sx={{ p: 2, mb: 2 }} data-result-card>
-                <Typography id={headingId} component="h2" variant="h6">{CARD_COPY.heading}</Typography>
-                <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
-            </Paper>
-        );
-    }
-
+/** The selected clock's name, why it is the one, and its four facts */
+function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingElement | null> }) {
+    const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected, nameRef } = props;
     const isRecommended = selectedIndex === recommendedIndex;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const reason = isRecommended
@@ -118,12 +92,8 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     const makes = makesText(selected, selected.copies);
     const wakeUps = wakeUpsText(selected);
     const recovers = recoversOf(selected);
-    const warns = props.rateWarning !== null || props.stale;
-
     return (
-        <Paper variant="outlined" component="section" aria-labelledby={headingId} sx={{ p: 2, mb: 2 }} data-result-card>
-            <Typography id={headingId} component="h2" variant="h6">{CARD_COPY.heading}</Typography>
-
+        <>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5, mt: 0.5 }}>
                 <Typography
                     ref={nameRef}
@@ -178,11 +148,15 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                 <Tile label={CARD_COPY.recovers} value={recovers.value} sub={recovers.detail} icon={RECOVERS_ICON[recovers.kind]} />
                 <Tile label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub="" />
             </Box>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 1, mt: 1 }}>
-                <Typography variant="body2" data-belt-line>{beltLine(props.pickRule, selected.beltLabel)}</Typography>
-                {props.beltAction}
-            </Box>
+        </>
+    );
+}
 
+/** The warnings, the Copy button and the steps that put the selected clock into the game */
+function ClockCopy(props: SelectedProps) {
+    const warns = props.rateWarning !== null || props.stale;
+    return (
+        <>
             {props.rateWarning && (
                 <Alert severity="warning" sx={{ mt: 2 }}>{props.rateWarning}</Alert>
             )}
@@ -205,7 +179,53 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                 <Typography variant="body2" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
             </Box>
 
-            <InstallSteps install={selected.install} hasDrills={props.hasDrills} stale={props.stale} />
+            <InstallSteps install={props.selected.install} hasDrills={props.hasDrills} stale={props.stale} />
+        </>
+    );
+}
+
+/**
+ * The answer at the top of Results: the selected clock by name, why it was picked, its facts, the button that copies
+ * it and the steps that put it into the game. While a run has no clock yet, it says so.
+ */
+export function ResultSummaryCard(props: ResultSummaryCardProps) {
+    const { alternatives, selectedIndex, isGenerating } = props;
+    const headingId = useId();
+    const nameRef = useRef<HTMLHeadingElement>(null);
+    const selected = alternatives[selectedIndex];
+
+    // a generation that ends with the focus on nothing (Generate was off while it ran) leaves it on the answer
+    const wasGenerating = useRef(isGenerating);
+    useEffect(() => {
+        const finished = wasGenerating.current && !isGenerating;
+        wasGenerating.current = isGenerating;
+        const name = nameRef.current;
+        const lost = document.activeElement === null || document.activeElement === document.body;
+        if (finished && lost && name && name.offsetParent !== null) {
+            name.focus();
+        }
+    }, [isGenerating]);
+
+    if (!selected && !isGenerating) {
+        return null;
+    }
+
+    // one tree for a run's start and for its clocks, so the belt action (2.4) stays mounted, and keeps the keyboard
+    // focus, when the run it starts empties the list of clocks
+    return (
+        <Paper variant="outlined" component="section" aria-labelledby={headingId} sx={{ p: 2, mb: 2 }} data-result-card>
+            <Typography id={headingId} component="h2" variant="h6">{CARD_COPY.heading}</Typography>
+            {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
+                <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
+            )}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 1, mt: 1 }}>
+                {/* 2.4's line says what the clocks assume of the belts when the run asked; otherwise the card says it */}
+                {selected && !props.beltAction && (
+                    <Typography variant="body2" data-belt-line>{beltLine(props.pickRule, selected.beltLabel)}</Typography>
+                )}
+                {props.beltAction}
+            </Box>
+            {selected ? <ClockCopy {...props} selected={selected} /> : null}
         </Paper>
     );
 }

@@ -4,7 +4,7 @@ import type { ClockAlternativeView } from '../worker/types';
 
 /** What the selection rule is given by the config a generation ran with */
 export interface PickRule {
-    /** "Belts do not move": every clock is made without belt slack and counts as made for the belt */
+    /** The input belts are backed up and standing still: every clock is made without belt slack and counts as made for the belt */
     nonMovingBelts: boolean;
     /** "Search for fewer wake-ups": the slower searches ran whether they were needed or not */
     searchedForFewerWakeUps: boolean;
@@ -41,8 +41,8 @@ export const RECOMMENDED_COPY = {
             + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one with fewer wake '
             + 'windows. If none qualifies, the one that runs nearest to the target rate.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
-            + 'A clock made without it is only picked when no clock for a moving belt holds the rate. With "Belts do '
-            + 'not move" on, every clock is made without the slack.',
+            + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
+            + 'input belts are backed up and standing still (Configure, Belts), every clock is made without the slack.',
     ],
     runMovingBelts: 'This run assumed moving belts.',
     runStillBelts: 'This run assumed belts that stand still.',

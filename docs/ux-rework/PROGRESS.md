@@ -81,7 +81,8 @@ come from here.
 | 2.1 (two units; after 1.5 + 1.3) → 2.7 B | 3 | 2.1 once 1.5 + 1.3 is in p2 |
 | 2.5 A → 2.5 B | 2 | after 2.5 A |
 | 2.8 a → 2.8 b (late) | 2 | 2.8 a, any idle slot |
-| 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | in progress |
+| 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | merged |
+| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | next free slot |
 
 ## Phase 3: expert depth
 
@@ -168,6 +169,18 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   `git push origin --delete`. Suggestion 2 (start Phase 2 items before Phase 1 merges) changes a PLAN.md rule, so it
   went to the owner, who approved it: `feat/ux-rework-p2` is cut from `feat/ux-rework-p1`'s head when a slot goes
   idle, starting with 2.2 and 2.6 (then 2.11); [PLAN.md](PLAN.md) "Phase branches" updated.
+
+- 2026-10-14: Process coach run 4 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated): one merge per 18 min (about 10
+  without the 48-min restart stall). Applied: (1) read-only agents count as zero units; 2.10 gets its own chain and the
+  next free slot; `master` is merged into `feat/ux-rework` now (merge-tree clean); (2) after 1.12 B merges, its
+  implementer does the p1→p2 merge and applies the glossary to Phase 2's new copy; post-merge conflict checks include
+  p1→p2 merges; phase-end findings on screens Phase 2 rebuilt are carried to that item; (3) `checkAxe` on every
+  captured state, focus-not-obscured at a short height, and a visible change after a mouse activation; (4) resume
+  lines in the handoff, push after every commit, resume all agents first after a restart; (5) capture writers start
+  as soon as a spec is final.
+- 2026-10-14: `master` moved outside the rework: the owner merged #158 (engine fix for issue 152, release 0.9.1;
+  24 files in `clock-generator/`). Plan (coach run 4): merge `master` into `feat/ux-rework` now, run the engine and generation tests there, and start the final PR's version bump from
+  0.9.1.
 
 ## Open questions
 

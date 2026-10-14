@@ -146,6 +146,16 @@ The helpers:
     `inertFromKeyboardReport` returns the detail (`reason`, `candidates`, `tabbable`, `tabLanded`, `reacted`); wrapper:
     `checkInertFromKeyboard(rec, page, locator, label)`. A disabled button is inert; a block that only looks disabled (`opacity`
     plus `pointer-events: none`) with live buttons in it fails.
+  - `checkAxe(rec, page, view, { rules, exclude })` runs axe-core in the page (found beside the script or in `/tmp/ux-capture/node_modules`, never
+    in the repo; an INFO line and a skip when missing) and records one PASS/FAIL per rule per view, with the failing nodes' selectors and
+    summaries in the detail. Default `rules` is `AXE_RULES` (nested-interactive, duplicate-id-aria, button-name, select-name, label, aria-input-field-name,
+    aria-toggle-field-name, aria-valid-attr-value, aria-allowed-role, target-size, landmark-one-main, region, empty-table-header, heading-order); default `exclude` is `canvas` and `.react-flow`.
+  - `checkFocusNotObscuredAtHeight(rec, page, { height, width, walk, max })` resizes the viewport (use 640 at 1440 wide, 560 at 720), Tabs through
+    `walk` (a list of locators, one container locator such as the open dialog, or nothing for the whole page) running `focusNotObscured` on every stop,
+    records ONE rolled-up check (fails on any fully covered stop; partly covered stops are listed) and restores the viewport.
+  - `checkMouseActivationVisible(rec, page, locator, label)` clicks the element with the real mouse and passes only if the viewport visibly
+    changed within ~400 ms: scrolled 4 px or more, different visible text, a dialog/menu/popover/snackbar opened or closed, or focus moved to an
+    element with a visible ring. The detail says what changed. It catches controls whose click lands off screen or does nothing.
 - "Before" shots are only for states the original review has no shot of; the review's shots already show 0.9.0.
 - The default widths are 1440 and 720. Add 390 (at 844 high) when the item affects reachability, and 960 at phase end.
 

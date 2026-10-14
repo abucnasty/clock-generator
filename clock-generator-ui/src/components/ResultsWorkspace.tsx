@@ -82,7 +82,10 @@ interface ResultsWorkspaceProps {
     copyLabel: string;
     /** The build has mining drills on the clock */
     hasDrills: boolean;
-    /** Shown in the card right after its belt line: the belt question (2.4) */
+    /**
+     * What the clocks assume of the input belts, with the action for the other answer (2.4's BeltAssumptionLine), shown in
+     * the card in place of its own belt line
+     */
     beltAction?: ReactNode;
 }
 

@@ -65,13 +65,23 @@ describe('generatedForOf', () => {
         const key = keyOf(config);
         config = edits.updateTargetOutput(config, 'items_per_second', 200);
         config = edits.updateTargetOutput(config, 'recipe', 'automation-science-pack');
-        expect(generatedFor).toEqual({ key, recipe: 'logistic-science-pack', itemsPerSecond: 240 });
+        expect(generatedFor).toEqual({
+            key,
+            recipe: 'logistic-science-pack',
+            itemsPerSecond: 240,
+            beltQuestion: { ask: false, answer: 'moving' },
+        });
         expect(keyOf(config)).not.toBe(key);
     });
 });
 
 describe('staleResultsMessage', () => {
-    const message = (itemsPerSecond: number) => staleResultsMessage({ key: '', recipe: 'logistic-science-pack', itemsPerSecond });
+    const message = (itemsPerSecond: number) => staleResultsMessage({
+        key: '',
+        recipe: 'logistic-science-pack',
+        itemsPerSecond,
+        beltQuestion: { ask: false, answer: 'moving' },
+    });
 
     it('says what the clocks are for in the plan\'s sentence', () => {
         expect(message(240)).toBe('These clocks are for logistic-science-pack at 240/s. Your build has changed since. Generate again.');

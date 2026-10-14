@@ -1,4 +1,5 @@
 import type { Config } from 'clock-generator/browser';
+import { beltQuestionOf, type BeltQuestion } from './beltQuestion';
 
 /** Label of every button that copies the blueprint of clocks made for an earlier build */
 export const STALE_COPY_LABEL = 'Copy old clock…';
@@ -9,11 +10,15 @@ export const STALE_COPY_TOOLTIP = 'Your build has changed since this clock was m
 /** Said in the Blueprint tab in place of the blueprint string while the clocks are for an earlier build */
 export const STALE_BLUEPRINT_NOTE = 'The blueprint is hidden because your build has changed since it was made. Generate again for a new one.';
 
-/** What a generation was for: the key of its config, and the target recipe and rate the clocks were made for */
+/**
+ * What a generation was for: the key of its config, the target recipe and rate the clocks were made for, and the belt
+ * question as the config answered it
+ */
 export interface GeneratedFor {
     key: string;
     recipe: string;
     itemsPerSecond: number;
+    beltQuestion: BeltQuestion;
 }
 
 /**
@@ -29,6 +34,7 @@ export function generatedForOf(config: Config): GeneratedFor {
         key: configKeyOf(config),
         recipe: config.target_output.recipe,
         itemsPerSecond: config.target_output.items_per_second,
+        beltQuestion: beltQuestionOf(config),
     };
 }
 
