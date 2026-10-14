@@ -17,6 +17,7 @@ import { chromium } from 'playwright-core';
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
 
 export const DEFAULT_BASE = process.env.BASE_URL ?? 'http://localhost:5199';
 export const DEFAULT_WIDTHS = [1440, 720];
@@ -1202,4 +1203,182 @@ async function announcedOnce(page, source, flags, isRegex) {
     else if (usable.length) detail = `a live element holds it but the accessibility tree does not show it there (${usable.map(describe).slice(0, 2).join('; ')})`;
     else detail = `no live element holds it; ${dom.length} live element${dom.length === 1 ? '' : 's'} on the page${dom.length ? `: ${dom.slice(0, 4).map(describe).join('; ')}` : ''}`;
     return { pass, detail };
+}
+
+/** The axe rules `checkAxe` runs by default (ids checked against axe-core 4.14) */
+export const AXE_RULES = [
+    'nested-interactive', 'duplicate-id-aria', 'button-name', 'select-name', 'label', 'aria-input-field-name',
+    'aria-toggle-field-name', 'aria-valid-attr-value', 'aria-allowed-role', 'target-size', 'landmark-one-main', 'region',
+    'empty-table-header', 'heading-order',
+];
+
+/** Where axe-core is installed: beside this file, or in /tmp/ux-capture (never in the repo). Null when it is not. */
+function findAxe() {
+    for (const base of [import.meta.url, '/tmp/ux-capture/']) {
+        try {
+            return createRequire(base.startsWith('file:') ? base : join(base, 'x.js')).resolve('axe-core/axe.min.js');
+        } catch { /* try the next folder */ }
+    }
+    return null;
+}
+
+/**
+ * Runs axe-core on the page, one PASS/FAIL line per rule: the detail lists the failing nodes' selectors and summaries
+ * (first three). The `.react-flow` canvas and `canvas` elements are excluded by default (React Flow's own markup). When axe-core
+ * is not installed (`cd /tmp/ux-capture && npm i axe-core`) it records an INFO line and returns null.
+ * Returns the names of the failing rules.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {string} view  how the checks are named ("Configure", "Results", "chest filters")
+ * @param {{ rules?: string[], exclude?: string[] }} [options]  axe rule ids (default `AXE_RULES`); CSS selectors to leave out
+ */
+export async function checkAxe(rec, page, view, { rules = AXE_RULES, exclude = ['canvas', '.react-flow'] } = {}) {
+    const axePath = findAxe();
+    if (!axePath) {
+        rec.info(`axe ${view}`, 'axe-core not installed (cd /tmp/ux-capture && npm i axe-core): skipped');
+        return null;
+    }
+    if (!(await page.evaluate(() => typeof window.axe === 'object'))) await page.addScriptTag({ path: axePath });
+    const result = await page.evaluate(
+        ({ ruleIds, skip }) =>
+            window.axe.run(skip.length ? { include: [['html']], exclude: skip.map((x) => [x]) } : document, { runOnly: { type: 'rule', values: ruleIds }, resultTypes: ['violations'] }).then((r) =>
+                r.violations.map((v) => ({
+                    id: v.id,
+                    impact: v.impact,
+                    nodes: v.nodes.map((n) => `${n.target.join(' ')} [${(n.failureSummary ?? '').replace(/\s+/g, ' ').replace(/^Fix (any|all) of the following: ?/, '').slice(0, 140)}]`),
+                })),
+            ),
+        { ruleIds: rules, skip: exclude },
+    );
+    const failed = [];
+    for (const rule of rules) {
+        const v = result.find((x) => x.id === rule);
+        if (v) failed.push(rule);
+        rec.check(`axe ${view}: ${rule}`, !v, v ? `${v.nodes.length} node${v.nodes.length === 1 ? '' : 's'} (${v.impact}): ${v.nodes.slice(0, 3).join('; ')}${v.nodes.length > 3 ? `; +${v.nodes.length - 3} more` : ''}` : 'no violation');
+    }
+    return failed;
+}
+
+/**
+ * Resizes the viewport to a short `height` (WCAG 2.4.11 fails first on short screens: 640 at 1440 wide, 560 at 720), Tabs through
+ * `walk` and runs `focusNotObscured` on every stop, recording ONE rolled-up check (fails if any stop is fully covered; partly
+ * covered stops are listed in the detail). The viewport is restored afterwards.
+ * `walk`: a list of locators (each is Tabbed to in order, and checked); one locator (a container such as the open dialog: Tab
+ * from its first stop on while focus stays inside, at most `max` stops); or nothing (Tab through the page from where focus is, until it
+ * wraps, at most `max` stops).
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {{ height: number, width?: number, walk?: import('playwright-core').Locator | import('playwright-core').Locator[], max?: number }} options
+ */
+export async function checkFocusNotObscuredAtHeight(rec, page, { height, width, walk, max = 80 }) {
+    const before = page.viewportSize();
+    const size = { width: width ?? before?.width ?? 1440, height };
+    const stops = [];
+    const record = async () => {
+        const r = await focusNotObscured(page);
+        stops.push(r);
+    };
+    try {
+        await page.setViewportSize(size);
+        await page.waitForTimeout(300);
+        if (Array.isArray(walk)) {
+            for (const loc of walk) {
+                const { reached } = await tabTo(page, loc);
+                if (reached) await record();
+                else stops.push({ ok: false, covered: 'fully', by: 'Tab never reached it', fraction: 1, inViewport: false, element: await loc.first().evaluate((e) => e.tagName.toLowerCase()).catch(() => 'a locator that matched nothing') });
+            }
+        } else if (walk) {
+            const { reached } = await tabTo(page, walk);
+            if (!reached) stops.push({ ok: false, covered: 'fully', by: 'Tab never reached the container', fraction: 1, inViewport: false, element: 'walk' });
+            else {
+                for (let i = 0; i < max; i++) {
+                    await record();
+                    await page.keyboard.press('Tab');
+                    const inside = await walk.evaluateAll((els) => els.some((el) => el.contains(document.activeElement))).catch(() => false);
+                    if (!inside) break;
+                }
+            }
+        } else {
+            await page.evaluate(() => { window.__uxStart = document.activeElement; });
+            for (let i = 0; i < max; i++) {
+                await page.keyboard.press('Tab');
+                if (await page.evaluate(() => document.activeElement === document.body || document.activeElement === window.__uxStart)) break;
+                await record();
+            }
+        }
+    } finally {
+        if (before) await page.setViewportSize(before);
+        await page.waitForTimeout(200);
+    }
+    const hidden = stops.filter((s) => !s.ok);
+    const partly = stops.filter((s) => s.ok && s.covered === 'partly');
+    const name = (s) => `${s.element} (${s.covered === 'partly' ? `${Math.round(s.fraction * 100)}% ` : ''}by ${s.by})`;
+    const list = (a) => a.slice(0, 4).map(name).join('; ') + (a.length > 4 ? `; +${a.length - 4} more` : '');
+    return rec.check(
+        `focus not obscured at ${size.width}x${size.height}`,
+        stops.length > 0 && hidden.length === 0,
+        `${stops.length} stop${stops.length === 1 ? '' : 's'} checked${hidden.length ? `; ${hidden.length} fully covered: ${list(hidden)}` : ''}${partly.length ? `; ${partly.length} partly covered: ${list(partly)}` : ''}`,
+    );
+}
+
+/** What is visible in the viewport right now: scroll, focus and its look, the visible text, open dialogs and popovers */
+const viewportSnapshot = (page) =>
+    page.evaluate(() => {
+        const vw = innerWidth, vh = innerHeight;
+        const shown = (el) => {
+            const cs = getComputedStyle(el);
+            if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return false;
+            const r = el.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0 && r.top < vh && r.left < vw;
+        };
+        const parts = [];
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            const t = (n.textContent ?? '').replace(/\s+/g, ' ').trim();
+            if (t && n.parentElement && !['SCRIPT', 'STYLE'].includes(n.parentElement.tagName) && shown(n.parentElement)) parts.push(t);
+        }
+        const text = parts.join('|');
+        let h = 5381;
+        for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+        const overlays = [...document.querySelectorAll('[role=dialog],[role=menu],[role=listbox],[role=tooltip],[role=alert],dialog[open],[popover]:popover-open,.MuiPopover-root,.MuiSnackbar-root')].filter(shown).map((e) => e.getAttribute('role') ?? e.className.toString().split(' ')[0]);
+        const a = document.activeElement;
+        let focus = null;
+        if (a && a !== document.body && a !== document.documentElement) {
+            const cs = getComputedStyle(a);
+            const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || (cs.boxShadow !== 'none' && cs.boxShadow !== '') || a.matches(':focus-visible');
+            focus = { desc: `${a.tagName.toLowerCase()}${a.id ? `#${a.id}` : ''}${(a.getAttribute('aria-label') ?? a.textContent ?? '').trim().slice(0, 30) ? ` "${(a.getAttribute('aria-label') ?? a.textContent ?? '').trim().slice(0, 30)}"` : ''}`, ring, outline: `${cs.outlineStyle} ${cs.outlineWidth}`, shadow: cs.boxShadow.slice(0, 60), inViewport: shown(a) };
+        }
+        const expanded = document.querySelectorAll('[aria-expanded=true]').length;
+        return { scrollY: Math.round(scrollY), text, hash: h, textCount: parts.length, overlays, focus, expanded };
+    });
+
+/**
+ * Records a check that a real mouse click on `locator` visibly does something in the viewport. It snapshots the viewport (scrollY,
+ * `document.activeElement` with its outline and box-shadow, a hash of the visible text, the open dialogs, menus, popovers and
+ * snackbars), clicks with the mouse at the element's centre, waits about 400 ms and passes when any of these changed: the page scrolled
+ * (4 px or more), the visible text changed, an overlay opened or closed, or focus moved to an element that shows a focus ring. The
+ * detail says what changed (or that nothing did). Meant to catch a control that looks live but whose click lands off screen or nowhere.
+ * Returns whether it passed.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @param {string} label  how the check is named
+ */
+export async function checkMouseActivationVisible(rec, page, locator, label) {
+    const before = await viewportSnapshot(page);
+    const box = await locator.first().boundingBox().catch(() => null);
+    if (!box) return rec.check(`mouse click visibly does something: ${label}`, false, 'the element has no box on screen');
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForTimeout(400);
+    const after = await viewportSnapshot(page);
+    const changes = [];
+    if (Math.abs(after.scrollY - before.scrollY) >= 4) changes.push(`scrolled ${before.scrollY} -> ${after.scrollY}`);
+    if (after.hash !== before.hash) changes.push(`visible text changed (${before.textCount} -> ${after.textCount} text runs)`);
+    if (after.overlays.join() !== before.overlays.join()) changes.push(`overlays ${JSON.stringify(before.overlays)} -> ${JSON.stringify(after.overlays)}`);
+    if (after.focus && after.focus.ring && after.focus.inViewport && after.focus.desc !== before.focus?.desc) changes.push(`focus moved to ${after.focus.desc} with a visible ring (outline ${after.focus.outline}${after.focus.shadow !== 'none' ? `, shadow ${after.focus.shadow}` : ''})`);
+    return rec.check(
+        `mouse click visibly does something: ${label}`,
+        changes.length > 0,
+        changes.length ? changes.join('; ') : `nothing changed in the viewport (scrollY ${after.scrollY}, focus ${after.focus ? `${after.focus.desc}, ring ${after.focus.ring}` : 'none'})`,
+    );
 }
