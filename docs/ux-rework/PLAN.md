@@ -67,7 +67,8 @@ master
      └─ feat/ux-rework-p3
 ```
 
-- **Child PRs:** small, one item per PR where practical, targeting the phase branch. **The agent may merge a child PR**
+- **Child PRs:** small, one item per PR where practical (items that share files may be bundled; see
+  `ORCHESTRATOR.md`), targeting the phase branch. **The agent may merge a child PR**
   once CI passes.
 - **Phase branches:** start each one from `feat/ux-rework` after the previous phase has merged. When the phase is done,
   its UX review has run (see Verification) and CI passes, **the agent may merge the phase PR into `feat/ux-rework`**.
@@ -238,6 +239,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - the fresh UX review (see Verification) finds none of the Phase 1 findings still present.
 
 ## Phase 2: the newcomer-first structure
+
+**Order:** 2.2 (sidecar) and 2.5 (install steps) go first, so the owner's in-game checks overlap the other items
+(orchestrator, 2026-10-14).
 
 **2.1 First visit and the way in** (A1, A2, A4, A15, A17)
 - **What:**

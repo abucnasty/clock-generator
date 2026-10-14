@@ -28,9 +28,20 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` â
 
 ## The loop for each plan item
 
-Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once. From step 2
-on, run at most **three items at once**, and only when their specs show no file in common. Run each in its own worktree
-(`isolation: "worktree"`). A spec drafted ahead is checked again against the phase branch before its item is
+Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once, including the
+next phase's while this one finishes. From step 2
+on, run at most **four units at once** (a bundle counts as one; an item that touches more than about 20 files, like
+1.9, counts as two). Items may share files (the owner, 2026-10-14): each
+implementer merges the phase branch into its branch (`git merge`, never a rebase of a pushed branch) before it reports,
+and again just before its PR, and resolves any conflict itself. After a merge that had conflicts, the checks re-run,
+and the orchestrator reads the conflicted hunks before review or merge. Prefer items that touch different parts of a
+shared file. Run each in its own worktree (`isolation: "worktree"`).
+
+**Bundles.** Items that change the same files and depend on each other are built as one bundle: one branch, one
+implementer, one review, one PR that names every item and its findings. Each item keeps its spec and its row in the
+ledger. Phase 1 bundles: **1.5 + 1.3** (messages, then Undo on `notify()`), **1.4 + 1.14** (the workflow bar's
+buttons), **1.6 + 1.7** (the clock table panel). If one part fails review, the fix round covers the bundle; if it
+can't be fixed in two rounds, split that part out rather than hold the rest. A spec drafted ahead is checked again against the phase branch before its item is
 implemented, since items merged in the meantime move its line numbers. The orchestrator decides the order in which
 items are implemented and merged (the owner, 2026-10-14), following the dependencies between the specs.
 
@@ -46,8 +57,12 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - It writes `specs/<item>.md` from the template below.
    - **You** check the spec against the plan and the owner's decisions, tighten the acceptance criteria, and look for
      checkpoint triggers. If the spec trips one, stop and ask the owner before implementing.
-2. **Implement** (implementer).
+2. **Implement** (implementer), with a **capture writer** alongside.
    - Create the child branch `feat/ux-rework-p<N>-<topic>` from the phase branch.
+   - At the same time, a `sonnet` capture writer turns the spec's "Screens to capture" and acceptance criteria into
+     `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
+     and saved to `/tmp/ux-capture/scripts/`. The implementer copies it in, fixes the selectors its code changed, and
+     runs it. The checks come from the spec, not from the code.
    - The implementer builds to the spec, writes the tests the spec lists, and commits in the repo's style.
    - It changes only what the spec covers. Anything else it notices goes in its report as a follow-up, not into the
      code.
@@ -55,11 +70,21 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - Nothing goes to review without all of:
      - the full local check set passing. In `clock-generator-ui`: `npm test`, `npm run lint`, `npm run knip`,
        `npm run check:icons`, `npm run build`. The same in `clock-generator` if the engine changed.
-     - before/after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
-       reachability), made with `docs/ux-rework/capture/`.
-     - a short evidence note: the commands and their result lines, and the list of screenshots.
+     - after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
+       reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`
+       (widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
+       a `vite preview` of the build). "Before" screenshots only for
+       states the original review has no shot of (its shots are listed in `review/`); otherwise the review's shot is
+       the "before".
+     - for every text or control colour pair the item adds or changes, a measured `contrast()` ratio, and for every new
+       control an aria snapshot showing its accessible name (which must contain its visible label). Below WCAG AA
+       (4.5:1 text, 3:1 large text and non-text) the gate fails.
+     - a short evidence note: the commands and their result lines, the contrast ratios, and the list of screenshots.
    - **You verify this. Don't trust the report.** Re-run at least `npm test` and the build yourself, or through a haiku
      runner, and open two or three of the screenshots.
+   - **After a fix round of minors only**, the checks re-run but the capture doesn't: the orchestrator reads the diff and
+     looks at one screenshot the implementer takes of the changed state. A fix round with a blocker or major re-runs
+     the capture for the affected states.
 4. **Code review** (code reviewer, read-only). It reviews the child branch's diff against the spec for:
    - correctness bugs, including edge cases and state that goes out of date
    - whether the code reads like the surrounding code
@@ -99,9 +124,15 @@ judgement (verdicts, fix batches, specs, the merge decision) and hands the mecha
 | Step | Who does it | What the orchestrator keeps |
 |---|---|---|
 | Re-running the checks for the evidence gate | `haiku` runner | It opens two or three screenshots, and reads the runner's result lines |
-| Opening the PR, waiting for CI, squash-merging, deleting the branch and the worktree | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge |
+| Opening the PR, waiting for CI, squash-merging, deleting the branch and the worktree | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge, and the branch sweep below |
 | Rebasing a child branch on the moved phase branch, and resolving conflicts | The item's implementer (`SendMessage`), or a `sonnet` agent if it has finished | Which side wins when a conflict changes behaviour |
 | Anything that waits, such as `gh pr checks --watch` | A background agent or a background command | Nothing waits in the foreground |
+
+**Branch sweep.** Every merge removes the item's remote branch (`--delete-branch`), its worktree, its local branch and
+the worktree's placeholder branch (`worktree-agent-*`). After each merge the orchestrator runs
+`git fetch --prune` and `git branch --merged origin/<phase branch>`, and deletes any local `feat/ux-rework-p<N>-*` or
+`worktree-agent-*` branch that is merged and has no live worktree. A dropped or carried item's branches go too, once
+the ledger says so.
 
 Delegate only when it frees the orchestrator. A one-line `gh` or `git` call is quicker to run directly.
 
@@ -119,8 +150,7 @@ Pass `model` on every Agent call. The defaults are below. `PROGRESS.md` lists ea
 | Lookups, running checks, evidence runs with no script changes | `haiku` | Mechanical work |
 | Implementer, contained items (labels, palette, snackbars, copy, single-component changes) | `sonnet` | Small, well-specified changes |
 | Implementer, cross-cutting or design-heavy items (state across hooks, Validate into Generate, renumbering, Results restructure, Wake windows, reskin, the sidecar's Lua, Phase 3) | `opus` | Many files, real design decisions, easy to get subtly wrong |
-| Code reviewer, items implemented on `opus` | `fable` (Claude Fable 5.1) | The most capable model, used at the step where bugs get caught on the riskiest items. Only a few calls, so its slower, pricier turns cost little |
-| Code reviewer, items implemented on `sonnet` | `opus` | Never weaker than the implementer |
+| Code reviewer, every item | `opus` | Never weaker than the implementer (the owner, 2026-10-14) |
 | UX auditor | `opus`; `sonnet` for small items whose diff touches one screen | Judgment and screenshot reading |
 | Phase-end three-designer review | `opus` | The same setup as the original review, so the results compare like for like |
 
@@ -144,6 +174,21 @@ Meanwhile, work on another item if one is unblocked.
   narrowing the item, or carrying the leftovers into the next phase.
 - **Each phase merge** into `feat/ux-rework`. After the owner says go, you do the merge yourself.
 - **The final PR** to `master`. The owner merges it; you never do.
+
+## Process coach
+
+A read-only `opus` agent whose only job is to find ways to finish the roadmap sooner without lowering the bar (every
+item still gets its spec, evidence, an `opus` code review and a UX audit, and the owner's decisions stand).
+
+- **When:** after every third merged item or bundle, at each phase end (before the retro), and when the owner asks.
+- **Inputs the orchestrator gives it:** the ledger, this file, `PLAN.md`, the merged PRs with their open and merge
+  times (`gh pr list --state merged`), the branch's commit times, and a table of each agent run's role, item, model and
+  duration (the orchestrator has these from the task notifications).
+- **Output:** at most five suggestions, ranked by time saved. Each gives the bottleneck it found (with the numbers),
+  the change, the expected saving, the risk to quality, and the exact rule in this file that would change.
+- **What happens next:** the orchestrator reviews them and applies the ones it agrees with itself (the owner,
+  2026-10-14), logging each in the ledger's decisions log and telling the owner in a line or two. It asks the owner
+  only when it is unsure, or when a suggestion would lower the quality bar or change an owner decision in `PLAN.md`.
 
 ## End of a phase
 
@@ -278,6 +323,17 @@ UX audit only, per cited finding: <A5: fixed | partly | not fixed â€” why>
   - plain copy
   - regressions on other screens.
 - Be blunt. Return the review verdict template.
+
+**Process coach.** You are the process coach for the UX rework in `/Users/abucnasty/dev/factorio-scripts`. This is
+read-only work: don't edit, commit or push anything.
+- Read `docs/ux-rework/ORCHESTRATOR.md`, `docs/ux-rework/PLAN.md` and `docs/ux-rework/PROGRESS.md`, plus the timing
+  data in this prompt. Use `gh pr list` and `git log --format='%h %ci %s'` for more.
+- Find where the time goes: waiting on shared files, implementation, evidence, reviews, fix rounds, or the
+  orchestrator itself. Back each claim with the numbers.
+- Return at most five suggestions, ranked by time saved: the bottleneck, the change, the expected saving, the risk to
+  quality, and the rule in `ORCHESTRATOR.md` it would change.
+- Never suggest lowering the bar (dropping a review, the evidence gate, tests or the owner's decisions), and never
+  suggest fast mode (the owner ruled it out).
 
 **Phase reviewers (A, B, C).** Use `docs/ux-rework/review/BRIEF.md`, with the persona sections from the original review
 prompts (A newcomer advocate, B power-user interaction designer, C visual, data-viz and accessibility designer), and
