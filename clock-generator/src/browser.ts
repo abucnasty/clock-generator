@@ -3,8 +3,6 @@
  * 
  * This module provides all the necessary exports for using clock-generator
  * in a browser environment, including React applications.
- * 
- * Note: HOCON parsing is NOT available in the browser. Use JSON format instead.
  */
 
 // ============================================================================
