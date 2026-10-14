@@ -149,7 +149,7 @@ export function WorkflowBar({
                     >
                         {validationStatus === 'running' ? 'Validating...' : 'Validate'}
                     </Button>
-                    <Tooltip title={validationStatus === 'valid' ? '' : 'Validate the configuration first'} arrow>
+                    <Tooltip title={validationStatus === 'valid' ? '' : 'Validate the configuration first'} arrow describeChild>
                         {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
                         <span>
                             <Button
@@ -158,7 +158,7 @@ export function WorkflowBar({
                                 onClick={onGenerate}
                                 color="secondary"
                                 disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
-                                startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                                startIcon={isLoading ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
                                 {isLoading ? 'Generating...' : 'Generate'}
                             </Button>
