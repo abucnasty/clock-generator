@@ -123,7 +123,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                             tooltip={`${facts.insertion_duration_ticks} ticks`}
                         />
                         <FactItem
-                            label="Overload Multiplier"
+                            label="Insertion Limit Multiplier"
                             value={formatNumberText(facts.overload_multiplier, { maxDecimals: TICK_DECIMALS })}
                         />
                     </Box>
@@ -232,18 +232,15 @@ const FACT_DESCRIPTIONS: Record<string, string> = {
     'Fuel Per Craft': 'Fuel items burned per craft',
     'Amount Per Craft': 'Amount produced per craft (including productivity)',
     'Max rate': 'Most this machine can make, in items per second',
-    'Output Block': 'Output block size (items per output cycle)',
+    'Output Block': 'How many output items the machine holds before it stops crafting until some are taken out',
     'Craft': 'Ticks required per craft',
     'Bonus': 'Ticks per bonus craft from productivity',
-    'Insertion Duration': 
-        'Insertion duration before overload lockout in ticks.'
-        + 'This represents the time window during which items can be inserted before the '
-        + 'machine locks out due to being over the overload multiplier. ' 
+    'Insertion Duration':
+        'How long items can still be inserted, in ticks, before the machine locks up for being over its insertion limit. '
         + 'It is impacted by both crafting speed and productivity.',
-    'Overload Multiplier': 'Overload multiplier value',
+    'Insertion Limit Multiplier': 'Each ingredient\'s insertion limit is the amount a craft takes times this, rounded up',
     'Productivity': 'Productivity bonus percentage',
     'Crafting Speed': 'Machine crafting speed multiplier',
-    'Type': 'Machine type (assembling machine, furnace or biochamber)',
     'Recipe': 'Recipe name',
 };
 

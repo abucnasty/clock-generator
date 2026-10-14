@@ -15,7 +15,7 @@ interface UseMachineFactsResult {
     error: string | null;
 }
 
-// The facts of every machine configuration asked for so far; machines configured alike share them
+// The facts of every machine settings asked for so far; machines configured alike share them
 const requests = new Map<string, Promise<SerializableMachineFacts | null>>();
 const known = new Map<string, SerializableMachineFacts | null>();
 
@@ -34,7 +34,7 @@ function requestFacts(key: string, params: UseMachineFactsParams): Promise<Seria
 }
 
 /**
- * Hook to compute machine facts on-the-fly based on machine configuration.
+ * Hook to compute machine facts on-the-fly based on the machine's settings.
  *
  * The engine's worker computes them. Facts computed before are at hand at once; while new ones are computed, the
  * last ones stay shown, so the form does not flicker.
