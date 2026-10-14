@@ -46,7 +46,7 @@ come from here.
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | spec | | | Bundle with 1.3. After 1.2 (reads `--app-header-height`, replaces its stop-gap) |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | impl | | | Bundle with 1.7, alongside 1.2 |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | impl | | | Bundle with 1.6, alongside 1.2 |
-| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | fix-1 | | 1 | Code review Fable PASS (minors); UX audit opus FIX: discard prompt contrast 3.0:1 (major). B5, B6, B16 fixed. Round 1: contrast, unchanged Save, fade staleness, draft util, tab marker |
+| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merging | | 1 | Code review Fable PASS (minors); UX audit opus FIX: discard prompt contrast 3.0:1 (major). B5, B6, B16 fixed. Round 1: contrast, unchanged Save, fade staleness, draft util, tab marker |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
@@ -58,17 +58,17 @@ come from here.
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| 2.1 | First visit and the way in | opus | todo | | | |
-| 2.2 | Sidecar mod changes | opus | todo | | | Checkpoint: owner tries it in Factorio 2.1 |
-| 2.3 | Fold Validate into Generate | opus | todo | | | |
-| 2.4 | Ask the belt question | sonnet | todo | | | |
-| 2.5 | Results lead with the answer | opus | todo | | | Checkpoint: install steps reviewed |
-| 2.6 | Wake windows view | opus | todo | | | |
-| 2.7 | Factorio GUI grammar pass | opus | todo | | | |
-| 2.8 | In-game item names | sonnet | todo | | | |
-| 2.9 | Half-width layout | sonnet | todo | | | |
-| 2.10 | Developer timelines: light fixes | sonnet | todo | | | |
-| 2.11 | Diagram readability | sonnet | todo | | | |
+| 2.1 | First visit and the way in | opus | spec | | | |
+| 2.2 | Sidecar mod changes | opus | spec | | | Goes first in Phase 2. Checkpoint: owner tries it in Factorio 2.1 |
+| 2.3 | Fold Validate into Generate | opus | spec | | | |
+| 2.4 | Ask the belt question | sonnet | spec | | | |
+| 2.5 | Results lead with the answer | opus | spec | | | Goes first in Phase 2. Checkpoint: install steps reviewed |
+| 2.6 | Wake windows view | opus | spec | | | |
+| 2.7 | Factorio GUI grammar pass | opus | spec | | | |
+| 2.8 | In-game item names | sonnet | spec | | | |
+| 2.9 | Half-width layout | sonnet | spec | | | |
+| 2.10 | Developer timelines: light fixes | sonnet | spec | | | |
+| 2.11 | Diagram readability | sonnet | spec | | | |
 
 ## Phase 3: expert depth
 
