@@ -240,7 +240,8 @@ export class InserterPickupMode implements InserterMode {
     /** The item in hand, else the first filtered item the machine has and the sink can take */
     private itemToPickupFromMachine(state: InserterState, source: MachineState): ItemName | null {
         if (state.held_item !== null) {
-            return state.held_item.item_name;
+            // as from a belt, a hand stops filling while the machine it puts into takes nothing of its item
+            return this.canPickupItemForSink(state.held_item.item_name) ? state.held_item.item_name : null;
         }
         const item = Array.from(state.inserter.filtered_items).find(it =>
             source.inventoryState.getQuantity(it) > 0 && this.canPickupItemForSink(it)

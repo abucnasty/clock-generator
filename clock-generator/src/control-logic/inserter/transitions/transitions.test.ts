@@ -375,6 +375,33 @@ describe("transitions (belt to machine)", () => {
             expect(inserterState.held_item?.quantity).toBe(12);
         })
 
+        // Recorded in Factorio 2.1.21 on the accumulator build of issue 152 and on the scaffolds: an inserter that takes
+        // from a machine and holds part of a hand took nothing more while the machine it puts into was at its output
+        // block, in 20,701 samples of 20,701 with products to take, and took more in 11,561 of 11,561 where it was not.
+        test("holds a partly filled hand from a machine while the machine it puts into is at its block", () => {
+            const source = MachineState.forMachine(createMachine("iron-gear-wheel"));
+            const sink = MachineState.forMachine(createMachine("transport-belt"));
+            const inserter_state = InserterState.createIdle(createInserter({
+                source: { entity_id: source.entity_id, item_names: new Set(["iron-gear-wheel"]) },
+                sink: { entity_id: sink.entity_id, item_names: new Set(["iron-gear-wheel"]) },
+                filters: ["iron-gear-wheel"],
+            }));
+            const pickup_mode = InserterPickupMode.create({ inserterState: inserter_state, sourceState: source, sinkState: sink });
+            source.inventoryState.setQuantity("iron-gear-wheel", 5);
+            pickup_mode.executeForTick();
+            expect(inserter_state.held_item?.quantity).toBe(5);
+
+            const block = sink.machine.output.outputBlock;
+            sink.inventoryState.setQuantity(block.item_name, block.ingredients_blocked_at);
+            source.inventoryState.setQuantity("iron-gear-wheel", 5);
+            pickup_mode.executeForTick();
+            expect(inserter_state.held_item?.quantity).toBe(5);
+
+            sink.inventoryState.setQuantity(block.item_name, 0);
+            pickup_mode.executeForTick();
+            expect(inserter_state.held_item?.quantity).toBe(10);
+        })
+
         test("caps pickup quantity when remaining capacity is less than lane stack size", () => {
             const mockSource: BeltState = withSupplyGate(mock<BeltState>({
                 entity_id: EntityId.forBelt(-1),
