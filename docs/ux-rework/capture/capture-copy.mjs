@@ -626,7 +626,10 @@ const PART_B_AFTER_GENERATE = [
             lacks(rec, 'Belt tooltip: "window" only as "wake window"', belt, /(?<!wake )\bwindows?\b/i);
             for (const tab of ['Timelines', 'Insights', 'Blueprint', 'Log']) await checkLabelInName(rec, page, page.getByRole('tab', { name: tab, exact: true }), `Results tab "${tab}"`);
             const info = page.getByLabel(/^How .* is made$/).first();
-            const i = await hoverTip(page, info);
+            await info.scrollIntoViewIfNeeded().catch(() => {});
+            await info.click().catch(() => {}); // the (i) opens a popover on click, not a tooltip on hover
+            await page.locator('.MuiPopover-paper').first().waitFor({ timeout: 3000 }).catch(() => {});
+            const i = norm(await page.locator('.MuiPopover-paper').allTextContents().then((t) => t.join(' || ')));
             await snap(page, rec, 'clocks-table-info', { gate: true, engineAll: true, desc: 'One clock\'s (i) popover open (engine text)' });
             rec.check('the (i) of a clock opens its description', i !== '', clip(i));
             await unhover(page);

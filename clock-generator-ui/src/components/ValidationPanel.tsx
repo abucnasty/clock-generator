@@ -52,7 +52,7 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 Checks that your build can be clocked and works out the swing plan: how many swings each inserter makes per
                 crafting cycle, and how many cycles the clock needs for them to come out whole. Nothing is recalculated while
-                you edit; validate again when you are done. Generating needs a build that was checked after its last change.
+                you edit. Validate again after you change anything.
             </Typography>
 
             {validation.status === 'none' && problem && (
@@ -73,7 +73,7 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
 
             {validation.status !== 'none' && validation.status !== 'running' && isOutOfDate && (
                 <Alert severity="warning">
-                    Your build changed since it was checked. Validate again to check it and refresh the swing plan.
+                    Your build changed since it was validated. Validate again to check it and refresh the swing plan.
                 </Alert>
             )}
 
@@ -87,7 +87,7 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
                             {validation.validation.output_swings_per_cycle === 1 ? '' : 's'} per crafting cycle of{' '}
                             {formatTicks(validation.validation.cycle_ticks)} ticks, and the clock repeats every{' '}
                             {formatTicks(validation.validation.period_ticks)} ticks ({validation.validation.used_lcm} crafting
-                            cycle{validation.validation.used_lcm === 1 ? '' : 's'}). Generating may still use fewer output swings
+                            cycle{validation.validation.used_lcm === 1 ? '' : 's'}). Generating may still use fewer swings
                             if this count does not hold the rate.
                         </Alert>
                     )}
