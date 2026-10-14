@@ -31,7 +31,7 @@ The orchestrator updates this file after every step (see `ORCHESTRATOR.md`). Its
 | 1.2 | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
 | 1.3 | Undo snackbar for destructive actions | sonnet | spec | | | |
 | 1.4 | Disabled actions say what is missing | sonnet | spec | | | |
-| 1.5 | Messages above the footer; quieter Ko-fi | sonnet | spec | | | |
+| 1.5 | Messages above the footer; quieter Ko-fi | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2 |
 | 1.6 | Make the clock pick explainable | opus | spec | | | |
 | 1.7 | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | 1.8 | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
@@ -82,7 +82,8 @@ Owner decisions made after the plan was written, and every change to `PLAN.md`, 
 
 ## Open questions
 
-None. (1.9's id question was answered on 2026-10-14; see the decisions log.)
+- **Merge 1.5 before 1.3? (asked 2026-10-14).** 1.3's Undo snackbar would use 1.5's `notify()`. With the plan's order
+  (1.3 first), 1.3 builds its own snackbar and 1.5 moves it a week later. Recommendation: 1.1, 1.2, 1.5, then 1.3.
 
 ## Follow-ups
 
