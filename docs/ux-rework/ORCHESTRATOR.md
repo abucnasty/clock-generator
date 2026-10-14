@@ -231,6 +231,13 @@ Be short and factual, and **only report what you verified**. If something failed
 - **If the owner asks for status:** run the session-start summary again.
 - **Only stay silent during long runs.** No narration between steps.
 
+## Issues found
+
+Every finding that isn't fixed in its item goes into the ledger's Follow-ups, with enough detail to file it later
+(where, what, how to reproduce, which finding or review it came from). Don't open GitHub issues during the work. At the
+end, before the final PR, they're filed in one pass after the owner reviews the draft (`PLAN.md`, "The final PR",
+step 0).
+
 ## Hard rules
 
 - **Never merge to `master`, force-push, or rewrite shared history.**

@@ -126,6 +126,9 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   ([ORCHESTRATOR.md](ORCHESTRATOR.md) "Staying responsive").
 - 2026-10-14: The rounded clock's non-integer decider constant (`decider-combinator.ts:82`, e.g. `signal-clock <
   90.947…` for a clock labelled as rounded to 90): the owner chose to leave it as a known issue for after the rework.
+- 2026-10-14: The owner wants every issue found filed on GitHub, in one pass at the end with a review step by the
+  owner. [PLAN.md](PLAN.md) "The final PR" gains step 0 (draft `ISSUES.md`, owner review, `gh issue create`). No
+  issues are filed before then.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
@@ -134,7 +137,8 @@ None.
 
 ## Follow-ups
 
-Minor and nit findings, and anything noticed outside an item's scope.
+Minor and nit findings, and anything noticed outside an item's scope. Whatever is still open at the end becomes a
+GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The final PR", step 0).
 
 - 1.13 → 1.9: wire `forcedAlways={inserter._forced_always}` in `InsertersForm` and add capture step 7 of
   `capture-enable-chip.mjs` (1.13 merged before 1.8).
