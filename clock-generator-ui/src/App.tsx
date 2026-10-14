@@ -46,10 +46,11 @@ import { blockedActionsOf, focusProblemTarget, needsListView, problemsOf, type P
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
+import { a11yThemeComponents } from './utils/a11yTheme';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 
-const darkTheme = createTheme({
+const baseTheme = createTheme({
     palette: {
         mode: 'dark',
         primary: {
@@ -85,6 +86,8 @@ const darkTheme = createTheme({
     },
     spacing: (factor: number) => factor * 7,
 });
+// the focus ring and other accessibility rules take their colours from the palette above
+const darkTheme = createTheme(baseTheme, { components: a11yThemeComponents(baseTheme) });
 
 
 function App() {
@@ -428,7 +431,7 @@ function App() {
                 <AppBar position="sticky" ref={headerRef}>
                     <Toolbar>
                         <Icon sx={{ mr: 3 }}>
-                            <img src="/big_biter_q5_right.png" alt="Logo" style={{ width: 26, height: 26 }} />
+                            <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
                         </Icon>
                         <Typography variant="h6" component="div" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
@@ -452,6 +455,7 @@ function App() {
                             view={view}
                             onViewChange={setView}
                             isLoading={isRunning}
+                            generationFailed={error !== null}
                             progressStore={progressStore}
                             onGenerate={handleGenerate}
                             generateDisabled={!canGenerate}
@@ -471,7 +475,7 @@ function App() {
                     )}
                 </AppBar>
 
-                <Container maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
+                <Container component="main" maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
                     {startupError ? (
                         <Alert severity="error" sx={{ mb: 2 }}>
                             The page could not start: {startupError}. Reload the page to try again.

@@ -8,8 +8,6 @@ import {
 } from '@mui/material';
 import { useId, useRef } from 'react';
 
-/** A focus outline instead of the focus ripple, which would lower the text's contrast */
-const FOCUS_OUTLINE = { '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } };
 
 interface DiscardChangesDialogProps {
     open: boolean;
@@ -46,10 +44,11 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button ref={keepEditingRef} onClick={onKeepEditing} autoFocus disableFocusRipple sx={FOCUS_OUTLINE}>
+                {/* the theme's focus ring marks focus; the focus ripple would lower the text's contrast */}
+                <Button ref={keepEditingRef} onClick={onKeepEditing} autoFocus disableFocusRipple>
                     Keep editing
                 </Button>
-                <Button onClick={onDiscard} color="error" disableFocusRipple sx={FOCUS_OUTLINE}>
+                <Button onClick={onDiscard} color="error" disableFocusRipple>
                     Discard
                 </Button>
             </DialogActions>
