@@ -480,7 +480,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
                     + `${period_ticks}/${scale} ticks, so a ${period_ticks}-tick clock is multiplied by ${scale} and taken modulo `
                     + `${period_ticks} by two extra arithmetic combinators, giving the position in the period in 1/${scale} ticks. `
                     + "Window starts can move by a tick between periods but never drift, so the build runs at exactly the target rate.",
-                result: { ...result, blueprint: result.subtick.blueprint },
+                result: { ...result, blueprint: result.subtick.blueprint, schedule: result.subtick.schedule },
             }),
             alternativeAt(rounded, {
                 id,

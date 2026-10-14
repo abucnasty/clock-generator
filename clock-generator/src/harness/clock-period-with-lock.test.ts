@@ -5,7 +5,9 @@ import { loadConfigFromFile } from "../config/loader";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import { generateClockForConfig } from "../crafting/generate-blueprint";
 import { quiet } from "../crafting/generate-blueprint-test-helpers";
-import { clockPeriodTicks } from "./factorio-harness";
+import { ClockSchedule } from "../crafting/blueprint";
+import { BlueprintGenerationResult } from "../crafting/plan/plan-run";
+import { clockOfBlueprintString, clockPeriodTicks } from "./factorio-harness";
 
 /**
  * The period the harness cuts a recording into is read from the clock blueprint. The generated clock has two
@@ -54,5 +56,38 @@ describe("clockPeriodTicks on the clocks the generator makes, with the lock", ()
         const fuel_clocks = entitiesOf(blueprint).filter(entity => /^Fuel clock/.test(entity.player_description ?? ""));
         expect(fuel_clocks.length).toBeGreaterThan(0);
         expect(clockPeriodTicks(blueprint)).toBe(result.subtick!.clock.period_ticks);
+    });
+});
+
+/**
+ * The harness wires a clock by the schedule the generator gives it, where it read the descriptions of the combinators
+ * before: the two say the same of every blueprint of a result, plain, modulo and subtick.
+ */
+describe("the schedule of a generated clock", () => {
+    const sorted = (schedule: ClockSchedule) => ({
+        counted_ticks: Math.trunc(schedule.counted_ticks),
+        inserter_combinators: schedule.inserter_combinators.map(it => ({ ...it, inserter_ids: it.inserter_ids.slice().sort((a, b) => a - b) })),
+    });
+    const exported = (result: BlueprintGenerationResult) => [
+        { blueprint: result.blueprint, schedule: result.schedule },
+        ...(result.modulo_blueprint ? [{ blueprint: result.modulo_blueprint, schedule: result.modulo_schedule! }] : []),
+        ...(result.subtick ? [result.subtick] : []),
+    ];
+
+    it("is what the descriptions of its combinators say", async () => {
+        const rocket_fuel = await loadConfigFromFile(ConfigPaths.GLEBA_ROCKET_FUEL);
+        const configs = [
+            await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE),
+            await loadConfigFromFile(ConfigPaths.IRON_BACTERIA_CULTIVATION),
+            await loadConfigFromFile(ConfigPaths.JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS),
+            { ...rocket_fuel, target_output: { ...rocket_fuel.target_output, items_per_second: 54 } },
+        ];
+        for (const config of configs) {
+            const clocks = exported(generateClockForConfig(config, { logger: quiet, fuel_consumption_view: false }));
+            for (const { blueprint, schedule } of clocks) {
+                expect(schedule.inserter_combinators.length, blueprint.label).toBeGreaterThan(0);
+                expect(sorted(schedule), blueprint.label).toEqual(clockOfBlueprintString(encodeBlueprintFile({ blueprint })).schedule);
+            }
+        }
     });
 });

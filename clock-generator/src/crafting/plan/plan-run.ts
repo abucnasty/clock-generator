@@ -11,7 +11,7 @@ import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, Read
 import { TargetProductionRate } from "../target-production-rate";
 import { EntityState, InserterState, MachineState } from "../../state";
 import Fraction, { fraction } from "fractionability";
-import { createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
+import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../../control-logic";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
@@ -159,6 +159,8 @@ export interface SwingBackoffReport {
 
 export interface BlueprintGenerationResult {
     blueprint: FactorioBlueprint;
+    /** What the combinators of the blueprint do, as data: what the recording harness wires and cuts a recording by */
+    schedule: ClockSchedule;
     /** Decider windows exported in the blueprint, per entity id (before circuit latency) */
     clock_windows: SerializableClockWindows;
     /** Ticks of belt pickup slack added to each belt-fed inserter's windows; empty when none was applied */
@@ -176,9 +178,10 @@ export interface BlueprintGenerationResult {
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
     /** For a fractional period: the same windows on a subtick clock that runs the exact period instead of rounding it */
-    subtick?: { clock: SubtickClock; blueprint: FactorioBlueprint };
+    subtick?: { clock: SubtickClock; blueprint: FactorioBlueprint; schedule: ClockSchedule };
     /** The same windows with repeating parts checked against the clock modulo a divisor of the period; absent when that saves nothing */
     modulo_blueprint?: FactorioBlueprint;
+    modulo_schedule?: ClockSchedule;
     crafting_cycle_plan: CraftingCyclePlan;
     simulation_duration: Duration;
     transfer_history: InventoryTransferHistory;
@@ -1118,15 +1121,20 @@ export function exportClock(
         if (options.modulo_blueprint === false) {
             return undefined;
         }
-        const { blueprint, modulo } = blueprintForWindows(all_windows, undefined, true);
+        const exported = blueprintForWindows(all_windows, undefined, true);
         // only worth offering when a window repeats within the period: a fuel clock alone is a modulo of the clock too
-        return modulo ? blueprint : undefined;
+        return exported.modulo ? exported : undefined;
     };
-    const subtickClockFor = (all_windows: Map<string, OpenRange[]>) => subtick_clock
-        ? { clock: subtick_clock, blueprint: blueprintForWindows(all_windows, subtick_clock).blueprint }
-        : undefined;
+    const subtickClockFor = (all_windows: Map<string, OpenRange[]>) => {
+        if (!subtick_clock) {
+            return undefined;
+        }
+        const { blueprint, schedule } = blueprintForWindows(all_windows, subtick_clock);
+        return { clock: subtick_clock, blueprint, schedule };
+    };
 
-    const { blueprint } = blueprintForWindows(windows);
+    const { blueprint, schedule } = blueprintForWindows(windows);
+    const modulo = moduloBlueprintFor(windows);
     const histories: Pick<TrialRun, "simulation_duration" | "transfer_history" | "serializable_transfer_history" | "serializable_state_transition_history" | "machine_facts"> =
         extras.histories ?? {
             simulation_duration: duration,
@@ -1141,7 +1149,9 @@ export function exportClock(
     return {
         ...histories,
         blueprint,
-        modulo_blueprint: moduloBlueprintFor(windows),
+        schedule,
+        modulo_blueprint: modulo?.blueprint,
+        modulo_schedule: modulo?.schedule,
         subtick: subtickClockFor(windows),
         clock_windows: serializeClockWindows(withInserterClocks(windows, inserter_clocks, duration.ticks)),
         belt_pickup_slack_ticks: clock.applied_belt_pickup_slack,

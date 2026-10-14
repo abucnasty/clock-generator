@@ -258,7 +258,9 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const period = subtick?.clock.period_ticks ?? selected.result.simulation_duration.ticks;
             // a subtick clock's repeat and a rate per copy can leave a float a hair off the whole number of items
             const expected = Math.round(config.target_output.items_per_second / config.target_output.copies * period / 60 * 1e6) / 1e6;
-            const clock = encodeBlueprintFile({ blueprint: subtick?.blueprint ?? selected.result.blueprint });
+            // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
+            const exported = subtick ?? selected.result;
+            const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
             const result = await record({
                 factorio: FACTORIO!,
                 save: SAVE!,

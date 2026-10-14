@@ -23,7 +23,7 @@ function createDeciderCombinatorForTransfers(
     inserter_clock?: InserterClock,
     /** The entities with the same windows, which are wired to this combinator too */
     merged_entity_ids: EntityId[] = [],
-): DeciderCombinatorEntity {
+): { combinator: DeciderCombinatorEntity; inserter_ids: number[] } {
     const entity = entity_registry.getEntityByIdOrThrow(entity_id)
     let outputSignalId = SignalId.virtual(`signal-${entity_id.number}`);
 
@@ -76,7 +76,9 @@ function createDeciderCombinatorForTransfers(
             : description_lines)
         .build();
 
-    return deciderCombinator
+    // the inserters its description names, which are wired to it
+    const inserter_ids = description_lines.length > 0 && Entity.isInserter(entity) ? entity_ids.map(it => it.number) : [];
+    return { combinator: deciderCombinator, inserter_ids }
 }
 
 /** The machines an inserter or drill works with, as their recipes: "from" the one it empties, "into" the one it fills */
@@ -433,11 +435,23 @@ function subtickRanges(ranges: OpenRange[], clock: SubtickClock): OpenRange[] {
     return OpenRange.reduceRanges(wholeRanges(scaled));
 }
 
-/** A clock blueprint, and whether some of its windows are checked against a modulo of the clock */
+/** What the combinators of a clock blueprint do, as data, for what builds it to read instead of their descriptions */
+export interface ClockSchedule {
+    /**
+     * Ticks the clock counts before it starts over: the period, the whole ticks of a subtick clock, or the count of a
+     * clock merged with fuel clocks. The game counts only its whole part.
+     */
+    counted_ticks: number;
+    /** Each combinator that enables inserters, by its entity number in the blueprint, with the config ids of those inserters */
+    inserter_combinators: { entity_number: number; inserter_ids: number[] }[];
+}
+
+/** A clock blueprint, whether some of its windows are checked against a modulo of the clock, and its schedule */
 export interface SignalPerInserterBlueprint {
     blueprint: FactorioBlueprint;
     /** Some window repeats within the period and is checked against the clock modulo its length: a modulo clock */
     modulo: boolean;
+    schedule: ClockSchedule;
 }
 
 export function createSignalPerInserterBlueprint(
@@ -499,6 +513,8 @@ export function createSignalPerInserterBlueprint(
     ] : [];
 
     const deciderCombinatorEntities: DeciderCombinatorEntity[] = []
+    // the config ids of the inserters each schedule combinator enables
+    const inserters_of = new Map<DeciderCombinatorEntity, number[]>();
 
     const sortedEntityIds = Array.from(inventory_transfers.keys()).sort((a, b) => a.id.localeCompare(b.id));
 
@@ -604,20 +620,20 @@ export function createSignalPerInserterBlueprint(
         const transfers = inventory_transfers.get(entityId)!;
         const split = splits.get(entityId);
         x += 1;
-        deciderCombinatorEntities.push(
-            createDeciderCombinatorForTransfers(
-                transfers,
-                entityId,
-                entityRegistry,
-                cycle,
-                total_duration.ticks / cycle.total_duration.ticks,
-                Position.fromXY(x, 0),
-                subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInPeriod,
-                split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
-                inserter_clocks.get(entityId.id),
-                history.merged_entities.get(entityId.id),
-            )
-        )
+        const { combinator, inserter_ids } = createDeciderCombinatorForTransfers(
+            transfers,
+            entityId,
+            entityRegistry,
+            cycle,
+            total_duration.ticks / cycle.total_duration.ticks,
+            Position.fromXY(x, 0),
+            subtick_clock ? ranges => subtickRanges(ranges, subtick_clock) : wholeRangesInPeriod,
+            split ? { split, signal: modulo_signals.get(split.modulus)! } : undefined,
+            inserter_clocks.get(entityId.id),
+            history.merged_entities.get(entityId.id),
+        );
+        deciderCombinatorEntities.push(combinator);
+        inserters_of.set(combinator, inserter_ids);
     })
 
     // A decider per fuel clock and window, which the fuel inserters with that window share. It reads the modulo of
@@ -645,7 +661,7 @@ export function createSignalPerInserterBlueprint(
             const inserter = inserters[0];
             const items = new Set(inserter.filtered_items);
             const window = wholeRanges([inserter_clock.window]);
-            window_deciders.push(DeciderCombinatorEntity
+            const window_decider = DeciderCombinatorEntity
                 .fromRanges(
                     fuel_clock_signal ?? SignalId.clock,
                     clockValueRanges(window),
@@ -653,7 +669,9 @@ export function createSignalPerInserterBlueprint(
                 )
                 .setPosition(Position.fromXY(x += 1, 0))
                 .setMultiLinePlayerDescription(unplannedInserterClockDescriptionLines(inserters.map(it => it.entity_id), entityRegistry, items, inserter_clock, fuel_clock_signal))
-                .build());
+                .build();
+            window_deciders.push(window_decider);
+            inserters_of.set(window_decider, inserters.map(it => it.entity_id.number));
         }
         if (fuel_clock_signal) {
             // wired with the other deciders, to the network that carries every modulo of the clock
@@ -720,19 +738,25 @@ export function createSignalPerInserterBlueprint(
         blueprint_label += " (modulo clock)";
     }
 
+    const entities = [
+        clock,
+        lock,
+        ...subtick_combinators,
+        ...modulo_combinators,
+        main_filter,
+        ...deciderCombinatorEntities,
+        ...fuel_combinators,
+    ];
     const blueprint = new BlueprintBuilder()
         .setLabel(blueprint_label)
         .setDescription(`${targetRateDescription(cycle)}\nClock period: ${formatRate(total_duration.ticks)} ticks`)
-        .setEntities([
-            clock,
-            lock,
-            ...subtick_combinators,
-            ...modulo_combinators,
-            main_filter,
-            ...deciderCombinatorEntities,
-            ...fuel_combinators,
-        ])
+        .setEntities(entities)
         .setWires(wires.concat(fuel_wires))
         .build();
-    return { blueprint, modulo };
+    // entities are numbered from 1 in the order they are set
+    const inserter_combinators = entities.flatMap((entity, index) => {
+        const inserter_ids = inserters_of.get(entity as DeciderCombinatorEntity) ?? [];
+        return inserter_ids.length > 0 ? [{ entity_number: index + 1, inserter_ids }] : [];
+    });
+    return { blueprint, modulo, schedule: { counted_ticks, inserter_combinators } };
 }

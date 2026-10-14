@@ -1,24 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertRecordableTicks, buildPartsMissingFromConfig, clockInserterIds, clockPeriodTicks, matchBuiltInserters, MAX_RECORDED_TICKS,
-    missingFromConfigMessage, recordedTicks, recordInFactorio,
+    assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltInserters, MAX_RECORDED_TICKS,
+    missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledInserterIds,
 } from "./factorio-harness";
 
-describe("clockInserterIds", () => {
-    it("reads the inserter ids the schedule combinators name", () => {
+describe("clockOfBlueprintString", () => {
+    const counting = { decider_conditions: { conditions: [{ comparator: "<", constant: 1728 }], else_outputs: [{ constant: 1 }] } };
+
+    it("reads the schedule of a clock blueprint from the descriptions of its combinators", () => {
         const blueprint = encodeBlueprintFile({
             blueprint: {
                 entities: [
-                    { player_description: "Clock for [item=agricultural-science-pack]:\n- Cycle Count: 25 cycles" },
-                    { player_description: "Inserters 3, 4, 6, 7 for [item=nutrients] into [recipe=pentapod-egg]\nSwing Counts:" },
-                    { player_description: "Inserter 12 for [item=agricultural-science-pack]" },
-                    { player_description: "Subtick clock, step 1 of 2" },
-                    {},
+                    { entity_number: 1, name: "decider-combinator", player_description: "Clock for [item=agricultural-science-pack]:\n- Cycle Count: 25 cycles", control_behavior: counting },
+                    { entity_number: 2, player_description: "Inserters 3, 4, 6, 7 for [item=nutrients] into [recipe=pentapod-egg]\nSwing Counts:" },
+                    { entity_number: 3, player_description: "Inserter 12 for [item=agricultural-science-pack]" },
+                    { entity_number: 4, player_description: "Subtick clock, step 1 of 2" },
+                    { entity_number: 5 },
                 ],
             },
         } as any);
-        expect(clockInserterIds(blueprint)).toEqual([3, 4, 6, 7, 12]);
+        const { schedule } = clockOfBlueprintString(blueprint);
+        expect(schedule).toEqual({
+            counted_ticks: 1728,
+            inserter_combinators: [{ entity_number: 2, inserter_ids: [3, 4, 6, 7] }, { entity_number: 3, inserter_ids: [12] }],
+        });
+        expect(scheduledInserterIds(schedule)).toEqual([3, 4, 6, 7, 12]);
+    });
+
+    it("refuses a blueprint without a clock the generator made", () => {
+        const blueprint = encodeBlueprintFile({ blueprint: { entities: [{ entity_number: 1, player_description: "Inserter 1 for [item=iron-plate]" }] } } as any);
+        expect(() => clockOfBlueprintString(blueprint)).toThrow("no clock the generator made");
     });
 });
 
@@ -259,10 +271,12 @@ describe("the most ticks one run in Factorio records", () => {
             ...more,
         });
         await expect(run(144_000, { unclocked: true })).rejects.toThrow("A recording of 144000 ticks is over the limit of 72000 ticks");
-        await expect(run(72_000, { clock: clock(1728, ONE_BASED), config: {} })).rejects.toThrow("The most that fits is 70848 ticks");
+        // a clock swapped in is cut by the ticks its schedule says it counts
+        const swapped = { blueprint: clock(1728, ONE_BASED), schedule: { counted_ticks: 1728, inserter_combinators: [] } };
+        await expect(run(72_000, { clock: swapped, config: {} })).rejects.toThrow("The most that fits is 70848 ticks");
         // a clock the build comes with and keeps is the one the recording is cut by
         await expect(run(600, { blueprint: clock(100_000, ONE_BASED) })).rejects.toThrow("records 100000");
         // within the limit the run goes on, to where it finds no Factorio
-        await expect(run(70_848, { clock: clock(1728, ONE_BASED), config: {} })).rejects.toThrow("Factorio not found");
+        await expect(run(70_848, { clock: swapped, config: {} })).rejects.toThrow("Factorio not found");
     });
 });
