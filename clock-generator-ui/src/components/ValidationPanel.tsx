@@ -66,7 +66,7 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
             )}
 
             {validation.status === 'valid' && (
-                <Box sx={{ mt: 1.5, opacity: isOutOfDate ? 0.45 : 1, pointerEvents: isOutOfDate ? 'none' : 'auto' }}>
+                <Box inert={isOutOfDate} sx={{ mt: 1.5, opacity: isOutOfDate ? 0.45 : 1, pointerEvents: isOutOfDate ? 'none' : 'auto' }}>
                     {!isOutOfDate && (
                         <Alert severity="success" sx={{ mb: 1 }}>
                             The configuration is valid. Each output inserter takes {validation.validation.output_swings_per_cycle} hand
