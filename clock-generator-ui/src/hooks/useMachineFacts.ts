@@ -81,10 +81,3 @@ export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsR
 export async function initializeMachineFacts(): Promise<void> {
     await loadModule();
 }
-
-/**
- * Check if the machine facts module is loaded.
- */
-export function isMachineFactsReady(): boolean {
-    return Machine !== null;
-}

@@ -18,8 +18,6 @@ export interface MachineFormData {
 }
 
 // Enable control override types
-export type EnableControlMode = 'AUTO' | 'ALWAYS' | 'NEVER' | 'CLOCKED' | 'CONDITIONAL';
-
 export interface EnableControlRange {
     start: number;
     end: number;
