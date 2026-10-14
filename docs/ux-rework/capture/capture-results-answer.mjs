@@ -388,7 +388,8 @@ async function cardChecks({ page, rec, tag = 'card', path = LOGISTIC }) {
         const words = (/^(Yes|No|Not tested)\b/.exec((t && t.value) || '') || [])[1];
         return { pass: Boolean(t && t.hasIcon) && Boolean(words) && (want === null || words === want), detail: `value ${show(t && t.value)}, icon ${t && t.hasIcon}, row status ${show(status)} (want ${want})` };
     });
-    await chk(rec, `${p} the Belt tile gives the belt line ("Made for moving belts." / "Made for belts that stand still.")`, async () => ({ pass: /Made for (moving belts|belts that stand still)\./.test(card.text), detail: show(card.tiles.Belt && card.tiles.Belt.lines) }));
+    // when the run asked the belt question, 2.4's line (in the card's beltAction slot) says it in place of the card's own
+    await chk(rec, `${p} the card says the belt in a line ("Made for moving belts." / "Made for belts that stand still.", or 2.4's "These clocks assume your input belts are …")`, async () => ({ pass: /Made for (moving belts|belts that stand still)\.|These clocks assume your input belts are/.test(card.text), detail: show(card.tiles.Belt && card.tiles.Belt.lines) }));
 
     // Copy and the colour grammar
     await chk(rec, `${p} Copy blueprint is in the card`, async () => ({ pass: Boolean(card.copy), detail: show(card.copy && card.copy.text) }));
@@ -881,9 +882,14 @@ try {
                     await cardChecks({ page, rec });
                     await contrastChecks({ page, rec });
                     await layoutChecks({ page, rec, width, tag: `card @${width}` });
-                    await chk(rec, 'card: the 2.4 slot renders nothing (no belt action button unless 2.4 passes one)', async () => {
+                    // 2.4 merged first: its belt line fills the slot inside the card, in place of the card's own belt line
+                    await chk(rec, 'card: the belt is said once inside the card (2.4\'s line in the beltAction slot, or the card\'s own line)', async () => {
                         const c = await cardOf(page);
-                        return { pass: c.present && !/My belts stand still/.test(c.text), detail: 'beltAction is a prop; the spec only fixes its place, so its markup is checked in review' };
+                        const said = await page.evaluate(() => {
+                            const card = document.querySelector('[data-result-card]');
+                            return { line24: Boolean(card && card.querySelector('[data-belt-assumption]')), own: Boolean(card && card.querySelector('[data-belt-line]')), outside: document.querySelectorAll('[data-belt-assumption]').length - (card ? card.querySelectorAll('[data-belt-assumption]').length : 0) };
+                        });
+                        return { pass: c.present && said.line24 !== said.own && said.outside === 0, detail: show(said) };
                     });
                 }, page);
             }
