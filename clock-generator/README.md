@@ -496,14 +496,10 @@ try {
 The configuration system is designed to work in browser environments:
 
 ```typescript
-import { createBrowserConfigLoader } from './config/loader';
+import { parseConfigFromJson } from 'clock-generator/browser';
 
-const loader = createBrowserConfigLoader(async (url) => {
-    const response = await fetch(url);
-    return response.text();
-});
-
-const config = await loader.loadFromUrl('/api/config');
+const response = await fetch('/api/config');
+const config = parseConfigFromJson(await response.text());
 ```
 
 
