@@ -502,13 +502,13 @@ const STEP_LIST = [
             let said = await announcedSince(page, mark);
             rec.check('Validate writes text into the polite status region', said.length > 0, said.length ? said.map((t) => `"${t}"`).join(', ') : 'nothing was announced');
             rec.check('Validate announces each message once', said.length === new Set(said).size, said.join(' | ') || 'nothing');
-            rec.check('Validate announces "The configuration is valid."', said.some((t) => /The configuration is valid\./.test(t)), said.join(' | ') || 'nothing');
+            rec.check('Validate announces "Your build can be clocked."', said.some((t) => /Your build can be clocked\./.test(t)), said.join(' | ') || 'nothing');
             // a check of a small build takes ~15 ms: the message host keeps only the latest announcement, so "Checking the
-            // configuration." is replaced before it is written, as a screen reader would drop it anyway. A slow check says it
-            rec.info('Validate: "Checking the configuration." written', said.some((t) => /Checking the configuration\./.test(t)) ? 'yes' : 'no (replaced by the result before it was written)');
-            await checkAnnounced(rec, page, 'The configuration is valid.', 'after Validate, in a region a screen reader can hear');
-            const alerts = await page.evaluate(() => [...document.querySelectorAll('[role=alert]')].map((e) => (e.textContent ?? '').trim()).filter((t) => /configuration is valid/i.test(t)));
-            rec.check('the "configuration is valid" panel is not a second announcement (no role=alert on it)', alerts.length === 0, alerts.length ? `role=alert: "${alerts[0].slice(0, 60)}"` : 'none'); // SELECTOR: confirm
+            // build." is replaced before it is written, as a screen reader would drop it anyway. A slow check says it
+            rec.info('Validate: "Checking the build." written', said.some((t) => /Checking the build\./.test(t)) ? 'yes' : 'no (replaced by the result before it was written)');
+            await checkAnnounced(rec, page, 'Your build can be clocked.', 'after Validate, in a region a screen reader can hear');
+            const alerts = await page.evaluate(() => [...document.querySelectorAll('[role=alert]')].map((e) => (e.textContent ?? '').trim()).filter((t) => /build can be clocked/i.test(t)));
+            rec.check('the "build can be clocked" panel is not a second announcement (no role=alert on it)', alerts.length === 0, alerts.length ? `role=alert: "${alerts[0].slice(0, 60)}"` : 'none'); // SELECTOR: confirm
 
             // Generate finishing
             mark = await announceMark(page);
@@ -575,7 +575,7 @@ const STEP_LIST = [
             await field.fill(String(Number(before) - 1));
             await page.waitForTimeout(600);
             let said = await announcedSince(page, mark);
-            rec.check('an edit after Validate announces "The configuration changed since it was checked."', said.some((t) => /changed since it was checked/.test(t)), said.join(' | ') || 'nothing');
+            rec.check('an edit after Validate announces "Your build changed since it was checked."', said.some((t) => /changed since it was checked/.test(t)), said.join(' | ') || 'nothing');
 
             // Copy old clock: the copy happens as its confirm dialog closes
             await goResults(page);

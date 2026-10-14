@@ -24,7 +24,7 @@
 //   - slots: "Filter 1: iron-plate" and a sibling "Remove filter 1: iron-plate", not nested
 //   - tooltips: column headers are named by their text, the description is the tooltip, the target takes Tab (describeChild)
 //   - headings: one h1, h2 per section, h3 for cards, no h6, no level skipped, no heading inside a heading, accordion titles
-//   - Results: clock radios share a name and are named by their clock, table "Potential clocks", tab/tabpanel pairs, the unstable
+//   - Results: clock radios share a name and are named by their clock, table "Clocks", tab/tabpanel pairs, the unstable
 //     divider row is a header cell, "Copy blueprint string", "Close fullscreen", the (i) button by keyboard (Tab, Enter/Space,
 //     Esc returns focus, click does not select the row)
 //   - header: logo alt, ⋮ menu (aria-haspopup, aria-expanded, menu named), loading spinner and generation progress bar named
@@ -219,13 +219,13 @@ function readHeadings(page, { dialog = false } = {}) {
 
 const CONFIGURE_HEADINGS = [
     [/^Target Output/, 2], [/^Machines \(/, 2], [/^Machine Facts/, 3], [/^Inserters \(/, 2], [/^Belts \(/, 2], [/^Chests \(/, 2],
-    [/^Mining Drills/, 2], [/^Advanced Overrides/, 2], [/^Validation/, 2], [/^Transfer Plan/, 3],
-]; // SELECTOR: confirm (the heading table of the spec; Transfer Plan shows after Validate)
+    [/^Mining Drills/, 2], [/^Advanced Overrides/, 2], [/^Validation/, 2], [/^Swing Plan/, 3],
+]; // SELECTOR: confirm (the heading table of the spec; Swing Plan shows after Validate)
 const RESULTS_HEADINGS = {
-    timelines: [[/^Potential Clocks/, 2], [/^Transfer Activity Timeline/, 2], [/^State Transition Timeline/, 2]],
-    insights: [[/^Potential Clocks/, 2], [/^About this clock/, 2], [/^About this build/, 2]],
-    blueprint: [[/^Potential Clocks/, 2]],
-    log: [[/^Potential Clocks/, 2], [/^Debug Output/, 2]],
+    timelines: [[/^Clocks/, 2], [/^Transfer Activity Timeline/, 2], [/^State Transition Timeline/, 2]],
+    insights: [[/^Clocks/, 2], [/^About this clock/, 2], [/^About this build/, 2]],
+    blueprint: [[/^Clocks/, 2]],
+    log: [[/^Clocks/, 2], [/^Debug Output/, 2]],
 };
 
 function judgeHeadings(rec, view, headings, expected, { needH1 = true, h3Min = 0, file } = {}) {
@@ -310,9 +310,9 @@ async function closeDialogs(page) {
     }
 }
 
-/** The clock table: named "Potential clocks" after PR B; found by its Clock period header until then */
+/** The clock table: named "Clocks" after PR B; found by its Clock period header until then */
 const clockTable = (page) => {
-    const named = page.getByRole('table', { name: 'Potential clocks' });
+    const named = page.getByRole('table', { name: 'Clocks' });
     return { named, any: page.locator('table').filter({ hasText: 'Clock period' }).filter({ has: page.locator('input[type=radio]') }).first() }; // SELECTOR: confirm
 };
 
@@ -402,7 +402,7 @@ const STEP_LIST = [
         async run({ page, rec }) {
             await goResults(page);
             const { named, any } = clockTable(page);
-            rec.check('the clock table is named "Potential clocks"', (await named.count()) === 1, (await named.count()) === 1 ? 'table "Potential clocks"' : 'no table with that name');
+            rec.check('the clock table is named "Clocks"', (await named.count()) === 1, (await named.count()) === 1 ? 'table "Clocks"' : 'no table with that name');
             const table = (await named.count()) === 1 ? named : any;
             if ((await table.count()) === 0) {
                 rec.check('the clock table is there to read', false, 'no table with a Clock period header and radios');
@@ -805,7 +805,7 @@ const STEP_LIST = [
             if ((await clocked.count()) > 0) {
                 await clocked.click();
                 await page.waitForTimeout(300);
-                rec.check('the range delete button is named "Remove range"', (await dialog.getByRole('button', { name: exactly('Remove range') }).count()) === 1, `${await dialog.getByRole('button', { name: exactly('Remove range') }).count()} found`);
+                rec.check('the range delete button is named "Remove wake window"', (await dialog.getByRole('button', { name: exactly('Remove wake window') }).count()) === 1, `${await dialog.getByRole('button', { name: exactly('Remove wake window') }).count()} found`);
             }
             const inv = await inventory(page, '[role=dialog]');
             judgeNames(rec, 'the enable-rule modal (Clocked)', inv);
