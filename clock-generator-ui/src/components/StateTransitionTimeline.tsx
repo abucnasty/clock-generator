@@ -55,7 +55,7 @@ interface StateTransitionTimelineProps {
 }
 
 const CLOCK_WINDOW_COLOR = '#ffffff';
-const CLOCK_WINDOW_LABEL = 'Clock window (decider on; the inserter reacts 2 ticks later)';
+const CLOCK_WINDOW_LABEL = 'Wake window (decider on; the inserter reacts 2 ticks later)';
 
 /** The thin strip under each row that shows the state the entity would show in Factorio */
 const FACTORIO_STATE_STRIP_HEIGHT = 6;

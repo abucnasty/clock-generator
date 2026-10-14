@@ -59,10 +59,10 @@ export function OverridesForm({
                         slotProps={{ htmlInput: { min: 1 } }}
                         sx={{ width: 200 }}
                         size="small"
-                        helperText="Override the calculated LCM. The swing plan below shows the calculated value."
+                        helperText="Crafting cycles per clock period (overrides the calculated LCM). The swing plan below shows the calculated value."
                     />
                     <Tooltip
-                        title="Uses exactly this many output swings per crafting cycle for every potential clock, even if the result is unstable. Leave empty to let the generator pick the count, lower it until the output is stable, and offer other counts as potential clocks."
+                        title="Uses exactly this many output swings per crafting cycle for every clock, even if the clock does not hold the rate. Leave empty to let the generator pick the count, lower it until the output holds the rate, and offer other counts as clocks."
                         arrow
                         describeChild
                         placement="top"
@@ -107,7 +107,7 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="Runs the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
+                        title="Runs the four searches for every build: observed wake windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
                         arrow
                         describeChild
                         placement="top"

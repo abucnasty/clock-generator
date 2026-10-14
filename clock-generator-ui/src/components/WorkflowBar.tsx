@@ -33,9 +33,9 @@ interface WorkflowBarProps {
     checkedForGenerate: boolean;
     /** The result of the last check for this build, as a chip; null when there is none to show */
     chip: { label: string; color: 'success' | 'error' } | null;
-    /** Blueprint of the selected potential clock, once one is generated */
+    /** Blueprint of the selected clock, once one is generated */
     blueprintString: string | null;
-    /** Name of the selected potential clock */
+    /** Name of the selected clock */
     selectedLabel: string | null;
     /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
     rateWarning: string | null;

@@ -34,7 +34,8 @@ come from here.
 
 - **Phase:** 1 (started 2026-10-14)
 - **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** none (2.2's in-game check passed: the owner tested the built mod, 2026-10-14)
+- **Open checkpoints:** none yet; the Phase 1 merge into `feat/ux-rework` will need the owner's approval
+- **Phase 1:** all 14 items merged (#145–#164); phase end (three-designer review, retro) running
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
 ## Phase 1: stop the harm, quick wins
@@ -52,7 +53,7 @@ come from here.
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | merged | [#150](https://github.com/abucnasty/clock-generator/pull/150) | 1 | Round 0: code review and UX audit FIX (keyboard on the stale plan; 720 row). Round 1: both PASS. CI green |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | merged | A [#160](https://github.com/abucnasty/clock-generator/pull/160), B [#162](https://github.com/abucnasty/clock-generator/pull/162) | A 1, B 1 | A (opus): round 0 both FIX (`checkAnnounced` uncommitted; the inserter editor's Save bar covered a field), round 1, re-review both PASS. B (sonnet, stacked on A): round 0 code PASS, UX FIX (focusable chips inside the Transfer Plan's accordion button; no axe run), round 1 (+ an axe step that found a stepper id bug), re-review both PASS. C8, C9, C10, C13, C22, C25 fixed. CI green |
-| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | A merged; B impl | [#153](https://github.com/abucnasty/clock-generator/pull/153) | 1 | Part A merged: code review opus PASS (re-ran checks in a clean copy), UX audit sonnet PASS (C30 fixed; A25, B32 partly, rest is Part B); one minors round (dialog row wraps at 390). CI green. Part B last in the phase, stacked on 1.11 B. Part B (sonnet, `feat/ux-rework-p1-glossary-copy-2`) started, stacked on 1.11 B, with a capture writer |
+| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | merged | A [#153](https://github.com/abucnasty/clock-generator/pull/153), B [#164](https://github.com/abucnasty/clock-generator/pull/164) | A 1, B 1 | A (sonnet): one minors round. B (sonnet, 40 files, stacked on 1.11 B): round 0 both FIX (the clock status detail; the Validation panel's hands/transfer plan), round 1, re-review both PASS. A25, B32, C30 fixed. README "Words in the UI" adds two rows for the owner (swing plan, start point). CI green |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | merged | [#155](https://github.com/abucnasty/clock-generator/pull/155) | 1 | Bundle with 1.4. C4 fixed Code re-check PASS; CI green |
 
@@ -63,13 +64,13 @@ come from here.
 | [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | merged (p2) | [#154](https://github.com/abucnasty/clock-generator/pull/154) | 0 | Into `feat/ux-rework-p2`. CI green. **In-game check: passed** (owner, 2026-10-14: "looks good"). Code review opus PASS (Lua read line by line; checks re-run); UX audit sonnet FIX on the owner steps only (fixed by the orchestrator). A17, Q3 fixed; A2, A3 partly (site side is 2.1); B19 to 2.1. Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | merged (p2) | [#161](https://github.com/abucnasty/clock-generator/pull/161) | 1 | Round 0: code review opus PASS (races fine); UX audit opus FIX (a mouse click on Check only looked silent). Round 1: a visible landing and the reason in the tooltip, plan stays mounted, alert named, announcements in 1.11 A's rule set; merged 2.11 and 1.11 A. Re-review both PASS: A12, B10 fixed. CI green |
-| [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | impl | | | Started on `feat/ux-rework-p2-belt-question` (opus) with a capture writer, right after 2.3 merged. Takes the C7 non-moving row wording |
-| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A impl | | | Two PRs. A (opus, `feat/ux-rework-p2-results-answer`) started with a capture writer; also takes 2.6's follow-ups (shared `announce()`, footer margin, nits) and, if 2.3 is in, the failed-check alert's raw engine text. Checkpoint: owner tries the install steps in game. B after A merges |
+| [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | merged (p2) | [#163](https://github.com/abucnasty/clock-generator/pull/163) | 0 | Code review opus PASS (storage, 2.3 interplay, double press, hint all checked; deviations accepted); UX audit opus PASS: A10 fixed, C7 (2.4's part) fixed. 498 tests; capture 274 PASS, 1 FAIL = 1.5's message over the action at 720 (ledgered). CI green |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A fix-1 | | A 1 | Two PRs. A (opus): code review FIX (drills taken from the form, not the clock; decoded ~300 exported clocks from 45 samples and every other step held); UX audit FIX (the wiring list gives only numbers); A21 fixed, A8/A19/A20/C§2.3 partly. Round 1 running, also takes 2.4's `beltAction` into the card. Then the owner's in-game check of the install steps. B after A |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | merged (p2) | [#156](https://github.com/abucnasty/clock-generator/pull/156) | 1 | Code review opus PASS (window maths correct; checks re-run), UX audit opus PASS (C2 fixed for the new chart; old charts → 2.5/2.10); one minors round, re-checked. CI green. Follow-up PR: switch to `announce()`, drop `scrollMarginBottom` |
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
 | [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
-| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | fix-1 | | 1 | On `feat/ux-rework-p2-timelines` (sonnet): 516 tests; capture 208 PASS, 0 FAIL. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name fixed). A minors round (Blocked painted last, device-pixel rounding) before merge |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
 
 **Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
@@ -82,7 +83,7 @@ come from here.
 | 2.5 A → 2.5 B | 2 | after 2.5 A |
 | 2.8 a → 2.8 b (late) | 2 | 2.8 a, any idle slot |
 | 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | merged |
-| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | next free slot |
+| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | in progress |
 
 ## Phase 3: expert depth
 
@@ -179,7 +180,7 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   lines in the handoff, push after every commit, resume all agents first after a restart; (5) capture writers start
   as soon as a spec is final.
 - 2026-10-14: `master` moved outside the rework: the owner merged #158 (engine fix for issue 152, release 0.9.1;
-  24 files in `clock-generator/`). Plan (coach run 4): merge `master` into `feat/ux-rework` now, run the engine and generation tests there, and start the final PR's version bump from
+  24 files in `clock-generator/`). Done (coach run 4): `master` merged into `feat/ux-rework` at 2d6aff4; engine 734 tests and UI checks pass; generation tests run 38651863631 passed; both phase branches merge it cleanly, run the engine and generation tests there, and start the final PR's version bump from
   0.9.1.
 
 ## Open questions
@@ -335,6 +336,19 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.11 B: NumberField steppers are all named "Increase"/"Decrease" (allowed gap in the spec); include the field's label.
 - 2.3: the swing plan's own "Check only" (before the first check) unmounts when pressed, so focus falls to `body`; move focus to the plan's summary after the check. Exclude chips stay keyboard-operable but inert while re-checking.
 - 1.11 B: the enable-rule dialog's heading still wraps its title-bar buttons ("… Fullscreen Close" in the heading list); an empty unstable row group when there are none.
+- **1.5, raised priority (three reports: 1.11 A, 2.11, 2.4):** the untimed Undo message ("Build imported. Undo") sits
+  over the page: over an open dialog at 390, over the fullscreen Diagram, and over 2.4's Results action (36% at 720;
+  the whole assumption line at 390). Plan a small Phase 2 fix: put messages in the page flow under the bar (or move
+  them clear of focused controls), keeping the owner's no-timer rule. Candidate owner: 2.7 B (layout) or its own item.
+- 2.4: "may do with 0 wake-ups a minute instead of 177" is true but not self-explaining (fewer = less UPS; 0 can
+  read as broken) → 2.5 B terms / copy; the Standing option doesn't say what goes wrong if picked wrongly → 1.12 B copy;
+  the Results assumption line sits before the "Potential Clocks" h2 (2.5 A moves it into its card); "Not sure? Leave it
+  on Moving." isn't linked to the group (`aria-describedby`); the Belt column's "non-moving"/"moving (+4 ticks)" and
+  engine clock names differ from the radio's wording → 2.5 B.
+- `capture-enable-chip.mjs` "Delete buttons line up in one column" fails on the Phase 1 base too (1.9/1.13 row layout): the delete buttons don't share a column across rows. For 2.9.
+- 1.12 B leftovers for 2.x copy: the diagram dialog's "Config" tab beside "Enable rule"; the Auto chip tooltip "runs" vs the modal's "switched on"; "Latched Mode … Once enabled"; "Mining drills are disabled… setup"; Stable/Unstable until 2.5. 2.11 spec line 88 should name `CONDITIONAL_CHIP_MAX_CHARS` (36).
+- 2.5 A → 2.7: two filled green buttons on Results (Generate in the bar, Copy in the card); outline Generate while results are fresh, or record the exception. → 2.5 B: "among the Stable clocks" in the reason (glossary "holds the rate"); the table's own "Back to recommended" duplicates the card's.
+- 2.10 → 2.5 B: the Fuel chart paints swings orange while Detailed state charts use orange for "No fuel"; unify the fuel palette with `colors.ts` when the charts move behind Developer tools. Keyboard/hover access to the canvases is left out (light fixes only).
 - 1.4: after an Import or a fix, coverage problems can name the previous build for one worker round-trip
   (`hooks/useInserterValidation.ts` keeps the old issues), so the bar shows old issues instead of "Checking the build…"
   and a click finds no element. Reset the coverage result to null when the build is replaced.

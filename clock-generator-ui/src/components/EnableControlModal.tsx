@@ -27,6 +27,7 @@ import {
     enableControlOverrideChanged,
 } from '../utils/enableControlDraft';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
+import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { RuleSetEditor } from './RuleSetEditor';
 import { createDefaultRuleSet } from './ruleSetUtils';
@@ -56,11 +57,11 @@ interface EnableControlModalProps {
 }
 
 const MODE_DESCRIPTIONS: Record<EnableControlMode, string> = {
-    [EnableControlMode.AUTO]: 'Use automatic control logic (default behavior)',
-    [EnableControlMode.ALWAYS]: 'Entity is always enabled, with no combinator in the blueprint',
-    [EnableControlMode.NEVER]: 'Entity is never enabled',
-    [EnableControlMode.CLOCKED]: 'Entity is enabled during specified tick ranges',
-    [EnableControlMode.CONDITIONAL]: 'Entity is enabled based on custom conditions',
+    [EnableControlMode.AUTO]: 'The generator decides when it is on (default).',
+    [EnableControlMode.ALWAYS]: 'On all the time, with no combinator in the blueprint.',
+    [EnableControlMode.NEVER]: 'Never switched on.',
+    [EnableControlMode.CLOCKED]: 'On only during the wake windows you set.',
+    [EnableControlMode.CONDITIONAL]: 'On only while your conditions are true.',
 };
 
 // ---- Exported standalone form (no Dialog wrapper) ----
@@ -79,7 +80,7 @@ interface EnableControlFormContentProps {
     onCancel?: () => void;
     /** Told what the form would save, as it changes; pass a stable function (a state setter) */
     onDraftChange?: (state: EnableControlFormState) => void;
-    /** Hides Clear Override, Cancel and Save, for a host with a Save of its own */
+    /** Hides Clear rule, Cancel and Save, for a host with a Save of its own */
     hideActions?: boolean;
     isFullscreen?: boolean;
     sourceType?: SourceSinkType;
@@ -181,7 +182,7 @@ export function EnableControlFormContent({
         <FullscreenProvider value={isFullscreen}>
             <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Configure when this {entityType} should be enabled during the crafting cycle.
+                    Choose when this {entityType} is switched on.
                 </Typography>
 
                 {/* Copy From dropdown */}
@@ -202,7 +203,7 @@ export function EnableControlFormContent({
                                 startAdornment={<ContentCopy sx={{ mr: 1, color: 'action.active' }} fontSize="small" />}
                                 renderValue={() => (
                                     <Typography variant="body2" color="text.secondary">
-                                        Select to copy configuration...
+                                        Select a rule to copy...
                                     </Typography>
                                 )}
                             >
@@ -211,7 +212,7 @@ export function EnableControlFormContent({
                                         <Box>
                                             <Typography variant="body2">{option.label}</Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {option.override.mode}
+                                                {ENABLE_MODE_LABELS[option.override.mode]}
                                                 {option.override.mode === EnableControlMode.CONDITIONAL && option.override.latch && ' (latched)'}
                                             </Typography>
                                         </Box>
@@ -234,7 +235,7 @@ export function EnableControlFormContent({
                                 control={<Radio />}
                                 label={
                                     <Box>
-                                        <Typography variant="body1">{m}</Typography>
+                                        <Typography variant="body1">{ENABLE_MODE_LABELS[m]}</Typography>
                                         <Typography variant="caption" color="text.secondary">
                                             {MODE_DESCRIPTIONS[m]}
                                         </Typography>
@@ -246,11 +247,11 @@ export function EnableControlFormContent({
                     </RadioGroup>
                 </FormControl>
 
-                {/* CLOCKED mode configuration */}
+                {/* CLOCKED mode fields */}
                 {mode === EnableControlMode.CLOCKED && (
                     <Box sx={{ mt: 3, pl: 4 }}>
                         <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                            Enable Ranges
+                            Wake windows
                         </Typography>
 
                         {ranges.map((range, index) => (
@@ -287,25 +288,25 @@ export function EnableControlFormContent({
                         ))}
 
                         <Button startIcon={<Add />} onClick={handleAddRange} size="small" sx={{ mt: 1 }}>
-                            Add Range
+                            Add wake window
                         </Button>
 
                         <Box sx={{ mt: 3 }}>
                             <TextField
-                                label="Period Duration (ticks)"
+                                label="Repeat every (ticks)"
                                 type="number"
                                 value={periodDuration}
                                 onChange={(e) => setPeriodDuration(e.target.value)}
                                 size="small"
                                 sx={{ width: 200 }}
                                 inputProps={{ min: 1 }}
-                                helperText="Optional. Defaults to crafting cycle duration."
+                                helperText="Optional. Defaults to one crafting cycle."
                             />
                         </Box>
                     </Box>
                 )}
 
-                {/* CONDITIONAL mode configuration */}
+                {/* CONDITIONAL mode fields */}
                 {mode === EnableControlMode.CONDITIONAL && (
                     <Box sx={{ mt: 3, pl: 2 }}>
                         <QuickTemplateSelect
@@ -343,7 +344,7 @@ export function EnableControlFormContent({
                         <Box>
                             {hasOverride && (
                                 <Button onClick={handleClear} color="error">
-                                    Clear Override
+                                    Clear rule
                                 </Button>
                             )}
                         </Box>
@@ -406,7 +407,7 @@ function EnableControlModalContent({
             >
                 <DialogTitle id="enable-control-bar" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box id="enable-control-title">
-                        <Typography variant="h6" component="span" sx={{ display: 'block' }}>Enable Control Override</Typography>
+                        <Typography variant="h6" component="span" sx={{ display: 'block' }}>Enable rule</Typography>
                         <Typography variant="body2" color="text.secondary">{entityLabel}</Typography>
                     </Box>
                     <Box>

@@ -7,7 +7,7 @@ import {
     ValueReferenceType,
 } from 'clock-generator/light';
 import type { Condition, EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
-import { ENABLE_CHIP_MAX_CHARS, describeEnableRule, enableChipAriaLabel, enableChipTooltip } from './enableRuleLabel';
+import { CONDITIONAL_CHIP_MAX_CHARS, ENABLE_CHIP_MAX_CHARS, describeEnableRule, enableChipAriaLabel, enableChipTooltip } from './enableRuleLabel';
 
 const clocked = (ranges: [number, number][], period?: number): EnableControlOverride => ({
     mode: EnableControlMode.CLOCKED,
@@ -64,18 +64,18 @@ describe('describeEnableRule', () => {
         }
     });
 
-    it('names ALWAYS and NEVER', () => {
+    it('names ALWAYS and NEVER as Always on and Never on', () => {
         expect(describeEnableRule({ mode: EnableControlMode.ALWAYS })).toMatchObject({
-            mode: EnableControlMode.ALWAYS, chip: 'Enable: Always', summary: 'Always',
+            mode: EnableControlMode.ALWAYS, chip: 'Enable: Always on', summary: 'Always on',
         });
         expect(describeEnableRule({ mode: EnableControlMode.NEVER })).toMatchObject({
-            mode: EnableControlMode.NEVER, chip: 'Enable: Never', summary: 'Never',
+            mode: EnableControlMode.NEVER, chip: 'Enable: Never on', summary: 'Never on',
         });
     });
 
     it('says an ALWAYS was set by Exclude from LCM in the summary only, and only for ALWAYS', () => {
         expect(describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true })).toMatchObject({
-            chip: 'Enable: Always', summary: 'Always (set by Exclude from LCM)',
+            chip: 'Enable: Always on', summary: 'Always on (set by Exclude from LCM)',
         });
         const clockedRule = clocked([[0, 7]]);
         expect(describeEnableRule(clockedRule, { forcedAlways: true })).toEqual(describeEnableRule(clockedRule));
@@ -142,32 +142,40 @@ describe('describeEnableRule', () => {
         expect(description.summary).toBe('Clocked 1234567890–12345678901234 ticks');
     });
 
-    it('reads an empty range list as no ranges, and prints no period of 0', () => {
-        expect(describeEnableRule(clocked([]))).toMatchObject({ chip: 'Clocked, no ranges', summary: 'Clocked, no ranges' });
+    it('reads an empty range list as no wake windows, and prints no period of 0', () => {
+        expect(describeEnableRule(clocked([]))).toMatchObject({ chip: 'Clocked, no wake windows', summary: 'Clocked, no wake windows' });
         expect(describeEnableRule(clocked([[0, 7]], 0))).toMatchObject({ chip: 'Clocked 0–7', summary: 'Clocked 0–7 ticks' });
     });
 
     it('never makes a chip longer than the limit', () => {
         for (const override of ALL_CASES) {
-            expect(describeEnableRule(override).chip.length).toBeLessThanOrEqual(ENABLE_CHIP_MAX_CHARS);
+            const limit = override?.mode === EnableControlMode.CONDITIONAL ? CONDITIONAL_CHIP_MAX_CHARS : ENABLE_CHIP_MAX_CHARS;
+            expect(describeEnableRule(override).chip.length).toBeLessThanOrEqual(limit);
         }
     });
 
     it('counts the conditions of a CONDITIONAL rule, nested ones included', () => {
-        expect(describeEnableRule(conditional(ruleSet(condition())))).toMatchObject({ chip: 'Conditional: 1 rule', summary: 'Conditional: 1 rule' });
+        expect(describeEnableRule(conditional(ruleSet(condition())))).toMatchObject({ chip: 'Conditional: 1 condition', summary: 'Conditional: 1 condition' });
         const nested = ruleSet(condition(), condition(), ruleSet(condition(), condition()));
-        expect(describeEnableRule(conditional(nested))).toMatchObject({ chip: 'Conditional: 4 rules', summary: 'Conditional: 4 rules' });
+        expect(describeEnableRule(conditional(nested))).toMatchObject({ chip: 'Conditional: 4 conditions', summary: 'Conditional: 4 conditions' });
     });
 
     it('adds latched to a CONDITIONAL rule with a latch, without counting its release condition', () => {
         const nested = ruleSet(condition(), condition(), ruleSet(condition(), condition()));
         expect(describeEnableRule(conditional(nested, true))).toMatchObject({
-            chip: 'Conditional: 4 rules, latched', summary: 'Conditional: 4 rules, latched',
+            chip: 'Conditional: 4 conditions, latched', summary: 'Conditional: 4 conditions, latched',
         });
     });
 
-    it('reads a rule set with no conditions as no rules', () => {
-        expect(describeEnableRule(conditional(ruleSet(ruleSet())))).toMatchObject({ chip: 'Conditional: no rules' });
+    it('leaves latched off the chip, and keeps it in the summary, when the count is too long for both', () => {
+        const many = ruleSet(...Array.from({ length: 1000 }, condition));
+        expect(describeEnableRule(conditional(many, true))).toMatchObject({
+            chip: 'Conditional: 1000 conditions', summary: 'Conditional: 1000 conditions, latched',
+        });
+    });
+
+    it('reads a rule set with no conditions as no conditions', () => {
+        expect(describeEnableRule(conditional(ruleSet(ruleSet())))).toMatchObject({ chip: 'Conditional: no conditions' });
     });
 });
 
@@ -185,7 +193,7 @@ describe('enableChipAriaLabel and enableChipTooltip', () => {
 
     it('describes a rule by the whole rule in ticks, without repeating the action', () => {
         expect(enableChipTooltip('inserter', description)).toBe('Clocked 0–7 ticks');
-        expect(enableChipTooltip('inserter', describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true }))).toBe('Always (set by Exclude from LCM)');
+        expect(enableChipTooltip('inserter', describeEnableRule({ mode: EnableControlMode.ALWAYS }, { forcedAlways: true }))).toBe('Always on (set by Exclude from LCM)');
     });
 
     it('explains Auto, for an inserter and for a drill', () => {

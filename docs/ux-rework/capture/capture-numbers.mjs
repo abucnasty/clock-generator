@@ -208,7 +208,7 @@ async function noSideScroll() {
     check('nothing scrolls sideways', scrollWidth <= innerWidth, `scrollWidth ${scrollWidth}, innerWidth ${innerWidth}`);
 }
 
-const clocksPanel = () => page.getByText('Potential Clocks', { exact: true }).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
+const clocksPanel = () => page.getByText('Clocks', { exact: true }).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
 
 async function tableHeaders() {
     return clocksPanel().locator('thead th').allTextContents();
@@ -443,7 +443,7 @@ async function runAt(w) {
     await step('9 results 11 copies', async () => {
         await validateAndGenerate();
         await goResults();
-        await shotClocks('9-results-11-copies', 'Results for the logistic build (11 copies): the Potential Clocks table');
+        await shotClocks('9-results-11-copies', 'Results for the logistic build (11 copies): the Clocks table');
         const headers = await tableHeaders();
         record('table headers', headers.join(' | '));
         check('header "Wake-ups/min (1 copy)", non-breaking inside the brackets', headers.includes(WAKE_UPS_HEADER));
@@ -482,7 +482,7 @@ async function runAt(w) {
         check('with 1 copy the Items per Second helper reads "Total for the build"', helper === 'Total for the build', JSON.stringify(helper));
         await validateAndGenerate();
         await goResults();
-        await shotClocks('11-results-1-copy', 'Results for the engines sample (24/s, 1 copy): the Potential Clocks table');
+        await shotClocks('11-results-1-copy', 'Results for the engines sample (24/s, 1 copy): the Clocks table');
         const headers = await tableHeaders();
         record('table headers, 1 copy', headers.join(' | '));
         check('header "Rate (items/s)"', headers.includes('Rate (items/s)'));
