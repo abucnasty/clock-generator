@@ -2,6 +2,7 @@
 -- Converts extraction results to clock-generator compatible JSON format.
 
 require("__clock-generator-sidecar__.scripts.types")
+local suggested_target = require("__clock-generator-sidecar__.scripts.suggested-target")
 
 local export = {}
 
@@ -89,6 +90,13 @@ function export.left_out_inserters(result)
     return left_out
 end
 
+---The product that leaves the selection and what its machines make of it per second at most, nil when there is none
+---@param result ExtractionResult
+---@return SuggestedTarget|nil
+function export.suggested_target(result)
+    return suggested_target.find(result.machines)
+end
+
 ---Convert extraction result to a clock-generator compatible config table
 ---@param result ExtractionResult
 ---@return table
@@ -103,7 +111,9 @@ function export.to_table(result)
         },
         inserters = {},
         belts = {},
-        chests = {}
+        chests = {},
+        -- nil, which leaves the key out, when the selection has no final product
+        suggested_target = export.suggested_target(result)
     }
     
     -- Format machines for clock-generator

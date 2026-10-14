@@ -26,6 +26,7 @@ import type {
     SerializableMachineFacts,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
+    SuggestedTarget,
     SwingBackoffReport,
 } from 'clock-generator/browser';
 
@@ -299,6 +300,8 @@ export interface PastedEntities {
     chests: ChestConfiguration[];
     /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
     guidance: Option<string>;
+    /** The target output the paste suggests: the mod's own, else worked out from the machines */
+    suggested_target: Option<SuggestedTarget>;
 }
 
 /**
@@ -324,6 +327,7 @@ export type EngineQuery =
         belts: unknown;
         chests: unknown;
         sidecar_version: unknown;
+        suggested_target: unknown;
     };
 
 export interface EngineAnswers {
