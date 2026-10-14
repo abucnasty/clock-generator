@@ -151,10 +151,9 @@ vite.config.ts.timestamp-*
 # the link to the Vercel project that `vercel link` writes, with the ids of the account and the project
 .vercel
 
-# local environment files; the harness reads clock-generator/.env, which is tracked on purpose with its example
+# local environment files; `npm run test:game` reads clock-generator/.env, made from the example next to it
 .env*
-!clock-generator/.env
-!clock-generator/.env.example
+!.env.example
 
 # copied from clock-generator/resources by `npm run dev` and `npm run build` in the UI
 clock-generator-ui/public/data-filtered.json
