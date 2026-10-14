@@ -46,7 +46,7 @@ come from here.
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2 |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | spec | | | Spec final. After 1.1; not alongside 1.7, 1.10 |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
-| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | review | | | Evidence verified (tests 97/97, lint, icons, build re-run; merges cleanly; shots checked). Code review Fable, UX audit opus |
+| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | fix-1 | | 1 | Code review Fable PASS (minors); UX audit opus FIX: discard prompt contrast 3.0:1 (major). B5, B6, B16 fixed. Round 1: contrast, unchanged Save, fade staleness, draft util, tab marker |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
@@ -160,6 +160,13 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 1.8: the X in `EnableControlModal` has no accessible name, unlike `EntityEditDialog`'s (1.11).
 - 1.8: wrapping the dialogs in fragments re-indented `EntityEditDialog.tsx` and `EnableControlModal.tsx`; expect
   merge care in 1.3, 1.12 and 3.2.
+- 1.8 → 2.3 or later: the Transfer Plan has no per-row "keeps your Clocked rule" note on an excluded inserter that kept
+  its own rule, and the rule isn't checked against the new clock period.
+- 1.8 → 2.7: the new footer Save and the modal Save are filled orange, not green.
+- 1.8 → 3.2: the diagram's inserter dialog is Save/Cancel; machine, belt, chest and drill dialogs still apply live.
+- 1.8 → 1.12: the Transfer Plan chip tooltip says "its inserters are set to ALWAYS", true only for inserters whose
+  items are all excluded.
+- 1.8 → 1.11: "Unsaved changes" has no live region; the modal's "Clear Override" is 3.0:1 on #474747.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
