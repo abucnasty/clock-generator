@@ -22,6 +22,12 @@ export {
     BufferChestConfigSchema,
     InfinityChestConfigSchema,
     ConfigOverridesSchema,
+    // Enable Control Types
+    EnableControlOverrideConfig,
+    EnableControlRange,
+    RuleSet,
+    Condition,
+    ValueReference,
     // Enable Control Enums
     EnableControlMode,
     EntityReference,
