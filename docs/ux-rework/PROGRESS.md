@@ -39,14 +39,14 @@ come from here.
 
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merging | | | Code review (Fable) PASS, UX audit (opus) PASS: A5, B1, C5 fixed. Cheap minors before merge (caption, note, dialog wording, tests, ids, onerror guard) |
-| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
+| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merged | [#147](https://github.com/abucnasty/clock-generator/pull/147) | 1 | Code review Fable PASS, UX audit opus PASS (A5, B1, C5 fixed); cheap minors fixed before merge. CI green |
+| [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | impl | | | Started after 1.1 merged |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Spec final; moved up (7 files). After 1.5 (uses `notify()`) and 1.8 (`serializeConfig`) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2; not alongside 1.3, 1.5 |
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2 |
 | [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | spec | | | Spec final. After 1.1; not alongside 1.7, 1.10 |
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
-| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
+| [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | evidence | | | Built (88/0 page checks); runner re-checking, then Fable code review and opus UX audit |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
