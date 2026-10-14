@@ -8,6 +8,9 @@ export type EnableRuleEntityType = 'inserter' | 'drill';
 /** The longest text the chip shows; the tooltip and the accessible name always have the whole rule */
 export const ENABLE_CHIP_MAX_CHARS = 32;
 
+/** The same for a Conditional chip, whose "conditions" and ", latched" need four more than the old "rules" did */
+export const CONDITIONAL_CHIP_MAX_CHARS = 36;
+
 // Every word the chip, its tooltip and its accessible name use is here, so a glossary pass changes them in one place.
 const ENABLE_CHIP_PREFIX = 'Enable: ';
 const MODE_AUTO = 'Auto';
@@ -56,8 +59,8 @@ interface Range {
     end: number;
 }
 
-function cut(text: string): string {
-    return text.length <= ENABLE_CHIP_MAX_CHARS ? text : `${text.slice(0, ENABLE_CHIP_MAX_CHARS - 1)}${ELLIPSIS}`;
+function cut(text: string, limit = ENABLE_CHIP_MAX_CHARS): string {
+    return text.length <= limit ? text : `${text.slice(0, limit - 1)}${ELLIPSIS}`;
 }
 
 function countConditions(ruleSet: RuleSet): number {
@@ -112,7 +115,7 @@ export function describeEnableRule(
             const counted = `${MODE_CONDITIONAL}${CONDITION_COUNT_JOINER}${CONDITION_COUNT(countConditions(override.rule_set))}`;
             const text = `${counted}${override.latch ? LATCHED : ''}`;
             // the latch goes from the chip, not the end of a word, when both do not fit; the summary keeps it
-            return { mode, quiet, chip: text.length <= ENABLE_CHIP_MAX_CHARS ? text : cut(counted), summary: text };
+            return { mode, quiet, chip: text.length <= CONDITIONAL_CHIP_MAX_CHARS ? text : cut(counted, CONDITIONAL_CHIP_MAX_CHARS), summary: text };
         }
         default:
             return named(MODE_AUTO);

@@ -7,7 +7,7 @@ import {
     ValueReferenceType,
 } from 'clock-generator/light';
 import type { Condition, EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
-import { ENABLE_CHIP_MAX_CHARS, describeEnableRule, enableChipAriaLabel, enableChipTooltip } from './enableRuleLabel';
+import { CONDITIONAL_CHIP_MAX_CHARS, ENABLE_CHIP_MAX_CHARS, describeEnableRule, enableChipAriaLabel, enableChipTooltip } from './enableRuleLabel';
 
 const clocked = (ranges: [number, number][], period?: number): EnableControlOverride => ({
     mode: EnableControlMode.CLOCKED,
@@ -149,7 +149,8 @@ describe('describeEnableRule', () => {
 
     it('never makes a chip longer than the limit', () => {
         for (const override of ALL_CASES) {
-            expect(describeEnableRule(override).chip.length).toBeLessThanOrEqual(ENABLE_CHIP_MAX_CHARS);
+            const limit = override?.mode === EnableControlMode.CONDITIONAL ? CONDITIONAL_CHIP_MAX_CHARS : ENABLE_CHIP_MAX_CHARS;
+            expect(describeEnableRule(override).chip.length).toBeLessThanOrEqual(limit);
         }
     });
 
@@ -159,14 +160,18 @@ describe('describeEnableRule', () => {
         expect(describeEnableRule(conditional(nested))).toMatchObject({ chip: 'Conditional: 4 conditions', summary: 'Conditional: 4 conditions' });
     });
 
-    it('adds latched to the summary of a CONDITIONAL rule with a latch, without counting its release condition', () => {
+    it('adds latched to a CONDITIONAL rule with a latch, without counting its release condition', () => {
         const nested = ruleSet(condition(), condition(), ruleSet(condition(), condition()));
-        expect(describeEnableRule(conditional(nested, true))).toMatchObject({ summary: 'Conditional: 4 conditions, latched' });
+        expect(describeEnableRule(conditional(nested, true))).toMatchObject({
+            chip: 'Conditional: 4 conditions, latched', summary: 'Conditional: 4 conditions, latched',
+        });
     });
 
-    it('leaves latched off the chip, as it does not fit with the count in the chip\'s limit', () => {
-        const small = ruleSet(condition());
-        expect(describeEnableRule(conditional(small, true)).chip).toBe('Conditional: 1 condition');
+    it('leaves latched off the chip, and keeps it in the summary, when the count is too long for both', () => {
+        const many = ruleSet(...Array.from({ length: 1000 }, condition));
+        expect(describeEnableRule(conditional(many, true))).toMatchObject({
+            chip: 'Conditional: 1000 conditions', summary: 'Conditional: 1000 conditions, latched',
+        });
     });
 
     it('reads a rule set with no conditions as no conditions', () => {
