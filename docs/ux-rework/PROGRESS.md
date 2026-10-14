@@ -62,7 +62,7 @@ come from here.
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | spec | | | Spec final. Goes first in Phase 2. Checkpoint: owner runs the in-game steps in the spec |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
-| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug being confirmed |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
@@ -128,7 +128,12 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
 
 ## Open questions
 
-None.
+- **A rounded clock's decider gets a non-integer constant (asked 2026-10-14).** Found while checking the subtick book.
+  For a fractional period, the rounded alternative's clock decider is exported as `signal-clock < 90.94736842105263`
+  (`clock-generator/src/blueprints/entity/decider-combinator.ts:82`, `clock(period)` gets `total_duration.ticks` with
+  no `Math.floor`), while its label says it is rounded to 90. A Factorio combinator constant is a whole number, so the
+  game truncates, rounds or rejects it. It is outside the plan (an engine change); the owner decides whether to check it
+  in game or fix it.
 
 ## Follow-ups
 
@@ -199,6 +204,8 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 2.7 found contrast failures in today's theme: green hover 3.98:1, error text 3.0-4.4:1 on cards and dialogs, input
   outlines and switch tracks 2.1-2.6:1, an orange Undo on MUI's snackbar 1.96:1, empty filter slots 1.46:1. 2.7 PR A
   fixes them; 1.5's snackbar and 1.3's Undo should not ship the 1.96:1 combination (checked in their evidence gate).
+- Engine guard: in `alternatives.ts` (around line 483) clear `modulo_blueprint`/`modulo_schedule` in the subtick spread,
+  with a test that every `-subtick` alternative exports a single blueprint. Changes no current output.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
