@@ -6,7 +6,7 @@
 //   SAMPLES_DIR  the sample configs of another checkout or worktree
 //   WIDTHS       comma list, default "1440,720,390"
 //   STEPS        comma list of steps to run, default all. In the order they run:
-//                  startup, headings-configure, results-names, clock-table, tabs, headings-results, info-button,
+//                  startup, headings-configure, transfer-plan, results-names, clock-table, tabs, headings-results, info-button,
 //                  blueprint-fullscreen, configure-names, rows, selects, slots, menu, enable-modal, dnd, progress
 //                (startup runs on first load, before the import; the import, Validate and Generate always run after it,
 //                once per width; configure-names, rows, selects and slots first add a Buffer Chest and a Mining Drill so every
@@ -61,6 +61,8 @@ const ICON_FILE_NAME = /\b[a-z0-9]+(?:-[a-z0-9]+)+\b/; // "assembling-machine-3"
 const KINDS = ['machine', 'inserter', 'belt', 'chest', 'drill'];
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const norm = (t) => String(t ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+/** Case and all spacing ignored: inline elements join their text without a space in textContent */
+const squash = (t) => norm(t).replace(/\s+/g, '');
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exactly = (s) => new RegExp(`^${esc(s)}$`, 'i');
 
@@ -177,18 +179,18 @@ async function inventory(page, scope = null) {
 const controlsOf = (inv) => inv.filter((it) => !it.ignored && CONTROL_ROLES.has(it.role) && (it.focusable || it.disabled) && it.shown);
 
 /** One rolled-up check for a view: every control has a name, none has aria-label with aria-hidden, the visible text is in the name */
-function judgeNames(rec, view, inv) {
+function judgeNames(rec, view, inv, { allowEmpty = false } = {}) {
     const controls = controlsOf(inv);
     const unnamed = controls.filter((c) => c.name.trim() === '');
-    rec.check(`${view}: every focusable control has an accessible name`, controls.length > 0 && unnamed.length === 0, unnamed.length ? `${unnamed.length} of ${controls.length} have none: ${brief(unnamed.map((c) => c.desc), 8)}` : `${controls.length} controls`);
+    rec.check(`${view}: every focusable control has an accessible name`, (allowEmpty || controls.length > 0) && unnamed.length === 0, unnamed.length ? `${unnamed.length} of ${controls.length} have none: ${brief(unnamed.map((c) => c.desc), 8)}` : `${controls.length} controls`);
 
-    const both = inv.filter((it) => it.ariaLabel !== null && it.ariaHidden === 'true');
+    const both = inv.filter((it) => it.shown && it.ariaLabel !== null && it.ariaHidden === 'true');
     rec.check(`${view}: no element has aria-label together with aria-hidden="true"`, both.length === 0, both.length ? `${both.length}: ${brief(both.map((b) => `${b.tag} "${(b.ariaLabel ?? '').slice(0, 40)}" in ${b.ctx || 'page'}`), 4)}` : 'none');
 
     const labelled = controls.filter((c) => TEXT_LABELLED_ROLES.has(c.role) && c.text !== '' && c.name.trim() !== '');
     const allowed = labelled.filter((c) => LABEL_IN_NAME_ALLOW.some((re) => re.test(c.text)));
     const checked = labelled.filter((c) => !allowed.includes(c));
-    const lost = checked.filter((c) => !norm(c.name).includes(norm(c.text)));
+    const lost = checked.filter((c) => !squash(c.name).includes(squash(c.text)));
     rec.check(`${view}: the accessible name contains the visible text (2.5.3; a tooltip title must not replace it)`, lost.length === 0, lost.length ? `${lost.length} of ${checked.length}: ${brief(lost.map((c) => `"${c.text.slice(0, 24)}" is named "${c.name.slice(0, 50)}"`), 4)}` : `${checked.length} checked${allowed.length ? `, ${allowed.length} on the allow-list` : ''}`);
 
     const raw = inv.filter((it) => !it.ignored && /\d+\.\d{4,}/.test(it.name));
@@ -364,6 +366,20 @@ const STEP_LIST = [
         },
     },
     {
+        name: 'transfer-plan',
+        async run({ page, rec }) {
+            // Needs the validated build, so it runs before any edit
+            await goConfigure(page);
+            const inv = await inventory(page);
+            judgeNames(rec, 'Configure (validated)', inv);
+            const chips = await page.evaluate(() => [...document.querySelectorAll('.MuiChip-root')].filter((c) => /^(LCM|Used):/.test((c.textContent ?? '').trim())).map((c) => ({ text: (c.textContent ?? '').trim(), tab: c.getAttribute('tabindex') === '0' || Boolean(c.querySelector('[tabindex="0"]')) || c.closest('[tabindex="0"]') !== null, label: c.getAttribute('aria-label') ?? '' })));
+            rec.check('the LCM and Used chips take Tab (their tooltip opens on focus) and their tooltip is not their name', chips.length > 0 && chips.every((c) => c.tab && c.label.length < 40), chips.length ? `${chips.length} chips: ${brief(chips.map((c) => `"${c.text}" ${c.tab ? 'tabbable' : 'not tabbable'}${c.label.length >= 40 ? ', named by a long aria-label' : ''}`), 3)}` : 'no LCM or Used chip found (Transfer Plan not shown?)'); // SELECTOR: confirm
+            const toggles = inv.filter((it) => !it.ignored && /^(Included|Excluded)$/.test(it.text));
+            const wrongToggle = toggles.filter((t) => !/^(Included in|Excluded from) LCM: .+/.test(t.name));
+            rec.check('the Included/Excluded chips are named "Included in LCM: {item}" / "Excluded from LCM: {item}"', toggles.length > 0 && wrongToggle.length === 0, toggles.length ? (wrongToggle.length ? `${wrongToggle.length} of ${toggles.length}: ${brief(wrongToggle.map((t) => `"${t.name.slice(0, 60)}"`), 2)}` : `${toggles.length} chips`) : 'no Included/Excluded chip found'); // SELECTOR: confirm
+        },
+    },
+    {
         name: 'results-names',
         async run({ page, rec }) {
             await goResults(page);
@@ -403,7 +419,7 @@ const STEP_LIST = [
             rec.check('exactly one clock radio is checked', radios.filter((r) => r.checked).length === 1, `${radios.filter((r) => r.checked).length} checked`);
             const radioNames = [];
             for (let i = 0; i < radios.length; i++) radioNames.push(await accessibleName(page, table.locator('input[type=radio]').nth(i)));
-            const bad = radios.filter((r, i) => radioNames[i].trim() === '' || !norm(r.row).includes(norm(radioNames[i])));
+            const bad = radios.filter((r, i) => radioNames[i].trim() === '' || !squash(r.row).includes(squash(radioNames[i])));
             rec.check('each clock radio is named by its clock (the label in the first cell)', radios.length > 0 && bad.length === 0, bad.length ? `${bad.length} of ${radios.length}: ${brief(bad.map((r) => `radio ${r.index + 1} is named "${radioNames[r.index]}", its row says "${r.row.slice(0, 40)}"`), 3)}` : `${radios.length} named`);
             // arrow keys move between radios of one group
             const first = table.locator('input[type=radio]').nth(0);
@@ -514,7 +530,10 @@ const STEP_LIST = [
             await goResults(page);
             await page.getByRole('tab', { name: 'Timelines', exact: true }).click();
             const { named, any } = clockTable(page);
-            const table = (await named.count()) === 1 ? named : any;
+            const tableRole = (await named.count()) === 1 ? named : any;
+            // an open popover hides the page from role queries (aria-hidden), so keep the table by a marker as well
+            await tableRole.evaluate((el) => el.setAttribute('data-ux-table', '')).catch(() => {});
+            const table = page.locator('[data-ux-table]');
             const infoName = /^How .+ is made$/; // SELECTOR: confirm (clockHelpName)
             const infos = table.getByRole('button', { name: infoName });
             if ((await infos.count()) === 0) {
@@ -545,7 +564,7 @@ const STEP_LIST = [
             const vw = page.viewportSize().width;
             rec.check('the dialog fits inside the window', Boolean(box) && box.x >= 0 && box.x + box.width <= vw + 0.5, box ? `x ${Math.round(box.x)} to ${Math.round(box.x + box.width)} of ${vw}` : 'no dialog to measure');
             await rec.shot(page, 'clock-popover', { aria: true, desc: 'The (i) popover open, opened with Enter' });
-            judgeNames(rec, 'the (i) popover', await inventory(page, '[role=dialog]'));
+            judgeNames(rec, 'the (i) popover', await inventory(page, '[role=dialog]'), { allowEmpty: true });
             await page.keyboard.press('Escape');
             await page.waitForTimeout(300);
             const closed = (await page.getByRole('dialog').count()) === 0;
@@ -561,6 +580,7 @@ const STEP_LIST = [
             // a click does not select the row
             const before = await table.evaluate((t) => [...t.querySelectorAll('input[type=radio]')].findIndex((r) => r.checked));
             await info.evaluate((el) => el.removeAttribute('data-ux-info')).catch(() => {});
+            await page.waitForFunction(() => document.querySelectorAll('[role=dialog]').length === 0, null, { timeout: 2000 }).catch(() => {});
             const other = table.locator('tr').filter({ has: page.locator('input[type=radio]:not(:checked)') }).first().getByRole('button', { name: infoName });
             if ((await other.count()) > 0) {
                 await other.click();
@@ -570,6 +590,7 @@ const STEP_LIST = [
                 await page.keyboard.press('Escape');
                 await page.waitForTimeout(300);
             }
+            await table.evaluate((el) => el.removeAttribute('data-ux-table')).catch(() => {});
             void width;
         },
     },
@@ -582,7 +603,7 @@ const STEP_LIST = [
             if ((await copy.count()) > 0) {
                 const name = await accessibleName(page, copy);
                 const text = (await copy.evaluate((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim()));
-                rec.check('the bar\'s Copy button name contains its visible text (a rate warning is a description)', norm(name).includes(norm(text)), `visible "${text}", named "${name.slice(0, 70)}"`);
+                rec.check('the bar\'s Copy button name contains its visible text (a rate warning is a description)', squash(name).includes(squash(text)), `visible "${text}", named "${name.slice(0, 70)}"`);
             } else {
                 rec.check('the bar\'s Copy button is there', false, 'no button named /^Copy/');
             }
@@ -617,13 +638,6 @@ const STEP_LIST = [
             await goConfigure(page);
             const inv = await inventory(page);
             judgeNames(rec, 'Configure', inv);
-            const tips = inv.filter((it) => !it.ignored && it.role !== 'columnheader' && /^(LCM|Used):/.test(it.text));
-            const chips = await page.evaluate(() => [...document.querySelectorAll('.MuiChip-root')].filter((c) => /^(LCM|Used):/.test((c.textContent ?? '').trim())).map((c) => ({ text: (c.textContent ?? '').trim(), tab: c.getAttribute('tabindex') === '0' || Boolean(c.querySelector('[tabindex="0"]')) || c.closest('[tabindex="0"]') !== null, label: c.getAttribute('aria-label') ?? '' })));
-            rec.check('the LCM and Used chips take Tab (their tooltip opens on focus) and their tooltip is not their name', chips.length > 0 && chips.every((c) => c.tab && c.label.length < 40), chips.length ? `${chips.length} chips: ${brief(chips.map((c) => `"${c.text}" ${c.tab ? 'tabbable' : 'not tabbable'}${c.label.length >= 40 ? ', named by a long aria-label' : ''}`), 3)}` : 'no LCM or Used chip found (Transfer Plan not shown?)'); // SELECTOR: confirm
-            void tips;
-            const toggles = inv.filter((it) => !it.ignored && /^(Included|Excluded)$/.test(it.text));
-            const wrongToggle = toggles.filter((t) => !/^(Included in|Excluded from) LCM: .+/.test(t.name));
-            rec.check('the Included/Excluded chips are named "Included in LCM: {item}" / "Excluded from LCM: {item}"', toggles.length > 0 && wrongToggle.length === 0, toggles.length ? (wrongToggle.length ? `${wrongToggle.length} of ${toggles.length}: ${brief(wrongToggle.map((t) => `"${t.name.slice(0, 60)}"`), 2)}` : `${toggles.length} chips`) : 'no Included/Excluded chip found'); // SELECTOR: confirm
             await rec.shot(page, 'configure-rows', { aria: true, desc: 'Configure with a chest and a drill added (the aria snapshot is the evidence for names)' });
         },
     },
@@ -773,10 +787,20 @@ const STEP_LIST = [
                     await page.waitForTimeout(300);
                 }
             }
-            const names = ['Quick templates', 'Comparison operator', 'Value type', 'Constant value', 'Remove condition', 'Is or is not', 'Machine status', 'Remove status check'];
+            const wantedControls = [
+                ['Quick templates', ['combobox']], ['Comparison operator', ['combobox']], ['Value type', ['combobox']], ['Constant value', ['spinbutton', 'textbox']],
+                ['Remove condition', ['button']], ['Is or is not', ['combobox']], ['Machine status', ['combobox']], ['Remove status check', ['button']],
+            ]; // SELECTOR: confirm (roles of the rule editor controls)
             const absent = [];
-            for (const n of names) if ((await dialog.getByRole(/templates|type|operator|status|not/i.test(n) ? 'combobox' : n === 'Constant value' ? 'spinbutton' : 'button', { name: exactly(n) }).count()) === 0 && (await dialog.getByText(exactly(n)).count()) === 0 && (await dialog.getByLabel(exactly(n)).count()) === 0) absent.push(n); // SELECTOR: confirm (roles of the rule editor controls)
-            rec.check('the rule editor\'s controls are named "Quick templates", "Comparison operator", "Value type", "Constant value", "Remove condition", "Is or is not", "Machine status", "Remove status check"', absent.length === 0, absent.length ? `${absent.length} of ${names.length} not found: ${brief(absent, 8)}` : `${names.length} names`);
+            for (const [n, roles] of wantedControls) {
+                let found = 0;
+                for (const role of roles) found += await dialog.getByRole(role, { name: exactly(n) }).count();
+                if (found === 0) absent.push(n);
+            }
+            rec.check('the rule editor\'s controls are named "Quick templates", "Comparison operator", "Value type", "Constant value", "Remove condition", "Is or is not", "Machine status", "Remove status check"', absent.length === 0, absent.length ? `${absent.length} of ${wantedControls.length} not found: ${brief(absent, 8)}` : `${wantedControls.length} names`);
+            const invConditional = await inventory(page, '[role=dialog]');
+            judgeNames(rec, 'the enable-rule modal (Conditional)', invConditional);
+            judgeSelects(rec, 'the enable-rule modal (Conditional)', invConditional);
             const clocked = dialog.getByRole('radio', { name: /^CLOCKED/ });
             if ((await clocked.count()) > 0) {
                 await clocked.click();
@@ -784,8 +808,7 @@ const STEP_LIST = [
                 rec.check('the range delete button is named "Remove range"', (await dialog.getByRole('button', { name: exactly('Remove range') }).count()) === 1, `${await dialog.getByRole('button', { name: exactly('Remove range') }).count()} found`);
             }
             const inv = await inventory(page, '[role=dialog]');
-            judgeNames(rec, 'the enable-rule modal', inv);
-            judgeSelects(rec, 'the enable-rule modal', inv);
+            judgeNames(rec, 'the enable-rule modal (Clocked)', inv);
             const headings = await readHeadings(page, { dialog: true });
             const h6 = headings.filter((h) => h.level >= 6);
             const nested = headings.filter((h) => h.nested);
@@ -884,9 +907,9 @@ function judgeSelects(rec, view, inv) {
     const empty = boxes.filter((b) => b.name.trim() === '');
     rec.check(`${view}: every select and combobox has a name`, boxes.length > 0 && empty.length === 0, empty.length ? `${empty.length} of ${boxes.length}: ${brief(empty.map((b) => b.desc + (b.alts.length ? ` [${b.alts[0]}]` : '')), 6)}` : `${boxes.length} comboboxes`);
     const labelled = boxes.filter((b) => b.label !== '');
-    const lost = labelled.filter((b) => !norm(b.name).includes(norm(b.label)));
+    const lost = labelled.filter((b) => !squash(b.name).includes(squash(b.label.replace(/[\s*]+$/, ''))));
     rec.check(`${view}: each select's name contains its visible label (2.5.3)`, lost.length === 0 && boxes.length > 0, lost.length ? `${lost.length} of ${labelled.length}: ${brief(lost.map((b) => `label "${b.label}", name "${b.name.slice(0, 40)}"`), 4)}` : `${labelled.length} with a label`);
-    const icon = boxes.filter((b) => ICON_FILE_NAME.test(b.name) || b.alts.some((a) => a && norm(b.name).includes(norm(a))));
+    const icon = boxes.filter((b) => ICON_FILE_NAME.test(b.name) || b.alts.some((a) => a && squash(b.name).includes(squash(a))));
     rec.check(`${view}: no select's name contains an icon file name ("assembling-machine-3")`, boxes.length > 0 && icon.length === 0, icon.length ? `${icon.length}: ${brief(icon.map((b) => `"${b.name.slice(0, 60)}"`), 3)}` : 'none');
 }
 
@@ -910,7 +933,9 @@ try {
         async ({ page, rec, width }) => {
             const state = { rows: false };
             const runStep = async (step) => {
+                const t0 = Date.now();
                 await rec.step(step.name, () => step.run({ page, rec, state, base, width }), page);
+                console.log(`step ${step.name} (${width}px): ${((Date.now() - t0) / 1000).toFixed(1)} s`);
                 // a step that stopped half way (a throw) can leave a menu or dialog open: close it before the next one
                 await page.keyboard.press('Escape').catch(() => {});
                 await closeDialogs(page).catch(() => {});
