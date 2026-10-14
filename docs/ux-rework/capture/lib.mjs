@@ -39,7 +39,7 @@ export const LOGISTIC = sample('science/logistic-science/logistic-science.json')
 /**
  * The build whose generation finishes fastest: use it where the build's size does not matter (a dialog, a header, a
  * chip, a colour). Timed once against `vite preview` on 2026-10-14, in the page, from the click on Generate to "Generating..."
- * gone (Validate takes 20 to 40 ms for every one of them):
+ * gone (the check, Check only, takes 20 to 40 ms for every one of them):
  *   science/logistic-science/logistic-science-sample.json                0.22 s  <- SMALL_SAMPLE (1.0 KB, the smallest)
  *   science/logistic-science/logistic-science-shared-inserter.json       0.22 s
  *   science/logistic-science/logistic-science.json (LOGISTIC)             0.23 s
@@ -389,12 +389,12 @@ export async function forWidths(widths, fn, { out, base = DEFAULT_BASE, goto = t
 
 // ------------------------------------------------------------------------------------------------------ app actions
 
-/** Imports a config through the hidden file input of the app bar, and waits until the Validate button is usable */
+/** Imports a config through the hidden file input of the app bar, and waits until the Check only button is usable */
 export async function importFile(page, path) {
     await page.setInputFiles('input[type=file]', path);
     await page.waitForTimeout(400);
     await page
-        .waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^validate/i.test(b.textContent ?? '') && !b.disabled), null, { timeout: 5000 })
+        .waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^check only/i.test(b.textContent ?? '') && !b.disabled), null, { timeout: 5000 })
         .catch(() => {});
     await page.waitForTimeout(300);
 }
@@ -440,39 +440,48 @@ function buttonLabelGone(page, label, timeout) {
     );
 }
 
-/** The status chip of the workflow bar ("Valid", "Invalid", "Changed since validation"), or '' */
-const validationChip = (page) =>
-    page.evaluate(() => [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '');
+/** The check's chip in the workflow bar ("Check passed", "Check failed"), or '' */
+const checkChip = (page) =>
+    page.evaluate(() => [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Check passed|Check failed)$/.test(t)) ?? '');
 
-/** Clicks Validate and waits until validating has finished (the status chip changed, or the busy label came and went) */
+/**
+ * Clicks "Check only" (the check without a generation, which used to be Validate) and waits until checking has finished
+ * (the chip changed, or the busy label "Checking..." came and went)
+ */
 export async function validate(page, { timeout = 120_000 } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
-    const before = await validationChip(page);
-    await page.getByRole('button', { name: 'Validate', exact: true }).first().click();
-    // A fast run may skip the busy label: then the chip changes, or (validating again) nothing does; give that 1 s.
+    const before = await checkChip(page);
+    await page.getByRole('button', { name: 'Check only', exact: true }).first().click();
+    // A fast run may skip the busy label: then the chip changes, or (checking again) nothing does; give that 1 s.
     await page
         .waitForFunction(
             ([text, chip]) => {
                 const busy = [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text));
-                const now = [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '';
+                const now = [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Check passed|Check failed)$/.test(t)) ?? '';
                 return busy || now !== chip;
             },
-            ['Validating...', before],
+            ['Checking...', before],
             { timeout: 1000 },
         )
         .catch(() => {});
-    await buttonLabelGone(page, 'Validating...', timeout);
+    await buttonLabelGone(page, 'Checking...', timeout);
     await page.waitForTimeout(300);
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
-/** Clicks Generate (which opens the Results tab) and waits until generating has finished */
+/**
+ * Clicks Generate and waits until generating has finished. Generate checks the build first when it has no passed check
+ * ("Checking..."), then generates ("Generating...", on the Results tab); it waits until neither label shows. A build with
+ * a problem or a failed check goes to Configure instead, and nothing is generated.
+ */
 export async function generate(page, { timeout = GEN_TIMEOUT } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole('button', { name: 'Generate', exact: true }).click();
-    await page
-        .waitForFunction((text) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text)), 'Generating...', { timeout: 5000 })
-        .catch(() => {}); // a fast run may skip the busy label
+    const busyLabel = (text) => page.waitForFunction((t) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(t)), text, { timeout: 5000 });
+    await Promise.any([busyLabel('Checking...'), busyLabel('Generating...')]).catch(() => {}); // a fast run may skip both
+    await buttonLabelGone(page, 'Checking...', timeout);
+    // after a check that passed, the generation follows at once
+    await busyLabel('Generating...').catch(() => {});
     await buttonLabelGone(page, 'Generating...', timeout);
     await page.waitForTimeout(500);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -481,7 +490,7 @@ export async function generate(page, { timeout = GEN_TIMEOUT } = {}) {
 /**
  * Shoots the state while a generation is running, without waiting for it to end: clicks Generate, waits until the
  * progress bar is on screen, shoots `name`, then reloads the page (which drops the run). The page is left on a fresh load
- * with the imported build restored by the app; validate again before generating again.
+ * with the imported build restored by the app (and no check: Generate checks it again first).
  *
  * Needs a run that lasts longer than the shot (about 0.1 s; CPU throttling slows the shot as much as the run, so it
  * does not help). The small samples finish in 0.25 s, too fast: import `SLOW_SAMPLE` (2.6 s) for this state. If
@@ -500,7 +509,7 @@ export async function captureInFlight(page, rec, name, { desc = '', fullPage = f
             () =>
                 new Promise((resolve, reject) => {
                     const button = [...document.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === 'Generate');
-                    if (!button || button.disabled) return reject(new Error('the Generate button is missing or disabled (validate first)'));
+                    if (!button || button.disabled) return reject(new Error('the Generate button is missing or disabled (something is running)'));
                     const barShown = () => [...document.querySelectorAll('.MuiLinearProgress-root')].some((bar) => bar.getBoundingClientRect().width > 0);
                     const timer = setTimeout(() => reject(new Error('no progress bar within 10 s of clicking Generate')), 10_000);
                     const observer = new MutationObserver(() => {

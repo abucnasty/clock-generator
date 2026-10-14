@@ -1,35 +1,57 @@
 import { describe, expect, it } from 'vitest';
 import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from './workflowAnnouncement';
 
-const idle: WorkflowSnapshot = { validationStatus: 'none', isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null };
+const idle: WorkflowSnapshot = { checkStatus: 'none', checkedForGenerate: false, isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null };
 const at = (changes: Partial<WorkflowSnapshot>, from: WorkflowSnapshot = idle): WorkflowSnapshot => ({ ...from, ...changes });
 
-describe('workflowAnnouncement: validation', () => {
+describe('workflowAnnouncement: a check from Check only (or the swing plan)', () => {
     it('says the check started', () => {
-        expect(workflowAnnouncement(idle, at({ validationStatus: 'running' }))).toBe('Checking the configuration.');
+        expect(workflowAnnouncement(idle, at({ checkStatus: 'running' }))).toBe('Checking the build.');
     });
 
     it('says how the check ended', () => {
-        const running = at({ validationStatus: 'running' });
-        expect(workflowAnnouncement(running, at({ validationStatus: 'valid' }))).toBe('The configuration is valid.');
-        expect(workflowAnnouncement(running, at({ validationStatus: 'invalid' }))).toBe('The configuration is not valid.');
+        const running = at({ checkStatus: 'running' });
+        expect(workflowAnnouncement(running, at({ checkStatus: 'valid' }))).toBe('Check passed.');
+        expect(workflowAnnouncement(running, at({ checkStatus: 'invalid' }))).toBe('Check failed. The reason is at the top of Configure.');
     });
 
-    it('says when a valid configuration was changed', () => {
-        expect(workflowAnnouncement(at({ validationStatus: 'valid' }), at({ validationStatus: 'out-of-date' })))
-            .toBe('The configuration changed since it was checked.');
+    it('says nothing when an edit makes the check out of date, or puts it back', () => {
+        expect(workflowAnnouncement(at({ checkStatus: 'valid' }), at({ checkStatus: 'out-of-date' }))).toBeNull();
+        expect(workflowAnnouncement(at({ checkStatus: 'out-of-date' }), at({ checkStatus: 'valid' }))).toBeNull();
+        expect(workflowAnnouncement(at({ checkStatus: 'out-of-date' }), at({ checkStatus: 'invalid' }))).toBeNull();
     });
 
-    it.each<WorkflowSnapshot['validationStatus']>(['running', 'valid', 'invalid', 'out-of-date'])(
+    it('says nothing when a check ends out of date (the build changed while it ran)', () => {
+        expect(workflowAnnouncement(at({ checkStatus: 'running' }), at({ checkStatus: 'out-of-date' }))).toBeNull();
+    });
+
+    it.each<WorkflowSnapshot['checkStatus']>(['running', 'valid', 'invalid', 'out-of-date'])(
         'says nothing when it goes from %s back to none',
         (status) => {
-            expect(workflowAnnouncement(at({ validationStatus: status }), idle)).toBeNull();
+            expect(workflowAnnouncement(at({ checkStatus: status }), idle)).toBeNull();
         }
     );
 });
 
+describe('workflowAnnouncement: a check from Generate', () => {
+    const forGenerate = at({ checkedForGenerate: true });
+
+    it('says nothing while it runs, nor when it passes: "Generating clocks." follows', () => {
+        const running = at({ checkStatus: 'running' }, forGenerate);
+        expect(workflowAnnouncement(forGenerate, running)).toBeNull();
+        const passed = at({ checkStatus: 'valid' }, forGenerate);
+        expect(workflowAnnouncement(running, passed)).toBeNull();
+        expect(workflowAnnouncement(passed, at({ isLoading: true }, passed))).toBe('Generating clocks.');
+    });
+
+    it('says nothing when it fails: Generate moves the focus to the reason, which reads it once', () => {
+        const running = at({ checkStatus: 'running' }, forGenerate);
+        expect(workflowAnnouncement(running, at({ checkStatus: 'invalid' }, forGenerate))).toBeNull();
+    });
+});
+
 describe('workflowAnnouncement: generation', () => {
-    const valid = at({ validationStatus: 'valid' });
+    const valid = at({ checkStatus: 'valid' });
     const generating = at({ isLoading: true }, valid);
 
     it('says generation started', () => {
@@ -64,25 +86,26 @@ describe('workflowAnnouncement: generation', () => {
 });
 
 describe('workflowAnnouncement: order and repeats', () => {
-    it('looks at generation before validation when both change', () => {
-        const before = at({ validationStatus: 'valid' });
-        expect(workflowAnnouncement(before, at({ isLoading: true, validationStatus: 'out-of-date' }, before)))
+    it('looks at generation before the check when both change', () => {
+        const before = at({ checkStatus: 'running' });
+        expect(workflowAnnouncement(before, at({ isLoading: true, checkStatus: 'valid' }, before)))
             .toBe('Generating clocks.');
-        const running = at({ isLoading: true, validationStatus: 'valid' });
-        expect(workflowAnnouncement(running, at({ isLoading: false, hasBlueprint: true, selectedLabel: 'X', validationStatus: 'out-of-date' }, running)))
+        const running = at({ isLoading: true, checkStatus: 'running' });
+        expect(workflowAnnouncement(running, at({ isLoading: false, hasBlueprint: true, selectedLabel: 'X', checkStatus: 'valid' }, running)))
             .toBe('Finished generating. Selected clock: X.');
     });
 
     it('says nothing for an unchanged snapshot', () => {
-        for (const snapshot of [idle, at({ validationStatus: 'valid' }), at({ isLoading: true }), at({ hasBlueprint: true, selectedLabel: 'X' })]) {
+        for (const snapshot of [idle, at({ checkStatus: 'valid' }), at({ isLoading: true }), at({ hasBlueprint: true, selectedLabel: 'X' })]) {
             expect(workflowAnnouncement(snapshot, { ...snapshot })).toBeNull();
         }
     });
 
-    it('keeps every message a non-empty sentence', () => {
+    it('keeps every message a non-empty sentence, in the glossary\'s words', () => {
         const texts = [...Object.values(ANNOUNCEMENTS).filter((it) => typeof it === 'string'), ANNOUNCEMENTS.finished('X')];
         for (const text of texts) {
             expect(text).toMatch(/^[A-Z].*\.$/);
+            expect(text).not.toMatch(/configuration|valid/i);
         }
     });
 });

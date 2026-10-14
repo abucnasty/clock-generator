@@ -40,9 +40,11 @@ import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
-import { ValidationPanel } from './components/ValidationPanel';
+import { CheckErrorAlert } from './components/CheckErrorAlert';
+import { CheckPlanSection } from './components/CheckPlanSection';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
-import { blockedActionsOf, focusProblemTarget, needsListView, problemsOf, type Problem } from './utils/firstProblem';
+import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
+import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate } from './utils/checkThenGenerate';
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
@@ -194,9 +196,9 @@ function App() {
     const [changelogOpen, setChangelogOpen] = useState(false);
     const [view, setView] = useState<WorkflowView>('configure');
 
-    // null until the config is checked; Generate waits for that
+    // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverageIssues = useInserterValidation(exportConfig, isInitialized);
-    // the header's height, for scrolling to a panel so that it is not left under the header
+    // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
     const coverageIssues = checkedCoverageIssues ?? [];
@@ -217,79 +219,108 @@ function App() {
         return Array.from(names).sort();
     }, [itemNames, resourceNames]);
 
-    // the Validate step is for the config as it stands; any edit since makes its result out of date
+    // the clocks on screen are for the build as it was when Generate was pressed
     const configKey = useMemo(() => configKeyOf(exportConfig()), [exportConfig]);
-    const isValidationOutOfDate = validation.status !== 'none' && configKeyOf(validation.config) !== configKey;
-    const validationStatus = validation.status === 'none' || validation.status === 'running' ? validation.status
-        : isValidationOutOfDate ? 'out-of-date' : validation.status;
-    // likewise the clocks on screen are for the build as it was when Generate was pressed
     const resultsAreStale = isStale(generatedFor, configKey);
     const staleFor = resultsAreStale ? generatedFor : null;
+    // likewise a check, except that the switches only the clock search reads leave it current
+    const checkKey = useMemo(() => checkKeyOf(exportConfig()), [exportConfig]);
+    const checkStatus = checkStatusOf(validation, checkKey);
 
-    // what keeps the build from being validated and generated, and so why each of the two buttons is off
+    // what keeps the build from being clocked, and so where Generate goes instead
     const problems = useMemo(() => problemsOf({
         targetOutput: config.target_output,
         machines: config.machines,
         coverageIssues: checkedCoverageIssues ?? [],
     }), [config.target_output, config.machines, checkedCoverageIssues]);
-    const blocked = useMemo(() => blockedActionsOf({
-        problems,
-        coverageChecked: checkedCoverageIssues !== null,
-        isRunning,
-        validationStatus,
-    }), [problems, checkedCoverageIssues, isRunning, validationStatus]);
 
-    const validationPanelRef = useRef<HTMLDivElement>(null);
-    // the Validation panel's top just below the header, at once: a smooth scroll stops short when the page changes under it
-    const scrollToValidationPanel = useCallback(() => {
-        const panel = validationPanelRef.current;
-        if (!panel) {
-            return;
-        }
-        // the header's height as it is now, as the page's scroll padding follows it only a frame later; and its 8px gap
-        const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 0;
-        window.scrollTo({ top: window.scrollY + panel.getBoundingClientRect().top - headerHeight - 8 });
+    // set while a check Generate started runs, which goes on to generate
+    const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
+    // both buttons are off while a check or a generation runs
+    const busy = isRunning || validation.status === 'running' || checkingFor !== null;
+    // a check the swing plan's Exclude chips start shows on Check only, as one of its own
+    const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
+    const note = barNoteOf({ problems, busy, checkStatus });
+    // who started the running or last check, for the announcements: Generate leads on by itself
+    const [checkedForGenerate, setCheckedForGenerate] = useState(false);
+
+    // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
+    const goToTarget = useCallback((target: FocusTarget) => {
+        // shown before the focus moves: a hidden element takes no focus
+        flushSync(() => {
+            if (needsListView(target)) {
+                setConfigView('list');
+            }
+            setView('configure');
+        });
+        focusProblemTarget(target);
     }, []);
-    // set while a Validate pressed in the bar is running: its answer changes the page's length and the header's height,
-    // so the panel is scrolled to again once it is in. `scrollY` is where the first scroll left the page, `sawRunning`
-    // that the check started (a Validate that could not start leaves nothing to wait for)
-    const pendingValidationScrollRef = useRef<{ scrollY: number | null; sawRunning: boolean } | null>(null);
-    const handleValidate = useCallback(() => {
-        // set first: the check's start may be seen while the view is shown, below
-        const pending = { scrollY: null as number | null, sawRunning: false };
-        pendingValidationScrollRef.current = pending;
-        validate(exportConfig());
-        // the panel sits below the forms; show the Configure view now, so that it can be scrolled to
-        flushSync(() => setView('configure'));
-        scrollToValidationPanel();
-        pending.scrollY = window.scrollY;
-    }, [exportConfig, validate, scrollToValidationPanel]);
+    const handleGoToProblem = useCallback((problem: Problem) => {
+        if (problem.target) {
+            goToTarget(problem.target);
+        }
+    }, [goToTarget]);
+
+    // after a check, its alert is focused once it is on the page; a new object each time, so the same target again
+    // still moves the focus
+    const [focusRequest, setFocusRequest] = useState<{ target: FocusTarget } | null>(null);
     useEffect(() => {
-        const pending = pendingValidationScrollRef.current;
-        if (!pending) {
-            return;
+        if (focusRequest) {
+            focusProblemTarget(focusRequest.target);
         }
-        if (validation.status === 'running') {
-            pending.sawRunning = true;
-            return;
+    }, [focusRequest]);
+    const goToCheckError = useCallback(() => {
+        setView('configure');
+        setFocusRequest({ target: { kind: 'validation-error' } });
+    }, []);
+
+    /**
+     * What Generate and Search deeper share: go to the first problem, or to the reason the last check failed; or check
+     * the build first; then `start` the generation for the build as it was checked
+     */
+    const runChecked = useCallback((start: (config: Config) => void) => {
+        const config = exportConfig();
+        const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        switch (decision.kind) {
+            case 'wait':
+                return;
+            case 'go-to-problem':
+                if (decision.problem.target) {
+                    goToTarget(decision.problem.target);
+                }
+                return;
+            case 'go-to-check-error':
+                goToCheckError();
+                return;
+            case 'generate':
+                start(config);
+                return;
+            case 'check-first':
+                setCheckingFor('generate');
+                setCheckedForGenerate(true);
+                validate(config).then((outcome) => {
+                    setCheckingFor(null);
+                    const next = afterCheck(outcome);
+                    if (next === 'generate') {
+                        start(config);
+                    } else if (next === 'go-to-check-error') {
+                        goToCheckError();
+                    }
+                });
+                return;
         }
-        if (!pending.sawRunning) {
-            return;
+    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, goToTarget, goToCheckError, validate, setCheckingFor]);
+
+    // checks without moving the page: the result shows as the chip, the alert and the swing plan
+    const handleCheckOnly = useCallback(() => {
+        const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        if (decision.kind === 'show-problems') {
+            focusBarNote();
+        } else if (decision.kind === 'check') {
+            setCheckedForGenerate(false);
+            validate(exportConfig());
         }
-        pendingValidationScrollRef.current = null;
-        // not when the panel is hidden (Results), nor when the player has scrolled since
-        const panel = validationPanelRef.current;
-        const scrolledAway = pending.scrollY !== null && Math.abs(window.scrollY - pending.scrollY) > 2;
-        if (panel && panel.offsetParent !== null && !scrolledAway) {
-            scrollToValidationPanel();
-        }
-    }, [validation.status, scrollToValidationPanel]);
-    // switching views drops a scroll still waiting for the check
-    useEffect(() => {
-        if (view !== 'configure') {
-            pendingValidationScrollRef.current = null;
-        }
-    }, [view]);
+    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, validate, exportConfig]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -300,12 +331,11 @@ function App() {
         }
     }, [exportConfig, validate]);
 
-    const handleGenerate = useCallback(() => {
-        const configToRun = exportConfig();
-        runSimulation(configToRun, debugSteps, streamLogs);
+    const handleGenerate = useCallback(() => runChecked((config) => {
+        runSimulation(config, debugSteps, streamLogs);
         // progress and the potential clocks arrive there
         setView('results');
-    }, [exportConfig, runSimulation, debugSteps, streamLogs]);
+    }), [runChecked, runSimulation, debugSteps, streamLogs]);
 
     // the actions that throw part of the build away offer Undo, just before they are applied
     const undoable = useMemo(() => {
@@ -371,11 +401,12 @@ function App() {
     );
     const handleExcludeChange = useCallback((items: string[]) => {
         // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
-        if (validation.status === 'valid' && !isValidationOutOfDate) {
+        if (validation.status === 'valid' && checkStatus === 'valid') {
             revalidateOnChangeRef.current = true;
+            setCheckedForGenerate(false);
             updateIgnoredIngredients(items, validation.validation.transfer_plan);
         }
-    }, [validation, isValidationOutOfDate, updateIgnoredIngredients]);
+    }, [validation, checkStatus, updateIgnoredIngredients]);
 
     const handleImportConfig = useCallback((imported: Config) => {
         importConfig(imported);
@@ -387,42 +418,19 @@ function App() {
         setView('configure');
     }, [clearResults]);
 
-    // the build can be generated once it is checked and has no problems; Generate also waits for the Validate step
-    const canGenerate = isInitialized && !isRunning && checkedCoverageIssues !== null && problems.length === 0;
-
-    // to where the problem is fixed: the Configure view, the List for the machines' fields, and the field itself
-    const handleGoToProblem = useCallback((problem: Problem) => {
-        const { target } = problem;
-        if (target === null) {
-            return;
-        }
-        // shown before the focus moves: a hidden element takes no focus
-        flushSync(() => {
-            if (needsListView(target)) {
-                setConfigView('list');
-            }
-            setView('configure');
-        });
-        focusProblemTarget(target);
-    }, []);
-
-    // Search deeper is a Generate, so it is disabled whenever the Generate button is
-    const canSearchDeeper = canGenerate && validationStatus === 'valid';
-    // Generate with the slower searches: for this run only, or, kept on, by turning the switch on in the form
-    const handleSearchDeeper = useCallback((keepOn: boolean) => {
-        if (!canSearchDeeper) {
-            return;
-        }
+    // Generate with the slower searches, checked first as Generate is: for this run only, or, kept on, by turning the
+    // switch on in the form (one the check does not read, so it stays current)
+    const handleSearchDeeper = useCallback((keepOn: boolean) => runChecked((config) => {
         if (keepOn) {
             // the form's key once the switch is on, so the results are not taken for out of date
-            const kept = withDeeperSearch(exportConfig());
+            const kept = withDeeperSearch(config);
             updateOverrides('search_for_fewer_wake_ups', true);
             runSimulation(kept, debugSteps, streamLogs);
         } else {
-            runSimulation(exportConfig(), debugSteps, streamLogs, true);
+            runSimulation(config, debugSteps, streamLogs, true);
         }
         setView('results');
-    }, [canSearchDeeper, exportConfig, updateOverrides, runSimulation, debugSteps, streamLogs]);
+    }), [runChecked, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
         <ThemeProvider theme={darkTheme}>
@@ -458,10 +466,12 @@ function App() {
                             generationFailed={error !== null}
                             progressStore={progressStore}
                             onGenerate={handleGenerate}
-                            generateDisabled={!canGenerate}
-                            onValidate={handleValidate}
-                            validateDisabled={!canGenerate}
-                            validationStatus={validationStatus}
+                            onCheckOnly={handleCheckOnly}
+                            busy={busy}
+                            checking={checking}
+                            checkStatus={checkStatus}
+                            checkedForGenerate={checkedForGenerate}
+                            chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
                             blueprintString={blueprintString}
                             selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
                             rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
@@ -469,7 +479,7 @@ function App() {
                             belowTarget={isBelowTarget(alternatives[selectedAlternativeIndex])}
                             staleFor={staleFor}
                             problems={problems}
-                            blocked={blocked}
+                            note={note}
                             onGoToProblem={handleGoToProblem}
                         />
                     )}
@@ -499,6 +509,7 @@ function App() {
                                     {error}
                                 </Alert>
                             )}
+                            <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null} />
 
                             <TargetOutputForm
                                 recipe={config.target_output.recipe}
@@ -616,21 +627,20 @@ function App() {
                                     nonMovingBelts={config.overrides?.non_moving_belts}
                                     searchForFewerWakeUps={config.overrides?.search_for_fewer_wake_ups}
                                     onUpdate={updateOverrides}
+                                    planSlot={(
+                                        <CheckPlanSection
+                                            validation={validation}
+                                            checkStatus={checkStatus}
+                                            busy={busy}
+                                            onCheckOnly={handleCheckOnly}
+                                            note={note}
+                                            excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
+                                            onExcludeChange={handleExcludeChange}
+                                        />
+                                    )}
                                 />
                             </Box>
 
-
-                            <ValidationPanel
-                                ref={validationPanelRef}
-                                validation={validation}
-                                isOutOfDate={isValidationOutOfDate}
-                                onValidate={handleValidate}
-                                canValidate={canGenerate}
-                                problem={problems[0] ?? null}
-                                isGenerating={isRunning}
-                                excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
-                                onExcludeChange={handleExcludeChange}
-                            />
                         </Box>
 
                         <Box sx={{ display: view === 'results' ? 'block' : 'none' }}>
@@ -647,8 +657,8 @@ function App() {
                                 skippedSearches={skippedSearches}
                                 searchedDeeper={searchedDeeper}
                                 keptOn={config.overrides?.search_for_fewer_wake_ups === true}
-                                canSearchDeeper={canSearchDeeper}
-                                searchDeeperBlockedBy={canSearchDeeper ? null : blocked.generate}
+                                canSearchDeeper={!busy}
+                                searchDeeperBlockedBy={note}
                                 onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}

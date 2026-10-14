@@ -93,8 +93,8 @@ async function goConfigure() {
 }
 
 async function validate() {
-    await page.getByRole('button', { name: 'Validate', exact: true }).first().click();
-    await page.waitForFunction(() => !document.body.innerText.includes('Validating...'), null, { timeout: 120_000 });
+    await page.getByRole('button', { name: 'Check only', exact: true }).first().click();
+    await page.waitForFunction(() => !document.body.innerText.includes('Checking...'), null, { timeout: 120_000 });
     await page.waitForTimeout(800);
 }
 

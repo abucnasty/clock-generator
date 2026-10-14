@@ -62,7 +62,7 @@ async function layoutPass(page, rec) {
 
     await rec.step('validate and generate', async () => {
         await validate(page);
-        await rec.shot(page, 'logistic-validated-top', { desc: 'After Validate, back at the top (workflow bar state)' });
+        await rec.shot(page, 'logistic-validated-top', { desc: 'After Check only, back at the top (workflow bar state)' });
         await generate(page);
         await goResults(page);
         await rec.shot(page, 'logistic-results-timelines', { fullPage: true, aria: true, desc: 'Results finished, default tab (Timelines)' });
@@ -183,9 +183,9 @@ async function walkthrough(page, rec, base) {
 
     await rec.step('validate', async () => {
         await validate(page);
-        await rec.shot(page, 'logistic-validated-viewport', { desc: 'Logistic science build: right after clicking Validate' });
+        await rec.shot(page, 'logistic-validated-viewport', { desc: 'Logistic science build: right after clicking Check only (the page does not move)' });
         await page.evaluate(() => window.scrollTo(0, 0));
-        await rec.shot(page, 'logistic-validated-top', { desc: 'Logistic science build: after Validate, scrolled back to the top (workflow bar state)' });
+        await rec.shot(page, 'logistic-validated-top', { desc: 'Logistic science build: after Check only, scrolled back to the top (workflow bar state)' });
     }, page);
 
     await rec.step('generate', async () => {
