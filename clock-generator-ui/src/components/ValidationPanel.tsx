@@ -21,8 +21,8 @@ interface ValidationPanelProps {
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
 /**
- * The step between configuring and generating: checks that a clock can be planned for the config and shows the
- * transfer plan it would use. Runs only when asked; editing the config afterwards marks the result out of date.
+ * The step between configuring and generating: checks that a clock can be planned for the build and shows the
+ * swing plan it would use. Runs only when asked; editing the config afterwards marks the result out of date.
  */
 export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(function ValidationPanel({
     validation,
@@ -50,9 +50,9 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
                 </Button>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                Checks that a clock can be planned for this configuration and works out the transfer plan: how many hands each
-                inserter moves per crafting cycle, and how many cycles the clock needs for them to come out whole. Nothing is
-                recalculated while you edit; validate again when you are done. Generating needs a valid, up-to-date configuration.
+                Checks that your build can be clocked and works out the swing plan: how many swings each inserter makes per
+                crafting cycle, and how many cycles the clock needs for them to come out whole. Nothing is recalculated while
+                you edit; validate again when you are done. Generating needs a build that was checked after its last change.
             </Typography>
 
             {validation.status === 'none' && problem && (
@@ -73,22 +73,22 @@ export const ValidationPanel = forwardRef<HTMLDivElement, ValidationPanelProps>(
 
             {validation.status !== 'none' && validation.status !== 'running' && isOutOfDate && (
                 <Alert severity="warning">
-                    The configuration changed since it was validated. Validate again to check it and refresh the transfer plan.
+                    Your build changed since it was checked. Validate again to check it and refresh the swing plan.
                 </Alert>
             )}
 
             {validation.status === 'valid' && (
                 <Box inert={isOutOfDate} sx={{ mt: 1.5, opacity: isOutOfDate ? 0.45 : 1, pointerEvents: isOutOfDate ? 'none' : 'auto' }}>
                     {!isOutOfDate && (
-                        // role none: the app's announcements region already says the configuration is valid; this
+                        // role none: the app's announcements region already says the build can be clocked; this
                         // alert would say it a second time, in full
                         <Alert severity="success" role="none" sx={{ mb: 1 }}>
-                            The configuration is valid. Each output inserter takes {validation.validation.output_swings_per_cycle} hand
+                            Your build can be clocked. Each output inserter makes {validation.validation.output_swings_per_cycle} swing
                             {validation.validation.output_swings_per_cycle === 1 ? '' : 's'} per crafting cycle of{' '}
                             {formatTicks(validation.validation.cycle_ticks)} ticks, and the clock repeats every{' '}
-                            {formatTicks(validation.validation.period_ticks)} ticks ({validation.validation.used_lcm} cycle
-                            {validation.validation.used_lcm === 1 ? '' : 's'}). A generation may still lower the output swings
-                            if this count turns out unstable.
+                            {formatTicks(validation.validation.period_ticks)} ticks ({validation.validation.used_lcm} crafting
+                            cycle{validation.validation.used_lcm === 1 ? '' : 's'}). Generating may still use fewer output swings
+                            if this count does not hold the rate.
                         </Alert>
                     )}
                     <TransferPlanPanel

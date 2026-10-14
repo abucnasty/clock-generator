@@ -16,6 +16,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BlockIcon from '@mui/icons-material/Block';
 import type { SerializableTransferPlan } from 'clock-generator/browser';
+import { EnableControlMode } from 'clock-generator/light';
+import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 
@@ -26,6 +28,8 @@ interface TransferPlanPanelProps {
     excludedIngredients: string[];
     onExcludeChange: (items: string[]) => void;
 }
+
+const ALWAYS_ON = ENABLE_MODE_LABELS[EnableControlMode.ALWAYS];
 
 function formatFraction(numerator: number, denominator: number): string {
     if (denominator === 1) return String(numerator);
@@ -53,10 +57,10 @@ function TransferPlanPanelComponent({
         <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' } }} sx={{ mt: 1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
-                    Transfer Plan
+                    Swing Plan
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-                    <Tooltip title={`The least common multiple (LCM) that is computed based on the transfer fractions of all inserters. The clock will repeat every LCM cycles.`} describeChild>
+                    <Tooltip title="LCM: the number of crafting cycles in one clock period (the least common multiple of every inserter's swings per cycle)." describeChild>
                         <Chip
                             tabIndex={0}
                             label={`LCM: ${computed_lcm}`}
@@ -67,7 +71,7 @@ function TransferPlanPanelComponent({
                     </Tooltip>
 
                     {isLcmOverridden && (
-                        <Tooltip title={`Manual LCM override active: ${usedLcm} (computed: ${computed_lcm})`} describeChild>
+                        <Tooltip title={`Manual LCM override active: ${usedLcm} (calculated: ${computed_lcm})`} describeChild>
                             <Chip
                                 tabIndex={0}
                                 label={`Used: ${usedLcm}`}
@@ -94,7 +98,7 @@ function TransferPlanPanelComponent({
                         <TableRow>
                             <TableCell sx={{ width: '30%' }}>Entity</TableCell>
                             <TableCell>Item</TableCell>
-                            <TableCell align="right" sx={{ width: '120px' }}>Transfers / cycle</TableCell>
+                            <TableCell align="right" sx={{ width: '120px' }}>Swings / cycle</TableCell>
                             <TableCell align="center" sx={{ width: '110px' }}>Exclude from LCM</TableCell>
                         </TableRow>
                     </TableHead>
@@ -157,7 +161,7 @@ function TransferPlanPanelComponent({
                                                 title={
                                                     isExcluded
                                                         ? 'Click to include in LCM'
-                                                        : 'Click to exclude from LCM (its inserters are set to ALWAYS unless they already have an enable rule of your own)'
+                                                        : `Click to exclude from LCM. An inserter whose items are all excluded is set to ${ALWAYS_ON} unless it already has an enable rule of your own.`
                                                 }
                                                 describeChild
                                             >
@@ -182,10 +186,10 @@ function TransferPlanPanelComponent({
                 </Table>
                 <Box sx={{ px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="caption" color="text.secondary">
-                        Transfers per cycle are fractions of the LCM period. Excluded ingredients are omitted from the
-                        LCM calculation — their inserters will be forced to{' '}
-                        <strong>ALWAYS</strong> enabled, unless you gave them an enable rule of your own, which stays.
-                        Validate again, then Generate, after making changes.
+                        Swings per cycle can be fractions. The clock period is the number of crafting cycles (the LCM)
+                        after which they all come out whole. Excluded ingredients are left out of that calculation, and an
+                        inserter whose items are all excluded is forced to <strong>{ALWAYS_ON}</strong>, unless you gave
+                        it an enable rule of your own, which stays. After making changes, validate again, then Generate.
                     </Typography>
                 </Box>
             </AccordionDetails>
