@@ -567,7 +567,16 @@ export function EntityEditDialog({
     // the inserter panel holds its edits until Save, so closing it with unsaved changes asks first
     const [inserterDirty, setInserterDirty] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    // each opening gets a fresh panel: one reopened while the last closing fades out must not keep that draft
+    const [openCount, setOpenCount] = useState(0);
+    const [wasOpen, setWasOpen] = useState(open);
+    if (open !== wasOpen) {
+        setWasOpen(open);
+        if (open) setOpenCount((count) => count + 1);
+    }
     const requestClose = () => {
+        // a closing dialog (its fade-out) has nothing left to ask about
+        if (!open) return;
         if (entityType === 'inserter' && inserterDirty) {
             setConfirmOpen(true);
         } else {
@@ -639,7 +648,7 @@ export function EntityEditDialog({
                     )}
                     {entity && entityType === 'inserter' && (
                         <InserterConfigPanel
-                            key={entityId ?? undefined}
+                            key={`${entityId}-${openCount}`}
                             inserter={entity as InserterFormData}
                             entityIndex={entityIndex}
                             machines={machines}
