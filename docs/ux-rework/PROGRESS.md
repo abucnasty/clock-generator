@@ -48,7 +48,7 @@ come from here.
 | [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | spec | | | Spec final; moved up (8 files). Waits for 1.1; not alongside 1.3, 1.4, 1.6 |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | impl | | | Moved up from sonnet: the spec touches about 12 files. Runs alongside 1.1 |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | spec | | | Spec final (about 24 files). After 1.8. Also wires 1.13's `forcedAlways` and capture step 7 |
-| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | fix-1 | | | Code review (Fable) PASS, UX audit (opus) PASS. Cheap minors before merge: header brackets, "clock period", Copies helper, tests, README |
+| [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
