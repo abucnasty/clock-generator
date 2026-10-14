@@ -5,6 +5,7 @@
     "src/browser.ts",
     "src/record-in-factorio.ts",
     "src/verify-recording.ts",
+    "src/rules-of-the-game.ts",
     "src/**/*.test.ts",
     "scripts/**/*.js",
     "resources/filter-raw.js"
