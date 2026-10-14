@@ -8,28 +8,33 @@ of the repo. Install it somewhere outside the repo.
 # once, outside the repo
 mkdir -p /tmp/ux-capture && cd /tmp/ux-capture && npm init -y && npm i playwright-core@1.56.1
 
-# the dev server (ignore-scripts is on, so copy the game data by hand)
-cd clock-generator-ui && node scripts/copy-factorio-data.mjs && npm run dev -- --port 5199 --strictPort
+# Node ignores NODE_PATH for ES modules, so copy the scripts next to playwright-core and run them from there
+cp docs/ux-rework/capture/{lib,capture,capture-extra}.mjs /tmp/ux-capture/
 
-# the walkthrough: writes PNGs, .aria.yml snapshots and INDEX.md into <out dir>
-NODE_PATH=/tmp/ux-capture/node_modules node docs/ux-rework/capture/capture.mjs <out dir>
-NODE_PATH=/tmp/ux-capture/node_modules node docs/ux-rework/capture/capture-extra.mjs <out dir> <next shot number>
+# capture against a production build (see "Shared helpers"): build once, the scripts serve it with `vite preview`
+cd clock-generator-ui && npm run build
+node /tmp/ux-capture/capture.mjs <out dir>                  # 1440, 960, 720 and 390 at once
+node /tmp/ux-capture/capture-extra.mjs <out dir>            # writes into <out dir>/extra
 ```
 
-If Node does not pick up `NODE_PATH` for ES modules, copy the scripts into `/tmp/ux-capture` and run them from there.
+`BASE_URL=http://localhost:5204` makes them use a server that is already running instead (a dev server needs
+`node scripts/copy-factorio-data.mjs && npm run dev -- --port 5204 --strictPort`; ignore-scripts is on, so the game data is
+copied by hand). The dev server runs React StrictMode, which breaks the autofocus of a dialog's field; capture against the
+preview unless you are debugging.
 
-- `capture.mjs` walks through the states at 1440×900:
-  - first visit
-  - the ⋮ menu and Paste from Factorio
-  - an imported build, in the List and the Diagram, with the editors
-  - Validate and Generate
-  - every Results tab
-  - copy, and an edit after generating.
-- `capture-extra.mjs` covers the narrow window, a broken build and a fuel build. It appends to `INDEX.md`.
-- Both use the sample configs in `clock-generator/resources/config-samples/` by absolute path, and find elements by
-  their 0.9.0 labels ("Validate", "Generate", "Advanced Overrides"…) and, for the enable rule of an inserter, the
-  chip's name (`/, Inserter \d+\. Edit rule$/`, which replaced the gear's "Configure Enable Control"). **Update the
-  selectors as the rework changes the UI**, and add the 960px and 720px passes the plan asks for.
+- `capture.mjs` runs the four widths of the plan (1440, 960, 720, 390) at once, each in its own browser context, into
+  `<out dir>/w<width>/` with a merged `INDEX.md`:
+  - **1440** is the full walkthrough: first visit, the ⋮ menu and Paste from Factorio, an imported build in the List and the
+    Diagram, with the editors, Validate and Generate, every Results tab, copy, an edit after generating (the stale
+    banner and "Copy old clock…"), a broken build, a fuel build, and a run in flight.
+  - **960, 720 and 390** take the layout states: first visit, Configure (List), Results and every tab, with a
+    no-side-scroll check and whether the Configure and Results tabs can be clicked. `WIDTHS=1440,390` picks other widths.
+- `capture-extra.mjs` covers the info tooltip, the narrow window above the fold, a broken build and a fuel build at 1440 and
+  390, into `<out dir>/extra/`.
+- Both use the sample configs in `clock-generator/resources/config-samples/` (`SAMPLES_DIR` for another checkout), and find
+  elements by their current labels ("Validate", "Generate", "Advanced Overrides", "Copy old clock…"…) and, for the enable
+  rule of an inserter, the chip's name (`/, Inserter \d+\. Edit rule$/`). **Update the selectors as the rework changes the
+  UI.** Waits for button text read `textContent`, not `innerText`: MUI upper-cases labels with CSS.
 - `capture-enable-chip.mjs <out dir> <before|after> [port]` checks the enable chip (item 1.13) at 1440px and 720px.
   `before` runs against the gear icon of 0.9.0; `after` runs the whole sequence and writes a pass or fail line per check
   into `INDEX.md`.
@@ -58,15 +63,52 @@ checks. `lib.mjs` needs `playwright-core`, and Node ignores `NODE_PATH` for ES m
 
 ```bash
 cp docs/ux-rework/capture/{lib,my-item}.mjs /tmp/ux-capture/
-BASE_URL=http://localhost:5204 node /tmp/ux-capture/my-item.mjs /tmp/ux-capture/out/my-item   # SAMPLES_DIR for a worktree
+node /tmp/ux-capture/my-item.mjs /tmp/ux-capture/out/my-item    # BASE_URL, SAMPLES_DIR, UI_DIR, PREVIEW_PORT are read from the environment
 ```
 
-- `openSession`, `createRecorder` (`shot`, `step`, `check`, `info`, `finish`) and `eachWidth` run the browser, number the
-  shots and write `INDEX.md` with a PASS or FAIL line per check. `finish()` returns a non-zero exit code if a check or a
-  step failed.
-- `importFile`, `goConfigure`, `goResults`, `validate`, `generate` and `openMenu` are the app actions. `validate` and
-  `generate` wait on the buttons' `textContent` until the work has finished.
-- `contrast`, `noSideScroll` and `isClickable` are the page measurements.
+**The fast pattern** (the evidence gate asks for it; `example-item.mjs` is the template):
+
+1. **Production build.** `previewServer({ port })` serves `clock-generator-ui/dist` with
+   `npx vite preview --port <port> --strictPort` and returns a stop function (`stop.url` is the address; `{ build: true }`
+   runs `npm run build` first, `UI_DIR` points at a worktree). Captures run against the preview by default (the scripts start
+   one unless `BASE_URL` is set). The dev server runs React StrictMode, which double-mounts components and so breaks the
+   autofocus of a dialog's field; that happens only in dev.
+2. **Widths at once.** `forWidths(widths, async ({ page, rec, width }) => ..., { out, base })` opens one browser context per
+   width and runs the steps for every width at the same time. Each width has its own recorder and writes into
+   `<out>/w<width>/` (files named `NN-<name>-<width>.png`); `run.finish({ title })` writes each width's `INDEX.md` and the
+   merged `<out>/INDEX.md`, and returns the exit code. (`eachWidth` still runs the widths one after the other on one page.)
+3. **One generation per width.** Import, Validate and Generate once, then take every Results state (each tab, each toggle)
+   from that run. Do not generate again to reach another state.
+4. **The small sample.** `SMALL_SAMPLE` is the build whose generation finishes fastest (`logistic-science-sample.json`; the
+   timings are in a comment in `lib.mjs`). Use it where the build's size does not matter. `LOGISTIC` (the default build)
+   is for states whose layout depends on the size: a long table, a tall diagram, the narrow window.
+5. **In flight.** `captureInFlight(page, rec, name)` clicks Generate, waits for the progress bar, shoots, then reloads the
+   page instead of waiting for the run to end. Runs of the small samples last 0.25 s, too short for a shot: use
+   `SLOW_SAMPLE` (2.6 s) for this state, and put it last, since the page reloads.
+
+Measured on 2026-10-14 (same shot list, logistic science, 1440 and 720, against a `vite preview`): 13.5 s one width after
+the other with the old waits, 4.6 s with `forWidths` and the event-based waits (preview start included).
+
+The helpers:
+
+- `openSession`, `createRecorder` (`shot`, `step`, `check`, `info`, `finish`), `eachWidth` and `forWidths` run the browser,
+  number the shots and write `INDEX.md` with a PASS or FAIL line per check. `finish()` returns a non-zero exit code if a
+  check or a step failed.
+- `importFile`, `goConfigure`, `goResults`, `validate`, `generate` and `openMenu` are the app actions. `importFile` waits
+  until Validate is usable, `validate` until the status chip changes, `generate` until the busy label is gone (both read
+  the buttons' `textContent`). `goConfigure` and `goResults` force the click, with a note, when another element covers the
+  tab (the header at 390 before item 1.2).
+- `contrast(page, locator, { sample })` is the text colour against the colour painted behind it: it blends the ancestors'
+  background colours **and** MUI's dark Paper elevation overlay (the `background-image` gradient). `sample: true` also
+  shoots the element with its text hidden and reads the pixels, to confirm a surprising number (`analyticRatio` keeps the
+  computed one). It returns `{ ratio, required, pass, color, background, fontSize, fontWeight, overlay }`.
+- `contrastPairs(page, [{ name, locator, required? }], rec)` records one check per pair against WCAG AA: 4.5:1 for text,
+  3:1 for text of at least 24 px (or 18.66 px and bold); `required: 3` for a non-text colour.
+- `accessibleName(page, locator)` is the name Chrome computes for the accessibility tree.
+  `checkLabelInName(rec, page, locator, label?)` records a check that it contains the visible text (case and spacing are
+  ignored; an icon-only control passes with a note).
+- `noSideScroll` and `isClickable` are the other page measurements.
 - "Before" shots are only for states the original review has no shot of; the review's shots already show 0.9.0.
-- The default widths are 1440 and 720. Add 390 (at 844 high) when the item affects reachability.
+- The default widths are 1440 and 720. Add 390 (at 844 high) when the item affects reachability, and 960 at phase end.
+
 - Never commit the screenshots. Attach a summary of the review to the phase PR instead.

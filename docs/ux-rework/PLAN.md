@@ -454,6 +454,13 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 
 ## The final PR (`feat/ux-rework` → `master`)
 
+0. **File the issues found (owner, 2026-10-14).** Every finding that was not fixed in the rework (the ledger's
+   Follow-ups, the known issues, and anything left open by the last UX review) becomes a GitHub issue, in one pass:
+   - the orchestrator drafts them in `docs/ux-rework/ISSUES.md`: one entry per issue with a title, a body (what's wrong,
+     where, how to reproduce, the finding it came from) and labels; duplicates merged; items fixed since dropped;
+   - **the owner reviews the draft** and edits, drops or approves entries;
+   - the orchestrator creates the approved ones with `gh issue create` and adds their links to the final PR.
+   This happens before `docs/ux-rework/` is deleted.
 1. Delete `docs/ux-rework/` in its own last commit.
 2. Bump the versions and changelogs (see Releases above).
 3. Run the full test workflow on the branch, including the generation tests.
