@@ -28,12 +28,11 @@ npm install
 ### Basic Usage
 
 1. Choose or create a configuration file in `resources/config-samples/` (JSON)
-2. Update `src/multi-machine-poc.ts` to use your desired config:
+2. Open it in the UI (`clock-generator-ui`), or generate its clock with the library in a file of your own under `src/`:
 
 ```typescript
 import { loadConfigFromFile } from './config/loader';
 import { ConfigPaths } from './config/config-paths';
-import { DebugSettingsProvider } from './crafting/sequence/debug/debug-settings-provider';
 import { generateClockForConfig } from './crafting/generate-blueprint';
 import { encodeBlueprintFile } from "./blueprints/serde";
 
@@ -41,8 +40,7 @@ async function main() {
     // Load a configuration file
     const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_SHARED_INSERTER);
 
-    const debug = DebugSettingsProvider.mutable();
-    const result = generateClockForConfig(config, debug);
+    const result = generateClockForConfig(config);
 
     console.log("----------------------");
     console.log(encodeBlueprintFile({
@@ -53,10 +51,10 @@ async function main() {
 main().catch(console.error);
 ```
 
-3. Run the generator:
+3. Build and run it:
 
 ```bash
-npm run dev
+npx tsc && node dist/<your file>.js
 ```
 
 4. Copy the output blueprint string and import it into Factorio
