@@ -67,7 +67,7 @@ come from here.
 | 2.7 | Factorio GUI grammar pass | opus | spec | | | |
 | 2.8 | In-game item names | sonnet | spec | | | |
 | 2.9 | Half-width layout | sonnet | spec | | | |
-| 2.10 | Developer timelines: light fixes | sonnet | spec | | | |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | spec | | | Spec final. After 1.14 |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | spec | | | Spec final; moved up (12 files). After 1.9 |
 
 ## Phase 3: expert depth
