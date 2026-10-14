@@ -27,6 +27,15 @@ If Node does not pick up `NODE_PATH` for ES modules, copy the scripts into `/tmp
   - copy, and an edit after generating.
 - `capture-extra.mjs` covers the narrow window, a broken build and a fuel build. It appends to `INDEX.md`.
 - Both use the sample configs in `clock-generator/resources/config-samples/` by absolute path, and find elements by
-  their 0.9.0 labels ("Validate", "Generate", "Configure Enable Control", "Advanced Overrides"…). **Update the
+  their 0.9.0 labels ("Validate", "Generate", "Advanced Overrides"…) and, for the enable rule of an inserter, the
+  chip's name (`/, Inserter \d+\. Edit rule$/`, which replaced the gear's "Configure Enable Control"). **Update the
   selectors as the rework changes the UI**, and add the 960px and 720px passes the plan asks for.
+- `capture-enable-chip.mjs <out dir> <before|after> [port]` checks the enable chip (item 1.13) at 1440px and 720px.
+  `before` runs against the gear icon of 0.9.0; `after` runs the whole sequence and writes a pass or fail line per check
+  into `INDEX.md`.
+- `capture-numbers.mjs <out dir> <start number> [port]` checks readable numbers and units (item 1.10) at 1440px and
+  720px: the number fields' short text and full value on focus (and that the stored value does not change), Machine
+  Facts, the diagram's machine node and the Potential Clocks headers. It writes a pass or fail line per check into
+  `INDEX.md`. Set `SAMPLES_DIR` to read the sample configs from another checkout (a worktree's
+  `clock-generator/resources/config-samples`).
 - Never commit the screenshots. Attach a summary of the review to the phase PR instead.

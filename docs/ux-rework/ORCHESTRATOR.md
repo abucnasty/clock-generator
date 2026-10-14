@@ -31,7 +31,8 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` �
 Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once. From step 2
 on, run at most **three items at once**, and only when their specs show no file in common. Run each in its own worktree
 (`isolation: "worktree"`). A spec drafted ahead is checked again against the phase branch before its item is
-implemented, since items merged in the meantime move its line numbers.
+implemented, since items merged in the meantime move its line numbers. The orchestrator decides the order in which
+items are implemented and merged (the owner, 2026-10-14), following the dependencies between the specs.
 
 ```
  1 Spec ─► 2 Implement ─► 3 Evidence gate ─► 4 Code review ─┐
@@ -89,6 +90,26 @@ implemented, since items merged in the meantime move its line numbers.
    - Wait for CI with `gh pr checks --watch`.
    - When CI is green and both verdicts are PASS, merge it yourself (squash, delete the branch).
 8. **Ledger and update.** Update `PROGRESS.md`, commit it to the phase branch, and send the owner the item update.
+
+## Staying responsive
+
+The owner must be able to ask a question at any time. So the orchestrator never blocks on long work. It keeps the
+judgement (verdicts, fix batches, specs, the merge decision) and hands the mechanical steps to background agents:
+
+| Step | Who does it | What the orchestrator keeps |
+|---|---|---|
+| Re-running the checks for the evidence gate | `haiku` runner | It opens two or three screenshots, and reads the runner's result lines |
+| Opening the PR, waiting for CI, squash-merging, deleting the branch and the worktree | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge, and the branch sweep below |
+| Rebasing a child branch on the moved phase branch, and resolving conflicts | The item's implementer (`SendMessage`), or a `sonnet` agent if it has finished | Which side wins when a conflict changes behaviour |
+| Anything that waits, such as `gh pr checks --watch` | A background agent or a background command | Nothing waits in the foreground |
+
+**Branch sweep.** Every merge removes the item's remote branch (`--delete-branch`), its worktree, its local branch and
+the worktree's placeholder branch (`worktree-agent-*`). After each merge the orchestrator runs
+`git fetch --prune` and `git branch --merged origin/<phase branch>`, and deletes any local `feat/ux-rework-p<N>-*` or
+`worktree-agent-*` branch that is merged and has no live worktree. A dropped or carried item's branches go too, once
+the ledger says so.
+
+Delegate only when it frees the orchestrator. A one-line `gh` or `git` call is quicker to run directly.
 
 ## Choosing the model
 

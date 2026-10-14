@@ -16,10 +16,12 @@ import { DebugPanel } from './DebugPanel';
 import { FuelPanel } from './FuelPanel';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
+import { StaleResultsBanner } from './StaleResultsBanner';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { rateWarningOf } from '../utils/rateWarning';
+import type { GeneratedFor } from '../utils/resultsStaleness';
 
 type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
@@ -49,6 +51,8 @@ interface ResultsWorkspaceProps {
     streamLogs: boolean;
     onStreamLogsChange: (stream: boolean) => void;
     onClearLogs: () => void;
+    /** What the clocks were made for, while the build has changed since. Null when not */
+    staleFor: GeneratedFor | null;
 }
 
 function TabBody({ shown, children }: { shown: boolean; children: ReactNode }) {
@@ -75,6 +79,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
     return (
         <Box>
+            {props.staleFor !== null && hasResults && <StaleResultsBanner generatedFor={props.staleFor} />}
+
             {props.error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                     {props.error}
@@ -168,6 +174,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         rateWarning={rateWarningOf(props.alternatives[props.selectedIndex])}
                         blueprintString={props.blueprintString}
                         simulationDurationTicks={props.simulationDurationTicks ?? undefined}
+                        staleFor={props.staleFor}
                     />
                 </TabBody>
             </Box>

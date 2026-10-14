@@ -1,4 +1,4 @@
-import { Add, Delete, Settings } from '@mui/icons-material';
+import { Add, Delete } from '@mui/icons-material';
 import {
     Autocomplete,
     Box,
@@ -6,7 +6,6 @@ import {
     IconButton,
     Paper,
     TextField,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import { TargetType } from 'clock-generator/light';
@@ -14,6 +13,7 @@ import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import { EnableControlModal } from './EnableControlModal';
+import { EnableRuleChip } from './EnableRuleChip';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
@@ -444,17 +444,13 @@ function InsertersFormComponent({
                         maxSlots={5}
                     />
 
-                    {/* Enable Control Settings */}
-                    <Tooltip title="Configure Enable Control">
-                        <IconButton
-                            onClick={() => setEnableControlModalInserterIndex(index)}
-                            color={inserter.overrides?.enable_control?.mode && inserter.overrides.enable_control.mode !== 'AUTO' ? 'primary' : 'default'}
-                        >
-                            <Settings />
-                        </IconButton>
-                    </Tooltip>
+                    <EnableRuleChip
+                        override={inserter.overrides?.enable_control}
+                        entityLabel={`Inserter ${index + 1}`}
+                        onClick={() => setEnableControlModalInserterIndex(index)}
+                    />
 
-                    <IconButton onClick={() => onRemove(index)} color="error">
+                    <IconButton onClick={() => onRemove(index)} color="error" sx={{ ml: 'auto' }}>
                         <Delete />
                     </IconButton>
                 </Box>

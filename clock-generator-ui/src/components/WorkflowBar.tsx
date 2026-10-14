@@ -2,7 +2,9 @@ import { Check, ContentCopy } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, CircularProgress, Paper, Snackbar, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { STALE_COPY_LABEL, STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { GenerationProgressStatus } from './BlueprintOutput';
+import { StaleCopyDialog } from './StaleCopyDialog';
 
 export type WorkflowView = 'configure' | 'results';
 
@@ -29,6 +31,8 @@ interface WorkflowBarProps {
     selectedLabel: string | null;
     /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
     rateWarning: string | null;
+    /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
+    staleFor: GeneratedFor | null;
 }
 
 /**
@@ -48,11 +52,13 @@ export function WorkflowBar({
     blueprintString,
     selectedLabel,
     rateWarning,
+    staleFor,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
     const [warned, setWarned] = useState(false);
+    const [confirmingOld, setConfirmingOld] = useState(false);
 
-    const handleCopy = useCallback(async () => {
+    const copyBlueprint = useCallback(async () => {
         if (!blueprintString) {
             return;
         }
@@ -99,15 +105,16 @@ export function WorkflowBar({
                                 {selectedLabel}
                             </Typography>
                         )}
-                        <Tooltip title={rateWarning ?? ''} arrow>
+                        {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
+                        <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild>
                             <Button
                                 variant="outlined"
                                 size="small"
-                                onClick={handleCopy}
-                                color={rateWarning ? 'warning' : copied ? 'success' : 'primary'}
+                                onClick={staleFor ? () => setConfirmingOld(true) : copyBlueprint}
+                                color={staleFor || rateWarning ? 'warning' : copied ? 'success' : 'primary'}
                                 startIcon={copied ? <Check /> : <ContentCopy />}
                             >
-                                {copied ? 'Copied' : 'Copy blueprint'}
+                                {copied ? 'Copied' : staleFor ? STALE_COPY_LABEL : 'Copy blueprint'}
                             </Button>
                         </Tooltip>
                         <Snackbar
@@ -120,6 +127,17 @@ export function WorkflowBar({
                                 Copied. {rateWarning}
                             </Alert>
                         </Snackbar>
+                        {staleFor && (
+                            <StaleCopyDialog
+                                open={confirmingOld && staleFor !== null}
+                                generatedFor={staleFor}
+                                onCancel={() => setConfirmingOld(false)}
+                                onConfirm={() => {
+                                    setConfirmingOld(false);
+                                    copyBlueprint();
+                                }}
+                            />
+                        )}
                     </>
                 )}
                 {validationStatus !== 'none' && validationStatus !== 'running' && (

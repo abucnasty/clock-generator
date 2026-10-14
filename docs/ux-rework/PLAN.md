@@ -310,6 +310,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - **Compare other clocks:** a compact table (Clock, Makes, Wake-ups/min, Works?) with "Show all columns" for the
     current full table
   - **Details** tabs: Insights (prose collapsed behind "Why?"), Fuel, and the blueprint string.
+- **Terms popover** (added 2026-10-14, the owner's glossary decision): a "Terms" item in ⋮ and an (i) by the Results
+  table headers open a popover listing the approved glossary (1.12), fed by a `glossary.ts`.
 - **Developer tools** (an item in ⋮, also turned on by `?debug`): the current Timelines, the Plan toggle, Detailed
   mode, and the Log tab with the debug switches.
 
