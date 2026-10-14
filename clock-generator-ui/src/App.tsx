@@ -41,7 +41,7 @@ import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { ValidationPanel } from './components/ValidationPanel';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { blockedActionsOf, focusProblemTarget, needsListView, problemsOf, type Problem } from './utils/firstProblem';
-import { rateWarningOf } from './utils/rateWarning';
+import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 
 const darkTheme = createTheme({
@@ -64,7 +64,12 @@ const darkTheme = createTheme({
         },
         error: {
             main: '#ff5958'
-        }
+        },
+        // a lemon yellow, told apart from the brand orange at a glance; black text on it
+        warning: {
+            main: '#ffe14d',
+            contrastText: '#000000',
+        },
     },
     typography: {
         fontFamily: '"Titillium Web", "Helvetica", "Arial", sans-serif',
@@ -366,6 +371,8 @@ function App() {
                             blueprintString={blueprintString}
                             selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
                             rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
+                            copyLabel={copyBlueprintLabelOf(alternatives[selectedAlternativeIndex], resultsAreStale)}
+                            belowTarget={isBelowTarget(alternatives[selectedAlternativeIndex])}
                             staleFor={staleFor}
                             problems={problems}
                             blocked={blocked}

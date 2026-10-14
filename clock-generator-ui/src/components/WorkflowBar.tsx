@@ -1,18 +1,19 @@
-import { Check, ContentCopy } from '@mui/icons-material';
+import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Alert, Box, Button, Chip, CircularProgress, Portal, Snackbar, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
-import { STALE_COPY_LABEL, STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
+import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { GenerationProgressStatus } from './BlueprintOutput';
 import { StaleCopyDialog } from './StaleCopyDialog';
 
 export type WorkflowView = 'configure' | 'results';
 
+// a warning is filled and has the warning icon, so it is not taken for the outlined orange buttons beside it
 const VALIDATION_CHIP = {
-    'valid': { label: 'Valid', color: 'success' },
-    'invalid': { label: 'Invalid', color: 'error' },
-    'out-of-date': { label: 'Changed since validation', color: 'warning' },
+    'valid': { label: 'Valid', color: 'success', variant: 'outlined', warns: false },
+    'invalid': { label: 'Invalid', color: 'error', variant: 'outlined', warns: false },
+    'out-of-date': { label: 'Changed since validation', color: 'warning', variant: 'filled', warns: true },
 } as const;
 
 interface WorkflowBarProps {
@@ -32,6 +33,10 @@ interface WorkflowBarProps {
     selectedLabel: string | null;
     /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
     rateWarning: string | null;
+    /** What the Copy button says when it has not just been used: "Copy blueprint", "… below target", or "Copy old clock…" */
+    copyLabel: string;
+    /** The selected clock runs short of the target rate: Copy is then a filled warning button */
+    belowTarget: boolean;
     /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
     /** What keeps the build from being validated and generated, first to fix first; empty when nothing does */
@@ -59,6 +64,8 @@ export function WorkflowBar({
     blueprintString,
     selectedLabel,
     rateWarning,
+    copyLabel,
+    belowTarget,
     staleFor,
     problems,
     blocked,
@@ -67,6 +74,10 @@ export function WorkflowBar({
     const [copied, setCopied] = useState(false);
     const [warned, setWarned] = useState(false);
     const [confirmingOld, setConfirmingOld] = useState(false);
+    // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
+    // since a filled button invites the click, and the copy of an old clock is the one to think twice about
+    const warns = rateWarning !== null || staleFor !== null;
+    const filled = belowTarget && staleFor === null;
 
     const copyBlueprint = useCallback(async () => {
         if (!blueprintString) {
@@ -108,13 +119,13 @@ export function WorkflowBar({
                             {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
                             <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild>
                                 <Button
-                                    variant="outlined"
+                                    variant={filled ? 'contained' : 'outlined'}
                                     size="small"
                                     onClick={staleFor ? () => setConfirmingOld(true) : copyBlueprint}
-                                    color={staleFor || rateWarning ? 'warning' : copied ? 'success' : 'primary'}
-                                    startIcon={copied ? <Check /> : <ContentCopy />}
+                                    color={warns ? 'warning' : copied ? 'success' : 'primary'}
+                                    startIcon={copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
                                 >
-                                    {copied ? 'Copied' : staleFor ? STALE_COPY_LABEL : 'Copy blueprint'}
+                                    {copied ? 'Copied' : copyLabel}
                                 </Button>
                             </Tooltip>
                             {/* stop-gap until 1.5's shared message host: in a portal, to be drawn above the app bar this bar is part of, at the bottom to stay off the header */}
@@ -155,9 +166,10 @@ export function WorkflowBar({
                     {validationStatus !== 'none' && validationStatus !== 'running' && (
                         <Chip
                             size="small"
-                            variant="outlined"
+                            variant={VALIDATION_CHIP[validationStatus].variant}
                             label={VALIDATION_CHIP[validationStatus].label}
                             color={VALIDATION_CHIP[validationStatus].color}
+                            icon={VALIDATION_CHIP[validationStatus].warns ? <Warning /> : undefined}
                         />
                     )}
                     {/* the reason is also the text under the buttons, which describes them for the keyboard and screen readers */}
