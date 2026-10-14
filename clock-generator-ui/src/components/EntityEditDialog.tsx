@@ -625,7 +625,9 @@ export function EntityEditDialog({
                     </IconButton>
                 </DialogTitle>
 
-                <DialogContent sx={entityType === 'inserter' ? { p: 0 } : { pt: '16px !important' }}>
+                {/* the inserter editor keeps Cancel and Save in a bar stuck to the bottom: a field reached with Tab stops
+                    above it instead of under it (WCAG 2.4.11) */}
+                <DialogContent sx={entityType === 'inserter' ? { p: 0, scrollPaddingBottom: 72 } : { pt: '16px !important' }}>
                     {entity && entityType === 'machine' && (
                         <>
                             <MachineEditSection

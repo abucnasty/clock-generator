@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from './workflowAnnouncement';
 
-const idle: WorkflowSnapshot = { validationStatus: 'none', isLoading: false, hasBlueprint: false, selectedLabel: null };
+const idle: WorkflowSnapshot = { validationStatus: 'none', isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null };
 const at = (changes: Partial<WorkflowSnapshot>, from: WorkflowSnapshot = idle): WorkflowSnapshot => ({ ...from, ...changes });
 
 describe('workflowAnnouncement: validation', () => {
@@ -49,6 +49,11 @@ describe('workflowAnnouncement: generation', () => {
     it('says nothing when it ends without a blueprint (an error, or a cleared run)', () => {
         expect(workflowAnnouncement(generating, at({ isLoading: false }, generating))).toBeNull();
         expect(workflowAnnouncement(generating, at({ isLoading: false, selectedLabel: 'Clock A' }, generating))).toBeNull();
+    });
+
+    it('says nothing when the run fails after some clocks arrived (its error alert says it)', () => {
+        const withClock = at({ hasBlueprint: true, selectedLabel: 'Clock A' }, generating);
+        expect(workflowAnnouncement(withClock, at({ isLoading: false, failed: true }, withClock))).toBeNull();
     });
 
     it('is not repeated while the run goes on and its clocks arrive', () => {

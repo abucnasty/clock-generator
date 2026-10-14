@@ -6,7 +6,8 @@
 //   WIDTHS       comma list, default "1440,960,720,390"
 //   STEPS        comma list of steps to run, default all. In the order they run:
 //                  landmarks, theme, slots, walk-configure, obscured, dialog, axe-configure, announce, walk-results, axe-results,
-//                  announce-dialog (last: it leaves the results out of date and imports a slower sample)
+//                  announce-dialog (it leaves the results out of date and imports a slower sample), inserter-dialog (1440 only:
+//                  the inserter editor walked at 1440x420 and 844x390), chest-slots (imports a build with three chest filters)
 //                (landmarks runs on first load, before the import; the import always runs after it; announce validates and
 //                generates, and walk-results / axe-results generate first if announce did not)
 //   WALK_MAX     most Tab stops recorded per view and width (default 250)
@@ -29,11 +30,11 @@
 //
 // Fast pattern (README): forWidths runs every width at once, one generation per width, the small sample, waits on textContent.
 // Against today's UI the new-behaviour checks FAIL by design; no step may crash (a missing element is a FAIL line).
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import {
-    forWidths, previewServer, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate, waitReady, contrast,
+    forWidths, previewServer, sample, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate, waitReady, contrast,
     tabTo, checkTabTo, focusNotObscured, checkFocusNotObscured, checkAnnounced,
 } from './lib.mjs';
 
@@ -138,6 +139,7 @@ function readFocus(page) {
             inHeader: Boolean(el.closest('header')),
             inMain: Boolean(el.closest('main, [role=main]')),
             inFooter: Boolean(el.closest('footer, [role=contentinfo]')), // the page footer is a landmark of its own, outside <main>
+            inMessage: Boolean(el.closest('.MuiSnackbar-root')), // the message host's snackbar is portalled to <body>, outside <main> by design
             iconOnly: clean === '' && Boolean(el.querySelector?.('svg')),
             deleteIcon: path.startsWith('M6 19c0'), // SELECTOR: confirm (MUI Delete icon path)
             ring: { kind: ring.kind, width: ring.width, style: ring.style, color: ring.color, offset: ring.offset },
@@ -230,8 +232,8 @@ function judgeStops(rec, view, stops, { inMainRule = false } = {}) {
     if (partly.length) rec.info(`${view}: stops partly covered when focused`, `${partly.length}: ${brief(partly.map((s) => `${s.desc} ${Math.round(s.obscured.fraction * 100)}% by ${s.obscured.by}`))}`);
 
     if (inMainRule) {
-        const outside = stops.filter((s) => !s.inHeader && !s.inMain && !s.inFooter);
-        rec.check(`${view}: every focus stop outside the header and the footer is inside <main>`, outside.length === 0, outside.length ? `${outside.length} outside: ${brief(outside.map((s) => s.desc))}` : `${n} stops`);
+        const outside = stops.filter((s) => !s.inHeader && !s.inMain && !s.inFooter && !s.inMessage);
+        rec.check(`${view}: every focus stop outside the header, the footer and a message is inside <main>`, outside.length === 0, outside.length ? `${outside.length} outside: ${brief(outside.map((s) => s.desc))}` : `${n} stops`);
     }
 
     const small = stops.filter((s) => (s.w < MIN_TARGET || s.h < MIN_TARGET) && !/^(Increase|Decrease)$/.test(s.name));
@@ -413,6 +415,8 @@ const STEP_LIST = [
                 shots: [
                     { name: 'focus-header', test: (s) => s.index === 0, desc: 'First Tab stop (header)' },
                     { name: 'focus-workflow', test: (s) => s.tag === 'button' && /^(Configure|Results)$/.test(s.name), desc: 'The Configure / Results toggle focused' },
+                    { name: 'focus-toggle-list', test: (s) => s.name === 'List view', desc: 'List view focused (selected): the ring\'s right side lies over Diagram view and must stay whole' },
+                    { name: 'focus-toggle-diagram', test: (s) => s.name === 'Diagram view', desc: 'Diagram view focused: the ring\'s left side lies over the selected List view' },
                     { name: 'focus-row', test: (s) => s.role === 'button' && s.roledescription === 'sortable', desc: 'A row\'s drag handle focused' },
                     { name: 'focus-slot', test: (s) => /^Filter \d+:/.test(s.name), desc: 'A filter slot focused' },
                     { name: 'focus-delete', test: (s) => s.deleteIcon || /^Delete\b/i.test(s.name), desc: 'A row\'s delete button focused' },
@@ -614,6 +618,101 @@ const STEP_LIST = [
             await page.waitForTimeout(400);
         },
     },
+    {
+        name: 'inserter-dialog',
+        async run({ page, rec, width }) {
+            // the inserter editor (opened from the Diagram) keeps Cancel and Save in a sticky bar: on a short window, a field
+            // reached with Tab must stop above it, not under it (2.4.11). Walked once, in the 1440 context, at two short sizes
+            if (width !== 1440) return;
+            await goConfigure(page);
+            await page.getByRole('button', { name: 'Diagram view' }).click(); // SELECTOR: confirm
+            await page.waitForTimeout(1200);
+            for (const size of [{ width: 1440, height: 420 }, { width: 844, height: 390 }]) {
+                await page.setViewportSize(size);
+                await page.waitForTimeout(300);
+                await page.locator('.react-flow__node-inserterNode').first().click(); // SELECTOR: confirm (opens the editor)
+                const dialog = page.getByRole('dialog').first();
+                try {
+                    await dialog.waitFor({ timeout: 5000 });
+                } catch {
+                    rec.check(`inserter editor opens at ${size.width}x${size.height}`, false, 'no dialog within 5 s');
+                    continue;
+                }
+                await page.waitForTimeout(500);
+                const tag = `${size.width}x${size.height}`;
+                const seen = new Set();
+                let shot = false;
+                for (let i = 0; i < 40; i++) {
+                    await page.keyboard.press('Tab');
+                    const id = await page.evaluate(() => {
+                        const el = document.activeElement;
+                        if (!el || el === document.body) return '';
+                        el.dataset.uxStop ??= String(Math.random());
+                        return el.dataset.uxStop;
+                    });
+                    if (!id || seen.has(id)) break; // the focus trap brought it back round
+                    seen.add(id);
+                    const r = await focusNotObscured(page);
+                    if (!shot && r.covered !== 'none') {
+                        shot = true;
+                        await rec.shot(page, `inserter-dialog-covered-${tag}`, { desc: `Inserter editor at ${tag}: a stop the sticky bar covers` });
+                    }
+                    await checkFocusNotObscured(rec, page, `inserter editor ${tag}, stop ${i + 1}`);
+                }
+                rec.info(`inserter editor ${tag}`, `${seen.size} Tab stops walked`);
+                await rec.shot(page, `inserter-dialog-${tag}`, { desc: `Inserter editor at ${tag}, after the Tab walk` });
+                await page.keyboard.press('Escape');
+                await page.waitForTimeout(400);
+                // Escape may ask about unsaved changes (1.8); nothing was edited, but close the prompt if it came
+                if ((await page.getByRole('dialog').count()) > 0) await page.keyboard.press('Escape');
+                await page.waitForTimeout(300);
+            }
+            await page.setViewportSize({ width, height: 900 });
+            await page.getByRole('button', { name: 'List view' }).click();
+            await page.waitForTimeout(500);
+        },
+    },
+    {
+        name: 'chest-slots',
+        async run({ page, rec, width }) {
+            // a chest with three filters, so the remove buttons sit between slots (and wrap at narrow widths)
+            const base = JSON.parse(readFileSync(sample('science/utility-science/utility-science-direct-insert-lds.json'), 'utf8'));
+            base.chests[0].item_filter = ['utility-science-pack', 'low-density-structure', 'processing-unit']
+                .map((item_name, i) => ({ item_name, request_count: i + 1 }));
+            const file = join(rec.out, 'chest-filters.json');
+            writeFileSync(file, JSON.stringify(base));
+            await goConfigure(page);
+            await importFile(page, file);
+            // SELECTOR: confirm (a chest slot's name ends in its count, "(2)"; an inserter's auto filter ends in "(auto)")
+            const slots = page.getByRole('button', { name: /^Filter \d+: .+ \(\d+\)$/ });
+            const n = await slots.count();
+            rec.check('a chest shows its filter slots', n >= 3, `${n} chest filter slots`);
+            if (n === 0) return;
+            const data = await page.evaluate(() => {
+                const box = (e) => e.getBoundingClientRect();
+                const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+                const chestSlots = [...document.querySelectorAll('[role=button][aria-label^="Filter"]')].filter((e) => /\(\d+\)$/.test(e.getAttribute('aria-label') ?? ''));
+                const removes = chestSlots.map((s) => s.parentElement.querySelector(':scope > button')).filter(Boolean);
+                const badges = chestSlots.map((s) => [...s.children].find((c) => /^\d+$/.test(c.textContent ?? ''))).filter(Boolean);
+                const add = document.querySelector('[aria-label="Add new filter"]');
+                const others = [...chestSlots, ...badges, ...(add ? [add] : [])];
+                const overlaps = removes.flatMap((b) => others
+                    .filter((o) => !b.parentElement.contains(o) && hit(box(b), box(o)))
+                    .map((o) => `${b.getAttribute('aria-label')} overlaps ${o.getAttribute('aria-label') ?? `badge "${o.textContent}"`}`));
+                const gaps = removes.map((b) => {
+                    const rb = box(b);
+                    const next = others.filter((o) => !b.parentElement.contains(o)).map(box).filter((r) => Math.abs(r.top - rb.top) < 40 && r.left >= rb.left);
+                    return next.length ? Math.round((Math.min(...next.map((r) => r.left)) - rb.right) * 10) / 10 : null;
+                }).filter((g) => g !== null);
+                return { removes: removes.map((b) => `${Math.round(box(b).width)}x${Math.round(box(b).height)}`), overlaps, gaps };
+            });
+            rec.check('chest remove buttons are 24x24 or more', data.removes.length >= 3 && data.removes.every((r) => r.split('x').every((v) => Number(v) >= 24)), data.removes.join(', ') || 'none found');
+            rec.check('a chest remove button overlaps no other slot, count badge or the add button', data.overlaps.length === 0, data.overlaps.length ? brief(data.overlaps, 3) : `clear; gaps to the next thing on the row: ${data.gaps.join(', ')}px`);
+            await axePass(page, rec, 'chest filters');
+            await slots.first().scrollIntoViewIfNeeded();
+            await rec.shot(page, 'chest-slots', { locator: slots.first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]'), desc: 'A chest with three filters: the remove buttons between the slots' });
+        },
+    },
 ];
 
 const wanted = process.env.STEPS ? process.env.STEPS.split(',').map((s) => s.trim()).filter(Boolean) : null;
@@ -633,7 +732,7 @@ let code = 1;
 try {
     const run = await forWidths(
         WIDTHS,
-        async ({ page, rec, context }) => {
+        async ({ page, rec, context, width }) => {
             const state = { validated: false, generated: false };
             // The polite regions' text over time (the status region must exist before its text changes, so watch from the first byte)
             await context.addInitScript((selector) => {
@@ -654,7 +753,7 @@ try {
             }, page);
             for (const step of STEP_LIST.filter((s) => s.before_import)) {
                 if (wanted && !wanted.includes(step.name)) continue;
-                await rec.step(step.name, () => step.run({ page, rec, state }), page);
+                await rec.step(step.name, () => step.run({ page, rec, state, width }), page);
             }
             await rec.step('import the small sample', async () => {
                 await goConfigure(page);
@@ -663,7 +762,7 @@ try {
             }, page);
             for (const step of STEP_LIST.filter((s) => !s.before_import)) {
                 if (wanted && !wanted.includes(step.name)) continue;
-                await rec.step(step.name, () => step.run({ page, rec, state }), page);
+                await rec.step(step.name, () => step.run({ page, rec, state, width }), page);
                 // a step that stopped half way (a throw) can leave a menu or dialog open: close it before the next one
                 await page.keyboard.press('Escape').catch(() => {});
             }

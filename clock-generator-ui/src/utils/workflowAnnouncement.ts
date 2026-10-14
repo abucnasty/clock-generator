@@ -14,6 +14,8 @@ export const ANNOUNCEMENTS = {
 export interface WorkflowSnapshot {
     validationStatus: 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
     isLoading: boolean;
+    /** The run stopped on an error; clocks that arrived before it may still be on screen */
+    failed: boolean;
     hasBlueprint: boolean;
     selectedLabel: string | null;
 }
@@ -28,8 +30,9 @@ export function workflowAnnouncement(prev: WorkflowSnapshot, next: WorkflowSnaps
         return ANNOUNCEMENTS.generating;
     }
     if (prev.isLoading && !next.isLoading) {
-        // without a blueprint the run failed, which its error alert says, or it was cleared, which is not news
-        if (!next.hasBlueprint) {
+        // a run that failed says so in its error alert, even when some clocks came in first; without a blueprint the run
+        // was cleared, which is not news
+        if (next.failed || !next.hasBlueprint) {
             return null;
         }
         return next.selectedLabel ? ANNOUNCEMENTS.finished(next.selectedLabel) : ANNOUNCEMENTS.finishedNoLabel;
