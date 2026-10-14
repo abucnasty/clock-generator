@@ -2,8 +2,9 @@ import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons
 import { Box, Button, Snackbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
-import { checkSidecarImport, Option, MachineConfigurationSchema, MiningDrillConfigSchema, InserterConfigSchema, BeltConfigSchema, ChestConfigSchema } from 'clock-generator/browser';
+import { checkSidecarImport, Option, parseConfigFromObject, MachineConfigurationSchema, MiningDrillConfigSchema, InserterConfigSchema, BeltConfigSchema, ChestConfigSchema } from 'clock-generator/browser';
 import type { z } from 'zod';
+import { migrateChests } from '../hooks/useConfigForm';
 
 type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 type MiningDrillConfiguration = z.infer<typeof MiningDrillConfigSchema>;
@@ -117,7 +118,12 @@ export function ConfigImportExport({
             try {
                 const content = await file.text();
                 
-                const parsedConfig = JSON.parse(content) as Config;
+                const parsed = JSON.parse(content);
+                // Files from before chest types have chests without a type
+                if (Array.isArray(parsed?.chests)) {
+                    parsed.chests = migrateChests(parsed.chests);
+                }
+                const parsedConfig = parseConfigFromObject(parsed);
 
                 onImport(parsedConfig);
                 setSnackbar({

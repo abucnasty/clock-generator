@@ -10,7 +10,7 @@ import type {
     SerializableTransferPlan,
     ValueReference,
 } from 'clock-generator/browser';
-import { ChestType } from 'clock-generator/browser';
+import { ChestType, ConfigSchema } from 'clock-generator/browser';
 
 const STORAGE_KEY = 'clock-generator-config';
 
@@ -214,7 +214,7 @@ function migrateInserters(inserters: unknown[]): InserterFormData[] {
 }
 
 /** Migrate legacy chest data to include type field */
-function migrateChests(chests: unknown[]): ChestFormData[] {
+export function migrateChests(chests: unknown[]): ChestFormData[] {
     return chests.map((chest: unknown) => {
         const c = chest as { type?: string; id: number; _uuid?: string; storage_size?: number; item_filter?: string | InfinityFilterFormData[] };
         const uuid = c._uuid ?? crypto.randomUUID();
@@ -260,7 +260,12 @@ function loadConfigFromStorage(): ConfigFormData {
                     parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                         d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
                 }
-                return parsed as ConfigFormData;
+                const result = ConfigSchema.safeParse(parsed);
+                // The form can hold values the generator rejects (e.g. 0 items per second); only reject a broken structure
+                if (result.success || result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big')) {
+                    return parsed as ConfigFormData;
+                }
+                console.warn('Saved config in localStorage is invalid, using defaults:', result.error);
             }
         }
     } catch (e) {
