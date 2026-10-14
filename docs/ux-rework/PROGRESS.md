@@ -77,6 +77,7 @@ Owner decisions made after the plan was written, and every change to `PLAN.md`, 
   load (the field is ignored).
 - 2026-10-14: The owner allowed specs to be drafted ahead without limit; implementation stays at two items at once with
   no file in common. `ORCHESTRATOR.md` ("The loop for each plan item") is updated to say so.
+- 2026-10-14: The owner raised the implementation cap from two items at once to three (still no file in common).
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions

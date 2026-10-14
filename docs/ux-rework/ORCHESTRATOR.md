@@ -29,7 +29,7 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` â
 ## The loop for each plan item
 
 Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once. From step 2
-on, run at most **two items at once**, and only when their specs show no file in common. Run each in its own worktree
+on, run at most **three items at once**, and only when their specs show no file in common. Run each in its own worktree
 (`isolation: "worktree"`). A spec drafted ahead is checked again against the phase branch before its item is
 implemented, since items merged in the meantime move its line numbers.
 
