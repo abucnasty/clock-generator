@@ -164,9 +164,6 @@ export interface ConfigFormData {
         search_for_fewer_wake_ups?: boolean;
         ignored_lcm_ingredients?: string[];
     };
-    /** UI-only: of each kind, an id past those of the entities removed from it, so that a new entity does not get one
-     *  of them, which references to the removed entity may still hold. Missing in forms saved before it. */
-    next_ids?: Partial<Record<EntityKind, number>>;
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({

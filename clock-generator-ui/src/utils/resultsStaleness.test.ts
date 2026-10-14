@@ -49,12 +49,11 @@ describe('isStale', () => {
         expect(isStale(generatedFor, keyOf(edits.updateTargetOutput(edited, 'items_per_second', 240)))).toBe(false);
     });
 
-    it('is false after a machine is added and removed again, since the form\'s own ids and next ids are not in the key', () => {
+    it('is false after a machine is added and removed again, since the form\'s own ids are not in the key', () => {
         const generated = form();
         const generatedFor = generatedForOf(formDataToConfig(generated));
         const added = edits.addMachine(generated);
         const removed = edits.removeMachine(added, added.machines.length - 1);
-        expect(removed.next_ids).toBeDefined();
         expect(isStale(generatedFor, keyOf(removed))).toBe(false);
     });
 });
