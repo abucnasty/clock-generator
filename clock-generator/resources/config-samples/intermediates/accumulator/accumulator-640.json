@@ -1,0 +1,195 @@
+{
+  "target_output": {
+    "recipe": "accumulator",
+    "items_per_second": 640,
+    "copies": 18
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "accumulator",
+      "productivity": 50,
+      "crafting_speed": 124.625,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "accumulator",
+      "productivity": 50,
+      "crafting_speed": 124.625,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 66.5,
+      "type": "machine"
+    },
+    {
+      "id": 4,
+      "recipe": "battery",
+      "productivity": 200,
+      "crafting_speed": 87.375,
+      "type": "machine"
+    },
+    {
+      "id": 5,
+      "recipe": "battery",
+      "productivity": 200,
+      "crafting_speed": 87.375,
+      "type": "machine"
+    },
+    {
+      "id": 6,
+      "recipe": "casting-copper",
+      "productivity": 150,
+      "crafting_speed": 112.244,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 3,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "id": 4,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "id": 5,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "id": 6,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "id": 7,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "id": 8,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "id": 9,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "id": 10,
+      "overrides": {}
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [],
+  "overrides": {}
+}

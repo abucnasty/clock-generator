@@ -84,8 +84,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         settle_ticks: 4800,
     },
     // its clocks have no belt pickup slack: batched swings has room for a hand of fuel in the windows of the three
-    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Selected is the
-    // clock with 2 output swings per cycle, since batched swings does not get back from a loss of nutrients
+    // inserters that take nutrients off the belt with their bioflux, without which they do not hold. Since the rules of
+    // issue 152 (2026-10-14) batched swings gets back from every loss and is selected; from 2026-10-10 until then the
+    // clock with 2 output swings per cycle was, since batched swings did not get back from a loss of nutrients
     "agricultural science (belts do not move)": {
         scaffold: path.join(SAMPLES, "science", "agriculture-science", "agriculture-science-scaffold.txt"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE,
@@ -182,6 +183,16 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         settle_ticks: 2400,
+    },
+    // The build of issue 152: two electromagnetic plants, two cryogenic plants and two foundries, 640 a second over 18
+    // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a period here.
+    // It settles from the scaffold's start over 4 periods of 972 ticks after the 2,400 the others take.
+    "accumulator": {
+        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640-scaffold.txt"),
+        config: ConfigPaths.ACCUMULATOR_640,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 7200,
     },
     "iron bacteria cultivation": {
         scaffold: path.join(SAMPLES, "gleba", "iron-bacteria-cultivation", "iron-bacteria-cultivation-scaffold.txt"),
