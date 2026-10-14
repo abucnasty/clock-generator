@@ -20,6 +20,7 @@ import type {
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { inferInserterItems } from '../utils/inferInserterItems';
+import { changedConfigFields } from '../utils/inserterDraft';
 import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
@@ -256,16 +257,15 @@ interface InserterConfigPanelProps {
     onDirtyChange?: (dirty: boolean) => void;
 }
 
-/** The fields the Config tab edits */
-const CONFIG_FIELDS = ['source', 'sink', 'stack_size', 'filters'] as const;
+// ---- Tab label with the unsaved mark ----
 
-/** The Config tab's fields that differ in the draft from the saved inserter, with their draft values */
-function changedConfigFields(draft: InserterFormData, saved: InserterFormData): Partial<InserterFormData> {
-    return Object.fromEntries(
-        CONFIG_FIELDS
-            .filter((key) => JSON.stringify(draft[key]) !== JSON.stringify(saved[key]))
-            .map((key) => [key, draft[key]]),
-    ) as Partial<InserterFormData>;
+function TabLabel({ text, unsaved }: { text: string; unsaved: boolean }) {
+    return (
+        <span>
+            {text}
+            {unsaved && <Box component="span" aria-hidden sx={{ ml: 0.5 }}>•</Box>}
+        </span>
+    );
 }
 
 // ---- Exported panel ----
@@ -337,7 +337,8 @@ export function InserterConfigPanel({
     }, [inserter.id, inserters]);
 
     const changedFields = useMemo(() => changedConfigFields(draft, inserter), [draft, inserter]);
-    const dirty = rule.changed || Object.keys(changedFields).length > 0;
+    const configDirty = Object.keys(changedFields).length > 0;
+    const dirty = rule.changed || configDirty;
 
     // a layout effect, like the rule form's, so that an Esc right after an edit already asks
     useLayoutEffect(() => {
@@ -367,9 +368,16 @@ export function InserterConfigPanel({
                 onChange={(_, v) => setActiveTab(v)}
                 sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
             >
-                <Tab label="Config" id={`${id}-tab-0`} aria-controls={`${id}-tabpanel-0`} />
+                {/* a tab with unsaved edits is marked "•" (its chip still shows the saved rule) */}
                 <Tab
-                    label="Overrides"
+                    label={<TabLabel text="Config" unsaved={configDirty} />}
+                    aria-label={configDirty ? 'Config, unsaved changes' : undefined}
+                    id={`${id}-tab-0`}
+                    aria-controls={`${id}-tabpanel-0`}
+                />
+                <Tab
+                    label={<TabLabel text="Overrides" unsaved={rule.changed} />}
+                    aria-label={rule.changed ? 'Overrides, unsaved changes' : undefined}
                     id={`${id}-tab-1`}
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
