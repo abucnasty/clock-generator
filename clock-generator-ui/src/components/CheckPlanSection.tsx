@@ -40,35 +40,20 @@ export function CheckPlanSection({
     if (current !== undefined && current !== lastPlan) {
         setLastPlan(current);
     }
+    const running = checkStatus === 'running';
     const checkingRow = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <CircularProgress size={16} color="inherit" />
+            <CircularProgress size={16} color="inherit" aria-hidden />
             <Typography variant="body2">{CHECK_TEXT.checking}</Typography>
         </Box>
     );
-    if (checkStatus === 'running') {
-        if (!lastPlan) {
-            return checkingRow;
-        }
-        return (
-            <>
-                {checkingRow}
-                {/* dimmed, not inert: the chip that started the check keeps the focus; a press meanwhile does nothing */}
-                <Box aria-busy="true" sx={{ opacity: 0.45, pointerEvents: 'none', overflowX: 'auto' }}>
-                    <TransferPlanPanel
-                        transferPlan={lastPlan.transfer_plan}
-                        usedLcm={lastPlan.used_lcm}
-                        excludedIngredients={excludedIngredients}
-                        onExcludeChange={onExcludeChange}
-                    />
-                </Box>
-            </>
-        );
+    if (running && !lastPlan) {
+        return checkingRow;
     }
     if (checkStatus === 'invalid') {
         return <Typography variant="body2" color="text.secondary">{CHECK_TEXT.planFailed}</Typography>;
     }
-    if (validation.status !== 'valid') {
+    if (!running && validation.status !== 'valid') {
         // never checked, the build was replaced, or a failed check is out of date: there is no plan to show
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -92,15 +77,24 @@ export function CheckPlanSection({
         );
     }
     const isOutOfDate = checkStatus === 'out-of-date';
-    const plan = validation.validation;
+    // while a check runs again, the last plan stays, dimmed: the same elements, so the chip that started it keeps the focus
+    const plan = running ? lastPlan : validation.status === 'valid' ? validation.validation : null;
+    if (!plan) {
+        return null;
+    }
     return (
         <>
-            {isOutOfDate && (
+            {running ? checkingRow : isOutOfDate ? (
                 // not an alert: it follows every edit, and is not news to read out
                 <Alert severity="warning" role="none" sx={{ mb: 1 }}>{CHECK_TEXT.planOutOfDate}</Alert>
-            )}
-            {/* the plan's table is wider than a phone: it scrolls on its own, not the page */}
-            <Box inert={isOutOfDate} sx={{ opacity: isOutOfDate ? 0.45 : 1, pointerEvents: isOutOfDate ? 'none' : 'auto', overflowX: 'auto' }}>
+            ) : null}
+            {/* the plan's table is wider than a phone: it scrolls on its own, not the page. Dimmed and inert when out of
+                date; only dimmed while checked again (a press meanwhile does nothing), so the focus stays on it */}
+            <Box
+                inert={isOutOfDate}
+                aria-busy={running || undefined}
+                sx={{ opacity: isOutOfDate || running ? 0.45 : 1, pointerEvents: isOutOfDate || running ? 'none' : 'auto', overflowX: 'auto' }}
+            >
                 {!isOutOfDate && (
                     // not an alert: the check's result is read out once, from the workflow bar
                     <Alert severity="success" role="none" sx={{ mb: 1 }}>

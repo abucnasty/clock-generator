@@ -104,7 +104,10 @@ The helpers:
 - `importFile`, `goConfigure`, `goResults`, `validate`, `generate` and `openMenu` are the app actions. `importFile` waits
   until Check only is usable, `validate` (it clicks "Check only", which replaced Validate in 2.3) until the check's chip
   changes, `generate` until neither busy label ("Checking...", "Generating...") shows (both read the buttons'
-  `textContent`). Generate alone is enough to get clocks: it checks first. `goConfigure` and `goResults` force the click, with a note, when another element covers the
+  `textContent`). Generate alone is enough to get clocks: it checks first.
+- Scripts written before 2.3 (`capture-header.mjs`, `capture-first-problem-warning.mjs`, `capture-messages-undo.mjs`,
+  `capture-copy.mjs`) target the Validate button and the Validation card, which 2.3 removed; for the current UI use
+  `capture.mjs` and `capture-generate-checks.mjs`. `goConfigure` and `goResults` force the click, with a note, when another element covers the
   tab (the header at 390 before item 1.2).
 - `contrast(page, locator, { sample })` is the text colour against the colour painted behind it: it blends the ancestors'
   background colours **and** MUI's dark Paper elevation overlay (the `background-image` gradient). `sample: true` also

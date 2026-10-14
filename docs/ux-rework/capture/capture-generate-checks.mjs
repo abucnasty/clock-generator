@@ -643,7 +643,8 @@ try {
                 rec.check('hovering Generate shows the note in its tooltip', genTip === T.noRecipe, show(genTip));
                 if (genTip) seen(genTip);
                 const coTip = await tipOf(checkOnlyBtn(page));
-                rec.check('hovering Check only shows "Checks that your build can be clocked, without making any clocks."', coTip === T.checkOnlyTooltip, show(coTip));
+                // fix round 1: with a problem, Check only's tooltip says the problem, as Generate's does (it goes to the note)
+                rec.check('hovering Check only on a build with a problem shows the problem, as Generate does', coTip === T.noRecipe, show(coTip));
                 if (coTip) {
                     seen(coTip);
                     await pairs(page, rec, [{ name: 'Check only tooltip text on its surface', locator: page.getByRole('tooltip').first() }]);
@@ -697,6 +698,37 @@ try {
                     const tl = await timeline(page);
                     rec.check('Check only on an empty build: no check ran', !tl.sawChecking, tl.sawChecking ? 'it showed "Checking..."' : 'never');
                     rec.check('Check only on an empty build: no chip says Check passed or Check failed', !(await exists(passedChip(page))) && !(await exists(failedChip(page))));
+                    // a mouse click must show where the focus went: the note's own outline, and no tooltip over it
+                    const look = await page.evaluate((id) => {
+                        const note = document.getElementById(id);
+                        if (!note) return null;
+                        const cs = getComputedStyle(note);
+                        const r = note.getBoundingClientRect();
+                        const points = [[r.left + 4, r.top + r.height / 2], [r.left + r.width / 2, r.top + r.height / 2], [r.right - 4, r.top + r.height / 2]];
+                        const covered = points.map(([x, y]) => document.elementFromPoint(x, y)).filter((el) => !el || !note.contains(el))
+                            .map((el) => (el ? `${el.tagName}.${String(el.className).split(' ')[0]}` : 'nothing'));
+                        return { outlineStyle: cs.outlineStyle, outlineWidth: parseFloat(cs.outlineWidth), outlineColor: cs.outlineColor, covered };
+                    }, REASON_ID);
+                    rec.check('Check only (mouse) on an empty build: the focused note has a visible outline', Boolean(look) && look.outlineStyle !== 'none' && look.outlineWidth >= 2, show(look && { style: look.outlineStyle, width: look.outlineWidth, color: look.outlineColor }));
+                    rec.check('Check only (mouse) on an empty build: no tooltip or other element covers the note', Boolean(look) && look.covered.length === 0, show(look?.covered ?? null));
+                    // the click moved the focus to the note, which closes the tooltip; hovered again, it opens above the button
+                    await page.mouse.move(1, 1);
+                    await page.waitForTimeout(400);
+                    await checkOnlyBtn(page).hover();
+                    await page.waitForTimeout(700);
+                    const tip = await page.locator('.MuiTooltip-tooltip').first().textContent({ timeout: 1500 }).catch(() => null);
+                    rec.check('Check only hovered again: its tooltip says the problem, as Generate\'s does', tip === T.noRecipe, show(tip));
+                    const coveredWhileHovered = await page.evaluate((id) => {
+                        const note = document.getElementById(id);
+                        if (!note) return ['no note'];
+                        const r = note.getBoundingClientRect();
+                        return [[r.left + 4, r.top + r.height / 2], [r.left + r.width / 2, r.top + r.height / 2], [r.right - 4, r.top + r.height / 2]]
+                            .map(([x, y]) => document.elementFromPoint(x, y)).filter((el) => !el || !note.contains(el))
+                            .map((el) => (el ? `${el.tagName}.${String(el.className).split(' ')[0]}` : 'nothing'));
+                    }, REASON_ID);
+                    rec.check('Check only hovered: its tooltip does not cover the note', coveredWhileHovered.length === 0, show(coveredWhileHovered));
+                    await page.mouse.move(1, 1);
+                    await rec.shot(page, 's1-check-only-mouse', { desc: 'Empty build, Check only clicked with the mouse: the note outlined, the tooltip (the problem) above the button' });
                     await rec.shot(page, 's1-check-only-focus', { desc: 'Empty build, scrolled down, Check only pressed: the note focused, the page where it was' });
                 }
                 await toTop(page);
@@ -777,8 +809,7 @@ try {
                 const said = tl.live.filter((l) => l.role !== 'alert-mounted').map((l) => l.text);
                 rec.info('live announcements during Generate', show(said));
                 rec.check('announcements: a check that Generate started and passed says nothing of its own', !said.some((t) => ANN_PASSED.test(t) && !ANN_GENERATING.test(t)), show(said));
-                // 1.11 B (announcements, workflowAnnouncement.ts) is not on the Phase 2 branch yet; 2.3 adds no "Generating" of its own
-                rec.info('announcements: "Generating clocks." (1.11 B, not in this base)', said.some((t) => ANN_GENERATING.test(t)) ? 'announced' : `not announced: ${show(said)}`);
+                rec.check('announcements: "Generating clocks." is announced', said.some((t) => ANN_GENERATING.test(t)), show(said));
                 // Search deeper offer (S9 uses CHEMICAL)
                 rec.info('Search deeper offered on the small sample', String(await exists(deeperBtn(page))));
                 await checkGeometry(rec, page, 'Results after Generate');
@@ -1220,6 +1251,9 @@ try {
                     const n = (t) => Number((t ?? '0').replace(/\D/g, '')) || 0;
                     rec.check('excluding an ingredient: the "excluded" chip count goes up', n(after) > n(before), `${show(before)} -> ${show(after)}`);
                     rec.check('excluding an ingredient: the view is unchanged (Configure)', (await viewOf(page)) === 'configure');
+                    // the check the chip started is not the bar's: the focus stays in the plan, not on the bar's Check only
+                    const focusAfter = await page.evaluate(() => ({ text: (document.activeElement?.textContent ?? '').trim().slice(0, 30), inHeader: Boolean(document.activeElement?.closest('header')) }));
+                    rec.check('excluding an ingredient: the focus does not jump to the bar\'s Check only', !focusAfter.inHeader, show(focusAfter));
                     rec.check('excluding an ingredient: the page did not jump', Math.abs((await scrollYOf(page)) - y) <= 120, `${y} -> ${await scrollYOf(page)}`);
                     p = await planInfo(page);
                     rec.check('excluding an ingredient: the check ran again by itself (the plan is not dimmed, the chip stays)', Boolean(p.inside) && !isDimmed(p) && (await exists(passedChip(page))), `${show(p.inside)}; chips ${show((await barState(page)).chips)}`);
