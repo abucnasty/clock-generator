@@ -166,9 +166,9 @@ await step('import-logistic', async () => {
 });
 
 await step('enable-control', async () => {
-    await page.getByRole('button', { name: 'Configure Enable Control' }).first().click();
+    await page.getByRole('button', { name: /, Inserter \d+\. Edit rule$/ }).first().click();
     await page.waitForTimeout(700);
-    await shot('enable-control-modal', 'Inserter row "Configure Enable Control" button clicked: the enable-control / rule editor modal');
+    await shot('enable-control-modal', 'Inserter row enable chip ("..., Inserter N. Edit rule") clicked: the enable-control / rule editor modal');
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
 });
