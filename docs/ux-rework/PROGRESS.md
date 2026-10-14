@@ -39,7 +39,7 @@ come from here.
 
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | fix-1 | | | Code review (Fable) PASS, UX audit (opus) PASS: A5, B1, C5 fixed. Cheap minors before merge (caption, note, dialog wording, tests, ids, onerror guard) |
+| [1.1](specs/1.1-stale-results.md) | Never offer a stale blueprint | opus | merging | | | Code review (Fable) PASS, UX audit (opus) PASS: A5, B1, C5 fixed. Cheap minors before merge (caption, note, dialog wording, tests, ids, onerror guard) |
 | [1.2](specs/1.2-header.md) | Header usable at every width | sonnet | spec | | | Spec final; waits for 1.1 (shares `App.tsx`, `WorkflowBar.tsx`, `ConfigImportExport.tsx`) |
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | spec | | | Spec final; moved up (7 files). After 1.5 (uses `notify()`) and 1.8 (`serializeConfig`) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Spec final; moved up (9 files). After 1.1 and 1.2; not alongside 1.3, 1.5 |
@@ -153,6 +153,8 @@ Minor and nit findings, and anything noticed outside an item's scope.
   Validate. When 2.3 removes that gate, check these strings hold. 1.4 shows "Validate the build first" meanwhile.
 - 1.1: the stale banner's `role="alert"` is inserted while Results is hidden, so it is rarely announced; consider
   dropping the live role (1.11).
+- 1.1: after start-up, an uncaught worker crash during a Validate (no generation on screen) is now ignored, so
+  Validate could stay pending. Rare; also cover a pending Validate in the `onerror` guard (Phase 3 cancel item, or 2.3).
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
