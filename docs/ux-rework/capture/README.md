@@ -38,4 +38,10 @@ If Node does not pick up `NODE_PATH` for ES modules, copy the scripts into `/tmp
   Facts, the diagram's machine node and the Potential Clocks headers. It writes a pass or fail line per check into
   `INDEX.md`. Set `SAMPLES_DIR` to read the sample configs from another checkout (a worktree's
   `clock-generator/resources/config-samples`).
+- `capture-header.mjs <out dir> [port]` checks the header (item 1.2) at 1440, 960, 720 and 390px: the Configure and Results
+  toggles, Generate and Copy are clickable (`elementFromPoint`), nothing in the header overlaps, the content starts below
+  the header, the header stays pinned on scroll, the title, the ⋮ menu, Export, Import and Paste from Factorio from the
+  menu, Validate scrolling to the Validation panel and the "Copied." warning. It writes a pass or fail line per check
+  into `INDEX.md`. Run it before and after a change to the header into two out dirs. Set `SAMPLES_DIR` to read the sample
+  configs from another checkout. It finds Copy by `/^Copy/`, since it reads "Copy old clock…" while results are stale.
 - Never commit the screenshots. Attach a summary of the review to the phase PR instead.
