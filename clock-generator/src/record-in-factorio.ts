@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { loadConfigFromFile } from "./config/loader";
+import "./data/factorio-data-file";
 import { clockOfBlueprintString, recordInFactorio, Seed } from "./harness/factorio-harness";
 import { summarizeRecording } from "./harness/recording-summary";
 

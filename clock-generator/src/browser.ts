@@ -133,7 +133,7 @@ export {
 export {
     encodeBlueprintFileBrowser,
     decodeBlueprintFileBrowser,
-} from './blueprints/serde';
+} from './blueprints/serde-browser';
 
 export {
     FactorioBlueprint,

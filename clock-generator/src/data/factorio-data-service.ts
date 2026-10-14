@@ -1,4 +1,3 @@
-import fs from "fs";
 import { FactorioData, Ingredient, Item, ItemName, MiningDrillSpec, Recipe, Resource, ResourceName } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
@@ -12,26 +11,27 @@ export interface EnrichedRecipe extends Recipe {
     results: EnrichedIngredient[];
 }
 
-/**
- * Check if we're running in a browser environment
- */
-function isBrowser(): boolean {
-    return typeof window !== 'undefined' && typeof window.document !== 'undefined';
-}
-
 export class FactorioDataService {
 
     private static factorio_data: FactorioData | null = null;
     private static initialized: boolean = false;
+    private static default_source: (() => FactorioData) | null = null;
 
     /**
      * Initialize the service with Factorio data.
-     * In Node.js, this is called automatically on first use.
+     * In Node.js, importing `factorio-data-file` makes this happen on first use.
      * In browser, call this with fetched data before using the service.
      */
     public static initialize(data: FactorioData): void {
         this.factorio_data = data;
         this.initialized = true;
+    }
+
+    /**
+     * Where the data comes from when it is used before `initialize`: `factorio-data-file` sets the file in resources/.
+     */
+    public static setDefaultSource(source: () => FactorioData): void {
+        this.default_source = source;
     }
 
     /**
@@ -42,25 +42,19 @@ export class FactorioDataService {
     }
 
     /**
-     * Get the Factorio data, initializing from file if in Node.js environment.
+     * Get the Factorio data, initializing from the default source if there is one.
      */
     private static getData(): FactorioData {
         if (!this.factorio_data) {
-            if (isBrowser()) {
+            if (!this.default_source) {
                 throw new Error(
                     "FactorioDataService not initialized. Call FactorioDataService.initialize(data) with fetched data before use."
                 );
             }
-            // Auto-initialize in Node.js environment
-            this.factorio_data = this.readRawFromResourceFile();
+            this.factorio_data = this.default_source();
             this.initialized = true;
         }
         return this.factorio_data;
-    }
-
-    private static readRawFromResourceFile(): FactorioData {
-        const file = fs.readFileSync("resources/data-filtered.json", "utf-8");
-        return JSON.parse(file) as FactorioData;
     }
 
     // ============ Recipe Listing Methods ============
