@@ -164,12 +164,17 @@ export function addInserter(prev: ConfigFormData): ConfigFormData {
     };
 }
 
+/** An update with `overrides` replaces the rule, so the inserter's rule is no longer one forced by Exclude from LCM */
 export function updateInserter(prev: ConfigFormData, index: number, updates: Partial<InserterFormData>): ConfigFormData {
     return {
         ...prev,
-        inserters: prev.inserters.map((ins, i) =>
-            i === index ? { ...ins, ...updates } : ins
-        ),
+        inserters: prev.inserters.map((ins, i) => {
+            if (i !== index) return ins;
+            if (!('overrides' in updates)) return { ...ins, ...updates };
+            const { _forced_always: _f, ...rest } = ins;
+            void _f;
+            return { ...rest, ...updates };
+        }),
     };
 }
 
@@ -446,13 +451,16 @@ export function updateOverrides(
     };
 }
 
+/**
+ * Sets the ingredients left out of the LCM. An inserter whose items are now all excluded and that has no rule of its
+ * own (AUTO) is forced to ALWAYS, and flagged so; including one of its items again takes away only that forced ALWAYS.
+ * A rule the player set (ALWAYS, NEVER, CLOCKED or CONDITIONAL) is never replaced or removed.
+ */
 export function updateIgnoredIngredients(
     prev: ConfigFormData,
     items: string[],
     transferPlan: SerializableTransferPlan,
 ): ConfigFormData {
-    const prevIgnored = prev.overrides?.ignored_lcm_ingredients ?? [];
-
     const updatedInserters = prev.inserters.map((ins) => {
         const planEntry = transferPlan.entities.find(
             (e) => e.entity_type === 'inserter' && e.entity_number === ins.id
@@ -460,27 +468,30 @@ export function updateIgnoredIngredients(
         if (!planEntry || planEntry.item_transfers.length === 0) return ins;
 
         const allNowIgnored = planEntry.item_transfers.every((t) => items.includes(t.item_name));
-        const allPrevIgnored = planEntry.item_transfers.every((t) => prevIgnored.includes(t.item_name));
+        const mode = ins.overrides?.enable_control?.mode ?? 'AUTO';
 
         if (allNowIgnored) {
-            // Auto-force to ALWAYS
+            // a rule of the player's own stays; an inserter already forced stays forced
+            if (mode !== 'AUTO') return ins;
             return {
                 ...ins,
                 overrides: {
                     ...ins.overrides,
                     enable_control: { mode: 'ALWAYS' as const },
                 },
+                _forced_always: true as const,
             };
-        } else if (allPrevIgnored && ins.overrides?.enable_control?.mode === 'ALWAYS') {
-            // Was auto-forced to ALWAYS because all its items were previously ignored;
-            // revert by removing the enable_control override
-            const { enable_control: _ec, ...restOverrides } = ins.overrides ?? {};
+        }
+        if (ins._forced_always) {
+            const { _forced_always: _f, overrides, ...unflagged } = ins;
+            void _f;
+            // any rule other than the forced ALWAYS stays (replacing the rule unflags the inserter, so this is only
+            // a safeguard)
+            if (mode !== 'ALWAYS') return overrides ? { ...unflagged, overrides } : unflagged;
+            // the ALWAYS was put there by Exclude, so it goes, and the overrides with it once none is left
+            const { enable_control: _ec, ...restOverrides } = overrides ?? {};
             void _ec;
-            const hasRemainingOverrides = Object.keys(restOverrides).length > 0;
-            return {
-                ...ins,
-                overrides: hasRemainingOverrides ? restOverrides : undefined,
-            };
+            return Object.keys(restOverrides).length > 0 ? { ...unflagged, overrides: restOverrides } : unflagged;
         }
 
         return ins;
