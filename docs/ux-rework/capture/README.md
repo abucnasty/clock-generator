@@ -54,6 +54,9 @@ preview unless you are debugging.
   before and after a delete, a reorder and a reload, the references in the saved form, an old saved form with `next_ids`, the
   dimmed Transfer Plan from the keyboard, the inserter row's layout and the forced-ALWAYS tooltip of the enable chip (step 13,
   which is step 7 of `capture-enable-chip.mjs`). `RESULTS=1` also generates a sample after a delete (slow).
+- `capture-first-problem-warning.mjs <out dir>` (on `lib.mjs`) checks items 1.4 and 1.14 at 1440, 720 and 390px: the problem
+  chip and reason in the bar, the jump to the first problem, the disabled buttons' reasons, the warning yellow and the
+  below-target Copy. `STEPS` (a regexp: `^P` for 1.4, `^W` for 1.14) runs a part; `UI_DIR` names the checkout it greps.
 
 ## Shared helpers
 

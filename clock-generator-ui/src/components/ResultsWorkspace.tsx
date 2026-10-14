@@ -27,6 +27,7 @@ import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import { VIEW_HEADING } from '../utils/wakeWindowCopy';
+import type { Problem } from '../utils/firstProblem';
 
 type ResultsTab = 'wakeWindows' | 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
@@ -49,6 +50,8 @@ interface ResultsWorkspaceProps {
     keptOn: boolean;
     /** False whenever Generate would be disabled */
     canSearchDeeper: boolean;
+    /** Why Search deeper is off, as Generate says it; null when it is on or a run is going */
+    searchDeeperBlockedBy: Problem | null;
     /** Generates again with the slower searches; `keepOn` also turns the switch on in the form */
     onSearchDeeper: (keepOn: boolean) => void;
     blueprintString: string | null;
@@ -134,6 +137,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         kind={noticeKind}
                         recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
                         canSearchDeeper={props.canSearchDeeper}
+                        blockedBy={props.searchDeeperBlockedBy}
                         onSearchDeeper={props.onSearchDeeper}
                     />
                 }
