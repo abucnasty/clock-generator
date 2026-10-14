@@ -148,7 +148,7 @@ export function OverridesForm({
                     </Tooltip>
                 </Box>
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
-                    Note: If the final output machine has more than 1 inserter, the terminal swing count will be devided equally between them.
+                    Note: If the final output machine has more than one inserter, the output swings you force are divided equally between them.
                 </Typography>
             </AccordionDetails>
         </Accordion>

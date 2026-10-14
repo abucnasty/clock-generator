@@ -779,3 +779,341 @@ export async function isClickable(page, locator) {
         return Boolean(hit) && el.contains(hit);
     });
 }
+
+// ------------------------------------------------------------------------------------------------ keyboard and focus
+
+/**
+ * Presses Tab (Shift+Tab with `shift: true`) from where focus is now until the locator's element, or a descendant of it, has
+ * focus. When the locator matches several elements, reaching any of them counts. It stops early when focus has gone all the
+ * way round (back to where it started) and never throws on "not reached": a control Tab cannot reach is a finding, not a crash.
+ * `presses: 0` means focus was already there.
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @param {{ max?: number, shift?: boolean }} [options]
+ * @returns {Promise<{ reached: boolean, presses: number }>}
+ */
+export async function tabTo(page, locator, { max = 200, shift = false } = {}) {
+    const key = shift ? 'Shift+Tab' : 'Tab';
+    const hasFocus = () =>
+        locator
+            .evaluateAll((els) => els.some((el) => el.contains(document.activeElement)))
+            .catch(() => false); // the element went away while the app re-rendered: not reached yet
+    if (await hasFocus()) return { reached: true, presses: 0 };
+    if ((await locator.count().catch(() => 0)) === 0) return { reached: false, presses: 0 };
+    // Where the walk started, to notice a full circle (body when nothing was focused; the focus then leaves the page and comes back as body once)
+    await page.evaluate(() => {
+        window.__uxTabStart = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+        window.__uxTabBodySeen = 0;
+    });
+    for (let presses = 1; presses <= max; presses++) {
+        await page.keyboard.press(key);
+        if (await hasFocus()) return { reached: true, presses };
+        const wrapped = await page.evaluate(() => {
+            const el = document.activeElement;
+            if (window.__uxTabStart) return el === window.__uxTabStart;
+            if (!el || el === document.body) return ++window.__uxTabBodySeen >= 2;
+            return false;
+        });
+        if (wrapped) return { reached: false, presses };
+    }
+    return { reached: false, presses: max };
+}
+
+/**
+ * Whether `document.activeElement` is hidden behind a fixed or sticky element (the app header, a Snackbar, a fixed footer): WCAG 2.2
+ * 2.4.11 Focus Not Obscured (Minimum), which fails only when the focused control is **fully** covered. A 5x5 grid of points
+ * across the focused element's visible rect is hit-tested with `elementFromPoint`; a point is covered when what is on top of it
+ * lies inside a `position: fixed|sticky` element that does not contain the focused element, and something there paints
+ * (a background, border, image, control or text; an empty transparent wrapper such as a Snackbar's root does not count).
+ * `partly` is reported too, since a ring half under the header is a finding even when 2.4.11 passes. Limits: an overlay with
+ * `pointer-events: none` is skipped by `elementFromPoint`; nothing focused, or a focused element outside the viewport, gives
+ * `covered: 'none'` with `inViewport: false`.
+ * `ok` is false only for `covered: 'fully'`.
+ * @param {import('playwright-core').Page} page
+ * @returns {Promise<{ ok: boolean, covered: 'none' | 'partly' | 'fully', by: string, fraction: number, inViewport: boolean, element: string, headerHeight: string }>}
+ */
+export async function focusNotObscured(page) {
+    return page.evaluate(() => {
+        const describe = (el) => {
+            const cls = [...el.classList].filter((c) => c.startsWith('Mui')).slice(0, 1).concat([...el.classList].filter((c) => !c.startsWith('Mui') && !c.startsWith('css-')).slice(0, 1));
+            const sel = `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${cls.length ? `.${cls.join('.')}` : ''}${el.getAttribute('role') ? `[role=${el.getAttribute('role')}]` : ''}`;
+            const text = (el.getAttribute('aria-label') ?? el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 30);
+            return text ? `${sel} "${text}"` : sel;
+        };
+        const headerHeight = getComputedStyle(document.documentElement).getPropertyValue('--app-header-height').trim() || document.body.style.getPropertyValue('--app-header-height').trim();
+        const active = document.activeElement;
+        if (!active || active === document.body || active === document.documentElement) {
+            return { ok: true, covered: 'none', by: '', fraction: 0, inViewport: false, element: '(nothing has focus)', headerHeight };
+        }
+        const rect = active.getBoundingClientRect();
+        const x0 = Math.max(0, rect.left);
+        const y0 = Math.max(0, rect.top);
+        const x1 = Math.min(window.innerWidth, rect.right);
+        const y1 = Math.min(window.innerHeight, rect.bottom);
+        if (x1 - x0 < 1 || y1 - y0 < 1) {
+            return { ok: true, covered: 'none', by: '', fraction: 0, inViewport: false, element: describe(active), headerHeight };
+        }
+        const transparent = (c) => !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c) || /\/\s*0\)$/.test(c);
+        const paints = (n, isHit) => {
+            const s = getComputedStyle(n);
+            if (!transparent(s.backgroundColor) || s.backgroundImage !== 'none') return true;
+            if (['borderTop', 'borderBottom', 'borderLeft', 'borderRight'].some((side) => parseFloat(s[`${side}Width`]) > 0 && s[`${side}Style`] !== 'none' && !transparent(s[`${side}Color`]))) return true;
+            if (isHit && /^(img|svg|canvas|video|input|select|textarea|button)$/i.test(n.tagName)) return true;
+            return [...n.childNodes].some((c) => c.nodeType === 3 && (c.textContent ?? '').trim() !== '');
+        };
+        const covering = (hit) => {
+            if (active.contains(hit)) return null;
+            let painted = false;
+            for (let n = hit; n && n !== document.documentElement; n = n.parentElement) {
+                if (n.contains(active)) return null; // the container the focused element lives in
+                if (!painted && paints(n, n === hit)) painted = true;
+                const position = getComputedStyle(n).position;
+                if (position === 'fixed' || position === 'sticky') return painted ? n : null;
+            }
+            return null;
+        };
+        const N = 5;
+        const by = new Map();
+        let covered = 0;
+        for (let i = 0; i < N; i++) {
+            for (let j = 0; j < N; j++) {
+                const x = Math.min(x1 - 0.5, Math.max(x0 + 0.5, x0 + ((i + 0.5) / N) * (x1 - x0)));
+                const y = Math.min(y1 - 0.5, Math.max(y0 + 0.5, y0 + ((j + 0.5) / N) * (y1 - y0)));
+                const hit = document.elementFromPoint(x, y);
+                const over = hit ? covering(hit) : null;
+                if (over) {
+                    covered++;
+                    by.set(over, (by.get(over) ?? 0) + 1);
+                }
+            }
+        }
+        const total = N * N;
+        const state = covered === 0 ? 'none' : covered === total ? 'fully' : 'partly';
+        const top = [...by.entries()].sort((a, b) => b[1] - a[1])[0];
+        return {
+            ok: state !== 'fully',
+            covered: state,
+            by: top ? describe(top[0]) : '',
+            fraction: covered / total,
+            inViewport: true,
+            element: describe(active),
+            headerHeight,
+        };
+    });
+}
+
+/**
+ * The full report behind `inertFromKeyboard`. Four tests on the locator's element and everything inside it:
+ *  1. each natively focusable or `tabindex`ed descendant is probed with `el.focus()`: focusable, and tabbable (`tabIndex >= 0`).
+ *     The reasons it might be inert are listed (`inert`, `disabled`, `tabindex=-1`, `aria-disabled`, hidden) for the report;
+ *  2. Tab is actually pressed into the element from a probe placed right before it, and Shift+Tab from one right after it;
+ *  3. each focusable descendant (up to 8) is focused and gets Enter, then Space; a `click`, `input`, `change` or `submit`
+ *     event inside the element, or a DOM mutation other than `class`/`style`, after the key counts as a reaction;
+ *  4. `inert` is true when nothing was tabbable, neither Tab landed inside, and nothing reacted.
+ * WARNING: step 3 presses Enter and Space on live controls: if the element is wrongly operable, its action runs (a Generate
+ * click generates). That is the finding; use it on a state you can afford to lose. Focus is put back where it was.
+ * A locator that matches nothing gives `found: false, inert: false` (a script that lost its target must not pass).
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @returns {Promise<{ found: boolean, inert: boolean, reason: string, candidates: { el: string, focusable: boolean, tabbable: boolean, why: string[] }[], tabbable: string[], tabLanded: string, reacted: string[] }>}
+ */
+export async function inertFromKeyboardReport(page, locator) {
+    const target = locator.first();
+    if ((await target.count()) === 0) {
+        return { found: false, inert: false, reason: 'the locator matches no element', candidates: [], tabbable: [], tabLanded: '', reacted: [] };
+    }
+    // 1. Probe every candidate
+    const candidates = await target.evaluate((root) => {
+        const describe = (el) => {
+            const label = (el.getAttribute('aria-label') ?? el.textContent ?? el.getAttribute('title') ?? '').replace(/\s+/g, ' ').trim().slice(0, 30);
+            return `${el.tagName.toLowerCase()}${el.getAttribute('role') ? `[role=${el.getAttribute('role')}]` : ''}${label ? ` "${label}"` : ''}`;
+        };
+        const maybeFocusable = 'a[href], button, input:not([type=hidden]), select, textarea, summary, audio[controls], video[controls], [contenteditable], [tabindex]';
+        const list = [root, ...root.querySelectorAll('*')].filter((el) => el.matches(maybeFocusable));
+        const before = document.activeElement;
+        const out = [];
+        for (const el of list) {
+            const why = [];
+            if (el.closest('[inert]')) why.push('inert');
+            if (el.matches(':disabled')) why.push('disabled');
+            const tabindex = el.getAttribute('tabindex');
+            if (tabindex !== null && Number(tabindex) < 0) why.push('tabindex=-1');
+            if (el.closest('[aria-disabled="true"]')) why.push('aria-disabled');
+            if (typeof el.checkVisibility === 'function' && !el.checkVisibility({ visibilityProperty: true })) why.push('hidden');
+            el.focus({ preventScroll: true });
+            const focusable = document.activeElement === el;
+            out.push({ el: describe(el), focusable, tabbable: focusable && el.tabIndex >= 0, why });
+            if (focusable) el.blur();
+        }
+        if (before && before !== document.body && before.isConnected) before.focus({ preventScroll: true });
+        return out;
+    });
+    const tabbable = candidates.filter((c) => c.tabbable).map((c) => c.el);
+
+    // 2. Really press Tab / Shift+Tab into it
+    let tabLanded = '';
+    const handle = await target.elementHandle();
+    const startedAt = (await page.evaluateHandle(() => (document.activeElement && document.activeElement !== document.body ? document.activeElement : null))).asElement();
+    try {
+        for (const side of ['before', 'after']) {
+            await handle.evaluate((el, s) => {
+                const probe = document.createElement('span');
+                probe.setAttribute('data-ux-tab-probe', '');
+                probe.tabIndex = 0;
+                probe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+                (s === 'before' ? el.before.bind(el) : el.after.bind(el))(probe);
+                probe.focus({ preventScroll: true });
+            }, side);
+            await page.keyboard.press(side === 'before' ? 'Tab' : 'Shift+Tab');
+            const landed = await handle.evaluate((el) => {
+                const a = document.activeElement;
+                if (!a || !el.contains(a)) return '';
+                return `${a.tagName.toLowerCase()}${a.getAttribute('aria-label') ? ` "${a.getAttribute('aria-label')}"` : ''}`;
+            });
+            await page.evaluate(() => document.querySelectorAll('[data-ux-tab-probe]').forEach((p) => p.remove()));
+            if (landed) {
+                tabLanded = `${side === 'before' ? 'Tab' : 'Shift+Tab'} landed on ${landed}`;
+                break;
+            }
+        }
+    } finally {
+        await page.evaluate(() => document.querySelectorAll('[data-ux-tab-probe]').forEach((p) => p.remove())).catch(() => {});
+    }
+
+    // 3. Enter and Space on whatever can be focused at all
+    const reacted = [];
+    const focusable = candidates.filter((c) => c.focusable).slice(0, 8);
+    if (focusable.length > 0) {
+        const all = await handle.evaluateHandle((root) => [root, ...root.querySelectorAll('*')].filter((el) => el.matches('a[href], button, input:not([type=hidden]), select, textarea, summary, audio[controls], video[controls], [contenteditable], [tabindex]')));
+        const props = await all.getProperties();
+        const els = [...props.values()].map((p) => p.asElement()).filter(Boolean);
+        let probed = 0;
+        for (const handleEl of els) {
+            if (probed >= focusable.length) break;
+            const ok = await handleEl.evaluate((el) => {
+                el.focus({ preventScroll: true });
+                return document.activeElement === el;
+            });
+            if (!ok) continue;
+            probed++;
+            const name = await handleEl.evaluate((el) => `${el.tagName.toLowerCase()}${el.getAttribute('aria-label') ? ` "${el.getAttribute('aria-label')}"` : ` "${(el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 30)}"`}`);
+            for (const key of ['Enter', 'Space']) {
+                await page.evaluate(
+                    (root) => {
+                        const log = { signals: [] };
+                        window.__uxInert = log;
+                        const note = (e) => {
+                            if (root.contains(e.target)) log.signals.push(e.type);
+                        };
+                        log.events = ['click', 'input', 'change', 'submit'];
+                        log.events.forEach((t) => document.addEventListener(t, note, true));
+                        log.note = note;
+                        log.observer = new MutationObserver((records) => {
+                            for (const r of records) {
+                                if (r.type === 'attributes' && (r.attributeName === 'class' || r.attributeName === 'style')) continue;
+                                log.signals.push(`mutation(${r.type}${r.attributeName ? `:${r.attributeName}` : ''})`);
+                            }
+                        });
+                        log.observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+                    },
+                    handle,
+                );
+                await page.waitForTimeout(250); // a tooltip that opens on focus settles first
+                await page.evaluate(() => window.__uxInert.observer.takeRecords()).catch(() => {});
+                await page.evaluate(() => {
+                    window.__uxInert.signals.length = 0;
+                });
+                await page.keyboard.press(key);
+                await page.waitForTimeout(150);
+                const signals = await page.evaluate(() => {
+                    const log = window.__uxInert;
+                    log.observer.takeRecords().forEach((r) => {
+                        if (!(r.type === 'attributes' && (r.attributeName === 'class' || r.attributeName === 'style'))) log.signals.push(`mutation(${r.type}${r.attributeName ? `:${r.attributeName}` : ''})`);
+                    });
+                    log.observer.disconnect();
+                    log.events.forEach((t) => document.removeEventListener(t, log.note, true));
+                    const found = [...new Set(log.signals)];
+                    delete window.__uxInert;
+                    return found;
+                });
+                if (signals.length) reacted.push(`${key} on ${name}: ${signals.slice(0, 3).join(', ')}`);
+                // The key may have moved focus (a dialog, a menu): go back to the element for the next key
+                await handleEl.evaluate((el) => el.focus({ preventScroll: true })).catch(() => {});
+            }
+        }
+    }
+    await restoreFocus(page, startedAt);
+
+    const inert = tabbable.length === 0 && tabLanded === '' && reacted.length === 0;
+    const reason = inert
+        ? candidates.length === 0
+            ? 'nothing focusable inside'
+            : `${candidates.length} focusable-looking element${candidates.length === 1 ? '' : 's'}, none tabbable, none reacts`
+        : [tabbable.length ? `tabbable: ${tabbable.slice(0, 3).join('; ')}${tabbable.length > 3 ? ` (+${tabbable.length - 3})` : ''}` : '', tabLanded, reacted.length ? `reacts: ${reacted.slice(0, 2).join('; ')}` : ''].filter(Boolean).join(' | ');
+    return { found: true, inert, reason, candidates, tabbable, tabLanded, reacted };
+}
+
+/** Puts focus back where it was before `inertFromKeyboardReport` moved it (or on nothing) */
+async function restoreFocus(page, startedAt) {
+    if (startedAt) await startedAt.evaluate((el) => el.isConnected && el.focus({ preventScroll: true })).catch(() => {});
+    else await page.evaluate(() => document.activeElement?.blur?.()).catch(() => {});
+}
+
+/**
+ * True when the locator's element is out of reach of the keyboard: none of its focusable descendants can be reached with Tab
+ * (checked as `inert`, `disabled`, `tabindex=-1`, `aria-disabled` and by pressing Tab into it), and Enter or Space on them does
+ * nothing detectable. See `inertFromKeyboardReport` for the details and the warning (it presses Enter on live controls).
+ * A control left clickable-by-keyboard inside a block that only looks disabled (`opacity` plus `pointer-events: none`) fails.
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @returns {Promise<boolean>}
+ */
+export async function inertFromKeyboard(page, locator) {
+    return (await inertFromKeyboardReport(page, locator)).inert;
+}
+
+/**
+ * Records a check that Tab reaches the element. `expect: false` records the opposite (Tab must NOT reach it).
+ * Returns whether the check passed.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @param {string} label  how the check is named
+ * @param {{ max?: number, shift?: boolean, expect?: boolean }} [options]
+ */
+export async function checkTabTo(rec, page, locator, label, { max = 200, shift = false, expect = true } = {}) {
+    const { reached, presses } = await tabTo(page, locator, { max, shift });
+    return rec.check(
+        `${expect ? 'Tab reaches' : 'Tab does not reach'} ${label}`,
+        reached === expect,
+        reached ? `after ${presses} ${shift ? 'Shift+Tab' : 'Tab'} press${presses === 1 ? '' : 'es'}` : `not reached in ${presses} press${presses === 1 ? '' : 'es'}`,
+    );
+}
+
+/**
+ * Records a check that the focused element is not fully hidden behind a fixed or sticky element (WCAG 2.4.11). A partly covered
+ * element passes but says so in the detail ("partly covered, 40%, by header ..."); `strict: true` fails it too.
+ * Returns whether the check passed.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {string} label  how the check is named (default: the focused element)
+ * @param {{ strict?: boolean }} [options]
+ */
+export async function checkFocusNotObscured(rec, page, label = '', { strict = false } = {}) {
+    const r = await focusNotObscured(page);
+    const pass = strict ? r.covered === 'none' : r.ok;
+    const detail = r.covered === 'none' ? `${r.element}, nothing on top${r.inViewport ? '' : ' (not in the viewport)'}` : `${r.element} is ${r.covered === 'fully' ? 'fully' : 'partly'} covered${r.covered === 'partly' ? ` (${Math.round(r.fraction * 100)}%)` : ''} by ${r.by}`;
+    return rec.check(`focus not obscured ${label || r.element}`, pass, detail);
+}
+
+/**
+ * Records a check that the element is out of the keyboard's reach (see `inertFromKeyboard`). Returns whether it passed.
+ * @param {ReturnType<typeof createRecorder>} rec
+ * @param {import('playwright-core').Page} page
+ * @param {import('playwright-core').Locator} locator
+ * @param {string} label  how the check is named
+ */
+export async function checkInertFromKeyboard(rec, page, locator, label) {
+    const r = await inertFromKeyboardReport(page, locator);
+    return rec.check(`inert from the keyboard ${label}`, r.inert, r.reason);
+}

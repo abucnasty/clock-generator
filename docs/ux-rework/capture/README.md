@@ -108,6 +108,29 @@ The helpers:
   `checkLabelInName(rec, page, locator, label?)` records a check that it contains the visible text (case and spacing are
   ignored; an icon-only control passes with a note).
 - `noSideScroll` and `isClickable` are the other page measurements.
+- **Keyboard and focus** (audits kept finding what the scripts never checked: focus hidden under the sticky header, controls
+  that stay operable from the keyboard while they look disabled or out of date, controls Tab never reaches). Each helper has a
+  `rec.check` wrapper that follows `checkLabelInName(rec, page, locator, label)`:
+  - `tabTo(page, locator, { max = 200, shift = false })` presses Tab (Shift+Tab) from where focus is until the locator's
+    element or a descendant has focus (any match counts) and returns `{ reached, presses }`; `presses: 0` means it already had
+    focus. It stops at the first full circle and never throws on "not reached". Wrapper: `checkTabTo(rec, page, locator, label,
+    { max, shift, expect = true })` (`expect: false` asserts Tab does not reach it).
+  - `focusNotObscured(page)` takes `document.activeElement` and hit-tests a 5x5 grid across its visible rect: a point is covered
+    when what is on top lies in a `position: fixed|sticky` element (the app header, a Snackbar, a fixed footer) that does not
+    contain the focused element and paints something (an empty transparent wrapper does not count). Returns `{ ok, covered:
+    'none'|'partly'|'fully', by, fraction, inViewport, element, headerHeight }`; `ok` is false only when `fully` (WCAG 2.4.11), but
+    `partly` is reported too (`checkFocusNotObscured(rec, page, label, { strict })` passes it with a note, or fails it with
+    `strict: true`). An overlay with `pointer-events: none` is invisible to `elementFromPoint` and not seen. Call it right after the
+    Tab press (use Tab, not `.focus()`, so the browser's own scroll-into-view runs).
+  - `inertFromKeyboard(page, locator)` is true when no focusable descendant can be reached by Tab and Enter or Space on them does
+    nothing detectable. It probes every focusable-looking descendant with `focus()` (`inert`, `disabled`, `tabindex=-1`,
+    `aria-disabled`, hidden are listed as reasons), presses Tab from a probe placed right before the element and Shift+Tab from one
+    right after it, then focuses each focusable descendant and presses Enter and Space, watching for a `click`, `input`, `change` or
+    `submit` event inside it or a DOM change other than `class`/`style`. **It presses Enter on live controls**, so a wrongly operable
+    Generate does generate: that is the finding. A locator that matches nothing is `inert: false` (a lost target must not pass).
+    `inertFromKeyboardReport` returns the detail (`reason`, `candidates`, `tabbable`, `tabLanded`, `reacted`); wrapper:
+    `checkInertFromKeyboard(rec, page, locator, label)`. A disabled button is inert; a block that only looks disabled (`opacity`
+    plus `pointer-events: none`) with live buttons in it fails.
 - "Before" shots are only for states the original review has no shot of; the review's shots already show 0.9.0.
 - The default widths are 1440 and 720. Add 390 (at 844 high) when the item affects reachability, and 960 at phase end.
 
