@@ -30,7 +30,8 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` �
 
 When a unit frees, start the unblocked item at the head of the longest remaining dependency chain (the chain table in
 `PROGRESS.md`); never leave a slot idle while an unblocked item waits (coach run 2). A unit that is only waiting on
-another branch counts as zero units (coach run 3). Specs (step 1) can be drafted ahead for any number of items at once, including the
+another branch counts as zero units (coach run 3), and so do read-only agents: scouts, capture writers, reviewers,
+the phase-end capture and review, and the coach (coach run 4). Specs (step 1) can be drafted ahead for any number of items at once, including the
 next phase's while this one finishes. From step 2
 on, run at most **four units at once** (a bundle counts as one; an item that touches more than about 20 files, like
 1.9, counts as two). Items may share files (the owner, 2026-10-14): each
@@ -38,7 +39,8 @@ implementer merges the phase branch into its branch (`git merge`, never a rebase
 again just before its PR, and whenever the post-merge conflict check flags its branch, and resolves any conflict
 itself, except when only the ledger moved (`git diff --quiet HEAD...origin/<phase branch> -- . ':!docs/ux-rework/PROGRESS.md'`).
 **Cross-item APIs:** when a decision mid-flight creates an API one item provides and another uses, write the exact
-export into both specs at once, and the provider commits it (a stub is fine) first. **Post-merge conflict check:** after every merge into the phase branch, run
+export into both specs at once, and the provider commits it (a stub is fine) first. **Post-merge conflict check:** after every merge into the phase branch (including each merge of the previous phase
+branch into the next), run
 `git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch, and tell any that conflicts to
 merge now, while its implementer still has the context. **Stacking:** in a serial tail (e.g. 1.11 A → 1.11 B → 1.12 B),
 the next item may branch from its predecessor's head once the predecessor's interface is committed (or at once when the
@@ -70,7 +72,7 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      checkpoint triggers. If the spec trips one, stop and ask the owner before implementing.
 2. **Implement** (implementer), with a **capture writer** alongside.
    - Create the child branch `feat/ux-rework-p<N>-<topic>` from the phase branch.
-   - At the same time, a `sonnet` capture writer turns the spec's "Screens to capture" and acceptance criteria into
+   - As soon as the spec is final and re-checked against the phase head (coach run 4), a `sonnet` capture writer turns the spec's "Screens to capture" and acceptance criteria into
      `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
      and saved to `/tmp/ux-capture/scripts/`. The implementer copies it in, fixes the selectors its code changed, and
      runs it. The checks come from the spec, not from the code.
@@ -85,8 +87,10 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
        reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`
        (widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
        a `vite preview` of the build), with keyboard reach (`tabTo`), focus not obscured (`focusNotObscured`) and
-       keyboard-inert disabled or out-of-date states (`inertFromKeyboard`), and every announcement reaching an unhidden live
-       region (`checkAnnounced`, with and without a dialog open), checked for every control and state the item
+       keyboard-inert disabled or out-of-date states (`inertFromKeyboard`), every announcement reaching an unhidden live
+       region (`checkAnnounced`, with and without a dialog open), an axe pass (`checkAxe`) on every captured state,
+       focus not obscured at a short window height for every dialog, editor or sticky bar the item touches, and a
+       visible change in the viewport after a mouse activation of every new action, checked for every control and state the item
        adds, disables or changes, at every captured width. "Before" screenshots only for
        states the original review has no shot of (its shots are listed in `review/`); otherwise the review's shot is
        the "before".
@@ -158,7 +162,10 @@ the ledger says so.
 **Reports and the handoff note.** Every agent's final report is about 30 lines: the verdict or result lines, counts and
 paths; the full notes go in the item's `EVIDENCE.md`. The orchestrator keeps a handoff note in its scratchpad
 (`HANDOFF.md`: each running agent's name, id, branch, port, what it waits on and the next action) current on every
-step, so a context compaction costs minutes, not a pause.
+step, so a context compaction costs minutes, not a pause. For each agent it keeps a ready-to-send resume line (id,
+branch, worktree, last pushed sha, the step it was on, and the fallback: a fresh same-role agent on the pushed branch).
+Implementers push after every commit. After a restart, the orchestrator resumes every agent in its first turn; a review
+cut off mid-run is re-run from the start.
 
 **Agent names.** Every Agent call's `description` follows `<item> <role>: <topic>`, so the agent map tells them apart
 at a glance: `1.9 implement: renumber`, `1.9 capture: renumber`, `1.9 code review`, `1.9 UX audit`, `1.9 checks`,
@@ -228,7 +235,8 @@ item still gets its spec, evidence, an `opus` code review and a UX audit, and th
    - Capture at 1440, 960, 720 and 390px.
    - Run three `opus` reviewers in parallel, on `review/BRIEF.md` with personas A, B and C.
    - Each also checks whether this phase's findings in `review/SYNTHESIS.md` are fixed.
-3. **Retro.** Write in `PROGRESS.md`:
+3. **Retro.** Findings on screens the next phase has already rebuilt are carried to the item that owns them, not fixed
+   on this branch (coach run 4). Write in `PROGRESS.md`:
    - what went well and what didn't (review rounds, escalations, model choices that worked or didn't)
    - the findings still open, now carried into the next phase
    - the new findings
