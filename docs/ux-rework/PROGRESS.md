@@ -44,8 +44,8 @@ come from here.
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | impl | | | Bundle with 1.5 (1.5 first in the branch) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Bundle with 1.14 |
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | impl | | | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`), started after 1.2 merged, with a capture writer |
-| [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | impl | | | Bundle with 1.7, alongside 1.2 |
-| [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | impl | | | Bundle with 1.6, alongside 1.2 |
+| [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | review | | | Bundle with 1.7 (`feat/ux-rework-p1-clock-pick`). Built (112 PASS, 0 FAIL); evidence verified (tests 206, lint, icons, build; merges cleanly). Code review and UX audit on opus |
+| [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | review | | | Bundle with 1.6 |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | fix-1 | | 1 | Code review and UX audit (opus) both FIX: the dimmed Transfer Plan still works from the keyboard and now hits the wrong inserter after a delete; the 720 row wraps to 3 lines. B4 fixed |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
@@ -213,6 +213,11 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - After the rework (owner, 2026-10-14): a rounded clock's decider gets a non-integer constant
   (`clock-generator/src/blueprints/entity/decider-combinator.ts:82`, `clock(period)` with no `Math.floor`). Check in
   game and fix in the engine.
+- 1.11: the clock table's "How … is made" icon has an `aria-label` but `aria-hidden="true"` and no role, so it has no
+  accessible role (found while repairing `capture.mjs`).
+- Tooling: `lib.mjs` now runs widths in parallel (`forWidths`), waits on real signals instead of fixed pads (about 2.9x
+  faster), measures contrast through MUI's overlay, and starts a `vite preview`. `capture.mjs` and `capture-extra.mjs`
+  run against the current UI with 0 failures.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
