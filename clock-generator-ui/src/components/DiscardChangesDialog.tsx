@@ -27,8 +27,13 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
             maxWidth="xs"
             aria-labelledby={`${id}-title`}
             aria-describedby={`${id}-description`}
-            // opened over another dialog, autoFocus alone loses the focus to the dialogs' focus traps
-            slotProps={{ transition: { onEntered: () => keepEditingRef.current?.focus() } }}
+            slotProps={{
+                // the plain paper colour, as the entity dialog's: the dark theme's elevation overlay would leave the
+                // buttons' text below 4.5:1
+                paper: { sx: { bgcolor: 'background.paper' } },
+                // opened over another dialog, autoFocus alone loses the focus to the dialogs' focus traps
+                transition: { onEntered: () => keepEditingRef.current?.focus() },
+            }}
         >
             <DialogTitle id={`${id}-title`}>{title}</DialogTitle>
             <DialogContent>
@@ -37,7 +42,15 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button ref={keepEditingRef} onClick={onKeepEditing} autoFocus>
+                {/* no focus ripple: it is focused on opening, and the ripple would lower its text's contrast; an
+                    outline shows the focus instead */}
+                <Button
+                    ref={keepEditingRef}
+                    onClick={onKeepEditing}
+                    autoFocus
+                    disableFocusRipple
+                    sx={{ '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}
+                >
                     Keep editing
                 </Button>
                 <Button onClick={onDiscard} color="error">
