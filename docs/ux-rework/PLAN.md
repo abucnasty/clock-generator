@@ -131,7 +131,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
     - the Paste from Factorio import
     - deleting any row (machine, inserter, belt, chest, drill)
     - deleting from the diagram
-  - Then show "{What happened}. Undo" for 10 seconds. Undo restores the snapshot, and the existing persistence saves it.
+  - Then show "{What happened}. Undo" until the next edit to the build, the next undoable action, Close or Escape (no
+    timer: the owner, 2026-10-14, for WCAG 2.2.1; this replaces "for 10 seconds"). Ctrl/Cmd+Z undoes while it is offered.
+    Undo restores the snapshot, and the existing persistence saves it.
   - In the ⋮ menu, put Reset below a divider, in the error colour.
 - **Done when:** there are vitest tests for snapshot and restore.
 

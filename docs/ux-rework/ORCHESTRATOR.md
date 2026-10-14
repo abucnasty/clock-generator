@@ -28,12 +28,19 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` �
 
 ## The loop for each plan item
 
-Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once, including the
+When a unit frees, start the item at the head of the longest remaining dependency chain; never leave a slot idle while
+an unblocked item waits (coach run 2). Specs (step 1) can be drafted ahead for any number of items at once, including the
 next phase's while this one finishes. From step 2
 on, run at most **four units at once** (a bundle counts as one; an item that touches more than about 20 files, like
 1.9, counts as two). Items may share files (the owner, 2026-10-14): each
 implementer merges the phase branch into its branch (`git merge`, never a rebase of a pushed branch) before it reports,
-and again just before its PR, and resolves any conflict itself. After a merge that had conflicts, the checks re-run,
+again just before its PR, and whenever the post-merge conflict check flags its branch, and resolves any conflict
+itself. **Post-merge conflict check:** after every merge into the phase branch, run
+`git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch, and tell any that conflicts to
+merge now, while its implementer still has the context. **Stacking:** in a serial tail (e.g. 1.11 A → 1.11 B → 1.12 B),
+the next item may branch from its predecessor's head once the predecessor reaches review; it merges the predecessor's
+branch after each fix round, then the phase branch once the predecessor merges, and its own review starts only after
+that, so its diff is against the phase branch. After a merge that had conflicts, the checks re-run,
 and the orchestrator reads the conflicted hunks before review or merge. Prefer items that touch different parts of a
 shared file. Run each in its own worktree (`isolation: "worktree"`).
 
@@ -73,7 +80,9 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      - after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
        reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`
        (widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
-       a `vite preview` of the build). "Before" screenshots only for
+       a `vite preview` of the build), with keyboard reach (`tabTo`), focus not obscured (`focusNotObscured`) and
+       keyboard-inert disabled or out-of-date states (`inertFromKeyboard`) checked for every control and state the item
+       adds, disables or changes, at every captured width. "Before" screenshots only for
        states the original review has no shot of (its shots are listed in `review/`); otherwise the review's shot is
        the "before".
      - for every text or control colour pair the item adds or changes, a measured `contrast()` ratio, and for every new
@@ -85,7 +94,8 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - **You verify this. Don't trust the report.** Re-run at least `npm test` and the build yourself, or through a haiku
      runner, and open two or three of the screenshots.
    - **After a fix round of minors only**, the checks re-run but the capture doesn't: the orchestrator reads the diff and
-     looks at one screenshot the implementer takes of the changed state. A fix round with a blocker or major re-runs
+     looks at one screenshot the implementer takes of the changed state, and the reviewer whose minors were fixed
+     re-checks the diff (resume it with `SendMessage`). A fix round with a blocker or major re-runs
      the capture for the affected states.
 4. **Code review** (code reviewer, read-only). It reviews the child branch's diff against the spec for:
    - correctness bugs, including edge cases and state that goes out of date
@@ -126,7 +136,7 @@ judgement (verdicts, fix batches, specs, the merge decision) and hands the mecha
 | Step | Who does it | What the orchestrator keeps |
 |---|---|---|
 | Re-running the checks for the evidence gate | `haiku` runner | It opens two or three screenshots, and reads the runner's result lines |
-| Opening the PR, waiting for CI, squash-merging, deleting the branch and the worktree | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge, and the branch sweep below |
+| Opening the PR, waiting for CI, squash-merging (`gh pr merge <n> --squash`, then `git push origin --delete <branch>`: `--delete-branch` fails while the base is checked out in the main checkout), deleting the worktree and local branches | `haiku` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge, and the branch sweep below |
 | Rebasing a child branch on the moved phase branch, and resolving conflicts | The item's implementer (`SendMessage`), or a `sonnet` agent if it has finished | Which side wins when a conflict changes behaviour |
 | Anything that waits, such as `gh pr checks --watch` | A background agent or a background command | Nothing waits in the foreground |
 
@@ -135,6 +145,11 @@ the worktree's placeholder branch (`worktree-agent-*`). After each merge the orc
 `git fetch --prune` and `git branch --merged origin/<phase branch>`, and deletes any local `feat/ux-rework-p<N>-*` or
 `worktree-agent-*` branch that is merged and has no live worktree. A dropped or carried item's branches go too, once
 the ledger says so.
+
+**Reports and the handoff note.** Every agent's final report is about 30 lines: the verdict or result lines, counts and
+paths; the full notes go in the item's `EVIDENCE.md`. The orchestrator keeps a handoff note in its scratchpad
+(`HANDOFF.md`: each running agent's name, id, branch, port, what it waits on and the next action) current on every
+step, so a context compaction costs minutes, not a pause.
 
 **Agent names.** Every Agent call's `description` follows `<item> <role>: <topic>`, so the agent map tells them apart
 at a glance: `1.9 implement: renumber`, `1.9 capture: renumber`, `1.9 code review`, `1.9 UX audit`, `1.9 checks`,
