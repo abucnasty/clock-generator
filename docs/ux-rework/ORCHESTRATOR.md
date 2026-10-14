@@ -28,8 +28,10 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` â
 
 ## The loop for each plan item
 
-Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once. From step 2
-on, run at most **three items at once** (a bundle counts as one). Items may share files (the owner, 2026-10-14): each
+Work through the items in plan order. Specs (step 1) can be drafted ahead for any number of items at once, including the
+next phase's while this one finishes. From step 2
+on, run at most **four units at once** (a bundle counts as one; an item that touches more than about 20 files, like
+1.9, counts as two). Items may share files (the owner, 2026-10-14): each
 implementer merges the phase branch into its branch (`git merge`, never a rebase of a pushed branch) before it reports,
 and again just before its PR, and resolves any conflict itself. After a merge that had conflicts, the checks re-run,
 and the orchestrator reads the conflicted hunks before review or merge. Prefer items that touch different parts of a
@@ -55,8 +57,12 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - It writes `specs/<item>.md` from the template below.
    - **You** check the spec against the plan and the owner's decisions, tighten the acceptance criteria, and look for
      checkpoint triggers. If the spec trips one, stop and ask the owner before implementing.
-2. **Implement** (implementer).
+2. **Implement** (implementer), with a **capture writer** alongside.
    - Create the child branch `feat/ux-rework-p<N>-<topic>` from the phase branch.
+   - At the same time, a `sonnet` capture writer turns the spec's "Screens to capture" and acceptance criteria into
+     `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
+     and saved to `/tmp/ux-capture/scripts/`. The implementer copies it in, fixes the selectors its code changed, and
+     runs it. The checks come from the spec, not from the code.
    - The implementer builds to the spec, writes the tests the spec lists, and commits in the repo's style.
    - It changes only what the spec covers. Anything else it notices goes in its report as a follow-up, not into the
      code.
@@ -65,10 +71,15 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      - the full local check set passing. In `clock-generator-ui`: `npm test`, `npm run lint`, `npm run knip`,
        `npm run check:icons`, `npm run build`. The same in `clock-generator` if the engine changed.
      - after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
-       reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`. "Before" screenshots only for
+       reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`
+       (widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
+       a `vite preview` of the build). "Before" screenshots only for
        states the original review has no shot of (its shots are listed in `review/`); otherwise the review's shot is
        the "before".
-     - a short evidence note: the commands and their result lines, and the list of screenshots.
+     - for every text or control colour pair the item adds or changes, a measured `contrast()` ratio, and for every new
+       control an aria snapshot showing its accessible name (which must contain its visible label). Below WCAG AA
+       (4.5:1 text, 3:1 large text and non-text) the gate fails.
+     - a short evidence note: the commands and their result lines, the contrast ratios, and the list of screenshots.
    - **You verify this. Don't trust the report.** Re-run at least `npm test` and the build yourself, or through a haiku
      runner, and open two or three of the screenshots.
    - **After a fix round of minors only**, the checks re-run but the capture doesn't: the orchestrator reads the diff and
@@ -175,9 +186,9 @@ item still gets its spec, evidence, an `opus` code review and a UX audit, and th
   duration (the orchestrator has these from the task notifications).
 - **Output:** at most five suggestions, ranked by time saved. Each gives the bottleneck it found (with the numbers),
   the change, the expected saving, the risk to quality, and the exact rule in this file that would change.
-- **What happens next:** the orchestrator relays them to the owner in a few lines with its own view. A suggestion that
-  changes this file, `PLAN.md`, the models or the quality bar is the owner's call; the orchestrator applies only what
-  the owner approves, and logs it in the ledger's decisions log.
+- **What happens next:** the orchestrator reviews them and applies the ones it agrees with itself (the owner,
+  2026-10-14), logging each in the ledger's decisions log and telling the owner in a line or two. It asks the owner
+  only when it is unsure, or when a suggestion would lower the quality bar or change an owner decision in `PLAN.md`.
 
 ## End of a phase
 
