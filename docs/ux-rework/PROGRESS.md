@@ -44,10 +44,10 @@ come from here.
 | [1.3](specs/1.3-undo.md) | Undo snackbar for destructive actions | opus | impl | | | Bundle with 1.5 (1.5 first in the branch) |
 | [1.4](specs/1.4-first-problem.md) | Disabled actions say what is missing | opus | spec | | | Bundle with 1.14 |
 | [1.5](specs/1.5-messages-footer.md) | Messages above the footer; quieter Ko-fi | opus | impl | | | Bundle with 1.3 (`feat/ux-rework-p1-messages-undo`), started after 1.2 merged, with a capture writer |
-| [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | impl | | | Bundle with 1.7, alongside 1.2 |
-| [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | impl | | | Bundle with 1.6, alongside 1.2 |
+| [1.6](specs/1.6-recommended-clock.md) | Make the clock pick explainable | opus | fix-1 | | 1 | Bundle with 1.7 (`feat/ux-rework-p1-clock-pick`). Code review PASS; UX audit minors only (A9, A11, B12, B14 fixed, C7 partly). Round 1: 13 cheap minors |
+| [1.7](specs/1.7-search-deeper.md) | "Search deeper" button | opus | fix-1 | | 1 | Bundle with 1.6. A22, B15, C27 fixed |
 | [1.8](specs/1.8-expert-bugs.md) | Fix the dangerous expert bugs | opus | merged | [#148](https://github.com/abucnasty/clock-generator/pull/148) | 1 | Round 0: code review Fable PASS, UX audit FIX (prompt contrast). Round 1: both opus PASS. Minors fixed before merge. CI green |
-| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | review | | | Built in 18 min with the capture writer's script (208 PASS, 0 FAIL). Evidence verified (tests 171/171, lint, icons, build; merges cleanly). Code review and UX audit on opus |
+| [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | fix-1 | | 1 | Code review and UX audit (opus) both FIX: the dimmed Transfer Plan still works from the keyboard and now hits the wrong inserter after a delete; the 720 row wraps to 3 lines. B4 fixed |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | spec | | | Spec final; two PRs: A foundation (opus), B names (sonnet). Late in the phase |
 | [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | spec | | | Glossary approved 2026-10-14. Part A (copy fixes) after 1.8; Part B last in the phase |
@@ -62,7 +62,7 @@ come from here.
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | spec | | | Spec final. Goes first in Phase 2. Checkpoint: owner runs the in-game steps in the spec |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | spec | | | Spec final. After 1.4 + 1.14 and 1.6 + 1.7; before 2.4. Closes the 1.1 "Generate again" and Validate-crash follow-ups |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | spec | | | Spec final; moved up (13 files). After 2.3 |
-| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug being confirmed |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | spec | | | Spec final; two PRs (A answer + install steps first; B details). After 2.6. Checkpoint: install steps reviewed in game. Subtick book bug refuted |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | spec | | | Spec final (11 files, no engine change). Before 2.5. Wake-up wording provisional |
 | [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
@@ -124,6 +124,11 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   in-game checks overlap other work, and `capture.mjs` is kept working as items merge.
 - 2026-10-14: The owner asked for distinct agent names. Agent descriptions now follow `<item> <role>: <topic>`
   ([ORCHESTRATOR.md](ORCHESTRATOR.md) "Staying responsive").
+- 2026-10-14: The rounded clock's non-integer decider constant (`decider-combinator.ts:82`, e.g. `signal-clock <
+  90.947…` for a clock labelled as rounded to 90): the owner chose to leave it as a known issue for after the rework.
+- 2026-10-14: The owner wants every issue found filed on GitHub, in one pass at the end with a review step by the
+  owner. [PLAN.md](PLAN.md) "The final PR" gains step 0 (draft `ISSUES.md`, owner review, `gh issue create`). No
+  issues are filed before then.
 - 2026-10-14: 1.8 runs alongside 1.1 (no file in common), ahead of 1.2 and 1.3, which share files with 1.1.
 
 ## Open questions
@@ -132,7 +137,8 @@ None.
 
 ## Follow-ups
 
-Minor and nit findings, and anything noticed outside an item's scope.
+Minor and nit findings, and anything noticed outside an item's scope. Whatever is still open at the end becomes a
+GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The final PR", step 0).
 
 - 1.13 → 1.9: wire `forcedAlways={inserter._forced_always}` in `InsertersForm` and add capture step 7 of
   `capture-enable-chip.mjs` (1.13 merged before 1.8).
@@ -199,6 +205,22 @@ Minor and nit findings, and anything noticed outside an item's scope.
 - 2.7 found contrast failures in today's theme: green hover 3.98:1, error text 3.0-4.4:1 on cards and dialogs, input
   outlines and switch tracks 2.1-2.6:1, an orange Undo on MUI's snackbar 1.96:1, empty filter slots 1.46:1. 2.7 PR A
   fixes them; 1.5's snackbar and 1.3's Undo should not ship the 1.96:1 combination (checked in their evidence gate).
+- Engine guard: in `alternatives.ts` (around line 483) clear `modulo_blueprint`/`modulo_schedule` in the subtick spread,
+  with a test that every `-subtick` alternative exports a single blueprint. Changes no current output.
+- 1.9 → 1.11: dnd-kit's reorder announcements read the `_uuid`; the row isn't a named group.
+- 1.9: `useInserterValidation` keeps the previous config's issues for a moment after a delete, so a fix applied then can
+  use old ids. Compare the issues to the config key, or check `machine_id` when applying.
+- After the rework (owner, 2026-10-14): a rounded clock's decider gets a non-integer constant
+  (`clock-generator/src/blueprints/entity/decider-combinator.ts:82`, `clock(period)` with no `Math.floor`). Check in
+  game and fix in the engine.
+- 1.11: the clock table's "How … is made" icon has an `aria-label` but `aria-hidden="true"` and no role, so it has no
+  accessible role (found while repairing `capture.mjs`).
+- Tooling: `lib.mjs` now runs widths in parallel (`forWidths`), waits on real signals instead of fixed pads (about 2.9x
+  faster), measures contrast through MUI's overlay, and starts a `vite preview`. `capture.mjs` and `capture-extra.mjs`
+  run against the current UI with 0 failures.
+- 1.6 → 2.4: "Only if the belt stands still" on non-moving clock rows (C7).
+- 1.7 → 1.4: a disabled Search deeper gives no reason.
+- 1.6 → 1.11: the unstable divider cell is a plain data cell, not a group header.
 - 1.7: a "found N fewer wake-ups" comparison after a deeper search needs the previous run kept. For 3.3.
 
 ## Retros
