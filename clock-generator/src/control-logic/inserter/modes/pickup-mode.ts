@@ -36,6 +36,9 @@ export class InserterPickupMode implements InserterMode {
 
     public onEnter(fromMode: InserterMode): void {
         this.current_tick = 0;
+        // on a clock of the game an inserter goes from disabled to its pickup in the first tick of its window
+        this.window_opened = fromMode.status === InserterStatus.DISABLED;
+        this.ticks_in_pickup = 0;
         // a hand that starts right after a swing back lands its first stack on the usual schedule
         this.belt_grab_decided = !(
             (fromMode.status === InserterStatus.IDLE && this.inserterState.waits_for_sink)
@@ -59,6 +62,12 @@ export class InserterPickupMode implements InserterMode {
      */
     private belt_grab_decided: boolean = true;
 
+    /** Whether the pickup started in the first tick of a window: it came straight from the disabled mode */
+    private window_opened: boolean = false;
+
+    /** Ticks since the pickup started, this one included */
+    private ticks_in_pickup: number = 0;
+
     public stateKey(): string {
         return `${this.current_tick},${this.belt_grab_decided}`;
     }
@@ -68,6 +77,7 @@ export class InserterPickupMode implements InserterMode {
     }
 
     public executeForTick(): void {
+        this.ticks_in_pickup += 1;
         if (!canPickupFromEntity(this.inserterState, this.sourceEntityState)) {
             this.waitForMachineOutput();
             // cannot pickup, go idle
@@ -204,6 +214,9 @@ export class InserterPickupMode implements InserterMode {
         state.held_item = { item_name: held_item.item_name, quantity: held_item.quantity + pickup_quantity };
         state.inventoryState.addQuantity(output_item_name, pickup_quantity);
         source.inventoryState.removeQuantity(output_item_name, pickup_quantity);
+        if (this.window_opened && this.ticks_in_pickup === 1) {
+            source.productsTakenAsWindowOpened = true;
+        }
     }
 
     /**
@@ -240,7 +253,8 @@ export class InserterPickupMode implements InserterMode {
     /** The item in hand, else the first filtered item the machine has and the sink can take */
     private itemToPickupFromMachine(state: InserterState, source: MachineState): ItemName | null {
         if (state.held_item !== null) {
-            return state.held_item.item_name;
+            // as from a belt, a hand stops filling while the machine it puts into takes nothing of its item
+            return this.canPickupItemForSink(state.held_item.item_name) ? state.held_item.item_name : null;
         }
         const item = Array.from(state.inserter.filtered_items).find(it =>
             source.inventoryState.getQuantity(it) > 0 && this.canPickupItemForSink(it)

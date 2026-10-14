@@ -54,17 +54,23 @@ describe("generateClockForConfig", () => {
             expect(five_swings.result.simulation_duration.ticks).toBe(480);
         });
 
-        it("does not call the 5-swing clock stable: the build does not get back to its rate under it once the nutrients have run out", () => {
-            expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
-            expect(five_swings.verdict).not.toBe("stable");
-            expect(five_swings.ranking.meets_target_rate).toBe(false);
+        // From 2026-10-10 the build did not get back to its rate under the 5-swing clock once the nutrients had run
+        // out, and the 2-swing clock was selected. Since the rules of issue 152 (GOALS.md, "When a waiting inserter
+        // acts") the 5-swing clock leaves the inserters that bring eggs to the science biochamber always enabled, and the
+        // build gets back from every loss under it; recorded in the game tests on 2026-10-14, 400 in every period.
+        it("calls the 5-swing clock stable: the build gets back to its rate under it from every loss", () => {
+            expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
+            expect(five_swings.verdict).toBe("stable");
+            expect(five_swings.ranking.meets_target_rate).toBe(true);
         });
 
-        it("selects the 2-swing clock, the one with the fewest wake-ups of the two that get back from every loss", () => {
+        it("selects the 5-swing clock, the one with the fewest wake-ups of the three that get back from every loss", () => {
             const stable = alternatives.filter(a => a.verdict === "stable");
-            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle"]);
-            expect(alternatives[selected_index].label).toBe("2 output swings per cycle");
-            expect(alternatives[selected_index].assessment.wake_ups_per_minute).toBeLessThan(one_swing.assessment.wake_ups_per_minute!);
+            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle", "Batched swings: 5 output swings per cycle"]);
+            expect(alternatives[selected_index].label).toBe("Batched swings: 5 output swings per cycle");
+            for (const other of stable.filter(a => a !== five_swings)) {
+                expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
+            }
         });
 
         it("also holds it with one output swing per cycle", () => {
@@ -83,21 +89,14 @@ describe("generateClockForConfig", () => {
             expect(Object.keys(two_swings.result.clock_windows).sort()).not.toContain("inserter:10");
         });
 
-        it("clocks the inserters that take eggs into the science biochamber on the 5-swing clock, with a combinator of their own", () => {
+        // Until the rules of issue 152 the 5-swing clock gave them windows of their own (0 to 67 of every 96 ticks), which
+        // the as-built check passed. Since a hand from a machine waits while the machine it puts into is at its block,
+        // the generator keeps no windows for them on this sample: they stay always enabled. Variants with other hands
+        // still get them (agricultural-science-feeders.generation.test.ts).
+        it("leaves the inserters that take eggs into the science biochamber always enabled on the 5-swing clock too", () => {
             const clocked = Object.keys(five_swing_windows).map(id => Number(id.replace("inserter:", ""))).sort((a, b) => a - b);
-            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 9, 10, 11, 12]);
-            expect(five_swing_windows["inserter:10"]).toEqual(five_swing_windows["inserter:9"]);
-        });
-
-        // The output of the science biochamber is back at 28 packs up to 30 ticks after an output window ends in the
-        // simulator, and 27 to 28 in the game; two ticks more are the margin. Each of the 5 windows of 37 ticks a
-        // period of 96 ticks leaves them enabled for 37 + 31 ticks (0 to 67) and disabled for the 28 that follow, until the next opens.
-        it("disables inserters 9 and 10 for the 28 ticks before each output window, 32 ticks after the last one closed", () => {
+            expect(clocked).toEqual([1, 2, 3, 4, 6, 7, 11, 12]);
             expect(five_swing_windows["inserter:12"].slice(0, 2)).toEqual([{ start: 0, end: 36 }, { start: 96, end: 132 }]);
-            for (const id of ["inserter:9", "inserter:10"]) {
-                expect(five_swing_windows[id]).toHaveLength(5);
-                expect(five_swing_windows[id].slice(0, 2)).toEqual([{ start: 0, end: 67 }, { start: 96, end: 163 }]);
-            }
         });
 
         it("gives the inserters bringing nutrients to the egg biochambers windows of two hands, 44 hands for the 35 planned a period", () => {

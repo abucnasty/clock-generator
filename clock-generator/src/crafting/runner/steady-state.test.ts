@@ -10,13 +10,14 @@ import { SimulationContext } from "../sequence";
  */
 const PLAIN_FIELDS: Record<string, string[]> = {
     // the running totals are left out of its key
-    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "outputBlockedAfterLastTick", "finishedCraftInLastTick"],
+    MachineState: ["craftCount", "status", "totalCrafted", "pendingOutput", "productsFinished", "outputBlockedAfterLastTick", "finishedCraftInLastTick", "productsTakenAsWindowOpened"],
     // `tick` and the counts of items are left out of its key
     inserter: ["status", "tick", "held_item", "items_picked_up", "items_dropped", "waits_for_sink", "enabled"],
     drill: ["status"],
     InserterDropMode: ["current_tick"],
-    InserterPickupMode: ["current_tick", "belt_grab_decided"],
-    IdleModeTransitionEvaluator: ["saw_sink_blocked"],
+    // what marks a take in the first tick of a window counts only within that tick
+    InserterPickupMode: ["current_tick", "belt_grab_decided", "window_opened", "ticks_in_pickup"],
+    IdleModeTransitionEvaluator: ["saw_sink_blocked", "window_opens"],
     InserterSwingModeTransitionEvaluator: ["entered_tick", "from"],
 };
 
