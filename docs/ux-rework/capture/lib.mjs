@@ -38,19 +38,21 @@ export const LOGISTIC = sample('science/logistic-science/logistic-science.json')
 
 /**
  * The build whose generation finishes fastest: use it where the build's size does not matter (a dialog, a header, a
- * chip, a colour). Timed once against `vite preview` on 2026-10-14 (net Generate time, click to "Generating..." gone;
- * Validate is ~0.2 s for all of them):
- *   logistic-science-sample.json                 0.25 s   <- SMALL_SAMPLE (1.0 KB; the smallest)
- *   logistic-science.json (LOGISTIC)             0.26 s
- *   logistic-science-shared-inserter.json        0.26 s
- *   chemical-science.json                        0.28 s
- *   stone-bricks-direct-insert.json              0.35 s
- *   processing-units.json                        0.40 s
- *   automation-science.json                      0.90 s
- *   automation-science-belted-buffer.json        2.4 s
- *   military-science-1-inserter.json             2.7 s
- * The first four are within noise of each other; what costs time is the fixed waits, not the generation (see the README
- * for the full table). The build is small enough that its Results tabs are short; use LOGISTIC for layout checks.
+ * chip, a colour). Timed once against `vite preview` on 2026-10-14, in the page, from the click on Generate to "Generating..."
+ * gone (Validate takes 20 to 40 ms for every one of them):
+ *   science/logistic-science/logistic-science-sample.json                0.22 s  <- SMALL_SAMPLE (1.0 KB, the smallest)
+ *   science/logistic-science/logistic-science-shared-inserter.json       0.22 s
+ *   science/logistic-science/logistic-science.json (LOGISTIC)             0.23 s
+ *   science/chemical-science/chemical-science.json                        0.26 s
+ *   smelting/stone-bricks/stone-bricks-direct-insert.json                 0.29 s
+ *   smelting/stone-bricks/stone-bricks-direct-insert-2-1.json             0.34 s
+ *   intermediates/processing-units/processing-units.json                  0.37 s
+ *   science/automation-science/automation-science.json                    0.89 s
+ *   science/automation-science/automation-science-belted-buffer.json     2.3 s
+ *   science/military-science/military-science-1-inserter.json (SLOW_SAMPLE) 2.6 s
+ * (intermediates/productivity-module/productivity-module.json never got to Generate.) The first four are within noise of one
+ * another: a generation is quick, so what costs time is the waits around it, not the build. The sample is for states that
+ * do not depend on the build's size; its Results are short, so use LOGISTIC for layout checks.
  */
 export const SMALL_SAMPLE = sample('science/logistic-science/logistic-science-sample.json');
 
