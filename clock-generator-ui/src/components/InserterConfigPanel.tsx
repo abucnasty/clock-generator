@@ -3,7 +3,6 @@ import {
     Box,
     Button,
     Chip,
-    MenuItem,
     Tab,
     Tabs,
     TextField,
@@ -19,6 +18,7 @@ import type {
 } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { describeEnableRule } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
 import { inferInserterItems } from '../utils/inferInserterItems';
 import { changedConfigFields } from '../utils/inserterDraft';
@@ -26,6 +26,7 @@ import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
+import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 
 // ---- Local types ----
@@ -95,13 +96,6 @@ function InserterEditSection({
         [inserter, machines, belts, chests, getRecipeInfo],
     );
 
-    // the two lanes of the belt this inserter picks up from, when they carry different items it could choose between
-    const sourceLanes = useMemo<string[] | null>(() => {
-        if (inserter.source.type !== TargetType.BELT) return null;
-        const lanes = belts.find(b => b.id === inserter.source.id)?.lanes.map(l => l.ingredient) ?? [];
-        return lanes.length === 2 && lanes[0] && lanes[1] && lanes[0] !== lanes[1] ? lanes : null;
-    }, [inserter.source, belts]);
-
     const handleFilterChange = (slotIndex: number, item: string) => {
         const filters = [...(inserter.filters || [])];
         filters[slotIndex] = item;
@@ -166,32 +160,7 @@ function InserterEditSection({
                 disableClearable
             />
 
-            {sourceLanes && (
-                <TextField
-                    select
-                    size="small"
-                    fullWidth
-                    label="Nearest lane of the belt"
-                    helperText="An inserter takes from the lane nearest to it first when its machine takes both items. The sidecar mod exports it; not set, the order of the filters is used."
-                    value={inserter.source.near_lane ?? 0}
-                    onChange={(e) => {
-                        const lane = Number(e.target.value);
-                        const source = { ...inserter.source };
-                        delete source.near_lane;
-                        onUpdate(entityIndex, { source: lane === 1 || lane === 2 ? { ...source, near_lane: lane } : source });
-                    }}
-                >
-                    <MenuItem value={0}>Not set</MenuItem>
-                    {sourceLanes.map((item, i) => (
-                        <MenuItem key={i} value={i + 1}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={item} size={18} />
-                                Lane {i + 1}: {item}
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </TextField>
-            )}
+            <NearLaneSelect source={inserter.source} belts={belts} onChange={(source) => onUpdate(entityIndex, { source })} />
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <FactorioIcon name="stack-inserter" size={22} />
@@ -202,7 +171,7 @@ function InserterEditSection({
                 <NumberField
                     label="Stack Size"
                     value={inserter.stack_size}
-                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 1 })}
+                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 16 })}
                     min={1}
                     sx={{ width: 130 }}
                     size="small"
@@ -300,10 +269,9 @@ export function InserterConfigPanel({
     const [draft, setDraft] = useState(inserter);
     const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false });
 
-    // the tab's chip shows the saved rule
+    // the tab's chip shows the saved rule, in the words of the List row's chip
     const currentOverride = inserter.overrides?.enable_control;
-    const overrideMode = currentOverride?.mode ?? EnableControlMode.AUTO;
-    const hasNonDefaultOverride = overrideMode !== EnableControlMode.AUTO;
+    const savedRule = describeEnableRule(currentOverride, { forcedAlways: inserter._forced_always });
 
     const availableItems = useMemo<string[]>(() => {
         const items = new Set<string>();
@@ -388,9 +356,9 @@ export function InserterConfigPanel({
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
                     icon={
-                        hasNonDefaultOverride
-                            ? <Chip label={overrideMode} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
-                            : undefined
+                        savedRule.quiet
+                            ? undefined
+                            : <Chip label={savedRule.chip} title={savedRule.summary} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
                     }
                 />
             </Tabs>

@@ -1,9 +1,10 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
-import type { EntityNodeData, MachineNodeParams } from '../utils/buildFlowGraph';
+import { ENTITY_NODE_WIDTH, type EntityNodeData, type MachineNodeParams } from '../utils/buildFlowGraph';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { formatNumberText, machineNodeCraftLine } from '../utils/numberText';
+import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
 const BORDER_COLORS: Record<EntityNodeData['entityType'], string> = {
     machine: '#fca300',
@@ -24,19 +25,22 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
         <Box sx={{ mt: 0.75, pt: 0.75, borderTop: '1px solid #444', width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <FactorioIcon name={facts.output_item} size={14} />
-                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: '#fca300', lineHeight: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: '#fca300', lineHeight: 1.2 }}>
                     {formatNumberText(facts.output_rate_per_second)}/s out
                 </Typography>
             </Box>
             {facts.inputs.map(inp => (
                 <Box key={inp.item_name} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                     <FactorioIcon name={inp.item_name} size={14} />
-                    <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
+                    <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2 }}>
                         {formatNumberText(inp.consumption_rate_per_second)}/s in
                     </Typography>
                 </Box>
             ))}
-            <Typography variant="caption" sx={{ fontSize: '0.55rem', color: '#666', lineHeight: 1, display: 'block', mt: 0.5 }}>
+            <Typography
+                variant="caption"
+                sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2, display: 'block', mt: 0.5, whiteSpace: 'normal' }}
+            >
                 {machineNodeCraftLine(facts.ticks_per_craft, facts.overload_multiplier)}
             </Typography>
         </Box>
@@ -47,11 +51,14 @@ type EntityFlowNodeType = Node<EntityNodeData, 'entityNode'>;
 
 export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
     const borderColor = BORDER_COLORS[data.entityType];
+    // a half takes only its own side's connections: the `in` half feeds, the `out` half receives
+    const hasTarget = data.half !== 'in';
+    const hasSource = data.half !== 'out';
 
     return (
         <>
-            <Handle type="target" position={Position.Left} />
             <Box
+                className={FLOW_NODE_BOX_CLASS}
                 sx={{
                     px: 1.5,
                     py: 1,
@@ -61,7 +68,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     display: 'flex',
                     flexDirection: 'column',
                     cursor: 'pointer',
-                    width: 176,
+                    width: ENTITY_NODE_WIDTH,
                     boxSizing: 'border-box',
                     '&:hover': { bgcolor: '#2d2d2d' },
                 }}
@@ -71,12 +78,13 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
+                            title={data.halfTitle}
                             sx={{
                                 fontWeight: 700,
                                 lineHeight: 1.2,
                                 display: 'block',
                                 color: borderColor,
-                                fontSize: '0.7rem',
+                                fontSize: FLOW_NODE_FONT_SIZE,
                             }}
                         >
                             {data.label}
@@ -84,10 +92,11 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         {data.sublabel && (
                             <Typography
                                 variant="caption"
+                                title={data.sublabel}
                                 sx={{
                                     color: 'text.secondary',
                                     display: 'block',
-                                    fontSize: '0.6rem',
+                                    fontSize: FLOW_NODE_FONT_SIZE,
                                     lineHeight: 1.2,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -109,13 +118,13 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         label={TYPE_LABELS[data.entityType]}
                         size="small"
                         sx={{
-                            height: 16,
-                            fontSize: '0.6rem',
+                            height: 20,
+                            fontSize: FLOW_NODE_FONT_SIZE,
                             bgcolor: borderColor,
                             color: '#000',
                             fontWeight: 700,
                             flexShrink: 0,
-                            '& .MuiChip-label': { px: 0.5 },
+                            '& .MuiChip-label': { px: 0.75 },
                         }}
                     />
                 </Box>
@@ -123,7 +132,8 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <MachineDetailsSection params={data.machineParams} />
                 )}
             </Box>
-            <Handle type="source" position={Position.Right} />
+            {hasTarget && <Handle type="target" position={Position.Left} />}
+            {hasSource && <Handle type="source" position={Position.Right} />}
             {data.verticalHandles && (
                 <>
                     <Handle type="target" id="top-in" position={Position.Top} style={{ left: '35%' }} />

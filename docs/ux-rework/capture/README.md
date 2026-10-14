@@ -57,6 +57,10 @@ preview unless you are debugging.
 - `capture-first-problem-warning.mjs <out dir>` (on `lib.mjs`) checks items 1.4 and 1.14 at 1440, 720 and 390px: the problem
   chip and reason in the bar, the jump to the first problem, the disabled buttons' reasons, the warning yellow and the
   below-target Copy. `STEPS` (a regexp: `^P` for 1.4, `^W` for 1.14) runs a part; `UI_DIR` names the checkout it greps.
+- `capture-diagram.mjs <out dir>` (on `lib.mjs`) checks the Diagram's readability (item 2.11) at 1440 and 720px: the split
+  "(in)"/"(out)" belt and the left-to-right order, arrowheads and their hover colour, 12px text and its contrast, overlaps,
+  the node chips against the List's, Enter on a focused node and the focus ring, the fullscreen fit, and the List's
+  "Nearest lane of the belt" select. `STEPS` (a regexp on the step numbers) runs a part.
 
 ## Shared helpers
 
@@ -112,6 +116,10 @@ The helpers:
   `checkLabelInName(rec, page, locator, label?)` records a check that it contains the visible text (case and spacing are
   ignored; an icon-only control passes with a note).
 - `noSideScroll` and `isClickable` are the other page measurements.
+- `checkAnnounced(rec, page, text, label?)` records a check that `text` (a string or RegExp) is announced: it must be in the accessibility
+  tree (`page.locator('body').ariaSnapshot()`, which leaves out `aria-hidden` subtrees) inside an element with role status, log or
+  alert, or `aria-live` polite or assertive, and that element must have no `aria-hidden="true"` ancestor in the DOM. It polls for about
+  1.5 s and returns whether it passed; the detail names the live regions it found, or says the text sits only under `aria-hidden`.
 - **Keyboard and focus** (audits kept finding what the scripts never checked: focus hidden under the sticky header, controls
   that stay operable from the keyboard while they look disabled or out of date, controls Tab never reaches). Each helper has a
   `rec.check` wrapper that follows `checkLabelInName(rec, page, locator, label)`:

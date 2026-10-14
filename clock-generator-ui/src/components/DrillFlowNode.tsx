@@ -1,8 +1,9 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
-import type { DrillNodeData } from '../utils/buildFlowGraph';
+import { DRILL_NODE_WIDTH, type DrillNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
+import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
 type DrillFlowNodeType = Node<DrillNodeData, 'drillNode'>;
 
@@ -10,6 +11,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
     return (
         <>
             <Box
+                className={FLOW_NODE_BOX_CLASS}
                 sx={{
                     px: 1.5,
                     py: 1,
@@ -21,7 +23,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     alignItems: 'center',
                     gap: 0.5,
                     cursor: 'pointer',
-                    width: 136,
+                    width: DRILL_NODE_WIDTH,
                     boxSizing: 'border-box',
                     '&:hover': { bgcolor: '#2a2a2a', borderColor: '#c47a45' },
                 }}
@@ -31,7 +33,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
-                            sx={{ fontWeight: 700, fontSize: '0.68rem', display: 'block', lineHeight: 1.2, color: '#c47a45' }}
+                            sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: '#c47a45' }}
                         >
                             {entityLabel('drill', data.drillId)}
                         </Typography>
@@ -40,8 +42,9 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                                 <FactorioIcon name={data.minedItem} size={14} />
                                 <Typography
                                     variant="caption"
+                                    title={data.minedItem}
                                     sx={{
-                                        fontSize: '0.6rem',
+                                        fontSize: FLOW_NODE_FONT_SIZE,
                                         color: 'text.secondary',
                                         lineHeight: 1.2,
                                         overflow: 'hidden',
@@ -55,7 +58,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                         ) : (
                             <Typography
                                 variant="caption"
-                                sx={{ fontSize: '0.6rem', color: 'text.disabled', lineHeight: 1.2, display: 'block' }}
+                                sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2, display: 'block' }}
                             >
                                 no resource
                             </Typography>
