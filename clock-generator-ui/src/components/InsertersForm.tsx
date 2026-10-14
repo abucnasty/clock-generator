@@ -17,6 +17,7 @@ import { EnableRuleChip } from './EnableRuleChip';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
+import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { entityLabel } from '../utils/entityLabel';
@@ -335,6 +336,15 @@ function InsertersFormComponent({
                             disableClearable
                         />
                     </Box>
+
+                    {/* the same select as the diagram's inserter dialog; a new source drops the lane, as there */}
+                    <NearLaneSelect
+                        compact
+                        source={inserter.source}
+                        belts={belts}
+                        entityLabel={entityLabel('inserter', inserter.id)}
+                        onChange={(source) => onUpdate(index, { source })}
+                    />
 
                     {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
                     <Box sx={PICKER_GROUP_SX}>
