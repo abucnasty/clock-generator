@@ -15,7 +15,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { ChestType } from 'clock-generator/light';
 import type {
@@ -39,6 +39,7 @@ import {
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import type { EntityClickType } from './ConfigFlowDiagram';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
@@ -563,6 +564,17 @@ export function EntityEditDialog({
         (entityType === 'drill' && !!onDeleteDrill)
     );
 
+    // the inserter panel holds its edits until Save, so closing it with unsaved changes asks first
+    const [inserterDirty, setInserterDirty] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const requestClose = () => {
+        if (entityType === 'inserter' && inserterDirty) {
+            setConfirmOpen(true);
+        } else {
+            onClose();
+        }
+    };
+
     const machineEntity = entity && entityType === 'machine' ? entity as MachineFormData : null;
     const { facts: machineFacts, error: machineFactsError } = useMachineFacts({
         recipe: machineEntity?.recipe ?? '',
@@ -572,85 +584,98 @@ export function EntityEditDialog({
     });
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth={entityType === 'inserter' ? 'md' : 'sm'}
-            fullWidth
-            PaperProps={{ sx: { bgcolor: 'background.paper' } }}
-        >            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pr: 1, pb: 1 }}>
-                {iconName && <FactorioIcon name={iconName} size={28} />}
-                <Typography variant="h6" component="span" sx={{ flex: 1 }}>
-                    {title}
-                </Typography>
-                {canDelete && (
-                    <IconButton onClick={handleDelete} size="small" aria-label="Delete entity" color="error">
-                        <DeleteOutline />
+        <>
+            <Dialog
+                open={open}
+                onClose={requestClose}
+                maxWidth={entityType === 'inserter' ? 'md' : 'sm'}
+                fullWidth
+                PaperProps={{ sx: { bgcolor: 'background.paper' } }}
+            >            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pr: 1, pb: 1 }}>
+                    {iconName && <FactorioIcon name={iconName} size={28} />}
+                    <Typography variant="h6" component="span" sx={{ flex: 1 }}>
+                        {title}
+                    </Typography>
+                    {canDelete && (
+                        <IconButton onClick={handleDelete} size="small" aria-label="Delete entity" color="error">
+                            <DeleteOutline />
+                        </IconButton>
+                    )}
+                    <IconButton onClick={requestClose} size="small" aria-label="Close dialog">
+                        <Close />
                     </IconButton>
-                )}
-                <IconButton onClick={onClose} size="small" aria-label="Close dialog">
-                    <Close />
-                </IconButton>
-            </DialogTitle>
+                </DialogTitle>
 
-            <DialogContent sx={entityType === 'inserter' ? { p: 0 } : { pt: '16px !important' }}>
-                {entity && entityType === 'machine' && (
-                    <>
-                        <MachineEditSection
-                            machine={entity as MachineFormData}
+                <DialogContent sx={entityType === 'inserter' ? { p: 0 } : { pt: '16px !important' }}>
+                    {entity && entityType === 'machine' && (
+                        <>
+                            <MachineEditSection
+                                machine={entity as MachineFormData}
+                                entityIndex={entityIndex}
+                                recipeNames={recipeNames}
+                                onUpdate={onUpdateMachine}
+                            />
+                            {machineEntity?.recipe && (
+                                <MachineFactsAccordion facts={machineFacts} error={machineFactsError} />
+                            )}
+                        </>
+                    )}
+                    {entity && entityType === 'belt' && (
+                        <BeltEditSection
+                            belt={entity as BeltFormData}
                             entityIndex={entityIndex}
-                            recipeNames={recipeNames}
-                            onUpdate={onUpdateMachine}
+                            itemNames={itemNames}
+                            onUpdate={onUpdateBelt}
                         />
-                        {machineEntity?.recipe && (
-                            <MachineFactsAccordion facts={machineFacts} error={machineFactsError} />
-                        )}
-                    </>
-                )}
-                {entity && entityType === 'belt' && (
-                    <BeltEditSection
-                        belt={entity as BeltFormData}
-                        entityIndex={entityIndex}
-                        itemNames={itemNames}
-                        onUpdate={onUpdateBelt}
-                    />
-                )}
-                {entity && entityType === 'chest' && (
-                    <ChestEditSection
-                        chest={entity as ChestFormData}
-                        entityIndex={entityIndex}
-                        itemNames={itemNames}
-                        onUpdate={onUpdateChest}
-                        onSwitchType={onSwitchChestType}
-                    />
-                )}
-                {entity && entityType === 'inserter' && (
-                    <InserterConfigPanel
-                        key={entityId ?? undefined}
-                        inserter={entity as InserterFormData}
-                        entityIndex={entityIndex}
-                        machines={machines}
-                        inserters={inserters}
-                        belts={belts}
-                        chests={chests}
-                        itemNames={itemNames}
-                        getRecipeInfo={getRecipeInfo}
-                        onUpdate={onUpdateInserter}
-                    />
-                )}
-                {entity && entityType === 'drill' && onUpdateDrill && (
-                    <DrillEditSection
-                        drill={entity as DrillFormData}
-                        entityIndex={entityIndex}
-                        machines={machines}
-                        itemNames={itemNames}
-                        onUpdate={onUpdateDrill}
-                    />
-                )}
-                {!entity && (
-                    <Typography color="text.secondary" variant="body2">Entity not found.</Typography>
-                )}
-            </DialogContent>
-        </Dialog>
+                    )}
+                    {entity && entityType === 'chest' && (
+                        <ChestEditSection
+                            chest={entity as ChestFormData}
+                            entityIndex={entityIndex}
+                            itemNames={itemNames}
+                            onUpdate={onUpdateChest}
+                            onSwitchType={onSwitchChestType}
+                        />
+                    )}
+                    {entity && entityType === 'inserter' && (
+                        <InserterConfigPanel
+                            key={entityId ?? undefined}
+                            inserter={entity as InserterFormData}
+                            entityIndex={entityIndex}
+                            machines={machines}
+                            inserters={inserters}
+                            belts={belts}
+                            chests={chests}
+                            itemNames={itemNames}
+                            getRecipeInfo={getRecipeInfo}
+                            onUpdate={onUpdateInserter}
+                            onClose={onClose}
+                            onDirtyChange={setInserterDirty}
+                        />
+                    )}
+                    {entity && entityType === 'drill' && onUpdateDrill && (
+                        <DrillEditSection
+                            drill={entity as DrillFormData}
+                            entityIndex={entityIndex}
+                            machines={machines}
+                            itemNames={itemNames}
+                            onUpdate={onUpdateDrill}
+                        />
+                    )}
+                    {!entity && (
+                        <Typography color="text.secondary" variant="body2">Entity not found.</Typography>
+                    )}
+                </DialogContent>
+            </Dialog>
+            <DiscardChangesDialog
+                open={confirmOpen}
+                title={`Discard changes to ${title}?`}
+                onKeepEditing={() => setConfirmOpen(false)}
+                onDiscard={() => {
+                    setConfirmOpen(false);
+                    onClose();
+                }}
+            />
+        </>
     );
 }

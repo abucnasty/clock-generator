@@ -1,6 +1,7 @@
 import {
     Autocomplete,
     Box,
+    Button,
     Chip,
     MenuItem,
     Tab,
@@ -9,7 +10,7 @@ import {
     Typography,
 } from '@mui/material';
 import { EnableControlMode, TargetType } from 'clock-generator/light';
-import { useMemo, useState } from 'react';
+import { useId, useLayoutEffect, useMemo, useState } from 'react';
 import type {
     BeltFormData,
     ChestFormData,
@@ -19,8 +20,7 @@ import type {
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { inferInserterItems } from '../utils/inferInserterItems';
-import type { EnableControlFormContentProps } from './EnableControlModal';
-import { EnableControlFormContent, type CopyFromOption } from './EnableControlModal';
+import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NumberField } from './NumberField';
@@ -248,11 +248,32 @@ interface InserterConfigPanelProps {
     chests: ChestFormData[];
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
+    /** Called once, on Save, with the changed fields */
     onUpdate: (index: number, updates: Partial<InserterFormData>) => void;
+    /** Closes the dialog the panel is in: after Save, and on Cancel */
+    onClose: () => void;
+    /** Told whether either tab has unsaved changes; pass a stable function (a state setter) */
+    onDirtyChange?: (dirty: boolean) => void;
+}
+
+/** The fields the Config tab edits */
+const CONFIG_FIELDS = ['source', 'sink', 'stack_size', 'filters'] as const;
+
+/** The Config tab's fields that differ in the draft from the saved inserter, with their draft values */
+function changedConfigFields(draft: InserterFormData, saved: InserterFormData): Partial<InserterFormData> {
+    return Object.fromEntries(
+        CONFIG_FIELDS
+            .filter((key) => JSON.stringify(draft[key]) !== JSON.stringify(saved[key]))
+            .map((key) => [key, draft[key]]),
+    ) as Partial<InserterFormData>;
 }
 
 // ---- Exported panel ----
 
+/**
+ * The diagram's inserter editor: a Config tab and an Overrides (rule) tab that make one form. Both edit a draft, which
+ * reaches the config only on Save; Cancel drops it. Both tabs stay mounted, so switching between them loses nothing.
+ */
 export function InserterConfigPanel({
     inserter,
     entityIndex,
@@ -263,10 +284,15 @@ export function InserterConfigPanel({
     itemNames,
     getRecipeInfo,
     onUpdate,
+    onClose,
+    onDirtyChange,
 }: InserterConfigPanelProps) {
+    const id = useId();
     const [activeTab, setActiveTab] = useState(0);
-    const [overrideFormKey, setOverrideFormKey] = useState(0);
+    const [draft, setDraft] = useState(inserter);
+    const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false });
 
+    // the tab's chip shows the saved rule
     const currentOverride = inserter.overrides?.enable_control;
     const overrideMode = currentOverride?.mode ?? EnableControlMode.AUTO;
     const hasNonDefaultOverride = overrideMode !== EnableControlMode.AUTO;
@@ -292,10 +318,10 @@ export function InserterConfigPanel({
                 }
             }
         };
-        addFromEntity(inserter.source.type, inserter.source.id);
-        addFromEntity(inserter.sink.type, inserter.sink.id);
+        addFromEntity(draft.source.type, draft.source.id);
+        addFromEntity(draft.sink.type, draft.sink.id);
         return [...items];
-    }, [inserter, machines, belts, chests, getRecipeInfo]);
+    }, [draft.source, draft.sink, machines, belts, chests, getRecipeInfo]);
 
     const copyFromOptions = useMemo<CopyFromOption[]>(() => {
         return inserters
@@ -310,15 +336,28 @@ export function InserterConfigPanel({
             }));
     }, [inserter.id, inserters]);
 
-    const handleSaveOverride: EnableControlFormContentProps['onSave'] = (override) => {
-        onUpdate(entityIndex, {
-            overrides: { ...inserter.overrides, enable_control: override },
-        });
-        setOverrideFormKey(k => k + 1);
+    const changedFields = useMemo(() => changedConfigFields(draft, inserter), [draft, inserter]);
+    const dirty = rule.changed || Object.keys(changedFields).length > 0;
+
+    // a layout effect, like the rule form's, so that an Esc right after an edit already asks
+    useLayoutEffect(() => {
+        onDirtyChange?.(dirty);
+        return () => onDirtyChange?.(false);
+    }, [dirty, onDirtyChange]);
+
+    const handleDraftUpdate = (_index: number, updates: Partial<InserterFormData>) => {
+        setDraft(d => ({ ...d, ...updates }));
     };
 
-    const handleCancelOverride = () => {
-        setOverrideFormKey(k => k + 1);
+    // one update with what changed; the overrides only when the rule did, so an untouched rule (a forced ALWAYS
+    // included) stays as it is
+    const handleSave = () => {
+        const updates: Partial<InserterFormData> = { ...changedFields };
+        if (rule.changed) {
+            updates.overrides = { ...inserter.overrides, enable_control: rule.override };
+        }
+        onUpdate(entityIndex, updates);
+        onClose();
     };
 
     return (
@@ -328,9 +367,11 @@ export function InserterConfigPanel({
                 onChange={(_, v) => setActiveTab(v)}
                 sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
             >
-                <Tab label="Config" />
+                <Tab label="Config" id={`${id}-tab-0`} aria-controls={`${id}-tabpanel-0`} />
                 <Tab
                     label="Overrides"
+                    id={`${id}-tab-1`}
+                    aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
                     icon={
                         hasNonDefaultOverride
@@ -340,32 +381,57 @@ export function InserterConfigPanel({
                 />
             </Tabs>
 
-            <Box sx={{ p: 2 }}>
-                {activeTab === 0 && (
-                    <InserterEditSection
-                        inserter={inserter}
-                        entityIndex={entityIndex}
-                        machines={machines}
-                        belts={belts}
-                        chests={chests}
-                        itemNames={itemNames}
-                        getRecipeInfo={getRecipeInfo}
-                        onUpdate={onUpdate}
-                    />
+            {/* both tabs stay mounted, so a draft on one survives a visit to the other */}
+            <Box role="tabpanel" id={`${id}-tabpanel-0`} aria-labelledby={`${id}-tab-0`} hidden={activeTab !== 0} sx={{ p: 2 }}>
+                <InserterEditSection
+                    inserter={draft}
+                    entityIndex={entityIndex}
+                    machines={machines}
+                    belts={belts}
+                    chests={chests}
+                    itemNames={itemNames}
+                    getRecipeInfo={getRecipeInfo}
+                    onUpdate={handleDraftUpdate}
+                />
+            </Box>
+            <Box role="tabpanel" id={`${id}-tabpanel-1`} aria-labelledby={`${id}-tab-1`} hidden={activeTab !== 1} sx={{ p: 2 }}>
+                <EnableControlFormContent
+                    entityType="inserter"
+                    currentOverride={currentOverride}
+                    onDraftChange={setRule}
+                    hideActions
+                    sourceType={draft.source.type}
+                    sinkType={draft.sink.type}
+                    availableItems={availableItems}
+                    copyFromOptions={copyFromOptions}
+                />
+            </Box>
+
+            <Box
+                sx={{
+                    position: 'sticky',
+                    bottom: 0,
+                    zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: 1,
+                    px: 2,
+                    py: 1.5,
+                    borderTop: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                }}
+            >
+                {dirty && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                        Unsaved changes
+                    </Typography>
                 )}
-                {activeTab === 1 && (
-                    <EnableControlFormContent
-                        key={overrideFormKey}
-                        entityType="inserter"
-                        currentOverride={currentOverride}
-                        onSave={handleSaveOverride}
-                        onCancel={handleCancelOverride}
-                        sourceType={inserter.source.type}
-                        sinkType={inserter.sink.type}
-                        availableItems={availableItems}
-                        copyFromOptions={copyFromOptions}
-                    />
-                )}
+                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={handleSave} variant="contained" disabled={!dirty}>
+                    Save
+                </Button>
             </Box>
         </Box>
     );
