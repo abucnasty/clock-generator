@@ -51,7 +51,7 @@ come from here.
 | [1.9](specs/1.9-renumber.md) | One number per entity, everywhere | opus | merged | [#150](https://github.com/abucnasty/clock-generator/pull/150) | 1 | Round 0: code review and UX audit FIX (keyboard on the stale plan; 720 row). Round 1: both PASS. CI green |
 | [1.10](specs/1.10-numbers-units.md) | Readable numbers and units | opus | merged | [#146](https://github.com/abucnasty/clock-generator/pull/146) | 1 | Code review Fable PASS, UX audit opus PASS; cheap minors fixed before merge. CI green |
 | [1.11](specs/1.11-a11y-basics.md) | Accessibility basics | opus + sonnet | impl | | | Two PRs. PR A (opus, `feat/ux-rework-p1-a11y-basics`) in impl with a capture writer, moved up by coach run 2; announcements go through 1.5's `announce()`. PR B (sonnet) stacks on A |
-| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | impl | | | Glossary approved 2026-10-14. Part A (copy fixes) in impl on `feat/ux-rework-p1-glossary-copy`, with a capture writer; Part B last in the phase |
+| [1.12](specs/1.12-glossary-copy.md) | Glossary and copy pass | sonnet | review | | | Glossary approved 2026-10-14. Part A (copy fixes, plus a name for the Type selects) in review on `feat/ux-rework-p1-glossary-copy`: 235 tests, capture 66 PASS 0 FAIL at 1440/720. Part B last in the phase |
 | [1.13](specs/1.13-enable-chip.md) | Enable mode shown on the row | sonnet | merged | [#145](https://github.com/abucnasty/clock-generator/pull/145) | 1 | Code review opus, UX audit sonnet: FIX, then PASS/PASS. CI green. Forced-ALWAYS wiring moves to 1.9 |
 | [1.14](specs/1.14-warning-colour.md) | Warning colour apart from the brand orange | opus | impl | | | Bundle with 1.4 |
 
@@ -248,6 +248,7 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.5 → 2.1: the import error shows raw parser text ("Expected property name or '}' in JSON at position 2 …").
 - 1.3: after Reset, Target Output's Recipe still shows the old recipe text without its icon (stale Autocomplete text;
   pre-existing, also in 1.1's before-shot).
+- 1.12A → 1.11 PR B: other selects have no `labelId` either (`ChestsForm.tsx` type select, `ValueReferenceSelector.tsx`), and the List's Type select name includes the icon's alt text ("Type assembling-machine-3 Assembling machine").
 - 1.5 → 2.1: "No items selected for import." and the menu names (Reset Configuration, Import/Export Config) keep
   "configuration"/"config" until 2.1 renames them.
 
