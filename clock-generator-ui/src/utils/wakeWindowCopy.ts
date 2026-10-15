@@ -74,14 +74,14 @@ export const ROWS_TABLE_HEADERS = {
     name: 'Name',
     moves: 'Moves',
     onFor: 'On for (% of the clock period)',
-    windows: 'Windows (count)',
+    windows: 'Wake windows (count)',
     notes: 'Notes',
 } as const;
 export const WINDOWS_TABLE_CAPTION = 'Every wake window';
 export const WINDOWS_TABLE_LABEL = 'Every wake window, scrolls sideways';
 export const WINDOWS_TABLE_HEADERS = {
     name: 'Name',
-    window: 'Window (n of N)',
+    window: 'Wake window (n of N)',
     starts: 'Starts at tick',
     ends: 'Ends at tick',
     lengthTicks: 'Length (ticks)',
@@ -152,7 +152,7 @@ export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock'>): string 
     }
 }
 
-/** "On for 14% of the period" */
+/** "On for 14% of the clock period" */
 export function onForText(share: number): string {
     return `On for ${percentText(share)} of the clock period`;
 }
@@ -190,7 +190,7 @@ export function windowEndText(window: Pick<WakeWindow, 'end' | 'wraps'>): string
     return `${num(window.end)}${window.wraps ? ' (next clock period)' : ''}`;
 }
 
-/** "Window 2 of 3" */
+/** "Wake window 2 of 3" */
 export function windowOrdinalText(index: number, count: number): string {
     return `Wake window ${num(index + 1)} of ${num(count)}`;
 }
@@ -238,7 +238,7 @@ export function rowSummary(
 }
 
 /**
- * The details of a selected window: "Window 2 of 3: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are
+ * The details of a selected wake window: "Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are
  * belt slack. The inserter reacts 2 ticks after the wake window opens."
  */
 export function windowDetails(row: WakeWindowRow, index: number, periodTicks: number): string {

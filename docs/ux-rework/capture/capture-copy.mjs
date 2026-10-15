@@ -327,7 +327,6 @@ const debugSummary = (page) => page.getByRole('button', { name: /^Debug Output/ 
 
 // -------------------------------------------------------------------------------------------------- Part B helpers
 
-const validationPanel = (page) => page.locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: 'Validation', exact: true }) }).last(); // SELECTOR: confirm
 // Phase 2 (2.3) put the swing plan inside Advanced Overrides, which starts closed
 async function openAdvanced(page) {
     if (!(await page.getByText('Force Output Swings', { exact: true }).first().isVisible().catch(() => false))) {
@@ -396,10 +395,19 @@ const PART_B_BEFORE_GENERATE = [
             await snap(page, rec, 'validation-ok', { gate: true, desc: 'Swing plan section after a check: the success sentence (spec state 6, Phase 2 place)' });
             rec.info('swing plan success sentence', ok);
             says(rec, 'success sentence: "makes N swing(s) per crafting cycle of X ticks"', ok, /makes \d+ swings? per crafting cycle of [\d,.]+ ticks/);
-            says(rec, 'success sentence: "the clock repeats every Y ticks (Z crafting cycle(s))"', ok, /the clock repeats every [\d,.]+ ticks \(\d+ crafting cycles?\)/);
+            says(rec, 'success sentence: "the clock repeats every Y ticks (Z crafting cycles)", or "the clock period is Y ticks (1 crafting cycle)"', ok, /the clock (repeats every|period is) [\d,.]+ ticks \(\d+ crafting cycles?\)/);
             says(rec, 'success sentence ends "Generating may still use fewer swings if this count does not hold the rate."', ok, /Generating may still use fewer swings if this count does not hold the rate\.$/);
             lacks(rec, 'success sentence has no hand(s), "takes", unstable or configuration', ok, /\bhands?\b|\btakes\b|unstable|configuration/i);
             rec.check('the Check only button keeps its name', (await page.getByRole('button', { name: /^Check only/ }).count()) > 0, 'button "Check only"');
+            // the out-of-date line (CHECK_TEXT.planOutOfDate), after an edit
+            const old = await bumpCopies(page);
+            await openAdvanced(page);
+            await swingPlan(page).scrollIntoViewIfNeeded();
+            const stale = await textOf(page.locator('.MuiAlert-colorWarning, .MuiAlert-standardWarning').filter({ hasText: /plan/ }).first());
+            await snap(page, rec, 'validation-out-of-date', { gate: true, desc: 'Swing plan section after an edit: the out-of-date line' });
+            says(rec, 'out-of-date line: "You changed the build since this plan was made. Check only (or Generate) makes a new one."', stale, /^You changed the build since this plan was made\. Check only \(or Generate\) makes a new one\.$/);
+            await restoreCopies(page, old);
+            await validate(page);
         },
     },
     {
@@ -453,7 +461,7 @@ const PART_B_BEFORE_GENERATE = [
             const tips = {};
             for (const [key, name, locator] of controls) {
                 // 2.4 moved "Belts do not move" out of Advanced Overrides into the belt question
-                if (key === 'belts' && (await locator.count()) === 0) { rec.info('Belts do not move', 'not in Advanced Overrides on this branch (2.4)'); tips[key] = null; continue; }
+                if (key === 'belts' && (await locator.count()) === 0) { tips[key] = null; continue; }
                 tips[key] = await hoverTip(page, locator);
                 await snap(page, rec, `overrides-tip-${key}`, { gate: true, desc: `Advanced Overrides, hover on ${name}` });
                 rec.check(`a tooltip opens on "${name}"`, tips[key] !== '', clip(tips[key]));
@@ -463,7 +471,13 @@ const PART_B_BEFORE_GENERATE = [
             says(rec, 'LCM Override helper: "Crafting cycles per clock period (overrides the calculated LCM)"', helper, /^Crafting cycles per clock period/);
             lacks(rec, 'Force Output Swings tooltip does not say "unstable" (it "does not hold the rate")', tips.force, /unstable/i); // SELECTOR: confirm (spec :63/:84 both name the Force/Fractional strings)
             lacks(rec, 'Enable Fractional Swings tooltip does not say "unstable"', tips.fractional, /unstable/i);
-            if (tips.belts !== null) {
+            if (tips.belts === null) {
+                // 2.4's belt question replaced the switch: read its words where it is asked
+                const belt = await textOf(page.getByText(/Your input belts are/).first().locator('xpath=ancestor::*[self::div or self::fieldset][2]'));
+                rec.info('belt question text', clip(belt, 300));
+                lacks(rec, 'belt question: no banned word, "window" only as "wake window"', belt, /potential clock|configuration|\bhands?\b|(?<!wake )\bwindows?\b/i);
+                if (belt) says(rec, 'belt question says "belt slack"', belt, /belt slack/i);
+            } else {
                 lacks(rec, 'Belts do not move tooltip: "window" only as "wake window"', tips.belts, /(?<!wake )\bwindows?\b/i);
                 says(rec, 'Belts do not move tooltip says "belt slack"', tips.belts, /belt slack/i);
             }

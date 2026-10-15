@@ -150,7 +150,7 @@ describe('watchNotes', () => {
         expect(watchNotes(row(), ctx)).toEqual([]);
     });
 
-    it('notes a row on for 80% of the period and not 79%', () => {
+    it('notes a row on for 80% of the clock period and not 79%', () => {
         expect(MOSTLY_ON_SHARE).toBe(0.8);
         const on80 = row({ windows: windowsOf([{ start: 0, end: 79 }], 100), onShare: 0.8 });
         const on79 = row({ windows: windowsOf([{ start: 0, end: 78 }], 100), onShare: 0.79 });
