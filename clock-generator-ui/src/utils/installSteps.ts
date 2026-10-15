@@ -82,8 +82,8 @@ export const INSTALL_COPY = {
     none: {
         title: 'Nothing to place or wire.',
         // generic: the clock's facts do not say whether the build has an inserter set to Never on
-        detail: 'No inserter or drill is on the clock, so this build needs no clock. Leave the ones set to Never on '
-            + 'switched off in the game.',
+        detail: 'No inserter or drill is on the clock, so this build needs no clock. If you set an inserter to Never '
+            + 'on, keep it switched off in the game yourself.',
     },
     lock: {
         title: 'Know the lock.',

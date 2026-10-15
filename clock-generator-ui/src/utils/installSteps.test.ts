@@ -21,7 +21,7 @@ describe('installSteps', () => {
         for (const book of [false, true]) {
             const steps = installSteps({ book, wiring: [], drills: [] });
             expect(ids(steps)).toEqual(['none']);
-            expect(steps[0].detail).toBe('No inserter or drill is on the clock, so this build needs no clock. Leave the ones set to Never on switched off in the game.');
+            expect(steps[0].detail).toBe('No inserter or drill is on the clock, so this build needs no clock. If you set an inserter to Never on, keep it switched off in the game yourself.');
         }
     });
 

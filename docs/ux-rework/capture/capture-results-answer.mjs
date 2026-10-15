@@ -96,7 +96,7 @@ const STEP_PHRASES = {
     drills: ['Drill 1 for', 'green wire', 'Anything > 0'],
     enable: ['Circuit network connection', 'Enable/disable', 'Anything > 0'],
     others: ['An inserter that is not in the list gets no combinator', 'keep it off in the game yourself', 'remove its wire, or untick Enable/disable'],
-    none: ['No inserter or drill is on the clock, so this build needs no clock.', 'Leave the ones set to Never on switched off in the game.'],
+    none: ['No inserter or drill is on the clock, so this build needs no clock.', 'If you set an inserter to Never on, keep it switched off in the game yourself.'],
     lock: ['The small constant combinator under the clock is the lock', 'a tick off'],
 };
 const NOTHING_TO_WIRE = 'No inserter or drill is on the clock, so this build needs no clock.';
