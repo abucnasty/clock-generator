@@ -29,9 +29,9 @@ export function OverridesForm({
     onUpdate,
 }: OverridesFormProps) {
     return (
-        <Accordion>
+        <Accordion slotProps={{ heading: { component: 'h2' } }}>
             <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="h6">
+                <Typography variant="h6" component="span">
                     Advanced Overrides (Optional)
                 </Typography>
             </AccordionSummary>
@@ -57,11 +57,12 @@ export function OverridesForm({
                         slotProps={{ htmlInput: { min: 1 } }}
                         sx={{ width: 200 }}
                         size="small"
-                        helperText="Override the calculated LCM"
+                        helperText="Crafting cycles per clock period (overrides the calculated LCM)"
                     />
                     <Tooltip
-                        title="Uses exactly this many output swings per crafting cycle for every potential clock, even if the result is unstable. Leave empty to let the generator pick the count, lower it until the output is stable, and offer other counts as potential clocks."
+                        title="Uses exactly this many output swings per crafting cycle for every clock, even if the clock does not hold the rate. Leave empty to let the generator pick the count, lower it until the output holds the rate, and offer other counts as clocks."
                         arrow
+                        describeChild
                         placement="top"
                     >
                         <TextField
@@ -83,6 +84,7 @@ export function OverridesForm({
                     <Tooltip 
                         title="When enabled, inserters with fractional swing counts (e.g., 1.5 swings per cycle) will distribute swings across multiple sub-cycles. For example, 3/2 swings becomes 1 swing in the first sub-cycle and 2 swings in the second."
                         arrow
+                        describeChild
                         placement="top"
                     >
                         <FormControlLabel
@@ -103,8 +105,9 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each window of an inserter that picks up from a belt stays open a few ticks longer (belt pickup slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, every clock is made without the slack and the one with the fewest wake-ups is selected. A clock that does not hold the target rate without the slack is listed as unstable."
+                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each wake window of an inserter that picks up from a belt stays open a few ticks longer (belt slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, every clock is made without the slack and the one with the fewest wake-ups is selected. A clock that does not hold the target rate without the slack is listed as unstable."
                         arrow
+                        describeChild
                         placement="top"
                     >
                         <FormControlLabel
@@ -125,8 +128,9 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="Runs the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
+                        title="Runs the four searches for every build: observed wake windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
                         arrow
+                        describeChild
                         placement="top"
                     >
                         <FormControlLabel
@@ -148,7 +152,7 @@ export function OverridesForm({
                     </Tooltip>
                 </Box>
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
-                    Note: If the final output machine has more than 1 inserter, the terminal swing count will be devided equally between them.
+                    Note: If the final output machine has more than one inserter, the output swings you force are divided equally between them.
                 </Typography>
             </AccordionDetails>
         </Accordion>

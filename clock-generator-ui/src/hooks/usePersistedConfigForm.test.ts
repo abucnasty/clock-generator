@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChestType } from 'clock-generator/light';
-import { backUpSavedConfig, readSavedConfig } from './usePersistedConfigForm';
+import { formDataToConfig } from '../utils/configForm/configMapping';
+import * as edits from '../utils/configForm/edits';
+import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
+import { backUpSavedConfig, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -20,11 +23,49 @@ describe('readSavedConfig', () => {
         expect(config?.machines[0]._uuid).toEqual(expect.any(String));
     });
 
+    it('loads a form saved with next ids, dropping them and keeping its ids as saved', () => {
+        const saved = JSON.stringify({
+            target_output: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            machines: [1, 3].map((id) => ({ id, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 })),
+            inserters: [1, 4].map((id) => ({ id, source: { type: 'machine', id: 1 }, sink: { type: 'machine', id: 3 }, stack_size: 16 })),
+            belts: [],
+            chests: [],
+            next_ids: { inserters: 9, machines: 7 },
+        });
+        const config = readSavedConfig(saved)!;
+        expect('next_ids' in config).toBe(false);
+        expect(config.machines.map((m) => m.id)).toEqual([1, 3]);
+        expect(config.inserters.map((ins) => ins.id)).toEqual([1, 4]);
+        expect(edits.addInserter(config).inserters.at(-1)!.id).toBe(5);
+        expect('next_ids' in formDataToConfig(config)).toBe(false);
+        expect(serializeConfig(config)).not.toContain('next_ids');
+    });
+
     it('gives null for what is not the form state', () => {
         vi.spyOn(console, 'warn').mockImplementation(() => { });
         expect(readSavedConfig('{ not json')).toBeNull();
         expect(readSavedConfig('{"machines": []}')).toBeNull();
         expect(readSavedConfig('{"target_output": {}, "machines": [], "chests": 3}')).toBeNull();
+    });
+});
+
+describe('serializeConfig', () => {
+    it('keeps the forced flag of an inserter through a save and a reload, and leaves out the uuids', () => {
+        const form: ConfigFormData = {
+            ...createDefaultConfig(),
+            inserters: [
+                {
+                    id: 1, _uuid: 'inserter-1', source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16,
+                    overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true,
+                },
+                { id: 2, _uuid: 'inserter-2', source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, stack_size: 16 },
+            ],
+        };
+        const text = serializeConfig(form);
+        expect(text).not.toContain('_uuid');
+        const reloaded = readSavedConfig(text);
+        expect(reloaded?.inserters[0]._forced_always).toBe(true);
+        expect('_forced_always' in reloaded!.inserters[1]).toBe(false);
     });
 });
 

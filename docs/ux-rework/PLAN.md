@@ -15,6 +15,9 @@ merged, and the owner then decided how to resolve every open question (the table
   and `review/C-visual-a11y.md` (full reviews), `review/BRIEF.md` (the brief the reviewers worked from), and
   `capture/` (the screenshot scripts; see its README).
 
+**How the work is run:** `ORCHESTRATOR.md` sets out the loop (spec, implement, evidence gate, code review, UX audit,
+fix cap, merge), which model each role uses, and the checkpoints with the owner. `PROGRESS.md` is the ledger.
+
 Finding references such as **A5**, **B4** and **C8** are finding numbers in those reviews. Read the finding before
 changing the code it points at: each one names the screenshot and `file:line` it is about.
 
@@ -64,9 +67,13 @@ master
      └─ feat/ux-rework-p3
 ```
 
-- **Child PRs:** small, one item per PR where practical, targeting the phase branch. **The agent may merge a child PR**
+- **Child PRs:** small, one item per PR where practical (items that share files may be bundled; see
+  `ORCHESTRATOR.md`), targeting the phase branch. **The agent may merge a child PR**
   once CI passes.
-- **Phase branches:** start each one from `feat/ux-rework` after the previous phase has merged. When the phase is done,
+- **Phase branches:** start each one from `feat/ux-rework` after the previous phase has merged. Exception (the owner,
+  2026-10-14): while the previous phase's tail leaves slots idle, the next phase's branch may be cut from the previous
+  phase branch's head and its unblocked items run in those slots (the four-unit cap counts both phases). It merges the
+  previous phase branch in after each of its merges, then `feat/ux-rework` once that phase lands. When the phase is done,
   its UX review has run (see Verification) and CI passes, **the agent may merge the phase PR into `feat/ux-rework`**.
 - **The final PR**, `feat/ux-rework` → `master`, is opened by the agent and **merged only by the owner**.
 - CI (`.github/workflows/test.yml`) runs on every pull request: the unit tests, knip, lint, `check:icons` and the build.
@@ -127,7 +134,11 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
     - the Paste from Factorio import
     - deleting any row (machine, inserter, belt, chest, drill)
     - deleting from the diagram
-  - Then show "{What happened}. Undo" for 10 seconds. Undo restores the snapshot, and the existing persistence saves it.
+  - Then show "{What happened}. Undo" until the next edit to the build, the next undoable action, Close or Escape (no
+    timer: the owner, 2026-10-14, for WCAG 2.2.1; this replaces "for 10 seconds"). Ctrl/Cmd+Z undoes while it is offered.
+    The offer also ends when a check or a generation starts: running the build accepts it (the owner, 2026-10-14,
+    after the Phase 1 end review; built in 1.5 F).
+    Undo restores the snapshot, and the existing persistence saves it.
   - In the ⋮ menu, put Reset below a divider, in the error colour.
 - **Done when:** there are vitest tests for snapshot and restore.
 
@@ -236,6 +247,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 
 ## Phase 2: the newcomer-first structure
 
+**Order:** 2.2 (sidecar) and 2.5 (install steps) go first, so the owner's in-game checks overlap the other items
+(orchestrator, 2026-10-14).
+
 **2.1 First visit and the way in** (A1, A2, A4, A15, A17)
 - **What:**
   - An intro card above Target Output, dismissible and remembered. It gives one sentence on what the tool does, then
@@ -307,6 +321,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - **Compare other clocks:** a compact table (Clock, Makes, Wake-ups/min, Works?) with "Show all columns" for the
     current full table
   - **Details** tabs: Insights (prose collapsed behind "Why?"), Fuel, and the blueprint string.
+- **Terms popover** (added 2026-10-14, the owner's glossary decision): a "Terms" item in ⋮ and an (i) by the Results
+  table headers open a popover listing the approved glossary (1.12), fed by a `glossary.ts`.
 - **Developer tools** (an item in ⋮, also turned on by `?debug`): the current Timelines, the Plan toggle, Detailed
   mode, and the Log tab with the debug switches.
 
@@ -445,6 +461,13 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 
 ## The final PR (`feat/ux-rework` → `master`)
 
+0. **File the issues found (owner, 2026-10-14).** Every finding that was not fixed in the rework (the ledger's
+   Follow-ups, the known issues, and anything left open by the last UX review) becomes a GitHub issue, in one pass:
+   - the orchestrator drafts them in `docs/ux-rework/ISSUES.md`: one entry per issue with a title, a body (what's wrong,
+     where, how to reproduce, the finding it came from) and labels; duplicates merged; items fixed since dropped;
+   - **the owner reviews the draft** and edits, drops or approves entries;
+   - the orchestrator creates the approved ones with `gh issue create` and adds their links to the final PR.
+   This happens before `docs/ux-rework/` is deleted.
 1. Delete `docs/ux-rework/` in its own last commit.
 2. Bump the versions and changelogs (see Releases above).
 3. Run the full test workflow on the branch, including the generation tests.

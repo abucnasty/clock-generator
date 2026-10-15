@@ -64,9 +64,9 @@ export function DebugPanel({
     };
 
     return (
-        <Accordion defaultExpanded={false}>
+        <Accordion defaultExpanded={false} slotProps={{ heading: { component: 'h2' } }}>
             <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="h6">
+                <Typography variant="h6" component="span">
                     Debug Output {logs.length > 0 && `(${logs.length} messages)`}
                 </Typography>
             </AccordionSummary>
@@ -105,7 +105,7 @@ export function DebugPanel({
                         ))}
                     </Box>
                     <Typography variant="caption" gutterBottom>
-                        The debug messages will appear in the browser console after pressing "Generate Blueprint"
+                        The debug messages will appear in the browser console the next time you press Generate.
                     </Typography>
                 </Box>
 
@@ -140,7 +140,7 @@ export function DebugPanel({
                             variant="body2"
                             sx={{ color: '#9e9e9e', fontStyle: 'italic', py: 2, textAlign: 'center' }}
                         >
-                            No logs yet. Turn on the generator log above and run a simulation.
+                            No logs yet. Turn on the generator log above and press Generate.
                         </Typography>
                     ) : (
                         <Box

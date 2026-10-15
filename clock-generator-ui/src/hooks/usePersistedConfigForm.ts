@@ -80,6 +80,8 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
                 parsed.drills.configs = parsed.drills.configs.map((d: DrillFormData & { _uuid?: string }) =>
                     d._uuid ? d : { ...d, _uuid: crypto.randomUUID() });
             }
+            // forms saved before ids were renumbered on delete carry a UI-only `next_ids`; it is no longer used
+            delete parsed.next_ids;
             return parsed as ConfigFormData;
         }
     } catch (e) {
@@ -113,7 +115,7 @@ function readConfigFromStorage(): StoredConfig | null {
  * gives the message that tells the user so
  */
 export function backUpSavedConfig(storage: Pick<Storage, 'setItem'>, text: string): string {
-    const failed = 'Your saved configuration could not be loaded.';
+    const failed = 'Your saved build could not be loaded.';
     try {
         storage.setItem(BACKUP_STORAGE_KEY, text);
     } catch (e) {
@@ -125,13 +127,18 @@ export function backUpSavedConfig(storage: Pick<Storage, 'setItem'>, text: strin
         + 'the browser console says what is wrong with it.';
 }
 
+/** The form state as saved in localStorage */
+export function serializeConfig(config: ConfigFormData): string {
+    // Strip internal _uuid fields — they are UI-only and shouldn't be in the exported config.
+    return JSON.stringify(config, (key, value) =>
+        key === '_uuid' ? undefined : value
+    );
+}
+
 /** Save config to localStorage */
 function saveConfigToStorage(config: ConfigFormData): void {
     try {
-        // Strip internal _uuid fields — they are UI-only and shouldn't be in the exported config.
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(config, (key, value) =>
-            key === '_uuid' ? undefined : value
-        ));
+        localStorage.setItem(STORAGE_KEY, serializeConfig(config));
     } catch (e) {
         console.warn('Failed to save config to localStorage:', e);
     }

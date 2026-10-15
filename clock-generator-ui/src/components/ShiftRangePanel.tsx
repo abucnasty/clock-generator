@@ -44,7 +44,7 @@ function EdgeReasons({ title, edge }: { title: string; edge: ShiftRangeEdge }) {
             ))}
             {edge.is_search_limit && (
                 <Typography variant="body2" color="text.secondary">
-                    • Nothing further was tried: the moved windows would meet the same inserters' other windows.
+                    • Nothing further was tried: the moved wake windows would meet the same inserters' other wake windows.
                 </Typography>
             )}
             {edge.notes.length === 0 && !edge.is_search_limit && (
@@ -55,7 +55,7 @@ function EdgeReasons({ title, edge }: { title: string; edge: ShiftRangeEdge }) {
 }
 
 /**
- * Every place tried for the swings a potential clock moved, drawn along one axis of ticks from the planned start,
+ * Every place tried for the swings a clock moved, drawn along one axis of ticks from the planned start,
  * so the range the machines accept is visible next to the one place the clock uses.
  */
 export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
@@ -81,7 +81,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
 
     return (
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>
                 {options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -93,9 +93,9 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     <> Places from {describeShift(range.from)} to {describeShift(range.to)} work, checked every {cell} ticks.</>
                 )}
                 {options.moved === 'swings' && (
-                    <> A machine takes an input hand once it is below its insertion limit and before it runs out, and gives an output hand once a full one is ready.</>
+                    <> A machine accepts an input swing once it is below its insertion limit and before it runs out, and an output swing can leave once a full hand is ready.</>
                 )}
-                {' '}Each place was checked with the clock-only simulation from 12 clock starts; the one in use was confirmed from 112.
+                {' '}Each place was checked with the clock-only simulation from 12 start points; the one in use was confirmed from 112.
             </Typography>
 
             {options.rows.map(row => (
@@ -174,7 +174,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Box sx={{ height: 12, borderLeft: `2px dashed ${USED_COLOR}` }} />
                     <Typography variant="caption">
-                        Planned start{plannedChecked ? '' : ' (offered as its own potential clock, not checked here)'}
+                        Planned start{plannedChecked ? '' : ' (offered as its own clock, not checked here)'}
                     </Typography>
                 </Box>
             </Box>

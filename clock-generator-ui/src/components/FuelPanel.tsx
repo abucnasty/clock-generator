@@ -2,6 +2,7 @@ import { Alert, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHe
 import { memo } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
+import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { COLOR_BLIND_PALETTE } from './colors';
 
@@ -13,8 +14,6 @@ const LABEL_WIDTH = 200;
 const LEVEL_HEIGHT = 56;
 const ROW_HEIGHT = 20;
 
-const machineLabel = (machineNumber: number) => `Machine ${machineNumber}`;
-const inserterLabel = (inserterNumber: number) => `Inserter ${inserterNumber}`;
 const ticksAndSeconds = (ticks: number) => `${Math.round(ticks)} ticks (${(ticks / 60).toFixed(1)} s)`;
 const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
 
@@ -29,11 +28,11 @@ function exportedClockText(fuel: FuelViewData): string {
     const fuelClocks = `${moduli.length === 1 ? 'a fuel clock' : 'fuel clocks'} of ${moduli.join(' and ')} ticks`;
     if (plan.merged_clock_ticks !== null) {
         return `One clock counts ${plan.merged_clock_ticks.toLocaleString()} ticks, the least common multiple of the `
-            + `${plan.period_ticks} tick period and ${fuelClocks}. Modulo combinators give the period and each fuel clock from it.`;
+            + `${plan.period_ticks} tick clock period and ${fuelClocks}. Modulo combinators give the clock period and each fuel clock from it.`;
     }
-    return `The blueprint has ${fuelClocks} next to the clock of the period, each with a counter of its own, because `
+    return `The blueprint has ${fuelClocks} next to the main clock, each with a counter of its own, because `
         + (plan.separate_clocks_reason === 'fractional_period'
-            ? `the ${plan.period_ticks.toFixed(3)} tick period is not a whole number of ticks.`
+            ? `the ${plan.period_ticks.toFixed(3)} tick clock period is not a whole number of ticks.`
             : 'one clock for all of them would count further than a signal can hold.');
 }
 
@@ -43,7 +42,7 @@ function RanOutAlert({ run }: { run: FuelRunView }) {
     if (empty.length > 0) {
         return (
             <Alert severity="error" sx={{ mb: 2 }}>
-                {empty.map(levels => `${machineLabel(levels.machine_number)} ran out of fuel at tick ${levels.first_empty_tick} `
+                {empty.map(levels => `${entityLabel('machine', levels.machine_number)} ran out of fuel at tick ${levels.first_empty_tick} `
                     + `and had none for ${levels.empty_ticks} ticks`).join('; ')}
                 {` over the ${span} simulated.`}
             </Alert>
@@ -86,7 +85,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                         <FactorioIcon name={machine.output_item} size={18} />
-                                        {machineLabel(machine.machine_number)}
+                                        {entityLabel('machine', machine.machine_number)}
                                         <Typography variant="caption" color="text.secondary">{machine.recipe}</Typography>
                                     </Box>
                                 </TableCell>
@@ -150,8 +149,8 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
                         const enables = run ? Math.ceil(run.durationTicks / inserter.modulus) : 0;
                         return (
                             <TableRow key={inserter.inserter_id}>
-                                <TableCell>{inserterLabel(inserter.inserter_number)}</TableCell>
-                                <TableCell>{machineLabel(inserter.machine_number)}</TableCell>
+                                <TableCell>{entityLabel('inserter', inserter.inserter_number)}</TableCell>
+                                <TableCell>{entityLabel('machine', inserter.machine_number)}</TableCell>
                                 <TableCell align="right">{inserter.modulus} ticks</TableCell>
                                 <TableCell align="right">{inserter.window.start} to {inserter.window.end}</TableCell>
                                 <TableCell align="right">{inserter.enables_per_minute.toFixed(1)}/min</TableCell>
@@ -242,7 +241,7 @@ function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInser
             <Box sx={{ width: LABEL_WIDTH, flexShrink: 0, pr: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <FactorioIcon name="stack-inserter" size={16} />
                 <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem' }}>
-                    {inserterLabel(inserter.inserter_number)}
+                    {entityLabel('inserter', inserter.inserter_number)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.65rem' }}>
                     every {inserter.modulus}
@@ -326,7 +325,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                         <FactorioIcon name={machine.output_item} size={18} />
                                         <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem' }}>
-                                            {machineLabel(machine.machine_number)} ({machine.recipe})
+                                            {entityLabel('machine', machine.machine_number)} ({machine.recipe})
                                         </Typography>
                                     </Box>
                                     <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontSize: '0.65rem' }}>
@@ -354,7 +353,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
 }
 
 /**
- * Fuel is outside the transfer plan: what each burner machine uses, the fuel clocks the blueprint exports to refill
+ * Fuel is outside the swing plan: what each burner machine uses, the fuel clocks the blueprint exports to refill
  * them, and the exported clock run long enough to show the fuel going down and being refilled.
  */
 function FuelPanelComponent({ fuel }: FuelPanelProps) {
@@ -364,7 +363,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             {run && <RanOutAlert run={run} />}
 
             <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6">Fuel consumption</Typography>
+                <Typography variant="h6" component="h2">Fuel consumption</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A machine burns fuel only while it crafts, so it burns its crafting share of the rate over a clock period.
                 </Typography>
@@ -372,7 +371,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
             </Paper>
 
             <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6">Fuel clocks</Typography>
+                <Typography variant="h6" component="h2">Fuel clocks</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A fuel inserter is enabled for a few ticks as often as the fuel slot's limit lasts, whatever the clock period is.
                     It only swings when the slot is below the limit, so most enables pass without a swing. {exportedClockText(fuel)}
@@ -382,7 +381,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
 
             {run && (
                 <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6">Fuel timeline</Typography>
+                    <Typography variant="h6" component="h2">Fuel timeline</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         The exported clock run for {run.periods} clock periods: {run.durationTicks} ticks ({(run.durationTicks / 60).toFixed(1)} seconds).
                         The dashed line is the fuel slot's limit.

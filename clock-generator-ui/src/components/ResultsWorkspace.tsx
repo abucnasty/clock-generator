@@ -13,13 +13,19 @@ import type { FuelViewData, ShiftOptionsView } from '../worker/types';
 import { BlueprintOutput } from './BlueprintOutput';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DebugPanel } from './DebugPanel';
+import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { FuelPanel } from './FuelPanel';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
+import { StaleResultsBanner } from './StaleResultsBanner';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { rateWarningOf } from '../utils/rateWarning';
+import type { GeneratedFor } from '../utils/resultsStaleness';
+import type { PickRule } from '../utils/recommendedClock';
+import { deeperSearchNoticeOf } from '../utils/deeperSearch';
+import type { Problem } from '../utils/firstProblem';
 
 type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
@@ -29,8 +35,23 @@ interface ResultsWorkspaceProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
+    /** The clock the selection rule picks; null while there are none */
+    recommendedIndex: number | null;
+    onSelectRecommended: () => void;
+    /** What the selection rule was given by the latest generation's config; null before one */
+    pickRule: PickRule | null;
     pending: string[];
     skippedSearches: string[];
+    /** The latest generation ran the slower searches because it asked for them */
+    searchedDeeper: boolean;
+    /** "Search for fewer wake-ups" is on in the form */
+    keptOn: boolean;
+    /** False whenever Generate would be disabled */
+    canSearchDeeper: boolean;
+    /** Why Search deeper is off, as Generate says it; null when it is on or a run is going */
+    searchDeeperBlockedBy: Problem | null;
+    /** Generates again with the slower searches; `keepOn` also turns the switch on in the form */
+    onSearchDeeper: (keepOn: boolean) => void;
     blueprintString: string | null;
     simulationDurationTicks: number | null;
     transferHistory: SerializableTransferHistory | null;
@@ -49,15 +70,32 @@ interface ResultsWorkspaceProps {
     streamLogs: boolean;
     onStreamLogsChange: (stream: boolean) => void;
     onClearLogs: () => void;
+    /** What the clocks were made for, while the build has changed since. Null when not */
+    staleFor: GeneratedFor | null;
 }
 
-function TabBody({ shown, children }: { shown: boolean; children: ReactNode }) {
+const tabId = (tab: ResultsTab) => `results-tab-${tab}`;
+const panelId = (tab: ResultsTab) => `results-panel-${tab}`;
+/** What a tab says about the panel it opens, and the panel about its tab */
+const tabProps = (tab: ResultsTab) => ({ id: tabId(tab), 'aria-controls': panelId(tab) });
+
+function TabBody({ tab, shown, children }: { tab: ResultsTab; shown: boolean; children: ReactNode }) {
     // kept mounted so a tab keeps its filters and scroll position while another is shown
-    return <Box sx={{ display: shown ? 'block' : 'none', pt: 2 }}>{children}</Box>;
+    return (
+        <Box
+            role="tabpanel"
+            id={panelId(tab)}
+            aria-labelledby={tabId(tab)}
+            hidden={!shown}
+            sx={{ display: shown ? 'block' : 'none', pt: 2 }}
+        >
+            {children}
+        </Box>
+    );
 }
 
 /**
- * Everything a generation produced: the potential clocks to pick from, and one tabbed area of detail for the
+ * Everything a generation produced: the clocks to pick from, and one tabbed area of detail for the
  * selected clock, so the page stays one screen long.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
@@ -72,9 +110,18 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     const transferHistory = showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
     const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
+    const noticeKind = deeperSearchNoticeOf({
+        searchesSkipped: props.skippedSearches.length > 0,
+        searchedDeeper: props.searchedDeeper,
+        keptOn: props.keptOn,
+        isRunning: props.isRunning,
+        stale: props.staleFor !== null,
+    });
 
     return (
         <Box>
+            {props.staleFor !== null && hasResults && <StaleResultsBanner generatedFor={props.staleFor} />}
+
             {props.error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                     {props.error}
@@ -84,7 +131,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             {!hasResults && !props.isRunning && !props.error && (
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
                     <Typography variant="body1" color="text.secondary">
-                        Nothing generated yet. Press Generate to create clocks for your configuration.
+                        Nothing generated yet. Press Generate to create clocks for your build.
                     </Typography>
                 </Paper>
             )}
@@ -93,8 +140,21 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 alternatives={props.alternatives}
                 selectedIndex={props.selectedIndex}
                 onSelect={props.onSelect}
+                recommendedIndex={props.recommendedIndex}
+                onSelectRecommended={props.onSelectRecommended}
+                pickRule={props.pickRule}
+                isGenerating={props.isRunning}
                 pending={props.pending}
-                skippedSearches={props.skippedSearches}
+                notice={
+                    <DeeperSearchNotice
+                        kind={noticeKind}
+                        recommendedLabel={props.recommendedIndex === null ? null : props.alternatives[props.recommendedIndex]?.label ?? null}
+                        canSearchDeeper={props.canSearchDeeper}
+                        blockedBy={props.searchDeeperBlockedBy}
+                        onSearchDeeper={props.onSearchDeeper}
+                    />
+                }
+                holdNotice={noticeKind === 'searching'}
             />
 
             <Box sx={{ display: hasResults ? 'block' : 'none', mt: 2 }}>
@@ -105,14 +165,14 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     scrollButtons="auto"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
-                    <Tab value="timelines" label="Timelines" />
-                    {fuelView !== null && <Tab value="fuel" label="Fuel" />}
-                    <Tab value="insights" label="Insights" />
-                    <Tab value="blueprint" label="Blueprint" />
-                    <Tab value="log" label="Log" />
+                    <Tab value="timelines" label="Timelines" {...tabProps('timelines')} />
+                    {fuelView !== null && <Tab value="fuel" label="Fuel" {...tabProps('fuel')} />}
+                    <Tab value="insights" label="Insights" {...tabProps('insights')} />
+                    <Tab value="blueprint" label="Blueprint" {...tabProps('blueprint')} />
+                    <Tab value="log" label="Log" {...tabProps('log')} />
                 </Tabs>
 
-                <TabBody shown={shownTab === 'insights'}>
+                <TabBody tab="insights" shown={shownTab === 'insights'}>
                     <SwingBackoffReportDisplay report={props.swingBackoffReport} />
                     <InsightsPanel
                         insights={props.alternatives[props.selectedIndex]?.insights ?? []}
@@ -122,7 +182,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     </InsightsPanel>
                 </TabBody>
 
-                <TabBody shown={shownTab === 'timelines'}>
+                <TabBody tab="timelines" shown={shownTab === 'timelines'}>
                     {hasClockOnlyRun && (
                         <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                             <ToggleButtonGroup
@@ -137,9 +197,9 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             </ToggleButtonGroup>
                             <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
                                 {timelineRun === 'clock'
-                                    ? 'The timelines show the build driven only by the clock windows in the blueprint. '
-                                        + 'This is the run the Status and Clock-only output columns are judged on.'
-                                    : 'The timelines show the planning simulation the clock windows were taken from. '
+                                    ? 'The timelines show the build driven only by the wake windows in the blueprint. '
+                                        + 'This is the run the Status and Output per clock period columns are judged on.'
+                                    : 'The timelines show the planning simulation the wake windows were taken from. '
                                         + 'Inserters also wait on their machine\'s inventory there, so swings can land differently than with the clock alone.'}
                             </Typography>
                         </Paper>
@@ -159,21 +219,31 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     )}
                 </TabBody>
 
-                <TabBody shown={shownTab === 'fuel'}>
-                    {fuelView !== null && <FuelPanel fuel={fuelView} />}
-                </TabBody>
+                {fuelView !== null && (
+                    <TabBody tab="fuel" shown={shownTab === 'fuel'}>
+                        <FuelPanel fuel={fuelView} />
+                    </TabBody>
+                )}
 
-                <TabBody shown={shownTab === 'blueprint'}>
+                <TabBody tab="blueprint" shown={shownTab === 'blueprint'}>
                     <BlueprintOutput
                         rateWarning={rateWarningOf(props.alternatives[props.selectedIndex])}
                         blueprintString={props.blueprintString}
                         simulationDurationTicks={props.simulationDurationTicks ?? undefined}
+                        staleFor={props.staleFor}
                     />
                 </TabBody>
             </Box>
 
             {/* reachable before anything is generated: it holds the debug options a generation runs with */}
-            <Box sx={{ display: !hasResults || shownTab === 'log' ? 'block' : 'none', pt: 2 }}>
+            <Box
+                // the Log tab's panel; with no results there are no tabs, and the options are plain content
+                role={hasResults ? 'tabpanel' : undefined}
+                id={panelId('log')}
+                aria-labelledby={hasResults ? tabId('log') : undefined}
+                hidden={hasResults && shownTab !== 'log'}
+                sx={{ display: !hasResults || shownTab === 'log' ? 'block' : 'none', pt: 2 }}
+            >
                 <DebugPanel
                     logs={props.logs}
                     debugSteps={props.debugSteps}

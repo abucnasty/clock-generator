@@ -79,7 +79,7 @@ export interface ShiftRangeEdge {
     notes: string[];
 }
 
-/** Every place tried for the swings a potential clock moved off their planned start */
+/** Every place tried for the swings a clock moved off their planned start */
 
 export interface ShiftOptionsView {
     moved: 'swings' | 'output-swing';
@@ -108,6 +108,8 @@ export interface ClockAlternativeView {
     rankingWindowCount: number;
     /** What the trial of the clock found: holds, survives backpressure loss, rate, wake-ups */
     assessment: ClockAssessment;
+    /** Copies of the build the target rate is shared over; the rate in the assessment is the total for all of them */
+    copies: number;
     /** The one word for the clock: stable, no recovery, or unstable */
     verdict: ClockVerdict;
     /** How the clock ranks against the others; the selection compares these, in order */

@@ -1,4 +1,4 @@
-import { Add, Delete, Info, Settings } from '@mui/icons-material';
+import { Add, Delete, Info } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -12,15 +12,18 @@ import {
     Select,
     Switch,
     TextField,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { EnableControlModal } from './EnableControlModal';
+import { EnableRuleChip } from './EnableRuleChip';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { DRILL_TYPES } from './entityTypes';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
@@ -73,11 +76,14 @@ function DrillsFormComponent({
         setCopied(true);
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, remove } = useFocusAfterRemove(drills.length, onRemove);
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         Mining Drills ({drills.length})
                     </Typography>
                     <FormControlLabel
@@ -97,7 +103,7 @@ function DrillsFormComponent({
                         label={enabled ? 'Enabled' : 'Disabled'}
                         sx={{ ml: 1 }}
                     />
-                    <IconButton size="small" onClick={handleInfoClick} color="info">
+                    <IconButton size="small" onClick={handleInfoClick} color="info" aria-label={BUTTON_NAMES.aboutDrills}>
                         <Info fontSize="small" />
                     </IconButton>
                     <Popover
@@ -138,7 +144,7 @@ function DrillsFormComponent({
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" disabled={!enabled}>
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" disabled={!enabled} data-row-add="">
                     Add Drill
                 </Button>
             </Box>
@@ -159,11 +165,13 @@ function DrillsFormComponent({
                         />
                     </Box>
 
-                    <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
+                    <SortableList itemKeys={drills.map((d) => d._uuid)} itemLabels={drills.map((d) => entityLabel('drill', d.id))} onReorder={onReorder}>
                     {drills.map((drill, index) => (
-                        <SortableItem key={drill._uuid} stableKey={drill._uuid} displayId={index + 1}>
+                        <SortableItem key={drill._uuid} stableKey={drill._uuid} label={entityLabel('drill', drill.id)}>
                             {(dragHandle) => (
                         <Box
+                            role="group"
+                            aria-label={entityLabel('drill', drill.id)}
                             sx={{
                                 display: 'flex',
                                 gap: 2,
@@ -179,6 +187,7 @@ function DrillsFormComponent({
                             <FormControl size="small" sx={{ minWidth: 180 }}>
                                 <InputLabel>Drill Type</InputLabel>
                                 <Select
+                                    inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
                                     value={drill.type}
                                     label="Drill Type"
                                     onChange={(e) =>
@@ -188,7 +197,7 @@ function DrillsFormComponent({
                                     }
                                     renderValue={(selected) => (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={selected} size={20} />
+                                            <FactorioIcon name={selected} size={20} alt="" />
                                             {DRILL_TYPES.find((dt) => dt.value === selected)?.label}
                                         </Box>
                                     )}
@@ -196,7 +205,7 @@ function DrillsFormComponent({
                                     {DRILL_TYPES.map((dt) => (
                                         <MenuItem key={dt.value} value={dt.value}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <FactorioIcon name={dt.value} size={20} />
+                                                <FactorioIcon name={dt.value} size={20} alt="" />
                                                 {dt.label}
                                             </Box>
                                         </MenuItem>
@@ -229,6 +238,7 @@ function DrillsFormComponent({
                             <FormControl size="small" sx={{ minWidth: 120 }} error={!machineIds.includes(drill.target.id)}>
                                 <InputLabel>Target Machine</InputLabel>
                                 <Select
+                                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
                                     value={drill.target.id}
                                     label="Target Machine"
                                     onChange={(e) =>
@@ -239,21 +249,18 @@ function DrillsFormComponent({
                                 >
                                     {machineIds.map((id) => (
                                         <MenuItem key={id} value={id}>
-                                            Machine {id}
+                                            {entityLabel('machine', id)}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
-                            {/* Enable Control Settings */}
-                            <Tooltip title="Configure Enable Control">
-                                <IconButton
-                                    onClick={() => setEnableControlModalDrillIndex(index)}
-                                    color={drill.overrides?.enable_control?.mode && drill.overrides.enable_control.mode !== 'AUTO' ? 'primary' : 'default'}
-                                >
-                                    <Settings />
-                                </IconButton>
-                            </Tooltip>
-                            <IconButton onClick={() => onRemove(index)} color="error">
+                            <EnableRuleChip
+                                override={drill.overrides?.enable_control}
+                                entityLabel={entityLabel('drill', drill.id)}
+                                entityType="drill"
+                                onClick={() => setEnableControlModalDrillIndex(index)}
+                            />
+                            <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete="">
                                 <Delete />
                             </IconButton>
                         </Box>
@@ -278,12 +285,12 @@ function DrillsFormComponent({
                 </Typography>
             )}
 
-            {/* Enable Control Modal */}
+            {/* the enable rule modal */}
             <EnableControlModal
                 open={enableControlModalDrillIndex !== null}
                 onClose={() => setEnableControlModalDrillIndex(null)}
                 entityType="drill"
-                entityLabel={enableControlModalDrillIndex !== null ? `Drill ${drills[enableControlModalDrillIndex]?.id}` : ''}
+                entityLabel={enableControlModalDrillIndex !== null && drills[enableControlModalDrillIndex] ? entityLabel('drill', drills[enableControlModalDrillIndex].id) : ''}
                 currentOverride={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.overrides?.enable_control : undefined}
                 sinkType="machine"
                 availableItems={(() => {

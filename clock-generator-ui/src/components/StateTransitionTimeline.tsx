@@ -27,6 +27,7 @@ import type {
     StatusCategory,
 } from 'clock-generator/browser';
 import { statusToCategory } from 'clock-generator/light';
+import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import {
     getStatusColor,
@@ -40,6 +41,7 @@ import {
     INSERTER_STATUS_COLORS,
     MACHINE_STATUS_COLORS,
     DRILL_STATUS_COLORS,
+    COLOR_BLIND_PALETTE,
 } from './colors';
 import { sortByRelationship, sortByType } from './topological-sort';
 
@@ -50,7 +52,7 @@ interface StateTransitionTimelineProps {
 }
 
 const CLOCK_WINDOW_COLOR = '#ffffff';
-const CLOCK_WINDOW_LABEL = 'Clock window (decider on; the inserter reacts 2 ticks later)';
+const CLOCK_WINDOW_LABEL = 'Wake window (decider on; the inserter reacts 2 ticks later)';
 
 /** The thin strip under each row that shows the state the entity would show in Factorio */
 const FACTORIO_STATE_STRIP_HEIGHT = 6;
@@ -316,7 +318,8 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
     const entityTypeColor = entity.entity_type === 'machine' 
         ? 'success.main' 
         : entity.entity_type === 'drill'
-        ? 'warning.main'
+        // a drill is not a warning: a fixed orange, not the theme's warning colour
+        ? COLOR_BLIND_PALETTE.orange
         : 'info.main';
 
     return (
@@ -986,7 +989,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
         <>
             <Paper sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         State Transition Timeline
                     </Typography>
                     <Tooltip title="Open fullscreen">
@@ -1025,7 +1028,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                             {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
                         </Typography>
                     </Box>
-                    <IconButton onClick={() => setIsModalOpen(false)} edge="end">
+                    <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen}>
                         <Close />
                     </IconButton>
                 </DialogTitle>

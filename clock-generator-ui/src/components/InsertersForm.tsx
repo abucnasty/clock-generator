@@ -1,4 +1,4 @@
-import { Add, Delete, Settings } from '@mui/icons-material';
+import { Add, Delete } from '@mui/icons-material';
 import {
     Autocomplete,
     Box,
@@ -6,21 +6,27 @@ import {
     IconButton,
     Paper,
     TextField,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import { TargetType } from 'clock-generator/light';
 import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { EnableControlModal } from './EnableControlModal';
+import { EnableRuleChip } from './EnableRuleChip';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
+
+/** Below md the source and destination share the row's first line, each at least 220px wide */
+const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', flex: { xs: '1 1 220px', md: '0 0 auto' } };
+const PICKER_SX = { flex: 1, minWidth: { md: 250 } };
 
 interface EntityOption {
     type: SourceSinkType;
@@ -67,7 +73,7 @@ function InsertersFormComponent({
             options.push({
                 type: TargetType.MACHINE,
                 id: machine.id,
-                label: `Machine ${machine.id}`,
+                label: entityLabel('machine', machine.id),
                 icon: machine.recipe || 'assembling-machine-3',
                 sublabel: machine.recipe || 'No recipe',
             });
@@ -79,7 +85,7 @@ function InsertersFormComponent({
             options.push({
                 type: TargetType.BELT,
                 id: belt.id,
-                label: `Belt ${belt.id}`,
+                label: entityLabel('belt', belt.id),
                 icon: belt.type,
                 ingredientIcons: ingredientIcons.length > 0 ? ingredientIcons : undefined,
             });
@@ -103,7 +109,7 @@ function InsertersFormComponent({
             options.push({
                 type: TargetType.CHEST,
                 id: chest.id,
-                label: `Chest ${chest.id}`,
+                label: entityLabel('chest', chest.id),
                 icon: isInfinityChest(chest) ? 'infinity-chest' : 'iron-chest',
                 sublabel,
                 ingredientIcons,
@@ -216,23 +222,28 @@ function InsertersFormComponent({
         onUpdate(inserterIndex, { filters: filters.length > 0 ? filters : undefined });
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, remove } = useFocusAfterRemove(inserters.length, onRemove);
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
+                <Typography variant="h6" component="h2">
                     Inserters ({inserters.length})
                 </Typography>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Inserter
                 </Button>
             </Box>
 
-            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
-                <SortableItem key={inserter._uuid} stableKey={inserter._uuid} displayId={index + 1}>
+                <SortableItem key={inserter._uuid} stableKey={inserter._uuid} label={entityLabel('inserter', inserter.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-inserter-${inserter.id}`}
+                    role="group"
+                    aria-label={entityLabel('inserter', inserter.id)}
                     sx={{
                         display: 'flex',
                         gap: 2,
@@ -246,10 +257,10 @@ function InsertersFormComponent({
                 >
                     {dragHandle}
                     {/* Source */}
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Box sx={PICKER_GROUP_SX}>
                         <Autocomplete
                             size="small"
-                            sx={{ minWidth: 250 }}
+                            sx={PICKER_SX}
                             options={entityOptions}
                             value={findEntityOption(inserter.source.type, inserter.source.id)}
                             onChange={(_, newValue) => {
@@ -330,18 +341,15 @@ function InsertersFormComponent({
                             disableClearable
                         />
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+
+                    {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
+                    <Box sx={PICKER_GROUP_SX}>
                         <Typography variant="body2" color="text.secondary">
                             →
                         </Typography>
-                    </Box>
-
-
-                    {/* Sink */}
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Autocomplete
                             size="small"
-                            sx={{ minWidth: 250 }}
+                            sx={PICKER_SX}
                             options={entityOptions}
                             value={findEntityOption(inserter.sink.type, inserter.sink.id)}
                             onChange={(_, newValue) => {
@@ -444,17 +452,15 @@ function InsertersFormComponent({
                         maxSlots={5}
                     />
 
-                    {/* Enable Control Settings */}
-                    <Tooltip title="Configure Enable Control">
-                        <IconButton
-                            onClick={() => setEnableControlModalInserterIndex(index)}
-                            color={inserter.overrides?.enable_control?.mode && inserter.overrides.enable_control.mode !== 'AUTO' ? 'primary' : 'default'}
-                        >
-                            <Settings />
-                        </IconButton>
-                    </Tooltip>
+                    <EnableRuleChip
+                        override={inserter.overrides?.enable_control}
+                        entityLabel={entityLabel('inserter', inserter.id)}
+                        entityType="inserter"
+                        forcedAlways={inserter._forced_always}
+                        onClick={() => setEnableControlModalInserterIndex(index)}
+                    />
 
-                    <IconButton onClick={() => onRemove(index)} color="error">
+                    <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
                         <Delete />
                     </IconButton>
                 </Box>
@@ -465,16 +471,16 @@ function InsertersFormComponent({
 
             {inserters.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                    No inserters configured. Add at least one inserter to transfer items.
+                    No inserters configured. Add at least one inserter to move items.
                 </Typography>
             )}
 
-            {/* Enable Control Modal */}
+            {/* the enable rule modal */}
             <EnableControlModal
                 open={enableControlModalInserterIndex !== null}
                 onClose={() => setEnableControlModalInserterIndex(null)}
                 entityType="inserter"
-                entityLabel={enableControlModalInserterIndex !== null ? `Inserter ${enableControlModalInserterIndex + 1}` : ''}
+                entityLabel={enableControlModalInserterIndex !== null && inserters[enableControlModalInserterIndex] ? entityLabel('inserter', inserters[enableControlModalInserterIndex].id) : ''}
                 currentOverride={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.overrides?.enable_control : undefined}
                 sourceType={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.source?.type : undefined}
                 sinkType={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.sink?.type : undefined}
@@ -485,8 +491,8 @@ function InsertersFormComponent({
                         inserter.overrides?.enable_control && 
                         inserter.overrides.enable_control.mode !== 'AUTO'
                     )
-                    .map(({ inserter, index }) => ({
-                        label: `Inserter ${index + 1}`,
+                    .map(({ inserter }) => ({
+                        label: entityLabel('inserter', inserter.id),
                         override: inserter.overrides!.enable_control!,
                     }))
                 }

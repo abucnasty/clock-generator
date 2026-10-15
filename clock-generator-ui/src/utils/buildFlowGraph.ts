@@ -1,8 +1,10 @@
 import dagre from '@dagrejs/dagre';
+import { EnableControlMode } from 'clock-generator/light';
 import type { Node, Edge } from '@xyflow/react';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { isBufferChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { entityLabel } from './entityLabel';
 import { inferInserterItems } from './inferInserterItems';
 
 const ENTITY_NODE_WIDTH = 180;
@@ -37,7 +39,7 @@ export type InserterNodeData = {
     inserterId: number;
     stackSize: number;
     filterIcons?: string[];
-    overrideMode?: 'ALWAYS' | 'NEVER' | 'CLOCKED' | 'CONDITIONAL';
+    overrideMode?: EnableControlMode;
     /** An inserter between two machines of a loop, drawn between them: it carries items down or up */
     vertical?: 'down' | 'up';
 };
@@ -121,7 +123,7 @@ export function buildFlowGraph(
             data: {
                 entityType: 'machine',
                 entityId: machine.id,
-                label: `Machine ${machine.id}`,
+                label: entityLabel('machine', machine.id),
                 iconName: machine.recipe || 'assembling-machine-3',
                 sublabel: machine.recipe || undefined,
                 machineParams: {
@@ -147,7 +149,7 @@ export function buildFlowGraph(
             data: {
                 entityType: 'belt',
                 entityId: belt.id,
-                label: `Belt ${belt.id}`,
+                label: entityLabel('belt', belt.id),
                 iconName: belt.type,
                 filterIcons: filterIcons.length > 0 ? filterIcons : undefined,
             } satisfies EntityNodeData,
@@ -174,7 +176,7 @@ export function buildFlowGraph(
             data: {
                 entityType: 'chest',
                 entityId: chest.id,
-                label: `Chest ${chest.id}`,
+                label: entityLabel('chest', chest.id),
                 iconName,
                 filterIcons,
             } satisfies EntityNodeData,
@@ -196,7 +198,7 @@ export function buildFlowGraph(
             : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
         const filterIcons = inferred.length > 0 ? inferred.slice(0, 3) : undefined;
         const ecMode = inserter.overrides?.enable_control?.mode;
-        const overrideMode = ecMode && ecMode !== 'AUTO' ? ecMode as 'ALWAYS' | 'NEVER' | 'CLOCKED' | 'CONDITIONAL' : undefined;
+        const overrideMode = ecMode && ecMode !== EnableControlMode.AUTO ? ecMode : undefined;
         nodes.push({
             id: inserterNodeId,
             type: 'inserterNode',

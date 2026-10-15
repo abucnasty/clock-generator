@@ -1,21 +1,29 @@
-import { Check, ContentCopy } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, CircularProgress, Paper, Snackbar, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
-import { useCallback, useState } from 'react';
+import { Check, ContentCopy, Warning } from '@mui/icons-material';
+import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAnnounce, useNotify } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
+import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
+import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
+import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
 import { GenerationProgressStatus } from './BlueprintOutput';
+import { StaleCopyDialog } from './StaleCopyDialog';
 
 export type WorkflowView = 'configure' | 'results';
 
+// a warning is filled and has the warning icon, so it is not taken for the outlined orange buttons beside it
 const VALIDATION_CHIP = {
-    'valid': { label: 'Valid', color: 'success' },
-    'invalid': { label: 'Invalid', color: 'error' },
-    'out-of-date': { label: 'Changed since validation', color: 'warning' },
+    'valid': { label: 'Valid', color: 'success', variant: 'outlined', warns: false },
+    'invalid': { label: 'Invalid', color: 'error', variant: 'outlined', warns: false },
+    'out-of-date': { label: 'Changed since validation', color: 'warning', variant: 'filled', warns: true },
 } as const;
 
 interface WorkflowBarProps {
     view: WorkflowView;
     onViewChange: (view: WorkflowView) => void;
     isLoading: boolean;
+    /** The last generation stopped on an error */
+    generationFailed: boolean;
     progressStore: GenerationProgressStore;
     onGenerate: () => void;
     generateDisabled: boolean;
@@ -23,22 +31,52 @@ interface WorkflowBarProps {
     validateDisabled: boolean;
     /** Where the Validate step stands for the config as it is now */
     validationStatus: 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
-    /** Blueprint of the selected potential clock, once one is generated */
+    /** Blueprint of the selected clock, once one is generated */
     blueprintString: string | null;
-    /** Name of the selected potential clock */
+    /** Name of the selected clock */
     selectedLabel: string | null;
     /** Said when the blueprint is copied: the selected clock does not hold the target rate. Null when it does */
     rateWarning: string | null;
+    /** What the Copy button says when it has not just been used: "Copy blueprint", "… below target", or "Copy old clock…" */
+    copyLabel: string;
+    /** The selected clock runs short of the target rate: Copy is then a filled warning button */
+    belowTarget: boolean;
+    /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
+    staleFor: GeneratedFor | null;
+    /** What keeps the build from being validated and generated, first to fix first; empty when nothing does */
+    problems: Problem[];
+    /** Why each of Validate and Generate is off; null when it is on or says on its own label what it is doing */
+    blocked: { validate: Problem | null; generate: Problem | null };
+    /** Shows and focuses where a problem is fixed */
+    onGoToProblem: (problem: Problem) => void;
 }
 
 /**
- * Stays in view under the app bar: switches between configuring the build and its results, and keeps the steps
- * of the workflow (validate, generate, copy the blueprint) one click away from either.
+ * The Copy button's words. What comes after "Copy blueprint" ("(200/s, below target)") keeps its case: upper-cased, the
+ * unit would read "200/S"
+ */
+function CopyLabel({ label }: { label: string }) {
+    const at = label.indexOf(' (');
+    if (at < 0) {
+        return label;
+    }
+    // one span: the button lays its children out as flex items, which would drop the space between them
+    return (
+        <span>
+            {label.slice(0, at)} <Box component="span" sx={{ textTransform: 'none' }}>{label.slice(at + 1)}</Box>
+        </span>
+    );
+}
+
+/**
+ * The second row of the app bar, so it stays in view with it: switches between configuring the build and its results,
+ * and keeps the steps of the workflow (validate, generate, copy the blueprint) one click away from either.
  */
 export function WorkflowBar({
     view,
     onViewChange,
     isLoading,
+    generationFailed,
     progressStore,
     onGenerate,
     generateDisabled,
@@ -48,117 +86,200 @@ export function WorkflowBar({
     blueprintString,
     selectedLabel,
     rateWarning,
+    copyLabel,
+    belowTarget,
+    staleFor,
+    problems,
+    blocked,
+    onGoToProblem,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
-    const [warned, setWarned] = useState(false);
+    const [confirmingOld, setConfirmingOld] = useState(false);
+    const notify = useNotify();
+    const announce = useAnnounce();
+    // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
+    // since a filled button invites the click, and the copy of an old clock is the one to think twice about
+    const warns = rateWarning !== null || staleFor !== null;
+    const filled = belowTarget && staleFor === null;
 
-    const handleCopy = useCallback(async () => {
+    // what changed in the workflow is read out in the app's one announcements region (validating, generating)
+    const hasBlueprint = blueprintString !== null;
+    const lastSnapshot = useRef<WorkflowSnapshot | null>(null);
+    useEffect(() => {
+        const snapshot: WorkflowSnapshot = { validationStatus, isLoading, failed: generationFailed, hasBlueprint, selectedLabel };
+        const previous = lastSnapshot.current;
+        lastSnapshot.current = snapshot;
+        const text = previous && workflowAnnouncement(previous, snapshot);
+        if (text) {
+            announce(text);
+        }
+    }, [validationStatus, isLoading, generationFailed, hasBlueprint, selectedLabel, announce]);
+
+    const copyBlueprint = useCallback(async () => {
         if (!blueprintString) {
             return;
         }
         try {
             await navigator.clipboard.writeText(blueprintString);
             setCopied(true);
-            setWarned(rateWarning !== null);
+            if (rateWarning !== null) {
+                // the warning's own alert says that it was copied
+                notify({ severity: 'warning', text: `Copied. ${rateWarning}` });
+            } else {
+                announce(ANNOUNCEMENTS.copied);
+            }
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
         }
-    }, [blueprintString, rateWarning]);
+    }, [blueprintString, rateWarning, notify, announce]);
 
     return (
-        <Paper
-            square
-            elevation={2}
-            sx={{
-                position: 'sticky',
-                top: { xs: 56, sm: 64 },
-                zIndex: (theme) => theme.zIndex.appBar - 1,
-                px: 2,
-                py: 1,
-            }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
+            <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: { xs: 1, sm: 2 }, py: 1 }}>
                 <ToggleButtonGroup
                     value={view}
                     exclusive
                     onChange={(_, value) => { if (value) onViewChange(value); }}
                     size="small"
                     aria-label="Configure the build or look at its results"
+                    // always in the header: where focus goes back to when what it was on has gone
+                    data-focus-fallback=""
                 >
                     <ToggleButton value="configure">Configure</ToggleButton>
                     <ToggleButton value="results">Results</ToggleButton>
                 </ToggleButtonGroup>
 
-                <Box sx={{ flexGrow: 1 }} />
-
-                {blueprintString && (
-                    <>
-                        {selectedLabel && (
-                            <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 320 }}>
-                                {selectedLabel}
-                            </Typography>
-                        )}
-                        <Tooltip title={rateWarning ?? ''} arrow>
+                {/* the actions wrap together and stay on the right, instead of one dropping to a row of its own */}
+                <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 1, sm: 2 } }}>
+                    {blueprintString && (
+                        <>
+                            {selectedLabel && (
+                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', sm: 'block' } }}>
+                                    {selectedLabel}
+                                </Typography>
+                            )}
+                            {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
+                            <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild>
+                                <Button
+                                    variant={filled ? 'contained' : 'outlined'}
+                                    size="small"
+                                    onClick={staleFor ? () => setConfirmingOld(true) : copyBlueprint}
+                                    color={warns ? 'warning' : copied ? 'success' : 'primary'}
+                                    startIcon={copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
+                                >
+                                    {copied ? 'Copied' : <CopyLabel label={copyLabel} />}
+                                </Button>
+                            </Tooltip>
+                            {staleFor && (
+                                <StaleCopyDialog
+                                    open={confirmingOld && staleFor !== null}
+                                    generatedFor={staleFor}
+                                    onCancel={() => setConfirmingOld(false)}
+                                    onConfirm={() => {
+                                        setConfirmingOld(false);
+                                        copyBlueprint();
+                                    }}
+                                />
+                            )}
+                        </>
+                    )}
+                    {problems.length > 0 && (
+                        <Chip
+                            size="small"
+                            color="error"
+                            label={problemCountLabel(problems.length)}
+                            onClick={() => onGoToProblem(problems[0])}
+                            aria-label={`${problemCountLabel(problems.length)}. Go to the first one.`}
+                            // black on the red reads at 6.8:1 (white, MUI's choice, only 3.1); lighter, not darker, when
+                            // hovered or focused, so that the black stays legible and the chip stands off the bar
+                            sx={{
+                                color: '#000',
+                                '&:hover, &.Mui-focusVisible': { bgcolor: 'error.light' },
+                            }}
+                        />
+                    )}
+                    {validationStatus !== 'none' && validationStatus !== 'running' && (
+                        <Chip
+                            size="small"
+                            variant={VALIDATION_CHIP[validationStatus].variant}
+                            label={VALIDATION_CHIP[validationStatus].label}
+                            color={VALIDATION_CHIP[validationStatus].color}
+                            icon={VALIDATION_CHIP[validationStatus].warns ? <Warning /> : undefined}
+                        />
+                    )}
+                    {/* the reason is also the text under the buttons, which describes them for the keyboard and screen readers */}
+                    <Tooltip title={blocked.validate?.text ?? ''} arrow describeChild>
+                        {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
+                        <span>
                             <Button
                                 variant="outlined"
                                 size="small"
-                                onClick={handleCopy}
-                                color={rateWarning ? 'warning' : copied ? 'success' : 'primary'}
-                                startIcon={copied ? <Check /> : <ContentCopy />}
+                                onClick={onValidate}
+                                disabled={validateDisabled || isLoading || validationStatus === 'running'}
+                                aria-describedby={blocked.validate ? ELEMENT_IDS.blockReason : undefined}
                             >
-                                {copied ? 'Copied' : 'Copy blueprint'}
+                                {validationStatus === 'running' ? 'Validating...' : 'Validate'}
                             </Button>
-                        </Tooltip>
-                        <Snackbar
-                            open={warned && rateWarning !== null}
-                            autoHideDuration={10000}
-                            onClose={() => setWarned(false)}
-                            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                        >
-                            <Alert severity="warning" variant="filled" onClose={() => setWarned(false)}>
-                                Copied. {rateWarning}
-                            </Alert>
-                        </Snackbar>
-                    </>
-                )}
-                {validationStatus !== 'none' && validationStatus !== 'running' && (
-                    <Chip
-                        size="small"
-                        variant="outlined"
-                        label={VALIDATION_CHIP[validationStatus].label}
-                        color={VALIDATION_CHIP[validationStatus].color}
-                    />
-                )}
-                <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={onValidate}
-                    disabled={validateDisabled || isLoading || validationStatus === 'running'}
-                >
-                    {validationStatus === 'running' ? 'Validating...' : 'Validate'}
-                </Button>
-                <Tooltip title={validationStatus === 'valid' ? '' : 'Validate the configuration first'} arrow>
-                    {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
-                    <span>
+                        </span>
+                    </Tooltip>
+                    <Tooltip title={blocked.generate?.text ?? ''} arrow describeChild>
+                        <span>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={onGenerate}
+                                color="secondary"
+                                disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
+                                aria-describedby={blocked.generate ? ELEMENT_IDS.blockReason : undefined}
+                                startIcon={isLoading ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
+                            >
+                                {isLoading ? 'Generating...' : 'Generate'}
+                            </Button>
+                        </span>
+                    </Tooltip>
+                </Box>
+            </Toolbar>
+            {blocked.generate && (
+                // under the buttons it explains, from md up; under the toggle in a narrow window, where the bar wraps
+                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1, mt: -0.5, minWidth: 0, display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, textAlign: { xs: 'left', md: 'right' } }}>
+                    {blocked.generate.target ? (
                         <Button
-                            variant="contained"
+                            id={ELEMENT_IDS.blockReason}
+                            variant="text"
                             size="small"
-                            onClick={onGenerate}
-                            color="secondary"
-                            disabled={generateDisabled || isLoading || validationStatus !== 'valid'}
-                            startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : undefined}
+                            color="error"
+                            onClick={() => blocked.generate && onGoToProblem(blocked.generate)}
+                            // the ripple would tint the text's background on focus; an outline marks the focus instead
+                            disableRipple
+                            // the lighter red: the error red is 3.9:1 on the bar, under the 4.5 text needs. A link's
+                            // underline on hover, not a tinted background, which would take the contrast under 4.5 again
+                            sx={{
+                                color: 'error.light',
+                                textTransform: 'none',
+                                textAlign: 'inherit',
+                                py: 0,
+                                px: 0.5,
+                                ml: -0.5,
+                                minWidth: 0,
+                                '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
+                                '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
+                            }}
                         >
-                            {isLoading ? 'Generating...' : 'Generate'}
+                            {blocked.generate.text}
                         </Button>
-                    </span>
-                </Tooltip>
-            </Box>
+                    ) : (
+                        <Typography id={ELEMENT_IDS.blockReason} variant="body2" color="text.secondary">
+                            {blocked.generate.text}
+                        </Typography>
+                    )}
+                </Box>
+            )}
             {isLoading && (
-                <Box sx={{ mt: 1 }}>
+                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1 }}>
                     <GenerationProgressStatus store={progressStore} />
                 </Box>
             )}
-        </Paper>
+        </Box>
     );
 }

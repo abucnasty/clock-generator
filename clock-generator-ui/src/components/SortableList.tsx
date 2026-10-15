@@ -18,17 +18,20 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { DragIndicator } from '@mui/icons-material';
 import { Box, Chip } from '@mui/material';
+import { reorderAnnouncements, reorderName } from '../utils/a11yLabels';
 
 interface SortableListProps {
     /** Stable UUID keys for each item, in current order. */
     itemKeys: string[];
+    /** The name each row shows ("Inserter 3"), in the same order, so a drag is read out by it and not by the row's key. */
+    itemLabels: string[];
     /** Called with the old and new array indices after a drag. */
     onReorder: (fromIndex: number, toIndex: number) => void;
     children: React.ReactNode;
 }
 
 /** Wraps a list of SortableItem children with @dnd-kit context. */
-export function SortableList({ itemKeys, onReorder, children }: SortableListProps) {
+export function SortableList({ itemKeys, itemLabels, onReorder, children }: SortableListProps) {
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -62,7 +65,12 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
     }
 
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            accessibility={{ announcements: reorderAnnouncements(new Map(itemKeys.map((key, i) => [key, itemLabels[i]])), localItemKeys) }}
+        >
             <SortableContext items={localItemKeys} strategy={verticalListSortingStrategy}>
                 {children}
             </SortableContext>
@@ -73,14 +81,14 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
 interface SortableItemProps {
     /** Stable UUID — used as the dnd-kit sortable ID. */
     stableKey: string;
-    /** The 1-based display position shown in the #N chip. */
-    displayId: number;
+    /** The entity's name shown in the row's chip, e.g. "Inserter 3". */
+    label: string;
     /** Render prop: receives the composed drag-handle+ID element to place inside the row. */
     children: (dragHandle: React.ReactNode) => React.ReactNode;
 }
 
 /** Wraps a single row with sortable drag behaviour and injects a drag handle. */
-export function SortableItem({ stableKey, displayId, children }: SortableItemProps) {
+export function SortableItem({ stableKey, label, children }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -110,9 +118,15 @@ export function SortableItem({ stableKey, displayId, children }: SortableItemPro
             <Box
                 {...attributes}
                 {...listeners}
+                // after the spread, which sets role="button" and nothing to call it
+                aria-label={reorderName(label)}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
+                    // a target of at least 24px, so a finger or a pointer can find it (WCAG 2.5.8)
+                    width: 28,
+                    height: 28,
                     color: 'text.disabled',
                     cursor: 'grab',
                     touchAction: 'none',
@@ -122,10 +136,11 @@ export function SortableItem({ stableKey, displayId, children }: SortableItemPro
             >
                 <DragIndicator fontSize="small" />
             </Box>
+            {/* at least as wide as "Inserter 99", so the rows of a card line up */}
             <Chip
-                label={`#${displayId}`}
+                label={label}
                 size="small"
-                sx={{ minWidth: 38, fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
+                sx={{ minWidth: 72, fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
             />
         </Box>
     );

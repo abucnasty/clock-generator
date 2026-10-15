@@ -2,8 +2,9 @@ import { Close, Fullscreen } from '@mui/icons-material';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
+import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
-import { COLOR_BLIND_PALETTE_ALL } from './colors';
+import { COLOR_BLIND_PALETTE, COLOR_BLIND_PALETTE_ALL } from './colors';
 
 interface TransferHistoryVisualizationProps {
     transferHistory: SerializableTransferHistory;
@@ -132,7 +133,8 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                             noWrap
                             sx={{
                                 fontSize: '0.75rem',
-                                color: entity.entity_type === 'drill' ? 'warning.main' : 'text.primary',
+                                // a drill is not a warning: a fixed orange, not the theme's warning colour
+                                color: entity.entity_type === 'drill' ? COLOR_BLIND_PALETTE.orange : 'text.primary',
                             }}
                         >
                             {entity.label}
@@ -300,7 +302,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
         <>
             <Paper sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         Transfer Activity Timeline
                     </Typography>
                     <Tooltip title="Open fullscreen">
@@ -339,7 +341,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                             {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
                         </Typography>
                     </Box>
-                    <IconButton onClick={() => setIsModalOpen(false)} edge="end">
+                    <IconButton onClick={() => setIsModalOpen(false)} edge="end" aria-label={BUTTON_NAMES.closeFullscreen}>
                         <Close />
                     </IconButton>
                 </DialogTitle>

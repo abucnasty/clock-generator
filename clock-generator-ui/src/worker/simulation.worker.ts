@@ -102,6 +102,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         inserterWindowCount: alternative.inserter_window_count,
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
+        copies: result.crafting_cycle_plan.production_rate.copies,
         verdict: alternative.verdict,
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),

@@ -1,6 +1,9 @@
 import { Autocomplete, Box, Paper, TextField, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
 import { NumberField } from './NumberField';
+import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
+import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
+import { ELEMENT_IDS } from '../utils/firstProblem';
 
 interface TargetOutputFormProps {
     recipe: string;
@@ -24,11 +27,12 @@ export function TargetOutputForm({
 }: TargetOutputFormProps) {
     return (
         <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
                 Target Output
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Autocomplete
+                    id={ELEMENT_IDS.targetRecipe}
                     sx={{ minWidth: 300, flex: 1 }}
                     options={recipeNames}
                     value={recipe || null}
@@ -40,11 +44,13 @@ export function TargetOutputForm({
                             placeholder="Search recipes..."
                             required
                             slotProps={{
+                                // the label says "Recipe" in every row: say whose it is
+                                htmlInput: { ...params.inputProps, 'aria-label': TARGET_RECIPE_NAME },
                                 input: {
                                     ...params.InputProps,
                                     startAdornment: recipe ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                            <FactorioIcon name={recipe} size={20} />
+                                            <FactorioIcon name={recipe} size={20} alt="" />
                                         </Box>
                                     ) : null,
                                 },
@@ -55,7 +61,7 @@ export function TargetOutputForm({
                         const { key, ...rest } = props;
                         return (
                             <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={option} size={20} />
+                                <FactorioIcon name={option} size={20} alt="" />
                                 {option}
                             </Box>
                         );
@@ -64,24 +70,27 @@ export function TargetOutputForm({
                     autoHighlight
                 />
                 <NumberField
+                    id={ELEMENT_IDS.targetRate}
                     label="Items per Second"
                     value={itemsPerSecond}
                     onValueChange={(val) => onItemsPerSecondChange(parseFloat(val?.toString() || '') || 0)}
                     min={0}
                     step={0.1}
-                    sx={{ width: 150 }}
+                    sx={{ width: 220 }}
                     required
                     error={itemsPerSecond <= 0}
-                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : undefined}
+                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : itemsPerSecondHelper(itemsPerSecond, copies)}
                 />
                 <NumberField
+                    id={ELEMENT_IDS.targetCopies}
                     label="Copies"
                     value={copies}
                     onValueChange={(val) => onCopiesChange(parseInt(val?.toString() || '') || 1)}
                     min={1}
                     step={1}
-                    sx={{ width: 120 }}
+                    sx={{ width: 200 }}
                     required
+                    helperText={COPIES_HELPER}
                 />
             </Box>
         </Paper>

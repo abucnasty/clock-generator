@@ -3,6 +3,7 @@ import { Box, FormControl, IconButton, MenuItem, Select } from '@mui/material';
 import type { TargetType } from 'clock-generator/browser';
 import { ComparisonOperator, ValueReferenceType } from 'clock-generator/light';
 import type { Condition, ValueReference } from '../hooks/useConfigForm';
+import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { StatusConditionRow } from './StatusConditionRow';
 import { ValueReferenceSelector } from './ValueReferenceSelector';
 
@@ -92,6 +93,7 @@ export function ConditionRow({
 
             <FormControl size="small" sx={{ minWidth: 60 }}>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.comparisonOperator }}
                     value={condition.operator}
                     onChange={(e) => handleOperatorChange(e.target.value as ComparisonOperator)}
                 >
@@ -117,6 +119,7 @@ export function ConditionRow({
                 disabled={!canDelete}
                 size="small"
                 color="error"
+                aria-label={BUTTON_NAMES.removeCondition}
             >
                 <Delete fontSize="small" />
             </IconButton>

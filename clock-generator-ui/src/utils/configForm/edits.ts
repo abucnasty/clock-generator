@@ -17,16 +17,22 @@ import {
 
 // Plain edits of the form state: each takes the state and returns the edited state, for `setConfig`
 
-/** The id for a new entity of a kind: past those of the kind's entities and of those removed */
+/** The id for a new entity of a kind: one past the highest of the kind's entities */
 export function nextId(prev: ConfigFormData, kind: EntityKind): number {
     const items: { id: number }[] = kind === 'drills' ? prev.drills?.configs ?? [] : prev[kind];
-    return Math.max(prev.next_ids?.[kind] ?? 1, ...items.map((item) => item.id + 1));
+    return Math.max(1, ...items.map((item) => item.id + 1));
 }
 
-/** Keeps the id of a removed entity from being given out again */
-function retireId(prev: ConfigFormData, kind: EntityKind, id: number | undefined): ConfigFormData['next_ids'] {
-    if (id === undefined) return prev.next_ids;
-    return { ...prev.next_ids, [kind]: Math.max(prev.next_ids?.[kind] ?? 1, id + 1) };
+/**
+ * Numbers the entities 1, 2, 3 … by their place, keeping every other field. The map takes the old id of every entity
+ * to its new one (the first entity wins where two had the same id).
+ */
+function renumberKind<T extends { id: number }>(items: T[]): { items: T[]; idMap: Map<number, number> } {
+    const idMap = new Map<number, number>();
+    items.forEach((item, i) => {
+        if (!idMap.has(item.id)) idMap.set(item.id, i + 1);
+    });
+    return { items: items.map((item, i) => ({ ...item, id: i + 1 })), idMap };
 }
 
 /** Rearrange an id-bearing array and reassign sequential ids (1-based). Returns the new array and an old→new id map. */
@@ -38,30 +44,40 @@ function reorderWithIdReassignment<T extends { id: number }>(
     const reordered = [...items];
     const [moved] = reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, moved);
-    const idMap = new Map<number, number>();
-    reordered.forEach((item, i) => {
-        const newId = i + 1;
-        if (item.id !== newId) idMap.set(item.id, newId);
-    });
-    const reassigned = reordered.map((item, i) => ({ ...item, id: i + 1 }));
-    return { items: reassigned, idMap };
+    return renumberKind(reordered);
 }
 
 /** No entity has id 0: a reference to it is one not chosen, which the form shows empty and the generator rejects */
 const UNSET_ID = 0;
 
-/** Unsets the inserter ends that reference the given entity, which is being removed */
-function unsetInserterEndsAt(inserters: InserterFormData[], type: InserterFormData['sink']['type'], id: number): InserterFormData[] {
-    return inserters.map((ins) => {
-        const source = ins.source.type === type && ins.source.id === id;
-        const sink = ins.sink.type === type && ins.sink.id === id;
-        if (!source && !sink) return ins;
-        return {
-            ...ins,
-            source: source ? { type, id: UNSET_ID } : ins.source,
-            sink: sink ? { type, id: UNSET_ID } : ins.sink,
-        };
-    });
+/**
+ * Moves the references to the entities of a kind along with their renumbering. A reference to an id that is not in
+ * the map (the removed entity's, or one no entity had) is unset.
+ */
+function followRenumber(prev: ConfigFormData, kind: EntityKind, idMap: Map<number, number>): ConfigFormData {
+    const type = kind === 'machines' ? 'machine' : kind === 'belts' ? 'belt' : kind === 'chests' ? 'chest' : undefined;
+    // nothing refers to an inserter or a drill
+    if (type === undefined) return prev;
+    const follow = <E extends { type: string; id: number }>(end: E): E => {
+        if (end.type !== type || end.id === UNSET_ID) return end;
+        const id = idMap.get(end.id) ?? UNSET_ID;
+        if (id === end.id) return end;
+        // an unset end has no lane
+        return id === UNSET_ID ? { type: end.type, id } as E : { ...end, id };
+    };
+    return {
+        ...prev,
+        inserters: prev.inserters.map((ins) => ({ ...ins, source: follow(ins.source), sink: follow(ins.sink) })),
+        ...(prev.drills && type === 'machine' && {
+            drills: { ...prev.drills, configs: prev.drills.configs.map((d) => ({ ...d, target: follow(d.target) })) },
+        }),
+    };
+}
+
+/** Takes out the entity at an index and renumbers the rest; undefined if there is none there */
+function removeAndRenumber<T extends { id: number }>(items: T[], index: number): { items: T[]; idMap: Map<number, number> } | undefined {
+    if (index < 0 || index >= items.length) return undefined;
+    return renumberKind(items.filter((_, i) => i !== index));
 }
 
 // Target output
@@ -111,19 +127,9 @@ export function updateMachine(
 }
 
 export function removeMachine(prev: ConfigFormData, index: number): ConfigFormData {
-    const id = prev.machines[index]?.id;
-    return {
-        ...prev,
-        next_ids: retireId(prev, 'machines', id),
-        machines: prev.machines.filter((_, i) => i !== index),
-        inserters: unsetInserterEndsAt(prev.inserters, 'machine', id),
-        ...(prev.drills && {
-            drills: {
-                ...prev.drills,
-                configs: prev.drills.configs.map((d) => d.target.id === id ? { ...d, target: { type: 'machine' as const, id: UNSET_ID } } : d),
-            },
-        }),
-    };
+    const removed = removeAndRenumber(prev.machines, index);
+    if (!removed) return prev;
+    return followRenumber({ ...prev, machines: removed.items }, 'machines', removed.idMap);
 }
 
 export function mergeMachines(prev: ConfigFormData, newMachines: MachineFormData[]): ConfigFormData {
@@ -164,21 +170,24 @@ export function addInserter(prev: ConfigFormData): ConfigFormData {
     };
 }
 
+/** An update with `overrides` replaces the rule, so the inserter's rule is no longer one forced by Exclude from LCM */
 export function updateInserter(prev: ConfigFormData, index: number, updates: Partial<InserterFormData>): ConfigFormData {
     return {
         ...prev,
-        inserters: prev.inserters.map((ins, i) =>
-            i === index ? { ...ins, ...updates } : ins
-        ),
+        inserters: prev.inserters.map((ins, i) => {
+            if (i !== index) return ins;
+            if (!('overrides' in updates)) return { ...ins, ...updates };
+            const { _forced_always: _f, ...rest } = ins;
+            void _f;
+            return { ...rest, ...updates };
+        }),
     };
 }
 
 export function removeInserter(prev: ConfigFormData, index: number): ConfigFormData {
-    return {
-        ...prev,
-        next_ids: retireId(prev, 'inserters', prev.inserters[index]?.id),
-        inserters: prev.inserters.filter((_, i) => i !== index),
-    };
+    const removed = removeAndRenumber(prev.inserters, index);
+    if (!removed) return prev;
+    return { ...prev, inserters: removed.items };
 }
 
 export function replaceInserters(prev: ConfigFormData, newInserters: InserterFormData[]): ConfigFormData {
@@ -214,12 +223,9 @@ export function updateBelt(prev: ConfigFormData, index: number, updates: Partial
 }
 
 export function removeBelt(prev: ConfigFormData, index: number): ConfigFormData {
-    return {
-        ...prev,
-        next_ids: retireId(prev, 'belts', prev.belts[index]?.id),
-        belts: prev.belts.filter((_, i) => i !== index),
-        inserters: unsetInserterEndsAt(prev.inserters, 'belt', prev.belts[index]?.id),
-    };
+    const removed = removeAndRenumber(prev.belts, index);
+    if (!removed) return prev;
+    return followRenumber({ ...prev, belts: removed.items }, 'belts', removed.idMap);
 }
 
 export function replaceBelts(prev: ConfigFormData, newBelts: BeltFormData[]): ConfigFormData {
@@ -288,12 +294,9 @@ export function switchChestType(prev: ConfigFormData, index: number, newType: Ch
 }
 
 export function removeChest(prev: ConfigFormData, index: number): ConfigFormData {
-    return {
-        ...prev,
-        next_ids: retireId(prev, 'chests', prev.chests[index]?.id),
-        chests: prev.chests.filter((_, i) => i !== index),
-        inserters: unsetInserterEndsAt(prev.inserters, 'chest', prev.chests[index]?.id),
-    };
+    const removed = removeAndRenumber(prev.chests, index);
+    if (!removed) return prev;
+    return followRenumber({ ...prev, chests: removed.items }, 'chests', removed.idMap);
 }
 
 export function replaceChests(prev: ConfigFormData, newChests: ChestFormData[]): ConfigFormData {
@@ -367,14 +370,9 @@ export function updateDrill(prev: ConfigFormData, index: number, updates: Partia
 
 export function removeDrill(prev: ConfigFormData, index: number): ConfigFormData {
     if (!prev.drills) return prev;
-    return {
-        ...prev,
-        next_ids: retireId(prev, 'drills', prev.drills.configs[index]?.id),
-        drills: {
-            ...prev.drills,
-            configs: prev.drills.configs.filter((_, i) => i !== index),
-        },
-    };
+    const removed = removeAndRenumber(prev.drills.configs, index);
+    if (!removed) return prev;
+    return { ...prev, drills: { ...prev.drills, configs: removed.items } };
 }
 
 export function mergeDrills(prev: ConfigFormData, newDrills: DrillFormData[]): ConfigFormData {
@@ -446,13 +444,16 @@ export function updateOverrides(
     };
 }
 
+/**
+ * Sets the ingredients left out of the LCM. An inserter whose items are now all excluded and that has no rule of its
+ * own (AUTO) is forced to ALWAYS, and flagged so; including one of its items again takes away only that forced ALWAYS.
+ * A rule the player set (ALWAYS, NEVER, CLOCKED or CONDITIONAL) is never replaced or removed.
+ */
 export function updateIgnoredIngredients(
     prev: ConfigFormData,
     items: string[],
     transferPlan: SerializableTransferPlan,
 ): ConfigFormData {
-    const prevIgnored = prev.overrides?.ignored_lcm_ingredients ?? [];
-
     const updatedInserters = prev.inserters.map((ins) => {
         const planEntry = transferPlan.entities.find(
             (e) => e.entity_type === 'inserter' && e.entity_number === ins.id
@@ -460,27 +461,30 @@ export function updateIgnoredIngredients(
         if (!planEntry || planEntry.item_transfers.length === 0) return ins;
 
         const allNowIgnored = planEntry.item_transfers.every((t) => items.includes(t.item_name));
-        const allPrevIgnored = planEntry.item_transfers.every((t) => prevIgnored.includes(t.item_name));
+        const mode = ins.overrides?.enable_control?.mode ?? 'AUTO';
 
         if (allNowIgnored) {
-            // Auto-force to ALWAYS
+            // a rule of the player's own stays; an inserter already forced stays forced
+            if (mode !== 'AUTO') return ins;
             return {
                 ...ins,
                 overrides: {
                     ...ins.overrides,
                     enable_control: { mode: 'ALWAYS' as const },
                 },
+                _forced_always: true as const,
             };
-        } else if (allPrevIgnored && ins.overrides?.enable_control?.mode === 'ALWAYS') {
-            // Was auto-forced to ALWAYS because all its items were previously ignored;
-            // revert by removing the enable_control override
-            const { enable_control: _ec, ...restOverrides } = ins.overrides ?? {};
+        }
+        if (ins._forced_always) {
+            const { _forced_always: _f, overrides, ...unflagged } = ins;
+            void _f;
+            // any rule other than the forced ALWAYS stays (replacing the rule unflags the inserter, so this is only
+            // a safeguard)
+            if (mode !== 'ALWAYS') return overrides ? { ...unflagged, overrides } : unflagged;
+            // the ALWAYS was put there by Exclude, so it goes, and the overrides with it once none is left
+            const { enable_control: _ec, ...restOverrides } = overrides ?? {};
             void _ec;
-            const hasRemainingOverrides = Object.keys(restOverrides).length > 0;
-            return {
-                ...ins,
-                overrides: hasRemainingOverrides ? restOverrides : undefined,
-            };
+            return Object.keys(restOverrides).length > 0 ? { ...unflagged, overrides: restOverrides } : unflagged;
         }
 
         return ins;
@@ -509,22 +513,12 @@ export function updateIgnoredIngredients(
 }
 
 // ── Reorders ──────────────────────────────────────────────────────────
-// Each rearranges the array, reassigns sequential IDs, then fixes up any
-// cross-references in other entity arrays so nothing points to a stale ID.
+// Each rearranges the array, reassigns sequential IDs, then follows the
+// renumbering in the references to the kind, as a remove does.
 
 export function reorderMachines(prev: ConfigFormData, fromIndex: number, toIndex: number): ConfigFormData {
-    const { items: newMachines, idMap } = reorderWithIdReassignment(prev.machines, fromIndex, toIndex);
-    if (idMap.size === 0) return { ...prev, machines: newMachines };
-    const remap = (id: number) => idMap.get(id) ?? id;
-    const newInserters = prev.inserters.map((ins) => ({
-        ...ins,
-        source: ins.source.type === 'machine' ? { ...ins.source, id: remap(ins.source.id) } : ins.source,
-        sink: ins.sink.type === 'machine' ? { ...ins.sink, id: remap(ins.sink.id) } : ins.sink,
-    }));
-    const newDrills = prev.drills
-        ? { ...prev.drills, configs: prev.drills.configs.map((d) => ({ ...d, target: { ...d.target, id: remap(d.target.id) } })) }
-        : undefined;
-    return { ...prev, machines: newMachines, inserters: newInserters, ...(newDrills ? { drills: newDrills } : {}) };
+    const { items, idMap } = reorderWithIdReassignment(prev.machines, fromIndex, toIndex);
+    return followRenumber({ ...prev, machines: items }, 'machines', idMap);
 }
 
 export function reorderInserters(prev: ConfigFormData, fromIndex: number, toIndex: number): ConfigFormData {
@@ -533,27 +527,13 @@ export function reorderInserters(prev: ConfigFormData, fromIndex: number, toInde
 }
 
 export function reorderBelts(prev: ConfigFormData, fromIndex: number, toIndex: number): ConfigFormData {
-    const { items: newBelts, idMap } = reorderWithIdReassignment(prev.belts, fromIndex, toIndex);
-    if (idMap.size === 0) return { ...prev, belts: newBelts };
-    const remap = (id: number) => idMap.get(id) ?? id;
-    const newInserters = prev.inserters.map((ins) => ({
-        ...ins,
-        source: ins.source.type === 'belt' ? { ...ins.source, id: remap(ins.source.id) } : ins.source,
-        sink: ins.sink.type === 'belt' ? { ...ins.sink, id: remap(ins.sink.id) } : ins.sink,
-    }));
-    return { ...prev, belts: newBelts, inserters: newInserters };
+    const { items, idMap } = reorderWithIdReassignment(prev.belts, fromIndex, toIndex);
+    return followRenumber({ ...prev, belts: items }, 'belts', idMap);
 }
 
 export function reorderChests(prev: ConfigFormData, fromIndex: number, toIndex: number): ConfigFormData {
-    const { items: newChests, idMap } = reorderWithIdReassignment(prev.chests, fromIndex, toIndex);
-    if (idMap.size === 0) return { ...prev, chests: newChests };
-    const remap = (id: number) => idMap.get(id) ?? id;
-    const newInserters = prev.inserters.map((ins) => ({
-        ...ins,
-        source: ins.source.type === 'chest' ? { ...ins.source, id: remap(ins.source.id) } : ins.source,
-        sink: ins.sink.type === 'chest' ? { ...ins.sink, id: remap(ins.sink.id) } : ins.sink,
-    }));
-    return { ...prev, chests: newChests, inserters: newInserters };
+    const { items, idMap } = reorderWithIdReassignment(prev.chests, fromIndex, toIndex);
+    return followRenumber({ ...prev, chests: items }, 'chests', idMap);
 }
 
 export function reorderDrills(prev: ConfigFormData, fromIndex: number, toIndex: number): ConfigFormData {

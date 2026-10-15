@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
 import { FactorioIcon } from './FactorioIcon';
+import { TICK_DECIMALS, formatNumberText, maxRateLabel } from '../utils/numberText';
 
 interface MachineFactsAccordionProps {
     facts: SerializableMachineFacts | null;
@@ -51,13 +52,13 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     },
                 }}
             >
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" component="span" color="text.secondary">
                     Machine Facts
                 </Typography>
-                <Tooltip title={`${facts.output_rate_per_second}/s`} arrow>
+                <Tooltip title={`The most this machine can make: ${facts.output_rate_per_second}/s`} arrow describeChild>
                     <Chip
                         size="small"
-                        label={`${facts.output_rate_per_second.toFixed(4)}/s`}
+                        label={maxRateLabel(facts.output_rate_per_second)}
                         color="primary"
                         variant="outlined"
                         sx={{ height: 20, fontSize: '0.7rem' }}
@@ -81,11 +82,11 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                         />
                         <FactItem
                             label="Amount Per Craft"
-                            value={facts.output_per_craft.toFixed(2)}
+                            value={formatNumberText(facts.output_per_craft)}
                         />
                         <FactItem
-                            label="Rate"
-                            value={`${facts.output_rate_per_second.toFixed(4)}/s`}
+                            label="Max rate"
+                            value={`${formatNumberText(facts.output_rate_per_second)}/s`}
                             tooltip={`${facts.output_rate_per_second}/s`}
                         />
                         <FactItem
@@ -108,22 +109,22 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                         <FactItem
                             label="Craft"
-                            value={`${facts.ticks_per_craft.toFixed(4)} ticks`}
+                            value={`${formatNumberText(facts.ticks_per_craft, { maxDecimals: TICK_DECIMALS })} ticks`}
                             tooltip={`${facts.ticks_per_craft} ticks`}
                         />
                         <FactItem
                             label="Bonus"
-                            value={`${facts.ticks_per_bonus_craft.toFixed(4)} ticks`}
+                            value={`${formatNumberText(facts.ticks_per_bonus_craft, { maxDecimals: TICK_DECIMALS })} ticks`}
                             tooltip={`${facts.ticks_per_bonus_craft} ticks`}
                         />
                         <FactItem
                             label="Insertion Duration"
-                            value={`${facts.insertion_duration_ticks.toFixed(4)} ticks`}
+                            value={`${formatNumberText(facts.insertion_duration_ticks, { maxDecimals: TICK_DECIMALS })} ticks`}
                             tooltip={`${facts.insertion_duration_ticks} ticks`}
                         />
                         <FactItem
-                            label="Overload Multiplier"
-                            value={`${facts.overload_multiplier}`}
+                            label="Insertion Limit Multiplier"
+                            value={formatNumberText(facts.overload_multiplier, { maxDecimals: TICK_DECIMALS })}
                         />
                     </Box>
                 </Box>
@@ -135,12 +136,12 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                             <FactItem
                                 icon={facts.fuel.item_name}
                                 label="Fuel"
-                                value={`${facts.fuel.consumption_rate_per_second.toFixed(4)}/s`}
+                                value={`${formatNumberText(facts.fuel.consumption_rate_per_second)}/s`}
                                 tooltip={`${facts.fuel.consumption_rate_per_second}/s while crafting`}
                             />
                             <FactItem
                                 label="Fuel Per Craft"
-                                value={facts.fuel.amount_per_craft.toFixed(4)}
+                                value={formatNumberText(facts.fuel.amount_per_craft, { maxDecimals: TICK_DECIMALS })}
                                 tooltip={`${facts.fuel.amount_per_craft}`}
                             />
                         </Box>
@@ -172,21 +173,21 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                             borderRadius: 1,
                                         }}
                                     >
-                                        <FactorioIcon name={input.item_name} size={24} />
+                                        <FactorioIcon name={input.item_name} size={24} alt="" />
                                         <Typography variant="body2" sx={{ minWidth: 120 }}>
                                             {input.item_name}
                                         </Typography>
-                                        <Tooltip title={`${input.consumption_rate_per_second}/s`} arrow>
+                                        <Tooltip title={`${input.consumption_rate_per_second}/s`} arrow describeChild>
                                             <span>
                                                 <Chip
                                                     size="small"
-                                                    label={`${input.consumption_rate_per_second.toFixed(4)}/s`}
+                                                    label={`${formatNumberText(input.consumption_rate_per_second)}/s`}
                                                     variant="outlined"
                                                     sx={{ height: 20, fontSize: '0.7rem' }}
                                                 />
                                             </span>
                                         </Tooltip>
-                                        <Tooltip title="Required amount per craft" arrow>
+                                        <Tooltip title="Required amount per craft" arrow describeChild>
                                             <span>
                                                 <Chip
                                                     size="small"
@@ -196,7 +197,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                 />
                                             </span>
                                         </Tooltip>
-                                        <Tooltip title="Automated insertion limit quantity" arrow>
+                                        <Tooltip title="Automated insertion limit quantity" arrow describeChild>
                                             <span>
                                                 <Chip
                                                     size="small"
@@ -230,19 +231,16 @@ const FACT_DESCRIPTIONS: Record<string, string> = {
     'Fuel': 'Fuel items burned per second while crafting',
     'Fuel Per Craft': 'Fuel items burned per craft',
     'Amount Per Craft': 'Amount produced per craft (including productivity)',
-    'Rate': 'Output rate in items per second',
-    'Output Block': 'Output block size (items per output cycle)',
+    'Max rate': 'Most this machine can make, in items per second',
+    'Output Block': 'How many output items the machine holds before it stops crafting until some are taken out',
     'Craft': 'Ticks required per craft',
     'Bonus': 'Ticks per bonus craft from productivity',
-    'Insertion Duration': 
-        'Insertion duration before overload lockout in ticks.'
-        + 'This represents the time window during which items can be inserted before the '
-        + 'machine locks out due to being over the overload multiplier. ' 
+    'Insertion Duration':
+        'How long items can still be inserted, in ticks, before the machine locks up for being over its insertion limit. '
         + 'It is impacted by both crafting speed and productivity.',
-    'Overload Multiplier': 'Overload multiplier value',
+    'Insertion Limit Multiplier': 'Each ingredient\'s insertion limit is the amount a craft takes times this, rounded up',
     'Productivity': 'Productivity bonus percentage',
     'Crafting Speed': 'Machine crafting speed multiplier',
-    'Type': 'Machine type (machine or furnace)',
     'Recipe': 'Recipe name',
 };
 
@@ -253,7 +251,7 @@ function FactItem({ icon, label, value, tooltip }: FactItemProps) {
         : tooltip ?? baseDescription;
     const content = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {icon && <FactorioIcon name={icon} size={18} />}
+            {icon && <FactorioIcon name={icon} size={18} alt="" />}
             <Typography variant="body2" color="text.secondary">
                 {label}:
             </Typography>
@@ -263,7 +261,7 @@ function FactItem({ icon, label, value, tooltip }: FactItemProps) {
         </Box>
     );
     return description ? (
-        <Tooltip title={description} arrow>
+        <Tooltip title={description} arrow describeChild>
             <span>{content}</span>
         </Tooltip>
     ) : content;

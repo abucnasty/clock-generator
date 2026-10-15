@@ -14,10 +14,13 @@ import {
     Typography,
 } from '@mui/material';
 import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
 import { BELT_TYPES } from './entityTypes';
 
 interface BeltsFormProps {
@@ -70,11 +73,14 @@ function BeltsFormComponent({
         }
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, remove } = useFocusAfterRemove(belts.length, onRemove);
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         Belts ({belts.length})
                     </Typography>
                     <IconButton size="small" onClick={(e) => setInfoAnchor(e.currentTarget)} color="info" aria-label="About belt strategies">
@@ -93,23 +99,25 @@ function BeltsFormComponent({
                                 </Typography>
                             ))}
                             <Typography variant="body2" color="text.secondary">
-                                Inserters putting items onto a belt are clocked for what the inserters in this config take off
-                                it. Use an export belt when machines outside this config take items off it too.
+                                Inserters putting items onto a belt are clocked for what the inserters in this build take off
+                                it. Use an export belt when machines outside this build take items off it too.
                             </Typography>
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Belt
                 </Button>
             </Box>
 
-            <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={belts.map((b) => b._uuid)} itemLabels={belts.map((b) => entityLabel('belt', b.id))} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
-                <SortableItem key={belt._uuid} stableKey={belt._uuid} displayId={beltIndex + 1}>
+                <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-belt-${belt.id}`}
+                    role="group"
+                    aria-label={entityLabel('belt', belt.id)}
                     sx={{
                         mb: 2,
                         p: 2,
@@ -122,6 +130,7 @@ function BeltsFormComponent({
                         <FormControl size="small" sx={{ minWidth: 180 }}>
                             <InputLabel>Belt Type</InputLabel>
                             <Select
+                                inputProps={{ 'aria-label': SELECT_NAMES.beltType }}
                                 value={belt.type}
                                 label="Belt Type"
                                 onChange={(e) =>
@@ -131,7 +140,7 @@ function BeltsFormComponent({
                                 }
                                 renderValue={(selected) => (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <FactorioIcon name={selected} size={20} />
+                                        <FactorioIcon name={selected} size={20} alt="" />
                                         {BELT_TYPES.find((bt) => bt.value === selected)?.label}
                                     </Box>
                                 )}
@@ -139,7 +148,7 @@ function BeltsFormComponent({
                                 {BELT_TYPES.map((bt) => (
                                     <MenuItem key={bt.value} value={bt.value}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={bt.value} size={20} />
+                                            <FactorioIcon name={bt.value} size={20} alt="" />
                                             {bt.label}
                                         </Box>
                                     </MenuItem>
@@ -149,6 +158,7 @@ function BeltsFormComponent({
                         <FormControl size="small" sx={{ minWidth: 130 }}>
                             <InputLabel>Strategy</InputLabel>
                             <Select
+                                inputProps={{ 'aria-label': SELECT_NAMES.beltStrategy }}
                                 value={belt.strategy ?? 'normal'}
                                 label="Strategy"
                                 onChange={(e) =>
@@ -157,7 +167,7 @@ function BeltsFormComponent({
                             >
                                 {BELT_STRATEGIES.map((strategy) => (
                                     <MenuItem key={strategy.value} value={strategy.value}>
-                                        <Tooltip title={strategy.description} placement="right">
+                                        <Tooltip title={strategy.description} placement="right" describeChild>
                                             <span>{strategy.label}</span>
                                         </Tooltip>
                                     </MenuItem>
@@ -170,7 +180,7 @@ function BeltsFormComponent({
                                 Add Lane
                             </Button>
                         )}
-                        <IconButton onClick={() => onRemove(beltIndex)} color="error">
+                        <IconButton onClick={() => remove(beltIndex)} color="error" aria-label={deleteButtonLabel('belt', belt.id)} data-row-delete="">
                             <Delete />
                         </IconButton>
                     </Box>
@@ -180,9 +190,9 @@ function BeltsFormComponent({
                         {belt.lanes.map((lane, laneIndex) => (
                             <Box
                                 key={`lane-${laneIndex}`}
-                                sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}
+                                sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, rowGap: 1, alignItems: 'center', mb: 1 }}
                             >
-                                <Typography variant="body2" sx={{ width: 60 }}>
+                                <Typography variant="body2" sx={{ width: 60, flexShrink: 0 }}>
                                     Lane {laneIndex + 1}:
                                 </Typography>
                                 <ItemSelector
@@ -193,7 +203,7 @@ function BeltsFormComponent({
                                     }
                                     label="Ingredient"
                                     freeSolo
-                                    sx={{ flex: 1 }}
+                                    sx={{ flex: '1 1 200px' }}
                                 />
                                 <NumberField
                                     label="Stack Size"
@@ -208,12 +218,12 @@ function BeltsFormComponent({
                                         )
                                     }}
                                     min={1}
-                                    sx={{ width: 100 }}
+                                    sx={{ width: 100, minWidth: 100, flexShrink: 0 }}
                                     size="small"
                                 />
                                 {belt.strategy === 'export' && (
-                                <Tooltip title={LANE_CONSUMPTION_TOOLTIP}>
-                                    <Box>
+                                <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
+                                    <Box sx={{ flexShrink: 0 }}>
                                         <NumberField
                                             label="Consumed /s"
                                             value={lane.consumption_per_second ?? null}
@@ -221,7 +231,7 @@ function BeltsFormComponent({
                                                 handleLaneUpdate(beltIndex, laneIndex, 'consumption_per_second', val && val > 0 ? val : undefined)
                                             }
                                             min={0}
-                                            sx={{ width: 120 }}
+                                            sx={{ width: 120, minWidth: 120 }}
                                             size="small"
                                         />
                                     </Box>
@@ -233,11 +243,12 @@ function BeltsFormComponent({
                                             size="small"
                                             onClick={() => removeLane(beltIndex)}
                                             color="error"
+                                            aria-label={deleteLaneName(entityLabel('belt', belt.id), laneIndex + 1)}
                                         >
                                             <Delete fontSize="small" />
                                         </IconButton>
                                     ) : (
-                                        <Box sx={{ width: 28 }} />
+                                        <Box sx={{ width: 28, flexShrink: 0 }} />
                                     )
                                 ) : null}
                             </Box>

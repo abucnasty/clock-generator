@@ -68,7 +68,6 @@ interface FlowContentProps {
     getRecipeInfo?: (name: string) => import('../hooks/useSimulationWorker').RecipeInfo | null;
     onNodeSelect: (type: EntityClickType, id: number) => void;
     onUpdateInserter?: (index: number, updates: Partial<InserterFormData>) => void;
-    onDeleteInserter?: (index: number) => void;
     onAddMachine?: () => void;
     onAddInserter?: () => void;
     onAddBelt?: () => void;
@@ -86,7 +85,6 @@ function FlowContent({
     getRecipeInfo,
     onNodeSelect,
     onUpdateInserter,
-    onDeleteInserter,
     onAddMachine,
     onAddInserter,
     onAddBelt,
@@ -194,25 +192,6 @@ function FlowContent({
         [entityOf],
     );
 
-    const handleEdgesDelete = useCallback((deletedEdges: Edge[]) => {
-        if (!onDeleteInserter) return;
-        const inserterIds = new Set<number>();
-        for (const edge of deletedEdges) {
-            const src = entityOf(edge.source);
-            const tgt = entityOf(edge.target);
-            if (src?.type === 'inserter') inserterIds.add(src.id);
-            if (tgt?.type === 'inserter') inserterIds.add(tgt.id);
-        }
-        // Delete highest indices first so earlier indices stay valid
-        const indices = [...inserterIds]
-            .map(id => inserters.findIndex(i => i.id === id))
-            .filter(idx => idx !== -1)
-            .sort((a, b) => b - a);
-        for (const idx of indices) {
-            onDeleteInserter(idx);
-        }
-    }, [inserters, onDeleteInserter, entityOf]);
-
     const hasEntities = machines.length > 0 || belts.length > 0 || chests.length > 0 || drills.length > 0;
 
     const handleNodeClick: NodeMouseHandler = (_event, node) => {
@@ -269,7 +248,8 @@ function FlowContent({
             edgesReconnectable={true}
             onConnect={handleConnect}
             onReconnect={handleReconnect}
-            onEdgesDelete={handleEdgesDelete}
+            // no key deletes anything: an edge stands for an inserter, which Backspace used to remove without a word
+            deleteKeyCode={null}
             isValidConnection={isValidConnection}
             fitView
             fitViewOptions={{ padding: 0.2 }}
@@ -385,6 +365,13 @@ function ConfigFlowDiagramComponent({
         setDialogOpen(true);
     };
 
+    // a delete renumbers the kind, so while the dialog fades out its id would name the next entity
+    const deselectOnDelete = (onDelete?: (index: number) => void) =>
+        onDelete && ((index: number) => {
+            setSelectedId(null);
+            onDelete(index);
+        });
+
     return (
         <>
             <Box
@@ -423,7 +410,6 @@ function ConfigFlowDiagramComponent({
                         getRecipeInfo={dialogProps.getRecipeInfo}
                         onNodeSelect={handleNodeSelect}
                         onUpdateInserter={dialogProps.onUpdateInserter}
-                        onDeleteInserter={dialogProps.onDeleteInserter}
                         onAddMachine={onAddMachine}
                         onAddInserter={onAddInserter}
                         onAddBelt={onAddBelt}
@@ -436,6 +422,11 @@ function ConfigFlowDiagramComponent({
 
             <EntityEditDialog
                 {...dialogProps}
+                onDeleteMachine={deselectOnDelete(dialogProps.onDeleteMachine)}
+                onDeleteInserter={deselectOnDelete(dialogProps.onDeleteInserter)}
+                onDeleteBelt={deselectOnDelete(dialogProps.onDeleteBelt)}
+                onDeleteChest={deselectOnDelete(dialogProps.onDeleteChest)}
+                onDeleteDrill={deselectOnDelete(dialogProps.onDeleteDrill)}
                 open={dialogOpen}
                 onClose={() => setDialogOpen(false)}
                 entityType={selectedType}

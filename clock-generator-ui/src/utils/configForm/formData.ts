@@ -20,7 +20,7 @@ export interface MachineFormData {
     energy_consumption_bonus?: number;
 }
 
-// Enable control override types come from the engine's config schema
+// Enable rule types come from the engine's config schema
 export type { Condition, EnableControlRange, RuleSet, ValueReference };
 export type EnableControlOverride = EnableControlOverrideConfig;
 export type LatchConfig = NonNullable<Extract<EnableControlOverride, { mode: 'CONDITIONAL' }>['latch']>;
@@ -42,6 +42,10 @@ export interface InserterFormData {
     stack_size: number;
     filters?: string[];
     overrides?: InserterOverrides;
+    /** UI-only, never part of the exported config: set when Exclude from LCM forced this inserter's rule to ALWAYS
+     *  (its items are all excluded), so that including one of them again may take that ALWAYS away. Replacing the
+     *  rule clears it. */
+    _forced_always?: true;
 }
 
 export interface BeltLaneFormData {
@@ -160,9 +164,6 @@ export interface ConfigFormData {
         search_for_fewer_wake_ups?: boolean;
         ignored_lcm_ingredients?: string[];
     };
-    /** UI-only: of each kind, an id past those of the entities removed from it, so that a new entity does not get one
-     *  of them, which references to the removed entity may still hold. Missing in forms saved before it. */
-    next_ids?: Partial<Record<EntityKind, number>>;
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({

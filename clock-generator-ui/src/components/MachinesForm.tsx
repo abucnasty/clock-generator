@@ -16,10 +16,15 @@ import {
 import { useState, memo } from 'react';
 import type { MachineFormData } from '../hooks/useConfigForm';
 import { useMachineFacts } from '../hooks/useMachineFacts';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
+import { BUTTON_NAMES, SELECT_NAMES, recipeName } from '../utils/a11yLabels';
 
 interface MachinesFormProps {
     machines: MachineFormData[];
@@ -57,14 +62,17 @@ function MachinesFormComponent({
         setCopied(true);
     };
 
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    const { cardRef, remove } = useFocusAfterRemove(machines.length, onRemove);
+
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" component="h2">
                         Machines ({machines.length})
                     </Typography>
-                    <IconButton size="small" onClick={handleInfoClick} color="info">
+                    <IconButton size="small" onClick={handleInfoClick} color="info" aria-label={BUTTON_NAMES.aboutMachines}>
                         <Info fontSize="small" />
                     </IconButton>
                     <Popover
@@ -105,14 +113,14 @@ function MachinesFormComponent({
                         </Box>
                     </Popover>
                 </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small">
+                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Machine
                 </Button>
             </Box>
 
-            <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
+            <SortableList itemKeys={machines.map((m) => m._uuid)} itemLabels={machines.map((m) => entityLabel('machine', m.id))} onReorder={onReorder}>
                 {machines.map((machine, index) => (
-                    <SortableItem key={machine._uuid} stableKey={machine._uuid} displayId={index + 1}>
+                    <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
                         {(dragHandle) => (
                             <MachineRow
                                 machine={machine}
@@ -121,7 +129,7 @@ function MachinesFormComponent({
                                 canDelete={machines.length > 1}
                                 dragHandle={dragHandle}
                                 onUpdate={onUpdate}
-                                onRemove={onRemove}
+                                onRemove={remove}
                             />
                         )}
                     </SortableItem>
@@ -153,6 +161,8 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
     return (
         <Box
             id={`entity-machine-${machine.id}`}
+            role="group"
+            aria-label={entityLabel('machine', machine.id)}
             sx={{
                 mb: 2,
                 p: 2,
@@ -170,6 +180,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
             >
                 {dragHandle}
                 <Autocomplete
+                    id={machineRecipeElementId(machine.id)}
                     sx={{ minWidth: 250, flex: 1 }}
                     options={recipeNames}
                     value={machine.recipe || null}
@@ -181,11 +192,13 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                             placeholder="Search recipes..."
                             size="small"
                             slotProps={{
+                                // the label says "Recipe" in every row: say whose it is
+                                htmlInput: { ...params.inputProps, 'aria-label': recipeName(entityLabel('machine', machine.id)) },
                                 input: {
                                     ...params.InputProps,
                                     startAdornment: machine.recipe ? (
                                         <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                            <FactorioIcon name={machine.recipe} size={20} />
+                                            <FactorioIcon name={machine.recipe} size={20} alt="" />
                                         </Box>
                                     ) : null,
                                 },
@@ -196,7 +209,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                         const { key, ...rest } = props;
                         return (
                             <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={option} size={20} />
+                                <FactorioIcon name={option} size={20} alt="" />
                                 {option}
                             </Box>
                         );
@@ -236,35 +249,36 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                         size="small"
                     />
                 )}
-                <FormControl size="small" sx={{ minWidth: 140 }}>
+                <FormControl size="small" sx={{ minWidth: 220 }}>
                     <InputLabel>Type</InputLabel>
                     <Select
+                        inputProps={{ 'aria-label': SELECT_NAMES.machineType }}
                         value={machine.type || 'machine'}
                         label="Type"
                         onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
                         renderValue={(selected) => (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} />
-                                {selected === 'furnace' ? 'Furnace' : selected === 'biochamber' ? 'Biochamber' : 'Machine'}
+                                <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} alt="" />
+                                {MACHINE_TYPE_LABELS[selected]}
                             </Box>
                         )}
                     >
                         <MenuItem value="machine">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="assembling-machine-3" size={20} />
-                                Machine
+                                <FactorioIcon name="assembling-machine-3" size={20} alt="" />
+                                {MACHINE_TYPE_LABELS.machine}
                             </Box>
                         </MenuItem>
                         <MenuItem value="furnace">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="electric-furnace" size={20} />
-                                Furnace
+                                <FactorioIcon name="electric-furnace" size={20} alt="" />
+                                {MACHINE_TYPE_LABELS.furnace}
                             </Box>
                         </MenuItem>
                         <MenuItem value="biochamber">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="biochamber" size={20} />
-                                Biochamber
+                                <FactorioIcon name="biochamber" size={20} alt="" />
+                                {MACHINE_TYPE_LABELS.biochamber}
                             </Box>
                         </MenuItem>
                     </Select>
@@ -273,6 +287,8 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     onClick={() => onRemove(index)}
                     color="error"
                     disabled={!canDelete}
+                    aria-label={deleteButtonLabel('machine', machine.id)}
+                    data-row-delete=""
                 >
                     <Delete />
                 </IconButton>
