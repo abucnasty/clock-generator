@@ -13,11 +13,14 @@ import {
     describePaste,
     describeRemoval,
     countOf,
+    exampleUndoMessage,
     removalMessage,
     removedDeleteLabel,
     settleUndoEntry,
     undoMessageInput,
     undoOutcome,
+    UNDO_IMPORT_MESSAGE,
+    UNDO_RESET_MESSAGE,
     UNDO_RESULTS_NOTE,
     type UndoEntry,
 } from './undoSnapshot';
@@ -341,6 +344,13 @@ describe('the messages', () => {
         expect(describePaste(['3 machines', '2 inserters'])).toBe('Imported 3 machines, 2 inserters from Factorio.');
         expect(describePaste([countOf(1, 'machine', 'machines'), countOf(1, 'belt', 'belts'), countOf(2, 'drill', 'drills')]))
             .toBe('Imported 1 machine, 1 belt, 2 drills from Factorio.');
+        expect(describePaste(['Target Output', '1 machine'])).toBe('Imported Target Output, 1 machine from Factorio.');
+    });
+
+    it('name a build file, a reset and an example in the words of the menu', () => {
+        expect(UNDO_IMPORT_MESSAGE).toBe('Build file opened.');
+        expect(UNDO_RESET_MESSAGE).toBe('Build reset.');
+        expect(exampleUndoMessage({ recipe: 'logistic-science-pack' }, (id) => id)).toBe('Example loaded: Logistic science pack.');
     });
 });
 

@@ -13,7 +13,6 @@ const expectCount = async (w, state, name, loc, want) => {
 
 for (const w of [1440, 720, 390]) {
     const { browser, page } = await openSession({ base: BASE, width: w });
-    const wide = w >= 900;
     const E = (state, name, loc, want = 1) => expectCount(w, state, name, loc, want);
 
     // ---- first visit (Configure, empty build)
@@ -25,8 +24,10 @@ for (const w of [1440, 720, 390]) {
     await E(s, 'viewToggle(Results)', ui.viewToggle(page, 'Results'));
     await E(s, 'menuButton', ui.menuButton(page));
     await E(s, 'menu (closed)', ui.menu(page), 0);
-    await E(s, 'importConfig', ui.importConfig(page), wide ? 1 : 0);
-    await E(s, 'exportConfig', ui.exportConfig(page), wide ? 1 : 0);
+    await E(s, 'importConfig', ui.importConfig(page), 0);
+    await E(s, 'exportConfig', ui.exportConfig(page), 0);
+    await E(s, 'pasteFromFactorio', ui.pasteFromFactorio(page));
+    await E(s, 'introCard', ui.introCard(page));
     await E(s, 'advancedOverrides', ui.advancedOverrides(page));
     for (const k of ['target', 'machines', 'inserters', 'belts', 'chests', 'drills']) await E(s, `card(${k})`, ui.card(page, k));
     await E(s, 'add(target)', ui.add(page, 'target'), 0);
@@ -46,28 +47,31 @@ for (const w of [1440, 720, 390]) {
     s = 'menu';
     const menu = await openMoreMenu(page);
     await E(s, 'menu (open)', ui.menu(page));
-    await E(s, 'pasteFromFactorio', ui.pasteFromFactorio(page));
     await E(s, 'reset', ui.reset(page));
-    await E(s, 'importConfig', ui.importConfig(page), wide ? 0 : 1);
-    await E(s, 'exportConfig', ui.exportConfig(page), wide ? 0 : 1);
+    await E(s, 'importConfig', ui.importConfig(page));
+    await E(s, 'exportConfig', ui.exportConfig(page));
     log((await openMoreMenu(page)) !== null, `${w} openMoreMenu twice is harmless`);
     await page.keyboard.press('Escape');
     await menu.waitFor({ state: 'hidden' });
-    await chooseMenuItem(page, 'Paste from Factorio');
+    await ui.pasteFromFactorio(page).click();
     await page.waitForTimeout(500);
-    log((await ui.message(page).count()) === 1, `${w} chooseMenuItem('Paste from Factorio') ran (no clipboard JSON: the message says "${((await ui.message(page).textContent().catch(() => '')) ?? '').slice(0, 60)}")`);
+    const pasteDialog = page.getByRole('dialog', { name: 'Paste from Factorio' });
+    log((await pasteDialog.count()) === 1, `${w} Paste from Factorio ran (no clipboard JSON: its dialog opens)`);
+    await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
-    // Import Config through chooseMenuItem at any width: it must raise a file chooser
+    // Open build file… through chooseMenuItem at any width: it must raise a file chooser
     const chooser = page.waitForEvent('filechooser', { timeout: 5000 });
-    await chooseMenuItem(page, 'Import Config');
+    await chooseMenuItem(page, 'Open build file…');
     await (await chooser).setFiles(SMALL_SAMPLE);
     await page.waitForTimeout(800);
     await E('imported', 'message', ui.message(page));
     await E('imported', 'messageUndo', ui.messageUndo(page));
     await E('imported', 'messageClose', ui.messageClose(page));
-    await chooseMenuItem(page, 'Export Config').catch((e) => log(false, `${w} chooseMenuItem Export: ${e.message}`));
+    // the message sits over the open menu's second item at 390 (messages over the page: 1.5 F), so it goes first
+    await ui.messageClose(page).click();
+    await chooseMenuItem(page, 'Save build file').catch((e) => log(false, `${w} chooseMenuItem Save build file: ${e.message}`));
     await page.waitForTimeout(500);
-    log(true, `${w} chooseMenuItem('Import Config') and ('Export Config') worked`);
+    log(true, `${w} chooseMenuItem('Open build file…') and ('Save build file') worked`);
 
     // ---- imported build, Configure
     s = 'configure';

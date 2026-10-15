@@ -35,10 +35,15 @@ describe("checkSidecarImport", () => {
         expect(Option.toNullable(checkSidecarImport("0.3.0", [biochamber]))).toContain("Clock Generator Sidecar 0.3.0.");
     });
 
-    it("only says that nothing is affected when nothing in the data needs what the sidecar lacks", () => {
-        const guidance = Option.toNullable(checkSidecarImport("0.3.0", [assembler]));
-        expect(guidance).toContain("Nothing in this import is affected");
+    it("says that nothing is missing, and only offers the update, when nothing in the data needs what the sidecar lacks", () => {
+        const guidance = Option.toNullable(checkSidecarImport("0.6.0", [assembler]));
+        expect(guidance).toBe(
+            "This was exported by Clock Generator Sidecar 0.6.0. Nothing is missing from this import. "
+            + `You can update the mod to ${LATEST_SIDECAR_VERSION} when you like.`,
+        );
         expect(guidance).not.toContain("energy consumption");
+        expect(guidance).not.toContain("affected");
+        expect(guidance).not.toContain("import everything automatically");
     });
 
     it("has nothing to say about the latest version", () => {
