@@ -175,7 +175,9 @@ function pasteFromMenu(page, text) {
         await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
         await Promise.race([
             page.getByRole('dialog').getByText('Confirm Import from Factorio').waitFor({ timeout: 8000 }),
-            snack(page).first().waitFor({ timeout: 8000 }),
+            // the paste's own error, not any message: an Undo message already up would let the next width write the
+            // clipboard before this paste has read it
+            snack(page).filter({ hasText: /^Failed to paste/ }).first().waitFor({ timeout: 8000 }),
         ]).catch(() => {});
     });
 }
