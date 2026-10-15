@@ -42,8 +42,8 @@ function returnTarget(record: ReturnFocus): HTMLElement | null {
  * The safety net for the actions that throw part of the build away: each says what it did in a message with an Undo
  * button, which puts the whole form back as it was just before. Ctrl+Z (Cmd+Z) does the same while Undo is offered,
  * outside a text field and an editing dialog. There is one slot, and no timer: the offer lasts until another action
- * replaces it, the message is closed, an editing dialog opens, or the form changes some other way, since putting the old
- * form back would also throw that change away.
+ * replaces it, the message is closed, an editing dialog opens, the player starts a check or a generation, or the form
+ * changes some other way, since putting the old form back would also throw that change away.
  */
 export function useUndo(
     config: ConfigFormData,
@@ -82,7 +82,7 @@ export function useUndo(
         }
     }, [entry, dismiss]);
 
-    const { offerUndo, undo } = useMemo(() => {
+    const { offerUndo, withdrawUndo, undo } = useMemo(() => {
         const show = (next: UndoEntry | null, record: ReturnFocus | null) => {
             setEntry(next);
             if (next === null) {
@@ -134,7 +134,13 @@ export function useUndo(
             show(createUndoEntry(++counterRef.current, text, form, isLoadedRef.current, options?.resultsCleared ?? false), record);
         };
 
-        return { offerUndo, undo };
+        /**
+         * Ends the offer without a word: for the player's own press of Generate or Check only, which accepts the build
+         * (the owner, 2026-10-14). The message goes with it, and Ctrl/Cmd+Z is the browser's again.
+         */
+        const withdrawUndo = () => setEntry(null);
+
+        return { offerUndo, withdrawUndo, undo };
     }, [notify, dismiss, setConfig]);
 
     useEffect(() => {
@@ -171,5 +177,5 @@ export function useUndo(
         };
     }, [undo, announce]);
 
-    return { offerUndo };
+    return { offerUndo, withdrawUndo };
 }

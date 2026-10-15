@@ -55,13 +55,13 @@ const DEFAULT_DURATION_MS: Record<MessageSeverity, number | null> = {
     error: null,
 };
 
-/** Errors and warnings are alerts, read out at once by their own role; the rest go through the polite live region */
+/** Errors and warnings are drawn filled */
 export const isUrgent = (severity: MessageSeverity) => severity === 'error' || severity === 'warning';
 
 /**
  * One message at a time: a new one replaces the one shown, since the player should see the result of what they just
- * did. Closing a message that has already been replaced leaves the newer one open, and the state as it is. A message
- * that is not urgent is also announced, with its hint, in the live region, as `announce` text is.
+ * did. Closing a message that has already been replaced leaves the newer one open, and the state as it is. Every
+ * message is also announced, with its hint, in the live region, as `announce` text is.
  */
 export function messagesReducer(state: MessageState, event: MessageEvent): MessageState {
     switch (event.type) {
@@ -74,9 +74,7 @@ export function messagesReducer(state: MessageState, event: MessageEvent): Messa
                     severity,
                     durationMs: durationMs !== undefined ? durationMs : DEFAULT_DURATION_MS[severity],
                 },
-                announcement: isUrgent(severity)
-                    ? state.announcement
-                    : { id: event.id, text: [rest.text, rest.hint].filter(Boolean).join(' ') },
+                announcement: { id: event.id, text: [rest.text, rest.hint].filter(Boolean).join(' ') },
             };
         }
         case 'dismiss':

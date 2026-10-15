@@ -4,7 +4,7 @@ import { useRef, useState, useCallback } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
-import { useNotify } from '../hooks/useMessages';
+import { useDismissMessage, useNotify } from '../hooks/useMessages';
 import { countOf, describePaste, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { askEngine } from '../worker/engineClient';
@@ -65,6 +65,15 @@ export function ConfigImportExport({
     // below 900px the app bar has room for the title and the menu only: Import and Export move into the menu
     const narrow = useMediaQuery(useTheme().breakpoints.down('md'));
     const notify = useNotify();
+    const dismiss = useDismissMessage();
+    // the last "Failed to import" or "Failed to paste", which goes as soon as the player tries again
+    const errorIdRef = useRef<number | null>(null);
+    const closeLastError = useCallback(() => {
+        if (errorIdRef.current !== null) {
+            dismiss(errorIdRef.current);
+            errorIdRef.current = null;
+        }
+    }, [dismiss]);
 
     // State for the hamburger menu
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -104,6 +113,7 @@ export function ConfigImportExport({
         async (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
             if (!file) return;
+            closeLastError();
 
             try {
                 const content = await file.text();
@@ -116,16 +126,17 @@ export function ConfigImportExport({
                 onBuildReplaced();
             } catch (error) {
                 console.error('Import error:', error);
-                notify({ severity: 'error', text: `Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}` });
+                errorIdRef.current = notify({ severity: 'error', text: `Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}` });
             }
 
             // Reset the input so the same file can be imported again
             event.target.value = '';
         },
-        [onImport, onBuildReplaced, onUndoable, notify]
+        [closeLastError, onImport, onBuildReplaced, onUndoable, notify]
     );
 
     const handlePasteFromFactorio = useCallback(async () => {
+        closeLastError();
         try {
             const clipboardText = await navigator.clipboard.readText();
             
@@ -224,9 +235,9 @@ export function ConfigImportExport({
             });
         } catch (error) {
             console.error('Paste from Factorio error:', error);
-            notify({ severity: 'error', text: `Failed to paste: ${error instanceof Error ? error.message : 'Unknown error'}` });
+            errorIdRef.current = notify({ severity: 'error', text: `Failed to paste: ${error instanceof Error ? error.message : 'Unknown error'}` });
         }
-    }, [notify]);
+    }, [closeLastError, notify]);
 
     const handleConfirmImport = useCallback(() => {
         if (!pendingImport) return;
