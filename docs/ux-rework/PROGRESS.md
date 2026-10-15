@@ -238,6 +238,11 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   `master` is merged into `feat/ux-rework`, then into p2 and p3, with the generation tests run; the final PR's version
   bump starts from 0.11.0.
 
+- 2026-10-15: Owner: **PR #178 (the clock-or-unwired advice) is out of scope** for the UX rework. No UI item is
+  built for it; the drafted spec is not committed. `master` 0.11.0 is merged into `feat/ux-rework` (829befc,
+  generation tests run 38731611174 passed), p2 (4e8619c) and p3 (e842f9a) as an ordinary upstream merge; the final
+  PR's version bump starts from 0.11.0.
+
 ## Open questions
 
 None.
