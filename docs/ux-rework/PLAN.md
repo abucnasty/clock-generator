@@ -267,8 +267,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
     machines.
   - Reword the old-mod warning (A17).
   - An untouched build shows its next step neutrally, not a red problem count. When the target rate is more than the
-    machines can make, a warning under the field says so; it doesn't block Check or Generate (the owner, 2026-10-14,
-    after the Phase 1 end review).
+    machines can make, a line under the field says so and it is a blocking problem, since the engine refuses such a
+    target (the owner, 2026-10-14, after the Phase 1 end review; built as 2.1 W).
 
 **2.2 Sidecar mod changes** (`clock-generator-sidecar/`, version 0.8.0 in the final PR)
 - **Export a suggested target.** Add the final product to the export in `scripts/export.lua`: the recipe whose output

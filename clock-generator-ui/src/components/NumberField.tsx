@@ -25,6 +25,11 @@ interface NumberFieldProps extends BaseNumberField.Root.Props {
     size?: 'small' | 'medium';
     error?: boolean;
     helperText?: string;
+    /**
+     * What is wrong with the value, under the helper text, which then stays as it is: the field is marked invalid and
+     * the line is in the lighter red (the error red is 4.4:1 on a card, under the 4.5 text needs)
+     */
+    problem?: string | null;
     sx?: SxProps<Theme>;
     /** Decimals shown while the field is not focused; the full value shows on focus and is the one stored */
     displayDecimals?: number;
@@ -35,6 +40,7 @@ export function NumberField({
     label,
     error,
     helperText,
+    problem,
     size = 'medium',
     sx,
     min,
@@ -89,8 +95,9 @@ export function NumberField({
         [min, max, onValueChange]
     );
 
-    const hasError = error || Boolean(validationError);
+    const hasError = error || Boolean(validationError) || Boolean(problem);
     const displayHelperText = validationError || helperText;
+    const describedBy = [displayHelperText && `${id}-helper`, problem && `${id}-problem`].filter(Boolean).join(' ') || undefined;
 
     return (
         <BaseNumberField.Root
@@ -155,7 +162,9 @@ export function NumberField({
                                     // the input slot's props are spread over the value above, so it is set again here
                                     value: shown,
                                     title: shown !== state.inputValue ? state.inputValue : undefined,
-                                    'aria-describedby': displayHelperText ? `${id}-helper` : undefined,
+                                    'aria-describedby': describedBy,
+                                    // the input slot's props come from the number field, which does not say it is invalid
+                                    'aria-invalid': hasError || undefined,
                                 },
                             }}
                             endAdornment={
@@ -200,8 +209,19 @@ export function NumberField({
                 }}
             />
             {displayHelperText && (
-                <FormHelperText id={`${id}-helper`} sx={{ ml: 0, '&:empty': { mt: 0 } }}>
+                <FormHelperText
+                    id={`${id}-helper`}
+                    // with a problem line of its own the helper text is not the problem: it keeps its colour
+                    error={problem && !error && !validationError ? false : undefined}
+                    sx={{ ml: 0, '&:empty': { mt: 0 } }}
+                >
                     {displayHelperText}
+                </FormHelperText>
+            )}
+            {problem && (
+                // not a live region: it is read with the field, and the workflow bar's note names it too
+                <FormHelperText id={`${id}-problem`} sx={{ ml: 0, mt: 0.5, '&, &.Mui-error': { color: 'error.light' } }}>
+                    {problem}
                 </FormHelperText>
             )}
         </BaseNumberField.Root>

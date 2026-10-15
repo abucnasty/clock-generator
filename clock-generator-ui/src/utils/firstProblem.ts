@@ -1,6 +1,7 @@
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
+import { isTargetAboveMax, maxRateText, type MachinesMax } from './targetRateLimit';
 
 /**
  * Every sentence that says what stops the build being clocked, and so where Generate goes. The tooltips, the note in the
@@ -11,6 +12,7 @@ export const PROBLEM_TEXT = {
     noRate: 'Set Items per Second in Target Output to more than 0',
     noCopies: 'Set Copies in Target Output to 1 or more',
     noMachines: 'Add a machine',
+    rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter bringing in ${item}`,
     missingOutput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter taking ${item} out`,
@@ -64,13 +66,16 @@ interface ProblemsInput {
     targetOutput: { recipe: string; items_per_second: number; copies: number };
     machines: { id: number; recipe: string }[];
     coverageIssues: CoverageIssueKey[];
+    /** The most the machines making the target recipe can make; null or left out while it is not known */
+    machinesMax?: MachinesMax | null;
 }
 
 /**
- * What keeps the build from being generated, in the order it is best fixed: the target, the machines, then the
- * inserters the engine found missing, in its order. Empty when the build can be generated.
+ * What keeps the build from being generated, in the order it is best fixed: the target, the machines, a target more
+ * than the machines can make (which their recipes change), then the inserters the engine found missing, in its order.
+ * Empty when the build can be generated.
  */
-export function problemsOf({ targetOutput, machines, coverageIssues }: ProblemsInput): Problem[] {
+export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax = null }: ProblemsInput): Problem[] {
     const problems: Problem[] = [];
     if (!targetOutput.recipe) {
         problems.push({ text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } });
@@ -91,6 +96,13 @@ export function problemsOf({ targetOutput, machines, coverageIssues }: ProblemsI
                 target: { kind: 'machine-recipe', machineId: machine.id },
             });
         }
+    }
+    // the engine's check refuses such a target too; said here, the player is sent to the field instead of a failed check
+    if (machinesMax && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
+        problems.push({
+            text: PROBLEM_TEXT.rateAboveMax(machinesMax.perCopy * targetOutput.copies),
+            target: { kind: 'target-rate' },
+        });
     }
     for (const { kind, machine_id, item_name } of coverageIssues) {
         problems.push({
