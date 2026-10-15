@@ -51,6 +51,14 @@ export interface RuleCountMachine {
     working: readonly boolean[];
     /** Simulated runs only: crafts started so far (the simulator's true starts), per index */
     crafts_started?: readonly number[];
+    /**
+     * The machine truly started a craft in the tick, per index (its ingredients were consumed), for the count in true
+     * starts (version A): from `crafts_started` in a simulated run, from crafting progress in a recording, and inferred
+     * from status, products_finished, crafting speed and recipe energy in an extractor dump (true-starts.ts). Absent when
+     * it cannot be known (a dump's machine without a crafting speed or a recipe): the count then uses the starts the
+     * series' original count infers, and names the machine.
+     */
+    true_starts?: readonly boolean[];
 }
 
 /** An inserter's per-index counts of the rule over the counted indices */
