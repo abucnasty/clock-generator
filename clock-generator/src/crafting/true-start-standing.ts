@@ -31,14 +31,14 @@ const CHECKED_PRODUCTIVITY = { min: 0.5, max: 3 };
 
 /** Recipes and machines on which the method equalled the input balance, with the range of delta checked */
 const CHECKED: readonly { recipe: string; machine_name: string; delta: { min: number; max: number } }[] = [
-    // exact tick for tick: 0.278 (advanced circuit), 0.364 (battery), 0.208 (accumulator), 0.286 (LDS); the range
-    // recorded over these, 0.208 to 0.364, holds for each of them (the reviewer session, 2026-10-15)
-    { recipe: "advanced-circuit", machine_name: "electromagnetic-plant", delta: { min: 0.208, max: 0.364 } },
-    { recipe: "battery", machine_name: "cryogenic-plant", delta: { min: 0.208, max: 0.364 } },
-    { recipe: "accumulator", machine_name: "electromagnetic-plant", delta: { min: 0.208, max: 0.364 } },
-    { recipe: "casting-low-density-structure", machine_name: "foundry", delta: { min: 0.208, max: 0.364 } },
+    // exact tick for tick: 0.278 (advanced circuit), 0.3641 (battery), 0.2077 (accumulator), 0.286 (LDS); the range
+    // recorded over these, 0.2077 to 0.3641, holds for each of them (the reviewer session, 2026-10-15)
+    { recipe: "advanced-circuit", machine_name: "electromagnetic-plant", delta: { min: 0.207, max: 0.365 } },
+    { recipe: "battery", machine_name: "cryogenic-plant", delta: { min: 0.207, max: 0.365 } },
+    { recipe: "accumulator", machine_name: "electromagnetic-plant", delta: { min: 0.207, max: 0.365 } },
+    { recipe: "casting-low-density-structure", machine_name: "foundry", delta: { min: 0.207, max: 0.365 } },
     // exact at delta 1.025 (the advanced circuit scaffold's plant)
-    { recipe: "plastic-bar", machine_name: "cryogenic-plant", delta: { min: 0.208, max: 1.03 } },
+    { recipe: "plastic-bar", machine_name: "cryogenic-plant", delta: { min: 0.207, max: 1.03 } },
 ];
 
 /** Kinds of machine on which the method was beyond the miss line */
