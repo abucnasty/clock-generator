@@ -1,4 +1,5 @@
-import { Box, Paper, Typography } from '@mui/material';
+import { Box } from '@mui/material';
+import { Panel } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
@@ -31,11 +32,8 @@ export function TargetOutputForm({
     onCopiesChange,
 }: TargetOutputFormProps) {
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
-            {/* focused by script when the intro card or a dialog that held the focus goes */}
-            <Typography id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1} variant="h6" component="h2" gutterBottom>
-                Target Output
-            </Typography>
+        // the heading is focused by script when the intro card or a dialog that held the focus goes
+        <Panel title="Target Output" focusableTitleId={TARGET_OUTPUT_HEADING_ID}>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <ItemSelector
                     kind="recipe"
@@ -78,6 +76,6 @@ export function TargetOutputForm({
                     helperText={COPIES_HELPER}
                 />
             </Box>
-        </Paper>
+        </Panel>
     );
 }

@@ -9,6 +9,11 @@ interface PanelProps {
     level?: 2 | 3;
     /** The heading's id is `${id}-title`; one is made up when not given */
     id?: string;
+    /**
+     * For a heading the page moves the focus to (as to Target Output when the intro card goes): its id instead, and
+     * focusable by script only
+     */
+    focusableTitleId?: string;
     /** A "?" after the title that opens this */
     help?: { label: string; content: ReactNode };
     /** At the right of the title bar */
@@ -24,9 +29,9 @@ interface PanelProps {
  * A card in the game's look: a title bar (a lighter band with the heading, its help and the card's actions), over the
  * dark body. A section of the page, named by its heading.
  */
-export function Panel({ title, level = 2, id, help, actions, children, sx, ref, ...data }: PanelProps) {
+export function Panel({ title, level = 2, id, focusableTitleId, help, actions, children, sx, ref, ...data }: PanelProps) {
     const madeUpId = useId();
-    const titleId = `${id ?? madeUpId}-title`;
+    const titleId = focusableTitleId ?? `${id ?? madeUpId}-title`;
     return (
         <Paper
             ref={ref as Ref<HTMLDivElement> | undefined}
@@ -51,7 +56,13 @@ export function Panel({ title, level = 2, id, help, actions, children, sx, ref, 
                 }}
             >
                 {/* the level is set: the theme makes a subtitle a paragraph */}
-                <Typography id={titleId} component={`h${level}`} variant={level === 2 ? 'h6' : 'subtitle1'} sx={{ fontWeight: 600 }}>
+                <Typography
+                    id={titleId}
+                    tabIndex={focusableTitleId ? -1 : undefined}
+                    component={`h${level}`}
+                    variant={level === 2 ? 'h6' : 'subtitle1'}
+                    sx={{ fontWeight: 600 }}
+                >
                     {title}
                 </Typography>
                 {help && <HelpButton label={help.label}>{help.content}</HelpButton>}

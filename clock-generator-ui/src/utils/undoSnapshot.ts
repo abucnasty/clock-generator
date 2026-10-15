@@ -11,7 +11,6 @@ const UNDO_NOTICE_DURATION_MS = 8_000;
 const UNDO_LABEL = 'Undo';
 export const UNDO_RESET_MESSAGE = 'Build reset.';
 export const UNDO_IMPORT_MESSAGE = 'Build file opened.';
-const UNDO_DRILLS_OFF_MESSAGE = 'Mining drills turned off.';
 export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Generate to make them again.';
 /** Read out when an editing dialog opening takes the offer away */
 export const UNDO_WITHDRAWN_MESSAGE = 'Undo is no longer offered.';
@@ -201,11 +200,6 @@ export function describeChestSwitch(form: ConfigFormData, index: number, newType
     }
     const type = isInfinityChest(chest) ? ChestType.INFINITY_CHEST : ChestType.BUFFER_CHEST;
     return type === newType ? null : `${entityLabel('chest', chest.id)} changed to ${CHEST_TYPE_NAMES[newType]}.`;
-}
-
-/** Null when the drills are already off */
-export function describeDrillsOff(form: ConfigFormData): string | null {
-    return form.drills === undefined ? null : UNDO_DRILLS_OFF_MESSAGE;
 }
 
 /** "Imported 3 machines, 1 inserter from Factorio." */
