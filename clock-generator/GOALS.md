@@ -1,9 +1,11 @@
 ## Goals of this Algorithm
 
 1. match the target rate of the recipe chosen exactly
-2. minimize "active inserter windows" whenever possible to reduce update time in factorio
+2. reduce the update time the build costs the game (UPS)
 
 The goals above are listed in priority order.
+
+Goal 2 was first written as "minimize active inserter windows whenever possible to reduce update time in factorio". Its aim is the update time itself (the owner, 2026-10-15: "The specific goal is to reduce UPS. Goal as stated is outdated."). The selection does not measure update time yet: it ranks clocks by their wake-ups ("Wake-ups, the measure for goal 2 for now"), which stand in for it, with the known difference that they count a productivity payout as waking the inserters into a machine. The wake-ups stay the measure until a plan to measure update time replaces them.
 
 ## Backpressure Loss
 
@@ -64,7 +66,7 @@ An inserter with nothing to move goes to sleep on the wake-up list of the machin
 
 This can be seen in the game with the debug setting `show-wakeup-lists`, which draws a yellow line from a waiting inserter to what it waits on. A line that flickers on and off very frequently is an inserter that keeps getting woken for nothing, and that is considered bad.
 
-### Wake-ups, the measure for goal 2
+### Wake-ups, the measure for goal 2 for now
 
 A wake-up is one waking of an inserter by a machine while the inserter was enabled and asleep on its list. A machine wakes an inserter at most once in a tick. What wakes which list (factorio-benchmarks docs/mechanics, D7):
 - An inserter waiting for space in a machine is woken when the machine starts a craft (consumes its ingredients), not when it pays out a productivity bonus. Measured once, on one build: the advanced circuit scaffold at +175% productivity, belt-fed inputs holding part of a hand, 252 of 252 starts and 0 of 210 lone payouts (D7 a1). The accumulator and low density structure recordings could not test it (D7 read 2, not yet audited): no input there waits for space with part of a hand. Whether it is the start or the finish of the craft before it is not known (D7 a2): on these builds they fall on the same tick.
@@ -118,7 +120,7 @@ On the samples it is made for the accumulator build and the processing unit buil
 
 The inserter cost series of factorio-benchmarks timed builds with and without their clocks and closed with a rule: whether a group of inserters is worth clocking follows from w, the wake-ups a minute a clock removes from each wired inserter of the group. The generator gives that call for each group as advice (since 0.11.0). The advice changes no clock, no selection and no wake-up figure the generator reports. It is about update time only, never a reason to drop a clock a build needs for goal 1.
 
-The rule's w is not goal 2's measure ("Wake-ups, the measure for goal 2"), which the selection uses. It is counted as the series counts it, so that the generator and the series count a save the same way (`clock-generator/src/crafting/rule-count.ts`). Since 0.12.0 it is counted in true starts, version A of the series' productivity recount (`closing/evidence/productivity-recount-1.md`):
+The rule's w is not goal 2's measure ("Wake-ups, the measure for goal 2 for now"), which the selection uses. It is counted as the series counts it, so that the generator and the series count a save the same way (`clock-generator/src/crafting/rule-count.ts`). Since 0.12.0 it is counted in true starts, version A of the series' productivity recount (`closing/evidence/productivity-recount-1.md`):
 - A source wake-up is a craft finished, or a productivity payout, by the machine the inserter takes from while it waited for items (any rise of `products_finished`; D7 b).
 - A sink wake-up is a craft the machine the inserter puts into truly started while the inserter waited for space, not in the tick of its own drop. A payout is not one (D7 a1). The simulator counts its starts; a recording reads them from the machine's crafting progress; a dump of the series' extractor has no progress, so they are worked out as the recount works them out (`clock-generator/src/crafting/true-starts.ts`): from the machine's status, products_finished, crafting speed and recipe energy. A machine whose crafting speed or recipe is not known keeps the starts the original count infers, and is named wherever the calls are given.
 - A pickup from a machine that no counted wake-up and no closed window in the 3 ticks before explains is counted too: the pickups of an output that takes part hands.
