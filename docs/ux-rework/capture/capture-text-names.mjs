@@ -559,7 +559,9 @@ async function iconsStep({ page, rec }) {
         await validate(page);
         await generate(page);
         await goResults(page);
-        await ui.resultsTab(page, 'Wake windows').click();
+        // a tab until 2.5 A, which shows Wake windows as a section under the card
+        const wakeTab = ui.resultsTab(page, 'Wake windows');
+        if ((await wakeTab.count()) > 0) await wakeTab.click();
         await page.waitForTimeout(500);
         const config = cfg(file);
         const rows = page.locator('[data-wake-row]'); // SELECTOR: confirm (each row is a role=group with data-wake-row="inserter:1")
