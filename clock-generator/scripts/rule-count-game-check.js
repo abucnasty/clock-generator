@@ -15,6 +15,8 @@ const SAMPLE = process.env.SAMPLE ?? "ADVANCED_CIRCUIT";
 const SCAFFOLDS = {
     ADVANCED_CIRCUIT: { scaffold: "intermediates/advanced-circuit/advanced-circuit-scaffold.txt", warmup: 3600, settle: 4800 },
     AUTOMATION_SCIENCE: { scaffold: "science/automation-science/automation-science-scaffold.txt", warmup: 300, settle: 4800 },
+    ACCUMULATOR_640: { scaffold: "intermediates/accumulator/accumulator-640-scaffold.txt", warmup: 3600, settle: 7200 },
+    LOW_DENSITY_STRUCTURE: { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", warmup: 3600, settle: 2400 },
 };
 const PERIODS = 20;
 
