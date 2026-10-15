@@ -3,6 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import * as zlib from "zlib";
 import { describe, expect, it } from "vitest";
+import { ruleCount } from "../crafting/rule-count";
 import { ExtractorDump, ExtractorDumpInserter, expandChanges, readExtractorDump } from "./extractor-dump";
 
 /**
@@ -209,11 +210,34 @@ describe("readExtractorDump groups the inserters as the series does", () => {
         });
     }
 
-    // TODO(rule-count): when the count lands in rule-count.ts, run it on both fixtures and compare per group with the
-    // `e_src_g`, `e_dst_g` and `e_pick_g` of `*.expected.json`, and `minutes` / `start_rule_fallback`
-    // (the unwired fixture's foundries all fall back to finishes: casting-copper 3, casting-iron-gear-wheel 3,
-    // copper-ore-melting 1).
-    it.todo("the count agrees with fuller.py's e_src_g, e_dst_g and e_pick_g of every group of both fixtures");
+    // The count laid against fuller.py on a productivity machine (two products a craft): source, sink and pickup
+    // wake-ups of every group, the minutes and the machines whose starts fall back to their finishes
+    for (const [name, base] of [["unwired", UNWIRED], ["clocked", CLOCKED]] as const) {
+        it(`the count agrees with fuller.py's e_src_g, e_dst_g and e_pick_g on every group of the ${name} fixture`, async () => {
+            const dump = await readExtractorDump(base);
+            const run = ruleCount(dump.inserters, dump.machines, 0, dump.ticks);
+            const expected = JSON.parse(fs.readFileSync(`${base}.expected.json`, "utf8"));
+            const theirs = new Map<string, { n: number; src: number; dst: number; pick: number }>();
+            for (const g of expected.groups) {
+                const key = `${g.role} | ${g.items} | ${g.recipes}`;
+                const e = theirs.get(key) ?? { n: 0, src: 0, dst: 0, pick: 0 };
+                theirs.set(key, { n: e.n + g.inserters, src: e.src + (g.e_src_g ?? 0), dst: e.dst + (g.e_dst_g ?? 0), pick: e.pick + (g.e_pick_g ?? 0) });
+            }
+            const ours = new Map(run.groups.map(g => [g.key, { n: g.inserters, src: g.source_wake_ups, dst: g.sink_wake_ups, pick: g.pickups }]));
+            expect(ours).toEqual(theirs);
+            expect(run.minutes).toBeCloseTo(expected.minutes, 12);
+            const fallback: Record<string, number> = {};
+            for (const m of run.start_rule_fallback) {
+                fallback[m.recipe] = (fallback[m.recipe] ?? 0) + 1;
+            }
+            const their_fallback: Record<string, number> = {};
+            for (const [machine, count] of Object.entries(expected.start_rule_fallback as Record<string, number>)) {
+                const recipe = machine.split(" ").slice(1).join(" ");
+                their_fallback[recipe] = (their_fallback[recipe] ?? 0) + count;
+            }
+            expect(fallback).toEqual(their_fallback);
+        });
+    }
 });
 
 describe("readExtractorDump of gzipped files", () => {
