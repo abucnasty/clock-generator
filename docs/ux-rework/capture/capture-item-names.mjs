@@ -26,7 +26,7 @@
 // Nothing here throws on a missing element: a failed lookup is a FAIL line with the reason.
 import { readFileSync } from 'node:fs';
 import {
-    forWidths, previewServer, sample, LOGISTIC, importFile, goConfigure, waitReady, openMenu, noSideScroll, accessibleName,
+    forWidths, previewServer, sample, LOGISTIC, importFile, goConfigure, waitReady, openMenu, noSideScroll, accessibleName, ui,
     checkLabelInName, checkTabTo, checkFocusNotObscured, checkFocusNotObscuredAtHeight, checkAxe,
 } from './lib.mjs';
 
@@ -68,7 +68,7 @@ async function readRows(page) {
     return optionRows(page).evaluateAll((lis) =>
         lis.map((li) => ({
             text: (li.textContent ?? '').replace(/\s+/g, ' ').trim(),
-            title: li.getAttribute('title') ?? li.querySelector('[title]')?.getAttribute('title') ?? '',
+            title: (li.getAttribute('title') ?? li.querySelector('[title]')?.getAttribute('title') ?? '').replace(/^.*\(([^()]+)\)$/, '$1'),
         })),
     );
 }
@@ -313,10 +313,13 @@ async function fallbackStep({ page, rec }) {
     await importFile(page, LOGISTIC);
     const item = beltInput(page, 0);
     // a mod id the locale lacks: the sentence-case form made when the data is dumped
-    checkRow(rec, 'fallback: ee-infinity-chest (no locale) reads "Ee infinity chest"', await search(page, item, 'ee-infinity-chest'), 'Ee infinity chest', 'ee-infinity-chest');
+    // 2.8 b: mod and internal ids are not offered (the sentence-case fallback is unit-tested)
+    const eeRows = await search(page, item, 'ee-infinity-chest');
+    rec.check('fallback: ee-infinity-chest (mod id) is not offered by the picker', !eeRows.some((r) => r.title === 'ee-infinity-chest'), rowsSummary(eeRows));
     await closeList(page);
-    checkRow(rec, 'fallback: parameter-0 (no locale) reads "Parameter 0"', await search(page, item, 'parameter-0'), 'Parameter 0', 'parameter-0');
-    await rec.shot(page, 'names-fallback', { desc: 'Item picker, "parameter-0" typed: the fallback name' });
+    const paramRows = await search(page, item, 'parameter-0');
+    rec.check('fallback: parameter-0 is not offered by the picker', !paramRows.some((r) => r.title === 'parameter-0'), rowsSummary(paramRows));
+    await rec.shot(page, 'names-fallback', { desc: 'Item picker, "parameter-0" typed: no row, as mod ids are not offered' });
     await closeList(page);
     // typed ids the page has never heard of stay as typed, and a prototype property name is not read as a name
     for (const typed of ['zz-not-an-item', 'constructor', '__proto__']) {
@@ -428,12 +431,9 @@ async function exportStep({ page, rec }) {
     await goConfigure(page);
     await importFile(page, LOGISTIC);
     const exportOnce = async () => {
-        let button = page.getByRole('button', { name: /^Export config/i }).first(); // SELECTOR: confirm ("Export Config" in the header)
-        if (!(await button.isVisible().catch(() => false))) {
-            // narrow windows keep Export in the ⋮ menu
-            await openMenu(page);
-            button = page.getByRole('menuitem', { name: /export/i }).first(); // SELECTOR: confirm
-        }
+        // 2.1: Save build file, a ⋮ menu item at every width
+        await openMenu(page);
+        const button = ui.exportConfig(page);
         const [download] = await Promise.all([page.waitForEvent('download', { timeout: 5000 }), button.click()]);
         return readFileSync(await download.path(), 'utf8');
     };

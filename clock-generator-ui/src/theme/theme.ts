@@ -24,7 +24,7 @@ const base = createTheme({
             default: SURFACE.page,
             paper: SURFACE.panel,
         },
-        text: { ...TEXT },
+        text: { primary: TEXT.primary, secondary: TEXT.secondary, disabled: TEXT.disabled },
         common: {
             black: '#121212',
         },
@@ -109,6 +109,8 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
                             props: { variant: 'outlined' as const, color },
                             style: { borderColor: theme.palette[color].main },
                         })),
+                        // red words in the lighter red (TEXT.error), the line in the red
+                        { props: { variant: 'outlined', color: 'error' }, style: { color: TEXT.error } },
                     ],
                 },
             },
@@ -126,6 +128,9 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
             },
         },
         MuiOutlinedInput: { styleOverrides: { notchedOutline: { borderColor: CONTROL.border } } },
+        // a field's problem (1.4) and its label in the lighter red; the field's outline stays the red
+        MuiFormHelperText: { styleOverrides: { root: { '&.Mui-error': { color: TEXT.error } } } },
+        MuiFormLabel: { styleOverrides: { root: { '&.Mui-error': { color: TEXT.error } } } },
         MuiInputBase: { styleOverrides: { input: { '&::placeholder': { color: TEXT.secondary, opacity: 1 } } } },
         MuiButton: {
             styleOverrides: {
@@ -142,6 +147,9 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
                             },
                         },
                         { props: { variant: 'outlined', color: 'inherit' }, style: { borderColor: CONTROL.border } },
+                        // danger (Discard, Clear rule): words in the lighter red, 4.5:1 on every surface and when hovered
+                        { props: { variant: 'text', color: 'error' }, style: { color: TEXT.error } },
+                        { props: { variant: 'outlined', color: 'error' }, style: { color: TEXT.error } },
                     ],
                 },
             },

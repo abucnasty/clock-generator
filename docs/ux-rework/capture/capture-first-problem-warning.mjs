@@ -46,7 +46,7 @@ import { join } from 'node:path';
 import {
     forWidths, previewServer, sample, SMALL_SAMPLE, SLOW_SAMPLE, LOGISTIC, waitReady,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll, isClickable,
-    contrast, contrastPairs, accessibleName, checkLabelInName, checkTabTo, checkFocusNotObscured,
+    contrast, contrastPairs, accessibleName, checkLabelInName, checkTabTo, checkFocusNotObscured, itemLabel,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -356,8 +356,7 @@ const importDialog = (page) => page.getByRole('dialog').filter({ hasText: 'Confi
 function pasteFromMenu(page, text) {
     return withClipboard(async () => {
         await page.evaluate((t) => navigator.clipboard.writeText(t), text);
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+        await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click(); // 2.1: a header button, not a menu item
         await Promise.race([
             importDialog(page).waitFor({ timeout: 8000 }),
             page.locator('.MuiSnackbar-root').first().waitFor({ timeout: 8000 }),
@@ -367,7 +366,7 @@ function pasteFromMenu(page, text) {
 }
 async function resetViaMenu(page) {
     await openMenu(page);
-    await page.getByRole('menuitem', { name: 'Reset Configuration' }).click();
+    await page.getByRole('menuitem', { name: 'Reset build' }).click();
     await page.waitForTimeout(500);
 }
 
@@ -617,10 +616,10 @@ try {
                 if (left.length && left.every((r) => r.kind === 'missing_output_inserter')) {
                     const want = T.output(left[0].machine, left[0].item);
                     const text3 = await waitReason(page, want);
-                    rec.check('output issue: the reason reads "Machine 1 has no inserter taking logistic-science-pack out"', text3 === 'Machine 1 has no inserter taking logistic-science-pack out', show(text3));
+                    rec.check('output issue: the reason reads "Machine 1 has no inserter taking Logistic science pack out"', text3 === `Machine 1 has no inserter taking ${itemLabel('logistic-science-pack')} out`, show(text3));
                     const chip3 = await waitChip(page, problems(left.length), 1500);
                     rec.check('output issue: the chip counts what is left', chip3 === problems(left.length), `want ${show(problems(left.length))}, got ${show(chip3)}`);
-                    await rec.shot(page, 'p3-output-issue', { desc: 'Only the output issue left: "Machine 1 has no inserter taking logistic-science-pack out"' });
+                    await rec.shot(page, 'p3-output-issue', { desc: 'Only the output issue left: "Machine 1 has no inserter taking Logistic science pack out"' });
                 } else rec.info('output issue', `could not leave only the output issue (rows now: ${left.map(sentenceOf).join(' | ')})`);
             }
         }, page);

@@ -29,12 +29,13 @@
 // Guessed selectors are marked `// SELECTOR: confirm`. A missing element is a FAIL line, never a crash.
 //
 // Copy this file and lib.mjs into a folder with `node_modules` -> /tmp/ux-capture/node_modules and run it there.
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
     forWidths, previewServer, sample, LOGISTIC, SMALL_SAMPLE, SLOW_SAMPLE, UI_DIR, importFile, goConfigure, goResults, validate, generate,
     waitReady, noSideScroll, isClickable, contrast, contrastPairs, tabTo, checkTabTo, checkAxe,
-    checkFocusNotObscuredAtHeight, checkMouseActivationVisible, openMenu,
+    checkFocusNotObscuredAtHeight, checkMouseActivationVisible, openMenu, ui,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -51,6 +52,21 @@ const FUEL = sample('gleba/biochamber-fuel/nutrients-from-yumako-mash-fuel-bonus
 const BELOW = sample('science/utility-science/utility-science-direct-insert-lds.json');
 const BAD = sample('intermediates/accumulator/accumulator-bad-config.json');
 const SHARED = sample('science/production-science/production-science-shared.json'); // chests, drills, many enable rules
+/** A Sidecar export of the logistic build (2.1: Paste from Factorio takes the mod's export, not a build file), as capture-first-visit builds it */
+const SIDECAR_EXPORT = (() => {
+    const { target_output: _t, overrides: _o, ...rest } = JSON.parse(readFileSync(LOGISTIC, 'utf8'));
+    return JSON.stringify({
+        sidecar_version: '0.7.0',
+        ...rest,
+        machines: rest.machines.map((m) => ({ type: 'machine', ...m })),
+        inserters: rest.inserters.map((i) => (i.source?.type === 'belt' ? { ...i, source: { near_lane: 1, ...i.source } } : i)),
+        drills: { mining_productivity_level: 0, configs: [] },
+        chests: [],
+    });
+})();
+/** A build file that is not JSON: opening it raises the urgent error message (2.1 shows a bad paste in its dialog instead) */
+const BROKEN_FILE = join(mkdtempSync(join(tmpdir(), 'gui-grammar-')), 'broken-build.json');
+writeFileSync(BROKEN_FILE, '{ not json');
 
 const stopPreview = process.env.BASE_URL ? null : await previewServer({ port: Number(process.env.PREVIEW_PORT ?? 5236) });
 const base = process.env.BASE_URL ?? stopPreview.url;
@@ -61,7 +77,7 @@ const base = process.env.BASE_URL ?? stopPreview.url;
 const RGB = {
     page: 'rgb(64, 64, 64)', titleBar: 'rgb(58, 58, 58)', bar: 'rgb(54, 54, 54)', row: 'rgb(46, 46, 46)', panel: 'rgb(35, 35, 35)', inset: 'rgb(26, 26, 26)',
     orange: 'rgb(252, 163, 0)', green: 'rgb(94, 182, 100)', greenDark: 'rgb(79, 158, 85)', yellow: 'rgb(255, 225, 77)', yellowDark: 'rgb(178, 157, 53)',
-    red: 'rgb(255, 122, 121)', black: 'rgb(0, 0, 0)', controlBorder: 'rgb(158, 158, 158)', textSecondary: 'rgba(255, 255, 255, 0.7)',
+    red: 'rgb(255, 122, 121)', redDark: 'rgb(226, 96, 95)', errorText: 'rgb(255, 148, 147)', black: 'rgb(0, 0, 0)', controlBorder: 'rgb(158, 158, 158)', textSecondary: 'rgba(255, 255, 255, 0.7)',
 };
 const show = (v) => JSON.stringify(v);
 const norm = (t) => String(t ?? '').replace(/\s+/g, ' ').trim();
@@ -453,7 +469,8 @@ async function roleChecks(page, rec, label, { overlayOnly = false } = {}) {
             rec.check(`${label}: confirm "${name}" is green filled with black text`, b.bg === RGB.green && b.color === RGB.black, `bg ${b.bg}, text ${b.color}`);
         }
         if (/^(Discard|Clear Override|Clear rule)$/i.test(name) && once(name)) {
-            rec.check(`${label}: danger "${name}" is red`, b.color === RGB.red, `text ${b.color}`);
+            // danger words are the lighter red, TEXT.error (2.7 A review: error.main text fell under 4.5:1 on some surfaces)
+            rec.check(`${label}: danger "${name}" is the error text red ${RGB.errorText}`, b.color === RGB.errorText, `text ${b.color}`);
         }
         if (b.variant === 'toggle' && b.selected && once(`toggle:${name}`)) {
             rec.check(`${label}: selected toggle "${name || b.label}" is filled orange with black text`, b.bg === RGB.orange && b.color === RGB.black, `bg ${b.bg}, text ${b.color}`);
@@ -476,9 +493,15 @@ async function roleChecks(page, rec, label, { overlayOnly = false } = {}) {
 async function chipChecks(page, rec, label) {
     const chips = await page.evaluate(surveyChips);
     if (!chips.length) return rec.info(`${label}: chips`, 'none on the page');
-    await chk(rec, `${label}: every chip has 2px corners and is 24px high`, async () => {
-        const bad = chips.filter((c) => c.radius !== '2px' || c.height !== 24);
-        return { pass: bad.length === 0, detail: bad.length ? `${bad.length} of ${chips.length}: ${bad.slice(0, 3).map((c) => `"${c.text.slice(0, 16)}" ${c.radius}/${c.height}px`).join(', ')}` : `${chips.length} chips` };
+    // the corners are PR A's (the theme); the 24px height is PR B's (the beta, #N and Machine Facts chips set their own)
+    const offenders = (bad) => [...new Set(bad.map((c) => `"${c.text.slice(0, 16)}" ${c.radius}/${c.height}px`))].join(', ');
+    await chk(rec, `${label}: every chip has 2px corners`, async () => {
+        const bad = chips.filter((c) => c.radius !== '2px');
+        return { pass: bad.length === 0, detail: bad.length ? `${bad.length} of ${chips.length}: ${offenders(bad)}` : `${chips.length} chips` };
+    });
+    await chk(rec, `${label}: every chip is 24px high (PR B)`, async () => {
+        const bad = chips.filter((c) => c.height !== 24);
+        return { pass: bad.length === 0, detail: bad.length ? `${bad.length} of ${chips.length}: ${offenders(bad)}` : `${chips.length} chips` };
     });
     const auto = chips.find((c) => /^Enable: Auto$/i.test(c.text));
     if (auto) {
@@ -654,11 +677,17 @@ async function stepFirst({ page, rec, width }) {
     await goConfigure(page);
     await rec.shot(page, 'configure-empty', { fullPage: true, aria: true, desc: 'First visit: empty Configure' });
     const label = 'first visit';
-    await filledRule(page, rec, label, []);
-    await chk(rec, `${label}: Generate is disabled and the first problem is shown as text beside it (1.4)`, async () => {
+    // 2.1: on a first visit the intro card's Paste from Factorio is the one next step, so the one filled button
+    await filledRule(page, rec, label, [{ re: /^Paste from Factorio$/, color: 'green', where: 'main' }]);
+    // accepted at the 2.7 A review: 2.3 keeps Generate on with problems (it goes to the first one), so it is outlined
+    // grey, not filled, and the first problem is the text beside it (1.4)
+    await chk(rec, `${label}: Generate is outlined grey (not filled) and the first problem is shown as text beside it (1.4)`, async () => {
         const g = (await page.evaluate(surveyButtons)).find((b) => b.text === 'Generate' && b.inBar);
         const reason = await page.locator('#workflow-block-reason').first().textContent().catch(() => ''); // SELECTOR: confirm (ELEMENT_IDS.blockReason)
-        return { pass: Boolean(g?.disabled) && norm(reason).length > 0, detail: `disabled ${g?.disabled}, reason ${show(norm(reason).slice(0, 60))}` };
+        return {
+            pass: g?.variant === 'outlined' && g.border === RGB.controlBorder && norm(reason).length > 0,
+            detail: `${g?.variant}, border ${g?.border}, disabled ${g?.disabled}, reason ${show(norm(reason).slice(0, 60))}`,
+        };
     });
     const heading = page.getByRole('main').locator('h2').first();
     if (await count(heading)) await contrastPairs(page, [{ name: `${label}: first card heading on its title bar`, locator: heading }], rec);
@@ -672,6 +701,27 @@ async function stepFirst({ page, rec, width }) {
     await accordionBandChecks(page, rec, label);
     await narrowBarChecks(page, rec, width, 'bar, first visit (row 11)');
     if (width <= 480) await rec.shot(page, 'bar-first-visit', { desc: 'The bar at first visit (row 11)' });
+    await rec.step(`${label}: a field's problem text`, async () => {
+        // the danger words are the lighter red (TEXT.error), 4.5:1 on the card (2.7 A review: error.main was 4.41 on p2)
+        const field = rateField(page);
+        if (!(await count(field))) return rec.check(`contrast ${label}: field problem text`, false, 'no Items per Second field');
+        // typed as a player does: the number field ignores a programmatic fill
+        await field.click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.type('0');
+        await page.keyboard.press('Tab');
+        await page.waitForTimeout(300);
+        const helper = page.locator('.MuiFormHelperText-root.Mui-error').first(); // SELECTOR: confirm (MUI's error helper)
+        const errorLabel = page.locator('label.Mui-error').first();
+        if (!(await count(helper))) return rec.check(`contrast ${label}: field problem text`, false, 'no error helper text after Items per Second 0');
+        await helper.scrollIntoViewIfNeeded();
+        await contrastPairs(page, [
+            { name: `${label}: field problem text ("Must be more than 0")`, locator: helper },
+            ...((await count(errorLabel)) ? [{ name: `${label}: the field's label in its error state`, locator: errorLabel }] : []),
+        ], rec);
+        await rec.shot(page, 'field-problem-text', { locator: helper.locator('xpath=ancestor::div[contains(@class,"MuiFormControl-root")][1]'), desc: 'Items per Second 0: the problem text under the field' });
+    }, page);
     await finalChecks(page, rec, width, 'first visit');
 }
 
@@ -801,6 +851,18 @@ async function stepFresh({ page, rec, width }) {
     const recChip = page.locator('.MuiChip-root').filter({ hasText: /^Recommended$/ }).first().locator('.MuiChip-label');
     if (await count(recChip)) await contrastPairs(page, [{ name: `${label}: Recommended chip`, locator: recChip }], rec);
     else rec.info(`contrast ${label}: Recommended chip`, 'not on the page');
+    await rec.step(`${label}: Status chip on the selected row, hovered`, async () => {
+        // the selected row is tinted orange, and more so hovered: the chip's words must stay at 4.5:1 (2.7 A review, 1.4.3)
+        const row = page.locator('table tbody tr.Mui-selected').first(); // SELECTOR: confirm (MUI's selected row)
+        const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Stable|Unstable|No recovery)$/ }).first();
+        if (!(await count(chip))) return rec.check(`contrast ${label}: Status chip on the selected row`, false, 'no Status chip in the selected row');
+        await row.scrollIntoViewIfNeeded();
+        await contrastPairs(page, [{ name: `${label}: Status chip on the selected row (rest)`, locator: chip.locator('.MuiChip-label') }], rec);
+        await row.locator('td').nth(3).hover();
+        await page.waitForTimeout(300);
+        await contrastPairs(page, [{ name: `${label}: Status chip on the selected row (row hovered)`, locator: chip.locator('.MuiChip-label') }], rec);
+        await page.mouse.move(1, 899);
+    }, page);
     await commonChecks(page, rec, label);
     await accordionBandChecks(page, rec, label);
     await narrowBarChecks(page, rec, width, 'bar, fresh results on Results (row 13)', { copy: true });
@@ -854,8 +916,13 @@ async function stepStale({ page, rec, width }) {
     await goConfigure(page);
     await rateField(page).scrollIntoViewIfNeeded();
     const current = Number(await rateField(page).inputValue().catch(() => '0')) || 1;
-    await rateField(page).fill(String(current + 1));
-    await rateField(page).blur();
+    // lower, not higher: since 2.1 W a rate above what the machines can make is a problem, which takes Generate's fill.
+    // Typed as a player does: the number field adds a programmatic fill to what it holds
+    await rateField(page).click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type(String(current > 1 ? current - 1 : current / 2));
+    await page.keyboard.press('Tab');
     await page.waitForTimeout(500);
     await toTop(page);
     await rec.shot(page, 'configure-stale', { desc: 'Stale: Configure' });
@@ -924,9 +991,9 @@ async function stepDialogs({ page, rec, width }) {
     await importChecked(page, SHARED);
     await rec.step('paste confirm dialog', async () => {
         await withClipboard(async () => {
-            await page.evaluate((t) => navigator.clipboard.writeText(t), readFileSync(LOGISTIC, 'utf8'));
-            await openMenu(page);
-            await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+            await page.evaluate((t) => navigator.clipboard.writeText(t), SIDECAR_EXPORT);
+            // 2.1 moved Paste from Factorio out of the menu into the header (ui.pasteFromFactorio)
+            await ui.pasteFromFactorio(page).click();
             await page.getByRole('dialog').first().waitFor({ timeout: 8000 });
             await page.waitForTimeout(500);
         });
@@ -1014,18 +1081,17 @@ async function stepMenu({ page, rec, width }) {
         await page.keyboard.press('Escape');
     }, page);
     await rec.step('error snackbar', async () => {
-        await withClipboard(async () => {
-            await page.evaluate(() => navigator.clipboard.writeText('not a factorio export'));
-            await openMenu(page);
-            await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
-            await page.locator('.MuiSnackbar-root').first().waitFor({ timeout: 6000 });
-        });
+        // 2.1 shows a bad paste inside its paste dialog; a build file that does not read is the urgent error message
+        await page.setInputFiles('input[type=file]', BROKEN_FILE);
+        await page.locator('.MuiSnackbar-root').first().waitFor({ timeout: 6000 });
         await page.waitForTimeout(400);
-        await rec.shot(page, 'snackbar-error', { desc: 'The error snackbar (bad paste)' });
+        await rec.shot(page, 'snackbar-error', { desc: 'The urgent error message (a build file that does not open)' });
         const label = 'error snackbar';
-        await chk(rec, `${label}: the snackbar surface is ${RGB.panel}`, async () => {
+        // accepted at the 2.7 A review: an urgent message keeps the filled colour of its severity (the error's dark red,
+        // black text at 5.45:1, measured below); the others are on the card surface (the Undo step)
+        await chk(rec, `${label}: the urgent message is filled in the error's dark red ${RGB.redDark}`, async () => {
             const bg = await page.locator('.MuiSnackbar-root .MuiPaper-root, .MuiSnackbar-root .MuiAlert-root, .MuiSnackbar-root .MuiSnackbarContent-root').first().evaluate((el) => getComputedStyle(el).backgroundColor); // SELECTOR: confirm
-            return { pass: bg === RGB.panel, detail: `bg ${bg}` };
+            return { pass: bg === RGB.redDark, detail: `bg ${bg}` };
         });
         const msg = page.locator('.MuiSnackbar-root .MuiAlert-message, .MuiSnackbar-root .MuiSnackbarContent-message').first();
         if (await count(msg)) await contrastPairs(page, [{ name: `${label}: message text`, locator: msg }], rec);
@@ -1067,26 +1133,20 @@ async function stepMenu({ page, rec, width }) {
     }, page);
 }
 
-async function stepHelp({ page, rec }) {
-    await importChecked(page, SHARED);
-    await rec.shot(page, 'help-configure', { aria: true, desc: 'Configure with the help controls' });
-    const names = (await page.evaluate(readHelp)).map((h) => h.label);
-    for (const [topic, re] of [['machines', /^About machines/i], ['belts', /^About belt/i], ['drills', /^About (mining )?drills/i]]) {
-        rec.check(`help: a HelpButton "About ${topic}" exists on Configure`, names.some((n) => re.test(n)), `help controls: ${show(names)}`);
-    }
-    await helpChecks(page, rec, 'help (Configure)');
+/** Enter and Space open each help popover, Esc closes it and the focus returns to the button (spec row 10) */
+async function helpKeyboardChecks(page, rec, view) {
     const buttons = helpBtns(page);
     const n = Math.min(await count(buttons), 8);
     for (let i = 0; i < n; i++) {
         const b = buttons.nth(i);
         const name = (await b.getAttribute('aria-label').catch(() => '')) || `help ${i + 1}`;
-        await rec.step(`help ${name}`, async () => {
+        await rec.step(`help ${view} ${name}`, async () => {
             await b.scrollIntoViewIfNeeded();
             await b.focus();
             await page.keyboard.press('Enter');
             await page.waitForTimeout(400);
             const open = (await page.getByRole('dialog').count()) > 0;
-            if (i === 0) await rec.shot(page, 'help-popover', { aria: true, desc: `Help popover: ${name}` });
+            if (i === 0) await rec.shot(page, `help-popover-${view.toLowerCase()}`, { aria: true, desc: `Help popover on ${view}: ${name}` });
             await page.keyboard.press('Escape');
             await page.waitForTimeout(400);
             const closed = (await page.getByRole('dialog').count()) === 0;
@@ -1101,7 +1161,18 @@ async function stepHelp({ page, rec }) {
             rec.check(`help "${name}": Space opens it too`, openSpace);
         }, page);
     }
-    if (n) await checkTabTo(rec, page, buttons.first(), 'the first HelpButton');
+    if (n) await checkTabTo(rec, page, buttons.first(), `the first HelpButton on ${view}`);
+}
+
+async function stepHelp({ page, rec }) {
+    await importChecked(page, SHARED);
+    await rec.shot(page, 'help-configure', { aria: true, desc: 'Configure with the help controls' });
+    const names = (await page.evaluate(readHelp)).map((h) => h.label);
+    for (const [topic, re] of [['machines', /^About machines/i], ['belts', /^About belt/i], ['drills', /^About (mining )?drills/i]]) {
+        rec.check(`help: a HelpButton "About ${topic}" exists on Configure`, names.some((n) => re.test(n)), `help controls: ${show(names)}`);
+    }
+    await helpChecks(page, rec, 'help (Configure)');
+    await helpKeyboardChecks(page, rec, 'Configure');
     await rec.step('clocks help on Results', async () => {
         await generate(page);
         await goResults(page);
@@ -1109,6 +1180,7 @@ async function stepHelp({ page, rec }) {
         await helpChecks(page, rec, 'help (Results)');
         await rec.shot(page, 'help-results', { aria: true, desc: 'Results with help controls' });
     }, page);
+    await helpKeyboardChecks(page, rec, 'Results');
     await rec.step('src grep: only HelpButton.tsx uses the help icons', async () => {
         const src = join(UI_DIR, 'src');
         if (!existsSync(src)) return rec.info('src grep', `no ${src} (set UI_DIR)`);

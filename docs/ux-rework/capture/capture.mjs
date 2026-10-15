@@ -98,8 +98,7 @@ async function walkthrough(page, rec, base) {
 
     await rec.step('paste, ordinary text', async () => {
         await page.evaluate(() => navigator.clipboard.writeText('not a factorio export'));
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+        await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click(); // 2.1: a header button, not a menu item
         await settle(page, 800);
         await rec.shot(page, 'paste-from-factorio-bad-clipboard', { desc: '"Paste from Factorio" with ordinary text on the clipboard (what a player sees without a sidecar export)' });
     }, page);
@@ -107,8 +106,7 @@ async function walkthrough(page, rec, base) {
     await rec.step('paste, an export', async () => {
         await settle(page, 4500); // let the snackbar go
         await page.evaluate((text) => navigator.clipboard.writeText(text), readFileSync(LOGISTIC, 'utf8'));
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+        await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click(); // 2.1: a header button, not a menu item
         await settle(page, 800);
         await rec.shot(page, 'paste-from-factorio-confirm', { desc: '"Paste from Factorio" with an export on the clipboard: the confirm-import dialog' });
         await page.keyboard.press('Escape');

@@ -52,6 +52,13 @@ describe('appTheme', () => {
         expect(variantStyle('MuiIconButton', { color: 'error' })?.color).toBe(TEXT.secondary);
     });
 
+    it('writes danger words in the lighter red, which the palette also names error.light', () => {
+        expect(palette.error.light).toBe(TEXT.error);
+        const helper = appTheme.components?.MuiFormHelperText?.styleOverrides?.root as Record<string, { color: string }>;
+        expect(helper['&.Mui-error'].color).toBe(TEXT.error);
+        expect(variantStyle('MuiButton', { variant: 'text', color: 'error' })?.color).toBe(TEXT.error);
+    });
+
     it('keeps 1.11\'s focus ring and removes no outline', () => {
         const components = JSON.stringify(appTheme.components);
         expect(components).not.toMatch(/"outline":\s*("none"|0)/);

@@ -1,6 +1,8 @@
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import type { ClockInsight } from 'clock-generator/browser';
+import { useGameNames } from '../hooks/useGameNames';
+import { GameName } from './GameName';
 import { Panel } from './Panel';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
@@ -24,11 +26,12 @@ function Part({ label, text }: { label: string; text: string }) {
 }
 
 function InsightCard({ insight }: { insight: ClockInsight }) {
+    const { nameIdsIn } = useGameNames();
     return (
-        <Panel title={insight.title} level={3}>
-            <Part label="What" text={insight.what} />
-            <Part label="Why" text={insight.why} />
-            <Part label="Explanation" text={insight.explanation} />
+        <Panel title={nameIdsIn(insight.title)} level={3}>
+            <Part label="What" text={nameIdsIn(insight.what)} />
+            <Part label="Why" text={nameIdsIn(insight.why)} />
+            <Part label="Explanation" text={nameIdsIn(insight.explanation)} />
             {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}
             {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} /></ExactTicks> : <InsightTable table={insight.table} />)}
         </Panel>
@@ -36,6 +39,13 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
 }
 
 function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) {
+    const { names, nameIdsIn } = useGameNames();
+    // a cell that is exactly an id of the game data shows its name; the engine's other text is left as it is
+    const cellOf = (cell: string, columnName: string): ReactNode => {
+        if (columnName === 'Recipe' && Object.hasOwn(names.recipe, cell)) return <GameName id={cell} kind="recipe" />;
+        if (Object.hasOwn(names.recipe, cell) && !Object.hasOwn(names.item, cell)) return <GameName id={cell} kind="recipe" />;
+        return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : nameIdsIn(cell);
+    };
     return (
         <>
             {(
@@ -49,7 +59,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
                         <TableBody>
                             {table.rows.map((row, index) => (
                                 <TableRow key={index}>
-                                    {row.map((cell, column) => <TableCell key={column}>{cell}</TableCell>)}
+                                    {row.map((cell, column) => <TableCell key={column}>{cellOf(cell, table.columns[column])}</TableCell>)}
                                 </TableRow>
                             ))}
                         </TableBody>

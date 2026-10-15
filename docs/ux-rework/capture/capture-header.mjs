@@ -252,8 +252,10 @@ for (const w of WIDTHS) {
         check('the ⋮ button is on screen', g.moreRight <= g.innerWidth, `right edge ${Math.round(g.moreRight)} of ${g.innerWidth}`);
         const oneToolbar = w < 600 ? 56 : 64;
         if (w < 900) check(`the title row is one Toolbar (${oneToolbar}px)`, Math.round(g.toolbarHeight) === oneToolbar, `${Math.round(g.toolbarHeight)}px`);
-        const inBar = (await header().getByRole('button', { name: 'Import Config' }).count()) + (await header().getByRole('button', { name: 'Export Config' }).count());
-        check(w < 900 ? 'Import Config and Export Config are not buttons in the app bar' : 'Import Config and Export Config are buttons in the app bar', w < 900 ? inBar === 0 : inBar === 2, `${inBar} found`);
+        // 2.1: Open build file… and Save build file are ⋮ menu items at every width; Paste from Factorio is the bar's button
+        const inBar = (await header().getByRole('button', { name: /Import Config|Export Config|Open build file|Save build file/ }).count());
+        check('Open build file… and Save build file are not buttons in the app bar', inBar === 0, `${inBar} found`);
+        check('Paste from Factorio is a button in the app bar', (await header().getByRole('button', { name: 'Paste from Factorio', exact: true }).count()) === 1);
     });
 
     // the header stays pinned: on both pages
@@ -284,12 +286,11 @@ for (const w of WIDTHS) {
             await page.waitForTimeout(500);
             await shot(`header-${w}-menu-open`, 'The ⋮ menu open');
             const items = await page.getByRole('menuitem').allTextContents();
-            const expected = w < 900 ? ['Paste from Factorio', 'Import Config', 'Export Config', 'Reset Configuration'] : ['Paste from Factorio', 'Reset Configuration'];
+            // 2.1: the same items at every width
+            const expected = ['Open build file…', 'Save build file', 'Try an example…', 'Getting started', 'Reset build'];
             check(`the menu lists ${expected.join(', ')}`, JSON.stringify(items) === JSON.stringify(expected), items.join(', '));
-            if (w < 900) {
-                const divider = await page.locator('[role=menu] hr, [role=menu] [role=separator]').count();
-                check('a divider sits before Reset Configuration', divider === 1, `${divider} divider`);
-            }
+            const divider = await page.locator('[role=menu] hr, [role=menu] [role=separator]').count();
+            check('a divider sits before Reset build', divider === 1, `${divider} divider`);
             await page.keyboard.press('Escape');
             await page.waitForTimeout(400);
         });
@@ -453,7 +454,7 @@ await step('390 paste from Factorio', async () => {
     const machines = JSON.parse(readFileSync(LOGISTIC, 'utf8')).machines.slice(0, 2);
     await page.evaluate((text) => navigator.clipboard.writeText(text), JSON.stringify({ machines }));
     await moreOptions().click();
-    await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+    await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click();
     await page.getByRole('dialog').getByText('Confirm Import from Factorio').waitFor({ state: 'visible', timeout: 15_000 });
     await page.waitForTimeout(300);
     await shot('header-390-paste-dialog', 'Paste from Factorio from the menu: the "Confirm Import from Factorio" dialog');
@@ -465,7 +466,7 @@ await step('390 paste from Factorio', async () => {
 // ---------------------------------------------------------------- 5. Export and Import from the menu
 await step('390 export from the menu', async () => {
     await moreOptions().click();
-    const exportItem = page.getByRole('menuitem', { name: 'Export Config' });
+    const exportItem = page.getByRole('menuitem', { name: 'Save build file' });
     check('Export Config is enabled in the menu with a build loaded', (await exportItem.getAttribute('aria-disabled')) !== 'true');
     const [download] = await Promise.all([page.waitForEvent('download', { timeout: 10_000 }), exportItem.click()]);
     check('Export Config in the menu downloads the JSON', /^clock-config-.*\.json$/.test(download.suggestedFilename()), download.suggestedFilename());
@@ -478,7 +479,7 @@ await step('390 export from the menu', async () => {
 
 await step('390 import from the menu', async () => {
     await moreOptions().click();
-    const [chooser] = await Promise.all([page.waitForEvent('filechooser', { timeout: 10_000 }), page.getByRole('menuitem', { name: 'Import Config' }).click()]);
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser', { timeout: 10_000 }), page.getByRole('menuitem', { name: 'Open build file…' }).click()]);
     check('Import Config in the menu opens the file picker', true);
     await chooser.setFiles(LOGISTIC);
     await page.getByText('Configuration imported successfully!').waitFor({ timeout: 10_000 });
@@ -493,10 +494,10 @@ await step('390 import from the menu', async () => {
 // ---------------------------------------------------------------- Export is disabled with no config
 await step('390 export with nothing to export', async () => {
     await moreOptions().click();
-    await page.getByRole('menuitem', { name: 'Reset Configuration' }).click();
+    await page.getByRole('menuitem', { name: 'Reset build' }).click();
     await page.waitForTimeout(800);
     await moreOptions().click();
-    const disabled = await page.getByRole('menuitem', { name: 'Export Config' }).getAttribute('aria-disabled');
+    const disabled = await page.getByRole('menuitem', { name: 'Save build file' }).getAttribute('aria-disabled');
     if (disabled === 'true') check('Export Config in the menu is disabled when there is no config', true);
     else note('after Reset Configuration the config still exports (Export Config enabled), so the disabled state could not be reached in the browser');
     await page.keyboard.press('Escape');

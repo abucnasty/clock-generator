@@ -4,12 +4,16 @@ import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
 import { ELEMENT_IDS } from '../utils/firstProblem';
+import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
+import { targetRateLineOf, type MachinesMax } from '../utils/targetRateLimit';
 
 interface TargetOutputFormProps {
     recipe: string;
     itemsPerSecond: number;
     /** Number of duplicate setups being modeled */
     copies: number;
+    /** The most the machines making the recipe can make, for the problem line under Items per Second; null while unknown */
+    machinesMax: MachinesMax | null;
     recipeNames: string[];
     onRecipeChange: (recipe: string) => void;
     onItemsPerSecondChange: (value: number) => void;
@@ -20,6 +24,7 @@ export function TargetOutputForm({
     recipe,
     itemsPerSecond,
     copies,
+    machinesMax,
     recipeNames,
     onRecipeChange,
     onItemsPerSecondChange,
@@ -27,7 +32,8 @@ export function TargetOutputForm({
 }: TargetOutputFormProps) {
     return (
         <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" component="h2" gutterBottom>
+            {/* focused by script when the intro card or a dialog that held the focus goes */}
+            <Typography id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1} variant="h6" component="h2" gutterBottom>
                 Target Output
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -58,6 +64,7 @@ export function TargetOutputForm({
                     required
                     error={itemsPerSecond <= 0}
                     helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : itemsPerSecondHelper(itemsPerSecond, copies)}
+                    problem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax })}
                 />
                 <NumberField
                     id={ELEMENT_IDS.targetCopies}

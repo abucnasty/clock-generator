@@ -24,7 +24,8 @@ import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
-import { DRILL_TYPES } from './entityTypes';
+import { useGameNames } from '../hooks/useGameNames';
+import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
 
@@ -57,6 +58,7 @@ function DrillsFormComponent({
     onRemove,
     onReorder,
 }: DrillsFormProps) {
+    const { itemLabel } = useGameNames();
     const [enableControlModalDrillIndex, setEnableControlModalDrillIndex] = useState<number | null>(null);
     const [infoAnchorEl, setInfoAnchorEl] = useState<HTMLButtonElement | null>(null);
     const [copied, setCopied] = useState(false);
@@ -198,7 +200,7 @@ function DrillsFormComponent({
                                     renderValue={(selected) => (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <FactorioIcon name={selected} size={20} alt="" />
-                                            {DRILL_TYPES.find((dt) => dt.value === selected)?.label}
+                                            {entityTypeLabel(selected, itemLabel)}
                                         </Box>
                                     )}
                                 >
@@ -206,7 +208,7 @@ function DrillsFormComponent({
                                         <MenuItem key={dt.value} value={dt.value}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <FactorioIcon name={dt.value} size={20} alt="" />
-                                                {dt.label}
+                                                {entityTypeLabel(dt.value, itemLabel)}
                                             </Box>
                                         </MenuItem>
                                     ))}

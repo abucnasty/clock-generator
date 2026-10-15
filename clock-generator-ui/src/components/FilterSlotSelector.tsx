@@ -1,6 +1,7 @@
 import { Add, Close } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover } from '@mui/material';
 import { useRef, useState } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
 import { removeFilterName } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
@@ -30,6 +31,7 @@ export function FilterSlotSelector({
 }: FilterSlotSelectorProps) {
     const hasExplicitFilters = filters.length > 0;
     const shouldShowInferred = !hasExplicitFilters && inferredFilters.length > 0;
+    const { itemLabel } = useGameNames();
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -86,7 +88,7 @@ export function FilterSlotSelector({
                             role="button"
                             aria-label={
                                 displayFilter
-                                    ? `Filter ${slotIndex + 1}: ${displayFilter}${isAutoAssigned ? ' (auto)' : ''}`
+                                    ? `Filter ${slotIndex + 1}: ${itemLabel(displayFilter)}${isAutoAssigned ? ' (auto)' : ''}`
                                     : `Add filter ${slotIndex + 1}`
                             }
                             onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
@@ -136,7 +138,7 @@ export function FilterSlotSelector({
                         >
                             {displayFilter ? (
                                 <>
-                                    <FactorioIcon name={displayFilter} size={22} />
+                                    <FactorioIcon name={displayFilter} size={22} alt="" titled />
                                     {/* Show auto badge for inferred filters */}
                                     {isAutoAssigned && (
                                         <Box
@@ -167,7 +169,7 @@ export function FilterSlotSelector({
                         {displayFilter && (
                             <IconButton
                                 size="small"
-                                aria-label={removeFilterName(slotIndex + 1, displayFilter)}
+                                aria-label={removeFilterName(slotIndex + 1, itemLabel(displayFilter))}
                                 onClick={() => removeFilter(slotIndex)}
                                 sx={{
                                     position: 'absolute',

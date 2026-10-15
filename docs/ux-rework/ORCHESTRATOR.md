@@ -32,8 +32,11 @@ When a unit frees, start the unblocked item at the head of the longest remaining
 `PROGRESS.md`); never leave a slot idle while an unblocked item waits (coach run 2). A chain edge needs a file the later item edits
 that the earlier one rewrites, or an API it adds; an order kept only so a layout is final is not an edge (the later
 item runs the geometry sweep instead). Re-derive the chain table from the specs' Files lists after every merge that
-unblocks an item, and pass over a two-unit chain head at most once (coach run 5). A unit that is only waiting on
-another branch counts as zero units (coach run 3), and so do read-only agents: scouts, capture writers, reviewers,
+unblocks an item, and pass over a two-unit chain head at most once (coach run 5). A unit counts while its implementer has work to do (implement, evidence, a fix or minors round, a merge with
+conflicts). An item in its first review counts as one until both verdicts land; an item waiting on a re-review, an
+owner check, CI or its predecessor counts as zero (coach runs 3 and 6). If a returning round would make five, it
+starts and the most recently started item pauses at its next push until a unit frees, so the cap holds and no slot
+sits empty (coach run 6). Read-only agents count as zero too: scouts, capture writers, reviewers,
 the phase-end capture and review, and the coach (coach run 4). Specs (step 1) can be drafted ahead for any number of items at once. The next phase's scouts start once every item of
 this phase has a final spec, and each spec names the items it must follow, from its Files list, so the chain table
 covers both phases (coach run 5). From step 2
@@ -45,12 +48,18 @@ itself, except when only the ledger moved (`git diff --quiet HEAD...origin/<phas
 **Cross-item APIs:** when a decision mid-flight creates an API one item provides and another uses, write the exact
 export into both specs at once, and the provider commits it (a stub is fine) first. **Post-merge conflict check:** after every merge into the phase branch (including each merge of the previous phase
 branch into the next), run
-`git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch, and tell any that conflicts to
-merge now, while its implementer still has the context. **Stacking:** whenever the next item on a chain is held only by its predecessor's review, fix round, minors round or
+`git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch (a stacked one against its
+predecessor), and have a background `haiku` runner type-check each clean result (`git commit-tree` the merged tree,
+add it as a scratch worktree, link `clock-generator-ui/node_modules` from the main checkout, `npx tsc -b`, remove it).
+Tell any branch with a text or type conflict to merge now, while its implementer still has the context (coach run 6).
+Remove an item's worktree only after its agent's final report says it is done. **Stacking:** whenever the next item on a chain is held only by its predecessor's review, fix round, minors round or
 owner check (e.g. 1.11 A → 1.11 B → 1.12 B; coach run 5), it branches from its predecessor's head once the predecessor's interface is committed (or at once when the
-specs say they share two files or fewer); it merges the predecessor's
-branch after each fix round, then the phase branch once the predecessor merges, and its own review starts only after
-that, so its diff is against the phase branch. After a merge that had conflicts, the checks re-run,
+specs say they share two files or fewer); it takes the phase branch only through its
+predecessor: it merges the predecessor's branch after each of the predecessor's fix rounds or phase-branch merges,
+and never merges the phase branch itself while the predecessor is open. Its review starts when it reports, on
+`git diff <predecessor head>...<branch>`. Once the predecessor merges, it merges the phase branch, the checks re-run,
+and its reviewers re-check only the conflicted hunks and the files the predecessor changed after their review (coach
+run 6). After a merge that had conflicts, the checks re-run,
 and the orchestrator reads the conflicted hunks before review or merge. Prefer items that touch different parts of a
 shared file. Run each in its own worktree (`isolation: "worktree"`).
 
@@ -205,14 +214,17 @@ Pass `model` on every Agent call. The defaults are below. `PROGRESS.md` lists ea
 
 ## Checkpoints: stop and ask the owner
 
-Ask with a short question, the options, and your recommendation. Don't continue past a checkpoint without an answer.
+Ask with a short question, the options, and your recommendation. Before asking, a `haiku` or `sonnet` lookup confirms
+with `file:line` that the engine and the mod allow each option; an option the code refuses is not offered. Every open
+owner ask goes in the same message, each answerable in a word (coach run 6). Don't continue past a checkpoint without an answer.
 Meanwhile, work on another item if one is unblocked.
 
 - **The glossary** (1.12), before any copy uses it.
 - **The id question** (1.9): what `git log -S retireId` turns up, before the delete behaviour changes.
-- **The install steps** (2.5), before PR A merges. The owner checks them in game. Send them as soon as no review
-  finding on the steps is a blocker or major, alongside any minors round; if a later fix changes a step, send only the
-  changed lines (coach run 5).
+- **The install steps** (2.5), before the Phase 2 PR (as the sidecar's, 2.2). The owner checks them in game. PR A
+  merges into the phase branch when its reviews pass; the owner's corrections land as a small follow-up PR with the
+  full gate before the phase PR opens (coach run 6, owner approved 2026-10-15). If a later fix changes a step, send
+  only the changed lines.
 - **The sidecar** (2.2): the steps the owner should try in Factorio 2.1, before the phase merges.
 - **Anything the plan doesn't cover**, or that contradicts it or an owner decision. This includes new dependencies, and
   changes to CI, the release workflows, or `.claude`/settings files.
@@ -276,7 +288,8 @@ Be short and factual, and **only report what you verified**. If something failed
 Every finding that isn't fixed in its item goes into the ledger's Follow-ups, with enough detail to file it later
 (where, what, how to reproduce, which finding or review it came from). Don't open GitHub issues during the work. At the
 end, before the final PR, they're filed in one pass after the owner reviews the draft (`PLAN.md`, "The final PR",
-step 0).
+step 0). A `sonnet` agent drafts `ISSUES.md` from the Follow-ups at the Phase 2 end and updates it at the
+Phase 3 end, so the owner can review it while Phase 3 runs; the final pass only drops what was fixed since (coach run 6).
 
 ## Hard rules
 

@@ -10,7 +10,7 @@ import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { installFactsOf } from './installFacts';
-import { NO_NAMES, type GameNames } from '../utils/gameNames';
+import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
 import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
@@ -19,6 +19,8 @@ type ClockGenerator = typeof import('clock-generator/browser');
 let clockGenerator: ClockGenerator;
 /** The data's in-game names, kept here so that the main thread does not parse the whole data for them */
 let gameNames: GameNames = NO_NAMES;
+/** The recipes the data marks hidden, which the pickers leave out */
+let hiddenRecipes: string[] = [];
 
 const LOG_FLUSH_INTERVAL_MS = 100;
 
@@ -36,6 +38,7 @@ async function handleInitialize(factorioData: string): Promise<void> {
         const parsed = JSON.parse(factorioData);
         clockGenerator.FactorioDataService.initialize(parsed);
         gameNames = parsed.names ?? NO_NAMES;
+        hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
         postResponse({ type: 'initialized' });
     } catch (error) {
@@ -208,7 +211,7 @@ function lookups(): FactorioLookups {
             // a recipe the generator cannot use has no info
         }
     }
-    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes, names: gameNames };
+    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes, names: gameNames, hiddenRecipes };
 }
 
 /** Validate each entry of a pasted list, throwing on the first one the schema rejects */

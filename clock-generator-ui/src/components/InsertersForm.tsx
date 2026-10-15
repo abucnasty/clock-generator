@@ -18,6 +18,7 @@ import { EnableRuleChip } from './EnableRuleChip';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
+import { useGameNames } from '../hooks/useGameNames';
 import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
@@ -66,6 +67,8 @@ function InsertersFormComponent({
 }: InsertersFormProps) {
     const [enableControlModalInserterIndex, setEnableControlModalInserterIndex] = useState<number | null>(null);
 
+    const { itemLabel, recipeLabel } = useGameNames();
+
     // Build entity options for the dropdown
     const entityOptions = useMemo<EntityOption[]>(() => {
         const options: EntityOption[] = [];
@@ -77,7 +80,7 @@ function InsertersFormComponent({
                 id: machine.id,
                 label: entityLabel('machine', machine.id),
                 icon: machine.recipe || 'assembling-machine-3',
-                sublabel: machine.recipe || 'No recipe',
+                sublabel: machine.recipe ? recipeLabel(machine.recipe) : 'No recipe',
             });
         });
 
@@ -99,12 +102,12 @@ function InsertersFormComponent({
             let ingredientIcons: string[] | undefined;
             
             if (isBufferChest(chest)) {
-                sublabel = chest.item_filter || 'No item filter';
+                sublabel = chest.item_filter ? itemLabel(chest.item_filter) : 'No item filter';
                 ingredientIcons = chest.item_filter ? [chest.item_filter] : undefined;
             } else {
                 // Infinity chest
                 const itemNames = chest.item_filter.map(f => f.item_name).filter(Boolean);
-                sublabel = itemNames.length > 0 ? itemNames.join(', ') : 'No filters';
+                sublabel = itemNames.length > 0 ? itemNames.map(itemLabel).join(', ') : 'No filters';
                 ingredientIcons = itemNames.length > 0 ? itemNames : undefined;
             }
             
@@ -119,7 +122,7 @@ function InsertersFormComponent({
         });
 
         return options;
-    }, [machines, belts, chests]);
+    }, [machines, belts, chests, itemLabel, recipeLabel]);
 
     // Find entity option by type and id
     const findEntityOption = (type: SourceSinkType, id: number): EntityOption | undefined => {
@@ -317,7 +320,7 @@ function InsertersFormComponent({
                                         {...rest}
                                         sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                                     >
-                                        <FactorioIcon name={option.icon} size={24} />
+                                        <FactorioIcon name={option.icon} size={24} alt="" />
                                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                                             <Typography variant="body2">{option.label}</Typography>
                                             {option.sublabel ? (
@@ -415,7 +418,7 @@ function InsertersFormComponent({
                                         {...rest}
                                         sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                                     >
-                                        <FactorioIcon name={option.icon} size={24} />
+                                        <FactorioIcon name={option.icon} size={24} alt="" />
                                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                                             <Typography variant="body2">{option.label}</Typography>
                                             {option.sublabel ? (

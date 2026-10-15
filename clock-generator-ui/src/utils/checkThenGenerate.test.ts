@@ -10,6 +10,7 @@ import {
     checkStatusOf,
     decideCheckOnly,
     decideGenerate,
+    startsRun,
     type CheckOutcome,
     type CheckStatus,
 } from './checkThenGenerate';
@@ -55,6 +56,14 @@ describe('decideGenerate', () => {
         expect(decideGenerate({ ...idle, checkStatus: 'valid' })).toEqual({ kind: 'generate' });
     });
 
+    it('goes to Items per Second for a target more than the machines can make, and never checks', () => {
+        const problem: Problem = { text: PROBLEM_TEXT.rateAboveMax(252.656), target: { kind: 'target-rate' } };
+        for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
+            expect(decideGenerate({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'go-to-problem', problem });
+            expect(decideCheckOnly({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'show-problems' });
+        }
+    });
+
     it('checks first when there is no check for this build', () => {
         expect(decideGenerate({ ...idle, checkStatus: 'none' })).toEqual({ kind: 'check-first' });
         expect(decideGenerate({ ...idle, checkStatus: 'out-of-date' })).toEqual({ kind: 'check-first' });
@@ -80,6 +89,27 @@ describe('decideCheckOnly', () => {
         for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
             expect(decideCheckOnly({ ...idle, checkStatus })).toEqual({ kind: 'check' });
         }
+    });
+});
+
+describe('startsRun', () => {
+    const idle = { initialized: true, generating: false, checkStatus: 'none' as CheckStatus, problems: [] as Problem[] };
+
+    // every kind of both decisions, made the way a press makes it; a new kind that `startsRun` does not classify fails
+    // the build (its table is typed by both decisions' kinds), and belongs in this list
+    it.each([
+        ['Generate', 'generate', decideGenerate({ ...idle, checkStatus: 'valid' }), true],
+        ['Generate', 'check-first (no check)', decideGenerate({ ...idle, checkStatus: 'none' }), true],
+        ['Generate', 'check-first (out of date)', decideGenerate({ ...idle, checkStatus: 'out-of-date' }), true],
+        ['Generate', 'wait (generating)', decideGenerate({ ...idle, generating: true }), false],
+        ['Generate', 'wait (checking)', decideGenerate({ ...idle, checkStatus: 'running' }), false],
+        ['Generate', 'go-to-problem', decideGenerate({ ...idle, problems: problems('a') }), false],
+        ['Generate', 'go-to-check-error', decideGenerate({ ...idle, checkStatus: 'invalid' }), false],
+        ['Check only', 'check', decideCheckOnly({ ...idle, checkStatus: 'valid' }), true],
+        ['Check only', 'wait', decideCheckOnly({ ...idle, generating: true }), false],
+        ['Check only', 'show-problems', decideCheckOnly({ ...idle, problems: problems('a') }), false],
+    ] as const)('%s, %s: %s', (_press, _kind, decision, expected) => {
+        expect(startsRun(decision)).toBe(expected);
     });
 });
 

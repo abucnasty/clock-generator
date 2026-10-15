@@ -32,9 +32,40 @@ export function iconName(names: GameNames, id: string): string {
     return own(names.item, id) ?? own(names.recipe, id) ?? id;
 }
 
+/**
+ * Text the engine wrote with ids in it, with each known id said as its game name: "Machine 1 (logistic-science-pack)" is
+ * "Machine 1 (Logistic science pack)", and "needs iron-plate" is "needs Iron plate". An id of one word is named only in
+ * brackets, so that "inserter" in a sentence stays a word; anything unknown is left as it is. In brackets the id is a recipe's
+ * (a machine's), outside them an item's (a recipe's where there is no such item).
+ */
+export function nameIdsInText(names: GameNames, text: string): string {
+    const known = (id: string) => Object.hasOwn(names.recipe, id) || Object.hasOwn(names.item, id);
+    return text.replace(/\(([^()]+)\)|\b[a-z0-9]+(?:[-_][a-z0-9]+)+\b/g, (whole, inner: string | undefined) => {
+        if (inner !== undefined) return known(inner) ? `(${recipeName(names, inner)})` : whole;
+        if (!known(whole)) return whole;
+        return Object.hasOwn(names.item, whole) ? itemName(names, whole) : recipeName(names, whole);
+    });
+}
+
 /** A name with its id after it for a hover, "Iron plate (iron-plate)"; the id alone when it has no other name */
 export function nameWithId(name: string, id: string): string {
     return name === id ? id : `${name} (${id})`;
+}
+
+/** Ids of mods and the editor, which no build is made of: Editor Extensions, Recipe Calculator, Region Cloner and the parameter signals */
+const INTERNAL_ID = /^(ee-|rcalc-|region-cloner_|parameter-)/;
+
+/**
+ * The ids a picker offers: without the mod and internal ids, and without those in `hidden` (the data's hidden entries).
+ * A build that already holds one still shows it; the picker keeps its chosen value.
+ */
+export function pickerIds(ids: readonly string[], hidden: ReadonlySet<string> = new Set()): string[] {
+    return ids.filter((id) => !INTERNAL_ID.test(id) && !hidden.has(id));
+}
+
+/** The ids of the recipes the game data marks `hidden`, in the data's order */
+export function hiddenRecipeIds(recipes: Record<string, { hidden?: boolean }> | undefined): string[] {
+    return Object.entries(recipes ?? {}).filter(([, recipe]) => recipe.hidden === true).map(([id]) => id);
 }
 
 /** Lower case, with dashes, underscores and punctuation as single spaces: "Fluoroketone (Cold)" and `fluoroketone-cold` agree */

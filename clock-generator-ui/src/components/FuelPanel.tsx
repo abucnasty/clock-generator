@@ -5,6 +5,7 @@ import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
 import { CHART_NAMES } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 import { COLOR_BLIND_PALETTE } from './colors';
 import { Panel } from './Panel';
 
@@ -86,15 +87,15 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                             <TableRow key={machine.machine_id}>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <FactorioIcon name={machine.output_item} size={18} />
+                                        <FactorioIcon name={machine.output_item} size={18} alt="" />
                                         {entityLabel('machine', machine.machine_number)}
-                                        <Typography variant="caption" color="text.secondary">{machine.recipe}</Typography>
+                                        <Typography variant="caption" color="text.secondary"><GameName id={machine.recipe} kind="recipe" /></Typography>
                                     </Box>
                                 </TableCell>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <FactorioIcon name={machine.fuel_item} size={18} />
-                                        {machine.fuel_item}
+                                        <FactorioIcon name={machine.fuel_item} size={18} alt="" />
+                                        <GameName id={machine.fuel_item} />
                                     </Box>
                                 </TableCell>
                                 <TableCell align="right">{machine.burn_rate_per_second.toFixed(3)}/s</TableCell>
@@ -115,7 +116,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                                     </TableCell>
                                 )}
                                 {run && (
-                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.main' : undefined }}>
+                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.light' : undefined }}>
                                         {levels ? levels.min_level.toFixed(2) : '-'}
                                     </TableCell>
                                 )}
@@ -329,13 +330,13 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Box sx={{ width: LABEL_WIDTH, flexShrink: 0, pr: 1 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <FactorioIcon name={machine.output_item} size={18} />
+                                        <FactorioIcon name={machine.output_item} size={18} alt="" />
                                         <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem' }}>
-                                            {entityLabel('machine', machine.machine_number)} ({machine.recipe})
+                                            {entityLabel('machine', machine.machine_number)} (<GameName id={machine.recipe} kind="recipe" />)
                                         </Typography>
                                     </Box>
                                     <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontSize: '0.65rem' }}>
-                                        {machine.fuel_item} {levels.min_level.toFixed(1)} to {levels.max_level.toFixed(1)}
+                                        <GameName id={machine.fuel_item} /> {levels.min_level.toFixed(1)} to {levels.max_level.toFixed(1)}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>

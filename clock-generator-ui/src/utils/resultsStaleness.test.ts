@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import * as edits from './configForm/edits';
 import { createDefaultConfig, type ConfigFormData } from './configForm/formData';
-import { configKeyOf, generatedForOf, isStale, staleResultsMessage } from './resultsStaleness';
+import { configKeyOf, generatedForOf, generatedForText, isStale, staleResultsMessage } from './resultsStaleness';
 
 /** A build as the page holds it: a target, a machine, and two inserters that differ */
 function form(): ConfigFormData {
@@ -85,6 +85,13 @@ describe('staleResultsMessage', () => {
 
     it('says what the clocks are for in the plan\'s sentence', () => {
         expect(message(240)).toBe('These clocks are for logistic-science-pack at 240/s. Your build has changed since. Generate again.');
+    });
+
+    it('says the recipe by its game name when given a label function', () => {
+        const generatedFor = { key: '', recipe: 'logistic-science-pack', itemsPerSecond: 240, beltQuestion: { ask: false, answer: 'moving' } } as const;
+        const label = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
+        expect(staleResultsMessage(generatedFor, label)).toBe('These clocks are for Logistic science pack at 240/s. Your build has changed since. Generate again.');
+        expect(generatedForText(generatedFor, label)).toBe('Logistic science pack at 240/s');
     });
 
     it('prints the rate with at most two decimals', () => {

@@ -29,6 +29,8 @@ import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
 import { useCopyBlueprint } from './hooks/useCopyBlueprint';
 import { useAnnounce, useNotify } from './hooks/useMessages';
+import { useIntroCard } from './hooks/useIntroCard';
+import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -36,11 +38,12 @@ import { BeltsForm } from './components/BeltsForm';
 import { ChestsForm } from './components/ChestsForm';
 import { DrillsForm } from './components/DrillsForm';
 import { OverridesForm } from './components/OverridesForm';
-import { ConfigImportExport } from './components/ConfigImportExport';
+import { ConfigImportExport, type BuildEntryHandle } from './components/ConfigImportExport';
+import { IntroCard } from './components/IntroCard';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
-import { MessageHost } from './components/Messages';
+import { MessageHost, MessageSlot } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { CheckErrorAlert } from './components/CheckErrorAlert';
@@ -49,7 +52,7 @@ import { BeltAssumption } from './components/BeltAssumption';
 import { BeltAssumptionLine } from './components/BeltAssumptionLine';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
-import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate } from './utils/checkThenGenerate';
+import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate, startsRun } from './utils/checkThenGenerate';
 import { copyBlueprintLabelOf, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
@@ -61,18 +64,22 @@ import { appTheme } from './theme/theme';
 import { nextStepOf } from './utils/nextStep';
 import { needsNoClock } from './utils/installSteps';
 import { itemName, type GameNames } from './utils/gameNames';
-import { GameNamesContext } from './hooks/useGameNames';
+import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames';
 import { RuleTimingContext } from './components/RuleTimingContext';
 import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
+import { isBlankBuild } from './utils/introCard';
+import type { TargetValues } from './utils/pasteTarget';
 
 /** The theme, the in-game names every picker and label reads, and the timing the rule editor checks a rule against */
-function PageProviders({ gameNames, ruleTiming, children }: { gameNames: GameNames; ruleTiming: RuleTiming; children: ReactNode }) {
+function PageProviders({ gameNames, searchOnlyRecipes, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; ruleTiming: RuleTiming; children: ReactNode }) {
     return (
         <ThemeProvider theme={appTheme}>
             <GameNamesContext value={gameNames}>
-                <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                <SearchOnlyRecipesContext value={searchOnlyRecipes}>
+                    <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+                </SearchOnlyRecipesContext>
             </GameNamesContext>
         </ThemeProvider>
     );
@@ -85,6 +92,7 @@ function App() {
         isRunning,
         progressStore,
         recipeNames,
+        searchOnlyRecipes,
         resourceNames,
         itemNames,
         gameNames,
@@ -165,7 +173,28 @@ function App() {
         reorderDrills,
     } = useConfigForm();
 
-    const { offerUndo } = useUndo(config, setConfig, isConfigLoaded);
+    const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded);
+
+    // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
+    // where to start instead of counting problems
+    const blankBuild = isBlankBuild(config);
+    const { visible: introVisible, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(blankBuild);
+    const buildEntryRef = useRef<BuildEntryHandle>(null);
+    const handleBuildByHand = useCallback(() => {
+        // the card goes first: focus then moves to the recipe, which takes its place at the top
+        flushSync(() => buildByHand());
+        focusProblemTarget({ kind: 'target-recipe' });
+    }, [buildByHand]);
+    const handleReset = useCallback(() => {
+        resetConfig();
+        afterReset();
+    }, [resetConfig, afterReset]);
+    // a paste that fills in Target Output
+    const replaceTarget = useCallback((target: TargetValues) => {
+        updateTargetOutput('recipe', target.recipe);
+        updateTargetOutput('items_per_second', target.items_per_second);
+        updateTargetOutput('copies', target.copies);
+    }, [updateTargetOutput]);
 
     // the page waits for the workers and for the saved config, which the engine's worker checks
     const isInitialized = workersReady && isConfigLoaded;
@@ -271,12 +300,16 @@ function App() {
         selectRecommended();
     }, [selectRecommended]);
 
+    // the most the machines making the target recipe can make: a target above it is a problem
+    const machinesMax = useMachinesMax(config.target_output.recipe, config.machines);
     // what keeps the build from being clocked, and so where Generate goes instead
     const problems = useMemo(() => problemsOf({
         targetOutput: config.target_output,
         machines: config.machines,
         coverageIssues: checkedCoverageIssues ?? [],
-    }), [config.target_output, config.machines, checkedCoverageIssues]);
+        machinesMax,
+        itemLabel: (id) => itemName(gameNames, id),
+    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax, gameNames]);
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
@@ -284,11 +317,12 @@ function App() {
     const busy = isRunning || validation.status === 'running' || checkingFor !== null;
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
-    const note = barNoteOf({ problems, busy, checkStatus });
+    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild });
     // the one filled button of the bar and the card: Generate, or the Copy of the clocks it made
     const primaryAction = nextStepOf({
         problemCount: problems.length,
-        isRunning: busy,
+        // a generation, with the check Generate starts first; Check only alone leaves fresh clocks the next step
+        isRunning: isRunning || checkingFor !== null,
         hasBlueprint: blueprintString !== null,
         stale: resultsAreStale,
         view,
@@ -335,6 +369,9 @@ function App() {
     const runChecked = useCallback((start: (config: Config) => void) => {
         const config = exportConfig();
         const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        // running the build accepts it: an Undo offered before this press ends here, once (not when the check's own
+        // generation starts later)
+        if (startsRun(decision)) withdrawUndo();
         switch (decision.kind) {
             case 'wait':
                 return;
@@ -363,18 +400,19 @@ function App() {
                 });
                 return;
         }
-    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, goToTarget, goToCheckError, validate, setCheckingFor]);
+    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
 
     // checks without moving the page: the result shows as the chip, the alert and the swing plan
     const handleCheckOnly = useCallback(() => {
         const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        if (startsRun(decision)) withdrawUndo();
         if (decision.kind === 'show-problems') {
             focusBarNote();
         } else if (decision.kind === 'check') {
             setCheckedForGenerate(false);
             validate(exportConfig());
         }
-    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, validate, exportConfig]);
+    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, exportConfig]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -513,7 +551,7 @@ function App() {
     }), [runChecked, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
-        <PageProviders gameNames={gameNames} ruleTiming={ruleTiming}>
+        <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} ruleTiming={ruleTiming}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
@@ -525,17 +563,22 @@ function App() {
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
                         <ConfigImportExport
+                            ref={buildEntryRef}
                             config={exportableConfig}
+                            target={config.target_output}
                             onImport={handleImportConfig}
+                            onReplaceTarget={replaceTarget}
                             onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
                             onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
                             onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
                             onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
-                            onReset={resetConfig}
+                            onReset={handleReset}
                             onBuildReplaced={handleBuildReplaced}
                             onUndoable={offerUndoOfReplace}
+                            onShowIntro={showIntro}
+                            pasteIsNextStep={blankBuild && !introVisible}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -565,9 +608,12 @@ function App() {
                             onCopy={copy.request}
                             problems={problems}
                             note={note}
+                            startHere={blankBuild && problems.length > 0}
                             onGoToProblem={handleGoToProblem}
                         />
                     )}
+                    {/* outside the condition: a message can come before the workflow bar is there */}
+                    <MessageSlot active={!diagramFullscreen} />
                 </AppBar>
 
                 <Container component="main" maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
@@ -596,10 +642,20 @@ function App() {
                             )}
                             <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null} />
 
+                            {introVisible && (
+                                <IntroCard
+                                    onPaste={() => buildEntryRef.current?.pasteFromFactorio()}
+                                    onTryExample={() => buildEntryRef.current?.openExamples()}
+                                    onBuildByHand={handleBuildByHand}
+                                    onDismiss={dismissIntro}
+                                />
+                            )}
+
                             <TargetOutputForm
                                 recipe={config.target_output.recipe}
                                 itemsPerSecond={config.target_output.items_per_second}
                                 copies={config.target_output.copies}
+                                machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
                                 onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
@@ -852,6 +908,8 @@ function App() {
                     <Box
                         sx={{
                             display: 'flex',
+                            flexWrap: 'wrap',
+                            columnGap: 1,
                             alignItems: 'center',
                             px: 2,
                             py: 1,
@@ -862,6 +920,8 @@ function App() {
                         }}
                     >
                         <Typography id="diagram-fullscreen-title" variant="h6" component="h2" sx={{ flex: 1 }}>Flow Diagram</Typography>
+                        {/* the page's header is behind this dialog, so its message shows here */}
+                        <MessageSlot active={diagramFullscreen} inBar />
                         <IconButton onClick={() => setDiagramFullscreen(false)} size="small" aria-label="Exit fullscreen">
                             <FullscreenExit />
                         </IconButton>

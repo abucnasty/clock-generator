@@ -74,6 +74,10 @@ preview unless you are debugging.
   "In words" sentence and "In the blueprint" note per mode, Clocked windows against the period (before a check, after
   Check only, after Generate with the strip), the inline problems and the refused Save in the dialog and the Diagram tab,
   templates that ask and confirm, drills without Conditional, names, focus and contrast. Controls are in `ui` (`rule*`).
+- `capture-messages-clear.mjs <out dir>` (on `lib.mjs`) checks messages that don't cover the page (item 1.5 F) at 1440,
+  720 and 390px: the message in the header's flow and in the fullscreen diagram's title bar, never over a focused
+  control or a dialog, errors closing when a dialog opens or the action starts again, keyboard reach of Undo, the Undo
+  offer ending when a check or generation starts, and the announcements. `BASE_URL`, `WIDTHS` and `STEPS` as above.
 
 ## Shared helpers
 

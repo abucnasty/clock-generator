@@ -1,4 +1,5 @@
 import type { Theme, ThemeOptions } from '@mui/material/styles';
+import { CONTROL } from '../theme/tokens';
 
 /**
  * The theme's accessibility rules, added to the base theme in `App.tsx`: a visible 2px focus ring in the brand colour
@@ -51,7 +52,7 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
                         // than the rules above, so it wins whichever is inserted first
                         props: { variant: 'filled' },
                         style: {
-                            '& .MuiButtonBase-root.Mui-focusVisible, & :focus-visible': { outlineColor: '#000' },
+                            '& .MuiButtonBase-root.Mui-focusVisible, & :focus-visible': { outlineColor: CONTROL.focusOnFill },
                         },
                     }],
                 },

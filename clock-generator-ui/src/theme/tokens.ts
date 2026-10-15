@@ -36,6 +36,11 @@ export const TEXT = {
     primary: '#ffffff',
     secondary: 'rgba(255, 255, 255, 0.7)',
     disabled: 'rgba(255, 255, 255, 0.5)',
+    /**
+     * Words in the danger colour (a field's problem, Discard, the red chips): the lighter red, 4.5:1 or more on every
+     * surface and on a hovered grey. `ROLE.red.main` stays for fills, borders and icons
+     */
+    error: ROLE.red.light,
 } as const;
 
 export const CONTROL = {
@@ -47,6 +52,8 @@ export const CONTROL = {
     edge: '#5c5c5c',
     /** The keyboard focus ring, drawn outside the control on the surface around it */
     focus: '#fca300',
+    /** The focus ring inside a filled alert, on the role's dark fill, where the orange is too close (1.3 to 2.2:1) */
+    focusOnFill: '#000000',
 } as const;
 
 interface TokenPair {
@@ -83,7 +90,14 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...on('yellow text', ROLE.yellow.main, SURFACES, 'text'),
     ...on('green text', ROLE.green.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
     ...on('red text', ROLE.red.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
+    ...on('error text', TEXT.error, SURFACES, 'text', 'field problems, Discard, Clear rule, the red chips'),
+    { name: 'error text on a hovered row', fg: TEXT.error, bg: '#3f3f3f', kind: 'text', note: '8% white on row' },
+    { name: 'error text on a hovered card or menu item', fg: TEXT.error, bg: '#353535', kind: 'text', note: '8% white on panel' },
     ...on('blue text', ROLE.blue.main, INFO_TEXT_SURFACES, 'text', 'info alerts only'),
+    // the clock table's Status chips carry their own panel fill, so a selected or hovered row's tint is not under them
+    ...(['green', 'yellow', 'red'] as const).map(role => ({
+        name: `Status chip, ${role} words on its panel fill`, fg: ROLE[role].main, bg: SURFACE.panel, kind: 'text' as const,
+    })),
     // text on a role's fill: a filled button or chip, its hover and its lighter shade
     ...Object.entries(ROLE).flatMap(([role, { main, dark, light, on: text }]) => [
         { name: `${role} on-text on main`, fg: text, bg: main, kind: 'text' as const },
@@ -102,6 +116,9 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...on('green fill', ROLE.green.main, STATUS_TEXT_SURFACES, 'nonText'),
     ...on('red fill', ROLE.red.main, STATUS_TEXT_SURFACES, 'nonText'),
     ...on('yellow fill', ROLE.yellow.main, SURFACES, 'nonText'),
+    ...(['yellow', 'red', 'green'] as const).map(role => ({
+        name: `focus ring in a filled ${role} alert`, fg: CONTROL.focusOnFill, bg: ROLE[role].dark, kind: 'nonText' as const,
+    })),
     { name: 'selected toggle fill on bar', fg: ROLE.orange.main, bg: SURFACE.bar, kind: 'nonText' },
     { name: 'switch thumb, off', fg: TEXT.primary, bg: CONTROL.trackOff, kind: 'nonText' },
     { name: 'switch thumb, on', fg: ROLE.orange.on, bg: ROLE.orange.main, kind: 'nonText' },
