@@ -10,6 +10,7 @@ import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { installFactsOf } from './installFacts';
+import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
 import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
@@ -26,6 +27,9 @@ const LOG_FLUSH_INTERVAL_MS = 100;
 
 const ctx: Worker = self as unknown as Worker;
 
+// a worker started in place of a cancelled or crashed one gets its requests before it has loaded the data
+const gate = createReadyGate();
+
 function postResponse(response: WorkerResponse): void {
     ctx.postMessage(response);
 }
@@ -40,8 +44,10 @@ async function handleInitialize(factorioData: string): Promise<void> {
         gameNames = parsed.names ?? NO_NAMES;
         hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
+        gate.open();
         postResponse({ type: 'initialized' });
     } catch (error) {
+        gate.fail(error instanceof Error ? error : new Error('Failed to initialize worker'));
         postResponse({
             type: 'error',
             message: error instanceof Error ? error.message : 'Failed to initialize worker',
@@ -309,13 +315,33 @@ function handleTask(
     });
 }
 
+/** The answer to a request that could not run because the worker never loaded the data */
+function failedRequest(request: Exclude<WorkerRequest, { type: 'initialize' }>, message: string): WorkerResponse {
+    switch (request.type) {
+        case 'validate':
+            return { type: 'validation-failed', requestId: request.requestId, message };
+        case 'query':
+            return { type: 'query-failed', requestId: request.requestId, message };
+        case 'plan':
+        case 'task':
+            return { type: 'error', runId: request.runId, message };
+    }
+}
+
 ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const request = event.data;
+    if (request.type === 'initialize') {
+        await handleInitialize(request.factorioData);
+        return;
+    }
+    try {
+        await gate.whenOpen();
+    } catch (error) {
+        postResponse(failedRequest(request, error instanceof Error ? error.message : 'Failed to initialize worker'));
+        return;
+    }
 
     switch (request.type) {
-        case 'initialize':
-            await handleInitialize(request.factorioData);
-            break;
         case 'validate':
             handleValidate(request.requestId, request.config);
             break;
