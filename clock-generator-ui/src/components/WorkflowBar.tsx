@@ -195,10 +195,10 @@ export function WorkflowBar({
                                 </Typography>
                             )}
                             {/* describeChild: the tooltip describes the button, which keeps its label as its name. Above
-                                it, as the others, and never in the way of a click (disableInteractive): under the bar
-                                are the messages, and at 390 the ⋮ is over it. Kept in the header (disablePortal), so its
-                                text is inside the banner landmark */}
-                            <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild placement="top" disableInteractive slotProps={{ popper: { disablePortal: true } }}>
+                                it, as the others, since under the bar are the messages; it stays open while the pointer
+                                is on it (WCAG 1.4.13). Kept in the header (disablePortal), so its text is inside the
+                                banner landmark */}
+                            <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
                                 <Button
                                     variant={copyFilled ? 'contained' : 'outlined'}
                                     size="small"
@@ -238,7 +238,7 @@ export function WorkflowBar({
                     )}
                     {/* the note under the buttons says where they go instead of checking; it describes both, and is their
                         tooltip too. Above the buttons, so that the tooltip does not cover the note it repeats */}
-                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top" disableInteractive slotProps={{ popper: { disablePortal: true } }}>
+                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
                         {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
                         <span>
                             <Button
@@ -258,7 +258,7 @@ export function WorkflowBar({
                             </Button>
                         </span>
                     </Tooltip>
-                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top" disableInteractive slotProps={{ popper: { disablePortal: true } }}>
+                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
                         <span>
                             {/* filled only when it is the next step (generateFilled); a blank build has problems, so there
                                 the next step is the recipe (or the intro card's Paste) and Generate is outlined */}
