@@ -181,7 +181,10 @@ async function closeDialogs(page) {
         await page.keyboard.press('Escape');
         await page.waitForTimeout(350);
     }
-    await page.getByRole('menu').count() && (await page.keyboard.press('Escape'));
+    if (await page.getByRole('menu').count()) {
+        await page.keyboard.press('Escape');
+        await page.getByRole('menu').waitFor({ state: 'detached' });
+    }
 }
 async function dismissMessage(page) {
     if (!(await snack(page).count())) return;
@@ -405,7 +408,8 @@ try {
             await openMenu(page);
             rec.check('Paste from Factorio is gone from the ⋮ menu', (await menuItem(page, /Paste from Factorio/).count()) === 0);
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(250);
+            // the closing menu takes longer the taller it is: wait until it is gone, not a fixed time
+            await page.getByRole('menu').waitFor({ state: 'detached' });
 
             // the mod link
             const link = modLinks(c);
@@ -926,7 +930,8 @@ try {
             await axe(rec, page, 'the ⋮ menu');
             await cpair(rec, page, 'menu item "Reset build"', menuItem(page, /^Reset/));
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
+            // the closing menu takes longer the taller it is: wait until it is gone, not a fixed time
+            await page.getByRole('menu').waitFor({ state: 'detached' });
             rec.check('Escape closes the menu and focus returns to the ⋮ button', await menuBtn(page).evaluate((el) => el === document.activeElement).catch(() => false));
 
             // Save build file downloads
@@ -942,7 +947,8 @@ try {
             } else {
                 rec.check('Save build file exists', false);
                 await page.keyboard.press('Escape');
-                await page.waitForTimeout(300);
+                // the closing menu takes longer the taller it is: wait until it is gone, not a fixed time
+                await page.getByRole('menu').waitFor({ state: 'detached' });
             }
             await dismissMessage(page);
 
@@ -966,7 +972,8 @@ try {
             } else {
                 rec.check('Open build file… exists', false);
                 await page.keyboard.press('Escape');
-                await page.waitForTimeout(300);
+                // the closing menu takes longer the taller it is: wait until it is gone, not a fixed time
+                await page.getByRole('menu').waitFor({ state: 'detached' });
             }
             await dismissMessage(page);
             // a file that is not JSON: a plain-words message, no raw parser text (ledger)
