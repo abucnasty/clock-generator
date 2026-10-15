@@ -211,7 +211,7 @@ async function runAt(w) {
         check('exactly one button is named "..., Inserter 3. Edit rule"', aria3 === 1, `${aria3} found`);
         const names = await enableControls(c).evaluateAll((els) => els.map((el) => [el.getAttribute('aria-label') ?? '', el.querySelector('.MuiChip-label')?.textContent ?? '']));
         check('every chip\'s accessible name starts with its visible text (WCAG 2.5.3)', names.every(([name, text]) => text !== '' && name.startsWith(text)), names.map(([name]) => name).join(' | '));
-        const deleteRights = await c.locator('[data-testid="DeleteIcon"]').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().right)));
+        const deleteRights = await c.locator('button[data-row-delete]') /* icons have no data-testid in a production build */.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().right)));
         check('the Delete buttons line up in one column', new Set(deleteRights).size === 1, deleteRights.join(', '));
         const quiet = await measureChip(enableControls(c).nth(0));
         const orange = await measureChip(enableControls(c).nth(3));

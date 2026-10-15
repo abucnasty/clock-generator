@@ -34,14 +34,16 @@ const MAX_FILTERS = 5;
 const RULE_COLUMN = '8.5rem';
 /** Stack Size's field, and its column when the row wraps */
 const STACK_COLUMN = '100px';
+/** Where an inserter row fits on one line with its names in full */
+const ONE_LINE = '@media (min-width: 1400px)';
 
 /**
  * The inserter rows are one grid, and each row a subgrid of it, so every column starts at the same x on every row,
  * whatever the row holds (a belt source's lane select, set or auto filters, a long rule): the handle and number,
  * Source, Destination, then Stack Size, the filters, the enable rule and delete. Source and Destination take the room
- * the others leave, so their names show in full where they fit. At lg a row is one line; from md, two lines, Source and
- * Destination on the first; from sm, Source and Destination each have a line beside the handle, so a name is not cut
- * off; below sm everything has a line of its own.
+ * the others leave, so their names show in full where they fit. From 1400px a row is one line (narrower, the names
+ * would be cut off); from md, two lines, Source and Destination on the first; from sm, Source and Destination each have
+ * a line beside the handle; below sm everything has a line of its own.
  */
 const LIST_GRID_SX = {
     display: 'grid',
@@ -51,8 +53,8 @@ const LIST_GRID_SX = {
         xs: 'minmax(0, 1fr)',
         sm: 'auto minmax(0, 1fr)',
         md: 'auto minmax(0, 1fr) minmax(0, 1fr)',
-        lg: 'auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto auto',
     },
+    [ONE_LINE]: { gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto auto' },
     // the sortable wrapper of each row passes the columns on
     '& > *': { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'subgrid' },
 };
@@ -68,21 +70,22 @@ const ROW_GRID_SX = {
 /** Under Source, in its column, until md puts the two side by side */
 const DESTINATION_CELL_SX = { gridColumn: { sm: 2, md: 'auto' } };
 /**
- * Stack Size, the filters, the rule and delete: cells of the rows' grid on one line; below lg a line of their own, in
+ * Stack Size, the filters, the rule and delete: cells of the rows' grid on one line; below 1400px a line of their own, in
  * columns of a fixed width (the filters take the rest), so they line up from row to row too
  */
 const ROW_REST_SX = {
-    display: { xs: 'flex', sm: 'grid', lg: 'contents' },
-    gridColumn: { xs: '1 / -1', lg: 'auto' },
+    display: { xs: 'flex', sm: 'grid' },
+    gridColumn: '1 / -1',
     gridTemplateColumns: { sm: `${STACK_COLUMN} minmax(0, 1fr) ${RULE_COLUMN} 40px` },
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 2,
+    [ONE_LINE]: { display: 'contents', gridColumn: 'auto' },
 };
 /** At the end of its line */
 const DELETE_SX = { ml: { xs: 'auto', sm: 0 } };
 /** At the top of the line when the row wraps, so Source and Destination stay level when the lane select goes under Source */
-const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: { xs: 'start', lg: 'center' } };
+const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start', [ONE_LINE]: { alignSelf: 'center' } };
 /** The source's lane select goes under it when the cell is narrow */
 const SOURCE_GROUP_SX = { ...PICKER_GROUP_SX, flexWrap: 'wrap' };
 const PICKER_SX = { flex: '1 1 160px', minWidth: 0 };
