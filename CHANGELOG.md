@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.13.1] - 2026-10-15
+
+### Changed
+- The documentation is split by subject, with the text unchanged. The goals page now holds the goals and what makes each one good, and points to the rest: one page on stability (backpressure loss and the active inserter windows), one on wake-ups and the wake-up lists (the measure for goal 2, and even hands), one on the advice on which inserters are worth clocking, one on the rules of the game (crafting constraints, stack inserters and their exceptions), one on the simulator (the status of an inserter, the order it takes items off a belt, two inserters that bring the same item, and when a waiting inserter acts) and one on the working rules. Every old section of the goals page keeps its place with a pointer to its new page. Text only: no clock or selection changes.
+
 ## [0.13.0] - 2026-10-15
 
 ### Changed
