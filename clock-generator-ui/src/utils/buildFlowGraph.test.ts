@@ -78,6 +78,19 @@ const FIXTURES: Record<string, () => ConfigFormData> = {
     ]),
 };
 
+describe('buildFlowGraph labels', () => {
+    it('says the game names in the nodes\' aria-labels while the data keeps the ids', () => {
+        const config = form({ machines: 1, belts: 1 }, []);
+        const machines = config.machines.map(m => ({ ...m, recipe: 'iron-gear-wheel' }));
+        const label = (id: string) => `<${id}>`;
+        const { nodes } = buildFlowGraph(machines, [], config.belts, [], [], undefined, false, { itemLabel: label, recipeLabel: label });
+        const aria = nodes.map(n => (n as Node & { ariaLabel?: string }).ariaLabel ?? '');
+        expect(aria.some(a => a.includes('makes <iron-gear-wheel>'))).toBe(true);
+        expect(aria.some(a => a.includes('carries <iron-plate> and <copper-plate>'))).toBe(true);
+        expect(JSON.stringify(nodes.map(n => n.data))).toContain('iron-gear-wheel');
+    });
+});
+
 describe('buildFlowGraph', () => {
     it('gives every edge an arrowhead, loop and drill edges included', () => {
         for (const [name, fixture] of Object.entries(FIXTURES)) {

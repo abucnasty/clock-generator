@@ -43,12 +43,12 @@ export function isStale(generatedFor: GeneratedFor | null, currentKey: string): 
     return generatedFor !== null && generatedFor.key !== currentKey;
 }
 
-/** "{recipe} at {rate}/s", for the sentences that say what the clocks were made for */
-export function generatedForText({ recipe, itemsPerSecond }: GeneratedFor): string {
-    return `${recipe} at ${Number(itemsPerSecond.toFixed(2)).toString()}/s`;
+/** "{recipe} at {rate}/s", for the sentences that say what the clocks were made for; `recipeLabel` gives the recipe's game name */
+export function generatedForText({ recipe, itemsPerSecond }: GeneratedFor, recipeLabel: (id: string) => string = (id) => id): string {
+    return `${recipeLabel(recipe)} at ${Number(itemsPerSecond.toFixed(2)).toString()}/s`;
 }
 
 /** The banner over Results while the clocks are for an earlier build */
-export function staleResultsMessage(generatedFor: GeneratedFor): string {
-    return `These clocks are for ${generatedForText(generatedFor)}. Your build has changed since. Generate again.`;
+export function staleResultsMessage(generatedFor: GeneratedFor, recipeLabel: (id: string) => string = (id) => id): string {
+    return `These clocks are for ${generatedForText(generatedFor, recipeLabel)}. Your build has changed since. Generate again.`;
 }

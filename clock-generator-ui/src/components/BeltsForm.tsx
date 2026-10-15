@@ -21,7 +21,8 @@ import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
-import { BELT_TYPES } from './entityTypes';
+import { useGameNames } from '../hooks/useGameNames';
+import { BELT_TYPES, entityTypeLabel } from './entityTypes';
 import { BeltAssumption } from './BeltAssumption';
 import type { BeltAnswer, BeltQuestion } from '../utils/beltQuestion';
 
@@ -47,6 +48,7 @@ function BeltsFormComponent({
     beltQuestion,
     onBeltAnswer,
 }: BeltsFormProps) {
+    const { itemLabel } = useGameNames();
     const [infoAnchor, setInfoAnchor] = useState<HTMLButtonElement | null>(null);
 
     const handleLaneUpdate = (
@@ -154,7 +156,7 @@ function BeltsFormComponent({
                                 renderValue={(selected) => (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <FactorioIcon name={selected} size={20} alt="" />
-                                        {BELT_TYPES.find((bt) => bt.value === selected)?.label}
+                                        {entityTypeLabel(selected, itemLabel)}
                                     </Box>
                                 )}
                             >
@@ -162,7 +164,7 @@ function BeltsFormComponent({
                                     <MenuItem key={bt.value} value={bt.value}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <FactorioIcon name={bt.value} size={20} alt="" />
-                                            {bt.label}
+                                            {entityTypeLabel(bt.value, itemLabel)}
                                         </Box>
                                     </MenuItem>
                                 ))}

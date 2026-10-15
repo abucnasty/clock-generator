@@ -2,8 +2,10 @@ import { Close, Fullscreen } from '@mui/icons-material';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
+import { useGameNames } from '../hooks/useGameNames';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 import { COLOR_BLIND_PALETTE, ITEM_COLOR_COUNT, TIMELINE_TRACK_COLOR, itemColorMap } from './colors';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
@@ -28,8 +30,8 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
             title={
                 <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                        <FactorioIcon name={transfer.item_name} size={16} />
-                        <Typography variant="body2">{transfer.item_name}</Typography>
+                        <FactorioIcon name={transfer.item_name} size={16} alt="" />
+                        <Typography variant="body2"><GameName id={transfer.item_name} /></Typography>
                     </Box>
                     <Typography variant="caption" display="block">
                         Amount: {transfer.amount}
@@ -75,6 +77,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProps) {
+    const { nameIdsIn } = useGameNames();
     // Collect unique items transferred by this entity
     const transferredItems = Array.from(new Set(entity.transfers.map(t => t.item_name))).sort();
 
@@ -88,15 +91,15 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                 <Tooltip
                     title={
                         <Box>
-                            <Typography variant="body2">{entity.label}</Typography>
+                            <Typography variant="body2">{nameIdsIn(entity.label)}</Typography>
                             {entity.source && (
                                 <Typography variant="caption" display="block">
-                                    From: {entity.source.label}
+                                    From: {nameIdsIn(entity.source.label)}
                                 </Typography>
                             )}
                             {entity.sink && (
                                 <Typography variant="caption" display="block">
-                                    To: {entity.sink.label}
+                                    To: {nameIdsIn(entity.sink.label)}
                                 </Typography>
                             )}
                             <Typography variant="caption" display="block">
@@ -121,7 +124,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                                 color: entity.entity_type === 'drill' ? COLOR_BLIND_PALETTE.orange : 'text.primary',
                             }}
                         >
-                            {entity.label}
+                            {nameIdsIn(entity.label)}
                         </Typography>
                         {/* Show total amount transferred */}
                         <Typography
@@ -217,8 +220,8 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                                 borderRadius: 0.25,
                             }}
                         />
-                        <FactorioIcon name={item} size={14} />
-                        <Typography variant="caption">{item}</Typography>
+                        <FactorioIcon name={item} size={14} alt="" />
+                        <Typography variant="caption"><GameName id={item} /></Typography>
                     </Box>
                 ))}
             </Box>

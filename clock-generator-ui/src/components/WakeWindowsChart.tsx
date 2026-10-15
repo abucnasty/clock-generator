@@ -10,6 +10,7 @@ import {
     type KeyboardEvent,
     type MouseEvent,
 } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
 import {
     axisTicks,
     barsToDraw,
@@ -29,6 +30,7 @@ import {
     windowDetails,
     type WatchNoteKind,
 } from '../utils/wakeWindowCopy';
+import { WakeRowMoves } from './WakeRowMoves';
 
 // Colours of the chart, measured on the outlined Paper (#232323, no elevation overlay): see the 2.6 spec
 /** A wake window (Wong sky blue), 6.81:1 */
@@ -270,6 +272,7 @@ const gridColumnsOf = (wide: boolean) => (wide ? `${LABEL_COLUMN_PX}px minmax(0,
 /** One inserter or drill: its name, track and numbers, the details of its selected window, its notes */
 const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
     const { row, periodTicks, selectedIndex, onSelect } = props;
+    const { itemLabel } = useGameNames();
     const indent = props.wide ? `${LABEL_COLUMN_PX + COLUMN_GAP_PX}px` : 0;
 
     const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -324,7 +327,7 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
             <Box
                 ref={(element: HTMLElement | null) => props.registerElement(row.id, element)}
                 role="group"
-                aria-label={rowSummary(row, periodTicks, { mostWakeUpsId: props.mostWakeUpsId })}
+                aria-label={rowSummary(row, periodTicks, { mostWakeUpsId: props.mostWakeUpsId, itemLabel })}
                 tabIndex={props.isActive ? 0 : -1}
                 onKeyDown={onKeyDown}
                 onFocus={event => {
@@ -349,9 +352,9 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
             >
                 <Box sx={{ gridArea: 'label', minWidth: 0 }}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>{row.label}</Typography>
-                    {row.detail && (
+                    {(row.items.length > 0 || row.route) && (
                         <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: 'anywhere' }}>
-                            {row.detail}
+                            <WakeRowMoves row={row} />
                         </Typography>
                     )}
                 </Box>

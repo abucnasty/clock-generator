@@ -88,6 +88,14 @@ describe('problemsOf', () => {
         expect(three).toHaveLength(3);
     });
 
+    it('says the item by its game name when given a label function, and keeps the id in the element id', () => {
+        const itemLabel = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
+        const [output] = problemsOf({ ...filledIn({ coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')] }), itemLabel });
+        expect(output.text).toBe('Machine 1 has no inserter taking Logistic science pack out');
+        expect(focusIdOf(output.target!)).toBe('coverage-issue-missing_output_inserter-1-logistic-science-pack');
+        expect(PROBLEM_TEXT.missingInput(2, 'logistic-science-pack', itemLabel)).toBe('Machine 2 has no inserter bringing in Logistic science pack');
+    });
+
     it('puts the target first, then the machines, then the coverage issues in the engine\'s order', () => {
         const problems = problemsOf({
             targetOutput: { recipe: '', items_per_second: 0, copies: 1 },

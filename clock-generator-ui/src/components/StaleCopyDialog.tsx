@@ -1,6 +1,7 @@
 import { Warning } from '@mui/icons-material';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import { useId } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
 import { generatedForText, type GeneratedFor } from '../utils/resultsStaleness';
 
 interface StaleCopyDialogProps {
@@ -16,6 +17,7 @@ interface StaleCopyDialogProps {
  * Cancel is focused, so Enter copies nothing.
  */
 export function StaleCopyDialog({ open, generatedFor, onCancel, onConfirm }: StaleCopyDialogProps) {
+    const { recipeLabel } = useGameNames();
     const titleId = useId();
     const textId = useId();
     return (
@@ -28,7 +30,7 @@ export function StaleCopyDialog({ open, generatedFor, onCancel, onConfirm }: Sta
             <DialogTitle id={titleId}>Copy the old clock?</DialogTitle>
             <DialogContent>
                 <DialogContentText id={textId}>
-                    This blueprint is for {generatedForText(generatedFor)}. Your build has changed since, so this clock
+                    This blueprint is for {generatedForText(generatedFor, recipeLabel)}. Your build has changed since, so this clock
                     may not work in it. Generate again to get a clock for the build you have now.
                 </DialogContentText>
             </DialogContent>
