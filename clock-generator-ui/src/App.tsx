@@ -28,6 +28,7 @@ import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
+import { useIntroCard } from './hooks/useIntroCard';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -35,7 +36,8 @@ import { BeltsForm } from './components/BeltsForm';
 import { ChestsForm } from './components/ChestsForm';
 import { DrillsForm } from './components/DrillsForm';
 import { OverridesForm } from './components/OverridesForm';
-import { ConfigImportExport } from './components/ConfigImportExport';
+import { ConfigImportExport, type BuildEntryHandle } from './components/ConfigImportExport';
+import { IntroCard } from './components/IntroCard';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
@@ -58,6 +60,8 @@ import { itemName, type GameNames } from './utils/gameNames';
 import { GameNamesContext } from './hooks/useGameNames';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
+import { isBlankBuild } from './utils/introCard';
+import type { TargetValues } from './utils/pasteTarget';
 
 const baseTheme = createTheme({
     palette: {
@@ -196,6 +200,27 @@ function App() {
 
     const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded);
 
+    // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
+    // where to start instead of counting problems
+    const blankBuild = isBlankBuild(config);
+    const { visible: introVisible, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(blankBuild);
+    const buildEntryRef = useRef<BuildEntryHandle>(null);
+    const handleBuildByHand = useCallback(() => {
+        // the card goes first: focus then moves to the recipe, which takes its place at the top
+        flushSync(() => buildByHand());
+        focusProblemTarget({ kind: 'target-recipe' });
+    }, [buildByHand]);
+    const handleReset = useCallback(() => {
+        resetConfig();
+        afterReset();
+    }, [resetConfig, afterReset]);
+    // a paste that fills in Target Output
+    const replaceTarget = useCallback((target: TargetValues) => {
+        updateTargetOutput('recipe', target.recipe);
+        updateTargetOutput('items_per_second', target.items_per_second);
+        updateTargetOutput('copies', target.copies);
+    }, [updateTargetOutput]);
+
     // the page waits for the workers and for the saved config, which the engine's worker checks
     const isInitialized = workersReady && isConfigLoaded;
     // until the workers are ready, an error is one that stopped them starting
@@ -263,7 +288,7 @@ function App() {
     const busy = isRunning || validation.status === 'running' || checkingFor !== null;
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
-    const note = barNoteOf({ problems, busy, checkStatus });
+    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild });
     // who started the running or last check, for the announcements: Generate leads on by itself
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
@@ -498,17 +523,22 @@ function App() {
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
                         <ConfigImportExport
+                            ref={buildEntryRef}
                             config={exportableConfig}
+                            target={config.target_output}
                             onImport={handleImportConfig}
+                            onReplaceTarget={replaceTarget}
                             onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
                             onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
                             onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
                             onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
-                            onReset={resetConfig}
+                            onReset={handleReset}
                             onBuildReplaced={handleBuildReplaced}
                             onUndoable={offerUndoOfReplace}
+                            onShowIntro={showIntro}
+                            introShown={introVisible}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -533,6 +563,7 @@ function App() {
                             staleFor={staleFor}
                             problems={problems}
                             note={note}
+                            startHere={blankBuild && problems.length > 0}
                             onGoToProblem={handleGoToProblem}
                         />
                     )}
@@ -565,6 +596,15 @@ function App() {
                                 </Alert>
                             )}
                             <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null} />
+
+                            {introVisible && (
+                                <IntroCard
+                                    onPaste={() => buildEntryRef.current?.pasteFromFactorio()}
+                                    onTryExample={() => buildEntryRef.current?.openExamples()}
+                                    onBuildByHand={handleBuildByHand}
+                                    onDismiss={dismissIntro}
+                                />
+                            )}
 
                             <TargetOutputForm
                                 recipe={config.target_output.recipe}

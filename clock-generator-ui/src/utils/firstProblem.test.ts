@@ -143,6 +143,13 @@ describe('barNoteOf', () => {
         expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
     });
 
+    it('says where to start, neutrally, on a build with nothing entered yet', () => {
+        const start = { text: 'Start: pick the recipe you want to make', target: { kind: 'target-recipe' } };
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true })).toEqual(start);
+        expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'none', blank: true })).toBeNull();
+        expect(barNoteOf({ problems: [], busy: false, checkStatus: 'none', blank: true })).toBeNull();
+    });
+
     it('points at the reason for a failed check when the build has no problem', () => {
         expect(barNoteOf({ problems: [], busy: false, checkStatus: 'invalid' })).toEqual(failed);
         expect(PROBLEM_TEXT.validationFailed).toBe('The last check failed. Show why');

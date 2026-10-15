@@ -26,7 +26,7 @@
 // Nothing here throws on a missing element: a failed lookup is a FAIL line with the reason.
 import { readFileSync } from 'node:fs';
 import {
-    forWidths, previewServer, sample, LOGISTIC, importFile, goConfigure, waitReady, openMenu, noSideScroll, accessibleName,
+    forWidths, previewServer, sample, LOGISTIC, importFile, goConfigure, waitReady, openMenu, noSideScroll, accessibleName, ui,
     checkLabelInName, checkTabTo, checkFocusNotObscured, checkFocusNotObscuredAtHeight, checkAxe,
 } from './lib.mjs';
 
@@ -428,12 +428,9 @@ async function exportStep({ page, rec }) {
     await goConfigure(page);
     await importFile(page, LOGISTIC);
     const exportOnce = async () => {
-        let button = page.getByRole('button', { name: /^Export config/i }).first(); // SELECTOR: confirm ("Export Config" in the header)
-        if (!(await button.isVisible().catch(() => false))) {
-            // narrow windows keep Export in the ⋮ menu
-            await openMenu(page);
-            button = page.getByRole('menuitem', { name: /export/i }).first(); // SELECTOR: confirm
-        }
+        // 2.1: Save build file, a ⋮ menu item at every width
+        await openMenu(page);
+        const button = ui.exportConfig(page);
         const [download] = await Promise.all([page.waitForEvent('download', { timeout: 5000 }), button.click()]);
         return readFileSync(await download.path(), 'utf8');
     };

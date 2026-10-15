@@ -298,9 +298,11 @@ async function run() {
     // ------------------------------------------------------------ 4. Export has no flag (B5)
     await step('4-export-no-flag', async () => {
         await page.evaluate(() => window.scrollTo(0, 0));
+        // 2.1: Save build file, a ⋮ menu item at every width
+        await page.getByRole('button', { name: 'More options' }).click();
         const [download] = await Promise.all([
             page.waitForEvent('download'),
-            page.getByRole('button', { name: 'Export Config' }).click(),
+            page.getByRole('menuitem', { name: 'Save build file' }).click(),
         ]);
         const text = readFileSync(await download.path(), 'utf8');
         const storage = await page.evaluate((key) => localStorage.getItem(key) ?? '', STORAGE_KEY);

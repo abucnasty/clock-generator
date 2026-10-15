@@ -1,12 +1,18 @@
-import { Download, Upload, ContentPaste, MoreVert, RestartAlt } from '@mui/icons-material';
+import { Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, HelpOutline } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, lighten, useMediaQuery, useTheme } from '@mui/material';
-import { useRef, useState, useCallback } from 'react';
-import type { Config } from 'clock-generator/browser';
+import { useRef, useState, useCallback, useImperativeHandle, type Ref } from 'react';
+import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
 import { useDismissMessage, useNotify } from '../hooks/useMessages';
-import { countOf, describePaste, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
+import { useGameNames } from '../hooks/useGameNames';
+import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
+import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
+import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
+import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
+import type { ExampleBuild } from '../utils/exampleBuilds';
+import { focusTargetOutputHeading } from '../utils/introCard';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -16,14 +22,21 @@ import type {
     MiningDrillConfiguration,
     PastedEntities,
 } from '../worker/types';
+import { PasteFromFactorioDialog } from './PasteFromFactorioDialog';
+import { ExamplesDialog } from './ExamplesDialog';
 
-const EXPORTED_MESSAGE = 'Build exported.';
+const SAVED_MESSAGE = 'Build saved to a file.';
+const TARGET_CAPTION_ID = 'paste-target-caption';
+const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 
 interface PendingImport extends PastedEntities {
     miningProductivityLevel?: number;
+    /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
+    fill: { values: TargetValues; source: SuggestedTarget['source'] } | null;
 }
 
 interface ImportSelections {
+    target: boolean;
     machines: boolean;
     drills: boolean;
     inserters: boolean;
@@ -31,10 +44,21 @@ interface ImportSelections {
     chests: boolean;
 }
 
+/** What the intro card starts in here */
+export interface BuildEntryHandle {
+    /** Reads the clipboard, so it must be called from the click itself */
+    pasteFromFactorio: () => void;
+    openExamples: () => void;
+}
+
 interface ConfigImportExportProps {
-    /** Null disables Export */
+    ref?: Ref<BuildEntryHandle>;
+    /** Null disables Save build file */
     config: Config | null;
+    /** The form's Target Output, which a paste fills in only when its recipe is empty */
+    target: TargetValues;
     onImport: (config: Config) => void;
+    onReplaceTarget: (target: TargetValues) => void;
     onReplaceMachines: (machines: MachineConfiguration[]) => void;
     onReplaceDrills: (drills: MiningDrillConfiguration[]) => void;
     onReplaceInserters: (inserters: InserterConfiguration[]) => void;
@@ -42,15 +66,22 @@ interface ConfigImportExportProps {
     onReplaceChests: (chests: ChestConfiguration[]) => void;
     onUpdateMiningProductivityLevel: (level: number) => void;
     onReset: () => void;
-    /** Called after Import, Paste or Reset replaced the build, so the clocks and validation of the old one go */
+    /** Called after Open, Paste, an example or Reset replaced the build, so the clocks and the check of the old one go */
     onBuildReplaced: () => void;
     /** Call just before the build is replaced, so the app can snapshot it for Undo; the message says what happened */
     onUndoable: (message: string) => void;
+    /** "Getting started": shows the intro card again */
+    onShowIntro: () => void;
+    /** The intro card is shown, with its own filled Paste: the header's is outlined then, one filled next step per state */
+    introShown: boolean;
 }
 
 export function ConfigImportExport({
+    ref,
     config,
+    target: currentTarget,
     onImport,
+    onReplaceTarget,
     onReplaceMachines,
     onReplaceDrills,
     onReplaceInserters,
@@ -60,13 +91,16 @@ export function ConfigImportExport({
     onReset,
     onBuildReplaced,
     onUndoable,
+    onShowIntro,
+    introShown,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    // below 900px the app bar has room for the title and the menu only: Import and Export move into the menu
-    const narrow = useMediaQuery(useTheme().breakpoints.down('md'));
+    // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
+    const narrow = useMediaQuery(useTheme().breakpoints.down('sm'));
     const notify = useNotify();
+    const { recipeLabel } = useGameNames();
     const dismiss = useDismissMessage();
-    // the last "Failed to import" or "Failed to paste", which goes as soon as the player tries again
+    // the last error of opening a build file or loading an example, which goes as soon as the player tries again
     const errorIdRef = useRef<number | null>(null);
     const closeLastError = useCallback(() => {
         if (errorIdRef.current !== null) {
@@ -82,12 +116,21 @@ export function ConfigImportExport({
     // State for the import confirmation modal
     const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
     const [importSelections, setImportSelections] = useState<ImportSelections>({
+        target: false,
         machines: true,
         drills: true,
         inserters: true,
         belts: true,
         chests: true,
     });
+
+    // the Paste from Factorio dialog, open when the clipboard could not be used, with why
+    const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number } | null>(null);
+    const promptCountRef = useRef(0);
+    const showPastePrompt = useCallback((prompt: PastePrompt) => setPasteDialog({ prompt, id: ++promptCountRef.current }), []);
+    // what had the focus when the confirm dialog opened, for it to go back to; see handleConfirmExited
+    const confirmOpenerRef = useRef<Element | null>(null);
+    const [examplesOpen, setExamplesOpen] = useState(false);
 
     const handleExport = useCallback(() => {
         if (!config) return;
@@ -102,152 +145,162 @@ export function ConfigImportExport({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        notify({ severity: 'success', text: EXPORTED_MESSAGE });
+        notify({ severity: 'success', text: SAVED_MESSAGE });
     }, [config, notify]);
 
     const handleImportClick = useCallback(() => {
         fileInputRef.current?.click();
     }, []);
 
+    /** Replaces the build with the one a build file holds; throws when the text is not one */
+    const importConfigText = useCallback(async (text: string, undoMessage: string) => {
+        // values out of bounds are kept, for the form to show; only a broken file is rejected
+        const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
+        // its Undo message says what replaced the build
+        onUndoable(undoMessage);
+        onImport(parsedConfig);
+        onBuildReplaced();
+    }, [onImport, onBuildReplaced, onUndoable]);
+
+    /**
+     * Reads an export of the Sidecar mod and opens the confirm dialog for it. Returns why it could not, for the Paste
+     * from Factorio dialog to say, or null once the confirm dialog is open.
+     */
+    const startPaste = useCallback(async (text: string): Promise<PastePrompt | null> => {
+        const read = readSidecarExport(text);
+        if (read.kind === 'problem') {
+            return PASTE_PROMPTS[read.problem];
+        }
+        let validated: PastedEntities;
+        try {
+            // each list checked against its schema
+            validated = await askEngine({
+                kind: 'pasted-entities',
+                machines: read.machines,
+                drills: read.drills,
+                inserters: read.inserters,
+                belts: read.belts,
+                chests: read.chests,
+                sidecar_version: read.sidecarVersion,
+                suggested_target: read.suggestedTarget,
+            });
+        } catch (error) {
+            console.error('Paste from Factorio error:', error);
+            return invalidExportPrompt(error instanceof Error ? error.message : 'Unknown error');
+        }
+        const suggestion = Option.toNullable(validated.suggested_target);
+        const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source } : null;
+        confirmOpenerRef.current = document.activeElement;
+        setPendingImport({ ...validated, miningProductivityLevel: read.miningProductivityLevel, fill });
+        // everything there is, except a target the player has already set; the first exports had machines only
+        setImportSelections({
+            target: fill !== null && currentTarget.recipe === '',
+            machines: validated.machines.length > 0,
+            drills: !read.legacy && validated.drills.length > 0,
+            inserters: !read.legacy && validated.inserters.length > 0,
+            belts: !read.legacy && validated.belts.length > 0,
+            chests: !read.legacy && validated.chests.length > 0,
+        });
+        return null;
+    }, [currentTarget.recipe]);
+
     const handleFileChange = useCallback(
         async (event: React.ChangeEvent<HTMLInputElement>) => {
-            const file = event.target.files?.[0];
+            const input = event.target;
+            const file = input.files?.[0];
             if (!file) return;
             closeLastError();
 
             try {
                 const content = await file.text();
-                // values out of bounds are kept, for the form to show; only a broken file is rejected
-                const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(content) });
-
-                // its Undo message says it was imported
-                onUndoable(UNDO_IMPORT_MESSAGE);
-                onImport(parsedConfig);
-                onBuildReplaced();
+                if (looksLikeSidecarExport(content)) {
+                    // an export of the mod saved to a file goes to the paste
+                    const prompt = await startPaste(content);
+                    if (prompt) {
+                        showPastePrompt(prompt);
+                    }
+                } else {
+                    await importConfigText(content, UNDO_IMPORT_MESSAGE);
+                }
             } catch (error) {
-                console.error('Import error:', error);
-                errorIdRef.current = notify({ severity: 'error', text: `Failed to import: ${error instanceof Error ? error.message : 'Unknown error'}` });
+                console.error('Open build file error:', error);
+                errorIdRef.current = notify({ severity: 'error', text: openFileProblem(error) });
             }
 
-            // Reset the input so the same file can be imported again
-            event.target.value = '';
+            // Reset the input so the same file can be opened again
+            input.value = '';
         },
-        [closeLastError, onImport, onBuildReplaced, onUndoable, notify]
+        [closeLastError, startPaste, importConfigText, notify, showPastePrompt]
     );
 
-    const handlePasteFromFactorio = useCallback(async () => {
+    // the clipboard is read in the click itself: a browser refuses a read after an await or a timer
+    const handlePasteFromFactorio = useCallback(() => {
+        closeLastError();
+        let reading: Promise<string>;
+        try {
+            reading = navigator.clipboard.readText();
+        } catch (error) {
+            // no clipboard API: a page not served over https, or an old browser
+            reading = Promise.reject(error);
+        }
+        reading.then(
+            async (text) => {
+                const prompt = await startPaste(text);
+                if (prompt) {
+                    showPastePrompt(prompt);
+                }
+            },
+            () => showPastePrompt(PASTE_PROMPTS.unreadable),
+        );
+    }, [closeLastError, startPaste, showPastePrompt]);
+
+    // a paste into the dialog's box, or Continue; one at a time
+    const pasteBusyRef = useRef(false);
+    const handlePasteSubmit = useCallback(async (text: string) => {
+        if (pasteBusyRef.current) return;
+        pasteBusyRef.current = true;
+        const prompt = await startPaste(text);
+        pasteBusyRef.current = false;
+        if (prompt) {
+            showPastePrompt(prompt);
+        } else {
+            setPasteDialog(null);
+        }
+    }, [startPaste, showPastePrompt]);
+
+    const handleClosePasteDialog = useCallback(() => setPasteDialog(null), []);
+
+    const handlePickExample = useCallback(async (example: ExampleBuild) => {
+        setExamplesOpen(false);
         closeLastError();
         try {
-            const clipboardText = await navigator.clipboard.readText();
-            
-            // Try to parse as JSON
-            let parsed: unknown;
-            try {
-                parsed = JSON.parse(clipboardText);
-            } catch {
-                throw new Error('Clipboard does not contain valid JSON. Make sure to copy from the Factorio mod.');
+            const response = await fetch(`/examples/${example.file}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
-
-            // Check if it's the new format with machines and drills
-            if (typeof parsed === 'object' && parsed !== null && 'machines' in parsed) {
-                const data = parsed as { 
-                    machines?: unknown[]; 
-                    drills?: { mining_productivity_level?: number; configs?: unknown[] } | unknown[]; 
-                    inserters?: unknown[]; 
-                    belts?: unknown[];
-                    chests?: unknown[];
-                    sidecar_version?: unknown;
-                    suggested_target?: unknown;
-                };
-                
-                const machineCount = Array.isArray(data.machines) ? data.machines.length : 0;
-                // Handle new drills format: { mining_productivity_level, configs: [...] }
-                const drillsData = data.drills;
-                const drillConfigs = drillsData && typeof drillsData === 'object' && !Array.isArray(drillsData) && 'configs' in drillsData
-                    ? (drillsData.configs as unknown[])
-                    : (Array.isArray(drillsData) ? drillsData : []);
-                const miningProductivityLevel = drillsData && typeof drillsData === 'object' && !Array.isArray(drillsData) && 'mining_productivity_level' in drillsData
-                    ? (drillsData.mining_productivity_level as number)
-                    : undefined;
-                const drillCount = Array.isArray(drillConfigs) ? drillConfigs.length : 0;
-                const inserterCount = Array.isArray(data.inserters) ? data.inserters.length : 0;
-                const beltCount = Array.isArray(data.belts) ? data.belts.length : 0;
-                const chestCount = Array.isArray(data.chests) ? data.chests.length : 0;
-                
-                if (machineCount === 0 && drillCount === 0 && inserterCount === 0 && beltCount === 0 && chestCount === 0) {
-                    throw new Error('No machines, drills, inserters, belts, or chests found in clipboard data.');
-                }
-
-                // Validate each list against its schema
-                const validated = await askEngine({
-                    kind: 'pasted-entities',
-                    machines: data.machines,
-                    drills: drillConfigs,
-                    inserters: data.inserters,
-                    belts: data.belts,
-                    chests: data.chests,
-                    sidecar_version: data.sidecar_version,
-                    suggested_target: data.suggested_target,
-                });
-
-                // Store pending import and show confirmation modal
-                setPendingImport({ ...validated, miningProductivityLevel });
-                // Reset selections to include all available items
-                setImportSelections({
-                    machines: validated.machines.length > 0,
-                    drills: validated.drills.length > 0,
-                    inserters: validated.inserters.length > 0,
-                    belts: validated.belts.length > 0,
-                    chests: validated.chests.length > 0,
-                });
-                return;
-            }
-
-            // Legacy format: array of machines
-            if (!Array.isArray(parsed)) {
-                throw new Error('Expected machines/drills object or array from Factorio mod.');
-            }
-
-            if (parsed.length === 0) {
-                throw new Error('No machines found in clipboard data.');
-            }
-
-            // Validate each machine entry
-            const validated = await askEngine({
-                kind: 'pasted-entities',
-                machines: parsed,
-                drills: [],
-                inserters: [],
-                belts: [],
-                chests: [],
-                sidecar_version: undefined,
-                suggested_target: undefined,
-            });
-
-            // Store pending import and show confirmation modal (legacy format - machines only)
-            setPendingImport(validated);
-            setImportSelections({
-                machines: true,
-                drills: false,
-                inserters: false,
-                belts: false,
-                chests: false,
-            });
+            await importConfigText(await response.text(), exampleUndoMessage(example, recipeLabel));
         } catch (error) {
-            console.error('Paste from Factorio error:', error);
-            errorIdRef.current = notify({ severity: 'error', text: `Failed to paste: ${error instanceof Error ? error.message : 'Unknown error'}` });
+            console.error('Example error:', error);
+            errorIdRef.current = notify({ severity: 'error', text: EXAMPLE_FAILED_MESSAGE });
         }
-    }, [closeLastError, notify]);
+    }, [closeLastError, importConfigText, notify, recipeLabel]);
+
+    const openExamples = useCallback(() => setExamplesOpen(true), []);
+    const handleCloseExamples = useCallback(() => setExamplesOpen(false), []);
+
+    useImperativeHandle(ref, () => ({ pasteFromFactorio: handlePasteFromFactorio, openExamples }), [handlePasteFromFactorio, openExamples]);
 
     const handleConfirmImport = useCallback(() => {
         if (!pendingImport) return;
 
+        const fill = importSelections.target ? pendingImport.fill : null;
         const machines = importSelections.machines && pendingImport.machines.length > 0;
         const drills = importSelections.drills && pendingImport.drills.length > 0;
         const inserters = importSelections.inserters && pendingImport.inserters.length > 0;
         const belts = importSelections.belts && pendingImport.belts.length > 0;
         const chests = importSelections.chests && pendingImport.chests.length > 0;
         const parts = [
+            fill !== null && 'Target Output',
             machines && countOf(pendingImport.machines.length, 'machine', 'machines'),
             drills && countOf(pendingImport.drills.length, 'drill', 'drills'),
             inserters && countOf(pendingImport.inserters.length, 'inserter', 'inserters'),
@@ -259,12 +312,15 @@ export function ConfigImportExport({
 
         if (parts.length === 0) {
             // not a failure: nothing was ticked
-            notify({ severity: 'warning', text: 'No items selected for import.' });
+            notify({ severity: 'warning', text: 'Nothing was imported: no box was ticked.' });
             return;
         }
 
         // one Undo for the whole paste, taken before any of it is applied; its message says what was imported
         onUndoable(describePaste(parts));
+        if (fill !== null) {
+            onReplaceTarget(fill.values);
+        }
         if (machines) {
             onReplaceMachines(pendingImport.machines);
         }
@@ -285,10 +341,22 @@ export function ConfigImportExport({
             onReplaceChests(pendingImport.chests);
         }
         onBuildReplaced();
-    }, [pendingImport, importSelections, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, notify]);
+    }, [pendingImport, importSelections, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, notify]);
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);
+    }, []);
+
+    // the dialog puts the focus back itself: on its opener, unless an import took that off the page (the intro card's
+    // Paste button, or the paste box), then on the Target Output heading rather than the page's body
+    const handleConfirmExited = useCallback(() => {
+        const opener = confirmOpenerRef.current;
+        confirmOpenerRef.current = null;
+        if (opener instanceof HTMLElement && opener.isConnected) {
+            opener.focus();
+        } else {
+            focusTargetOutputHeading();
+        }
     }, []);
 
     const handleSelectionChange = useCallback((key: keyof ImportSelections) => {
@@ -306,10 +374,9 @@ export function ConfigImportExport({
         setMenuAnchorEl(null);
     }, []);
 
-    const handleMenuPasteFromFactorio = useCallback(() => {
-        handleMenuClose();
-        handlePasteFromFactorio();
-    }, [handleMenuClose, handlePasteFromFactorio]);
+    // the menu is mounted in the header, read once when it opens: it must not move while it closes
+    const menuButtonRef = useRef<HTMLButtonElement>(null);
+    const menuContainer = useCallback(() => menuButtonRef.current?.closest('header') ?? document.body, []);
 
     // the file picker and the download are only allowed from the click itself: no await or timer before them
     const handleMenuImport = useCallback(() => {
@@ -322,6 +389,16 @@ export function ConfigImportExport({
         handleExport();
     }, [handleMenuClose, handleExport]);
 
+    const handleMenuExamples = useCallback(() => {
+        handleMenuClose();
+        openExamples();
+    }, [handleMenuClose, openExamples]);
+
+    const handleMenuGettingStarted = useCallback(() => {
+        handleMenuClose();
+        onShowIntro();
+    }, [handleMenuClose, onShowIntro]);
+
     const handleMenuReset = useCallback(() => {
         handleMenuClose();
         onUndoable(UNDO_RESET_MESSAGE);
@@ -331,30 +408,23 @@ export function ConfigImportExport({
 
     return (
         <>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                {!narrow && (
-                    <Button
-                        startIcon={<Upload />}
-                        onClick={handleImportClick}
-                        variant="outlined"
-                        size="small"
-                    >
-                        Import Config
-                    </Button>
-                )}
-                {!narrow && (
-                    <Button
-                        startIcon={<Download />}
-                        onClick={handleExport}
-                        disabled={!config}
-                        variant="outlined"
-                        size="small"
-                    >
-                        Export Config
-                    </Button>
-                )}
-                <Tooltip title="More options">
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {/* the way in: below 600px it says only "Paste", and keeps its full name */}
+                <Button
+                    onClick={handlePasteFromFactorio}
+                    variant={introShown ? 'outlined' : 'contained'}
+                    color={introShown ? 'inherit' : 'secondary'}
+                    size="small"
+                    startIcon={narrow ? undefined : <ContentPaste />}
+                    aria-label={narrow ? INTRO_BUTTONS.paste : undefined}
+                    sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                >
+                    {narrow ? 'Paste' : INTRO_BUTTONS.paste}
+                </Button>
+                {/* the tooltip stays in the header, so its text is inside the banner landmark */}
+                <Tooltip title="More options" slotProps={{ popper: { disablePortal: true } }}>
                     <IconButton
+                        ref={menuButtonRef}
                         onClick={handleMenuOpen}
                         size="small"
                         color="inherit"
@@ -376,39 +446,45 @@ export function ConfigImportExport({
                         vertical: 'top',
                         horizontal: 'right',
                     }}
+                    // mounted in the header, so the menu is inside the banner landmark; the header is sticky, so the
+                    // menu stays by its button and the page needs no scroll lock
+                    container={menuContainer}
+                    disableScrollLock
                     // the plain paper colour, without the dark theme's elevation overlay (a background image), which
                     // lightens it so far that Reset's red is below 4.5:1 when hovered or focused
                     slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions }, paper: { sx: { backgroundImage: 'none' } } }}
                 >
-                    <MenuItem onClick={handleMenuPasteFromFactorio}>
+                    <MenuItem onClick={handleMenuImport}>
                         <ListItemIcon>
-                            <ContentPaste fontSize="small" />
+                            <Upload fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText>Paste from Factorio</ListItemText>
+                        <ListItemText>Open build file…</ListItemText>
                     </MenuItem>
-                    {narrow && (
-                        <MenuItem onClick={handleMenuImport}>
-                            <ListItemIcon>
-                                <Upload fontSize="small" />
-                            </ListItemIcon>
-                            <ListItemText>Import Config</ListItemText>
-                        </MenuItem>
-                    )}
-                    {narrow && (
-                        <MenuItem onClick={handleMenuExport} disabled={!config}>
-                            <ListItemIcon>
-                                <Download fontSize="small" />
-                            </ListItemIcon>
-                            <ListItemText>Export Config</ListItemText>
-                        </MenuItem>
-                    )}
+                    <MenuItem onClick={handleMenuExport} disabled={!config}>
+                        <ListItemIcon>
+                            <Download fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Save build file</ListItemText>
+                    </MenuItem>
+                    <MenuItem onClick={handleMenuExamples}>
+                        <ListItemIcon>
+                            <Science fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Try an example…</ListItemText>
+                    </MenuItem>
+                    <MenuItem onClick={handleMenuGettingStarted}>
+                        <ListItemIcon>
+                            <HelpOutline fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Getting started</ListItemText>
+                    </MenuItem>
                     <Divider />
                     {/* in the error colour, lightened to stay 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
                     <MenuItem onClick={handleMenuReset} sx={{ color: (theme) => lighten(theme.palette.error.main, 0.3) }}>
                         <ListItemIcon sx={{ color: 'inherit' }}>
                             <RestartAlt fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText>Reset Configuration</ListItemText>
+                        <ListItemText>Reset build</ListItemText>
                     </MenuItem>
                 </Menu>
             </Box>
@@ -422,11 +498,18 @@ export function ConfigImportExport({
             />
 
             {/* Import Confirmation Dialog */}
-            <Dialog open={pendingImport !== null} onClose={handleCancelImport} maxWidth="sm" fullWidth>
+            <Dialog
+                open={pendingImport !== null}
+                onClose={handleCancelImport}
+                maxWidth="sm"
+                fullWidth
+                disableRestoreFocus
+                slotProps={{ transition: { onExited: handleConfirmExited } }}
+            >
                 <DialogTitle>Confirm Import from Factorio</DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" sx={{ mb: 2 }}>
-                        Select which items you want to import. Existing items of each selected type will be replaced.
+                        Tick what to import. Each ticked part replaces the same part of your build.
                     </Typography>
                     
                     {pendingImport?.guidance && Option.match(pendingImport.guidance, {
@@ -436,6 +519,30 @@ export function ConfigImportExport({
 
                     {pendingImport && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {pendingImport.fill ? (
+                                <Box>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={importSelections.target}
+                                                onChange={() => handleSelectionChange('target')}
+                                                slotProps={{ input: { 'aria-describedby': TARGET_CAPTION_ID } }}
+                                            />
+                                        }
+                                        label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
+                                    />
+                                    <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                        {targetRowCaption(pendingImport.fill.source)}
+                                        {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
+                                    </Typography>
+                                </Box>
+                            ) : (
+                                currentTarget.recipe === '' && (
+                                    <Typography variant="body2" color="text.secondary">
+                                        {NO_TARGET_NOTE}
+                                    </Typography>
+                                )
+                            )}
                             <FormControlLabel
                                 control={
                                     <Checkbox
@@ -501,6 +608,16 @@ export function ConfigImportExport({
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {pasteDialog && (
+                <PasteFromFactorioDialog
+                    prompt={pasteDialog.prompt}
+                    promptId={pasteDialog.id}
+                    onSubmit={handlePasteSubmit}
+                    onClose={handleClosePasteDialog}
+                />
+            )}
+            {examplesOpen && <ExamplesDialog onPick={handlePickExample} onClose={handleCloseExamples} />}
         </>
     );
 }
