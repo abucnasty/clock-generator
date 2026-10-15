@@ -8,7 +8,7 @@ When the generator refuses a config because it does not model something yet, the
 
 | Id | Name | What it delivers | Status |
 |---|---|---|---|
-| M0 | Ship what is built | Release 0.13.0: the wake-ups clocks are ranked by count an inserter waiting to put items into a machine as woken by the start of a craft, not by a productivity bonus. | Released as 0.13.0 |
+| M0 | Ship what is built | Release 0.13.0: clocks are ranked by wake-ups counted at the start of a craft, which is when an inserter waiting to fill a machine is woken, not at a productivity payout. | Released as 0.13.0 |
 | M0.5 | Foundations | Release 0.14.0: Factorio 2.1.21 game data, refusals that say why, filters on belts and chests, long chains that no longer overflow, a check of copies, and inserter kind and quality. | Release 0.14.0 |
 | M1 | Calibration | Three cells that were unstable are placed in the game with the generator's best clock. The generator's rate model is compared with what machines really finish, and cells whose fluid input is dropped are checked. The result is a verdict per cell and a written finding. It is a finding, not a release. | Not started |
 | M2 | Containers | Cars and cargo wagons as chests, with wagon slots by quality taken from the game data. A rocket silo works either as a chest or as a machine, never both. Checked on cells farmed from real bases. | Not started |
