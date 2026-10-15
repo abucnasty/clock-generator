@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 import { ENTITY_NODE_WIDTH, type EntityNodeData, type MachineNodeParams } from '../utils/buildFlowGraph';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { formatNumberText, machineNodeCraftLine } from '../utils/numberText';
@@ -24,14 +25,14 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
     return (
         <Box sx={{ mt: 0.75, pt: 0.75, borderTop: '1px solid #444', width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                <FactorioIcon name={facts.output_item} size={14} />
+                <FactorioIcon name={facts.output_item} size={14} titled />
                 <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: '#fca300', lineHeight: 1.2 }}>
                     {formatNumberText(facts.output_rate_per_second)}/s out
                 </Typography>
             </Box>
             {facts.inputs.map(inp => (
                 <Box key={inp.item_name} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                    <FactorioIcon name={inp.item_name} size={14} />
+                    <FactorioIcon name={inp.item_name} size={14} titled />
                     <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2 }}>
                         {formatNumberText(inp.consumption_rate_per_second)}/s in
                     </Typography>
@@ -74,7 +75,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FactorioIcon name={data.iconName} size={32} />
+                    <FactorioIcon name={data.iconName} size={32} titled />
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
@@ -92,7 +93,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         {data.sublabel && (
                             <Typography
                                 variant="caption"
-                                title={data.sublabel}
+                                title={data.entityType === 'machine' ? undefined : data.sublabel}
                                 sx={{
                                     color: 'text.secondary',
                                     display: 'block',
@@ -103,13 +104,15 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                                     whiteSpace: 'nowrap',
                                 }}
                             >
-                                {data.sublabel}
+                                {data.entityType === 'machine' && data.machineParams?.recipe
+                                    ? <GameName id={data.machineParams.recipe} kind="recipe" />
+                                    : data.sublabel}
                             </Typography>
                         )}
                         {data.filterIcons && data.filterIcons.length > 0 && (
                             <Box sx={{ display: 'flex', gap: 0.25, mt: 0.25, flexWrap: 'wrap' }}>
                                 {data.filterIcons.slice(0, 4).map(icon => (
-                                    <FactorioIcon key={icon} name={icon} size={14} />
+                                    <FactorioIcon key={icon} name={icon} size={14} titled />
                                 ))}
                             </Box>
                         )}

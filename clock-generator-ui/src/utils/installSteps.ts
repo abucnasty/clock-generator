@@ -128,12 +128,24 @@ export function installSteps(input: InstallInput): InstallStep[] {
     ];
 }
 
+/** What an inserter or drill moves and between which ends: the item ids (the page shows them as icons) and "Belt 1 to Machine 1" */
+export interface WiringMoves {
+    items: string[];
+    route: string;
+}
+
+/** One inserter or drill to wire to a combinator's output */
+interface WiringEntry extends WiringMoves {
+    /** "Inserter 1", "Drill 2" */
+    label: string;
+}
+
 /** One combinator's row of the wiring list */
 export interface WiringRow {
     /** As its description starts: "Inserters 1, 5", "Drill 2" */
     combinator: string;
-    /** What to wire to it, one line each: "Inserter 1 — iron-plate: Belt 1 to Machine 1" */
-    entries: string[];
+    /** What to wire to it, one line each */
+    entries: WiringEntry[];
 }
 
 /** "Inserters 1, 5" or "Drill 2", as the engine's description header names a combinator's entities */
@@ -141,11 +153,11 @@ const namesText = (kind: 'Inserter' | 'Drill', ids: number[]) => `${kind}${ids.l
 
 /**
  * The wiring list: one row per combinator, inserters first and then drills, each ordered by its first number, with
- * what each inserter or drill carries and between which ends (`detailOf`, keyed "inserter:3"; empty when unknown).
+ * what each inserter or drill moves and between which ends (`movesOf`, keyed "inserter:3"; empty when unknown).
  */
 export function wiringList(
     facts: Pick<InstallInput, 'wiring' | 'drills'>,
-    detailOf: (id: string) => string,
+    movesOf: (id: string) => WiringMoves,
 ): WiringRow[] {
     const rows = (kind: 'Inserter' | 'Drill', groups: number[][]) => groups
         .map(ids => [...ids].sort((a, b) => a - b))
@@ -153,10 +165,8 @@ export function wiringList(
         .sort((a, b) => a[0] - b[0])
         .map(ids => ({
             combinator: namesText(kind, ids),
-            entries: ids.map(id => {
-                const detail = detailOf(`${kind.toLowerCase()}:${id}`);
-                return detail ? `${kind} ${id} — ${detail}` : `${kind} ${id}`;
-            }),
+            entries: ids.map(id => ({ label: `${kind} ${id}`, ...movesOf(`${kind.toLowerCase()}:${id}`) })),
         }));
     return [...rows('Inserter', facts.wiring), ...rows('Drill', facts.drills)];
 }
+

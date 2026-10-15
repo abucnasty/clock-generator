@@ -3,7 +3,9 @@ import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '
 import { useId, useState } from 'react';
 import type { ClockInstallFacts } from '../worker/installFacts';
 import { WIRING_LIST_NAME } from '../utils/a11yLabels';
-import { INSTALL_COPY, installSteps, wiringList, type WiringRow } from '../utils/installSteps';
+import { INSTALL_COPY, installSteps, wiringList, type WiringMoves, type WiringRow } from '../utils/installSteps';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { WakeRowMoves } from './WakeRowMoves';
 
 /** Where the steps being folded away is remembered, so a player who knows them is not shown them again */
 const COLLAPSED_KEY = 'clock-generator-install-steps-collapsed';
@@ -37,32 +39,58 @@ function writeCollapsed(collapsed: boolean) {
 
 interface InstallStepsProps {
     install: ClockInstallFacts;
-    /** What an inserter or drill carries and between which ends, by entity id ("inserter:3"); empty when unknown */
-    detailOf: (id: string) => string;
+    /** What an inserter or drill moves and between which ends, by entity id ("inserter:3"); empty when unknown */
+    movesOf: (id: string) => WiringMoves;
     /** The clocks are for an earlier build: the wiring list would name inserters of a build that has changed */
     stale: boolean;
+}
+
+/**
+ * One inserter or drill: "Inserter 1 — [icon]: Belt 1 to Machine 1", the item as its icon (Wake windows' rows do the same);
+ * a screen reader hears "Inserter 1, Iron plate: Belt 1 to Machine 1"
+ */
+function WiringEntryText({ entry }: { entry: WiringRow['entries'][number] }) {
+    const moves = entry.items.length > 0 || entry.route !== '';
+    return (
+        <>
+            {entry.label}
+            {moves && (
+                <>
+                    <span aria-hidden="true"> — </span>
+                    <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>
+                    <WakeRowMoves row={entry} />
+                </>
+            )}
+        </>
+    );
 }
 
 /** One combinator: what it is called, then what to wire to its output (one line when it serves one inserter) */
 function WiringItem({ row }: { row: WiringRow }) {
     if (row.entries.length === 1) {
-        return <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator}>{row.entries[0]}</Box>;
+        return (
+            <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator} data-wiring-entry="">
+                <WiringEntryText entry={row.entries[0]} />
+            </Box>
+        );
     }
     return (
         <Box component="li" sx={{ py: 0.5 }} data-wiring-row={row.combinator}>
             <Box component="span" sx={{ fontWeight: 600 }}>{row.combinator}</Box>
             <Box component="span" sx={{ color: 'text.secondary' }}> ({INSTALL_COPY.oneCombinator})</Box>
             <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-                {row.entries.map(entry => <li key={entry}>{entry}</li>)}
+                {row.entries.map(entry => (
+                    <li key={entry.label} data-wiring-entry=""><WiringEntryText entry={entry} /></li>
+                ))}
             </Box>
         </Box>
     );
 }
 
 /** What to wire to each combinator: what each inserter carries and between which ends */
-function WiringList({ install, detailOf }: Pick<InstallStepsProps, 'install' | 'detailOf'>) {
+function WiringList({ install, movesOf }: Pick<InstallStepsProps, 'install' | 'movesOf'>) {
     const captionId = useId();
-    const rows = wiringList(install, detailOf);
+    const rows = wiringList(install, movesOf);
     const scrolls = linesOf(rows) > WIRING_ROWS_SHOWN;
     return (
         <Box
@@ -99,7 +127,7 @@ function WiringList({ install, detailOf }: Pick<InstallStepsProps, 'install' | '
  * The numbered steps that put the clock into the game, with the list of what to wire to each combinator. Open unless
  * the player folded it away; while the clocks are for an earlier build, only one line.
  */
-export function InstallSteps({ install, detailOf, stale }: InstallStepsProps) {
+export function InstallSteps({ install, movesOf, stale }: InstallStepsProps) {
     const [expanded, setExpanded] = useState(() => !readCollapsed());
     const summaryId = useId();
     const detailsId = useId();
@@ -129,7 +157,7 @@ export function InstallSteps({ install, detailOf, stale }: InstallStepsProps) {
                             <Box component="li" key={step.id} sx={{ mb: 1.5 }} data-install-step={step.id}>
                                 <Typography variant="body2" component="p" sx={{ fontWeight: 600 }}>{step.title}</Typography>
                                 <Typography variant="body2" component="p" color="text.secondary">{step.detail}</Typography>
-                                {(step.id === 'wire' || step.id === 'drills') && <WiringList install={install} detailOf={detailOf} />}
+                                {(step.id === 'wire' || step.id === 'drills') && <WiringList install={install} movesOf={movesOf} />}
                             </Box>
                         ))}
                     </Box>

@@ -17,6 +17,7 @@ import {
 } from '@xyflow/react';
 import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { Add, Fullscreen, InfoOutlined } from '@mui/icons-material';
+import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph, flowNodeEntity } from '../utils/buildFlowGraph';
 import { EntityFlowNode } from './EntityFlowNode';
@@ -174,9 +175,10 @@ function FlowContent({
         }
     }, [nodeSizes, fitView, fitViewOptions]);
 
+    const { itemLabel, recipeLabel } = useGameNames();
     const { nodes: graphNodes, edges } = useMemo(
-        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode),
-        [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode],
+        () => buildFlowGraph(machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, { itemLabel, recipeLabel }),
+        [machines, inserters, belts, chests, drills, getRecipeInfo, detailedMode, itemLabel, recipeLabel],
     );
     // hovering or focusing one half of a belt drawn twice outlines the other half
     const twinId = twinNodeId(hoveredNodeId) ?? twinNodeId(focusedNodeId);

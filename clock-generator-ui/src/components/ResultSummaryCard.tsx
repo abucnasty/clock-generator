@@ -156,9 +156,9 @@ function ClockCopy(props: SelectedProps) {
     const warns = props.rateWarning !== null || props.stale;
     // what each inserter and drill carries and between which ends, as the Wake windows rows say it
     const { selected } = props;
-    const detailOf = useMemo(() => {
-        const details = new Map(buildWakeWindowRows(selected).map(row => [row.id, row.detail]));
-        return (id: string) => details.get(id) ?? '';
+    const movesOf = useMemo(() => {
+        const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
+        return (id: string) => moves.get(id) ?? { items: [], route: '' };
     }, [selected]);
     return (
         <>
@@ -185,7 +185,7 @@ function ClockCopy(props: SelectedProps) {
                 <Typography variant="body2" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
             </Box>}
 
-            <InstallSteps install={props.selected.install} detailOf={detailOf} stale={props.stale} />
+            <InstallSteps install={props.selected.install} movesOf={movesOf} stale={props.stale} />
         </>
     );
 }

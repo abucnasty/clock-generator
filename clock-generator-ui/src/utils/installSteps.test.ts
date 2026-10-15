@@ -98,31 +98,41 @@ describe('installSteps', () => {
 });
 
 describe('wiringList', () => {
-    const details: Record<string, string> = {
-        'inserter:1': 'iron-plate: Belt 1 to Machine 1',
-        'inserter:2': 'copper-cable: Machine 2 to Machine 1',
-        'drill:1': 'stone: to Machine 3',
+    const moves: Record<string, { items: string[]; route: string }> = {
+        'inserter:1': { items: ['iron-plate'], route: 'Belt 1 to Machine 1' },
+        'inserter:2': { items: ['copper-cable'], route: 'Machine 2 to Machine 1' },
+        'drill:1': { items: ['stone'], route: 'into Machine 3' },
     };
-    const detailOf = (id: string) => details[id] ?? '';
+    const none = { items: [], route: '' };
+    const movesOf = (id: string) => moves[id] ?? none;
 
     it('has one row per combinator, inserters then drills, ordered by the first number', () => {
-        const rows = wiringList({ wiring: [[3], [2, 1], [10]], drills: [[1]] }, detailOf);
+        const rows = wiringList({ wiring: [[3], [2, 1], [10]], drills: [[1]] }, movesOf);
         expect(rows.map(it => it.combinator)).toEqual(['Inserters 1, 2', 'Inserter 3', 'Inserter 10', 'Drill 1']);
     });
 
-    it('says what each inserter carries and between which ends, one line each', () => {
-        const [merged, single] = wiringList({ wiring: [[2, 1], [3]], drills: [] }, detailOf);
-        expect(merged.entries).toEqual(['Inserter 1 — iron-plate: Belt 1 to Machine 1', 'Inserter 2 — copper-cable: Machine 2 to Machine 1']);
-        expect(single.entries).toEqual(['Inserter 3']);
+    it('gives each inserter its item ids (shown as icons) and its ends, one entry each', () => {
+        const [merged, single] = wiringList({ wiring: [[2, 1], [3]], drills: [] }, movesOf);
+        expect(merged.entries).toEqual([
+            { label: 'Inserter 1', items: ['iron-plate'], route: 'Belt 1 to Machine 1' },
+            { label: 'Inserter 2', items: ['copper-cable'], route: 'Machine 2 to Machine 1' },
+        ]);
+        expect(single.entries).toEqual([{ label: 'Inserter 3', items: [], route: '' }]);
+    });
+
+    it('gives a drill its item and where it mines into', () => {
+        const [drill] = wiringList({ wiring: [], drills: [[1]] }, movesOf);
+        expect(drill.entries).toEqual([{ label: 'Drill 1', items: ['stone'], route: 'into Machine 3' }]);
     });
 
     it('names each inserter once, by its number, never by an entity id', () => {
-        const rows = wiringList({ wiring: [[1, 22], [3]], drills: [[4, 2]] }, () => '');
-        expect(rows.flatMap(it => it.entries)).toEqual(['Inserter 1', 'Inserter 22', 'Inserter 3', 'Drill 2', 'Drill 4']);
+        const rows = wiringList({ wiring: [[1, 22], [3]], drills: [[4, 2]] }, () => none);
+        expect(rows.flatMap(it => it.entries.map(entry => entry.label))).toEqual(['Inserter 1', 'Inserter 22', 'Inserter 3', 'Drill 2', 'Drill 4']);
         expect(rows.map(it => it.combinator)).toEqual(['Inserters 1, 22', 'Inserter 3', 'Drills 2, 4']);
     });
 
     it('drops an empty row', () => {
-        expect(wiringList({ wiring: [[], [5, 4]], drills: [[]] }, () => '').map(it => it.combinator)).toEqual(['Inserters 4, 5']);
+        expect(wiringList({ wiring: [[], [5, 4]], drills: [[]] }, () => none).map(it => it.combinator)).toEqual(['Inserters 4, 5']);
     });
 });
+

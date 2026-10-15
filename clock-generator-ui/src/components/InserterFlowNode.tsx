@@ -48,7 +48,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                 {data.filterIcons && data.filterIcons.length > 0 && (
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                         {data.filterIcons.map(icon => (
-                            <FactorioIcon key={icon} name={icon} size={14} />
+                            <FactorioIcon key={icon} name={icon} size={14} titled />
                         ))}
                     </Box>
                 )}

@@ -1508,7 +1508,9 @@ function gameNames() {
  * scripts do not change. Set UI_DIR to the checkout whose build you are driving.
  */
 export function itemLabel(id) {
-    const entry = gameNames()[id];
+    // the data file keys the names by kind ({ item: {...}, recipe: {...} }, 2.8 a); a flat map is read as it is
+    const names = gameNames();
+    const entry = names.item?.[id] ?? names[id];
     return typeof entry === 'string' ? entry : (entry?.name ?? id);
 }
 
