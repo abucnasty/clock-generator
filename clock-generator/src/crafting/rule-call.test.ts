@@ -60,7 +60,7 @@ describe("ruleCallOf, in true starts (the call)", () => {
 
     it("says why the call is in true starts, and that its thresholds are still a prediction", () => {
         const text = RULE_CALL_CAVEATS.join(" ");
-        expect(text).toMatch(/D7 a1: measured on one build/);
+        expect(text).toMatch(/D7 a1: confirmed on two designs/);
         expect(text).toMatch(/51.28 leave unwired, 170.17 a marginal clock/);
         expect(text).toMatch(/prediction/);
     });
