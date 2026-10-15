@@ -1398,9 +1398,6 @@ export async function checkMouseActivationVisible(rec, page, locator, label) {
 // Every `ui` entry is a function `(page, ...args) => Locator` (never awaited, so it can be chained and counted). Entries that
 // the app shows only in some states resolve to 0 elements elsewhere; the comment says when.
 
-/** The width at which Import Config / Export Config are header buttons (below it they are items of the ⋮ menu) */
-export const WIDE_HEADER = 900;
-const isWide = (page) => (page.viewportSize()?.width ?? 1440) >= WIDE_HEADER;
 const btn = (page, name, exact = true) => page.getByRole('button', { name, exact });
 /** A Configure card: the Paper that holds the card's h2 (the innermost one, so a wrapping Paper is not taken) */
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
@@ -1423,16 +1420,18 @@ export const ui = {
     menuButton: (page) => btn(page, 'More options'),
     /** The open ⋮ menu; 0 while it is closed (owner: 1.7 header) */
     menu: (page) => page.getByRole('menu', { name: 'More options' }),
-    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. Paste from Factorio, Reset Configuration always; Import Config / Export Config below 900 px (owner: 1.7 header) */
+    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Try an example…, Getting started, Reset build (owner: 2.1 first visit) */
     menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
-    /** Paste from Factorio: ⋮ menu item at every width (owner: 1.7 header) */
-    pasteFromFactorio: (page) => ui.menuItem(page, 'Paste from Factorio'),
-    /** Reset Configuration: ⋮ menu item at every width (owner: 1.7 header) */
-    reset: (page) => ui.menuItem(page, 'Reset Configuration'),
-    /** Import Config: header button at 900 px and up, ⋮ menu item below it (then it resolves only while the menu is open; use chooseMenuItem) (owner: 1.7 header) */
-    importConfig: (page) => (isWide(page) ? btn(page, 'Import Config') : ui.menuItem(page, 'Import Config')),
-    /** Export Config: header button at 900 px and up, ⋮ menu item below it (see importConfig) (owner: 1.7 header) */
-    exportConfig: (page) => (isWide(page) ? btn(page, 'Export Config') : ui.menuItem(page, 'Export Config')),
+    /** Paste from Factorio: the filled button in the header at every width; it reads "Paste" below 600 px, with the same name (owner: 2.1 first visit) */
+    pasteFromFactorio: (page) => page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }),
+    /** Reset build: ⋮ menu item at every width (owner: 2.1 first visit) */
+    reset: (page) => ui.menuItem(page, 'Reset build'),
+    /** Open build file… (was Import Config): ⋮ menu item at every width; resolves only while the menu is open, so use chooseMenuItem (owner: 2.1 first visit) */
+    importConfig: (page) => ui.menuItem(page, 'Open build file…'),
+    /** Save build file (was Export Config): ⋮ menu item at every width (see importConfig) (owner: 2.1 first visit) */
+    exportConfig: (page) => ui.menuItem(page, 'Save build file'),
+    /** The intro card above Target Output: shown on a blank build until closed, and from Getting started in the ⋮ menu (owner: 2.1 first visit) */
+    introCard: (page) => page.getByRole('region', { name: 'Make a clock for your build' }),
 
     // ---- Configure
     /** The Advanced Overrides (Optional) accordion button (owner: 1.x Advanced) */
@@ -1539,14 +1538,10 @@ export async function openMoreMenu(page, { timeout = 5000 } = {}) {
 }
 
 /**
- * Picks an item by name at any width. Import Config and Export Config are header buttons at 900 px and up (clicked there),
- * ⋮ menu items below; every other item is opened from the menu. Waits for the menu to close after a menu item.
+ * Picks an item of the ⋮ menu by name, at any width (every item is in the menu: Paste from Factorio is a header button,
+ * `ui.pasteFromFactorio`). Waits for the menu to close after the item.
  */
 export async function chooseMenuItem(page, name, { timeout = 5000 } = {}) {
-    if (isWide(page) && (name === 'Import Config' || name === 'Export Config')) {
-        await btn(page, name).click({ timeout });
-        return;
-    }
     const menu = await openMoreMenu(page, { timeout });
     const item = menu.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name });
     try {

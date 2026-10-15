@@ -55,8 +55,7 @@ try {
         async function paste(exported) {
             await page.evaluate(() => (window.__answers = []));
             await page.evaluate((text) => navigator.clipboard.writeText(text), JSON.stringify(exported, null, 2));
-            await openMenu(page);
-            await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+            await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click(); // 2.1: a header button, not a menu item
             await page.getByRole('dialog', { name: 'Confirm Import from Factorio' }).waitFor({ timeout: 15_000 });
             await page.waitForTimeout(300);
             return page.evaluate(() => window.__answers.find((a) => a && typeof a === 'object' && JSON.stringify(a).includes('"suggested_target"')) ?? null);

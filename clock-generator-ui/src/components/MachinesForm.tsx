@@ -19,6 +19,7 @@ import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
+import { SidecarModLink } from './IntroCard';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
@@ -85,7 +86,12 @@ function MachinesFormComponent({
                     >
                         <Box sx={{ p: 2, maxWidth: 350 }}>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                                To get the crafting speed of a machine in Factorio, hover over the machine and run this command:
+                                The <SidecarModLink /> copies the crafting speeds of your build: then click Paste from
+                                Factorio.
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                Without it, hover over a machine in Factorio and run this command. A /c command turns off
+                                achievements for that save.
                             </Typography>
                             <Box
                                 sx={{

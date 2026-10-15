@@ -15,6 +15,8 @@ export const PROBLEM_TEXT = {
     missingInput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter bringing in ${item}`,
     missingOutput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter taking ${item} out`,
     validationFailed: 'The last check failed. Show why',
+    /** On a build with nothing entered yet: its next step, said neutrally rather than as problems */
+    start: 'Start: pick the recipe you want to make',
 } as const;
 
 /** The ids of the elements a problem moves the keyboard focus to; the forms set them from here */
@@ -108,15 +110,20 @@ export function firstProblemOf(input: ProblemsInput): Problem | null {
 
 /**
  * The one note in the workflow bar, which says where Generate and Check only go: the first problem, else the reason the
- * last check failed. Null while something runs (the buttons then say what it is) or when there is nothing to say.
+ * last check failed. Null while something runs (the buttons then say what it is) or when there is nothing to say. On a
+ * `blank` build (nothing entered yet) the problems are only the next step: the note says where to start.
  */
-export function barNoteOf({ problems, busy, checkStatus }: {
+export function barNoteOf({ problems, busy, checkStatus, blank = false }: {
     problems: Problem[];
     busy: boolean;
     checkStatus: CheckStatus;
+    blank?: boolean;
 }): Problem | null {
     if (busy) {
         return null;
+    }
+    if (blank && problems.length > 0) {
+        return { text: PROBLEM_TEXT.start, target: { kind: 'target-recipe' } };
     }
     if (problems.length > 0) {
         return problems[0];
