@@ -11,14 +11,14 @@ From 0.6.0 on, it lists only what people generating clocks will notice. Changes 
 ## [0.14.0] - 2026-10-15
 
 ### Changed
-- The game data is from Factorio 2.1.21: the ore melting recipes are named as 2.1 names them (iron ore melting, copper ore melting), every recipe carries 2.1's list of crafting categories, and the version of the game the data came from is recorded and shown in the header of the clocking advice. No clock, selection or call on the sample builds changes with the data.
-- A build that cannot be clocked is refused with the reason: a recipe whose only products are fluids says so (fluid products wait on a later release), and a car, cargo wagon, rocket silo or recycler in a config says it is not supported yet and which release brings it, instead of listing the kinds that are.
-- An inserter dropping onto a belt or into a chest may be filtered to any item, such as the spoilage it clears off a machine. Before, a filter had to name something the sink used, which refused such builds.
-- An inserter in a config can name its kind and quality (`prototype`, such as "fast-inserter", and `quality`, such as "rare"), and its swing and full-research hand are worked out from the game data; `stack_size` is now optional and overrides the hand. Without them an inserter is a legendary stack inserter, as before. Picking up from and dropping onto a belt are timed as for the legendary stack inserter for every kind, and every kind is simulated as waiting for a full hand, as the stack inserter does: both are not checked for other inserters yet. The burner inserter is refused. The web form does not offer the two fields yet.
-- A config that holds several identical copies of one unit side by side (the same machines and inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`. What `copies` assumes is documented, with how to give Node a larger heap for a chain that has no repeating unit.
+- Game data from Factorio 2.1.21; the calls header shows the game version.
+- Unsupported builds are refused with the reason and the roadmap item that adds them (docs/ROADMAP.md).
+- Inserters onto a belt or into a chest may filter any item.
+- Inserters can name their kind and quality (`prototype`, `quality`); `stack_size` is now optional. Belt timing for kinds other than the legendary stack inserter is not checked yet.
+- A config that repeats one unit several times is refused; describe one unit and set `copies`.
 
 ### Fixed
-- Long production chains with uneven crafting speeds no longer fail with "Invalid input format" from the fraction arithmetic. A fraction that outgrows exact arithmetic is bounded instead of thrown away.
+- Long chains no longer fail with "Invalid input format".
 
 ## [0.13.0] - 2026-10-15
 
