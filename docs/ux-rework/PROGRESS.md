@@ -32,10 +32,10 @@ come from here.
 
 ## Current state
 
-- **Phase:** 1 (started 2026-10-14)
-- **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** none yet; the Phase 1 merge into `feat/ux-rework` will need the owner's approval
-- **Phase 1:** all 14 items merged (#145–#164); phase-end review done ([reviews and synthesis](review/phase1-end/)); phase-end fixes on `feat/ux-rework-p1-phase-end-fixes`; then the phase PR (owner approval)
+- **Phase:** 2 (Phase 1 merged into `feat/ux-rework`, #170, 877989d)
+- **Branch:** [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2); the ledger lives here now (`feat/ux-rework-p1` is kept for the links in its PRs)
+- **Open checkpoints:** 2.5 A's install steps in game (owner)
+- **Phase 1:** merged into `feat/ux-rework` (#170) after the end review, its fixes (#168) and the owner's approval
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
 ## Phase 1: stop the harm, quick wins
@@ -83,16 +83,18 @@ come from here.
 | 2.5 A → 2.5 B → 2.9 | 3 | 2.5 B once 2.5 A merges |
 | 2.8 a → 2.8 b | 2 | 2.8 a in review |
 | 1.5 F | 1 | next free slot |
-| Phase 3: 3.1 (barely touches Phase 2), 3.4 (after 2.1), 3.3 (after 2.7 A), 3.2 (after 2.7 B and 2.8 b) | | specs being drafted |
+| 2.7 A → 3.1, 3.3 (3.3 also after 1.5 F) | | after 2.7 A |
+| 2.1 → 3.4 (also after 1.5 F) | | after 2.1 |
+| 2.7 B, 2.8 b → 3.2 A → 3.2 B (also after 1.5 F) | | after 2.7 B and 2.8 b |
 
 ## Phase 3: expert depth
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| 3.1 | Rule editor upgrades | opus | todo | | | |
-| 3.2 | Editing at scale | opus | todo | | | |
-| 3.3 | Cancel, and keep the results | opus | todo | | | |
-| 3.4 | Build library and share links | opus | todo | | | |
+| [3.1](specs/3.1-rule-editor.md) | Rule editor upgrades | opus | spec | | | Spec final. One unit (17 existing, 11 new files). After 2.7 A and 2.8 a. Engine: rules never reach the blueprint, they only shape the planning run; a Conditional rule on a drill fails generation (blocked in the editor) |
+| [3.2](specs/3.2-editing-at-scale.md) | Editing at scale | opus | spec | | | Spec final. Two PRs: A (one inserter editor, draft dialogs, B26; one unit) after 2.7 B and 2.8 b; B (duplicate, reorder with Undo, bulk edit; two units) after A and 1.5 F |
+| [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus | spec | | | Spec final. One unit (20 existing, 12 new files). After 2.7 A and 1.5 F. `offerUndo` loses `resultsCleared` (also in 3.4) |
+| [3.4](specs/3.4-build-library.md) | Build library and share links | opus | spec | | | Spec final. One unit (8 existing, 9 new files). After 2.1 and 1.5 F |
 
 ## Decisions log
 
@@ -195,6 +197,19 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   helpers in `lib.mjs`. Not paying off: the chain table went stale (re-derived now, after every unblocking merge).
 - 2026-10-14: 2.8 a: the spec's "science pack lists Logistic first" and "fluoroketone cold lists the fluid" can't hold
   (ties keep data order; no picker lists fluids). The orchestrator changed both checks; the spec is corrected.
+
+- 2026-10-14: Phase 1 merged into `feat/ux-rework` (#170, merge commit 877989d; the owner approved; CI passed).
+- 2026-10-14: `master` moved again outside the rework: #166 (the even hands clock, release 0.10.0). Merged into
+  `feat/ux-rework` (3306841; engine 739 and UI tests pass; generation tests run 38661710992 passed) and on into
+  `feat/ux-rework-p2` (3e4c8d7). A scout found no UI change needed: the clock is grouped, named ("Fewest wake-ups" in
+  the card) and wired correctly. The final PR's version bump starts from 0.10.0.
+- 2026-10-14: Owner decisions after the Phase 1 end review: a target above what the machines can make **warns, doesn't
+  block** (2.1); drag reorder **stays with a message and Undo** and Move up/down (3.2); Diagram dialogs are **drafts
+  with Save** (3.2); the terms **"Your builds" and "share link"** are approved with **no new dependency** (3.4);
+  results storage **10 builds, about 64 MB, no fake-indexeddb** (3.3); the latched template **releases on the
+  source's level** like the owner's sample (3.1). [PLAN.md](PLAN.md) 2.1 and 3.1–3.4 updated; Phase 3 specs committed.
+- 2026-10-14: 2.5 A install steps: step 6 and the nothing-to-wire step were wrong for an inserter set to Never on (found
+  by the 3.1 spec writer); corrected, and the owner is asked how a player should keep one switched off in game.
 
 ## Open questions
 
@@ -381,6 +396,10 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
   drill against an expected developer-timeline count of 0); script or 2.5 B.
 - 2.5 A: in the nothing-to-wire case the bar still shows the yellow Copy blueprint → 2.7 A.
 - 2.8 a: knip inside `.claude/worktrees` lists the 3 `scripts/*.mjs` as unused (location only; passes elsewhere).
+- master 0.10.0: `SLOW_TASKS` (`useSimulationWorker.ts:87`) does not list `even-hands`; add it if timing shows it is
+  slow. The engine's even hands name and description use "hand" for a trip and a bare "window" → the engine-text pass
+  (2.5).
+- 2.5 A: when the first clock arrives with no belt, the belt action unmounts and focus can drop to the body.
 
 ## Retros
 
