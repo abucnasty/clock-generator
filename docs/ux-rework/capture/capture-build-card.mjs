@@ -89,7 +89,7 @@ const sel = {
     removeX: (root) => root.getByRole('button', { name: /^Remove filter/i }),
     source: (root) => root.getByRole('combobox', { name: /^Source/ }), // SELECTOR: confirm
     destination: (root) => root.getByRole('combobox', { name: /^Destination/ }), // SELECTOR: confirm
-    stack: (root) => root.getByLabel(/^Stack Size/), // SELECTOR: confirm
+    stack: (root) => root.getByLabel(/^Stack size/), // SELECTOR: confirm
 };
 const helpBtns = (page) => page.getByRole('main').locator('button[aria-haspopup=dialog]').filter({ has: page.locator('svg') }); // SELECTOR: confirm (a HelpButton is an IconButton with aria-haspopup=dialog)
 const oldInfoIcons = (page) => page.locator('main button:has(svg path[d^="M11 7h2v2h-2zm0 4h2v6h-2z"]), main button:has(svg path[d^="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15"])'); // the (i) glyphs of 0.9.0: InfoOutlined, Info
@@ -180,7 +180,7 @@ function readRowGeometry(rowEl) {
     const R = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) }; };
     const find = (re) => [...rowEl.querySelectorAll('[role=combobox], input')].find((i) => re.test(i.getAttribute('aria-label') ?? '') || re.test(i.labels?.[0]?.textContent ?? ''));
     const root = (i) => i && (i.closest('.MuiAutocomplete-root') ?? i.closest('.MuiFormControl-root') ?? i);
-    const src = find(/^Source/), dst = find(/^Destination/), stack = find(/^Stack Size/);
+    const src = find(/^Source/), dst = find(/^Destination/), stack = find(/^Stack size/);
     /** The row's own child (its grid cell) that holds an element */
     const cell = (el) => { let n = el; while (n && n.parentElement !== rowEl) n = n.parentElement; return n; };
     return {
@@ -1007,7 +1007,7 @@ function readColumnStarts() {
             row: row.getAttribute('aria-label'),
             source: R(field(/^Source/)),
             destination: R(field(/^Destination/)),
-            stack: R(field(/^Stack Size/)),
+            stack: R(field(/^Stack size/)),
             filters: R(caption?.parentElement),
             rule: R(row.querySelector('.MuiChip-root[aria-label$="Edit rule"]')),
             delete: R(row.querySelector('button[data-row-delete]')),

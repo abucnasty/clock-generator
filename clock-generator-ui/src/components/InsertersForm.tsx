@@ -63,8 +63,11 @@ const ROW_GRID_SX = {
     display: 'grid',
     gridTemplateColumns: 'subgrid',
     alignItems: 'center',
-    rowGap: 1.5,
+    // room above a wrapped line for the filters' label, which hangs over its slots
+    rowGap: 3,
     p: 2,
+    // and above a one-line row's
+    pt: 2.5,
     bgcolor: SURFACE.row,
 };
 /** Under Source, in its column, until md puts the two side by side */
@@ -477,7 +480,7 @@ function InsertersFormComponent({
 
                     <Box sx={ROW_REST_SX}>
                     <NumberField
-                        label="Stack Size"
+                        label="Stack size"
                         value={inserter.stack_size}
                         onValueChange={(val) =>
                             onUpdate(index, { stack_size: parseInt(val?.toString() || '') || 16 })

@@ -26,7 +26,7 @@ import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
-import { drillsListed } from '../utils/drillsSection';
+import { drillsListed, focusLeaves } from '../utils/drillsSection';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
 
@@ -65,13 +65,24 @@ function DrillsFormComponent({
     const { cardRef, remove } = useFocusAfterRemove(drills.length, onRemove);
     // the Add row goes with the first drill: the keyboard moves on to that drill's type
     const focusAdded = useFocusAfterAdd(drills.length, cardRef);
-    const [levelFocused, setLevelFocused] = useState(false);
-    const listed = drillsListed({ drillCount: drills.length, miningProductivityLevel, levelFocused });
+    // the section does not fold while the focus is in it: not under the level field typed down to 0, nor under a click
+    // on its Add button (which a fold before the click would swallow)
+    const [focusInSection, setFocusInSection] = useState(false);
+    // but deleting the last drill folds it, as before: the focus then goes to the Add row
+    const [drillCountBefore, setDrillCountBefore] = useState(drills.length);
+    if (drills.length !== drillCountBefore) {
+        setDrillCountBefore(drills.length);
+        if (drills.length < drillCountBefore) setFocusInSection(false);
+    }
+    const listed = drillsListed({ drillCount: drills.length, miningProductivityLevel, focusInSection });
 
     return (
         // the same section in both shapes, so that the focus finds the Add row in it once the last drill goes
         <PanelSection
             ref={cardRef}
+            // held open only once listed: focusing the Add row of a folded section does not open it
+            onFocus={() => { if (listed) setFocusInSection(true); }}
+            onBlur={(event) => { if (focusLeaves(event.currentTarget, event.relatedTarget)) setFocusInSection(false); }}
             level={3}
             title={listed ? `Mining drills (${drills.length})` : 'Mining drills'}
             help={{
@@ -105,9 +116,6 @@ function DrillsFormComponent({
                                 onUpdateProductivityLevel(parseInt(e.target.value) || 0)
                             }
                             inputProps={{ min: 0 }}
-                            // the section does not fold under the keyboard while the level is typed down to 0
-                            onFocus={() => setLevelFocused(true)}
-                            onBlur={() => setLevelFocused(false)}
                             sx={{ width: 200 }}
                             size="small"
                         />

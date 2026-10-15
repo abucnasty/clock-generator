@@ -71,9 +71,15 @@ export function FilterSlotSelector({
     };
 
     return (
-        <Box>
-            {/* above the slots, as a field's label is, so the row's room goes to Source and Destination */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1, mb: 1.5 }}>
+        // the slots alone set the height, so they sit on the line of the row's fields; the label hangs above them, as a
+        // field's label sits on its border, clear of a slot's ×
+        <Box sx={{ position: 'relative' }}>
+            {/* above the slots, so the row's room goes to Source and Destination */}
+            <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ position: 'absolute', bottom: '100%', left: 0, mb: 1.25, lineHeight: 1, whiteSpace: 'nowrap' }}
+            >
                 Filters
             </Typography>
         {/* the gap leaves room for a remove button between two slots, clear of the next one */}

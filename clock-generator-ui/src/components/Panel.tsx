@@ -1,5 +1,5 @@
 import { Box, Paper, Typography, type SxProps, type Theme } from '@mui/material';
-import { useId, type ReactNode, type Ref } from 'react';
+import { useId, type FocusEventHandler, type ReactNode, type Ref } from 'react';
 import { CONTROL, SURFACE } from '../theme/tokens';
 import { HelpButton } from './HelpButton';
 
@@ -84,6 +84,9 @@ interface PanelSectionProps {
     children?: ReactNode;
     sx?: SxProps<Theme>;
     ref?: Ref<HTMLElement>;
+    /** The focus comes into the section, or moves within it (React's focus events bubble) */
+    onFocus?: FocusEventHandler<HTMLElement>;
+    onBlur?: FocusEventHandler<HTMLElement>;
     /** For whoever needs to find the section: a capture script, a test */
     [dataAttribute: `data-${string}`]: string | undefined;
 }
@@ -93,7 +96,7 @@ interface PanelSectionProps {
  * rule under its heading; a part of one (h4) is smaller, grey and has none, so the two read apart and their rules do not
  * stack. No band of its own, so the card's title bar stays the one band. A section of the page, named by its heading.
  */
-export function PanelSection({ title, level, help, actions, children, sx, ref, ...data }: PanelSectionProps) {
+export function PanelSection({ title, level, help, actions, children, sx, ref, onFocus, onBlur, ...data }: PanelSectionProps) {
     const titleId = `${useId()}-title`;
     const part = level === 4;
     return (
@@ -102,6 +105,8 @@ export function PanelSection({ title, level, help, actions, children, sx, ref, .
             component="section"
             aria-labelledby={titleId}
             sx={[{ mb: part ? 2 : 3, '&:last-child': { mb: 0 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+            onFocus={onFocus}
+            onBlur={onBlur}
             {...data}
         >
             <Box

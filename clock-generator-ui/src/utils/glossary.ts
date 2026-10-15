@@ -3,7 +3,7 @@
  * Terms, and the (i) by the clock table's headers) lists these, so this file is the one source; new copy uses these
  * terms, and `insteadOf` lists the words they replace.
  *
- * Kept as they are: tick, UPS, combinator, insertion limit, Sidecar mod, Configure and Results, Generate, Stack Size and
+ * Kept as they are: tick, UPS, combinator, insertion limit, Sidecar mod, Configure and Results, Generate, Stack size and
  * "Copy old clock…". The engine's own text (the clocks' names and descriptions, the Insights prose) is shown as it comes
  * and is not covered yet.
  */

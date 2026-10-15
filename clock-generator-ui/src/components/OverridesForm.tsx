@@ -11,6 +11,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { ReactNode } from 'react';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 
 interface OverridesFormProps {
     lcm?: number;
@@ -46,7 +47,10 @@ export function OverridesForm({
                     {/* it folds after Import, Paste and Reset: says that a build sets some all the same */}
                     {setCount > 0 && (
                         <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                            · {setCount} set
+                            {/* read "Advanced, 1 set": a comma for the pause, the dot for the eye */}
+                            <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>
+                            <span aria-hidden="true">· </span>
+                            {setCount} set
                         </Typography>
                     )}
                 </Typography>

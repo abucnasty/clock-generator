@@ -992,7 +992,7 @@ try {
                     ['LCM Override', lcmField(page), '2', ''],
                     ['a machine (Productivity %)', page.getByLabel(/^Productivity \(%\)/).first(), null, null],
                     ['a chest (Storage Size)', page.getByLabel(/^Storage Size/).first(), null, null],
-                    ['a belt (Stack Size)', page.getByLabel(/^Stack Size/).first(), null, null],
+                    ['a belt (Stack Size)', page.getByLabel(/^Stack size/).first(), null, null],
                 ];
                 for (const [name, field, to, back] of edits) {
                     if (!(await exists(field))) {

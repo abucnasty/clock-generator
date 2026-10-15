@@ -171,7 +171,7 @@ function InserterEditSection({
                 </Typography>
                 <Box sx={{ flex: 1 }} />
                 <NumberField
-                    label="Stack Size"
+                    label="Stack size"
                     value={inserter.stack_size}
                     onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 16 })}
                     min={1}

@@ -26,7 +26,7 @@ export function SlotRemoveButton({ slotNumber, itemName, onClick }: SlotRemoveBu
                 // over the next slot's box, which comes later in the page, so all 24px stay its own to click
                 zIndex: 1,
                 // over the slot's corner by 8px at most, so 24x24 of the 32px slot stays its own to click
-                top: -10,
+                top: -8,
                 right: -16,
                 width: 24,
                 height: 24,

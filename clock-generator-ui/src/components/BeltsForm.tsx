@@ -213,7 +213,7 @@ function BeltsFormComponent({
                                     sx={{ flex: '1 1 200px' }}
                                 />
                                 <NumberField
-                                    label="Stack Size"
+                                    label="Stack size"
                                     value={lane.stack_size}
                                     onValueChange={(val) => {
                                         const integer = parseInt(val?.toString() || '');
