@@ -29,12 +29,16 @@ All of `docs/ux-rework/` is deleted in the last commit before `feat/ux-rework` �
 ## The loop for each plan item
 
 When a unit frees, start the unblocked item at the head of the longest remaining dependency chain (the chain table in
-`PROGRESS.md`); never leave a slot idle while an unblocked item waits (coach run 2). A unit that is only waiting on
+`PROGRESS.md`); never leave a slot idle while an unblocked item waits (coach run 2). A chain edge needs a file the later item edits
+that the earlier one rewrites, or an API it adds; an order kept only so a layout is final is not an edge (the later
+item runs the geometry sweep instead). Re-derive the chain table from the specs' Files lists after every merge that
+unblocks an item, and pass over a two-unit chain head at most once (coach run 5). A unit that is only waiting on
 another branch counts as zero units (coach run 3), and so do read-only agents: scouts, capture writers, reviewers,
-the phase-end capture and review, and the coach (coach run 4). Specs (step 1) can be drafted ahead for any number of items at once, including the
-next phase's while this one finishes. From step 2
-on, run at most **four units at once** (a bundle counts as one; an item that touches more than about 20 files, like
-1.9, counts as two). Items may share files (the owner, 2026-10-14): each
+the phase-end capture and review, and the coach (coach run 4). Specs (step 1) can be drafted ahead for any number of items at once. The next phase's scouts start once every item of
+this phase has a final spec, and each spec names the items it must follow, from its Files list, so the chain table
+covers both phases (coach run 5). From step 2
+on, run at most **four units at once** (a bundle counts as one; an item that edits more than about 20 existing files, like
+1.9, counts as two; new files and their tests don't count, coach run 5). Items may share files (the owner, 2026-10-14): each
 implementer merges the phase branch into its branch (`git merge`, never a rebase of a pushed branch) before it reports,
 again just before its PR, and whenever the post-merge conflict check flags its branch, and resolves any conflict
 itself, except when only the ledger moved (`git diff --quiet HEAD...origin/<phase branch> -- . ':!docs/ux-rework/PROGRESS.md'`).
@@ -42,8 +46,8 @@ itself, except when only the ledger moved (`git diff --quiet HEAD...origin/<phas
 export into both specs at once, and the provider commits it (a stub is fine) first. **Post-merge conflict check:** after every merge into the phase branch (including each merge of the previous phase
 branch into the next), run
 `git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch, and tell any that conflicts to
-merge now, while its implementer still has the context. **Stacking:** in a serial tail (e.g. 1.11 A → 1.11 B → 1.12 B),
-the next item may branch from its predecessor's head once the predecessor's interface is committed (or at once when the
+merge now, while its implementer still has the context. **Stacking:** whenever the next item on a chain is held only by its predecessor's review, fix round, minors round or
+owner check (e.g. 1.11 A → 1.11 B → 1.12 B; coach run 5), it branches from its predecessor's head once the predecessor's interface is committed (or at once when the
 specs say they share two files or fewer); it merges the predecessor's
 branch after each fix round, then the phase branch once the predecessor merges, and its own review starts only after
 that, so its diff is against the phase branch. After a merge that had conflicts, the checks re-run,
@@ -75,7 +79,9 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - As soon as the spec is final and re-checked against the phase head (coach run 4), a `sonnet` capture writer turns the spec's "Screens to capture" and acceptance criteria into
      `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
      and saved to `/tmp/ux-capture/scripts/`. The implementer copies it in, fixes the selectors its code changed, and
-     runs it. The checks come from the spec, not from the code.
+     runs it. Scripts find controls only through `lib.mjs`'s `ui` map and `itemLabel`, and open tooltips and menus only with
+     `openTooltip`, `openMoreMenu` and `chooseMenuItem`; an item that renames a control updates `ui` in the same commit
+     (coach run 5). The checks come from the spec, not from the code.
    - The implementer builds to the spec, writes the tests the spec lists, and commits in the repo's style.
    - It changes only what the spec covers. Anything else it notices goes in its report as a follow-up, not into the
      code.
@@ -204,7 +210,9 @@ Meanwhile, work on another item if one is unblocked.
 
 - **The glossary** (1.12), before any copy uses it.
 - **The id question** (1.9): what `git log -S retireId` turns up, before the delete behaviour changes.
-- **The install steps** (2.5), before they ship. The owner checks them in game.
+- **The install steps** (2.5), before PR A merges. The owner checks them in game. Send them as soon as no review
+  finding on the steps is a blocker or major, alongside any minors round; if a later fix changes a step, send only the
+  changed lines (coach run 5).
 - **The sidecar** (2.2): the steps the owner should try in Factorio 2.1, before the phase merges.
 - **Anything the plan doesn't cover**, or that contradicts it or an owner decision. This includes new dependencies, and
   changes to CI, the release workflows, or `.claude`/settings files.

@@ -604,8 +604,8 @@ async function readTables(page) {
     const t2 = tables[1];
     if (!t1 || !t2) return { tables, t1: null, t2: null };
     const idx = (table, res) => res.map((re) => table.headers.findIndex((h) => re.test(h.text.replace(NBSP, ' '))));
-    const [a0, a1, a2, a3, a4, a5] = idx(t1, [/^name/i, /^moves/i, /^on for/i, /^windows/i, /^wake-ups\/min/i, /^notes/i]);
-    const [b0, b1, b2, b3, b4, b5, b6] = idx(t2, [/^name/i, /^window/i, /^starts at/i, /^ends at/i, /^length \(ticks\)/i, /^length \(s\)/i, /^belt slack/i]);
+    const [a0, a1, a2, a3, a4, a5] = idx(t1, [/^name/i, /^moves/i, /^on for/i, /^wake windows/i, /^wake-ups\/min/i, /^notes/i]);
+    const [b0, b1, b2, b3, b4, b5, b6] = idx(t2, [/^name/i, /^wake window/i, /^starts at/i, /^ends at/i, /^length \(ticks\)/i, /^length \(s\)/i, /^belt slack/i]);
     void find;
     const rows1 = t1.rows.map((cells) => ({
         name: cells[a0]?.text ?? '',
@@ -800,8 +800,8 @@ try {
                     return { pass: legendSolid.length >= 1 && legendHatched.length >= 1 && words, detail: `outside the rows: ${legendSolid.length} solid and ${legendHatched.length} hatched painted swatches; words "wake window" and "belt slack" ${words ? 'present' : 'missing'}` };
                 });
                 // the review asked for "Click or tap a bar" in place of the spec's "Tap a bar"
-                await chk(rec, 'keyboard hint: "Left and right arrow keys step through the windows of a row. Click or tap a bar for details."', async () => ({
-                    pass: /Left and right arrow keys step through the windows of a row\. Click or tap a bar for details\./i.test(need(s).text),
+                await chk(rec, 'keyboard hint: "Left and right arrow keys step through the wake windows of a row. Click or tap a bar for details."', async () => ({
+                    pass: /Left and right arrow keys step through the wake windows of a row\. Click or tap a bar for details\./i.test(need(s).text),
                     detail: /arrow keys[^.]*\.[^.]*\./i.exec(s.text)?.[0] ?? 'hint not found',
                 }));
                 await chk(rec, 'the chart is a group named by its heading and described by the hint', async () => {
@@ -1021,7 +1021,7 @@ try {
                 const s = await state();
                 const o = await getOracle();
                 const PATTERNS = [
-                    { id: 'mostly-on', source: 'On for \\d+(?:\\.\\d+)?\\s?% of the clock period', flags: 'i' },
+                    { id: 'mostly-on', source: 'On for \\d+(?:\\.\\d+)?\\s?% of the clock period, so the clock switches', flags: 'i' },
                     { id: 'slack', source: '\\+\\d+ ticks?\\b', flags: 'i' },
                     { id: 'short', source: 'Window \\d+ is only \\d+ ticks? long', flags: 'i' },
                     { id: 'wraps', source: 'Window \\d+ runs past the end of the clock period', flags: 'i' },
@@ -1085,7 +1085,7 @@ try {
                     if (t.count === 0) rec.check(`contrast ${name}`, false, `no element found with text /${source}/ in the view`);
                     else pairs.push({ name: `${name} ("${t.text.slice(0, 40)}")`, locator: page.locator(`[data-ux-find="${name}"]`), tag: name });
                 };
-                await tagged('summary line', '^Period\\s+[\\d,.]+\\s*ticks');
+                await tagged('summary line', '^Clock period\\s+[\\d,.]+\\s*ticks');
                 await tagged('axis label (seconds)', '^0 s$');
                 await tagged('row label', '^(Inserter|Drill) \\d+$');
                 await tagged('on-for figure', 'On for \\d');
@@ -1439,11 +1439,11 @@ try {
                     pass: tables.length === 2 && /^Wake windows by inserter and drill$/i.test(tables[0]?.caption) && /^Every wake window$/i.test(tables[1]?.caption),
                     detail: JSON.stringify(tables.map((t) => t.caption)),
                 }));
-                await chk(rec, 'table 1 columns: Name, Moves, On for (% of the period), Windows (count), Wake-ups/min (1 copy), Notes; table 2: Name, Window (n of N), Starts at tick, Ends at tick, Length (ticks), Length (s), Belt slack (ticks)', async () => {
+                await chk(rec, 'table 1 columns: Name, Moves, On for (% of the clock period), Wake windows (count), Wake-ups/min (1 copy), Notes; table 2: Name, Wake window (n of N), Starts at tick, Ends at tick, Length (ticks), Length (s), Belt slack (ticks)', async () => {
                     const h1 = (tables[0]?.headers ?? []).map((h) => h.text.replace(NBSP, ' '));
                     const h2 = (tables[1]?.headers ?? []).map((h) => h.text.replace(NBSP, ' '));
-                    const ok1 = [/^name/i, /^moves/i, /^on for/i, /^windows/i, /^wake-ups\/min/i, /^notes/i].every((re, i) => re.test(h1[i] ?? ''));
-                    const ok2 = [/^name/i, /^window/i, /^starts at tick/i, /^ends at tick/i, /^length \(ticks\)/i, /^length \(s\)/i, /^belt slack/i].every((re, i) => re.test(h2[i] ?? ''));
+                    const ok1 = [/^name/i, /^moves/i, /^on for/i, /^wake windows/i, /^wake-ups\/min/i, /^notes/i].every((re, i) => re.test(h1[i] ?? ''));
+                    const ok2 = [/^name/i, /^wake window/i, /^starts at tick/i, /^ends at tick/i, /^length \(ticks\)/i, /^length \(s\)/i, /^belt slack/i].every((re, i) => re.test(h2[i] ?? ''));
                     return { pass: ok1 && ok2 && h1.length === 6 && h2.length === 7, detail: `table 1 ${JSON.stringify(h1)}; table 2 ${JSON.stringify(h2)}` };
                 });
                 await chk(rec, 'headers are <th scope="col">, the name cell of every body row is <th scope="row">', async () => {
