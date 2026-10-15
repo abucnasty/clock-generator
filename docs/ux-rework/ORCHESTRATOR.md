@@ -79,7 +79,9 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - As soon as the spec is final and re-checked against the phase head (coach run 4), a `sonnet` capture writer turns the spec's "Screens to capture" and acceptance criteria into
      `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
      and saved to `/tmp/ux-capture/scripts/`. The implementer copies it in, fixes the selectors its code changed, and
-     runs it. The checks come from the spec, not from the code.
+     runs it. Scripts find controls only through `lib.mjs`'s `ui` map and `itemLabel`, and open tooltips and menus only with
+     `openTooltip`, `openMoreMenu` and `chooseMenuItem`; an item that renames a control updates `ui` in the same commit
+     (coach run 5). The checks come from the spec, not from the code.
    - The implementer builds to the spec, writes the tests the spec lists, and commits in the repo's style.
    - It changes only what the spec covers. Anything else it notices goes in its report as a follow-up, not into the
      code.
