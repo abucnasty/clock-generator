@@ -24,6 +24,7 @@
 //   S8  reachability: the app bar on one line, title not truncated, no overlaps, targets clickable, both views
 //   S9  accessible names, labelled region, focus ring/size of the new controls
 //   S10 A3: the Machines help names the mod and the /c achievements warning
+//   S11 the focus when the card goes (Hide, an example, Paste then Import Selected): on the Target Output heading, never <body>
 //
 // `// SELECTOR: confirm` marks a role/name/text the spec does not pin down. Against today's UI (no new code) the new checks FAIL
 // and the steps still run to the end (the old menu item stands in where the new bar button is missing).
@@ -303,7 +304,6 @@ async function checkPasteDialog(rec, page, label, promptText, { first = false } 
         await cpair(rec, page, 'the paste dialog steps text', dlg.getByText(/Alt\+E/).first());
         await axe(rec, page, 'paste dialog');
         await lib.checkFocusNotObscuredAtHeight(rec, page, { height: (page.viewportSize()?.width ?? 1440) >= 1000 ? 640 : 560, walk: dlg });
-        await page.locator('body').click({ position: { x: 1, y: 1 }, force: true }).catch(() => {});
     }
     return true;
 }
@@ -579,7 +579,9 @@ try {
                 const open = await checkPasteDialog(rec, page, label, prompt, { first: n === 0 });
                 if (label === 'an export that fails the schema' && open) {
                     const t = await dlgText(pasteDlg(page));
-                    rec.check('invalid export: "The export has a problem:" … "Copy it again from Factorio. If it keeps happening, update the Sidecar mod."', /The export has a problem:/.test(t) && /Copy it again from Factorio\. If it keeps happening, update the Sidecar mod\./.test(t), t.slice(0, 260));
+                    // round 1 (code review, UX audit): the entity and its number from 1, never the schema's words or a 0-based index
+                    rec.check('invalid export: "The export has a problem with machine 1. Copy it again from Factorio. If it keeps happening, update the Sidecar mod."', /The export has a problem with machine 1\. Copy it again from Factorio\. If it keeps happening, update the Sidecar mod\./.test(t), t.slice(0, 260));
+                    rec.check('invalid export: no 0-based index and no schema words', !/index 0|Invalid input|expected string|received/i.test(t), t.match(/index 0|Invalid input|expected string|received/i)?.[0] ?? '');
                     rec.check('invalid export: no raw parser text in the line (ledger: the import error)', !rawParserText.test(t), t.match(rawParserText)?.[0] ?? '');
                     rec.check('invalid export: no "Validate" or "wake-up" in the copy', !/Validate|wake-up/i.test(t));
                 }
@@ -710,7 +712,7 @@ try {
                 const r = await readConfirm(page);
                 await rec.shot(page, 'confirm-already-set', { desc: 'Confirm dialog with a target already set: the row is unticked and says it replaces' });
                 rec.check('already set: the row is unticked', r.has && r.checked === false, r.rowName);
-                rec.check('already set: "This replaces your current target (… at 240/s)"', /This replaces your current target/i.test(r.t) && /240\/s/.test(r.t), r.t.match(/This replaces[^.]*\./)?.[0] ?? '');
+                rec.check('already set: "Tick to replace your current target (… at 240/s)"', /Tick to replace your current target/i.test(r.t) && /240\/s/.test(r.t), r.t.match(/Tick to replace[^.]*\./)?.[0] ?? '');
                 if (r.has) {
                     await targetRow(r.dlg).check();
                     await r.dlg.getByRole('button', { name: 'Import Selected', exact: true }).click();
@@ -788,6 +790,7 @@ try {
                 await cardExample(page).click();
                 const dlg = page.getByRole('dialog').first();
                 rec.check('missing manifest: "Examples are not available right now."', await appears(dlg.getByText('Examples are not available right now.'), 4000));
+                await page.waitForTimeout(400); // the dialog's enter transition
                 await rec.shot(page, 'examples-missing', { desc: 'Examples dialog with the manifest missing' });
                 await closeDialogs(page);
             } else rec.check('Try an example in the card (missing-manifest case)', false);
@@ -946,6 +949,7 @@ try {
                     await fc.setFiles(EXPORT_FILE);
                     const ok = await appears(confirmDlg(page), 12_000);
                     rec.check('a Sidecar export opened as a file reaches the confirm dialog (not an error)', ok, ok ? '' : norm(await snack(page).first().innerText().catch(() => 'no message')));
+                    await page.waitForTimeout(400); // the confirm dialog's enter transition
                     await rec.shot(page, 'open-sidecar-export', { desc: 'A Sidecar export opened through Open build file…' });
                     await closeDialogs(page);
                 }
@@ -1054,6 +1058,62 @@ try {
             }
             await cpair(rec, page, 'A3 popover text', pop.locator('p').last());
             await page.keyboard.press('Escape');
+        });
+
+        // ================================================================================================== S11 focus when the card goes
+        // Round 1 (code review, UX audit, major): hiding the card by keyboard, picking an example from it, and its Paste then
+        // Import Selected must not drop the focus to <body>; it goes to the Target Output heading (#target-output-heading)
+        await step('S11 focus when the card goes: Hide, an example, Paste then Import Selected', async () => {
+            const focusNow = () => page.evaluate(() => ({ tag: document.activeElement?.tagName ?? '', id: document.activeElement?.id ?? '', text: (document.activeElement?.textContent ?? '').trim().slice(0, 40) }));
+            const checkLanded = async (label) => {
+                const f = await focusNow();
+                rec.check(`${label}: the focus is not on <body>`, f.tag !== 'BODY' && f.tag !== '', JSON.stringify(f));
+                rec.check(`${label}: the focus is on the Target Output heading`, f.id === 'target-output-heading', JSON.stringify(f));
+                await checkFocusNotObscured(rec, page, `${label}: the heading focused`);
+            };
+            // (a) Hide by keyboard
+            await freshVisit(page, base);
+            if (await need(rec, 'the card (Hide)', card(page))) {
+                await checkTabTo(rec, page, cardClose(page), 'Tab reaches Hide this introduction');
+                await page.keyboard.press('Enter');
+                await page.waitForTimeout(500);
+                rec.check('Hide by keyboard: the card is gone', (await card(page).count()) === 0);
+                await checkLanded('Hide by keyboard');
+                await rec.shot(page, 'focus-after-hide', { desc: 'After hiding the card from the keyboard: the focus on the Target Output heading' });
+            }
+            // (b) an example picked from the card, by keyboard
+            await freshVisit(page, base);
+            if (await need(rec, 'the card (example)', card(page))) {
+                await checkTabTo(rec, page, cardExample(page), 'Tab reaches Try an example');
+                await page.keyboard.press('Enter');
+                if (rec.check('the examples dialog opens from the card', await appears(examplesDlg(page), 5000))) {
+                    await page.waitForTimeout(800);
+                    const first = await focusNow();
+                    rec.check('the examples dialog opens with the focus on the first build', /^Logistic science/i.test(first.text), JSON.stringify(first));
+                    await page.keyboard.press('Enter');
+                    await page.waitForFunction(() => !document.querySelector('[role=dialog]'), null, { timeout: 5000 }).catch(() => {});
+                    await page.waitForTimeout(1200);
+                    rec.check('an example from the card: the card is gone', (await card(page).count()) === 0);
+                    await checkLanded('an example from the card');
+                    await rec.shot(page, 'focus-after-example', { desc: 'After picking an example from the card: the focus on the Target Output heading' });
+                }
+            }
+            // (c) the card's Paste, then Import Selected
+            await freshVisit(page, base);
+            await grant();
+            if (await need(rec, 'the card (Paste)', card(page))) {
+                await clickPaste(page, 'card', text(FIXTURES.inferred));
+                if (rec.check('card Paste: the confirm dialog opens', await appears(confirmDlg(page), 12_000))) {
+                    await confirmDlg(page).getByRole('button', { name: 'Import Selected', exact: true }).focus();
+                    await page.keyboard.press('Enter');
+                    await page.waitForFunction(() => !document.querySelector('[role=dialog]'), null, { timeout: 5000 }).catch(() => {});
+                    await page.waitForTimeout(800);
+                    rec.check('card Paste, Import Selected: the card is gone', (await card(page).count()) === 0);
+                    await checkLanded('card Paste, Import Selected');
+                    await rec.shot(page, 'focus-after-paste', { desc: 'After the card\'s Paste and Import Selected: the focus on the Target Output heading' });
+                }
+            }
+            await dismissMessage(page);
         });
     }, { out: OUT, base });
 

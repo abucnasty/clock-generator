@@ -20,12 +20,14 @@ describe('the words of the way in', () => {
         expect(PASTE_PROMPTS['build-file'].text).toContain('Open build file…');
     });
 
-    it('puts the reason of an invalid export between its two sentences', () => {
-        expect(invalidExportPrompt('Invalid machine at index 0: Required')).toEqual({
+    it('names the entity of an invalid export, counted from 1, without the schema\'s words', () => {
+        expect(invalidExportPrompt('Invalid machine at index 0: Invalid input: expected string, received undefined')).toEqual({
             severity: 'error',
-            text: 'The export has a problem: Invalid machine at index 0: Required. Copy it again from Factorio. If it keeps happening, update the Sidecar mod.',
+            text: 'The export has a problem with machine 1. Copy it again from Factorio. If it keeps happening, update the Sidecar mod.',
         });
-        expect(invalidExportPrompt('Bad.').text).toContain('problem: Bad. Copy');
+        expect(invalidExportPrompt('Invalid inserter at index 4: Required').text).toMatch(/^The export has a problem with inserter 5\. /);
+        expect(invalidExportPrompt('Something odd happened').text).toMatch(/^The export has a problem\. Copy it again/);
+        expect(invalidExportPrompt('Something odd happened').text).not.toContain('odd');
     });
 });
 

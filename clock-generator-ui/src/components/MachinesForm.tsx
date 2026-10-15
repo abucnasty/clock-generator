@@ -86,7 +86,12 @@ function MachinesFormComponent({
                     >
                         <Box sx={{ p: 2, maxWidth: 350 }}>
                             <Typography variant="body2" sx={{ mb: 1 }}>
-                                To get the crafting speed of a machine in Factorio, hover over the machine and run this command:
+                                The <SidecarModLink /> copies the crafting speeds of your build: then click Paste from
+                                Factorio.
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                Without it, hover over a machine in Factorio and run this command. A /c command turns off
+                                achievements for that save.
                             </Typography>
                             <Box
                                 sx={{
@@ -110,10 +115,6 @@ function MachinesFormComponent({
                                     {copied ? 'Copied!' : 'Copy'}
                                 </Button>
                             </Box>
-                            <Typography variant="body2" sx={{ mt: 1 }}>
-                                A /c command turns off achievements for that save. The <SidecarModLink /> copies the
-                                crafting speeds of your build without one: then click Paste from Factorio.
-                            </Typography>
                         </Box>
                     </Popover>
                 </Box>

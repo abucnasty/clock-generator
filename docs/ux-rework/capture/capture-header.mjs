@@ -252,8 +252,10 @@ for (const w of WIDTHS) {
         check('the ⋮ button is on screen', g.moreRight <= g.innerWidth, `right edge ${Math.round(g.moreRight)} of ${g.innerWidth}`);
         const oneToolbar = w < 600 ? 56 : 64;
         if (w < 900) check(`the title row is one Toolbar (${oneToolbar}px)`, Math.round(g.toolbarHeight) === oneToolbar, `${Math.round(g.toolbarHeight)}px`);
-        const inBar = (await header().getByRole('button', { name: 'Import Config' }).count()) + (await header().getByRole('button', { name: 'Export Config' }).count());
-        check(w < 900 ? 'Import Config and Export Config are not buttons in the app bar' : 'Import Config and Export Config are buttons in the app bar', w < 900 ? inBar === 0 : inBar === 2, `${inBar} found`);
+        // 2.1: Open build file… and Save build file are ⋮ menu items at every width; Paste from Factorio is the bar's button
+        const inBar = (await header().getByRole('button', { name: /Import Config|Export Config|Open build file|Save build file/ }).count());
+        check('Open build file… and Save build file are not buttons in the app bar', inBar === 0, `${inBar} found`);
+        check('Paste from Factorio is a button in the app bar', (await header().getByRole('button', { name: 'Paste from Factorio', exact: true }).count()) === 1);
     });
 
     // the header stays pinned: on both pages
@@ -284,12 +286,11 @@ for (const w of WIDTHS) {
             await page.waitForTimeout(500);
             await shot(`header-${w}-menu-open`, 'The ⋮ menu open');
             const items = await page.getByRole('menuitem').allTextContents();
-            const expected = w < 900 ? ['Paste from Factorio', 'Import Config', 'Export Config', 'Reset Configuration'] : ['Paste from Factorio', 'Reset Configuration'];
+            // 2.1: the same items at every width
+            const expected = ['Open build file…', 'Save build file', 'Try an example…', 'Getting started', 'Reset build'];
             check(`the menu lists ${expected.join(', ')}`, JSON.stringify(items) === JSON.stringify(expected), items.join(', '));
-            if (w < 900) {
-                const divider = await page.locator('[role=menu] hr, [role=menu] [role=separator]').count();
-                check('a divider sits before Reset Configuration', divider === 1, `${divider} divider`);
-            }
+            const divider = await page.locator('[role=menu] hr, [role=menu] [role=separator]').count();
+            check('a divider sits before Reset build', divider === 1, `${divider} divider`);
             await page.keyboard.press('Escape');
             await page.waitForTimeout(400);
         });

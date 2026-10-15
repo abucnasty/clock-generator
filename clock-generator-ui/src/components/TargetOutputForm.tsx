@@ -4,6 +4,7 @@ import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
 import { ELEMENT_IDS } from '../utils/firstProblem';
+import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
 import { targetRateWarningOf, type MachinesMax } from '../utils/targetRateWarning';
 
 interface TargetOutputFormProps {
@@ -31,7 +32,8 @@ export function TargetOutputForm({
 }: TargetOutputFormProps) {
     return (
         <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" component="h2" gutterBottom>
+            {/* focused by script when the intro card or a dialog that held the focus goes */}
+            <Typography id={TARGET_OUTPUT_HEADING_ID} tabIndex={-1} variant="h6" component="h2" gutterBottom>
                 Target Output
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
