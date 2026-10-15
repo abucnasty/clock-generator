@@ -16,6 +16,15 @@ describe("generateClockForConfig", () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
         const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
         const feeders = ["inserter:9", "inserter:10"];
+        // Since the rules of issue 152 (a hand from a machine waits while the machine it puts into is at its block) the
+        // sample keeps no windows for its feeders, and the variants below were chosen again: egg biochambers at speed
+        // 68 to 92 with feeder hands of 8 keep them, and at 76 or 80 with hands of 14 or 15; speed 80 with hands of 12
+        // and the other hands from 6 to 16 at those speeds hold with nothing or not at all.
+        const variant = (speed: number, hand: number): Config => ({
+            ...sample,
+            machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: speed } : it),
+            inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: hand } : it),
+        });
 
         it("generates a build with a dedicated fuel inserter in bounded time (under a minute), and stable", () => {
             // inserter 11 brings bioflux only and a new one nutrients, which the science biochamber burns
@@ -45,15 +54,12 @@ describe("generateClockForConfig", () => {
             }
         });
 
-        it("keeps the feeders always enabled where the clock with their windows does not pass, as without the rule", () => {
-            // egg biochambers at speed 80 and hands of 12 into the science biochamber: with the windows the long run comes up short
-            const config: Config = {
-                ...sample,
-                machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 80 } : it),
-                inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
-            };
-            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
-            expect(result.stability_check.holds).toBe(true);
+        // Until the rules of issue 152 this variant held without the windows and came up short with them; now it does
+        // not hold either way, and no variant tried holds without them and fails with them
+        it("keeps the feeders always enabled where the clock does not pass", () => {
+            // egg biochambers at speed 80 and hands of 12 into the science biochamber
+            const result = generateClockForConfig(five_swings(variant(80, 12)), { verify_as_built: true, logger: quiet });
+            expect(result.stability_check.holds).toBe(false);
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).not.toContain(id);
             }
@@ -67,7 +73,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("clocks them when the as-built check is on and passes with them", () => {
-            const result = generateClockForConfig(five_swings(sample), { verify_as_built: true, logger: quiet });
+            const result = generateClockForConfig(five_swings(variant(72, 8)), { verify_as_built: true, logger: quiet });
             expect(result.stability_check.as_built?.holds).toBe(true);
             for (const id of feeders) {
                 expect(Object.keys(result.clock_windows)).toContain(id);
@@ -83,13 +89,8 @@ describe("generateClockForConfig", () => {
         // short in two periods of 200 of the longer run, so that they were dropped. With that tick it holds through the
         // longer run. No variant tried since drops them (speeds 68 to 76, hands of 10 to 14, 4 to 6 swings): the ones
         // that hold keep them, the others hold with nothing.
-        it("keeps feeder windows through the longer run with egg biochambers at speed 72 and hands of 12", () => {
-            const config: Config = {
-                ...sample,
-                machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 72 } : it),
-                inserters: sample.inserters.map(it => it.id === 9 || it.id === 10 ? { ...it, stack_size: 12 } : it),
-            };
-            const result = generateClockForConfig(five_swings(config), { verify_as_built: true, logger: quiet });
+        it("keeps feeder windows through the longer run with egg biochambers at speed 76 and hands of 14", () => {
+            const result = generateClockForConfig(five_swings(variant(76, 14)), { verify_as_built: true, logger: quiet });
             expect(result.stability_check.holds).toBe(true);
             expect(result.output_feeders?.inserter_ids).toEqual(feeders);
             for (const id of feeders) {
@@ -98,7 +99,8 @@ describe("generateClockForConfig", () => {
         });
 
         it("takes feeder windows on the prefer-planned path of the derive flow too", () => {
-            const config: Config = { ...sample, overrides: { ...sample.overrides, derive_clock_windows: true } };
+            const with_hands_of_8 = variant(72, 8);
+            const config: Config = { ...with_hands_of_8, overrides: { ...with_hands_of_8.overrides, derive_clock_windows: true } };
             const result = generateClockForConfig(five_swings(config), { logger: quiet });
             expect(result.derived_clock_windows?.kept_planned_windows).toBe(true);
             expect(result.output_feeders?.inserter_ids).toEqual(feeders);

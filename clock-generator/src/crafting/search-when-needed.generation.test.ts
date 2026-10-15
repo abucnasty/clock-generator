@@ -32,20 +32,23 @@ describe("the searches only run when they are needed", () => {
             expect(idsOf(by_default).filter(id => SEARCH_IDS.includes(id))).toEqual([]);
         });
 
+        // fractional swings, since a hand is counted in while the stock before it is under the insertion limit
+        // (2026-10-14), at 10.1 wake-ups a minute where batched swings has 20.4
         it("selects a stable clock made without a search", () => {
             const selected = selectedOf(by_default);
-            expect(selected.id).toBe("planned-belt-slack");
+            expect(selected.id).toBe("fractional");
             expect(selected.verdict).toBe("stable");
             expect(selectableAsStable(selected.ranking)).toBe(true);
         });
 
-        it("runs the searches when the config asks for them, and selects the clock with fewer wake-ups that one finds", () => {
+        // the searches find no fewer wake-ups than fractional swings since 2026-10-14: shifted swings has the same 10.1
+        it("runs the searches when the config asks for them, and selects a clock with no more wake-ups", () => {
             expect(searched.skipped_searches).toEqual([]);
             expect(idsOf(searched)).toEqual(expect.arrayContaining(["derived", "uneven-output", "shifted-swings"]));
             const selected = selectedOf(searched);
             expect(selected.id).toBe("shifted-swings");
             expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.wake_ups_per_minute!).toBeLessThan(selectedOf(by_default).assessment.wake_ups_per_minute!);
+            expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(selectedOf(by_default).assessment.wake_ups_per_minute!, 6);
         });
 
         it("lists the clocks made without a search in the same order either way", () => {
