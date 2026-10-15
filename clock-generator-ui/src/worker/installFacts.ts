@@ -18,6 +18,8 @@ export interface ClockInstallFacts {
 
 /** The first line of a drill's combinator description, "Drills 1, 2 for [item=iron-ore] …" (`entityDescriptionHeaderLines`) */
 const DRILL_HEADER = /^Drills? (\d+(?:, \d+)*) for /;
+/** A drill's key in the clock's wake windows, "drill:2" */
+const DRILL_ID = /^drill:(\d+)$/;
 
 const ordered = (rows: number[][]) => rows
     .map(ids => [...ids].sort((a, b) => a - b))
@@ -31,14 +33,25 @@ const ordered = (rows: number[][]) => rows
  * what the player reads in the game; a drill that is always on has none. A combinator that switches nothing on (a part
  * of the clock) has no row.
  */
-export function installFactsOf(result: Pick<BlueprintGenerationResult, 'modulo_blueprint' | 'schedule' | 'blueprint'>): ClockInstallFacts {
-    const drills = result.blueprint.entities.flatMap(entity => {
+export function installFactsOf(
+    result: Pick<BlueprintGenerationResult, 'modulo_blueprint' | 'schedule' | 'blueprint' | 'clock_windows'>,
+): ClockInstallFacts {
+    const described = result.blueprint.entities.flatMap(entity => {
         if (entity.name !== 'decider-combinator') {
             return [];
         }
         const header = DRILL_HEADER.exec(entity.player_description ?? '');
         return header ? [header[1].split(', ').map(Number)] : [];
     });
+    // every drill with wake windows has a combinator. The descriptions say which drills share one; a clocked drill no
+    // description names (were their wording to change) still gets a row of its own, so a build that clocks only drills
+    // never reads as one that needs no clock
+    const named = new Set(described.flat());
+    const unnamed = Object.entries(result.clock_windows).flatMap(([id, windows]) => {
+        const drill = DRILL_ID.exec(id);
+        return drill && windows.length > 0 && !named.has(Number(drill[1])) ? [[Number(drill[1])]] : [];
+    });
+    const drills = [...described, ...unnamed];
     return {
         book: result.modulo_blueprint !== undefined,
         wiring: ordered(result.schedule.inserter_combinators.map(combinator => combinator.inserter_ids)),

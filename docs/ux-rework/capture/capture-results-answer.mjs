@@ -92,7 +92,7 @@ const STEP_PHRASES = {
     import: ['Press Copy blueprint', 'open the blueprint library', 'Older versions cannot read these clocks'],
     book: ['The book holds the same clock twice', '(modulo clock)', 'Use the first blueprint', 'the book opens on it'],
     place: ['It has only combinators: no inserters and no machines', 'do not rewire them', '9 tiles'],
-    wire: ['green wire', 'connect its output to each inserter in the list below', 'this list has all of it', 'Clock lock,'],
+    wire: ['green wire', 'connect its output to each inserter in the list below', 'names the same inserters; this list has all of it', 'Clock lock,'],
     drills: ['Drill 1 for', 'green wire', 'Anything > 0'],
     enable: ['Circuit network connection', 'Enable/disable', 'Anything > 0'],
     others: ['An inserter that is not in the list runs all the time', 'remove its wire, or untick Enable/disable'],
@@ -994,6 +994,12 @@ try {
                 const card = await cardOf(page);
                 if (!card.present) return rec.check('nothing to wire: the card shows the "nothing to wire" step', false, NOT_THERE);
                 await stepChecks({ rec, card, p: 'nothing to wire:', path: null, book: undefined, noWire: true });
+                await chk(rec, 'nothing to wire: the card has no Copy blueprint and no "Needs Factorio 2.1." (there is no clock to copy)', async () => ({ pass: !card.copy && !card.text.includes(REQUIRES), detail: `copy ${show(card.copy && card.copy.text)}, caption in card: ${card.text.includes(REQUIRES)}` }));
+                await chk(rec, 'nothing to wire: no belt action in the card when the clock picks up from no belt (the Belt tile says "No belt")', async () => {
+                    const belt = await page.evaluate(() => ({ action: Boolean(document.querySelector('[data-result-card] [data-belt-assumption]')), line: (document.querySelector('[data-result-card] [data-belt-line]') || {}).textContent || null }));
+                    const noBelt = Boolean(card.tiles.Belt) && card.tiles.Belt.value === 'No belt';
+                    return { pass: noBelt ? !belt.action : true, detail: `Belt tile ${show(card.tiles.Belt && card.tiles.Belt.value)}; ${show(belt)}` };
+                });
             }, page);
             await rec.step('drills (from the clock)', async () => {
                 await build(page, DRILLS);

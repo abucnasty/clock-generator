@@ -12,7 +12,7 @@ import {
     recoversOf,
     wakeUpsText,
 } from '../utils/clockSummary';
-import { REQUIRES_FACTORIO } from '../utils/installSteps';
+import { REQUIRES_FACTORIO, needsNoClock } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { buildWakeWindowRows } from '../utils/wakeWindows';
 import { InstallSteps } from './InstallSteps';
@@ -169,7 +169,8 @@ function ClockCopy(props: SelectedProps) {
                 <Typography variant="body2" sx={{ mt: 2 }} data-card-stale>{CARD_COPY.staleLine}</Typography>
             )}
 
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 1, mt: 2 }}>
+            {/* a build that needs no clock has nothing to copy: the steps say so (a stale one keeps "Copy old clock…") */}
+            {(props.stale || !needsNoClock(selected.install)) && <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 1, mt: 2 }}>
                 <Button
                     // the one filled green button of the page; yellow with the warning icon when there is something to
                     // warn of, and outlined for an earlier build's clock, the copy to think twice about
@@ -182,7 +183,7 @@ function ClockCopy(props: SelectedProps) {
                     {props.copied ? CARD_COPY.copied : <CopyLabel label={props.copyLabel} />}
                 </Button>
                 <Typography variant="body2" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
-            </Box>
+            </Box>}
 
             <InstallSteps install={props.selected.install} detailOf={detailOf} stale={props.stale} />
         </>
@@ -217,6 +218,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
 
     // one tree for a run's start and for its clocks, so the belt action (2.4) stays mounted, and keeps the keyboard
     // focus, when the run it starts empties the list of clocks
+    const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     return (
         <Paper variant="outlined" component="section" aria-labelledby={headingId} sx={{ p: 2, mb: 2 }} data-result-card>
             <Typography id={headingId} component="h2" variant="h6">{CARD_COPY.heading}</Typography>
@@ -224,11 +226,12 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 1, mt: 1 }}>
-                {/* 2.4's line says what the clocks assume of the belts when the run asked; otherwise the card says it */}
-                {selected && !props.beltAction && (
+                {/* 2.4's line says what the clocks assume of the belts when the run asked, and the clock picks up from a
+                    belt (while a run has no clock yet too, so its action keeps the focus); otherwise the card says it */}
+                {selected && !showBeltAction && (
                     <Typography variant="body2" data-belt-line>{beltLine(props.pickRule, selected.beltLabel)}</Typography>
                 )}
-                {props.beltAction}
+                {showBeltAction && props.beltAction}
             </Box>
             {selected ? <ClockCopy {...props} selected={selected} /> : null}
         </Paper>

@@ -51,7 +51,7 @@ export const INSTALL_COPY = {
         detail: 'A combinator described as "Inserter 3 for [item] from [recipe] into [recipe]" switches that inserter '
             + 'on. With a green wire, connect its output to each inserter in the list below. Find an inserter by its '
             + 'item and by the machines at its two ends; the numbers are the ones on Configure. The combinator\'s '
-            + 'description says the same; this list has all of it. The other combinators (Clock, Clock lock, Fuel '
+            + 'description names the same inserters; this list has all of it. The other combinators (Clock, Clock lock, Fuel '
             + 'clock, Clock lock filter, and the ones about a modulo or a subtick clock) are the clock itself: leave them.',
         drills: ' A combinator described as "Drill 1 for …" switches that mining drill on: wire it the same way.',
     },
@@ -88,6 +88,11 @@ export const INSTALL_COPY = {
     },
 } as const;
 
+/** No combinator switches an inserter or a drill on: every one runs all the time, so there is no clock to place */
+export function needsNoClock(input: Pick<InstallInput, 'wiring' | 'drills'>): boolean {
+    return input.wiring.length === 0 && input.drills.length === 0;
+}
+
 const step = (id: 'import' | 'book' | 'place' | 'drills' | 'others' | 'none' | 'lock'): InstallStep => ({ id, ...INSTALL_COPY[id] });
 
 /**
@@ -97,11 +102,11 @@ const step = (id: 'import' | 'book' | 'place' | 'drills' | 'others' | 'none' | '
  * needs no clock: one step says so.
  */
 export function installSteps(input: InstallInput): InstallStep[] {
-    const inserters = input.wiring.length > 0;
-    const drills = input.drills.length > 0;
-    if (!inserters && !drills) {
+    if (needsNoClock(input)) {
         return [step('none')];
     }
+    const inserters = input.wiring.length > 0;
+    const drills = input.drills.length > 0;
     const wiring = inserters
         ? [
             { id: 'wire', title: INSTALL_COPY.wire.title, detail: INSTALL_COPY.wire.detail + (drills ? INSTALL_COPY.wire.drills : '') },

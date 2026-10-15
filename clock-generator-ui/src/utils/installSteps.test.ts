@@ -59,7 +59,7 @@ describe('installSteps', () => {
     it('names the clock lock among the parts to leave, and points the description to the list', () => {
         const wire = detailOf(installSteps(plain), 'wire');
         expect(wire).toContain('Clock lock,');
-        expect(wire).toContain('The combinator\'s description says the same; this list has all of it.');
+        expect(wire).toContain('The combinator\'s description names the same inserters; this list has all of it.');
         expect(wire).not.toMatch(/500 bytes/);
     });
 
