@@ -8,6 +8,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import WarningIcon from '@mui/icons-material/Warning';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { FIELD_DECIMALS, shownNumberText } from '../utils/numberText';
 
@@ -25,6 +26,8 @@ interface NumberFieldProps extends BaseNumberField.Root.Props {
     size?: 'small' | 'medium';
     error?: boolean;
     helperText?: string;
+    /** A line under the helper text, in the warning colour with ⚠: the value is allowed, but worth a second look */
+    warning?: string | null;
     sx?: SxProps<Theme>;
     /** Decimals shown while the field is not focused; the full value shows on focus and is the one stored */
     displayDecimals?: number;
@@ -35,6 +38,7 @@ export function NumberField({
     label,
     error,
     helperText,
+    warning,
     size = 'medium',
     sx,
     min,
@@ -91,6 +95,7 @@ export function NumberField({
 
     const hasError = error || Boolean(validationError);
     const displayHelperText = validationError || helperText;
+    const describedBy = [displayHelperText && `${id}-helper`, warning && `${id}-warning`].filter(Boolean).join(' ') || undefined;
 
     return (
         <BaseNumberField.Root
@@ -155,7 +160,7 @@ export function NumberField({
                                     // the input slot's props are spread over the value above, so it is set again here
                                     value: shown,
                                     title: shown !== state.inputValue ? state.inputValue : undefined,
-                                    'aria-describedby': displayHelperText ? `${id}-helper` : undefined,
+                                    'aria-describedby': describedBy,
                                 },
                             }}
                             endAdornment={
@@ -202,6 +207,16 @@ export function NumberField({
             {displayHelperText && (
                 <FormHelperText id={`${id}-helper`} sx={{ ml: 0, '&:empty': { mt: 0 } }}>
                     {displayHelperText}
+                </FormHelperText>
+            )}
+            {warning && (
+                // not a live region: it is read with the field, and the workflow bar's note names it too
+                <FormHelperText
+                    id={`${id}-warning`}
+                    sx={{ ml: 0, mt: 0.5, color: 'warning.main', display: 'flex', alignItems: 'flex-start', gap: 0.5 }}
+                >
+                    <WarningIcon sx={{ fontSize: '1rem', mt: '0.15em', flexShrink: 0 }} />
+                    <span>{warning}</span>
                 </FormHelperText>
             )}
         </BaseNumberField.Root>

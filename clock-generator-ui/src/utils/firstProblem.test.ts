@@ -6,6 +6,7 @@ import {
     ELEMENT_IDS,
     PROBLEM_TEXT,
     barNoteOf,
+    blockingProblemsOf,
     coverageIssueElementId,
     firstProblemOf,
     focusIdOf,
@@ -125,6 +126,43 @@ describe('problemsOf', () => {
             const hasNoProblems = problemsOf({ ...input, coverageIssues: checked }).length === 0;
             expect(hasNoProblems).toBe(oldCanGenerate(input, checked));
         }
+    });
+});
+
+describe('a target more than the machines can make', () => {
+    // Machine 1 of the logistic science sample makes at most 22.97/s; 11 copies 252.66/s
+    const machinesMax = { machineIds: [1], perCopy: 22.968749205271 };
+    const tooHigh = filledIn({ targetOutput: { recipe: 'logistic-science-pack', items_per_second: 240200, copies: 11 }, machinesMax });
+
+    it('is a warning, not a problem, and goes to Items per Second', () => {
+        expect(problemsOf(tooHigh)).toEqual([{
+            text: 'Items per Second is more than the machines can make (at most 252.66/s)',
+            target: { kind: 'target-rate' },
+            warning: true,
+        }]);
+        expect(blockingProblemsOf(problemsOf(tooHigh))).toEqual([]);
+    });
+
+    it('comes after the problems', () => {
+        const problems = problemsOf({ ...tooHigh, machines: [{ id: 1, recipe: 'logistic-science-pack' }, { id: 2, recipe: '' }] });
+        expect(problems.map((p) => p.warning ?? false)).toEqual([false, true]);
+        expect(blockingProblemsOf(problems).map((p) => p.text)).toEqual(['Set the recipe of Machine 2']);
+    });
+
+    it('is not there for a target the copies can make, or while the machines\' max is not known', () => {
+        expect(problemsOf(filledIn({ targetOutput: { recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, machinesMax }))).toEqual([]);
+        expect(problemsOf({ ...tooHigh, machinesMax: null })).toEqual([]);
+        expect(problemsOf({ ...tooHigh, machinesMax: undefined })).toEqual([]);
+    });
+
+    it('is in the bar\'s note only when nothing keeps the build from being clocked and the last check did not fail', () => {
+        const [rateWarning] = problemsOf(tooHigh);
+        const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
+        expect(barNoteOf({ problems: [rateWarning], busy: false, checkStatus: 'none' })).toEqual(rateWarning);
+        expect(barNoteOf({ problems: [rateWarning], busy: false, checkStatus: 'valid' })).toEqual(rateWarning);
+        expect(barNoteOf({ problems: [recipeProblem, rateWarning], busy: false, checkStatus: 'none' })).toEqual(recipeProblem);
+        expect(barNoteOf({ problems: [rateWarning], busy: false, checkStatus: 'invalid' })?.text).toBe(PROBLEM_TEXT.validationFailed);
+        expect(barNoteOf({ problems: [rateWarning], busy: true, checkStatus: 'none' })).toBeNull();
     });
 });
 

@@ -29,6 +29,7 @@ import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
 import { useIntroCard } from './hooks/useIntroCard';
+import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -275,12 +276,15 @@ function App() {
         [config.inserters, config.belts, config.overrides]
     );
 
-    // what keeps the build from being clocked, and so where Generate goes instead
+    // the most the machines making the target recipe can make, which a target above it is warned of
+    const machinesMax = useMachinesMax(config.target_output.recipe, config.machines);
+    // what keeps the build from being clocked, and so where Generate goes instead; then what is only a warning
     const problems = useMemo(() => problemsOf({
         targetOutput: config.target_output,
         machines: config.machines,
         coverageIssues: checkedCoverageIssues ?? [],
-    }), [config.target_output, config.machines, checkedCoverageIssues]);
+        machinesMax,
+    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax]);
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
@@ -289,6 +293,8 @@ function App() {
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
     const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild });
+    // where the buttons go instead of checking: not a warning, with which they check and generate as usual
+    const blockedBy = note?.warning ? null : note;
     // who started the running or last check, for the announcements: Generate leads on by itself
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
@@ -603,6 +609,7 @@ function App() {
                                 recipe={config.target_output.recipe}
                                 itemsPerSecond={config.target_output.items_per_second}
                                 copies={config.target_output.copies}
+                                machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
                                 onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
@@ -731,7 +738,7 @@ function App() {
                                             checkStatus={checkStatus}
                                             busy={busy}
                                             onCheckOnly={handleCheckOnly}
-                                            note={note}
+                                            note={blockedBy}
                                             excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
                                             onExcludeChange={handleExcludeChange}
                                         />
@@ -756,7 +763,7 @@ function App() {
                                 searchedDeeper={searchedDeeper}
                                 keptOn={config.overrides?.search_for_fewer_wake_ups === true}
                                 canSearchDeeper={!busy}
-                                searchDeeperBlockedBy={note}
+                                searchDeeperBlockedBy={blockedBy}
                                 onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}

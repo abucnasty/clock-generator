@@ -1,6 +1,6 @@
 import type { Config, ConfigValidation } from 'clock-generator/browser';
 import type { ValidationState } from '../hooks/useSimulationWorker';
-import type { Problem } from './firstProblem';
+import { blockingProblemsOf, type Problem } from './firstProblem';
 import { configKeyOf } from './resultsStaleness';
 
 /** Every word this flow puts on screen: the buttons, their tooltips, the result chip, the alert and the swing plan */
@@ -67,6 +67,7 @@ interface DecisionInput {
     /** A generation, or a check started by Generate, is running */
     generating: boolean;
     checkStatus: CheckStatus;
+    /** A warning among them does not stop either button */
     problems: Problem[];
 }
 
@@ -75,8 +76,9 @@ export function decideGenerate({ initialized, generating, checkStatus, problems 
     if (!initialized || generating || checkStatus === 'running') {
         return { kind: 'wait' };
     }
-    if (problems.length > 0) {
-        return { kind: 'go-to-problem', problem: problems[0] };
+    const [first] = blockingProblemsOf(problems);
+    if (first) {
+        return { kind: 'go-to-problem', problem: first };
     }
     switch (checkStatus) {
         case 'invalid':
@@ -96,7 +98,7 @@ export function decideCheckOnly({ initialized, generating, checkStatus, problems
     if (!initialized || generating || checkStatus === 'running') {
         return { kind: 'wait' };
     }
-    if (problems.length > 0) {
+    if (blockingProblemsOf(problems).length > 0) {
         return { kind: 'show-problems' };
     }
     return { kind: 'check' };

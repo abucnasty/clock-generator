@@ -4,12 +4,15 @@ import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
 import { ELEMENT_IDS } from '../utils/firstProblem';
+import { targetRateWarningOf, type MachinesMax } from '../utils/targetRateWarning';
 
 interface TargetOutputFormProps {
     recipe: string;
     itemsPerSecond: number;
     /** Number of duplicate setups being modeled */
     copies: number;
+    /** The most the machines making the recipe can make, for the warning under Items per Second; null while unknown */
+    machinesMax: MachinesMax | null;
     recipeNames: string[];
     onRecipeChange: (recipe: string) => void;
     onItemsPerSecondChange: (value: number) => void;
@@ -20,6 +23,7 @@ export function TargetOutputForm({
     recipe,
     itemsPerSecond,
     copies,
+    machinesMax,
     recipeNames,
     onRecipeChange,
     onItemsPerSecondChange,
@@ -58,6 +62,7 @@ export function TargetOutputForm({
                     required
                     error={itemsPerSecond <= 0}
                     helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : itemsPerSecondHelper(itemsPerSecond, copies)}
+                    warning={targetRateWarningOf({ itemsPerSecond, copies, max: machinesMax })}
                 />
                 <NumberField
                     id={ELEMENT_IDS.targetCopies}
