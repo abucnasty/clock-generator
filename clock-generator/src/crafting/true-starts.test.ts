@@ -122,6 +122,22 @@ describe("trueStartsOfDump", () => {
             expect(result.diag.phase_runs).toBe(2);
         });
 
+        it("simulates no more than 20 candidate phases, thinned evenly, when more are tied", () => {
+            // a wrap every 100 ticks, and rises on the odd ticks 1 to 59 of each hundred: 30 separate phases fit
+            const finished = [0];
+            for (let t = 1; t < 300; t++) {
+                const fits = t % 100 >= 1 && t % 100 < 60 && t % 2 === 1;
+                finished.push(finished[t - 1] + (fits ? 1 : 0));
+            }
+            const result = trueStartsOfDump(Array.from({ length: 300 }, () => WORK), finished, 0.01, 0, 300);
+            expect(result.diag.phase_ties).toBe(20);
+            expect(result.diag.phase_runs).toBe(20);
+            expect(result.diag.phase_viol).toBe(0);
+            // every candidate simulates with no resync or miss, and the first wins the tie: the lowest phase, whose
+            // wrap falls on tick 59 of each hundred
+            expect(at(result.start)).toEqual([59, 159, 259]);
+        });
+
         it("does not fit a phase when the first sample is not working", () => {
             const result = trueStartsOfDump([SHORT, SHORT], [0, 0], QUARTER, 0, 2);
             expect(result.diag.phase_runs).toBe(1);
