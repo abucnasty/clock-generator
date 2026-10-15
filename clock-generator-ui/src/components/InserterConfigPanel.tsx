@@ -9,7 +9,7 @@ import {
     Typography,
 } from '@mui/material';
 import { EnableControlMode, TargetType } from 'clock-generator/light';
-import { useId, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useAnnounce } from '../hooks/useMessages';
 import { blockedSummaryOf } from '../utils/ruleProblems';
@@ -271,6 +271,21 @@ export function InserterConfigPanel({
     const [activeTab, setActiveTab] = useState(0);
     const [draft, setDraft] = useState(inserter);
     const announce = useAnnounce();
+    // the sticky Save bar grows when it says why Save was refused: the dialog's scroller keeps focus clear of it
+    const barRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const bar = barRef.current;
+        const scroller = bar?.closest<HTMLElement>('.MuiDialogContent-root');
+        if (!bar || !scroller) return;
+        const observer = new ResizeObserver(() => {
+            scroller.style.scrollPaddingBottom = `${bar.getBoundingClientRect().height + 8}px`;
+        });
+        observer.observe(bar);
+        return () => {
+            observer.disconnect();
+            scroller.style.removeProperty('scroll-padding-bottom');
+        };
+    }, []);
     // whether Save was pressed while the rule had problems: the bar says why until they are fixed
     const [saveRefused, setSaveRefused] = useState(false);
     const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false, problems: [] });
@@ -416,6 +431,7 @@ export function InserterConfigPanel({
             </Box>
 
             <Box
+                ref={barRef}
                 sx={{
                     position: 'sticky',
                     bottom: 0,
