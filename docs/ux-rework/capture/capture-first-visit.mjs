@@ -379,12 +379,14 @@ try {
             rec.check('plain words: no "swing", "LCM", "validate" in the card', !/swing|\bLCM\b|validat/i.test(ct), ct.match(/swing|LCM|validat\w*/i)?.[0] ?? '');
             rec.check('the card says it needs Factorio 2.1', /Factorio 2\.1/.test(ct));
 
-            // both Paste buttons
+            // both Paste buttons: the card's is the filled one; the bar's is outlined while the card shows (2.7 A audit:
+            // one filled next-step button per state)
             for (const [name, loc] of [['bar', barPaste(page)], ['card', cardPaste(page)]]) {
                 if (!(await need(rec, `the ${name} Paste from Factorio button`, loc))) continue;
                 rec.check(`the ${name} Paste button is clickable (nothing covers it)`, await isClickable(page, loc));
                 const s = await styleOf(loc);
-                rec.check(`the ${name} Paste button is filled green`, isFilledGreen(s), JSON.stringify(s.bg));
+                if (name === 'card') rec.check('the card Paste button is filled green', isFilledGreen(s), JSON.stringify(s.bg));
+                else rec.check('the bar Paste button is outlined, not filled, while the card shows', isOutlined(s) && !isFilledGreen(s), JSON.stringify(s));
                 await checkLabelInName(rec, page, loc, `the ${name} Paste button`);
                 await cpair(rec, page, `the ${name} Paste button text`, loc);
             }
@@ -392,6 +394,13 @@ try {
                 const label = norm(await barPaste(page).first().innerText());
                 rec.check('below 600px the bar button reads "Paste" (name stays "Paste from Factorio")', /^Paste$/i.test(label), `visible "${label}"`);
             }
+            // one filled next-step button on first visit (2.7 A audit): count the enabled, visible MUI contained buttons
+            const filled = await page.evaluate(() => [...document.querySelectorAll('button.MuiButton-contained')]
+                .filter((b) => !b.disabled && b.getBoundingClientRect().width > 0 && getComputedStyle(b).visibility !== 'hidden')
+                .map((b) => (b.getAttribute('aria-label') || b.textContent || '').trim()));
+            rec.check('first visit: one enabled filled button (the card\'s Paste from Factorio)', filled.length === 1, JSON.stringify(filled));
+            await cpair(rec, page, 'Generate, outlined on a blank build', generateBtn(page));
+            await cpair(rec, page, 'the bar Paste button, outlined while the card shows', barPaste(page));
             // gone from the menu
             await openMenu(page);
             rec.check('Paste from Factorio is gone from the ⋮ menu', (await menuItem(page, /Paste from Factorio/).count()) === 0);
@@ -484,6 +493,7 @@ try {
                 await lib.checkMouseActivationVisible(rec, page, cardClose(page), 'the close button');
                 await page.waitForTimeout(400);
                 rec.check('closing hides the card', (await card(page).count()) === 0);
+                rec.check('with the card closed, the bar Paste button is filled green again', isFilledGreen(await styleOf(barPaste(page))));
                 rec.check(`closing stores localStorage['${DISMISS_KEY}']`, (await storageGet(page, DISMISS_KEY)) !== null, String(await storageGet(page, DISMISS_KEY)));
                 await reload(page);
                 rec.check('after a reload the card is still gone', (await card(page).count()) === 0);

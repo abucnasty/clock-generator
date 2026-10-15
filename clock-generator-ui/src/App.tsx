@@ -534,6 +534,7 @@ function App() {
                             onBuildReplaced={handleBuildReplaced}
                             onUndoable={offerUndoOfReplace}
                             onShowIntro={showIntro}
+                            introShown={introVisible}
                         />
                     </Toolbar>
                     {isInitialized && (
