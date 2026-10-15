@@ -256,3 +256,46 @@ describe("readExtractorDump of gzipped files", () => {
         }
     });
 });
+
+describe("readExtractorDump infers the true starts of a machine that has a crafting speed and a recipe record", () => {
+    // the fixtures are cuts without recipe records (k "r"), which the series' dumps hold; one is added to a copy
+    const RECIPE_RECORD = '{"k":"r","n":"automation-science-pack","energy":5,"prod":[{"name":"automation-science-pack","amount":1}],"pb":0,"max_pb":3}\n';
+    const SCIENCE_ASSEMBLER = "117545";
+    const FOUNDRY = "117480";
+
+    it("names a machine without a recipe record, with the reason, and gives it no true starts", async () => {
+        const dump = await readExtractorDump(UNWIRED);
+        for (const machine of dump.machines) {
+            expect(machine.crafting).toBeNull();
+            expect(machine.true_starts).toBeUndefined();
+            expect(machine.no_params_reason).toBe("no recipe record");
+        }
+        expect(machineOf(dump, SCIENCE_ASSEMBLER).name).toBe("assembling-machine-3");
+    });
+
+    it("reads delta, the productivity bonus and the diagnostics, and sets true_starts, where the record is", async () => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), "extractor-dump-"));
+        try {
+            fs.writeFileSync(path.join(directory, "with-recipe.static.ndjson"),
+                fs.readFileSync(`${UNWIRED}.static.ndjson`, "utf8") + RECIPE_RECORD);
+            fs.copyFileSync(`${UNWIRED}.samples.ndjson`, path.join(directory, "with-recipe.samples.ndjson"));
+            const dump = await readExtractorDump(path.join(directory, "with-recipe"));
+            const assembler = machineOf(dump, SCIENCE_ASSEMBLER);
+            // crafting speed 56.484375, energy 5; the entity's productivity 1 and the recipe's 0
+            expect(assembler.no_params_reason).toBeNull();
+            expect(assembler.crafting?.crafting_speed).toBe(56.484375);
+            expect(assembler.crafting?.delta).toBe(56.484375 / 300);
+            expect(assembler.crafting?.productivity_bonus).toBe(1);
+            expect(assembler.crafting?.diag).toMatchObject({ resync: expect.any(Number), miss: expect.any(Number) });
+            expect(assembler.crafting?.craft_out_count).toBeGreaterThan(0);
+            expect(assembler.true_starts).toHaveLength(800);
+            expect(assembler.true_starts![0]).toBe(false);
+            expect(assembler.true_starts!.filter(Boolean).length).toBeGreaterThan(0);
+            // the foundry's recipe has no record
+            expect(machineOf(dump, FOUNDRY).true_starts).toBeUndefined();
+            expect(machineOf(dump, FOUNDRY).no_params_reason).toBe("no recipe record");
+        } finally {
+            fs.rmSync(directory, { recursive: true, force: true });
+        }
+    });
+});
