@@ -7,6 +7,7 @@ import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
+import type { NextStep } from '../utils/nextStep';
 import { GenerationProgressStatus } from './BlueprintOutput';
 
 export type WorkflowView = 'configure' | 'results';
@@ -25,6 +26,8 @@ interface WorkflowBarProps {
     onGenerate: () => void;
     /** Checks the build without generating and without moving the page */
     onCheckOnly: () => void;
+    /** The one filled button: Generate, this bar's Copy, or the Results card's Copy (the bar's is then outlined) */
+    primaryAction: NextStep;
     /** A check or a generation is running: both buttons are off */
     busy: boolean;
     /** Which button's check is running, for its label; null when none is */
@@ -49,8 +52,6 @@ interface WorkflowBarProps {
     rateWarning: string | null;
     /** What the Copy button says when it has not just been used: "Copy blueprint", "… below target", or "Copy old clock…" */
     copyLabel: string;
-    /** The selected clock runs short of the target rate: Copy is then a filled warning button */
-    belowTarget: boolean;
     /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
     /** Every Copy button says "Copied" for a moment after any of them copied */
@@ -94,6 +95,7 @@ export function WorkflowBar({
     progressStore,
     onGenerate,
     onCheckOnly,
+    primaryAction,
     busy,
     checking,
     checkStatus,
@@ -106,7 +108,6 @@ export function WorkflowBar({
     selectionQuiet,
     rateWarning,
     copyLabel,
-    belowTarget,
     staleFor,
     copied,
     onCopy,
@@ -138,10 +139,11 @@ export function WorkflowBar({
             startedHereRef.current = false;
         }
     }, [checking]);
-    // any warning colours the button and gives it the warning icon; only a fresh clock short of the target is filled,
-    // since a filled button invites the click, and the copy of an old clock is the one to think twice about
+    // any warning colours the button and gives it the warning icon. Filled when it is the next step: yellow when the
+    // clock warns, green when not; the copy of an old clock is the one to think twice about, never filled
     const warns = rateWarning !== null || staleFor !== null;
-    const filled = belowTarget && staleFor === null;
+    const copyFilled = primaryAction === 'copy-bar' && staleFor === null;
+    const generateFilled = primaryAction === 'generate';
 
     // what changed in the workflow is read out in the app's one announcements region (checking, generating)
     const hasBlueprint = blueprintString !== null;
@@ -191,10 +193,11 @@ export function WorkflowBar({
                             {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
                             <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild>
                                 <Button
-                                    variant={filled ? 'contained' : 'outlined'}
+                                    variant={copyFilled ? 'contained' : 'outlined'}
                                     size="small"
                                     onClick={onCopy}
-                                    color={warns ? 'warning' : copied ? 'success' : 'primary'}
+                                    // "Copied" keeps the colour it had
+                                    color={warns ? 'warning' : copyFilled ? 'secondary' : 'inherit'}
                                     startIcon={copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
                                 >
                                     {copied ? 'Copied' : <CopyLabel label={copyLabel} />}
@@ -205,15 +208,16 @@ export function WorkflowBar({
                     {problems.length > 0 && (
                         <Chip
                             size="small"
+                            variant="outlined"
                             color="error"
                             label={problemCountLabel(problems.length)}
                             onClick={() => onGoToProblem(problems[0])}
                             aria-label={`${problemCountLabel(problems.length)}. Go to the first one.`}
-                            // black on the red reads at 6.8:1 (white, MUI's choice, only 3.1); lighter, not darker, when
-                            // hovered or focused, so that the black stays legible and the chip stands off the bar
+                            // outlined as "Check failed" is, which takes the same place: one look for red in the bar. A
+                            // tint under the red would take its words under 4.5:1; hovered, they are underlined
                             sx={{
-                                color: '#000',
-                                '&:hover, &.Mui-focusVisible': { bgcolor: 'error.light' },
+                                '&:hover, &.Mui-focusVisible': { bgcolor: 'transparent' },
+                                '&:hover .MuiChip-label': { textDecoration: 'underline' },
                             }}
                         />
                     )}
@@ -223,9 +227,6 @@ export function WorkflowBar({
                             variant="outlined"
                             label={chip.label}
                             color={chip.color}
-                            // the lighter shade, for the words and a solid border: the error red is 3.9:1 on the bar, under
-                            // the 4.5 text needs, and MUI's border is that red at 70%
-                            sx={{ color: `${chip.color}.light`, borderColor: `${chip.color}.light` }}
                         />
                     )}
                     {/* the note under the buttons says where they go instead of checking; it describes both, and is their
@@ -235,7 +236,8 @@ export function WorkflowBar({
                         <span>
                             <Button
                                 ref={checkOnlyRef}
-                                variant="outlined"
+                                variant="text"
+                                color="inherit"
                                 size="small"
                                 onClick={() => {
                                     pressedAtRef.current = performance.now();
@@ -252,10 +254,10 @@ export function WorkflowBar({
                     <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top">
                         <span>
                             <Button
-                                variant="contained"
+                                variant={generateFilled ? 'contained' : 'outlined'}
                                 size="small"
                                 onClick={onGenerate}
-                                color="secondary"
+                                color={generateFilled ? 'secondary' : 'inherit'}
                                 disabled={busy}
                                 aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}

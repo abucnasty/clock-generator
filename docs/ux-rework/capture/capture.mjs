@@ -213,9 +213,9 @@ async function walkthrough(page, rec, base) {
         await page.getByRole('tab', { name: 'Timelines', exact: true }).click();
         await page.evaluate(() => window.scrollTo(0, 0));
         // an icon with an aria-label (aria-hidden, so not a "button" to the accessibility tree)
-        await page.locator('[aria-label^="How "][aria-label$=" is made"]').first().click();
+        await page.locator('table [aria-label^="About "][aria-haspopup="dialog"]').first().click();
         await settle(page, 800);
-        await rec.shot(page, 'alternative-how-made', { desc: 'Results: the "How <clock> is made" button on a potential clock clicked' });
+        await rec.shot(page, 'alternative-how-made', { desc: 'Results: the "About <clock>" help button on a potential clock clicked' });
         await page.keyboard.press('Escape');
     }, page);
 

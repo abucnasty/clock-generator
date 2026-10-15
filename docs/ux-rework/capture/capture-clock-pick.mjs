@@ -116,7 +116,8 @@ function tableRows() {
                 return { kind: tr.querySelector('.MuiCircularProgress-root') ? 'pending' : 'divider', text: tr.textContent ?? '', top: tr.getBoundingClientRect().top + window.scrollY };
             }
             const clockCell = cells[1];
-            const chip = clockCell.querySelector('.MuiChip-colorPrimary');
+            // the clock cell's one chip, Recommended (grey with a star since 2.7, so not found by colour)
+            const chip = clockCell.querySelector('.MuiChip-root');
             return {
                 kind: 'clock',
                 label: clockCell.firstElementChild?.firstChild?.textContent ?? '',

@@ -1,7 +1,8 @@
-import { Box, Paper, Tooltip, Typography } from '@mui/material';
+import { Box, Tooltip, Typography } from '@mui/material';
 import type { ShiftRangeEdge } from '../worker/types';
 import type { ShiftOptionsView } from '../worker/types';
 import { COLOR_BLIND_PALETTE } from './colors';
+import { Panel } from './Panel';
 
 const WORKS_COLOR = COLOR_BLIND_PALETTE.green;
 const FAILS_COLOR = COLOR_BLIND_PALETTE.vermillion;
@@ -80,10 +81,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     const plannedChecked = options.rows.some(row => row.shifts.some(shift => shift.shift_ticks === 0));
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>
-                {options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'}
-            </Typography>
+        <Panel title={options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'} level={3}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 {options.moved === 'swings' && options.plannedTicks
                     ? <>This clock moves the swings planned in clock ticks {options.plannedTicks.start}–{options.plannedTicks.end} ({options.movedDescription}) together, </>
@@ -178,6 +176,6 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     </Typography>
                 </Box>
             </Box>
-        </Paper>
+        </Panel>
     );
 }

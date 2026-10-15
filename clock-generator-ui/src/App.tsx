@@ -13,7 +13,6 @@ import {
     ThemeProvider,
     Toolbar,
     Typography,
-    createTheme,
     Alert,
     Icon,
     Paper,
@@ -51,55 +50,18 @@ import { BeltAssumptionLine } from './components/BeltAssumptionLine';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
 import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate } from './utils/checkThenGenerate';
-import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
+import { copyBlueprintLabelOf, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 import { clockTechnicalName, plainClockName } from './utils/clockSummary';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
-import { a11yThemeComponents } from './utils/a11yTheme';
+import { appTheme } from './theme/theme';
+import { nextStepOf } from './utils/nextStep';
+import { needsNoClock } from './utils/installSteps';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
-
-const baseTheme = createTheme({
-    palette: {
-        mode: 'dark',
-        primary: {
-            main: '#fca300',
-            light: '#ffba37',
-        },
-        secondary: {
-            main: '#5eb664',
-            light: '#81d99a',
-        },
-        background: {
-            default: '#404040',
-            paper: '#232323',
-        },
-        common: {
-            black: '#121212',
-        },
-        error: {
-            main: '#ff5958'
-        },
-        // a lemon yellow, told apart from the brand orange at a glance; black text on it
-        warning: {
-            main: '#ffe14d',
-            contrastText: '#000000',
-        },
-    },
-    typography: {
-        fontFamily: '"Titillium Web", "Helvetica", "Arial", sans-serif',
-        fontWeightMedium: 600,
-    },
-    shape: {
-        borderRadius: 0,
-    },
-    spacing: (factor: number) => factor * 7,
-});
-// the focus ring and other accessibility rules take their colours from the palette above
-const darkTheme = createTheme(baseTheme, { components: a11yThemeComponents(baseTheme) });
 
 
 function App() {
@@ -291,6 +253,16 @@ function App() {
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
     const note = barNoteOf({ problems, busy, checkStatus });
+    // the one filled button of the bar and the card: Generate, or the Copy of the clocks it made
+    const primaryAction = nextStepOf({
+        problemCount: problems.length,
+        isRunning: busy,
+        hasBlueprint: blueprintString !== null,
+        stale: resultsAreStale,
+        view,
+        // the card shows no Copy for a build that needs no clock; the bar's then is the one
+        pageHasCopy: selectedClock !== undefined && !needsNoClock(selectedClock.install),
+    });
     // who started the running or last check, for the announcements: Generate leads on by itself
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
@@ -509,7 +481,7 @@ function App() {
     }), [runChecked, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <ThemeProvider theme={appTheme}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
@@ -543,6 +515,7 @@ function App() {
                             progressStore={progressStore}
                             onGenerate={handleGenerate}
                             onCheckOnly={handleCheckOnly}
+                            primaryAction={primaryAction}
                             busy={busy}
                             checking={checking}
                             checkStatus={checkStatus}
@@ -555,7 +528,6 @@ function App() {
                             selectionQuiet={selectionQuiet}
                             rateWarning={rateWarning}
                             copyLabel={copyLabel}
-                            belowTarget={isBelowTarget(selectedClock)}
                             staleFor={staleFor}
                             copied={copy.copied}
                             onCopy={copy.request}
@@ -617,7 +589,8 @@ function App() {
                                     <ToggleButton value="diagram" aria-label="Diagram view">
                                         <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
                                         Diagram
-                                        <Chip label="beta" size="small" sx={{ ml: 0.75, height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.5 } }} />
+                                        {/* in the button's own colour, which is black on the selected orange */}
+                                        <Chip label="beta" size="small" variant="outlined" sx={{ ml: 0.75, height: 16, fontSize: '0.6rem', color: 'inherit', borderColor: 'currentColor', '& .MuiChip-label': { px: 0.5 } }} />
                                     </ToggleButton>
                                 </ToggleButtonGroup>
                             </Box>
@@ -772,6 +745,7 @@ function App() {
                                 copied={copy.copied}
                                 onCopy={copy.request}
                                 copyLabel={copyLabel}
+                                copyIsNextStep={primaryAction === 'copy-page'}
                                 // only when the run asked the belt question; otherwise the card says the belt itself
                                 beltAction={beltAssumption?.ask ? (
                                     <BeltAssumptionLine

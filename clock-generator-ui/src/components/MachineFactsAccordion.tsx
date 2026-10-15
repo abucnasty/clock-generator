@@ -202,7 +202,6 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                 <Chip
                                                     size="small"
                                                     label={`limit: ${input.automated_insertion_limit}`}
-                                                    color="secondary"
                                                     variant="outlined"
                                                     sx={{ height: 20, fontSize: '0.7rem' }}
                                                 />

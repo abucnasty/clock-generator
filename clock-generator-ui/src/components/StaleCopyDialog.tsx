@@ -33,7 +33,7 @@ export function StaleCopyDialog({ open, generatedFor, onCancel, onConfirm }: Sta
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onCancel} autoFocus>Cancel</Button>
+                <Button onClick={onCancel} color="inherit" autoFocus>Cancel</Button>
                 <Button onClick={onConfirm} variant="outlined" color="warning" startIcon={<Warning />}>Copy old clock</Button>
             </DialogActions>
         </Dialog>

@@ -365,9 +365,7 @@ export function ConfigImportExport({
                         vertical: 'top',
                         horizontal: 'right',
                     }}
-                    // the plain paper colour, without the dark theme's elevation overlay (a background image), which
-                    // lightens it so far that Reset's red is below 4.5:1 when hovered or focused
-                    slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions }, paper: { sx: { backgroundImage: 'none' } } }}
+                    slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions } }}
                 >
                     <MenuItem onClick={handleMenuPasteFromFactorio}>
                         <ListItemIcon>
@@ -479,7 +477,7 @@ export function ConfigImportExport({
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCancelImport}>Cancel</Button>
+                    <Button onClick={handleCancelImport} color="inherit">Cancel</Button>
                     <Button 
                         onClick={handleConfirmImport} 
                         variant="contained" 

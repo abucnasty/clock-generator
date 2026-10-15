@@ -933,9 +933,9 @@ try {
             if (on('wake')) await rec.step('wake windows slot', () => wakeChecks({ page, rec }), page);
             if (on('bar')) {
                 await rec.step('bar', async () => {
-                    // 2.3's bar (merged before this item) keeps Generate the one filled green confirm, so it stays filled on Results
-                    await barChecks({ page, rec, expectFill: true });
-                    await rec.shot(page, 'bar', { desc: 'The bar on fresh Results: Selected clock, Copy, Check only, Generate (filled, 2.3)' });
+                    // 2.7's one filled button: on fresh Results it is the card's Copy, so the bar's Generate is outlined
+                    await barChecks({ page, rec, expectFill: false });
+                    await rec.shot(page, 'bar', { desc: 'The bar on fresh Results: Selected clock, Copy, Check only, Generate (outlined, 2.7)' });
                 }, page);
             }
             if (on('a11y')) await rec.step('a11y', () => a11yChecks({ page, rec }), page);

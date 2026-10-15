@@ -1,6 +1,7 @@
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import type { ClockInsight } from 'clock-generator/browser';
+import { Panel } from './Panel';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
 interface InsightsPanelProps {
@@ -24,14 +25,13 @@ function Part({ label, text }: { label: string; text: string }) {
 
 function InsightCard({ insight }: { insight: ClockInsight }) {
     return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>{insight.title}</Typography>
+        <Panel title={insight.title} level={3}>
             <Part label="What" text={insight.what} />
             <Part label="Why" text={insight.why} />
             <Part label="Explanation" text={insight.explanation} />
             {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}
             {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} /></ExactTicks> : <InsightTable table={insight.table} />)}
-        </Paper>
+        </Panel>
     );
 }
 

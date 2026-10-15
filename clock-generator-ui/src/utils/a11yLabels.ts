@@ -50,9 +50,9 @@ export const CLOCK_TABLE_NAME = 'Clocks';
 /** The box the install steps' wiring list scrolls in, past 8 rows */
 export const WIRING_LIST_NAME = 'Wiring list';
 
-/** The name of the (i) button beside a clock in the table */
+/** The name of the help button beside a clock in the table, which says what the clock is */
 export function clockHelpName(clockLabel: string): string {
-    return `How ${clockLabel} is made`;
+    return `About ${clockLabel}`;
 }
 
 /** The names of the charts drawn on a canvas or in an SVG (no text of their own), each naming the clock it shows */
