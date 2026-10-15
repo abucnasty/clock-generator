@@ -43,7 +43,7 @@ export function parseConfigFromObject(jsonObject: unknown): Config {
         return ConfigSchema.parse(jsonObject);
     } catch (error) {
         if (error instanceof ZodError) {
-            throw new ConfigValidationError(error);
+            throw new ConfigValidationError(error, jsonObject);
         }
         throw error;
     }

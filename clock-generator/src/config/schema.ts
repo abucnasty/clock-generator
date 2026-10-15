@@ -36,7 +36,15 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
  * 
  * @property recipe - The recipe name to produce
  * @property items_per_second - Target production rate in items per second
- * @property copies - Number of duplicate setups being modeled (multiplier for ratio calculations)
+ * @property copies - How many identical units the build holds side by side. The config describes ONE unit, and the
+ *   generator plans that unit and multiplies the output rate by `copies`. This assumes:
+ *   - the units are identical: the same machines, recipes, crafting speeds, productivity, inserters, filters, stack
+ *     sizes and chests;
+ *   - no inserter joins one unit to another: machine-to-machine and machine-to-chest-to-machine inserters stay
+ *     inside a unit;
+ *   - the belts are shared between the units: every unit takes from and drops onto the same belt lanes.
+ *   A config that itself holds several identical units (copies of one unit side by side, each with its own inserters)
+ *   is refused with a CopiesError: describe one unit and set `copies` to the number of units instead.
  */
 export const TargetProductionRateConfigSchema = z.object({
     recipe: z.string(),

@@ -39,7 +39,7 @@ export async function parseConfig(jsonString: string): Promise<Config> {
 
     const result = ConfigSchema.safeParse(normalized);
     if (!result.success) {
-        throw new ConfigValidationError(result.error);
+        throw new ConfigValidationError(result.error, normalized);
     }
     return result.data;
 }

@@ -128,9 +128,13 @@ export class InserterFactory {
         let filtered_items = new Set(Array.from(sink_consumed_items).filter(it => source_provided_items.has(it)))
 
         if(config.filters && config.filters.length > 0) {
-            config.filters.forEach(it => {
-                assert(sink_consumed_items.has(it), `Inserter filter ${it} is not a valid item for sink entity ${sink.id} of type ${sink.type}`);
-            })
+            // a machine takes only its ingredients and fuel; a belt or a chest takes anything the filter names, such as
+            // the spoilage an inserter clears off a machine, which no recipe lists
+            if (sink.type === EntityType.MACHINE) {
+                config.filters.forEach(it => {
+                    assert(sink_consumed_items.has(it), `Inserter filter ${it} is not a valid item for sink entity ${sink.id} of type ${sink.type}`);
+                })
+            }
             filtered_items = new Set(config.filters);
         }
 
