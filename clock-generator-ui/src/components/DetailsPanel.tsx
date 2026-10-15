@@ -57,6 +57,8 @@ export function DetailsPanel(props: DetailsPanelProps) {
                 onChange={(_, value: DetailsTab) => setTab(value)}
                 variant="scrollable"
                 scrollButtons="auto"
+                // the arrow keys show the tab they move to
+                selectionFollowsFocus
                 aria-label={TABLIST_NAMES.details}
                 sx={{ borderBottom: 1, borderColor: 'divider' }}
             >

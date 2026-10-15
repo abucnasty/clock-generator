@@ -227,11 +227,18 @@ function recommendedFirst<T>(rows: ClockRow<T>[], recommendedIndex: number | nul
  * unstable ones never moves a stable row. While the unstable ones are hidden (and something is stable) only the selected
  * and the recommended of them stay. Shown, the rows in `pinnedIds` (those that stayed while hidden) come first in the
  * group, so showing the others does not move them either; the rest follow in list order. The recommended clock is
- * first in its group, so the answer leads the table.
+ * first in its group, so the answer leads the table, unless `recommendedFirst` is false (a run is going).
  */
 export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | 'verdict'>>(
     alternatives: T[],
-    options: { selectedIndex: number; recommendedIndex: number | null; showUnstable: boolean; pinnedIds?: string[] },
+    options: {
+        selectedIndex: number;
+        recommendedIndex: number | null;
+        showUnstable: boolean;
+        pinnedIds?: string[];
+        /** The recommended row first in its group (default); off while a run can still change the pick */
+        recommendedFirst?: boolean;
+    },
 ): { stable: ClockRow<T>[]; unstable: ClockRow<T>[]; unstableCount: number; hiddenCount: number; anyStable: boolean } {
     const rows = alternatives.map((alternative, index) => ({ alternative, index }));
     const stable = rows.filter(({ alternative }) => alternative.verdict === 'stable');
@@ -245,9 +252,10 @@ export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | '
             ...allUnstable.filter(({ alternative }) => pinned.has(alternative.id)),
             ...allUnstable.filter(({ alternative }) => !pinned.has(alternative.id)),
         ];
+    const lead = (group: ClockRow<T>[]) => options.recommendedFirst === false ? group : recommendedFirst(group, options.recommendedIndex);
     return {
-        stable: recommendedFirst(stable, options.recommendedIndex),
-        unstable: recommendedFirst(unstable, options.recommendedIndex),
+        stable: lead(stable),
+        unstable: lead(unstable),
         unstableCount: allUnstable.length,
         hiddenCount: allUnstable.length - unstable.length,
         anyStable,

@@ -141,7 +141,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'holds-the-rate',
         term: 'holds the rate',
-        definition: 'The clock makes the target rate for as long as nothing runs out and nothing backs up.',
+        definition: 'The clock makes the target rate for as long as nothing runs out and nothing backs up. A clock that '
+            + 'does not is unstable.',
         insteadOf: '"meets the target rate"',
     },
     {

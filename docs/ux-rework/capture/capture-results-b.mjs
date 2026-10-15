@@ -63,7 +63,7 @@ const COMPARE_H2 = 'Compare other clocks';
 const COMPACT_HEADS = [/^Clock$/, /^Makes\b/, /^Wake-ups\/min\b/, /^Works\?$/]; // Makes is absent when foldedMakes() is not null
 const FULL_ONLY_HEADS = [/^Belt/, /^Output swings/, /^Clock period/, /^Wake windows/, /^(Makes|Rate) \(items\/s, all \d+ copies\)$/, /^Status$/]; // 1.10's headers, as Show all columns keeps them
 const WORKS_RES = [
-    /^Yes$/, /^Only for belts that stand still$/, /^Misses the rate \(\d+(\.\d+)?\/s\)$/, /^Needs a restart after a jam$/, /^Unstable$/,
+    /^Yes$/, /^Only for belts that stand still$/, /^Misses the rate \(\d+(\.\d+)?\/s\)$/, /^Does not recover$/, /^Unstable$/,
 ];
 const FOLD_RE = /^All \d+ clocks make \d+(\.\d+)?\/s\.$/;
 const GLOSSARY_IDS = ['swing', 'crafting-cycle', 'clock-period', 'wake-window', 'wake-up', 'copies', 'build', 'clock', 'blueprint', 'check', 'enable-rule', 'assembling-machine', 'holds-the-rate', 'recovers', 'jammed', 'starved', 'belt-slack', 'simulator', 'lcm', 'hand'];
@@ -1104,7 +1104,7 @@ async function a11yChecks({ page, rec, width }) {
     const c = await compareOf(page);
     const pairs = [];
     const cp = comparePanel(page);
-    if ((await count(cp.locator('tbody td').filter({ hasText: /^(Yes|Unstable|Only for|Misses|Needs a restart)/ }))) > 0) pairs.push({ name: 'Works? text', locator: cp.locator('tbody td').filter({ hasText: /^(Yes|Unstable|Only for|Misses|Needs a restart)/ }).first() });
+    if ((await count(cp.locator('tbody td').filter({ hasText: /^(Yes|Unstable|Only for|Misses|Does not recover)/ }))) > 0) pairs.push({ name: 'Works? text', locator: cp.locator('tbody td').filter({ hasText: /^(Yes|Unstable|Only for|Misses|Does not recover)/ }).first() });
     if (c.fold) pairs.push({ name: 'the fold line', locator: cp.getByText(c.fold, { exact: true }).first() });
     pairs.push({ name: 'a compact header', locator: cp.locator('thead th').filter({ hasText: /^Clock$/ }).first() });
     if ((await count(why)) > 0) pairs.push({ name: 'the Why? button', locator: why });

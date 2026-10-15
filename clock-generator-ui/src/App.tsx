@@ -19,7 +19,7 @@ import {
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
-import { AccountTree, Code, FullscreenExit, List, LocalCafe, MenuBook } from '@mui/icons-material';
+import { Abc, AccountTree, Code, FullscreenExit, List, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
@@ -62,12 +62,6 @@ import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
-
-/** The page's own items in ⋮ */
-const TOOLS_MENU = {
-    terms: 'Terms',
-    developerTools: 'Developer tools',
-};
 import { appTheme } from './theme/theme';
 import { nextStepOf } from './utils/nextStep';
 import { needsNoClock } from './utils/installSteps';
@@ -77,6 +71,12 @@ import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
 import type { TargetValues } from './utils/pasteTarget';
+
+/** The page's own items in ⋮ */
+const TOOLS_MENU = {
+    terms: 'Terms',
+    developerTools: 'Developer tools',
+};
 
 /** The theme, and the in-game names every picker and label reads */
 function PageProviders({ gameNames, searchOnlyRecipes, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; children: ReactNode }) {
@@ -290,21 +290,13 @@ function App() {
     // ⋮ > Terms and ⋮ > Developer tools; the setting is kept for the next visit, and said, as the section it adds is at
     // the end of Results
     const toggleDeveloperTools = useCallback(() => {
-        setDeveloperTools(on => {
-            writeDeveloperTools(!on);
-            return !on;
-        });
-    }, []);
-    const firstToggle = useRef(true);
-    useEffect(() => {
-        if (firstToggle.current) {
-            firstToggle.current = false;
-            return;
-        }
-        announce(developerTools ? ANNOUNCEMENTS.developerToolsOn : ANNOUNCEMENTS.developerToolsOff);
+        const next = !developerTools;
+        setDeveloperTools(next);
+        writeDeveloperTools(next);
+        announce(next ? ANNOUNCEMENTS.developerToolsOn : ANNOUNCEMENTS.developerToolsOff);
     }, [developerTools, announce]);
     const toolsMenuItems = useMemo<ToolsMenuItem[]>(() => [
-        { key: 'terms', label: TOOLS_MENU.terms, icon: <MenuBook fontSize="small" />, onClick: setTermsAnchor },
+        { key: 'terms', label: TOOLS_MENU.terms, icon: <Abc fontSize="small" />, onClick: setTermsAnchor },
         {
             key: 'developer-tools',
             label: TOOLS_MENU.developerTools,

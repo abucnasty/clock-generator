@@ -94,7 +94,7 @@ function statusDetail(alternative: ClockAlternativeView): string {
         return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
             + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run that starves and jams the build.');
     }
-    const phases = `Checked from ${check.start_phases_checked} start point(s)`;
+    const phases = `Checked from ${check.start_phases_checked} start point${check.start_phases_checked === 1 ? '' : 's'}`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
         return phases;
     }
@@ -174,7 +174,9 @@ export function ClockAlternativesPanel({
 
     const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(
         alternatives,
-        { selectedIndex, recommendedIndex, showUnstable, pinnedIds },
+        // the recommended row leads once the run is over: while it runs the pick can change, and rows must not jump
+        // under the pointer
+        { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
     const anyHolds = alternatives.some(alternative => alternative.verdict !== 'unstable');
     // of the build, so every clock has the same
@@ -333,9 +335,11 @@ export function ClockAlternativesPanel({
                     aria-expanded={allColumns}
                     aria-controls={tableId}
                     onClick={() => setAllColumns(shown => !shown)}
+                    // the chevron turns, as Why? does, so the state shows on screen too
+                    endIcon={<ExpandMoreIcon sx={{ transform: allColumns ? 'rotate(180deg)' : 'none' }} />}
                     sx={{ ml: 'auto' }}
                 >
-                    {/* the same name both ways: the state is in aria-expanded */}
+                    {/* the same name both ways: the state is in aria-expanded and the chevron */}
                     {COMPARE_COPY.showAll}
                 </Button>
             </Box>
@@ -356,7 +360,7 @@ export function ClockAlternativesPanel({
                                     <TableCell align="right"><HelpHeader label={WAKE_UPS_HEADER} help={COMPARE_COPY.wakeUpsHelp} /></TableCell>
                                     <TableCell align="right">{rateHeader(copies)}</TableCell>
                                     <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
-                                    <TableCell>{COMPARE_COPY.status}</TableCell>
+                                    <TableCell><TermsHeader label={COMPARE_COPY.status} focus={TERMS_FOCUS.works} /></TableCell>
                                 </>
                             ) : (
                                 <>

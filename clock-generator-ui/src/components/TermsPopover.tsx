@@ -1,9 +1,12 @@
-import { Box, Popover, Typography } from '@mui/material';
+import { Close } from '@mui/icons-material';
+import { Box, IconButton, Popover, Typography } from '@mui/material';
 import { useId } from 'react';
+import { POPOVER_MS } from '../theme/tokens';
 import { glossaryWithFocus, type GlossaryEntry, type GlossaryId } from '../utils/glossary';
 
 const TERMS_COPY = {
     heading: 'Terms',
+    close: 'Close terms',
     related: 'Related terms',
     all: 'All terms',
     provisional: '(provisional)',
@@ -67,17 +70,22 @@ export function TermsPopover({ anchorEl, onClose }: TermsPopoverProps) {
             onClose={onClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            // a fixed, short grow: as long as the list is, it would otherwise take most of half a second to go
-            transitionDuration={200}
+            transitionDuration={POPOVER_MS}
             slotProps={{
                 paper: {
                     role: 'dialog',
                     'aria-labelledby': headingId,
-                    sx: { width: 480, maxWidth: 'calc(100vw - 32px)', p: 2 },
+                    sx: { width: 480, maxWidth: 'calc(100vw - 32px)', p: 2, pt: 0 },
                 },
             }}
         >
-            <Typography id={headingId} component="h2" variant="h6" sx={{ mb: 1 }}>{TERMS_COPY.heading}</Typography>
+            {/* the heading and its Close stay in view while the list scrolls; a finger has no Esc */}
+            <Box sx={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, pt: 2, pb: 1, bgcolor: 'background.paper' }}>
+                <Typography id={headingId} component="h2" variant="h6">{TERMS_COPY.heading}</Typography>
+                <IconButton size="small" aria-label={TERMS_COPY.close} onClick={onClose}>
+                    <Close fontSize="small" />
+                </IconButton>
+            </Box>
             <TermsList />
         </Popover>
     );

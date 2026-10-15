@@ -274,8 +274,8 @@ describe('worksOf', () => {
             .toEqual({ kind: 'no', text: 'Unstable' });
     });
 
-    it('says a clock that does not recover needs a restart, and one that does not hold its rate is unstable', () => {
-        expect(worksOf(clock('a', { verdict: 'no recovery', matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Needs a restart after a jam' });
+    it('says a clock that does not recover so, and one that does not hold its rate is unstable', () => {
+        expect(worksOf(clock('a', { verdict: 'no recovery', matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Does not recover' });
         expect(worksOf(clock('b', { verdict: 'unstable' }))).toEqual({ kind: 'no', text: 'Unstable' });
     });
 });

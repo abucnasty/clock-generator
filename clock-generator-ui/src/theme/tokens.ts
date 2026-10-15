@@ -49,6 +49,12 @@ export const TEXT = {
     error: ROLE.red.light,
 } as const;
 
+/**
+ * How long a help or Terms popover takes to open or close: fixed and short, as a long one (the Terms) would otherwise
+ * take most of half a second to go
+ */
+export const POPOVER_MS = 200;
+
 export const CONTROL = {
     /** Inputs, outlined buttons and chips, slots */
     border: '#9e9e9e',

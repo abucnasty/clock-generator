@@ -56,7 +56,7 @@ export const SUMMARY_COPY = {
     worksYes: 'Yes',
     worksStillBelts: 'Only for belts that stand still',
     worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
-    worksNoRecovery: 'Needs a restart after a jam',
+    worksNoRecovery: 'Does not recover',
     worksUnstable: 'Unstable',
 };
 

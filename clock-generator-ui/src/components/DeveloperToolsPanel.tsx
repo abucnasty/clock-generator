@@ -21,7 +21,6 @@ const DEVELOPER_COPY = {
     heading: 'Developer tools',
     timelines: 'Timelines',
     log: 'Log',
-    nothingYet: 'Nothing generated yet: the timelines come with the clocks.',
     clockRun: 'The timelines show the build driven only by the wake windows in the blueprint. This is the run the Status '
         + 'and Output per clock period columns are judged on.',
     planRun: 'The timelines show the planning simulation the wake windows were taken from. Inserters also wait on their '
@@ -54,7 +53,8 @@ interface DeveloperToolsPanelProps {
  * the tools are off, so its canvases cost nothing then.
  */
 export function DeveloperToolsPanel(props: DeveloperToolsPanelProps) {
-    const [tab, setTab] = useState<DeveloperTab>('timelines');
+    // opened before anything is generated (or during a run) it starts on the log, and stays there when the clocks come
+    const [tab, setTab] = useState<DeveloperTab>(() => props.hasResults ? 'timelines' : 'log');
     const [timelineRun, setTimelineRun] = useState<'clock' | 'plan'>('clock');
 
     // before anything is generated there is only the log, which holds the switches a generation runs with
@@ -79,9 +79,6 @@ export function DeveloperToolsPanel(props: DeveloperToolsPanelProps) {
             </Tabs>
 
             <TabBody prefix={PREFIX} tab="timelines" shown={shownTab === 'timelines'}>
-                {!props.hasResults && (
-                    <Typography variant="body2" color="text.secondary">{DEVELOPER_COPY.nothingYet}</Typography>
-                )}
                 {hasClockOnlyRun && (
                     <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                         <ToggleButtonGroup

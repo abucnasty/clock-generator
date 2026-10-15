@@ -381,6 +381,11 @@ describe('partitionClockRows', () => {
         expect(indexes(rows.unstable)).toEqual([1, 3, 4]);
     });
 
+    it('keeps list order while a run can still change the pick', () => {
+        const rows = partitionClockRows(clocks, { selectedIndex: 0, recommendedIndex: 2, showUnstable: true, recommendedFirst: false });
+        expect(indexes(rows.stable)).toEqual([0, 2]);
+    });
+
     it('shows every clock in one group when none is stable', () => {
         const none = rowsOf(['unstable', 'no recovery']);
         const rows = partitionClockRows(none, { selectedIndex: 1, recommendedIndex: 1, showUnstable: false });
