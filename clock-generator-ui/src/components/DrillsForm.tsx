@@ -1,25 +1,25 @@
-import { Add, Delete, Info } from '@mui/icons-material';
+import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
     FormControl,
-    FormControlLabel,
     IconButton,
     InputLabel,
     MenuItem,
-    Paper,
-    Popover,
     Select,
-    Switch,
     TextField,
     Typography,
 } from '@mui/material';
 import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
-import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { useFocusAfterAdd, useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { SURFACE } from '../theme/tokens';
+import { AddRow } from './AddRow';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
 import { FactorioIcon } from './FactorioIcon';
+import { HelpCommand } from './HelpButton';
+import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
@@ -30,28 +30,27 @@ import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
 
 interface DrillsFormProps {
-    enabled: boolean;
     miningProductivityLevel: number;
     drills: DrillFormData[];
     resourceNames: string[];
     machineIds: number[];
-    onEnable: () => void;
-    onDisable: () => void;
     onUpdateProductivityLevel: (value: number) => void;
+    /** Adds a drill, and turns drills on in the build if they were not */
     onAdd: () => void;
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
+/**
+ * The build's mining drills. With none (and no productivity level to keep), the section is one "Add mining drill" row:
+ * a build without drills and one with drills turned off are the same to the generator.
+ */
 function DrillsFormComponent({
-    enabled,
     miningProductivityLevel,
     drills,
     resourceNames,
     machineIds,
-    onEnable,
-    onDisable,
     onUpdateProductivityLevel,
     onAdd,
     onUpdate,
@@ -60,99 +59,39 @@ function DrillsFormComponent({
 }: DrillsFormProps) {
     const { itemLabel } = useGameNames();
     const [enableControlModalDrillIndex, setEnableControlModalDrillIndex] = useState<number | null>(null);
-    const [infoAnchorEl, setInfoAnchorEl] = useState<HTMLButtonElement | null>(null);
-    const [copied, setCopied] = useState(false);
 
-    const handleInfoClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        setInfoAnchorEl(event.currentTarget);
-    };
-
-    const handleInfoClose = () => {
-        setInfoAnchorEl(null);
-        setCopied(false);
-    };
-
-    const handleCopy = async () => {
-        await navigator.clipboard.writeText(SPEED_BONUS_COMMAND);
-        setCopied(true);
-    };
-
-    // the row's delete button goes with it: the keyboard moves on to a neighbour's
+    // the row's delete button goes with it: the keyboard moves on to a neighbour's, or to the Add row
     const { cardRef, remove } = useFocusAfterRemove(drills.length, onRemove);
+    // the Add row goes with the first drill: the keyboard moves on to that drill's type
+    const focusAdded = useFocusAfterAdd(drills.length, cardRef);
+    const listed = drills.length > 0 || miningProductivityLevel > 0;
 
     return (
-        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6" component="h2">
-                        Mining Drills ({drills.length})
-                    </Typography>
-                    <FormControlLabel
-                        control={
-                            <Switch
-                                checked={enabled}
-                                onChange={() => {
-                                    if (enabled) {
-                                        onDisable();
-                                    } else {
-                                        onEnable();
-                                    }
-                                }}
-                                size="small"
-                            />
-                        }
-                        label={enabled ? 'Enabled' : 'Disabled'}
-                        sx={{ ml: 1 }}
-                    />
-                    <IconButton size="small" onClick={handleInfoClick} color="info" aria-label={BUTTON_NAMES.aboutDrills}>
-                        <Info fontSize="small" />
-                    </IconButton>
-                    <Popover
-                        open={Boolean(infoAnchorEl)}
-                        anchorEl={infoAnchorEl}
-                        onClose={handleInfoClose}
-                        anchorOrigin={{
-                            vertical: 'bottom',
-                            horizontal: 'left',
-                        }}
-                    >
-                        <Box sx={{ p: 2, maxWidth: 350 }}>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                To get the speed bonus of a mining drill in Factorio, hover over the drill and run this command:
-                            </Typography>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    bgcolor: 'action.hover',
-                                    p: 1,
-                                    borderRadius: 1,
-                                    fontFamily: 'monospace',
-                                    fontSize: '0.85rem',
-                                }}
-                            >
-                                <Typography
-                                    component="code"
-                                    sx={{ flex: 1, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.85rem' }}
-                                >
-                                    {SPEED_BONUS_COMMAND}
-                                </Typography>
-                                <Button size="small" onClick={handleCopy} variant="outlined">
-                                    {copied ? 'Copied!' : 'Copy'}
-                                </Button>
-                            </Box>
-                        </Box>
-                    </Popover>
-                </Box>
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" disabled={!enabled} data-row-add="">
+        // the same element in both shapes, so that the focus finds the Add row in it once the last drill goes
+        <Box ref={cardRef}>
+            {!listed ? (
+                <AddRow label="Add mining drill" data-row-add="" onClick={() => { focusAdded(); onAdd(); }} />
+            ) : (
+        <PanelSection
+            level={3}
+            title={`Mining drills (${drills.length})`}
+            help={{
+                label: BUTTON_NAMES.aboutDrills,
+                content: (
+                    <>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                            To get the speed bonus of a mining drill in Factorio, hover over the drill and run this command:
+                        </Typography>
+                        <HelpCommand command={SPEED_BONUS_COMMAND} />
+                    </>
+                ),
+            }}
+            actions={(
+                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Drill
                 </Button>
-            </Box>
-
-            {enabled ? (
-                <>
+            )}
+        >
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
                         <TextField
                             label="Mining Productivity Level"
@@ -180,8 +119,7 @@ function DrillsFormComponent({
                                 alignItems: 'center',
                                 mb: 2,
                                 p: 2,
-                                bgcolor: 'action.hover',
-                                borderRadius: 1,
+                                bgcolor: SURFACE.row,
                                 flexWrap: 'wrap',
                             }}
                         >
@@ -270,21 +208,7 @@ function DrillsFormComponent({
                         </SortableItem>
                     ))}
                     </SortableList>
-
-                    {drills.length === 0 && (
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ textAlign: 'center', py: 2 }}
-                        >
-                            No drills configured. Add drills if you need mining input.
-                        </Typography>
-                    )}
-                </>
-            ) : (
-                <Typography variant="body2" color="text.secondary">
-                    Mining drills are disabled. Enable them if your setup includes ore mining.
-                </Typography>
+        </PanelSection>
             )}
 
             {/* the enable rule modal */}
@@ -316,7 +240,7 @@ function DrillsFormComponent({
                     setEnableControlModalDrillIndex(null);
                 }}
             />
-        </Paper>
+        </Box>
     );
 }
 

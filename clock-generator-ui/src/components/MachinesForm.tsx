@@ -1,4 +1,4 @@
-import { Add, Delete, Info } from '@mui/icons-material';
+import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -6,17 +6,18 @@ import {
     IconButton,
     InputLabel,
     MenuItem,
-    Paper,
-    Popover,
     Select,
     Typography,
 } from '@mui/material';
-import { useState, memo } from 'react';
+import { memo } from 'react';
 import type { MachineFormData } from '../hooks/useConfigForm';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { SURFACE } from '../theme/tokens';
 import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
+import { HelpCommand } from './HelpButton';
+import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { SidecarModLink } from './IntroCard';
@@ -45,84 +46,36 @@ function MachinesFormComponent({
     onRemove,
     onReorder,
 }: MachinesFormProps) {
-    const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-    const [copied, setCopied] = useState(false);
-
-    const handleInfoClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleClose = () => {
-        setAnchorEl(null);
-        setCopied(false);
-    };
-
-    const handleCopy = async () => {
-        await navigator.clipboard.writeText(CRAFTING_SPEED_COMMAND);
-        setCopied(true);
-    };
-
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
     const { cardRef, remove } = useFocusAfterRemove(machines.length, onRemove);
 
     return (
-        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6" component="h2">
-                        Machines ({machines.length})
-                    </Typography>
-                    <IconButton size="small" onClick={handleInfoClick} color="info" aria-label={BUTTON_NAMES.aboutMachines}>
-                        <Info fontSize="small" />
-                    </IconButton>
-                    <Popover
-                        open={Boolean(anchorEl)}
-                        anchorEl={anchorEl}
-                        onClose={handleClose}
-                        anchorOrigin={{
-                            vertical: 'bottom',
-                            horizontal: 'left',
-                        }}
-                    >
-                        <Box sx={{ p: 2, maxWidth: 350 }}>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                The <SidecarModLink /> copies the crafting speeds of your build: then click Paste from
-                                Factorio.
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                                Without it, hover over a machine in Factorio and run this command. A /c command turns off
-                                achievements for that save.
-                            </Typography>
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    bgcolor: 'action.hover',
-                                    p: 1,
-                                    borderRadius: 1,
-                                    fontFamily: 'monospace',
-                                    fontSize: '0.85rem',
-                                }}
-                            >
-                                <Typography
-                                    component="code"
-                                    sx={{ flex: 1, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.85rem' }}
-                                >
-                                    {CRAFTING_SPEED_COMMAND}
-                                </Typography>
-                                <Button size="small" onClick={handleCopy} variant="outlined">
-                                    {copied ? 'Copied!' : 'Copy'}
-                                </Button>
-                            </Box>
-                        </Box>
-                    </Popover>
-                </Box>
+        <PanelSection
+            ref={cardRef}
+            level={3}
+            title={`Machines (${machines.length})`}
+            help={{
+                label: BUTTON_NAMES.aboutMachines,
+                content: (
+                    <>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                            The <SidecarModLink /> copies the crafting speeds of your build: then click Paste from
+                            Factorio.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                            Without it, hover over a machine in Factorio and run this command. A /c command turns off
+                            achievements for that save.
+                        </Typography>
+                        <HelpCommand command={CRAFTING_SPEED_COMMAND} />
+                    </>
+                ),
+            }}
+            actions={(
                 <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Machine
                 </Button>
-            </Box>
-
+            )}
+        >
             <SortableList itemKeys={machines.map((m) => m._uuid)} itemLabels={machines.map((m) => entityLabel('machine', m.id))} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
@@ -140,7 +93,7 @@ function MachinesFormComponent({
                     </SortableItem>
                 ))}
             </SortableList>
-        </Paper>
+        </PanelSection>
     );
 }
 
@@ -171,8 +124,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
             sx={{
                 mb: 2,
                 p: 2,
-                bgcolor: 'action.hover',
-                borderRadius: 1,
+                bgcolor: SURFACE.row,
             }}
         >
             <Box

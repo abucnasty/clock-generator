@@ -230,15 +230,16 @@ function InsertersFormComponent({
     const { cardRef, remove } = useFocusAfterRemove(inserters.length, onRemove);
 
     return (
-        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" component="h2">
-                    Inserters ({inserters.length})
-                </Typography>
+        <PanelSection
+            ref={cardRef}
+            level={3}
+            title={`Inserters (${inserters.length})`}
+            actions={(
                 <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Inserter
                 </Button>
-            </Box>
+            )}
+        >
 
             <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
@@ -248,19 +249,10 @@ function InsertersFormComponent({
                     id={`entity-inserter-${inserter.id}`}
                     role="group"
                     aria-label={entityLabel('inserter', inserter.id)}
-                    sx={{
-                        display: 'flex',
-                        gap: 2,
-                        alignItems: 'center',
-                        mb: 2,
-                        p: 2,
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
-                        flexWrap: 'wrap',
-                    }}
+                    sx={ROW_GRID_SX}
                 >
                     {dragHandle}
-                    {/* Source */}
+                    {/* Source, and the lane of its belt */}
                     <Box sx={PICKER_GROUP_SX}>
                         <Autocomplete
                             size="small"
