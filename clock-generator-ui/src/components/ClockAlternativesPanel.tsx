@@ -108,7 +108,7 @@ const sentencesOf = (text: string) => text.split(/(?<=\.)\s+(?=[A-Z])/).filter(B
 /** A header with its (i), which opens the Terms with the column's terms first */
 function TermsHeader({ label, focus }: { label: string; focus: readonly GlossaryId[] }) {
     return (
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
             {label}
             <HelpButton label={termsHelpName(label)}>
                 <TermsList focus={focus} />
@@ -120,7 +120,7 @@ function TermsHeader({ label, focus }: { label: string; focus: readonly Glossary
 /** A header of the full table with the help that was its hover text */
 function HelpHeader({ label, help }: { label: string; help: string }) {
     return (
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
             {label}
             <HelpButton label={`About ${label}`}>
                 <Typography variant="body2">{help}</Typography>

@@ -2,6 +2,9 @@ import { HelpOutline } from '@mui/icons-material';
 import { IconButton, Popover } from '@mui/material';
 import { useState, type ReactNode } from 'react';
 
+/** How long the popover takes to open or close */
+const POPOVER_MS = 200;
+
 interface HelpButtonProps {
     /** What the button is called, and what the popover is called: "About Fixed 4 + 2" */
     label: string;
@@ -38,6 +41,8 @@ export function HelpButton({ label, children }: HelpButtonProps) {
                 anchorEl={anchor}
                 onClose={() => setAnchor(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                // a fixed, short grow: a long help (the Terms) would otherwise take most of half a second to go
+                transitionDuration={POPOVER_MS}
                 // a click in the popover, or on its backdrop, reaches the row through React's tree: it must not select the clock
                 onClick={(event) => event.stopPropagation()}
                 slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { maxWidth: 360, p: 2 } } }}

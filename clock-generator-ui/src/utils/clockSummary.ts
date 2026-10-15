@@ -231,15 +231,16 @@ export function foldedMakes(clocks: Pick<SummaryClock, 'assessment'>[]): string 
 
 /**
  * The compare table's "Works?": "Yes" for a clock that holds the rate and recovers, made for the belt asked for;
- * otherwise what is wrong, the worst first: the rate it misses, that it does not hold its rate, that it needs a restart
- * after a jam, or that it is only for belts that stand still. `kind` picks the icon; the words say it without the colour.
+ * otherwise what is wrong, the worst first: that it does not hold its rate (the word of the group it is listed under;
+ * its rate is in its name and in Makes), the rate it misses, that it needs a restart after a jam, or that it is only for
+ * belts that stand still. `kind` picks the icon; the words say it without the colour.
  */
 export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment'>): { kind: 'yes' | 'caution' | 'no'; text: string } {
-    if (isOffTarget(clock)) {
-        return { kind: 'no', text: SUMMARY_COPY.worksOffTarget(rateText(clock.assessment.items_per_second)) };
-    }
     if (clock.verdict === 'unstable') {
         return { kind: 'no', text: SUMMARY_COPY.worksUnstable };
+    }
+    if (isOffTarget(clock)) {
+        return { kind: 'no', text: SUMMARY_COPY.worksOffTarget(rateText(clock.assessment.items_per_second)) };
     }
     if (clock.verdict === 'no recovery') {
         return { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery };

@@ -67,6 +67,8 @@ export function TermsPopover({ anchorEl, onClose }: TermsPopoverProps) {
             onClose={onClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            // a fixed, short grow: as long as the list is, it would otherwise take most of half a second to go
+            transitionDuration={200}
             slotProps={{
                 paper: {
                     role: 'dialog',

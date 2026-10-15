@@ -264,9 +264,14 @@ describe('worksOf', () => {
         expect(worksOf(clock('a', { matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Only for belts that stand still' });
     });
 
-    it('names the rate a clock misses, before its verdict', () => {
-        expect(worksOf(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })))
+    it('names the rate a clock that holds a rate misses, before whether it recovers', () => {
+        expect(worksOf(clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 })))
             .toEqual({ kind: 'no', text: 'Misses the rate (192/s)' });
+    });
+
+    it('calls a clock that does not hold its rate unstable, whatever rate it runs at', () => {
+        expect(worksOf(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })))
+            .toEqual({ kind: 'no', text: 'Unstable' });
     });
 
     it('says a clock that does not recover needs a restart, and one that does not hold its rate is unstable', () => {
