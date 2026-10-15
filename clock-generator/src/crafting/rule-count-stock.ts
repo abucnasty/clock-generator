@@ -25,7 +25,8 @@ function endKindOf(entity_id: EntityId): EndKind {
 
 /**
  * The input of the rule count (`ruleCount`) for a simulated run: its stock, and the entities of its config, which
- * give the ends, their kinds, the recipes and the items each inserter moves (its filters, or what its source holds).
+ * give the ends, their kinds and the recipes. The items of an inserter are the ones seen in its hand over the run, as
+ * the series reads a dump and as a recording is read, so that the three sources group the same inserters alike.
  * An inserter is counted only if the stock has it; the machines carry `crafts_started`, the simulator's true starts.
  *
  * @param wired whether the run gives the inserter a circuit wire and an enable condition: for a clocked run, that
@@ -48,7 +49,7 @@ export function ruleCountInputOfStock(
         })),
         inserters: registry.getAll().filter(Entity.isInserter).filter(it => recorded.has(it.entity_id.id)).map(inserter => {
             const series = inserters.get(inserter.entity_id.id)!;
-            const items = inserter.filtered_items.size > 0 ? inserter.filtered_items : inserter.source.item_names;
+            const items = new Set(series.held_item.filter(item => item !== ""));
             const source = inserter.source.entity_id;
             const sink = inserter.sink.entity_id;
             return {
