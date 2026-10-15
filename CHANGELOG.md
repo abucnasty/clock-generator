@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.12.1] - 2026-10-15
+
+### Changed
+- The mechanism the clocking advice rests on, that a productivity payout does not wake an inserter waiting to put items into a machine, is now confirmed on a second design with the same kind of machine (the advanced circuit electromagnetic plant). Other kinds of machine are not tested. Text only: no clock, selection or call changes.
+
 ## [0.12.0] - 2026-10-15
 
 ### Changed
