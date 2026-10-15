@@ -31,7 +31,7 @@ export const PROBLEM_TEXT = {
 } as const;
 
 /** The non-blocking warning of a "Repeat every" that the clock period is not a whole number of */
-export const repeatWarning = (repeat: number, period: number) =>
+const repeatWarning = (repeat: number, period: number) =>
     `${repeat} ticks doesn't fit a whole number of times into the ${period}-tick clock period, so the blueprint can't repeat this rule exactly.`;
 
 /** The DOM id of one of the rule form's fields: the form's prefix, then its place ("start", 0) */

@@ -70,6 +70,10 @@ preview unless you are debugging.
   stale, in flight), the colour roles of confirm, cancel, danger and selection, square chips, title bars on cards,
   dialogs and accordions, the help controls, focus rings (black in a filled alert), messages and menus on the card
   surface, and that each surface is its token. `BASE_URL`, `UI_DIR`, `WIDTHS` and `STEPS` as above.
+- `capture-rule-editor.mjs <out dir>` (on `lib.mjs`) checks the rule editor (item 3.1) at 1440, 720 and 390px: the
+  "In words" sentence and "In the blueprint" note per mode, Clocked windows against the period (before a check, after
+  Check only, after Generate with the strip), the inline problems and the refused Save in the dialog and the Diagram tab,
+  templates that ask and confirm, drills without Conditional, names, focus and contrast. Controls are in `ui` (`rule*`).
 
 ## Shared helpers
 

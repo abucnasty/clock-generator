@@ -10,6 +10,9 @@ import {
 } from '@mui/material';
 import { EnableControlMode, TargetType } from 'clock-generator/light';
 import { useId, useLayoutEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { useAnnounce } from '../hooks/useMessages';
+import { blockedSummaryOf } from '../utils/ruleProblems';
 import type {
     BeltFormData,
     ChestFormData,
@@ -267,6 +270,9 @@ export function InserterConfigPanel({
     const id = useId();
     const [activeTab, setActiveTab] = useState(0);
     const [draft, setDraft] = useState(inserter);
+    const announce = useAnnounce();
+    // whether Save was pressed while the rule had problems: the bar says why until they are fixed
+    const [saveRefused, setSaveRefused] = useState(false);
     const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false, problems: [] });
 
     // the tab's chip shows the saved rule, in the words of the List row's chip
@@ -335,6 +341,17 @@ export function InserterConfigPanel({
     // one update with what changed; the overrides only when the rule did, so an untouched rule (a forced ALWAYS
     // included) stays as it is
     const handleSave = () => {
+        // a rule with problems is not saved: the Enable rule tab shows, its first problem takes the focus, and the bar
+        // and the polite region say why
+        if (rule.problems.length > 0) {
+            flushSync(() => {
+                setActiveTab(1);
+                setSaveRefused(true);
+            });
+            document.getElementById(rule.problems[0].fieldId)?.focus();
+            announce(blockedSummaryOf(rule.problems));
+            return;
+        }
         const updates: Partial<InserterFormData> = { ...changedFields };
         if (rule.changed) {
             updates.overrides = { ...inserter.overrides, enable_control: rule.override };
@@ -406,6 +423,7 @@ export function InserterConfigPanel({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'flex-end',
+                    flexWrap: 'wrap',
                     gap: 1,
                     px: 2,
                     py: 1.5,
@@ -417,6 +435,11 @@ export function InserterConfigPanel({
                 {dirty && (
                     <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
                         Unsaved changes
+                    </Typography>
+                )}
+                {saveRefused && rule.problems.length > 0 && (
+                    <Typography variant="body2" color="error" sx={{ mr: 1 }} data-rule-blocked="">
+                        {blockedSummaryOf(rule.problems)}
                     </Typography>
                 )}
                 <Button onClick={onClose} color="inherit">Cancel</Button>

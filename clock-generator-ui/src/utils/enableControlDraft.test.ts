@@ -30,6 +30,22 @@ describe('enableControlDraftOf', () => {
         expect(enableControlDraftOf(clocked)).toMatchObject({ mode: 'CLOCKED', ranges: [{ start: '0', end: '10' }, { start: '20', end: '30' }], periodDuration: '60' });
         expect(enableControlDraftOf(conditional)).toMatchObject({ mode: 'CONDITIONAL', ruleSet, latchEnabled: true, releaseCondition: release });
     });
+
+    const planned = { ranges: [{ start: 12, end: 20 }, { start: 80, end: 95 }], periodTicks: 264 };
+
+    it('starts the Clocked fields of a rule that is not Clocked from the clock\'s windows and period', () => {
+        for (const stored of [undefined, { mode: 'ALWAYS' } as const, conditional]) {
+            expect(enableControlDraftOf(stored, planned)).toMatchObject({
+                mode: stored?.mode ?? 'AUTO',
+                ranges: [{ start: '12', end: '20' }, { start: '80', end: '95' }],
+                periodDuration: '264',
+            });
+        }
+    });
+
+    it('keeps a stored Clocked rule over the clock\'s windows', () => {
+        expect(enableControlDraftOf(clocked, planned)).toMatchObject({ ranges: [{ start: '0', end: '10' }, { start: '20', end: '30' }], periodDuration: '60' });
+    });
 });
 
 describe('buildEnableControlOverride', () => {
@@ -52,7 +68,12 @@ describe('buildEnableControlOverride', () => {
         expect(buildEnableControlOverride(draft)).toEqual({ mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 5, end: 5 }], period_duration_ticks: 60 });
     });
 
-    it.each(['', '0', '-5'])('leaves out a CLOCKED period of %j', (periodDuration) => {
+    it('leaves out a window with an empty or unwhole field, never making a value up', () => {
+        const draft = { ...enableControlDraftOf(clocked), ranges: [{ start: '', end: '10' }, { start: '1.5', end: '3' }, { start: ' 4 ', end: '6' }] };
+        expect(buildEnableControlOverride(draft)).toEqual({ mode: 'CLOCKED', ranges: [{ start: 4, end: 6 }], period_duration_ticks: 60 });
+    });
+
+    it.each(['', '0', '-5', 'abc', '1.5'])('leaves out a CLOCKED period of %j', (periodDuration) => {
         const override = buildEnableControlOverride({ ...enableControlDraftOf(clocked), periodDuration });
         expect(override).toEqual({ mode: 'CLOCKED', ranges: clocked.ranges });
         expect('period_duration_ticks' in override!).toBe(false);

@@ -62,14 +62,18 @@ import { nextStepOf } from './utils/nextStep';
 import { needsNoClock } from './utils/installSteps';
 import { itemName, type GameNames } from './utils/gameNames';
 import { GameNamesContext } from './hooks/useGameNames';
+import { RuleTimingContext } from './components/RuleTimingContext';
+import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 
-/** The theme, and the in-game names every picker and label reads */
-function PageProviders({ gameNames, children }: { gameNames: GameNames; children: ReactNode }) {
+/** The theme, the in-game names every picker and label reads, and the timing the rule editor checks a rule against */
+function PageProviders({ gameNames, ruleTiming, children }: { gameNames: GameNames; ruleTiming: RuleTiming; children: ReactNode }) {
     return (
         <ThemeProvider theme={appTheme}>
-            <GameNamesContext value={gameNames}>{children}</GameNamesContext>
+            <GameNamesContext value={gameNames}>
+                <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
+            </GameNamesContext>
         </ThemeProvider>
     );
 }
@@ -222,6 +226,21 @@ function App() {
     const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
     const rateWarning = rateWarningOf(selectedClock);
     const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale);
+
+    // what the rule editor checks a rule against: the selected clock while it is for this build, else the last check
+    const timingClock = generatedFor !== null && !resultsAreStale ? selectedClock ?? null : null;
+    const checkedPlan = validation.status === 'valid' && checkStatus === 'valid' ? validation.validation : null;
+    const checkedCycle = checkedPlan?.cycle_ticks ?? null;
+    const checkedPeriod = checkedPlan?.period_ticks ?? null;
+    const ruleTiming = useMemo(
+        () => ruleTimingOf({
+            results: timingClock
+                ? { cycleTicks: timingClock.cycleTicks, periodTicks: timingClock.simulationDurationTicks, windows: timingClock.clockWindows }
+                : null,
+            check: checkedCycle !== null && checkedPeriod !== null ? { cycleTicks: checkedCycle, periodTicks: checkedPeriod } : null,
+        }),
+        [timingClock, checkedCycle, checkedPeriod],
+    );
 
     // one copy for every Copy button: the bar's, the card's and the string's
     const notify = useNotify();
@@ -494,7 +513,7 @@ function App() {
     }), [runChecked, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
-        <PageProviders gameNames={gameNames}>
+        <PageProviders gameNames={gameNames} ruleTiming={ruleTiming}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
