@@ -29,6 +29,7 @@ import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
 import { useIntroCard } from './hooks/useIntroCard';
+import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -275,12 +276,15 @@ function App() {
         [config.inserters, config.belts, config.overrides]
     );
 
+    // the most the machines making the target recipe can make: a target above it is a problem
+    const machinesMax = useMachinesMax(config.target_output.recipe, config.machines);
     // what keeps the build from being clocked, and so where Generate goes instead
     const problems = useMemo(() => problemsOf({
         targetOutput: config.target_output,
         machines: config.machines,
         coverageIssues: checkedCoverageIssues ?? [],
-    }), [config.target_output, config.machines, checkedCoverageIssues]);
+        machinesMax,
+    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax]);
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
@@ -604,6 +608,7 @@ function App() {
                                 recipe={config.target_output.recipe}
                                 itemsPerSecond={config.target_output.items_per_second}
                                 copies={config.target_output.copies}
+                                machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 onRecipeChange={(recipe) => updateTargetOutput('recipe', recipe)}
                                 onItemsPerSecondChange={(value) => updateTargetOutput('items_per_second', value)}
