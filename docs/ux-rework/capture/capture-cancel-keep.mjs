@@ -174,6 +174,11 @@ const radios = (p) => ui.clockTable(p).getByRole('radio');
 const clocksMade = (p) => radios(p).count();
 const labelsOf = (p) => radios(p).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
 const selectedLabel = (p) => ui.clockTable(p).locator('input[type=radio]:checked').first().getAttribute('aria-label', { timeout: 1000 }).catch(() => null);
+/**
+ * A row's name is "{plain name}: {engine name}" (2.5 B); the plain name ("Fewest wake-ups") is relative to the other clocks
+ * made, so two rows are the same clock when their engine names are
+ */
+const engineOf = (label) => (label ?? '').split(': ').slice(1).join(': ');
 const pickRow = async (p, i) => {
     await radios(p).nth(i).locator('xpath=ancestor::tr[1]').locator('td').last().click();
     await p.waitForTimeout(300);
@@ -200,10 +205,13 @@ async function reload(p) {
     await waitReady(p);
 }
 async function setRate(p, value) {
+    // off any button whose tooltip (above it, in the header) could cover the Configure toggle at 390
+    await p.mouse.move(0, 0);
+    await p.waitForTimeout(300);
     await goConfigure(p);
     const field = ui.targetRate(p);
     // focused first: the field shows its full value on focus, and a fill before that lands after the short one
-    await field.click();
+    await field.focus();
     await field.fill(String(value));
     await field.press('Tab');
     await p.waitForTimeout(400);
@@ -436,6 +444,8 @@ const run = await forWidths(
                 rec.check('a clock arrived while Cancel was on screen', !!some);
                 nStopped = await clocksMade(page);
                 await rec.shot(page, 'running-with-clocks', { desc: 'Running: clocks arriving, Cancel in the header' });
+                // the clocks on screen when Cancel is pressed (a later clock can replace earlier ones while the run goes)
+                nStopped = await clocksMade(page);
                 const stillOnCancel = await onCancel(page);
                 const markCancel = await annMark(page);
                 let pressed = false;
@@ -551,6 +561,9 @@ const run = await forWidths(
                     rec.check('while running the Results card has a Copy button', false, 'none found');
                 }
                 try {
+                    // the pointer is still on Generate from the click: its tooltip goes first
+                    await page.mouse.move(0, 0);
+                    await sleep(400);
                     const tip = await openTooltip(page, copyBar(page));
                     rec.check('while running Copy\'s tooltip is the one for "Copy current best"', (await tip.innerText()).replace(/\s+/g, ' ').includes(WORDS.copyBestTooltip), JSON.stringify((await tip.innerText()).slice(0, 90)));
                     await rec.shot(page, 'copy-current-best-tooltip', { desc: 'Copy current best with its tooltip open (running)' });
@@ -566,10 +579,15 @@ const run = await forWidths(
                     clip1 = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
                 });
                 rec.check('Copy current best wrote a blueprint to the clipboard', clip1.length > 100, `${clip1.length} characters`);
-                await checkAnnounced(rec, page, WORDS.copiedBest, 'copy current best');
+                // read from the recorder of the polite region: the clipboard is shared by the widths, so the copy can come just
+                // before the run ends, whose "Finished generating" then takes the region's place
+                {
+                    const heard = (await annSince(page, mark)).filter((t) => WORDS.copiedBest.test(t));
+                    rec.check('announced copy current best (in the polite region)', heard.length >= 1, JSON.stringify(heard));
+                }
                 await idle(page);
                 await sleep(500);
-                rec.check('after the run the clock that was copied is still the selected one', (await selectedLabel(page)) === copiedLabel, `${copiedLabel} -> ${await selectedLabel(page)}`);
+                rec.check('after the run the clock that was copied is still the selected one (by engine name)', engineOf(await selectedLabel(page)) === engineOf(copiedLabel) && engineOf(copiedLabel) !== '', `${copiedLabel} -> ${await selectedLabel(page)}`);
                 let clip2 = '';
                 await withClipboard(async () => {
                     await copyBar(page).first().click();
@@ -600,7 +618,7 @@ const run = await forWidths(
                 await generate(page);
                 await goResults(page);
                 const now = await selectedLabel(page);
-                rec.check('after Items per second 240 -> 220 and Generate the same clock (by label) is selected', pickedLabel !== null && now === pickedLabel, `${pickedLabel} -> ${now}`);
+                rec.check('after Items per second 240 -> 220 and Generate the same clock (by engine name) is selected', pickedLabel !== null && engineOf(now) === engineOf(pickedLabel) && engineOf(now) !== '', `${pickedLabel} -> ${now}`);
             });
         }
 
