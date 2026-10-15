@@ -3,7 +3,7 @@ import { Machine } from './machine'
 import { RecipeMetadata } from './recipe'
 import { MachineMetadata } from './machine-metadata';
 import { Ingredient } from '../../data/factorio-data-types';
-import { fraction } from 'fractionability';
+import { fraction } from "../../data-types/fraction";
 import { TICKS_PER_SECOND } from '../../data-types';
 
 

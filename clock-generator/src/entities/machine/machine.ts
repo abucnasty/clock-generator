@@ -1,4 +1,4 @@
-import { fraction } from "fractionability"
+import { fraction } from "../../data-types/fraction"
 import { MachineConfiguration } from "../../config";
 import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
 import { BurnerEnergySource, FuelSlot } from "./fuel";

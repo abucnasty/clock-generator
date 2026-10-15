@@ -1,4 +1,4 @@
-import Fraction, { fraction } from "fractionability";
+import Fraction, { fraction } from "../../../data-types/fraction";
 import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
 import { MapExtended } from "../../../data-types";
