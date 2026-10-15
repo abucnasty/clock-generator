@@ -198,7 +198,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
                                 {timelineRun === 'clock'
                                     ? 'The timelines show the build driven only by the wake windows in the blueprint. '
-                                        + 'This is the run the Status and Clock-only output columns are judged on.'
+                                        + 'This is the run the Status and Output per clock period columns are judged on.'
                                     : 'The timelines show the planning simulation the wake windows were taken from. '
                                         + 'Inserters also wait on their machine\'s inventory there, so swings can land differently than with the clock alone.'}
                             </Typography>
