@@ -6,7 +6,7 @@ import { ClockAlternative, ClockAlternativesResult, generateClockAlternatives } 
 import { StockRecording } from "./machine-stock";
 import { runBuild } from "./plan/plan-run";
 import { removedBetween, RuleRemoval } from "./rule-call";
-import { ruleCount, RuleCountRun, TrueStartAgreement, trueStartAgreementOf } from "./rule-count";
+import { ruleCount, RuleCountRun } from "./rule-count";
 import { ruleCountInputOfStock } from "./rule-count-stock";
 import { FREE_RUNNING_CHECK_TICKS, longRunPeriodsOf, OUTPUT_FEEDER_CHECK_TICKS, simulateClockOnly } from "./trial";
 import { LONG_RUN_SETTLE_SHARE } from "./long-run";
@@ -29,10 +29,10 @@ export interface RuleCallsOfClock {
     unwired_run: RuleCountRun;
     /** The build on the clock; wired are the inserters the clock gives windows */
     clocked_run: RuleCountRun;
-    /** The removal per group, the pooled figure, and the calls */
+    /** The removal per group, the pooled figure, and the calls, in true starts: the call */
     removal: RuleRemoval;
-    /** Sink wake-ups by inferred starts against true starts, per group, in each run (simulated runs have true starts) */
-    true_start_agreement: { unwired: TrueStartAgreement[]; clocked: TrueStartAgreement[] };
+    /** The same on the series' original count, for comparison */
+    removal_original: RuleRemoval;
     /**
      * Goal 2's count (`wakeUps`, unchanged) of the clocked stock here, against the one the generator's long run made
      * for the clock: equal when this run is the same run
@@ -123,7 +123,7 @@ export function ruleCallsOfClock(config: Config, selected: ClockAlternative, log
         clock: { id: selected.id, label: selected.label, verdict: selected.verdict, period_ticks: period },
         from_tick, to_tick, unwired_run, clocked_run,
         removal: removedBetween(unwired_run, clocked_run),
-        true_start_agreement: { unwired: trueStartAgreementOf(unwired_run), clocked: trueStartAgreementOf(clocked_run) },
+        removal_original: removedBetween(unwired_run, clocked_run, "original"),
         clocked_wake_ups_per_minute: {
             here: wakeUpsOfStock(clocked_stock, ends, from_tick).wake_ups_per_minute,
             long_run: result.stability_check.as_built!.wake_ups!.wake_ups_per_minute,

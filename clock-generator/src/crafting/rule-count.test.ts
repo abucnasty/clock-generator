@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RuleCountInserter, RuleCountMachine, ruleCount, trueStartAgreementOf } from "./rule-count";
+import { RuleCountInserter, RuleCountMachine, ruleCount } from "./rule-count";
 
 const WORKING = "working";
 const SOURCE = "waiting_for_source_items";
@@ -234,22 +234,35 @@ describe("ruleCount", () => {
         });
     });
 
-    describe("true starts of a simulated run", () => {
-        it("counts the sink wake-ups with the true starts beside the inferred ones, and the agreement per group", () => {
-            const length = 8;
-            // the sink starts at 3 and 5 by its counter; its status shows working only from 3 to 7, and no finish at all
-            const sink = machine(length, [], [3, 4, 5, 6, 7], { machine_id: "machine:2", crafts_started: counter(length, [3, 5]) });
-            const states = series(length, WORKING, { 2: SPACE, 4: SPACE });
-            const into = inserter(states, series(length, 0), { source_kind: "belt", source_machine_id: null, sink_kind: "machine", sink_machine_id: "machine:2" });
-            const run = ruleCount([into], [sink], 0, length);
-            expect(run.inserters[0]).toMatchObject({ sink_wake_ups: 1, sink_wake_ups_true_starts: 2 });
-            expect(trueStartAgreementOf(run)).toEqual([{ key: run.groups[0].key, inserters: 1, inferred: 1, true_starts: 2, difference: -1 }]);
+    describe("the count in true starts", () => {
+        const length = 10;
+        // the sink truly starts at 3 and 7; it pays out a productivity bar at 5 (a finish that is no start)
+        const sink = (extra: Partial<RuleCountMachine> = {}) => machine(length, [3, 5, 7], [3, 4, 5, 6, 7, 8, 9], {
+            machine_id: "machine:2", true_starts: series(length, false, { 3: true, 7: true }), ...extra,
+        });
+        const states = series(length, WORKING, { 2: SPACE, 4: SPACE, 6: SPACE });
+        const into = inserter(states, series(length, 0), { source_kind: "belt", source_machine_id: null, sink_kind: "machine", sink_machine_id: "machine:2" });
+
+        it("wakes an input on a true start and not on a payout, where the original count takes the payout for a start", () => {
+            const run = ruleCount([into], [sink()], 0, length);
+            expect(run.inserters[0]).toMatchObject({ sink_wake_ups: 3, true_sink_wake_ups: 2, true_wake_ups: 2, wake_ups: 3 });
+            expect(run.groups[0]).toMatchObject({ wake_ups: 3, true_wake_ups: 2 });
+            expect(run.true_start_unknown).toEqual([]);
         });
 
-        it("reports no true starts for a recording of the game", () => {
-            const run = ruleCount([inserter(series(5, WORKING), series(5, 0))], [machine(5, [2])], 0, 5);
-            expect(run.inserters[0].sink_wake_ups_true_starts).toBeNull();
-            expect(trueStartAgreementOf(run)).toEqual([]);
+        it("lets a machine without true starts stand in with its inferred starts, and names it", () => {
+            const run = ruleCount([into], [sink({ true_starts: undefined })], 0, length);
+            expect(run.inserters[0]).toMatchObject({ sink_wake_ups: 3, true_sink_wake_ups: 3 });
+            expect(run.true_start_unknown).toEqual([{ machine_id: "machine:2", recipe: "gear" }]);
+        });
+
+        it("reads a pickup against the true-start count's own wake-ups", () => {
+            // the output's source pays out at 5 and the output takes the payout's item at 6: explained by the source
+            // wake-up in both counts, since the source half is the same
+            const source = machine(length, [5], [], { true_starts: series(length, false) });
+            const out = inserter(series(length, MORE, { 6: WORKING }), series(length, 0, { 6: 1, 7: 1, 8: 1, 9: 1 }));
+            const run = ruleCount([out], [source], 0, length);
+            expect(run.inserters[0]).toMatchObject({ source_wake_ups: 1, pickups: 0, true_pickups: 0, true_wake_ups: 1 });
         });
     });
 });

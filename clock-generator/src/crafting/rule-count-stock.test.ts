@@ -67,15 +67,15 @@ describe("the rule count of a simulated run", () => {
         expect(output.states).toBe(stock.inserters.find(it => it.inserter_id === output.inserter_id)!.factorio_state);
     });
 
-    it("counts the sink wake-ups with the true starts as with the inferred ones for the belt-fed inserters", () => {
+    it("gives each machine its true starts from the simulator's crafts_started", () => {
         const stock = stockOf(40);
         const input = ruleCountInputOfStock(stock, createEntityRegistryFromConfig(config), () => true);
-        const run = ruleCount(input.inserters, input.machines, Math.floor(stock.ticks / 3), stock.ticks);
-        const belt_fed = run.inserters.filter(it => it.sink_wake_ups_true_starts !== null);
-        expect(belt_fed).toHaveLength(2);
-        for (const inserter of belt_fed) {
-            expect(inserter.sink_wake_ups).toBe(inserter.sink_wake_ups_true_starts);
+        for (const [m, machine] of input.machines.entries()) {
+            const started = stock.machines[m].crafts_started;
+            expect(machine.true_starts?.filter(Boolean).length).toBe(started[started.length - 1] - started[0]);
         }
+        const run = ruleCount(input.inserters, input.machines, Math.floor(stock.ticks / 3), stock.ticks);
+        expect(run.true_start_unknown).toEqual([]);
     });
 
     it("works out the removal and the calls of a clock, over the ticks of its long run", () => {
@@ -88,11 +88,11 @@ describe("the rule count of a simulated run", () => {
         expect(calls.clocked_run.groups.reduce((sum, group) => sum + group.wired, 0)).toBe(3);
         expect(calls.removal.newly_wired_inserters).toBe(3);
         expect(calls.removal.w_removed_pooled).toBeCloseTo(549.7, 1);
-        expect(calls.removal.call).toMatchObject({ call: "clock", firm: true, region: "above 207.6" });
+        expect(calls.removal.call).toMatchObject({ call: "clock", firm: true, region: "above 175.7", count: "true starts" });
         expect(calls.removal.groups.map(group => group.status)).toEqual(["newly wired", "newly wired", "newly wired"]);
-        for (const agreement of [...calls.true_start_agreement.unwired, ...calls.true_start_agreement.clocked]) {
-            expect(agreement.difference).toBe(0);
-        }
+        // its sinks are fed from belts at +0%: the true starts are the inferred ones, and the two counts agree
+        expect(calls.removal_original.w_removed_pooled).toBeCloseTo(calls.removal.w_removed_pooled!, 9);
+        expect(calls.removal_original.call).toMatchObject({ call: "clock", firm: true, region: "above 207.6", count: "original" });
     });
 });
 
@@ -136,7 +136,7 @@ describe("the rule count of a recording of the game", () => {
         const input = ruleCountInputOfRecording(recording, () => false);
         const run = ruleCount(input.inserters, input.machines, 0, 6);
         // waited at 2, the machine finished at 3: one wake-up; the hand rose at 4, one index after it: explained
-        expect(run.inserters[0]).toMatchObject({ source_wake_ups: 1, sink_wake_ups: 0, pickups: 0, sink_wake_ups_true_starts: null });
+        expect(run.inserters[0]).toMatchObject({ source_wake_ups: 1, sink_wake_ups: 0, pickups: 0, true_wake_ups: 1 });
         expect(run.groups[0]).toMatchObject({ key: "machine to belt | gear | gear > ", wired: 0 });
     });
 });

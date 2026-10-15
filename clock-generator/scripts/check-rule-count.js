@@ -69,21 +69,21 @@ const TOLERANCE = 0.5;
                 fail(`${side}: start-rule fallback ${JSON.stringify(fb_ours)} against ${JSON.stringify(fb_theirs)}`);
             }
         }
-        const removal = removedBetween(runs.unwired, runs.clocked);
+        const removal = removedBetween(runs.unwired, runs.clocked, "original");
         const theirs = series.get(pair.name);
         const rows = [];
         const theirs_by = new Map(theirs.groups.map(g => [g.key, g.w_removed]));
         for (const g of removal.groups.filter(g => g.newly_wired)) {
             const t = theirs_by.get(g.key);
-            const region_ours = g.call.region, region_theirs = t === undefined ? "-" : ruleCallOf(t).region;
+            const region_ours = g.call.region, region_theirs = t === undefined ? "-" : ruleCallOf(t, "original").region;
             const diff = t === undefined ? null : g.w_removed - t;
             rows.push({ group: g.key, inserters: g.inserters_clocked, generator: g.w_removed, series: t ?? null, difference: diff, region: region_ours, region_series: region_theirs });
             if (t === undefined || Math.abs(diff) > TOLERANCE || region_ours !== region_theirs) fail(`removed ${g.key}: ${g.w_removed} against ${t}`);
         }
         if (removal.groups.filter(g => g.newly_wired).length !== theirs.groups.length) fail(`newly wired groups ${removal.groups.filter(g => g.newly_wired).length} against ${theirs.groups.length}`);
         const pooled_diff = removal.w_removed_pooled - theirs.pooled;
-        rows.push({ group: "design, a wired inserter (pooled)", inserters: removal.newly_wired_inserters, generator: removal.w_removed_pooled, series: theirs.pooled, difference: pooled_diff, region: removal.call.region, region_series: ruleCallOf(theirs.pooled).region });
-        if (Math.abs(pooled_diff) > TOLERANCE || removal.call.region !== ruleCallOf(theirs.pooled).region) fail(`pooled ${removal.w_removed_pooled} against ${theirs.pooled}`);
+        rows.push({ group: "design, a wired inserter (pooled)", inserters: removal.newly_wired_inserters, generator: removal.w_removed_pooled, series: theirs.pooled, difference: pooled_diff, region: removal.call.region, region_series: ruleCallOf(theirs.pooled, "original").region });
+        if (Math.abs(pooled_diff) > TOLERANCE || removal.call.region !== ruleCallOf(theirs.pooled, "original").region) fail(`pooled ${removal.w_removed_pooled} against ${theirs.pooled}`);
         for (const r of rows) console.log(`  ${r.group} | n ${r.inserters} | ${r.generator.toFixed(2)} | ${r.series === null ? "-" : r.series.toFixed(2)} | ${r.difference === null ? "-" : r.difference.toExponential(1)} | ${r.region}`);
         report.push({ name: pair.name, rows, fallback: { unwired: runs.unwired.start_rule_fallback.length, clocked: runs.clocked.start_rule_fallback.length } });
     }

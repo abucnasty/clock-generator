@@ -5,7 +5,7 @@ import { loadConfigFromFile } from "./config/loader";
 import { ConfigPaths } from "./config/config-paths";
 import "./data/factorio-data-file";
 import { EntityId } from "./entities";
-import { RULE_CALL_CAVEATS, RULE_CALL_SOURCE, RULE_CALL_THRESHOLDS, removedBetween, RuleCall, RuleRemoval } from "./crafting/rule-call";
+import { RULE_CALL_CAVEATS, RULE_THRESHOLDS, removedBetween, RuleCall, RuleRemoval } from "./crafting/rule-call";
 import { ruleCallsOfSample } from "./crafting/rule-calls-of-sample";
 import { ruleCount, RuleCountRun } from "./crafting/rule-count";
 import { FactorioInserterState } from "./state/factorio-entity-state";
@@ -22,7 +22,8 @@ import { ruleCountInputOfRecording } from "./verification/recording-rule-count";
  * - a sample or config of the generator, whose selected clock is run in the simulator against the same build with
  *   every inserter always enabled.
  *
- * It prints the groups, the w removed of each, the call, the pooled figure, and what the call rests on; `--json`
+ * It prints the groups, the w removed of each and its call in true starts, beside them the series' original count and
+ * its call, the pooled figures, the machines whose starts could not be read, and what the call rests on; `--json`
  * writes all of it with the version and the commit of the generator that counted it.
  */
 
@@ -45,9 +46,11 @@ function usage(): never {
         "  --sample               a sample of the generator (e.g. ADVANCED_CIRCUIT) or a config file: its selected clock",
         "                         against the same build with every inserter always enabled, in the simulator",
         "",
-        `The call: w removed (wake-ups a minute a clock removes from a wired inserter) below ${RULE_CALL_THRESHOLDS.unwired_firm}: leave`,
-        `unwired; ${RULE_CALL_THRESHOLDS.unwired_firm} to ${RULE_CALL_THRESHOLDS.clock_lower}: leave unwired, marginal; ${RULE_CALL_THRESHOLDS.clock_lower} to ${RULE_CALL_THRESHOLDS.clock_firm}: clock, marginal;`,
-        `above ${RULE_CALL_THRESHOLDS.clock_firm}: clock. From ${RULE_CALL_SOURCE.page}.`,
+        ...(["true starts", "original"] as const).map(count => {
+            const t = RULE_THRESHOLDS[count];
+            return `${count === "true starts" ? "The call, in true starts" : "Beside it, the series' original count"}: w removed below ${t.unwired_firm}: leave unwired; `
+                + `${t.unwired_firm} to ${t.clock_lower}: leave unwired, marginal; ${t.clock_lower} to ${t.clock_firm}: clock, marginal; above ${t.clock_firm}: clock. From ${t.page}.`;
+        }),
         ...RULE_CALL_CAVEATS.map(caveat => `  - ${caveat}`),
     ].join("\n"));
     process.exit(2);
@@ -87,23 +90,43 @@ async function runOf(at: string, samples_at: string | undefined): Promise<{ run:
 const callText = (call: RuleCall | null): string =>
     call === null ? "not wired" : `${call.call} (${call.firm ? "firm" : "marginal"}, ${call.region})`;
 
-function print(removal: RuleRemoval, runs: { unwired: RuleCountRun; clocked: RuleCountRun }, notes: string[]): void {
-    const f = (x: number | null) => x === null ? "-" : x.toFixed(1);
-    console.log("| Group | Inserters | Wired | w unwired | w clocked | w removed | Call |");
-    console.log("|---|---|---|---|---|---|---|");
+/** The machines whose true starts could not be read, by recipe: their inferred starts stand in for them */
+function printUnknownStarts(runs: { unwired: RuleCountRun; clocked: RuleCountRun }): void {
+    for (const [name, run] of Object.entries(runs)) {
+        const by_recipe = new Map<string, number>();
+        for (const m of run.true_start_unknown) {
+            by_recipe.set(m.recipe, (by_recipe.get(m.recipe) ?? 0) + 1);
+        }
+        for (const [recipe, machines] of by_recipe) {
+            console.log(`True starts not known (${name}): ${machines} ${recipe || "(no recipe)"} machines; the original count's starts stand in for them`);
+        }
+    }
+}
+
+function print(removal: RuleRemoval, original: RuleRemoval, runs: { unwired: RuleCountRun; clocked: RuleCountRun }, notes: string[]): void {
+    const f = (x: number | null | undefined) => x === null || x === undefined ? "-" : x.toFixed(1);
+    const original_by_key = new Map(original.groups.map(g => [g.key, g]));
+    console.log("| Group | Inserters | Wired | w unwired | w clocked | w removed | Call | Original count: w removed | Its call |");
+    console.log("|---|---|---|---|---|---|---|---|---|");
     const groups = [...removal.groups].sort((a, b) => Number(b.newly_wired) - Number(a.newly_wired) || a.key.localeCompare(b.key));
     for (const g of groups) {
-        console.log(`| ${g.key.split(" | ").join("; ")} | ${g.inserters_clocked} | ${g.wired_clocked} | ${f(g.w_unwired)} | ${f(g.w_clocked)} | ${f(g.w_removed)} | ${callText(g.call)} |`);
+        const o = original_by_key.get(g.key);
+        console.log(`| ${g.key.split(" | ").join("; ")} | ${g.inserters_clocked} | ${g.wired_clocked} | ${f(g.w_unwired)} | ${f(g.w_clocked)} | ${f(g.w_removed)} | ${callText(g.call)} | ${f(o?.w_removed)} | ${o ? callText(o.call) : "-"} |`);
     }
-    console.log(`| design, a wired inserter (pooled) | ${removal.newly_wired_inserters} | | | | ${f(removal.w_removed_pooled)} | ${callText(removal.call)} |`);
+    console.log(`| design, a wired inserter (pooled) | ${removal.newly_wired_inserters} | | | | ${f(removal.w_removed_pooled)} | ${callText(removal.call)} | ${f(original.w_removed_pooled)} | ${callText(original.call)} |`);
     for (const [name, run] of Object.entries(runs)) {
         const by_recipe = new Map<string, number>();
         for (const m of run.start_rule_fallback) {
             by_recipe.set(m.recipe, (by_recipe.get(m.recipe) ?? 0) + 1);
         }
         for (const [recipe, machines] of by_recipe) {
-            console.log(`Start rule fallback (${name}): ${machines} ${recipe} machines counted by their finishes (starts more than 3% off)`);
+            console.log(`Original count's start rule fallback (${name}): ${machines} ${recipe} machines counted by their finishes (starts more than 3% off)`);
         }
+    }
+    printUnknownStarts(runs);
+    const differ = groups.filter(g => g.call && original_by_key.get(g.key)?.call && g.call.call !== original_by_key.get(g.key)!.call!.call);
+    if (differ.length > 0) {
+        console.log(`Calls that differ between the two counts: ${differ.map(g => g.key.split(" | ").join("; ")).join(" / ")}`);
     }
     console.log("");
     for (const note of [...notes, ...removal.caveats]) {
@@ -120,7 +143,8 @@ async function main() {
         usage();
     }
     const generator = generatorVersion();
-    const header = `clock-generator ${generator.version}, commit ${generator.commit}; rule from ${RULE_CALL_SOURCE.page} (sha256 ${RULE_CALL_SOURCE.sha256})`;
+    const call_page = RULE_THRESHOLDS["true starts"];
+    const header = `clock-generator ${generator.version}, commit ${generator.commit}; call in true starts from ${call_page.page} (sha256 ${call_page.sha256})`;
 
     if (sample !== undefined) {
         const config_path = (ConfigPaths as Record<string, string>)[sample] ?? sample;
@@ -129,23 +153,24 @@ async function main() {
         console.log(header);
         console.log(`${config_path}: ${calls.clock.label} (${calls.clock.id}, ${calls.clock.verdict}), period ${calls.clock.period_ticks}, ticks ${calls.from_tick} to ${calls.to_tick}`);
         console.log("");
-        print(calls.removal, { unwired: calls.unwired_run, clocked: calls.clocked_run }, [SIMULATOR_NOTE]);
+        print(calls.removal, calls.removal_original, { unwired: calls.unwired_run, clocked: calls.clocked_run }, [SIMULATOR_NOTE]);
         if (json_at) {
-            fs.writeFileSync(json_at, JSON.stringify({ generator, rule: RULE_CALL_SOURCE, thresholds: RULE_CALL_THRESHOLDS, sample: config_path, simulator_note: SIMULATOR_NOTE, ...calls }, null, 1));
+            fs.writeFileSync(json_at, JSON.stringify({ generator, thresholds: RULE_THRESHOLDS, sample: config_path, simulator_note: SIMULATOR_NOTE, ...calls }, null, 1));
         }
         return;
     }
     const unwired = await runOf(unwired_at!, argValue("unwired-samples"));
     const clocked = await runOf(clocked_at!, argValue("clocked-samples"));
     const removal = removedBetween(unwired.run, clocked.run);
+    const removal_original = removedBetween(unwired.run, clocked.run, "original");
     console.log(header);
     console.log(`unwired: ${unwired.source} (${unwired.run.ticks} ticks); clocked: ${clocked.source} (${clocked.run.ticks} ticks)`);
     console.log("");
-    print(removal, { unwired: unwired.run, clocked: clocked.run }, []);
+    print(removal, removal_original, { unwired: unwired.run, clocked: clocked.run }, []);
     if (json_at) {
         fs.writeFileSync(json_at, JSON.stringify({
-            generator, rule: RULE_CALL_SOURCE, thresholds: RULE_CALL_THRESHOLDS,
-            unwired: unwired.source, clocked: clocked.source, unwired_run: unwired.run, clocked_run: clocked.run, removal,
+            generator, thresholds: RULE_THRESHOLDS,
+            unwired: unwired.source, clocked: clocked.source, unwired_run: unwired.run, clocked_run: clocked.run, removal, removal_original,
         }, null, 1));
     }
 }
