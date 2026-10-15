@@ -1512,9 +1512,12 @@ export const ui = {
     ruleTemplates: (scope) => scope.getByRole('combobox', { name: 'Quick templates', exact: true }),
     ruleTemplateStep: (scope) => scope.locator('[data-template-step]').first(),
     ruleTemplateReplace: (scope) => scope.locator('[data-template-step]').getByRole('button', { name: /^(Replace conditions|Use template)$/ }),
+    /** The template step's own Cancel (not the dialog's, which comes after it) (owner: 3.1 rule editor) */
+    ruleTemplateCancel: (scope) => scope.locator('[data-template-step]').getByRole('button', { name: 'Cancel', exact: true }),
     /** "Copy from another inserter" and its confirm step's Replace rule (owner: 3.1 rule editor) */
     ruleCopyFrom: (scope) => scope.getByRole('combobox', { name: /^Copy from another/ }),
     ruleReplaceRule: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Replace rule', exact: true }),
+    ruleCopyCancel: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Cancel', exact: true }),
 };
 
 let namesCache;
@@ -1537,7 +1540,9 @@ function gameNames() {
  * scripts do not change. Set UI_DIR to the checkout whose build you are driving.
  */
 export function itemLabel(id) {
-    const entry = gameNames()[id];
+    // the data file keys the names by kind ({ item: {...}, recipe: {...} }, 2.8 a); a flat map is read as it is
+    const names = gameNames();
+    const entry = names.item?.[id] ?? names[id];
     return typeof entry === 'string' ? entry : (entry?.name ?? id);
 }
 
