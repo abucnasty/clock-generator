@@ -1,6 +1,6 @@
-import { Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, HelpOutline, Link } from '@mui/icons-material';
+import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, HelpOutline, Link } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
-import { useRef, useState, useCallback, useImperativeHandle, type Ref } from 'react';
+import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
@@ -93,6 +93,11 @@ interface ConfigImportExportProps {
     buildName: string | null;
     /** The open build's title, which Save build file names the file after */
     buildTitle: string;
+    /**
+     * Items of the page's own put in ⋮ after Getting started (Terms, Developer tools): this menu shows them and calls
+     * them with the ⋮ button, which a popover they open can hang from. One with `checked` is a check item.
+     */
+    toolsMenuItems?: ToolsMenuItem[];
 }
 
 /** A share link made when the ⋮ menu opens, so a click can copy it at once; tagged with the build it was made for */
@@ -100,6 +105,15 @@ interface PreparedLink {
     tag: string;
     promise: Promise<string>;
     link: string | null;
+}
+
+export interface ToolsMenuItem {
+    key: string;
+    label: string;
+    icon: ReactNode;
+    /** A setting that is on or off: the item is a menuitemcheckbox, ticked while on */
+    checked?: boolean;
+    onClick: (menuButton: HTMLElement | null) => void;
 }
 
 export function ConfigImportExport({
@@ -121,6 +135,7 @@ export function ConfigImportExport({
     pasteIsNextStep,
     buildName,
     buildTitle,
+    toolsMenuItems = [],
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
@@ -566,6 +581,22 @@ export function ConfigImportExport({
                         </ListItemIcon>
                         <ListItemText>Getting started</ListItemText>
                     </MenuItem>
+                    {/* one by one, not in a Fragment: the Menu reads its children for the keyboard */}
+                    {toolsMenuItems.map(item => (
+                        <MenuItem
+                            key={item.key}
+                            role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+                            aria-checked={item.checked}
+                            onClick={() => {
+                                handleMenuClose();
+                                item.onClick(menuButtonRef.current);
+                            }}
+                        >
+                            <ListItemIcon>{item.icon}</ListItemIcon>
+                            <ListItemText>{item.label}</ListItemText>
+                            {item.checked && <Check fontSize="small" aria-hidden sx={{ ml: 2 }} />}
+                        </MenuItem>
+                    ))}
                     <Divider />
                     {/* in the error text red (TEXT.error), 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
                     <MenuItem onClick={handleMenuReset} sx={{ color: 'error.light' }}>

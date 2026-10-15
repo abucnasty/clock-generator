@@ -1,5 +1,5 @@
-import { Alert, Box, Paper, Tab, Tabs, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { useState, type ReactNode } from 'react';
+import { Alert, Box, Paper, Typography } from '@mui/material';
+import type { ReactNode } from 'react';
 import type {
     LogMessage,
     DebugSteps,
@@ -10,27 +10,19 @@ import type {
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import type { FuelViewData, ShiftOptionsView } from '../worker/types';
-import { BlueprintOutput } from './BlueprintOutput';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
-import { DebugPanel } from './DebugPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
-import { FuelPanel } from './FuelPanel';
+import { DetailsPanel } from './DetailsPanel';
+import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
-import { InsightsPanel } from './InsightsPanel';
-import { ShiftRangePanel } from './ShiftRangePanel';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { StateTransitionTimeline } from './StateTransitionTimeline';
-import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
-import { TransferHistoryVisualization } from './TransferHistoryVisualization';
 import { WakeWindowsView } from './WakeWindowsView';
 import { rateWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
-
-type ResultsTab = 'insights' | 'timelines' | 'fuel' | 'blueprint' | 'log';
 
 interface ResultsWorkspaceProps {
     isRunning: boolean;
@@ -40,8 +32,7 @@ interface ResultsWorkspaceProps {
     onSelect: (index: number) => void;
     /** The clock the selection rule picks; null while there are none */
     recommendedIndex: number | null;
-    onSelectRecommended: () => void;
-    /** The card's Back to recommended: the same, with the focus moving to the card's name, which reads it out */
+    /** The card's Back to recommended: selects it, with the focus moving to the card's name, which reads it out */
     onCardBackToRecommended: () => void;
     /** What the selection rule was given by the latest generation's config; null before one */
     pickRule: PickRule | null;
@@ -69,6 +60,8 @@ interface ResultsWorkspaceProps {
     clockWindows: SerializableClockWindows | null;
     shiftOptions: ShiftOptionsView | null;
     swingBackoffReport: SwingBackoffReport | null;
+    /** ⋮ > Developer tools, or `?debug`: the timelines and the log, at the end of the page */
+    developerTools: boolean;
     logs: LogMessage[];
     debugSteps: DebugSteps;
     onDebugStepsChange: (steps: DebugSteps) => void;
@@ -102,41 +95,11 @@ interface ResultsWorkspaceProps {
     beltAction?: ReactNode;
 }
 
-const tabId = (tab: ResultsTab) => `results-tab-${tab}`;
-const panelId = (tab: ResultsTab) => `results-panel-${tab}`;
-/** What a tab says about the panel it opens, and the panel about its tab */
-const tabProps = (tab: ResultsTab) => ({ id: tabId(tab), 'aria-controls': panelId(tab) });
-
-function TabBody({ tab, shown, children }: { tab: ResultsTab; shown: boolean; children: ReactNode }) {
-    // kept mounted so a tab keeps its filters and scroll position while another is shown
-    return (
-        <Box
-            role="tabpanel"
-            id={panelId(tab)}
-            aria-labelledby={tabId(tab)}
-            hidden={!shown}
-            sx={{ display: shown ? 'block' : 'none', pt: 2 }}
-        >
-            {children}
-        </Box>
-    );
-}
-
 /**
  * Everything a generation produced, the answer first: the selected clock with its install steps, its wake windows,
- * the clocks to pick from, and one tabbed area of detail for the selected clock.
+ * the other clocks to compare it with, and the details of the selected clock. Developer tools, when they are on, last.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
-    const [tab, setTab] = useState<ResultsTab>('timelines');
-    const [timelineRun, setTimelineRun] = useState<'clock' | 'plan'>('clock');
-
-    const hasClockOnlyRun = props.clockOnlyTransferHistory !== null && props.clockOnlyStateTransitionHistory !== null;
-    const fuelView = props.fuelView;
-    // the fuel tab is only there for a build with fuel inserters
-    const shownTab: ResultsTab = tab === 'fuel' && fuelView === null ? 'timelines' : tab;
-    const showClockOnlyRun = hasClockOnlyRun && timelineRun === 'clock';
-    const transferHistory = showClockOnlyRun ? props.clockOnlyTransferHistory : props.transferHistory;
-    const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
     const selected = props.alternatives[props.selectedIndex];
     const rateWarning = rateWarningOf(selected);
@@ -194,7 +157,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 selectedIndex={props.selectedIndex}
                 onSelect={props.onSelect}
                 recommendedIndex={props.recommendedIndex}
-                onSelectRecommended={props.onSelectRecommended}
                 pickRule={props.pickRule}
                 isGenerating={props.isRunning}
                 pending={props.pending}
@@ -210,96 +172,30 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 holdNotice={noticeKind === 'searching'}
             />
 
-            <Box sx={{ display: hasResults ? 'block' : 'none', mt: 2 }}>
-                <Tabs
-                    value={shownTab}
-                    onChange={(_, value: ResultsTab) => setTab(value)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    sx={{ borderBottom: 1, borderColor: 'divider' }}
-                >
-                    <Tab value="timelines" label="Timelines" {...tabProps('timelines')} />
-                    {fuelView !== null && <Tab value="fuel" label="Fuel" {...tabProps('fuel')} />}
-                    <Tab value="insights" label="Insights" {...tabProps('insights')} />
-                    <Tab value="blueprint" label="Blueprint" {...tabProps('blueprint')} />
-                    <Tab value="log" label="Log" {...tabProps('log')} />
-                </Tabs>
+            {selected && (
+                <DetailsPanel
+                    insights={selected.insights}
+                    shiftOptions={props.shiftOptions}
+                    swingBackoffReport={props.swingBackoffReport}
+                    fuelView={props.fuelView}
+                    blueprintString={props.blueprintString}
+                    simulationDurationTicks={props.simulationDurationTicks}
+                    rateWarning={rateWarning}
+                    staleFor={props.staleFor}
+                    copied={props.copied}
+                    onCopy={props.onCopy}
+                />
+            )}
 
-                <TabBody tab="insights" shown={shownTab === 'insights'}>
-                    <SwingBackoffReportDisplay report={props.swingBackoffReport} />
-                    <InsightsPanel
-                        insights={selected?.insights ?? []}
-                        clockLabel={selected?.label ?? null}
-                    >
-                        {props.shiftOptions && <ShiftRangePanel options={props.shiftOptions} />}
-                    </InsightsPanel>
-                </TabBody>
-
-                <TabBody tab="timelines" shown={shownTab === 'timelines'}>
-                    {hasClockOnlyRun && (
-                        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                            <ToggleButtonGroup
-                                value={timelineRun}
-                                exclusive
-                                onChange={(_, value) => { if (value) setTimelineRun(value); }}
-                                size="small"
-                                aria-label="Simulation shown in the timelines"
-                            >
-                                <ToggleButton value="clock">Exported clock</ToggleButton>
-                                <ToggleButton value="plan">Plan</ToggleButton>
-                            </ToggleButtonGroup>
-                            <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
-                                {timelineRun === 'clock'
-                                    ? 'The timelines show the build driven only by the wake windows in the blueprint. '
-                                        + 'This is the run the Status and Output per clock period columns are judged on.'
-                                    : 'The timelines show the planning simulation the wake windows were taken from. '
-                                        + 'Inserters also wait on their machine\'s inventory there, so swings can land differently than with the clock alone.'}
-                            </Typography>
-                        </Paper>
-                    )}
-                    {transferHistory && (
-                        <Box sx={{ mt: 2 }}>
-                            <TransferHistoryVisualization transferHistory={transferHistory} />
-                        </Box>
-                    )}
-                    {stateTransitionHistory && (
-                        <Box sx={{ mt: 2 }}>
-                            <StateTransitionTimeline
-                                stateTransitionHistory={stateTransitionHistory}
-                                clockWindows={props.clockWindows ?? undefined}
-                            />
-                        </Box>
-                    )}
-                </TabBody>
-
-                {fuelView !== null && (
-                    <TabBody tab="fuel" shown={shownTab === 'fuel'}>
-                        <FuelPanel fuel={fuelView} />
-                    </TabBody>
-                )}
-
-                <TabBody tab="blueprint" shown={shownTab === 'blueprint'}>
-                    <BlueprintOutput
-                        rateWarning={rateWarning}
-                        blueprintString={props.blueprintString}
-                        simulationDurationTicks={props.simulationDurationTicks ?? undefined}
-                        staleFor={props.staleFor}
-                        copied={props.copied}
-                        onCopy={props.onCopy}
-                    />
-                </TabBody>
-            </Box>
-
-            {/* reachable before anything is generated: it holds the debug options a generation runs with */}
-            <Box
-                // the Log tab's panel; with no results there are no tabs, and the options are plain content
-                role={hasResults ? 'tabpanel' : undefined}
-                id={panelId('log')}
-                aria-labelledby={hasResults ? tabId('log') : undefined}
-                hidden={hasResults && shownTab !== 'log'}
-                sx={{ display: !hasResults || shownTab === 'log' ? 'block' : 'none', pt: 2 }}
-            >
-                <DebugPanel
+            {/* not mounted while off: no timelines, no log and no debug switches on the page */}
+            {props.developerTools && (
+                <DeveloperToolsPanel
+                    hasResults={hasResults}
+                    transferHistory={props.transferHistory}
+                    stateTransitionHistory={props.stateTransitionHistory}
+                    clockOnlyTransferHistory={props.clockOnlyTransferHistory}
+                    clockOnlyStateTransitionHistory={props.clockOnlyStateTransitionHistory}
+                    clockWindows={props.clockWindows}
                     logs={props.logs}
                     debugSteps={props.debugSteps}
                     onDebugStepsChange={props.onDebugStepsChange}
@@ -307,7 +203,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     onStreamLogsChange={props.onStreamLogsChange}
                     onClearLogs={props.onClearLogs}
                 />
-            </Box>
+            )}
         </Box>
     );
 }

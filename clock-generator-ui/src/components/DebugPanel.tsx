@@ -64,7 +64,8 @@ export function DebugPanel({
     };
 
     return (
-        <Accordion defaultExpanded={false} slotProps={{ heading: { component: 'h2' } }}>
+        // in Developer tools' Log tab, which is there to be read: open, under the section's h2
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' } }}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
                     Debug Output {logs.length > 0 && `(${logs.length} messages)`}

@@ -42,7 +42,7 @@ interface CopyBlueprint {
 export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, running, onCopied, onPinned }: CopyBlueprintOptions): CopyBlueprint {
     // what was copied, and for which earlier build the question is open: another clock is not "Copied", and a question
     // asked about clocks that have since become current (or been made again) is not open any more
-    const [copiedString, setCopiedString] = useState<string | null>(null);
+    const [copiedFor, setCopiedFor] = useState<{ blueprint: string; staleFor: GeneratedFor | null } | null>(null);
     const [confirmingFor, setConfirmingFor] = useState<GeneratedFor | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     useEffect(() => () => clearTimeout(timer.current), []);
@@ -57,14 +57,14 @@ export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, runni
             console.error('Failed to copy:', err);
             return;
         }
-        setCopiedString(blueprintString);
+        setCopiedFor({ blueprint: blueprintString, staleFor });
         if (running) {
             onPinned?.();
         }
         onCopied(rateWarning, running);
         clearTimeout(timer.current);
-        timer.current = setTimeout(() => setCopiedString(null), COPIED_MS);
-    }, [blueprintString, rateWarning, running, onCopied, onPinned]);
+        timer.current = setTimeout(() => setCopiedFor(null), COPIED_MS);
+    }, [blueprintString, staleFor, rateWarning, running, onCopied, onPinned]);
 
     const request = useCallback(() => {
         if (staleFor) {
@@ -80,7 +80,8 @@ export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, runni
     const cancel = useCallback(() => setConfirmingFor(null), []);
 
     return {
-        copied: copiedString !== null && copiedString === blueprintString,
+        // an edit that puts the clocks out of date ends "Copied" too: the string is the same, but it is an old clock now
+        copied: copiedFor !== null && copiedFor.blueprint === blueprintString && copiedFor.staleFor === staleFor,
         request,
         confirmingStale: confirmingFor !== null && confirmingFor === staleFor,
         confirm,

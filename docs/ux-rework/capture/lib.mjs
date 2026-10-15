@@ -1412,7 +1412,7 @@ export const ui = {
     copyBlueprint: (page) => page.getByRole('banner').getByRole('button', { name: /^Copy blueprint/ }),
     /** Configure / Results toggle: pass 'Configure' or 'Results' (owner: 1.1 workflow bar) */
     viewToggle: (page, which) => page.getByRole('group', { name: 'Configure the build or look at its results' }).getByRole('button', { name: which, exact: true }),
-    /** The Results tabs: pass 'Wake windows', 'Timelines', 'Insights', 'Blueprint' or 'Log'; they exist on Results only (owner: 2.x Results tabs) */
+    /** The Results tabs: Details has 'Insights', 'Fuel' (a fuel build) and 'Blueprint string'; Developer tools (when on) 'Timelines' and 'Log' (owner: 2.5 B results) */
     resultsTab: (page, name) => page.getByRole('tab', { name, exact: true }),
 
     // ---- the ⋮ menu and what moves into it
@@ -1420,7 +1420,7 @@ export const ui = {
     menuButton: (page) => btn(page, 'More options'),
     /** The open ⋮ menu; 0 while it is closed (owner: 1.7 header) */
     menu: (page) => page.getByRole('menu', { name: 'More options' }),
-    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Copy share link, Try an example…, Getting started, Reset build (owner: 2.1 first visit, 3.4 build library) */
+    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Copy share link, Try an example…, Getting started, Terms, Developer tools (a menuitemcheckbox: use developerToolsItem), Reset build (owner: 2.1 first visit, 2.5 B, 3.4 build library) */
     menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
     /** Paste from Factorio: the filled button in the header at every width; it reads "Paste" below 600 px, with the same name (owner: 2.1 first visit) */
     pasteFromFactorio: (page) => page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }),
@@ -1482,6 +1482,20 @@ export const ui = {
     },
     /** The Results answer card, headed "Your clock"; 0 until item 2.6 (results answer) is on the branch (owner: 2.6 results answer) */
     resultsCard: (page) => card(page, /^Your clock$/),
+    /** The h2 of the clocks to compare (was "Clocks"); the table inside keeps the name "Clocks" (owner: 2.5 B results) */
+    compareHeading: (page) => page.getByRole('main').getByRole('heading', { name: 'Compare other clocks', level: 2, exact: true }),
+    /** Show all columns: toggles the compact clock table and the full one; same name both ways, the state is aria-expanded (owner: 2.5 B results) */
+    showAllColumns: (page) => page.getByRole('main').getByRole('button', { name: 'Show all columns', exact: true }),
+    /** The h2 of Details (tabs Insights, Fuel for a fuel build, Blueprint string: use resultsTab) (owner: 2.5 B results) */
+    detailsHeading: (page) => page.getByRole('main').getByRole('heading', { name: 'Details', level: 2, exact: true }),
+    /** The h2 of Developer tools (tabs Timelines and Log); 0 while the tools are off (owner: 2.5 B results) */
+    developerTools: (page) => page.getByRole('main').getByRole('heading', { name: 'Developer tools', level: 2, exact: true }),
+    /** ⋮ > Developer tools, a menuitemcheckbox (aria-checked); resolves only while the menu is open (owner: 2.5 B results) */
+    developerToolsItem: (page) => page.getByRole('menuitemcheckbox', { name: 'Developer tools', exact: true }),
+    /** ⋮ > Terms; resolves only while the menu is open, so use chooseMenuItem(page, 'Terms') (owner: 2.5 B results) */
+    termsItem: (page) => ui.menuItem(page, 'Terms'),
+    /** The Terms popover (role dialog, named "Terms") from ⋮ > Terms; the (i) by a clock table header opens one named "Terms for <column>" (owner: 2.5 B results) */
+    termsPopover: (page) => page.getByRole('dialog', { name: 'Terms', exact: true }),
 
     // ---- messages
     /** The message on screen (the Snackbar carries data-message); 0 when none shows (owner: 1.5 messages) */
@@ -1651,4 +1665,19 @@ export async function chooseMenuItem(page, name, { timeout = 5000 } = {}) {
     }
     await item.click({ timeout });
     await menu.waitFor({ state: 'hidden', timeout }).catch(() => {});
+}
+
+/**
+ * Turns ⋮ > Developer tools (the Timelines and Log tabs at the end of Results) on or off; nothing when it already is.
+ * The setting is kept in localStorage for the next load. Returns whether it was on before.
+ */
+export async function setDeveloperTools(page, on, { timeout = 5000 } = {}) {
+    const menu = await openMoreMenu(page, { timeout });
+    const item = ui.developerToolsItem(page);
+    await item.waitFor({ state: 'visible', timeout });
+    const was = (await item.getAttribute('aria-checked')) === 'true';
+    if (was === on) await page.keyboard.press('Escape');
+    else await item.click({ timeout });
+    await menu.waitFor({ state: 'hidden', timeout }).catch(() => {});
+    return was;
 }

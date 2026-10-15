@@ -77,7 +77,7 @@ try {
                 await rec.shot(page, 'fuel-configure', { fullPage: true, desc: 'Gleba biochamber build with fuel (nutrients from yumako mash): Configure page' });
                 await validate(page);
                 await generate(page);
-                await rec.shot(page, 'fuel-results-timelines', { fullPage: true, desc: 'Gleba fuel build: Results, default tab' });
+                await rec.shot(page, 'fuel-results', { fullPage: true, desc: 'Gleba fuel build: Results, Details on its default tab (Insights)' });
                 await page.getByRole('tab', { name: 'Fuel', exact: true }).click();
                 await settle(page, 700);
                 await rec.shot(page, 'fuel-results-fuel-tab', { fullPage: true, desc: 'Gleba fuel build: Results, Fuel tab' });

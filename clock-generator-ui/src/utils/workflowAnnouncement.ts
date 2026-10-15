@@ -18,6 +18,8 @@ export const ANNOUNCEMENTS = {
     clocksBack: (selectedLabel: string) => `Your clocks for this build are back. Selected clock: ${selectedLabel}.`,
     pickGone: pickGoneNote,
     copiedCurrentBest: (selectedLabel: string) => `Copied the best clock so far: ${selectedLabel}. It stays selected.`,
+    developerToolsOn: 'Developer tools on. They are at the end of Results.',
+    developerToolsOff: 'Developer tools off.',
 } as const;
 
 /** What a Cancel says, by what it left on screen */

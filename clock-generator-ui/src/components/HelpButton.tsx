@@ -1,6 +1,10 @@
-import { HelpOutline } from '@mui/icons-material';
-import { IconButton, Popover } from '@mui/material';
+import { Close, HelpOutline } from '@mui/icons-material';
+import { Box, IconButton, Popover } from '@mui/material';
 import { useState, type ReactNode } from 'react';
+import { POPOVER_MS } from '../theme/tokens';
+
+/** The name of the button that closes the popover */
+const HELP_CLOSE = 'Close';
 
 interface HelpButtonProps {
     /** What the button is called, and what the popover is called: "About Fixed 4 + 2" */
@@ -38,10 +42,22 @@ export function HelpButton({ label, children }: HelpButtonProps) {
                 anchorEl={anchor}
                 onClose={() => setAnchor(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transitionDuration={POPOVER_MS}
                 // a click in the popover, or on its backdrop, reaches the row through React's tree: it must not select the clock
                 onClick={(event) => event.stopPropagation()}
-                slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { maxWidth: 360, p: 2 } } }}
+                slotProps={{ paper: { role: 'dialog', 'aria-label': label, sx: { maxWidth: 360, p: 2, pr: 5 } } }}
             >
+                {/* stays in the corner while a long help (the Terms) scrolls; a finger has no Esc */}
+                <Box sx={{ position: 'sticky', top: 0, height: 0, display: 'flex', justifyContent: 'flex-end', zIndex: 1 }}>
+                    <IconButton
+                        size="small"
+                        aria-label={HELP_CLOSE}
+                        onClick={() => setAnchor(null)}
+                        sx={{ mt: -1, mr: -4.5, bgcolor: 'background.paper' }}
+                    >
+                        <Close fontSize="small" />
+                    </IconButton>
+                </Box>
                 {children}
             </Popover>
         </>
