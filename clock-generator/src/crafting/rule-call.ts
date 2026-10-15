@@ -19,8 +19,8 @@ export const RULE_CALL_SOURCE = {
 
 /**
  * Wake-ups a minute a clock removes from one wired inserter (w removed), at which the call changes. Below `unwired_firm`
- * leave it unwired for sure; up to `clock_lower` leave it unwired, marginally; up to and including `clock_firm` clock
- * it, marginally; above that clock it for sure.
+ * leave it unwired, outside the band; up to `clock_lower` leave it unwired, marginally; up to and including
+ * `clock_firm` clock it, marginally; above that clock it, outside the band. "Firm" means outside the band, not certain.
  */
 export const RULE_CALL_THRESHOLDS = {
     unwired_firm: 63.5,
@@ -32,6 +32,7 @@ export const RULE_CALL_THRESHOLDS = {
 export const RULE_CALL_CAVEATS = [
     "The rule was measured on saves of 91,000 to 606,000 entities. Below that size it is not known, and the generator does not know the size of the save the build goes into.",
     "It is advice about update time only. It is never a reason to drop a clock a build needs for stable output.",
+    "A firm call is one outside the band (63.5 to 207.6), not a certain one. Outside the band the call was right in every timed case that showed a sign, and was never shown wrong; but 7 timed groups outside the band showed no sign (all on one utility science design, whose pooled 215 a minute calls \"clock\"), and the evidence is thinner near the band's edges. Inside the band the call is the cheaper one on expected cost, from one held-out measurement.",
 ] as const;
 
 export type RuleCallKind = "leave unwired" | "clock";
