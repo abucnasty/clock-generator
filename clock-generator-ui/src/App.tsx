@@ -188,8 +188,10 @@ function App() {
 
     const { offerUndo } = useUndo(config, setConfig, isConfigLoaded);
 
-    // the intro card shows above Target Output while nothing has been entered; its ways in are the app bar's
-    const { visible: introVisible, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(isBlankBuild(config));
+    // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
+    // where to start instead of counting problems
+    const blankBuild = isBlankBuild(config);
+    const { visible: introVisible, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(blankBuild);
     const buildEntryRef = useRef<BuildEntryHandle>(null);
     const handleBuildByHand = useCallback(() => {
         // the card goes first: focus then moves to the recipe, which takes its place at the top
@@ -273,7 +275,7 @@ function App() {
     const busy = isRunning || validation.status === 'running' || checkingFor !== null;
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
-    const note = barNoteOf({ problems, busy, checkStatus });
+    const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild });
     // who started the running or last check, for the announcements: Generate leads on by itself
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
@@ -543,6 +545,7 @@ function App() {
                             staleFor={staleFor}
                             problems={problems}
                             note={note}
+                            startHere={blankBuild && problems.length > 0}
                             onGoToProblem={handleGoToProblem}
                         />
                     )}

@@ -153,21 +153,16 @@ const KINDS = {
 };
 
 async function exportConfig(page) {
-    const direct = page.getByRole('button', { name: 'Export Config' }); // SELECTOR: confirm (a button in the app bar at 900px and up, a menu item below)
-    if (await direct.count()) {
-        await direct.first().click();
-    } else {
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Export Config' }).click(); // SELECTOR: confirm
-    }
+    // 2.1: Save build file, a ⋮ menu item at every width
+    await openMenu(page);
+    await page.getByRole('menuitem', { name: 'Save build file' }).click();
 }
 
 /** Clipboard text, then the menu's Paste from Factorio; holds the shared clipboard until the paste has been read (dialog or message) */
 function pasteFromMenu(page, text) {
     return withClipboard(async () => {
         await page.evaluate((t) => navigator.clipboard.writeText(t), text);
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+        await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click(); // 2.1: a header button, not a menu item
         await Promise.race([
             page.getByRole('dialog').getByText('Confirm Import from Factorio').waitFor({ timeout: 8000 }),
             snack(page).first().waitFor({ timeout: 8000 }),
@@ -206,7 +201,7 @@ async function pasteNoItems(page) {
 
 async function resetViaMenu(page) {
     await openMenu(page);
-    await page.getByRole('menuitem', { name: 'Reset Configuration' }).click(); // SELECTOR: confirm
+    await page.getByRole('menuitem', { name: 'Reset build' }).click(); // SELECTOR: confirm
 }
 
 // ------------------------------------------------------------------------------------------------- message measurements

@@ -426,6 +426,23 @@ try {
             await cpair(rec, page, 'the card heading', c.getByRole('heading', { level: 2 }));
             const side = await noSideScroll(page);
             rec.check('nothing scrolls sideways on first visit', side.pass, side.detail);
+            // Phase 1 end (A6, N11): the untouched default form shows its next step neutrally, not a red "2 problems"
+            rec.check('blank build: no red problem count in the bar', (await header(page).getByRole('button', { name: /\d+ problems?/ }).count()) === 0);
+            const startNote = header(page).locator('#workflow-block-reason');
+            if (await need(rec, 'blank build: the bar names the next step', startNote)) {
+                const t = norm(await startNote.first().innerText());
+                rec.check('blank build: it reads "Start: pick the recipe you want to make"', t === 'Start: pick the recipe you want to make', t);
+                const color = await startNote.first().evaluate((el) => getComputedStyle(el).color);
+                const m = /rgba?\(([^)]+)\)/.exec(color);
+                const [r, g, b] = m ? m[1].split(/[ ,/]+/).map(Number) : [0, 0, 0];
+                rec.check('blank build: the step is not in the error red', !(r > 200 && g < 160 && b < 160), color);
+                await cpair(rec, page, 'the start note', startNote);
+                await checkLabelInName(rec, page, startNote, 'the start note');
+                await lib.checkMouseActivationVisible(rec, page, startNote, 'the start note');
+                const active = await page.evaluate(() => document.activeElement?.id ?? '');
+                rec.check('the start note takes focus to the Target Output recipe (#target-recipe)', active === 'target-recipe', `active id "${active}"`);
+                await page.evaluate(() => { window.scrollTo(0, 0); document.activeElement?.blur(); });
+            }
             await axe(rec, page, 'first visit');
             // keyboard: Tab reaches both Paste buttons, the link and the card controls; focus is not hidden under the sticky bar
             await page.evaluate(() => { window.scrollTo(0, 0); document.activeElement?.blur(); });

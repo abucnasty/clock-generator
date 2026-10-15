@@ -466,7 +466,7 @@ export function ConfigImportExport({
                 <DialogTitle>Confirm Import from Factorio</DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" sx={{ mb: 2 }}>
-                        Select which items you want to import. Existing items of each selected type will be replaced.
+                        Tick what to import. Each ticked part replaces the same part of your build.
                     </Typography>
                     
                     {pendingImport?.guidance && Option.match(pendingImport.guidance, {

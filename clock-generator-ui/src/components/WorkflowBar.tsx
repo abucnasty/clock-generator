@@ -49,6 +49,8 @@ interface WorkflowBarProps {
     problems: Problem[];
     /** Where Generate and Check only go instead of checking, said under them; null when they check */
     note: Problem | null;
+    /** Nothing has been entered yet: the note is the next step, not a problem, and there is no count */
+    startHere: boolean;
     /** Shows and focuses where a problem is fixed */
     onGoToProblem: (problem: Problem) => void;
 }
@@ -95,6 +97,7 @@ export function WorkflowBar({
     staleFor,
     problems,
     note,
+    startHere,
     onGoToProblem,
 }: WorkflowBarProps) {
     const [copied, setCopied] = useState(false);
@@ -211,7 +214,7 @@ export function WorkflowBar({
                             )}
                         </>
                     )}
-                    {problems.length > 0 && (
+                    {problems.length > 0 && !startHere && (
                         <Chip
                             size="small"
                             color="error"
@@ -283,14 +286,15 @@ export function WorkflowBar({
                             id={ELEMENT_IDS.blockReason}
                             variant="text"
                             size="small"
-                            color="error"
+                            color={startHere ? 'inherit' : 'error'}
                             onClick={() => onGoToProblem(note)}
                             // the ripple would tint the text's background on focus; an outline marks the focus instead
                             disableRipple
                             // the lighter red: the error red is 3.9:1 on the bar, under the 4.5 text needs. A link's
-                            // underline on hover, not a tinted background, which would take the contrast under 4.5 again
+                            // underline on hover, not a tinted background, which would take the contrast under 4.5 again.
+                            // The first step on a blank build is not a problem: in the bar's own text colour
                             sx={{
-                                color: 'error.light',
+                                color: startHere ? 'text.primary' : 'error.light',
                                 textTransform: 'none',
                                 textAlign: 'inherit',
                                 py: 0,
@@ -300,7 +304,7 @@ export function WorkflowBar({
                                 '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
                                 // on any focus, not only the keyboard's: Check only moves the focus here when the build has
                                 // a problem, and a mouse click must show where it went
-                                '&:focus, &.Mui-focusVisible': { outline: '2px solid', outlineColor: 'error.light', outlineOffset: 2 },
+                                '&:focus, &.Mui-focusVisible': { outline: '2px solid', outlineColor: startHere ? 'primary.main' : 'error.light', outlineOffset: 2 },
                             }}
                         >
                             {note.text}

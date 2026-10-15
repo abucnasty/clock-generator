@@ -356,8 +356,7 @@ const importDialog = (page) => page.getByRole('dialog').filter({ hasText: 'Confi
 function pasteFromMenu(page, text) {
     return withClipboard(async () => {
         await page.evaluate((t) => navigator.clipboard.writeText(t), text);
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+        await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click(); // 2.1: a header button, not a menu item
         await Promise.race([
             importDialog(page).waitFor({ timeout: 8000 }),
             page.locator('.MuiSnackbar-root').first().waitFor({ timeout: 8000 }),
@@ -367,7 +366,7 @@ function pasteFromMenu(page, text) {
 }
 async function resetViaMenu(page) {
     await openMenu(page);
-    await page.getByRole('menuitem', { name: 'Reset Configuration' }).click();
+    await page.getByRole('menuitem', { name: 'Reset build' }).click();
     await page.waitForTimeout(500);
 }
 
