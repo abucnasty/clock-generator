@@ -15,7 +15,7 @@
 // size does not matter, and shoot a running generation with `captureInFlight` instead of waiting for it to end.
 import { chromium } from 'playwright-core';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 
@@ -1390,4 +1390,171 @@ export async function checkMouseActivationVisible(rec, page, locator, label) {
         changes.length > 0,
         changes.length ? changes.join('; ') : `nothing changed in the viewport (scrollY ${after.scrollY}, focus ${after.focus ? `${after.focus.desc}, ring ${after.focus.ring}` : 'none'})`,
     );
+}
+
+// ======================================================================================== ui map and shared UI helpers
+// Added after Phase 2 began. Rule: scripts find controls only through `ui` and `itemLabel`, and open tooltips and menus only with
+// `openTooltip` / `openMoreMenu` / `chooseMenuItem`. An item that renames a control updates `ui` in the same commit.
+// Every `ui` entry is a function `(page, ...args) => Locator` (never awaited, so it can be chained and counted). Entries that
+// the app shows only in some states resolve to 0 elements elsewhere; the comment says when.
+
+/** The width at which Import Config / Export Config are header buttons (below it they are items of the ⋮ menu) */
+export const WIDE_HEADER = 900;
+const isWide = (page) => (page.viewportSize()?.width ?? 1440) >= WIDE_HEADER;
+const btn = (page, name, exact = true) => page.getByRole('button', { name, exact });
+/** A Configure card: the Paper that holds the card's h2 (the innermost one, so a wrapping Paper is not taken) */
+const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
+
+export const ui = {
+    // ---- workflow bar and header
+    /** Generate (the workflow bar). Label while busy: "Checking..." / "Generating..." (owner: 1.5 workflow bar) */
+    generate: (page) => btn(page, 'Generate'),
+    /** Check only. The workflow bar's button, which is the first; Configure repeats one at its foot (owner: 1.5 workflow bar) */
+    checkOnly: (page) => btn(page, 'Check only').first(),
+    /** Copy blueprint in the header. Its name can carry the rate ("Copy blueprint (192/s, below target)"); it exists on Results only (owner: 2.2 Copy) */
+    copyBlueprint: (page) => page.getByRole('banner').getByRole('button', { name: /^Copy blueprint/ }),
+    /** Configure / Results toggle: pass 'Configure' or 'Results' (owner: 1.1 workflow bar) */
+    viewToggle: (page, which) => page.getByRole('group', { name: 'Configure the build or look at its results' }).getByRole('button', { name: which, exact: true }),
+    /** The Results tabs: pass 'Wake windows', 'Timelines', 'Insights', 'Blueprint' or 'Log'; they exist on Results only (owner: 2.x Results tabs) */
+    resultsTab: (page, name) => page.getByRole('tab', { name, exact: true }),
+
+    // ---- the ⋮ menu and what moves into it
+    /** The ⋮ button (BUTTON_NAMES.moreOptions) (owner: 1.7 header) */
+    menuButton: (page) => btn(page, 'More options'),
+    /** The open ⋮ menu; 0 while it is closed (owner: 1.7 header) */
+    menu: (page) => page.getByRole('menu', { name: 'More options' }),
+    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. Paste from Factorio, Reset Configuration always; Import Config / Export Config below 900 px (owner: 1.7 header) */
+    menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
+    /** Paste from Factorio: ⋮ menu item at every width (owner: 1.7 header) */
+    pasteFromFactorio: (page) => ui.menuItem(page, 'Paste from Factorio'),
+    /** Reset Configuration: ⋮ menu item at every width (owner: 1.7 header) */
+    reset: (page) => ui.menuItem(page, 'Reset Configuration'),
+    /** Import Config: header button at 900 px and up, ⋮ menu item below it (then it resolves only while the menu is open; use chooseMenuItem) (owner: 1.7 header) */
+    importConfig: (page) => (isWide(page) ? btn(page, 'Import Config') : ui.menuItem(page, 'Import Config')),
+    /** Export Config: header button at 900 px and up, ⋮ menu item below it (see importConfig) (owner: 1.7 header) */
+    exportConfig: (page) => (isWide(page) ? btn(page, 'Export Config') : ui.menuItem(page, 'Export Config')),
+
+    // ---- Configure
+    /** The Advanced Overrides (Optional) accordion button (owner: 1.x Advanced) */
+    advancedOverrides: (page) => btn(page, /^Advanced Overrides/),
+    /** A Configure card by key: 'target' | 'machines' | 'inserters' | 'belts' | 'chests' | 'drills' (owner: 1.x Configure cards) */
+    card: (page, key) => card(page, { target: /^Target Output/, machines: /^Machines/, inserters: /^Inserters/, belts: /^Belts/, chests: /^Chests/, drills: /^Mining Drills/ }[key] ?? new RegExp(`^${key}`, 'i')),
+    /** The Add button of a card by key: 'machines' | 'inserters' | 'belts' | 'drills'. Target Output has none (0). Chests have two (see addChest) (owner: 1.x Configure cards) */
+    add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add Drill' }[key] ?? `Add ${key}`),
+    /** Chests are added by type: 'buffer' (default) or 'infinity' (owner: 1.x Configure cards) */
+    addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity Chest' : 'Buffer Chest'),
+
+    // ---- Results
+    /** The Clocks table (CLOCK_TABLE_NAME); Results only (owner: 2.x clock table) */
+    clockTable: (page) => page.getByRole('table', { name: 'Clocks', exact: true }),
+    /** The Clocks table's body rows; pass an index for one row (owner: 2.x clock table) */
+    clockRows: (page, index) => {
+        const rows = ui.clockTable(page).locator('tbody tr');
+        return index === undefined ? rows : rows.nth(index);
+    },
+    /** The Results answer card, headed "Your clock"; 0 until item 2.6 (results answer) is on the branch (owner: 2.6 results answer) */
+    resultsCard: (page) => card(page, /^Your clock$/),
+
+    // ---- messages
+    /** The message on screen (the Snackbar carries data-message); 0 when none shows (owner: 1.5 messages) */
+    message: (page) => page.locator('[data-message]'),
+    /** The Undo button inside the message; 0 when the message has none, or Undo ended (owner: 1.5 messages, F) */
+    messageUndo: (page) => ui.message(page).getByRole('button', { name: 'Undo', exact: true }),
+    /** The message's Close button (owner: 1.5 messages) */
+    messageClose: (page) => ui.message(page).getByRole('button', { name: 'Close', exact: true }),
+
+    // ---- Diagram
+    /** List / Diagram view buttons of the Configure cards (owner: 1.x diagram) */
+    listView: (page) => btn(page, /^List view/),
+    diagramView: (page) => btn(page, /^Diagram view/),
+    /** The diagram canvas (React Flow); 0 in List view (owner: 1.x diagram) */
+    diagram: (page) => page.getByRole('main').locator('.react-flow').first(),
+    /** The diagram's Fullscreen button; 0 in List view (owner: 1.x diagram) */
+    diagramFullscreen: (page) => btn(page, 'Fullscreen'),
+    /** The fullscreen dialog; 0 until Fullscreen is pressed (owner: 1.x diagram) */
+    diagramDialog: (page) => page.getByRole('dialog'),
+    /** The diagram's fullscreen dialog's close button, named "Exit fullscreen" (the timelines' dialogs use "Close fullscreen" instead) (owner: 1.x diagram) */
+    diagramClose: (page) => ui.diagramDialog(page).getByRole('button', { name: 'Exit fullscreen', exact: true }),
+};
+
+let namesCache;
+/** The `names` key of data-filtered.json (game id -> in-game name), or {} while the file has none */
+function gameNames() {
+    if (namesCache) return namesCache;
+    namesCache = {};
+    try {
+        const file = join(UI_DIR, '..', 'clock-generator', 'resources', 'data-filtered.json');
+        if (existsSync(file)) namesCache = JSON.parse(readFileSync(file, 'utf8')).names ?? {};
+    } catch {
+        /* no names: the id is shown */
+    }
+    return namesCache;
+}
+
+/**
+ * What the UI shows for a game id. TODO(2.8 a/b): the app switches from the id to the in-game name; until the data file has a
+ * `names` key (branch feat/ux-rework-p2-item-names adds it) this is the id itself. Once it has, this reads the name from it, so
+ * scripts do not change. Set UI_DIR to the checkout whose build you are driving.
+ */
+export function itemLabel(id) {
+    const entry = gameNames()[id];
+    return typeof entry === 'string' ? entry : (entry?.name ?? id);
+}
+
+/**
+ * Hovers and focuses `locator`, waits for a visible `[role=tooltip]` and returns it (the first visible one). Leaves the mouse
+ * there; move it away (`page.mouse.move(0, 0)`) before a shot. Throws a clear error naming the control when no tooltip opens.
+ */
+export async function openTooltip(page, locator, { timeout = 5000 } = {}) {
+    const what = String(locator);
+    try {
+        await locator.first().scrollIntoViewIfNeeded({ timeout });
+    } catch (e) {
+        throw new Error(`openTooltip: ${what} is not on the page (${firstLine(e)})`);
+    }
+    await locator.first().hover({ timeout });
+    await locator.first().focus({ timeout: 1000 }).catch(() => {}); // not focusable: the hover is enough
+    const tip = page.locator('[role=tooltip]:visible').first();
+    try {
+        await tip.waitFor({ state: 'visible', timeout });
+    } catch {
+        const seen = await page.locator('[role=tooltip]').allTextContents();
+        throw new Error(`openTooltip: no visible [role=tooltip] within ${timeout} ms after hover and focus on ${what} (tooltips in the DOM: ${seen.length ? JSON.stringify(seen) : 'none'})`);
+    }
+    return tip;
+}
+
+/** Opens the ⋮ menu if it is not open, waits until it is visible and returns it. Like `openMenu`, but it waits for the menu itself and not a fixed 300 ms */
+export async function openMoreMenu(page, { timeout = 5000 } = {}) {
+    const menu = ui.menu(page);
+    if (!(await menu.isVisible())) {
+        await ui.menuButton(page).click({ timeout });
+        try {
+            await menu.waitFor({ state: 'visible', timeout });
+        } catch {
+            throw new Error(`openMoreMenu: the "More options" menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`);
+        }
+    }
+    return menu;
+}
+
+/**
+ * Picks an item by name at any width. Import Config and Export Config are header buttons at 900 px and up (clicked there),
+ * ⋮ menu items below; every other item is opened from the menu. Waits for the menu to close after a menu item.
+ */
+export async function chooseMenuItem(page, name, { timeout = 5000 } = {}) {
+    if (isWide(page) && (name === 'Import Config' || name === 'Export Config')) {
+        await btn(page, name).click({ timeout });
+        return;
+    }
+    const menu = await openMoreMenu(page, { timeout });
+    const item = menu.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name });
+    try {
+        await item.waitFor({ state: 'visible', timeout });
+    } catch {
+        const have = await menu.getByRole('menuitem').allTextContents();
+        throw new Error(`chooseMenuItem: no menu item ${String(name)} at ${page.viewportSize()?.width}px (the menu has: ${JSON.stringify(have)})`);
+    }
+    await item.click({ timeout });
+    await menu.waitFor({ state: 'hidden', timeout }).catch(() => {});
 }
