@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
-## [Unreleased]
+## [0.10.0] - 2026-10-14
 
 ### Added
 - A potential clock called "Even hands". Every inserter gets one window for each hand it moves in the clock period, spread evenly over the period, and each window is a tick shorter than the inserter's hand cycle, so it moves one hand whenever in it the source has the hand and the machine it puts into takes it. Inserters that move the same hands per period get the same windows and share one window decider: the two halves of a build that do the same thing open and close together, and two inserters that take from one machine at the same rate take from it on the same ticks. It is made straight from the plan, without a search, and is offered where every inserter takes from a machine or a chest and moves a whole number of hands per period, and the build has no mining drills, no loop of machines and no fuel or by-product inserters.
