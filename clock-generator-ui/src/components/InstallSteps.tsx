@@ -144,6 +144,7 @@ export function InstallSteps({ install, movesOf, stale }: InstallStepsProps) {
             variant="outlined"
             sx={{ mt: 2, bgcolor: 'background.paper' }}
             data-install-steps
+            slotProps={{ region: { 'aria-labelledby': summaryId } }}
         >
             <AccordionSummary expandIcon={<ExpandMoreIcon />} id={summaryId} aria-controls={detailsId}>
                 <Typography component="span" variant="subtitle1" sx={{ fontWeight: 600 }}>{INSTALL_COPY.heading}</Typography>

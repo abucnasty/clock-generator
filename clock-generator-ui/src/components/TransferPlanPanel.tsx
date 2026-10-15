@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import {
     Accordion,
     AccordionDetails,
@@ -22,6 +22,8 @@ import { entityLabel } from '../utils/entityLabel';
 import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
+import { ScrollX } from './ScrollX';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 
 interface TransferPlanPanelProps {
     transferPlan: SerializableTransferPlan;
@@ -61,9 +63,10 @@ function TransferPlanPanelComponent({
     };
     const isLcmOverridden = usedLcm !== computed_lcm;
 
+    const summaryId = useId();
     return (
-        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' } }} sx={{ mt: 1 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId } }} sx={{ mt: 1 }}>
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Swing Plan
                 </Typography>
@@ -101,13 +104,16 @@ function TransferPlanPanelComponent({
                         />
                     )}
                 </Box>
-                <Table size="small">
+                <ScrollX label={SCROLL_REGION_NAMES.swingPlan}>
+                {/* from 600px up the columns keep their widths; below it they shrink to their content, with less padding, so that the
+                    Exclude from LCM column stays on screen on a phone (the box scrolls, with an edge fade, only when it still cannot fit) */}
+                <Table size="small" sx={{ '& th, & td': { px: { xs: 0.75, sm: 2 } } }}>
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{ width: '30%' }}>Entity</TableCell>
+                            <TableCell sx={{ width: { sm: '30%' } }}>Entity</TableCell>
                             <TableCell>Item</TableCell>
-                            <TableCell align="right" sx={{ width: '120px' }}>Swings / cycle</TableCell>
-                            <TableCell align="center" sx={{ width: '110px' }}>Exclude from LCM</TableCell>
+                            <TableCell align="right" sx={{ width: { sm: '120px' } }}>Swings / cycle</TableCell>
+                            <TableCell align="center" sx={{ width: { sm: '110px' } }}>Exclude from LCM</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -126,7 +132,7 @@ function TransferPlanPanelComponent({
                                     >
                                         <TableCell>
                                             {isFirstRow ? (
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                                                     <Chip
                                                         label={sentenceCase(entity.entity_type)}
                                                         size="small"
@@ -191,6 +197,7 @@ function TransferPlanPanelComponent({
                         )}
                     </TableBody>
                 </Table>
+                </ScrollX>
                 <Box sx={{ px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="caption" color="text.secondary">
                         Swings per cycle can be fractions. The clock period is the number of crafting cycles (the LCM)

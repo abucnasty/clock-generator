@@ -10,7 +10,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 interface OverridesFormProps {
     lcm?: number;
@@ -30,9 +30,10 @@ export function OverridesForm({
     onUpdate,
     planSlot,
 }: OverridesFormProps) {
+    const summaryId = useId();
     return (
-        <Accordion slotProps={{ heading: { component: 'h2' } }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
+        <Accordion slotProps={{ heading: { component: 'h2' }, region: { 'aria-labelledby': summaryId } }}>
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
                     Advanced Overrides (Optional)
                 </Typography>
