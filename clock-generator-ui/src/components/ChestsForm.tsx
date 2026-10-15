@@ -114,113 +114,113 @@ function ChestsFormComponent({
                     ]}
                 />
             ) : (
-        <PanelSection
-            level={4}
-            title={`Chests (${chests.length})`}
-            actions={(
-                <>
-                    <Button startIcon={<Add />} onClick={() => onAdd(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
-                        Buffer Chest
-                    </Button>
-                    <Button startIcon={<Add />} onClick={() => onAdd(ChestType.INFINITY_CHEST)} variant="text" size="small">
-                        Infinity Chest
-                    </Button>
-                </>
-            )}
-        >
-            <SortableList itemKeys={chests.map((c) => c._uuid)} itemLabels={chests.map((c) => entityLabel('chest', c.id))} onReorder={onReorder}>
-            {chests.map((chest, index) => (
-                <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)}>
-                    {(dragHandle) => (
-                <Box
-                    id={`entity-chest-${chest.id}`}
-                    role="group"
-                    aria-label={entityLabel('chest', chest.id)}
-                    sx={{
-                        mb: 2,
-                        p: 2,
-                        bgcolor: SURFACE.row,
-                    }}
-                >
-                    {/* Header row with ID, Type, Filters, and Delete */}
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {dragHandle}
-                        
-                        <FormControl size="small" sx={{ minWidth: 150 }}>
-                            <InputLabel>Type</InputLabel>
-                            <Select
-                                inputProps={{ 'aria-label': SELECT_NAMES.chestType }}
-                                value={chest.type}
-                                label="Type"
-                                onChange={(e) => onSwitchType(index, e.target.value)}
-                            >
-                                <MenuItem value={ChestType.BUFFER_CHEST}>Buffer Chest</MenuItem>
-                                <MenuItem value={ChestType.INFINITY_CHEST}>Infinity Chest</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        {/* Buffer Chest fields - item filter and storage size */}
-                        {isBufferChest(chest) && (
-                            <>
-                                <ItemSelector
-                                    value={chest.item_filter || null}
-                                    options={itemNames}
-                                    onChange={(newValue) => onUpdate(index, { item_filter: newValue || '' })}
-                                    label="Item Filter"
-                                    size="small"
-                                    minWidth={200}
-                                />
-                                <TextField
-                                    label="Storage Size"
-                                    type="number"
-                                    value={chest.storage_size}
-                                    onChange={(e) => onUpdate(index, { storage_size: parseInt(e.target.value) || 1 })}
-                                    inputProps={{ min: 1 }}
-                                    sx={{ width: 140 }}
-                                    size="small"
-                                    slotProps={{
-                                        input: {
-                                            endAdornment: (
-                                                <InputAdornment position="end" sx={{ mr: -1 }}>
-                                                    <HelpButton label="About storage size">{STORAGE_SIZE_HELP}</HelpButton>
-                                                </InputAdornment>
-                                            ),
-                                        },
-                                    }}
-                                />
-                            </>
-                        )}
-
-                        {/* Infinity Chest filter slots - multiple slots */}
-                        {isInfinityChest(chest) && (
-                            <ChestFilterSlotSelector
-                                filters={getInfinityChestFilters(chest)}
-                                itemNames={itemNames}
-                                onFilterChange={(slotIndex, filter) =>
-                                    handleInfinityChestFilterChange(index, slotIndex, filter)
-                                }
-                                onRemoveFilter={(slotIndex) =>
-                                    handleInfinityChestRemoveFilter(index, slotIndex)
-                                }
-                                onAddFilter={() => handleInfinityChestAddFilter(index)}
-                                maxSlots={10}
-                                quantityLabel="Request Count"
-                                canAddMore={true}
-                            />
-                        )}
-
-                        <Box sx={{ flex: 1 }} />
-
-                        <IconButton onClick={() => remove(index)} color="error" aria-label={deleteButtonLabel('chest', chest.id)} data-row-delete="">
-                            <Delete />
-                        </IconButton>
-                    </Box>
-                </Box>
+                <PanelSection
+                    level={4}
+                    title={`Chests (${chests.length})`}
+                    actions={(
+                        <>
+                            <Button startIcon={<Add />} onClick={() => onAdd(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
+                                Buffer Chest
+                            </Button>
+                            <Button startIcon={<Add />} onClick={() => onAdd(ChestType.INFINITY_CHEST)} variant="text" size="small">
+                                Infinity Chest
+                            </Button>
+                        </>
                     )}
-                </SortableItem>
-            ))}
-            </SortableList>
-        </PanelSection>
+                >
+                    <SortableList itemKeys={chests.map((c) => c._uuid)} itemLabels={chests.map((c) => entityLabel('chest', c.id))} onReorder={onReorder}>
+                    {chests.map((chest, index) => (
+                        <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)}>
+                            {(dragHandle) => (
+                        <Box
+                            id={`entity-chest-${chest.id}`}
+                            role="group"
+                            aria-label={entityLabel('chest', chest.id)}
+                            sx={{
+                                mb: 2,
+                                p: 2,
+                                bgcolor: SURFACE.row,
+                            }}
+                        >
+                            {/* Header row with ID, Type, Filters, and Delete */}
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                                {dragHandle}
+                                
+                                <FormControl size="small" sx={{ minWidth: 150 }}>
+                                    <InputLabel>Type</InputLabel>
+                                    <Select
+                                        inputProps={{ 'aria-label': SELECT_NAMES.chestType }}
+                                        value={chest.type}
+                                        label="Type"
+                                        onChange={(e) => onSwitchType(index, e.target.value)}
+                                    >
+                                        <MenuItem value={ChestType.BUFFER_CHEST}>Buffer Chest</MenuItem>
+                                        <MenuItem value={ChestType.INFINITY_CHEST}>Infinity Chest</MenuItem>
+                                    </Select>
+                                </FormControl>
+
+                                {/* Buffer Chest fields - item filter and storage size */}
+                                {isBufferChest(chest) && (
+                                    <>
+                                        <ItemSelector
+                                            value={chest.item_filter || null}
+                                            options={itemNames}
+                                            onChange={(newValue) => onUpdate(index, { item_filter: newValue || '' })}
+                                            label="Item Filter"
+                                            size="small"
+                                            minWidth={200}
+                                        />
+                                        <TextField
+                                            label="Storage Size"
+                                            type="number"
+                                            value={chest.storage_size}
+                                            onChange={(e) => onUpdate(index, { storage_size: parseInt(e.target.value) || 1 })}
+                                            inputProps={{ min: 1 }}
+                                            sx={{ width: 140 }}
+                                            size="small"
+                                            slotProps={{
+                                                input: {
+                                                    endAdornment: (
+                                                        <InputAdornment position="end" sx={{ mr: -1 }}>
+                                                            <HelpButton label="About storage size">{STORAGE_SIZE_HELP}</HelpButton>
+                                                        </InputAdornment>
+                                                    ),
+                                                },
+                                            }}
+                                        />
+                                    </>
+                                )}
+
+                                {/* Infinity Chest filter slots - multiple slots */}
+                                {isInfinityChest(chest) && (
+                                    <ChestFilterSlotSelector
+                                        filters={getInfinityChestFilters(chest)}
+                                        itemNames={itemNames}
+                                        onFilterChange={(slotIndex, filter) =>
+                                            handleInfinityChestFilterChange(index, slotIndex, filter)
+                                        }
+                                        onRemoveFilter={(slotIndex) =>
+                                            handleInfinityChestRemoveFilter(index, slotIndex)
+                                        }
+                                        onAddFilter={() => handleInfinityChestAddFilter(index)}
+                                        maxSlots={10}
+                                        quantityLabel="Request Count"
+                                        canAddMore={true}
+                                    />
+                                )}
+
+                                <Box sx={{ flex: 1 }} />
+
+                                <IconButton onClick={() => remove(index)} color="error" aria-label={deleteButtonLabel('chest', chest.id)} data-row-delete="">
+                                    <Delete />
+                                </IconButton>
+                            </Box>
+                        </Box>
+                            )}
+                        </SortableItem>
+                    ))}
+                    </SortableList>
+                </PanelSection>
             )}
         </Box>
     );

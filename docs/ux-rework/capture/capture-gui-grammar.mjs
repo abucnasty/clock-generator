@@ -595,7 +595,7 @@ async function narrowBarChecks(page, rec, width, label, { copy = false } = {}) {
     await chk(rec, `${label}: bar items do not overlap and nothing scrolls sideways`, async () => {
         const s = await noSideScroll(page);
         const overlap = await page.evaluate(() => {
-            const bs = [...document.querySelectorAll('header button, header .MuiChip-root')].filter((b) => b.getBoundingClientRect().width > 0).map((b) => b.getBoundingClientRect());
+            const bs = [...document.querySelectorAll('header.MuiAppBar-root button, header.MuiAppBar-root .MuiChip-root') /* the app bar: a card's title bar is a <header> too (2.7 B) */].filter((b) => b.getBoundingClientRect().width > 0).map((b) => b.getBoundingClientRect());
             let n = 0;
             for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
                 const a = bs[i], b = bs[j];

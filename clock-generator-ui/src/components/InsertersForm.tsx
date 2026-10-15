@@ -59,7 +59,8 @@ const ROW_REST_SX = {
 };
 /** At the end of the second line when the row wraps; in its own column on one line */
 const DELETE_SX = { ml: { xs: 'auto', lg: 0 } };
-const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0 };
+/** At the top of the line when the row wraps, so Source and Destination stay level when the lane select goes under Source */
+const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: { xs: 'start', lg: 'center' } };
 /** The source's lane select goes under it when the cell is narrow */
 const SOURCE_GROUP_SX = { ...PICKER_GROUP_SX, flexWrap: 'wrap' };
 const PICKER_SX = { flex: '1 1 160px', minWidth: 0 };
