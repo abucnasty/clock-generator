@@ -1,5 +1,5 @@
-import { Autocomplete, Box, Paper, TextField, Typography } from '@mui/material';
-import { FactorioIcon } from './FactorioIcon';
+import { Box, Paper, Typography } from '@mui/material';
+import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
@@ -31,43 +31,21 @@ export function TargetOutputForm({
                 Target Output
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Autocomplete
-                    id={ELEMENT_IDS.targetRecipe}
-                    sx={{ minWidth: 300, flex: 1 }}
+                <ItemSelector
+                    kind="recipe"
+                    inputId={ELEMENT_IDS.targetRecipe}
+                    sx={{ flex: 1 }}
+                    minWidth={300}
+                    size="medium"
                     options={recipeNames}
                     value={recipe || null}
-                    onChange={(_, newValue) => onRecipeChange(newValue || '')}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Recipe"
-                            placeholder="Search recipes..."
-                            required
-                            slotProps={{
-                                // the label says "Recipe" in every row: say whose it is
-                                htmlInput: { ...params.inputProps, 'aria-label': TARGET_RECIPE_NAME },
-                                input: {
-                                    ...params.InputProps,
-                                    startAdornment: recipe ? (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                            <FactorioIcon name={recipe} size={20} alt="" />
-                                        </Box>
-                                    ) : null,
-                                },
-                            }}
-                        />
-                    )}
-                    renderOption={(props, option) => {
-                        const { key, ...rest } = props;
-                        return (
-                            <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={option} size={20} alt="" />
-                                {option}
-                            </Box>
-                        );
-                    }}
+                    onChange={(newValue) => onRecipeChange(newValue || '')}
+                    label="Recipe"
+                    placeholder="Search recipes..."
+                    required
+                    // the label says "Recipe" in every row: say whose it is
+                    inputAriaLabel={TARGET_RECIPE_NAME}
                     freeSolo
-                    autoHighlight
                 />
                 <NumberField
                     id={ELEMENT_IDS.targetRate}

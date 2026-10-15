@@ -451,7 +451,8 @@ src/
 └── verification/     # Comparing a recording with the simulator (verify)
 
 resources/
-├── data-filtered.json # The game data
+├── data-filtered.json # The game data, and under `names` the in-game English names of its items and recipes
+├── filter-raw.js     # Makes data-filtered.json from `factorio --dump-data` and the game's locale (FACTORIO_DATA_DIR)
 ├── clock_generator_staging.zip # The save test:game builds in
 └── config-samples/   # sample configurations and scaffolds, by build
 ```

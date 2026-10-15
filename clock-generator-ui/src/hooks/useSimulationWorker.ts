@@ -8,6 +8,7 @@ import type { GeneratedFor } from '../utils/resultsStaleness';
 import { PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
 import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
 import { planGenerationRun } from '../utils/deeperSearch';
+import { NO_NAMES, type GameNames } from '../utils/gameNames';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -29,6 +30,8 @@ interface UseSimulationWorkerResult {
     recipeNames: string[];
     itemNames: string[];
     resourceNames: string[];
+    /** The in-game names of the ids above */
+    gameNames: GameNames;
     logs: LogMessage[];
     blueprintString: string | null;
     transferHistory: SerializableTransferHistory | null;
@@ -150,6 +153,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
+    const [gameNames, setGameNames] = useState<GameNames>(NO_NAMES);
     const [recipes, setRecipes] = useState<Map<string, RecipeInfo>>(() => new Map());
     const [logs, setLogs] = useState<LogMessage[]>([]);
     const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
@@ -356,6 +360,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             setRecipeNames(lookups.recipeNames);
             setItemNames(lookups.itemNames);
             setResourceNames(lookups.resourceNames);
+            setGameNames(lookups.names);
             setRecipes(lookups.recipes);
             await workersReady;
             
@@ -467,6 +472,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         recipeNames,
         resourceNames,
         itemNames,
+        gameNames,
         logs,
         blueprintString: selected?.blueprintString ?? null,
         transferHistory: selected?.transferHistory ?? null,

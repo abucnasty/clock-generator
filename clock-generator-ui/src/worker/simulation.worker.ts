@@ -9,12 +9,15 @@
 import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
+import { NO_NAMES, type GameNames } from '../utils/gameNames';
 import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
 // imported dynamically in the worker context
 let clockGenerator: ClockGenerator;
+/** The data's in-game names, kept here so that the main thread does not parse the whole data for them */
+let gameNames: GameNames = NO_NAMES;
 
 const LOG_FLUSH_INTERVAL_MS = 100;
 
@@ -29,7 +32,9 @@ async function handleInitialize(factorioData: string): Promise<void> {
         // Dynamically import the clock-generator browser module
         clockGenerator = await import('clock-generator/browser');
 
-        clockGenerator.FactorioDataService.initialize(JSON.parse(factorioData));
+        const parsed = JSON.parse(factorioData);
+        clockGenerator.FactorioDataService.initialize(parsed);
+        gameNames = parsed.names ?? NO_NAMES;
 
         postResponse({ type: 'initialized' });
     } catch (error) {
@@ -201,7 +206,7 @@ function lookups(): FactorioLookups {
             // a recipe the generator cannot use has no info
         }
     }
-    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes };
+    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes, names: gameNames };
 }
 
 /** Validate each entry of a pasted list, throwing on the first one the schema rejects */

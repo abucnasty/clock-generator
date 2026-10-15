@@ -29,6 +29,7 @@ import type {
     SuggestedTarget,
     SwingBackoffReport,
 } from 'clock-generator/browser';
+import type { GameNames } from '../utils/gameNames';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -285,6 +286,8 @@ export interface FactorioLookups {
     resourceNames: string[];
     /** By recipe name; a recipe the generator cannot use is left out */
     recipes: Map<string, RecipeInfo>;
+    /** The in-game names of the ids, from the data's `names` key (none when the data has no such key) */
+    names: GameNames;
 }
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
