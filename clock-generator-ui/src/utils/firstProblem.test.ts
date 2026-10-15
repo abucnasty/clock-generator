@@ -128,6 +128,40 @@ describe('problemsOf', () => {
     });
 });
 
+describe('a target more than the machines can make', () => {
+    // Machine 1 of the logistic science sample: 11 copies make 252.656…/s, printed rounded down as 252.65
+    const machinesMax = { machineIds: [1], perCopy: 22.96874920527133 };
+    const target = (items_per_second: number) => ({ recipe: 'logistic-science-pack', items_per_second, copies: 11 });
+    const tooHigh = filledIn({ targetOutput: target(240200), machinesMax });
+    const rateProblem: Problem = { text: 'Items per Second is more than the machines can make (at most 252.65/s)', target: { kind: 'target-rate' } };
+
+    it('is a problem that goes to Items per Second', () => {
+        expect(problemsOf(tooHigh)).toEqual([rateProblem]);
+        expect(firstProblemOf(tooHigh)).toEqual(rateProblem);
+    });
+
+    it('comes after the machines and before the missing inserters', () => {
+        const problems = problemsOf({
+            ...tooHigh,
+            machines: [{ id: 1, recipe: 'logistic-science-pack' }, { id: 2, recipe: '' }],
+            coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')],
+        });
+        expect(problems.map((p) => p.target?.kind)).toEqual(['machine-recipe', 'target-rate', 'coverage-issue']);
+    });
+
+    it('is not there for a target the copies make (252.65 is, 252.66 is not), or while the most is not known', () => {
+        expect(problemsOf(filledIn({ targetOutput: target(240), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.65), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.66), machinesMax }))).toEqual([rateProblem]);
+        expect(problemsOf({ ...tooHigh, machinesMax: null })).toEqual([]);
+        expect(problemsOf({ ...tooHigh, machinesMax: undefined })).toEqual([]);
+    });
+
+    it('is the bar\'s note, ahead of a failed check', () => {
+        expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
+    });
+});
+
 describe('barNoteOf', () => {
     const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
     const rateProblem: Problem = { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } };

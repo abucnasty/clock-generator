@@ -1442,6 +1442,18 @@ export const ui = {
     add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add Drill' }[key] ?? `Add ${key}`),
     /** Chests are added by type: 'buffer' (default) or 'infinity' (owner: 1.x Configure cards) */
     addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity Chest' : 'Buffer Chest'),
+    /** Target Output's Items per Second input (ELEMENT_IDS.targetRate) (owner: 1.10 numbers) */
+    targetRate: (page) => page.locator('#target-items-per-second'),
+    /** Target Output's Copies input (ELEMENT_IDS.targetCopies) (owner: 1.10 numbers) */
+    targetCopies: (page) => page.locator('#target-copies'),
+    /** The problem line under Items per Second when the target is more than the machines can make; 0 otherwise (owner: 2.1 W rate limit) */
+    targetRateProblem: (page) => page.locator('#target-items-per-second-problem'),
+
+    // ---- the workflow bar's problems
+    /** The note under the bar's buttons (ELEMENT_IDS.blockReason): the first problem, the failed check or where to start; 0 when none (owner: 1.4 first problem) */
+    barNote: (page) => page.getByRole('banner').locator('#workflow-block-reason'),
+    /** The red "N problems" chip in the bar, named "N problems. Go to the first one."; 0 when nothing blocks (owner: 1.4 first problem) */
+    problemCount: (page) => page.getByRole('banner').getByRole('button', { name: /^\d+ problems?\. Go to the first one\.$/ }),
 
     // ---- Results
     /** The Clocks table (CLOCK_TABLE_NAME); Results only (owner: 2.x clock table) */
