@@ -92,7 +92,7 @@ come from here.
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [3.1](specs/3.1-rule-editor.md) | Rule editor upgrades | opus | implementing | | | Spec final. One unit (17 existing, 11 new files). After 2.7 A and 2.8 a. Engine: rules never reach the blueprint, they only shape the planning run; a Conditional rule on a drill fails generation (blocked in the editor) |
+| [3.1](specs/3.1-rule-editor.md) | Rule editor upgrades | opus | merged (p3) | [#179](https://github.com/abucnasty/clock-generator/pull/179) | 1 | Stacked on 2.7 A, reviewed against its head (coach run 6). Live "In words" sentence, "In the blueprint" note (rules shape the planning run only; engine-verified), Clocked strip against the clock's windows, inline problems block Save (shown after leaving a field or a refused Save), templates ask item and amount; latched template releases on the source's level (owner; engine-verified to match the sample). Round 0 code PASS / UX FIX (errors on untouched fields); round 1 both PASS. B8, B9 fixed. Capture 902/0. CI green. First Phase 3 merge |
 | [3.2](specs/3.2-editing-at-scale.md) | Editing at scale | opus | spec | | | Spec final. Two PRs: A (one inserter editor, draft dialogs, B26; one unit) after 2.7 B and 2.8 b; B (duplicate, reorder with Undo, bulk edit; two units) after A and 1.5 F |
 | [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus | spec | | | Spec final. One unit (20 existing, 12 new files). After 2.7 A and 1.5 F. `offerUndo` loses `resultsCleared` (also in 3.4) |
 | [3.4](specs/3.4-build-library.md) | Build library and share links | opus | spec | | | Spec final. One unit (8 existing, 9 new files). After 2.1 and 1.5 F |
@@ -232,6 +232,11 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   merged trees after every merge; worktrees removed only after the agent's final report. Not paying off: the chain
   table went stale again — it now lives in the handoff and is re-derived at every merge.
 - 2026-10-15: Owner: install step 6's Never on wording stays ("keep it off in the game yourself").
+
+- 2026-10-15: The owner opened #178 into `master` (engine: clock-or-unwired advice from the rule count, release 0.11.0;
+  33 files, all under `clock-generator/` plus the package versions). Its head merges cleanly with p2. When it merges,
+  `master` is merged into `feat/ux-rework`, then into p2 and p3, with the generation tests run; the final PR's version
+  bump starts from 0.11.0.
 
 ## Open questions
 

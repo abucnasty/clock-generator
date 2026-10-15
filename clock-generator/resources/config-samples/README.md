@@ -330,6 +330,24 @@ The two selected clocks are those the generator makes since the simulator has th
 510 against 400 the build is over the quarter the game tests allow, so its wake-ups are not held there yet
 (`wake_ups_open` in the test); what it moves is.
 
+The rule's count (GOALS.md, "The rule's count and the clock-or-unwired advice"), recorded on 2026-10-14 unclocked and on
+the selected clock, 15,840 ticks each after the first period (`scripts/rule-count-game-check.js`), w a minute for each
+inserter, game against simulator:
+
+| Group | Unclocked | Clocked | w removed |
+|---|---|---|---|
+| electronic circuit from the belt | 1,164 / 1,075 | 68 / 78 | 1,096 / 998 |
+| copper cable from the foundries | 1,414 / 1,325 | 236 / 236 | 1,178 / 1,089 |
+| plastic from the cryogenic plant | 1,289 / 1,200 | 109 / 109 | 1,180 / 1,091 |
+| coal from the belt | 469 / 438 | 27 / 27 | 441 / 410 |
+| advanced circuit output | 902 / 1,119 | 159 / 168 | 743 / 951 |
+
+Every group is called "clock" in both. The machines craft at the same rate in both (2,752 products a minute an
+advanced circuit plant). The output's difference is the one in the table above: the simulator shows the output as
+waiting on its plant where the game shows it working, so the simulator counts a craft (742 a minute) where the game
+counts a pickup (760). The inputs into the plants count about 8% more sink wake-ups in the game, unclocked; why was
+not looked into. No call changes, so both are left (working rule 2).
+
 The last row is the clock that rule was read from (`src/crafting/wake-after-output-block.test.ts`). One plant made its
 352 a period and the other 264, from the first period the clock ran on the build. That plant held 14 advanced circuits
 when the clock started and 9 after its first output window, so it was over its output block of 21 before every
