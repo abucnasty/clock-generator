@@ -190,9 +190,9 @@ function BeltsFormComponent({
                         {belt.lanes.map((lane, laneIndex) => (
                             <Box
                                 key={`lane-${laneIndex}`}
-                                sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}
+                                sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, rowGap: 1, alignItems: 'center', mb: 1 }}
                             >
-                                <Typography variant="body2" sx={{ width: 60 }}>
+                                <Typography variant="body2" sx={{ width: 60, flexShrink: 0 }}>
                                     Lane {laneIndex + 1}:
                                 </Typography>
                                 <ItemSelector
@@ -203,7 +203,7 @@ function BeltsFormComponent({
                                     }
                                     label="Ingredient"
                                     freeSolo
-                                    sx={{ flex: 1 }}
+                                    sx={{ flex: '1 1 200px' }}
                                 />
                                 <NumberField
                                     label="Stack Size"
@@ -218,12 +218,12 @@ function BeltsFormComponent({
                                         )
                                     }}
                                     min={1}
-                                    sx={{ width: 100 }}
+                                    sx={{ width: 100, minWidth: 100, flexShrink: 0 }}
                                     size="small"
                                 />
                                 {belt.strategy === 'export' && (
                                 <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
-                                    <Box>
+                                    <Box sx={{ flexShrink: 0 }}>
                                         <NumberField
                                             label="Consumed /s"
                                             value={lane.consumption_per_second ?? null}
@@ -231,7 +231,7 @@ function BeltsFormComponent({
                                                 handleLaneUpdate(beltIndex, laneIndex, 'consumption_per_second', val && val > 0 ? val : undefined)
                                             }
                                             min={0}
-                                            sx={{ width: 120 }}
+                                            sx={{ width: 120, minWidth: 120 }}
                                             size="small"
                                         />
                                     </Box>
@@ -248,7 +248,7 @@ function BeltsFormComponent({
                                             <Delete fontSize="small" />
                                         </IconButton>
                                     ) : (
-                                        <Box sx={{ width: 28 }} />
+                                        <Box sx={{ width: 28, flexShrink: 0 }} />
                                     )
                                 ) : null}
                             </Box>
