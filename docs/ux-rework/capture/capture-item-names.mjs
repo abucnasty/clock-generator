@@ -134,6 +134,26 @@ async function checkShows(rec, label, input, name, id) {
     return rec.check(label, v.value === name && v.title.includes(id), `value ${show(v.value)} (want ${show(name)}), title ${show(v.title)} (want it to hold ${id})`);
 }
 
+/** The accessible description Chrome computes for the element ('' if none), read from the accessibility tree */
+const axSessions = new WeakMap();
+async function axDescription(page, locator) {
+    let cdp = axSessions.get(page);
+    if (!cdp) {
+        cdp = await page.context().newCDPSession(page);
+        axSessions.set(page, cdp);
+    }
+    const target = locator.first();
+    await target.evaluate((el) => el.setAttribute('data-ux-axd', ''));
+    try {
+        const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
+        const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '[data-ux-axd]' });
+        const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+        return nodes[0]?.description?.value ?? '';
+    } finally {
+        await target.evaluate((el) => el.removeAttribute('data-ux-axd')).catch(() => {});
+    }
+}
+
 async function reload(page) {
     await page.reload({ waitUntil: 'commit' });
     await waitReady(page);
@@ -157,6 +177,9 @@ async function namesStep({ page, rec }) {
     await checkShows(rec, 'names: Target Output recipe reads "Logistic science pack", hover shows the id', targetInput(page), 'Logistic science pack', 'logistic-science-pack');
     await checkShows(rec, 'names: Machine 1 recipe reads "Logistic science pack", hover shows the id', machineInput(page), 'Logistic science pack', 'logistic-science-pack');
     await checkShows(rec, 'names: belt ingredient reads "Transport belt", hover shows the id', beltInput(page, 0), 'Transport belt', 'transport-belt');
+    // a long name cut off in a narrow field can still be read whole on hover: "Name (id)"
+    const hover = (await valueOf(targetInput(page))).title;
+    rec.check('names: hovering the chosen target shows "Logistic science pack (logistic-science-pack)"', hover === 'Logistic science pack (logistic-science-pack)', `title ${show(hover)}`);
     const entity = await page.getByRole('combobox', { name: 'Destination', exact: true }).first().evaluate((el) => el.value).catch(() => '');
     rec.info('2.8b (not a verdict): the Destination entity picker reads', show(entity));
     await rec.shot(page, 'names-configure', { desc: 'Logistic sample imported, Configure: Target Output, Machines, Belts (names in the pickers)', aria: true });
@@ -343,6 +366,49 @@ async function storesStep({ page, rec }) {
     s = await stored(page);
     rec.check('stores: typing "IRON-PLATE" then Enter stores iron-plate', recipesOf(s.json).target === 'iron-plate', `stored target ${show(recipesOf(s.json).target)}`);
 
+    // Enter after typing a name takes row 1, even when the old value also matches and the list highlights it
+    const machine1 = machineInput(page);
+    for (const [from, typedName, want, name] of [
+        ['stone-wall-recycling', 'Wall', 'stone-wall', 'Wall'],
+        ['electronic-circuit-recycling', 'Electronic circuit', 'electronic-circuit', 'Electronic circuit'],
+        ['fast-inserter', 'Inserter', 'inserter', 'Inserter'],
+    ]) {
+        await typeEnter(page, machine1, from);
+        const before = recipesOf((await stored(page)).json).machines[0];
+        await typeEnter(page, machine1, typedName);
+        const after = recipesOf((await stored(page)).json).machines[0];
+        const v = await valueOf(machine1);
+        rec.check(
+            `stores: from ${from}, typing "${typedName}" then Enter stores ${want} (row 1), not the old value`,
+            before === from && after === want && v.value === name,
+            `before ${show(before)}, after ${show(after)}, the field reads ${show(v.value)}`,
+        );
+    }
+
+    // a row the player moved to with the arrow keys is the one Enter takes
+    await typeEnter(page, machine1, 'logistic-science-pack');
+    await machine1.click();
+    await machine1.selectText().catch(() => {});
+    await page.keyboard.type('science pack', { delay: 5 });
+    await page.waitForTimeout(250);
+    await page.keyboard.press('ArrowDown');
+    const arrowed = await page.locator('[role="listbox"] [role="option"].Mui-focused').first().textContent().catch(() => null); // SELECTOR: confirm (MUI's highlighted row)
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(350);
+    const picked = recipesOf((await stored(page)).json).machines[0];
+    const pickedName = (await valueOf(machine1)).value;
+    rec.check('stores: typing, then ArrowDown and Enter, takes the row the arrow moved to', !!arrowed && pickedName === arrowed.trim() && picked !== 'logistic-science-pack', `arrowed to ${show(arrowed)}, stored ${show(picked)}, the field reads ${show(pickedName)}`);
+
+    // an icon that failed to load does not hide the next one: a typed unknown id, then a name
+    await typeEnter(page, target, 'zz-no-icon');
+    await typeEnter(page, target, 'Iron plate');
+    await page.waitForTimeout(300);
+    const icon = targetInput(page).locator('xpath=..').locator('img').first();
+    const shown = (await icon.count())
+        ? await icon.evaluate((img) => ({ display: getComputedStyle(img).display, loaded: img.complete && img.naturalWidth > 0, src: img.getAttribute('src') }))
+        : null;
+    rec.check('stores: after an unknown id, the next value\'s icon shows (iron-plate)', !!shown && shown.display !== 'none' && shown.loaded && /iron-plate/.test(shown.src ?? ''), show(shown));
+
     // an item picker: "Iron plate" + Enter stores iron-plate in the belt's lane
     await importFile(page, LOGISTIC);
     await typeEnter(page, beltInput(page, 0), 'Iron plate');
@@ -437,6 +503,17 @@ async function a11yStep({ page, rec }) {
     const named = page.getByRole('option', { name: /Logistic science pack/ }); // Playwright computes the accessible name
     const optNames = await optionRows(page).evaluateAll((lis) => lis.slice(0, 3).map((li) => (li.getAttribute('aria-label') ?? li.textContent ?? '').trim()));
     rec.check('a11y: an option\'s accessible name is "Logistic science pack" (the name, not only the id)', (await named.count()) > 0, `options named ${show(optNames)}`);
+    // a screen reader does not spell the id out: no option and no picker has it as its description (the hover title is on
+    // an inner span or the input's wrapper, which the accessibility tree does not take as the description)
+    const optionDescs = [];
+    for (let i = 0; i < Math.min(3, await optionRows(page).count()); i++) optionDescs.push(await axDescription(page, optionRows(page).nth(i)));
+    rec.check('a11y: the first options have no description (no id read out)', optionDescs.length > 0 && optionDescs.every((d) => d === ''), `descriptions ${show(optionDescs)}`);
+    const pickerDescs = {
+        target: await axDescription(page, targetInput(page)),
+        machine: await axDescription(page, machineInput(page)),
+        belt: await axDescription(page, beltInput(page, 0)),
+    };
+    rec.check('a11y: the target, machine and belt pickers have no id as description', Object.values(pickerDescs).every((d) => !/[a-z0-9]+-[a-z0-9]+/.test(d)), `descriptions ${show(pickerDescs)}`);
     const axeRules = ['aria-valid-attr-value', 'aria-allowed-role', 'aria-input-field-name', 'label', 'nested-interactive', 'duplicate-id-aria'];
     await checkAxe(rec, page, 'recipe list open', { rules: axeRules });
     await closeList(page);
