@@ -844,12 +844,11 @@ try {
             const listText = hasSelect ? ((await select.first().textContent()) ?? '').trim() : null;
             rec.check('the List row reads "Not set" after it was cleared in the Diagram dialog', listText === 'Not set', `row reads ${JSON.stringify(listText)}`);
             // the exported config has no near_lane on inserter 1
-            const exportButton = page.getByRole('button', { name: 'Export Config' }); // SELECTOR: confirm (app bar button at 900px and up, menu item below)
-            const direct = (await exportButton.count()) > 0 && (await exportButton.first().isVisible());
-            if (!direct) await openMenu(page);
+            // 2.1: Save build file, a ⋮ menu item at every width
+            await openMenu(page);
             const [download] = await Promise.all([
                 page.waitForEvent('download'),
-                (direct ? exportButton.first() : page.getByRole('menuitem', { name: /Export Config/ })).click(),
+                page.getByRole('menuitem', { name: 'Save build file' }).click(),
             ]);
             const exported = JSON.parse(readFileSync(await download.path(), 'utf8'));
             const rows = exported.inserters ?? [];
