@@ -127,8 +127,8 @@ const alertLoc = (page) => page.locator(`#${ERROR_ID}`);
 const rateField = (page) => page.locator('#target-items-per-second').or(page.getByLabel(/^Items per Second/)).first();
 const recipeField = (page) => page.locator('#target-recipe').or(page.getByRole('combobox', { name: /Recipe/ }).first()).first();
 const lcmField = (page) => page.getByLabel(/^LCM Override/).first();
-const advancedSummary = (page) => page.getByRole('button', { name: /^Advanced$/ }).first();
-const advancedBox = (page) => page.locator('.MuiAccordion-root').filter({ has: page.getByRole('button', { name: /^Advanced$/ }) }).first();
+const advancedSummary = (page) => page.getByRole('button', { name: /^Advanced\b/ }).first();
+const advancedBox = (page) => page.locator('.MuiAccordion-root').filter({ has: page.getByRole('button', { name: /^Advanced\b/ }) }).first();
 const switchOf = (page, label) => page.getByLabel(label, { exact: true }).first();
 const staleBanner = (page) => page.locator('.MuiAlert-root').filter({ hasText: /Generate again/ }).first();
 const copyOldBtn = (page) => page.getByRole('button', { name: /^Copy old clock/ }).first();
@@ -522,7 +522,7 @@ const planInfo = (page) =>
         const outside = [];
         let inside = null;
         for (const leaf of leaves) {
-            const adv = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => a.contains(leaf) && /^Advanced$/.test(a.querySelector('.MuiAccordionSummary-root')?.textContent ?? ''));
+            const adv = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => a.contains(leaf) && /^Advanced\b/.test(a.querySelector('.MuiAccordionSummary-root')?.textContent ?? ''));
             if (!adv) {
                 outside.push(leaf);
                 continue;

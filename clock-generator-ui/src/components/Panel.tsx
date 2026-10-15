@@ -89,17 +89,19 @@ interface PanelSectionProps {
 }
 
 /**
- * A section inside a card: a bold heading with a rule under it, then the help and the section's actions, then its rows.
- * No band of its own, so the card's title bar stays the one band. A section of the page, named by its heading.
+ * A section inside a card: a bold heading, then the help and the section's actions, then its rows. A section (h3) has a
+ * rule under its heading; a part of one (h4) is smaller, grey and has none, so the two read apart and their rules do not
+ * stack. No band of its own, so the card's title bar stays the one band. A section of the page, named by its heading.
  */
 export function PanelSection({ title, level, help, actions, children, sx, ref, ...data }: PanelSectionProps) {
     const titleId = `${useId()}-title`;
+    const part = level === 4;
     return (
         <Box
             ref={ref}
             component="section"
             aria-labelledby={titleId}
-            sx={[{ mb: 3, '&:last-child': { mb: 0 } }, ...(Array.isArray(sx) ? sx : [sx])]}
+            sx={[{ mb: part ? 2 : 3, '&:last-child': { mb: 0 } }, ...(Array.isArray(sx) ? sx : [sx])]}
             {...data}
         >
             <Box
@@ -108,13 +110,18 @@ export function PanelSection({ title, level, help, actions, children, sx, ref, .
                     flexWrap: 'wrap',
                     alignItems: 'center',
                     columnGap: 1,
-                    minHeight: 40,
-                    mb: 1.5,
-                    borderBottom: `1px solid ${CONTROL.edge}`,
+                    minHeight: part ? 32 : 40,
+                    mb: part ? 1 : 1.5,
+                    borderBottom: part ? 'none' : `1px solid ${CONTROL.edge}`,
                 }}
             >
                 {/* the level is set: the theme makes a subtitle a paragraph */}
-                <Typography id={titleId} component={`h${level}`} variant={level === 3 ? 'subtitle1' : 'subtitle2'} sx={{ fontWeight: 700 }}>
+                <Typography
+                    id={titleId}
+                    component={`h${level}`}
+                    variant={part ? 'subtitle2' : 'subtitle1'}
+                    sx={part ? { fontWeight: 600, color: 'text.secondary' } : { fontWeight: 700, fontSize: '1.0625rem' }}
+                >
                     {title}
                 </Typography>
                 {help && <HelpButton label={help.label}>{help.content}</HelpButton>}

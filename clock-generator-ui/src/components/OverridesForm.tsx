@@ -23,6 +23,8 @@ interface OverridesFormProps {
     /** Closed on a first visit, and again when the build is replaced (Import, Paste, Reset) */
     expanded: boolean;
     onExpandedChange: (expanded: boolean) => void;
+    /** How many of its settings the build uses (`advancedSetCount`), shown in the title */
+    setCount: number;
 }
 
 export function OverridesForm({
@@ -34,12 +36,19 @@ export function OverridesForm({
     planSlot,
     expanded,
     onExpandedChange,
+    setCount,
 }: OverridesFormProps) {
     return (
         <Accordion expanded={expanded} onChange={(_, open) => onExpandedChange(open)} slotProps={{ heading: { component: 'h2' } }}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
                     Advanced
+                    {/* it folds after Import, Paste and Reset: says that a build sets some all the same */}
+                    {setCount > 0 && (
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                            · {setCount} set
+                        </Typography>
+                    )}
                 </Typography>
             </AccordionSummary>
             <AccordionDetails>

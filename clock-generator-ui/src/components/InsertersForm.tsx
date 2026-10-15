@@ -24,16 +24,21 @@ import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { filtersWithSlotRemoved, filtersWithSlotSet } from '../utils/filterSlots';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
 /** An inserter's filter slots in the game */
 const MAX_FILTERS = 5;
+/** The enable rule's column on one line: "Enable: Clocked" and the like; a longer rule ends in "…" (its full words in the tooltip and name) */
+const RULE_COLUMN = '8.5rem';
 
 /**
  * An inserter row is a grid: the handle and number, Source, Destination, then Stack Size, the filters, the enable rule
- * and delete. Source and Destination take the room the others leave, so their names show in full where they fit. Below
- * lg the row is two lines, Source and Destination on the first; below sm each has a line of its own.
+ * and delete. Source and Destination take the room the others leave, so their names show in full where they fit. At lg
+ * the row is one line, the rule and delete in columns of a fixed width so they line up from row to row; from md, two
+ * lines, Source and Destination on the first; from sm, Source and Destination each have a line beside the handle, so a
+ * name is not cut off; below sm everything has a line of its own.
  */
 const ROW_GRID_SX = {
     display: 'grid',
@@ -45,10 +50,13 @@ const ROW_GRID_SX = {
     bgcolor: SURFACE.row,
     gridTemplateColumns: {
         xs: 'minmax(0, 1fr)',
-        sm: 'auto minmax(0, 1fr) minmax(0, 1fr)',
-        lg: 'auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto auto',
+        sm: 'auto minmax(0, 1fr)',
+        md: 'auto minmax(0, 1fr) minmax(0, 1fr)',
+        lg: `auto minmax(0, 1fr) minmax(0, 1fr) auto auto ${RULE_COLUMN} 40px`,
     },
 };
+/** Under Source, in its column, until md puts the two side by side */
+const DESTINATION_CELL_SX = { gridColumn: { sm: 2, md: 'auto' } };
 /** Stack Size, the filters, the rule and delete: cells of the row's grid on one line, a line of their own below lg */
 const ROW_REST_SX = {
     display: { xs: 'flex', lg: 'contents' },
@@ -231,35 +239,12 @@ function InsertersFormComponent({
 
     const handleFilterChange = (inserterIndex: number, slotIndex: number, item: string) => {
         const inserter = inserters[inserterIndex];
-        // the slots show the auto filters while none is set, and the "+" after them: setting one keeps the others
-        const filters = inserter.filters?.length ? [...inserter.filters] : getInferredFilters(inserter).slice(0, MAX_FILTERS);
-        filters[slotIndex] = item;
-        // Remove empty trailing slots
-        while (filters.length > 0 && !filters[filters.length - 1]) {
-            filters.pop();
-        }
-        onUpdate(inserterIndex, { filters: filters.length > 0 ? filters : undefined });
+        onUpdate(inserterIndex, { filters: filtersWithSlotSet(inserter.filters, getInferredFilters(inserter), slotIndex, item, MAX_FILTERS) });
     };
 
     const handleRemoveFilter = (inserterIndex: number, slotIndex: number) => {
         const inserter = inserters[inserterIndex];
-        let filters = [...(inserter.filters || [])];
-        
-        // If removing an auto-assigned filter (no explicit filters exist), convert all to explicit first
-        if (filters.length === 0) {
-            const inferredFilters = getInferredFilters(inserter);
-            filters = [...inferredFilters];
-        }
-        
-        // Remove the specified slot
-        filters.splice(slotIndex, 1);
-        
-        // Clean up empty trailing slots
-        while (filters.length > 0 && !filters[filters.length - 1]) {
-            filters.pop();
-        }
-        
-        onUpdate(inserterIndex, { filters: filters.length > 0 ? filters : undefined });
+        onUpdate(inserterIndex, { filters: filtersWithSlotRemoved(inserter.filters, getInferredFilters(inserter), slotIndex) });
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
@@ -383,7 +368,7 @@ function InsertersFormComponent({
                     </Box>
 
                     {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
-                    <Box sx={PICKER_GROUP_SX}>
+                    <Box sx={{ ...PICKER_GROUP_SX, ...DESTINATION_CELL_SX }}>
                         <Typography variant="body2" color="text.secondary">
                             →
                         </Typography>
@@ -493,13 +478,16 @@ function InsertersFormComponent({
                         maxSlots={MAX_FILTERS}
                     />
 
-                    <EnableRuleChip
-                        override={inserter.overrides?.enable_control}
-                        entityLabel={entityLabel('inserter', inserter.id)}
-                        entityType="inserter"
-                        forcedAlways={inserter._forced_always}
-                        onClick={() => setEnableControlModalInserterIndex(index)}
-                    />
+                    {/* a cell of its own, so the chip keeps its width in the rule's column */}
+                    <Box sx={{ display: 'flex', minWidth: 0 }}>
+                        <EnableRuleChip
+                            override={inserter.overrides?.enable_control}
+                            entityLabel={entityLabel('inserter', inserter.id)}
+                            entityType="inserter"
+                            forcedAlways={inserter._forced_always}
+                            onClick={() => setEnableControlModalInserterIndex(index)}
+                        />
+                    </Box>
 
                     <IconButton onClick={() => remove(index)} color="error" sx={DELETE_SX} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
                         <Delete />

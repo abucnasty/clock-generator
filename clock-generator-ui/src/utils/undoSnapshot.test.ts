@@ -319,8 +319,8 @@ describe('the messages', () => {
     });
 
     it('name a chest switch, and nothing for a switch to the same type', () => {
-        expect(describeChestSwitch(form(), 0, ChestType.INFINITY_CHEST)).toBe('Chest 1 changed to Infinity Chest.');
-        expect(describeChestSwitch(form(), 1, ChestType.BUFFER_CHEST)).toBe('Chest 2 changed to Buffer Chest.');
+        expect(describeChestSwitch(form(), 0, ChestType.INFINITY_CHEST)).toBe('Chest 1 changed to Infinity chest.');
+        expect(describeChestSwitch(form(), 1, ChestType.BUFFER_CHEST)).toBe('Chest 2 changed to Buffer chest.');
         expect(describeChestSwitch(form(), 0, ChestType.BUFFER_CHEST)).toBeNull();
         expect(describeChestSwitch(form(), 5, ChestType.BUFFER_CHEST)).toBeNull();
     });

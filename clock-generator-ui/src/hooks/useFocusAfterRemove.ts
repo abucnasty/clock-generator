@@ -41,15 +41,19 @@ export function useFocusAfterRemove(count: number, onRemove: (index: number) => 
 export function useFocusAfterAdd(count: number, cardRef: RefObject<HTMLElement | null>) {
     const countBefore = useRef<number | null>(null);
 
+    // after every render, and once only: the render the add caused. Were the add to come to nothing, a later growth
+    // (a Paste) must not take the focus
     useEffect(() => {
         const before = countBefore.current;
-        if (before === null || count <= before) {
+        if (before === null) {
             return;
         }
         countBefore.current = null;
-        const rows = cardRef.current?.querySelectorAll<HTMLElement>('[role="group"]');
-        rows?.[rows.length - 1]?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
-    }, [count, cardRef]);
+        if (count > before) {
+            const rows = cardRef.current?.querySelectorAll<HTMLElement>('[role="group"]');
+            rows?.[rows.length - 1]?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+        }
+    });
 
     return useCallback(() => {
         countBefore.current = count;

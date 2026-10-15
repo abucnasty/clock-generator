@@ -34,7 +34,6 @@ for (const w of [1440, 720, 390]) {
     await E(s, 'card(chests)', ui.card(page, 'chests'), 0);
     await E(s, 'add(target)', ui.add(page, 'target'), 0);
     for (const k of ['machines', 'inserters', 'belts']) await E(s, `add(${k})`, ui.add(page, k));
-    await E(s, 'add(drills)', ui.add(page, 'drills'), 0);
     await E(s, 'addDrillRow', ui.addDrillRow(page));
     await E(s, 'addChest(buffer)', ui.addChest(page), 0);
     await E(s, 'addChestRow', ui.addChestRow(page));

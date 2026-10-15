@@ -41,6 +41,7 @@ import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
+import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
@@ -737,6 +738,7 @@ function App() {
                                     onUpdate={updateOverrides}
                                     expanded={advancedOpen}
                                     onExpandedChange={setAdvancedOpen}
+                                    setCount={advancedSetCount(config.overrides)}
                                     planSlot={(
                                         <CheckPlanSection
                                             validation={validation}

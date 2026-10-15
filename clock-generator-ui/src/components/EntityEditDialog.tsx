@@ -331,13 +331,13 @@ function ChestEditSection({
                     <MenuItem value={ChestType.BUFFER_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FactorioIcon name="iron-chest" size={20} alt="" />
-                            Buffer Chest
+                            Buffer chest
                         </Box>
                     </MenuItem>
                     <MenuItem value={ChestType.INFINITY_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FactorioIcon name="infinity-chest" size={20} alt="" />
-                            Infinity Chest
+                            Infinity chest
                         </Box>
                     </MenuItem>
                 </Select>

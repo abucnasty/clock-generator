@@ -718,12 +718,20 @@ async function rowChecks(page, rec, width, label) {
         await chk(rec, `${label}: Source and Destination fill the row (their cells take more than half of it)`, async () => ({ pass: Boolean(g.sourceCell && g.destinationCell) && g.sourceCell.w + g.destinationCell.w > g.row.w / 2, detail: `cells ${g.sourceCell?.w}+${g.destinationCell?.w}px (fields ${g.source.w}+${g.destination.w}px) of ${g.row.w}px` }));
         await chk(rec, `${label}: no Source or Destination text is truncated (compare review shot 10)`, async () => ({ pass: g.sourceTruncated === false && g.destinationTruncated === false, detail: `Source ${show(g.sourceText.slice(0, 30))} truncated ${g.sourceTruncated}, Destination truncated ${g.destinationTruncated}` }));
     } else {
-        await chk(rec, `${label}: Source and Destination keep at least 160px and the row wraps below 960px`, async () => {
+        // 2.7 B fix round 1 (orchestrator): from 900 to 1200 Source and Destination share the first line and the rest wraps
+        // under them; from 600 to 900 each has a full line (Destination under Source, in its column), so names are not cut
+        // off; below 600 everything is free to stack
+        await chk(rec, `${label}: Source and Destination keep at least 160px and the row wraps below 1200px`, async () => {
             const sameLine = Math.abs(g.source.y - g.destination.y) <= 6;
-            const stackBelow = g.stack ? g.stack.y > g.source.y + 12 : true;
-            const wraps = width < 960 && width > 480 ? sameLine && stackBelow : true; // SELECTOR: confirm (720: Source and Destination on the first line, the rest on the second; 390 is free to stack)
-            return { pass: g.source.w >= 160 && g.destination.w >= 160 && wraps, detail: `Source ${g.source.w}px at y ${g.source.y}, Destination ${g.destination.w}px at y ${g.destination.y}, Stack at y ${g.stack?.y}` };
+            const stacked = g.destination.y > g.source.y + 12 && Math.abs(g.source.x - g.destination.x) <= 40;
+            const stackBelow = g.stack ? g.stack.y > Math.max(g.source.y, g.destination.y) + 12 : true;
+            const wraps = width >= 900 ? sameLine && stackBelow : width >= 600 ? stacked && stackBelow : true;
+            return { pass: g.source.w >= 160 && g.destination.w >= 160 && wraps, detail: `Source ${g.source.w}px at ${g.source.x},${g.source.y}, Destination ${g.destination.w}px at ${g.destination.x},${g.destination.y}, Stack at y ${g.stack?.y}` };
         });
+        // 2.7 B fix round 1: between 600 and 1200 a name the base showed in full is not cut off (scrollWidth <= clientWidth)
+        if (width >= 600) {
+            await chk(rec, `${label}: no Source or Destination text is cut off at ${width}px`, async () => ({ pass: g.sourceTruncated === false && g.destinationTruncated === false, detail: `Source ${show(g.sourceText.slice(0, 30))} cut off ${g.sourceTruncated}, Destination cut off ${g.destinationTruncated}` }));
+        }
     }
     rec.check(`${label}: the row is painted SURFACE.row (${RGB.row}), not action.hover`, g.rowBg === RGB.row, `row background ${g.rowBg}`);
 }

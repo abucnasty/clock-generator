@@ -1132,7 +1132,7 @@ try {
                 const imported = await readState(page);
                 if (!rec.check(`${what}: the import offers Undo first`, (await undoBtn(page).count()) === 1 && imported.saved !== prod.saved)) return;
                 if (swing) {
-                    const summary = page.getByRole('button', { name: /^Advanced$/ }).first(); // SELECTOR: confirm (the accordion's summary)
+                    const summary = page.getByRole('button', { name: /^Advanced\b/ }).first(); // SELECTOR: confirm (the accordion's summary)
                     if ((await summary.count()) > 0 && (await summary.getAttribute('aria-expanded')) !== 'true') await summary.click().catch(() => {});
                     await page.waitForTimeout(600);
                 }
@@ -1187,7 +1187,7 @@ try {
             await goConfigure(page);
             const select = section(page, 'Chests').locator('.MuiSelect-select').first();
             const current = (((await select.textContent()) ?? '').trim());
-            const target = /Buffer/.test(current) ? 'Infinity Chest' : 'Buffer Chest';
+            const target = /Buffer/.test(current) ? 'Infinity chest' : 'Buffer chest';
             await select.click();
             await page.getByRole('option', { name: target }).click();
             const offered = await waitMessage(page, /^Chest \d+ changed|^Changed Chest|Chest/, 3000);
@@ -1307,7 +1307,7 @@ try {
             await fresh(page, PU);
             const select = section(page, 'Chests').locator('.MuiSelect-select').first();
             const current = (((await select.textContent()) ?? '').trim());
-            const target = /Buffer/.test(current) ? 'Infinity Chest' : 'Buffer Chest';
+            const target = /Buffer/.test(current) ? 'Infinity chest' : 'Buffer chest';
             await page.evaluate(() => {
                 window.__busyAtMessage = null;
                 const isBusy = (t) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(t));

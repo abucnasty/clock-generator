@@ -26,6 +26,7 @@ export function AddRow({ label, onClick, menu, ...data }: AddRowProps) {
     return (
         <>
             <Button
+                disableFocusRipple
                 variant="text"
                 fullWidth
                 startIcon={<Add />}

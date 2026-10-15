@@ -1435,7 +1435,7 @@ export const ui = {
 
     // ---- Configure
     /** The Advanced accordion button (was "Advanced Overrides (Optional)"); collapsed on a first visit and after Import, Paste, Reset (owner: 2.7 B) */
-    advancedOverrides: (page) => btn(page, /^Advanced$/),
+    advancedOverrides: (page) => btn(page, /^Advanced\b/),
     /** The Build card (an h2 "Build" Panel; its title bar holds the List/Diagram toggle) (owner: 2.7 B) */
     buildCard: (page) => page.getByRole('main').getByRole('region', { name: 'Build', exact: true }),
     /**
@@ -1449,10 +1449,10 @@ export const ui = {
         const name = { machines: /^Machines \(/, inserters: /^Inserters \(/, belts: /^Belts \(/, chests: /^Chests \(/, drills: /^Mining drills/ }[key] ?? new RegExp(`^${key}`, 'i');
         return page.getByRole('main').getByRole('region', { name });
     },
-    /** The Add button of a section by key: 'machines' | 'inserters' | 'belts' | 'drills' (the drills' header button while drills are listed; else see addDrillRow). Target Output has none (0). Chests: see addChest (owner: 2.7 B) */
-    add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add Drill' }[key] ?? `Add ${key}`),
+    /** The Add button of a section by key: 'machines' | 'inserters' | 'belts' | 'drills' ("Add mining drill": the header button while drills are listed, else the Add row, addDrillRow). Target Output has none (0). Chests: see addChest (owner: 2.7 B) */
+    add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add mining drill' }[key] ?? `Add ${key}`),
     /** While there are chests: the Chests section's add buttons, by type 'buffer' (default) or 'infinity'; 0 with none (see addChestRow) (owner: 2.7 B) */
-    addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity Chest' : 'Buffer Chest'),
+    addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity chest' : 'Buffer chest'),
     /** With no chests: the dashed "Add chest" row, which opens a menu (see addChestMenuItem); 0 once there is a chest (owner: 2.7 B) */
     addChestRow: (page) => btn(page, 'Add chest'),
     /** An item of the "Add chest" row's menu: 'buffer' (default) or 'infinity'; 0 while the menu is closed (owner: 2.7 B) */

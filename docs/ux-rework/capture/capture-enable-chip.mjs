@@ -88,9 +88,9 @@ async function goConfigure() {
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
-/** The card (nearest MuiPaper-root ancestor) of the heading that reads e.g. "Inserters (5)" */
+/** The Build card's section (2.7 B) named by the heading that reads e.g. "Inserters (5)" */
 function card(headingPattern) {
-    return page.getByText(headingPattern).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
+    return page.getByRole('main').getByRole('region', { name: headingPattern });
 }
 
 const inserterCard = () => card(/^Inserters \(\d+\)$/);
@@ -237,9 +237,8 @@ async function runAt(w) {
     // ------------------------------------------------------------ 2. drills card
     await step('2 drills card', async () => {
         const c = drillCard();
+        // the sample has its drills listed; 2.7 B removed the Enabled switch
         await c.scrollIntoViewIfNeeded();
-        const sw = c.locator('input[type=checkbox]').first();
-        if (!(await sw.isChecked())) await sw.check();
         await page.waitForTimeout(400);
         await shot('2-drills-card', AFTER ? 'Mining Drills card: the drill\'s enable chip' : 'Mining Drills card: the drill\'s gear icon', c);
         if (!AFTER) {

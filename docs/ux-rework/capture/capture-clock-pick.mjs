@@ -225,7 +225,7 @@ async function checkFinished(name) {
 
 async function overridesSwitch() {
     await goConfigure(page);
-    const summary = page.getByRole('button', { name: /^Advanced$/ });
+    const summary = page.getByRole('button', { name: /^Advanced\b/ });
     if ((await summary.getAttribute('aria-expanded')) !== 'true') {
         await summary.click();
         await page.waitForTimeout(600);

@@ -223,7 +223,7 @@ function readHeadings(page, { dialog = false } = {}) {
 // capture-build-card checks its level with a build that has chests
 const CONFIGURE_HEADINGS = [
     [/^Target Output/, 2], [/^Build$/, 2], [/^Machines \(/, 3], [/^Machine Facts/, 4], [/^Belts and chests$/, 3], [/^Belts \(/, 4],
-    [/^Inserters \(/, 3], [/^Mining drills/, 3], [/^Advanced$/, 2], [/^Swing Plan/, 3],
+    [/^Inserters \(/, 3], [/^Mining drills/, 3], [/^Advanced\b/, 2], [/^Swing Plan/, 3],
 ]; // SELECTOR: confirm (the heading table of the spec; Swing Plan shows after a check)
 const RESULTS_HEADINGS = {
     timelines: [[/^Clocks/, 2], [/^Transfer Activity Timeline/, 2], [/^State Transition Timeline/, 2]],

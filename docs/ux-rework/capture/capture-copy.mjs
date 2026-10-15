@@ -330,7 +330,7 @@ const debugSummary = (page) => page.getByRole('button', { name: /^Debug Output/ 
 // Phase 2 (2.3) put the swing plan inside Advanced Overrides, which starts closed
 async function openAdvanced(page) {
     if (!(await page.getByText('Force Output Swings', { exact: true }).first().isVisible().catch(() => false))) {
-        await page.getByRole('button', { name: /^Advanced$/ }).click();
+        await page.getByRole('button', { name: /^Advanced\b/ }).click();
         await page.waitForTimeout(500);
     }
 }
@@ -448,7 +448,7 @@ const PART_B_BEFORE_GENERATE = [
         name: 'overrides-tooltips',
         async run({ page, rec }) {
             await goConfigure(page);
-            const summary = page.getByRole('button', { name: /^Advanced$/ });
+            const summary = page.getByRole('button', { name: /^Advanced\b/ });
             if (!(await page.getByText('Force Output Swings', { exact: true }).first().isVisible())) await summary.click();
             await page.waitForTimeout(400);
             const helper = await textOf(page.locator('.MuiFormHelperText-root').filter({ hasText: /LCM/ }));
@@ -698,7 +698,7 @@ const PART_B_AFTER_GENERATE = [
             for (const file of SHIFT_CANDIDATES) {
                 tried.push(file.split('/').pop());
                 await loadBuild(page, state, file);
-                const summary = page.getByRole('button', { name: /^Advanced$/ });
+                const summary = page.getByRole('button', { name: /^Advanced\b/ });
                 const searchLabel = page.getByText('Search for fewer wake-ups', { exact: true }).first();
                 if (!(await searchLabel.isVisible())) await summary.click();
                 if (!(await page.getByRole('switch', { name: /Search for fewer wake-ups|Runs the four/ }).first().isChecked())) await searchLabel.click(); // SELECTOR: confirm (the switch's name is its tooltip text)
@@ -831,7 +831,7 @@ const STEP_LIST = [
         name: 'advanced-note',
         async run({ page, rec }) {
             await goConfigure(page);
-            const summary = page.getByRole('button', { name: /^Advanced$/ }); // SELECTOR: confirm (accordion summary)
+            const summary = page.getByRole('button', { name: /^Advanced\b/ }); // SELECTOR: confirm (accordion summary)
             await summary.click();
             const note = page.getByText(/^Note: If the final output machine/); // SELECTOR: confirm (the note's first words, before and after the fix)
             await note.waitFor();

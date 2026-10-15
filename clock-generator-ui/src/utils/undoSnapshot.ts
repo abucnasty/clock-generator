@@ -29,8 +29,8 @@ const KINDS: Record<EntityKind, { one: LabelKind; many: string }> = {
 };
 
 const CHEST_TYPE_NAMES: Record<ChestType, string> = {
-    [ChestType.BUFFER_CHEST]: 'Buffer Chest',
-    [ChestType.INFINITY_CHEST]: 'Infinity Chest',
+    [ChestType.BUFFER_CHEST]: 'Buffer chest',
+    [ChestType.INFINITY_CHEST]: 'Infinity chest',
 };
 
 /**
@@ -192,7 +192,7 @@ export function removedDeleteLabel(form: ConfigFormData, kind: EntityKind, index
     return removed ? deleteButtonLabel(KINDS[kind].one, removed.id) : null;
 }
 
-/** "Chest 2 changed to Infinity Chest."; null when the chest is already of that type or there is none */
+/** "Chest 2 changed to Infinity chest."; null when the chest is already of that type or there is none */
 export function describeChestSwitch(form: ConfigFormData, index: number, newType: ChestType): string | null {
     const chest = form.chests[index];
     if (!chest) {

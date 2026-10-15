@@ -1160,7 +1160,7 @@ try {
             const beforeChest = await readState(page);
             const select = section(page, 'Chests').locator('.MuiSelect-select').first();
             const current = ((await select.textContent()) ?? '').trim();
-            const target = /Buffer/.test(current) ? 'Infinity Chest' : 'Buffer Chest';
+            const target = /Buffer/.test(current) ? 'Infinity chest' : 'Buffer chest';
             await select.click();
             await page.getByRole('option', { name: target }).click();
             await undoMessage(page, rec, 'undo-chest-switch', new RegExp(`^Chest \\d+ changed to ${target}`), 'chest type switch', { desc: `A chest switched from ${current} to ${target}: message with Undo` });

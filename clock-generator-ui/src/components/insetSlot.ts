@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material';
-import { CONTROL, ROLE, SURFACE } from '../theme/tokens';
+import { CONTROL, ROLE, SHADOW, SURFACE } from '../theme/tokens';
 
 /** A slot's side; its item icon is 24px */
 const INSET_SLOT_SIZE = 32;
@@ -32,7 +32,7 @@ export function insetSlotSx({ auto = false, open = false }: InsetSlotState = {})
         borderStyle: auto ? 'dashed' : 'solid',
         borderColor: open ? ROLE.orange.main : CONTROL.border,
         borderRadius: '2px',
-        boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.6)',
+        boxShadow: SHADOW.inset,
         transition: 'border-color 0.2s',
         '&:hover, &:focus-visible': { borderColor: ROLE.orange.main },
     };

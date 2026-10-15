@@ -26,6 +26,7 @@ import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
+import { drillsListed } from '../utils/drillsSection';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
 
@@ -64,7 +65,8 @@ function DrillsFormComponent({
     const { cardRef, remove } = useFocusAfterRemove(drills.length, onRemove);
     // the Add row goes with the first drill: the keyboard moves on to that drill's type
     const focusAdded = useFocusAfterAdd(drills.length, cardRef);
-    const listed = drills.length > 0 || miningProductivityLevel > 0;
+    const [levelFocused, setLevelFocused] = useState(false);
+    const listed = drillsListed({ drillCount: drills.length, miningProductivityLevel, levelFocused });
 
     return (
         // the same section in both shapes, so that the focus finds the Add row in it once the last drill goes
@@ -86,7 +88,7 @@ function DrillsFormComponent({
             // with none, the Add row below is the one add
             actions={listed && (
                 <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
-                    Add Drill
+                    Add mining drill
                 </Button>
             )}
         >
@@ -103,6 +105,9 @@ function DrillsFormComponent({
                                 onUpdateProductivityLevel(parseInt(e.target.value) || 0)
                             }
                             inputProps={{ min: 0 }}
+                            // the section does not fold under the keyboard while the level is typed down to 0
+                            onFocus={() => setLevelFocused(true)}
+                            onBlur={() => setLevelFocused(false)}
                             sx={{ width: 200 }}
                             size="small"
                         />

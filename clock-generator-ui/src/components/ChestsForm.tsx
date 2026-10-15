@@ -120,10 +120,10 @@ function ChestsFormComponent({
                     actions={(
                         <>
                             <Button startIcon={<Add />} onClick={() => onAdd(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
-                                Buffer Chest
+                                Buffer chest
                             </Button>
                             <Button startIcon={<Add />} onClick={() => onAdd(ChestType.INFINITY_CHEST)} variant="text" size="small">
-                                Infinity Chest
+                                Infinity chest
                             </Button>
                         </>
                     )}
@@ -154,8 +154,8 @@ function ChestsFormComponent({
                                         label="Type"
                                         onChange={(e) => onSwitchType(index, e.target.value)}
                                     >
-                                        <MenuItem value={ChestType.BUFFER_CHEST}>Buffer Chest</MenuItem>
-                                        <MenuItem value={ChestType.INFINITY_CHEST}>Infinity Chest</MenuItem>
+                                        <MenuItem value={ChestType.BUFFER_CHEST}>Buffer chest</MenuItem>
+                                        <MenuItem value={ChestType.INFINITY_CHEST}>Infinity chest</MenuItem>
                                     </Select>
                                 </FormControl>
 
