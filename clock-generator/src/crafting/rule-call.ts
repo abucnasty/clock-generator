@@ -44,6 +44,8 @@ export interface RuleCall {
     region: "below 63.5" | "63.5 to 158.6" | "158.6 to 207.6" | "above 207.6";
     /** The w it was made for */
     w: number;
+    /** The page the thresholds are from */
+    source: typeof RULE_CALL_SOURCE;
     caveats: readonly string[];
 }
 
@@ -51,16 +53,17 @@ export interface RuleCall {
 export function ruleCallOf(w: number): RuleCall {
     const { unwired_firm, clock_lower, clock_firm } = RULE_CALL_THRESHOLDS;
     const caveats = RULE_CALL_CAVEATS;
+    const source = RULE_CALL_SOURCE;
     if (w < unwired_firm) {
-        return { call: "leave unwired", firm: true, region: "below 63.5", w, caveats };
+        return { call: "leave unwired", firm: true, region: "below 63.5", w, source, caveats };
     }
     if (w < clock_lower) {
-        return { call: "leave unwired", firm: false, region: "63.5 to 158.6", w, caveats };
+        return { call: "leave unwired", firm: false, region: "63.5 to 158.6", w, source, caveats };
     }
     if (w <= clock_firm) {
-        return { call: "clock", firm: false, region: "158.6 to 207.6", w, caveats };
+        return { call: "clock", firm: false, region: "158.6 to 207.6", w, source, caveats };
     }
-    return { call: "clock", firm: true, region: "above 207.6", w, caveats };
+    return { call: "clock", firm: true, region: "above 207.6", w, source, caveats };
 }
 
 /** One group of inserters, unwired against clocked */
