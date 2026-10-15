@@ -98,12 +98,12 @@ export function CheckPlanSection({
                 {!isOutOfDate && (
                     // not an alert: the check's result is read out once, from the workflow bar
                     <Alert severity="success" role="none" sx={{ mb: 1 }}>
-                        Each output inserter takes {plan.output_swings_per_cycle} swing
+                        Each output inserter makes {plan.output_swings_per_cycle} swing
                         {plan.output_swings_per_cycle === 1 ? '' : 's'} per crafting cycle of{' '}
-                        {formatTicks(plan.cycle_ticks)} ticks, and the clock repeats every{' '}
-                        {formatTicks(plan.period_ticks)} ticks ({plan.used_lcm} cycle
-                        {plan.used_lcm === 1 ? '' : 's'}). A generation may still lower the output swings
-                        if this count turns out unstable.
+                        {formatTicks(plan.cycle_ticks)} ticks, and the clock {plan.used_lcm === 1 ? 'period is' : 'repeats every'}{' '}
+                        {formatTicks(plan.period_ticks)} ticks ({plan.used_lcm} crafting
+                        cycle{plan.used_lcm === 1 ? '' : 's'}). Generating may still use fewer swings
+                        if this count does not hold the rate.
                     </Alert>
                 )}
                 <TransferPlanPanel

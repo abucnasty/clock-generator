@@ -11,7 +11,7 @@ import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 
 /** Glossary, "wake window" */
 export const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock switches an inserter or drill on. '
-    + 'Between its windows the inserter is off, so the game has nothing to wake.';
+    + 'Between its wake windows the inserter is off, so the game has nothing to wake.';
 
 /** Glossary, "wake-up" (option (b), approved provisionally on 2026-10-14) */
 export const WAKE_UP_DEFINITION =
@@ -49,12 +49,12 @@ export const TERMS = [
 
 export const LEGEND_LABEL = 'Legend';
 export const LEGEND_WINDOW = 'Wake window';
-export const LEGEND_SLACK = 'Belt slack at the end of a window';
-export const LEGEND_SELECTED = 'Selected window';
+export const LEGEND_SLACK = 'Belt slack at the end of a wake window';
+export const LEGEND_SELECTED = 'Selected wake window';
 export const LEGEND_TRACK = 'One clock period';
 
-export const KEYBOARD_HINT = 'Up and down arrow keys move between rows. Left and right arrow keys step through the windows '
-    + 'of a row. Click or tap a bar for details. Home and End jump to the first and last window, and Escape clears the selection.';
+export const KEYBOARD_HINT = 'Up and down arrow keys move between rows. Left and right arrow keys step through the wake windows '
+    + 'of a row. Click or tap a bar for details. Home and End jump to the first and last wake window, and Escape clears the selection.';
 export const SHOW_AS_TABLE = 'Show as table';
 
 export const ALWAYS_ON_TEXT = 'Always on: not on the clock';
@@ -73,15 +73,15 @@ export const ROWS_TABLE_WAKE_UPS_HEADER = 'Wake-ups/min per inserter (1\u00a0cop
 export const ROWS_TABLE_HEADERS = {
     name: 'Name',
     moves: 'Moves',
-    onFor: 'On for (% of the period)',
-    windows: 'Windows (count)',
+    onFor: 'On for (% of the clock period)',
+    windows: 'Wake windows (count)',
     notes: 'Notes',
 } as const;
 export const WINDOWS_TABLE_CAPTION = 'Every wake window';
 export const WINDOWS_TABLE_LABEL = 'Every wake window, scrolls sideways';
 export const WINDOWS_TABLE_HEADERS = {
     name: 'Name',
-    window: 'Window (n of N)',
+    window: 'Wake window (n of N)',
     starts: 'Starts at tick',
     ends: 'Ends at tick',
     lengthTicks: 'Length (ticks)',
@@ -118,7 +118,7 @@ export function lengthText(ticks: number): string {
 
 /** The axis end */
 export function periodEndText(ticks: number): string {
-    return `Period: ${periodText(ticks)}`;
+    return `Clock period: ${periodText(ticks)}`;
 }
 
 /** A mark of the axis: the ticks, and below them the seconds; the first mark names its unit */
@@ -152,9 +152,9 @@ export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock'>): string 
     }
 }
 
-/** "On for 14% of the period" */
+/** "On for 14% of the clock period" */
 export function onForText(share: number): string {
-    return `On for ${percentText(share)} of the period`;
+    return `On for ${percentText(share)} of the clock period`;
 }
 
 /** The share alone, for the table: "14%" */
@@ -180,23 +180,23 @@ export function windowCountText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | '
     return modeText(row) ?? num(row.windows.length);
 }
 
-/** "212–240"; a wrapped window "590–4 (next period)" */
+/** "212–240"; a wrapped window "590–4 (next clock period)" */
 function windowTicksText(window: Pick<WakeWindow, 'start' | 'end' | 'wraps'>): string {
-    return `${num(window.start)}–${num(window.end)}${window.wraps ? ' (next period)' : ''}`;
+    return `${num(window.start)}–${num(window.end)}${window.wraps ? ' (next clock period)' : ''}`;
 }
 
-/** The end of a window in the table: "240", or "4 (next period)" */
+/** The end of a window in the table: "240", or "4 (next clock period)" */
 export function windowEndText(window: Pick<WakeWindow, 'end' | 'wraps'>): string {
-    return `${num(window.end)}${window.wraps ? ' (next period)' : ''}`;
+    return `${num(window.end)}${window.wraps ? ' (next clock period)' : ''}`;
 }
 
-/** "Window 2 of 3" */
+/** "Wake window 2 of 3" */
 export function windowOrdinalText(index: number, count: number): string {
-    return `Window ${num(index + 1)} of ${num(count)}`;
+    return `Wake window ${num(index + 1)} of ${num(count)}`;
 }
 
 /**
- * Period, rows and wake-ups of the clock: "Period 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
+ * Clock period, rows and wake-ups of the clock: "Clock period 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
  * for one copy"
  */
 export function summaryText(args: { periodTicks: number; inserters: number; drills: number; wakeUps: number | null }): string {
@@ -206,7 +206,7 @@ export function summaryText(args: { periodTicks: number; inserters: number; dril
     const wakeUps = args.wakeUps === null
         ? 'Wake-ups not counted'
         : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wake-ups a minute for one copy`;
-    return `Period ${periodText(args.periodTicks)} · ${counts} · ${wakeUps}`;
+    return `Clock period ${periodText(args.periodTicks)} · ${counts} · ${wakeUps}`;
 }
 
 /**
@@ -226,7 +226,7 @@ export function rowSummary(
         const ticks = listText(row.windows.map(windowTicksText), SUMMARY_WINDOWS);
         const slack = Math.max(0, ...row.windows.map(window => window.slackTicks));
         const slackText = slack > 0 ? `, the last ${ticksText(slack)} of each are belt slack` : '';
-        parts.push(`${plural(row.windows.length, 'window', 'windows')}: ticks ${ticks}${slackText}.`);
+        parts.push(`${plural(row.windows.length, 'wake window', 'wake windows')}: ticks ${ticks}${slackText}.`);
     }
     parts.push(`On for ${percentText(row.onShare)} of the clock period of ${periodText(periodTicks)}.`);
     parts.push(`${wakeUpsRowText(row)}.`);
@@ -238,8 +238,8 @@ export function rowSummary(
 }
 
 /**
- * The details of a selected window: "Window 2 of 3: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are
- * belt slack. The inserter reacts 2 ticks after the window opens."
+ * The details of a selected wake window: "Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are
+ * belt slack. The inserter reacts 2 ticks after the wake window opens."
  */
 export function windowDetails(row: WakeWindowRow, index: number, periodTicks: number): string {
     const window = row.windows[index];
@@ -252,7 +252,7 @@ export function windowDetails(row: WakeWindowRow, index: number, periodTicks: nu
     const slack = window.slackTicks > 0
         ? `, of which the last ${ticksText(window.slackTicks)} ${window.slackTicks === 1 ? 'is' : 'are'} belt slack`
         : '';
-    const reacts = `The ${row.kind} reacts ${ticksText(CIRCUIT_LATENCY_TICKS)} after the window opens.`;
+    const reacts = `The ${row.kind} reacts ${ticksText(CIRCUIT_LATENCY_TICKS)} after the wake window opens.`;
     return `${windowOrdinalText(index, row.windows.length)}: ${where} (${lengthText(window.length)})${slack}. ${reacts}`;
 }
 
@@ -282,7 +282,7 @@ export function watchNotes(
         if (slack > 0) {
             notes.push({
                 id: 'slack',
-                text: `+${ticksText(slack)}: the last ${ticksText(slack)} of each window ${slack === 1 ? 'is' : 'are'} belt slack, `
+                text: `+${ticksText(slack)}: the last ${ticksText(slack)} of each wake window ${slack === 1 ? 'is' : 'are'} belt slack, `
                     + 'so a late pickup from a moving belt can still finish.',
             });
         }
@@ -293,20 +293,20 @@ export function watchNotes(
             const { window, index } = short[0];
             notes.push({
                 id: 'short',
-                text: `Window ${num(index + 1)} is only ${ticksText(window.length)} long. Very short windows are sensitive to timing.`,
+                text: `Wake window ${num(index + 1)} is only ${ticksText(window.length)} long. Very short wake windows are sensitive to timing.`,
             });
         } else if (short.length > 1) {
             const names = listText(short.map(({ index }) => num(index + 1)), NOTE_WINDOWS);
             notes.push({
                 id: 'short',
-                text: `Windows ${names} are ${ticksText(SHORT_WINDOW_TICKS)} long or shorter. Very short windows are sensitive to timing.`,
+                text: `Wake windows ${names} are ${ticksText(SHORT_WINDOW_TICKS)} long or shorter. Very short wake windows are sensitive to timing.`,
             });
         }
         const wrapped = row.windows.findIndex(window => window.wraps);
         if (wrapped >= 0) {
             notes.push({
                 id: 'wraps',
-                text: `Window ${num(wrapped + 1)} runs past the end of the clock period and carries on from tick 0.`,
+                text: `Wake window ${num(wrapped + 1)} runs past the end of the clock period and carries on from tick 0.`,
             });
         }
     }
