@@ -210,6 +210,8 @@ function readCard() {
             rows: [...region.querySelectorAll('li[data-wiring-row]')].map((li) => [li.getAttribute('data-wiring-row'), clean(li.textContent)]),
             // its lines: one per inserter or drill, and a heading line for a combinator of several
             lines: region.querySelectorAll('li').length,
+            // one per inserter or drill: its text without the icons, and the icons' names (game names, not ids)
+            entries: [...region.querySelectorAll('[data-wiring-entry]')].map((e) => ({ text: clean(e.textContent), imgs: [...e.querySelectorAll('img')].map((i) => i.getAttribute('alt') ?? '') })),
             regionName: region ? region.getAttribute('aria-label') : null,
             regionTabindex: region ? region.getAttribute('tabindex') : null,
             scrollH: region ? region.scrollHeight : null,
@@ -458,7 +460,9 @@ async function stepChecks({ rec, card, p, path, book, noWire = false, drillsOnly
         await chk(rec, `${p} "${NOTHING_TO_WIRE}" is the one step, and there is no wiring list`, async () => ({ pass: card.text.includes(NOTHING_TO_WIRE) && !card.wiring && titles.length === 1, detail: `text has it: ${card.text.includes(NOTHING_TO_WIRE)}, wiring list: ${Boolean(card.wiring)}, titles ${show(titles)}` }));
     } else {
         await chk(rec, `${p} the wiring list has its caption "${WIRING_CAPTION}"`, async () => ({ pass: Boolean(card.wiring) && card.wiring.caption === WIRING_CAPTION, detail: show(card.wiring && card.wiring.caption) }));
-        await chk(rec, `${p} each wiring row is a combinator ("Inserter 3", "Inserters 1, 2", "Drill 1") with what each of its inserters carries and between which ends`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => /^(Inserters?|Drills?) [\d, ]+$/.test(r[0] || '') && /(Inserter|Drill) \d+ — \S/.test(r[1] || '')), detail: show(card.wiring && card.wiring.rows.slice(0, 3)) }));
+        // each entry: "Inserter 1 — [item icon]: Belt 1 to Machine 1" (2.8 b); its text is "Inserter 1 — , : Belt 1 to Machine 1"
+        // (the dash hidden from screen readers, the ", " hidden from sight, the item an icon named with its game name)
+        await chk(rec, `${p} each wiring row is a combinator ("Inserter 3", "Inserters 1, 2", "Drill 1"), each of its inserters with its item's icon and its ends`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => /^(Inserters?|Drills?) [\d, ]+$/.test(r[0] || '')) && card.wiring.entries.length > 0 && card.wiring.entries.every((e) => /^(Inserter|Drill) \d+ — , : \S/.test(e.text) && e.imgs.length > 0 && e.imgs.every((alt) => alt && !/^[a-z0-9-]+$/.test(alt))), detail: show(card.wiring && card.wiring.entries.slice(0, 3)) }));
     }
     if ((path || drills !== undefined) && !noWire && !drillsOnly) {
         // from the clock (its drill combinators) when the copied string is known; else from the build
