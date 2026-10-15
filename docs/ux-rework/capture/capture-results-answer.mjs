@@ -467,8 +467,11 @@ async function stepChecks({ rec, card, p, path, book, noWire = false, drillsOnly
     } else {
         await chk(rec, `${p} the wiring list has its caption "${WIRING_CAPTION}"`, async () => ({ pass: Boolean(card.wiring) && card.wiring.caption === WIRING_CAPTION, detail: show(card.wiring && card.wiring.caption) }));
         // each entry: "Inserter 1 — [item icon]: Belt 1 to Machine 1" (2.8 b); its text is "Inserter 1 — , : Belt 1 to Machine 1"
-        // (the dash hidden from screen readers, the ", " hidden from sight, the item an icon named with its game name)
-        await chk(rec, `${p} each wiring row is a combinator ("Inserter 3", "Inserters 1, 2", "Drill 1"), each of its inserters with its item's icon and its ends`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => /^(Inserters?|Drills?) [\d, ]+$/.test(r[0] || '')) && card.wiring.entries.length > 0 && card.wiring.entries.every((e) => /^(Inserter|Drill) \d+ — , : \S/.test(e.text) && e.imgs.length > 0 && e.imgs.every((alt) => alt && !/^[a-z0-9-]+$/.test(alt))), detail: show(card.wiring && card.wiring.entries.slice(0, 3)) }));
+        // (the dash hidden from screen readers, the ", " hidden from sight, the item an icon named with its game name); since
+        // 2.5 B an entry of several items has a ", " hidden from sight between their icons too, one fewer than the icons
+        const entryOk = (e) => e.text.startsWith(`${/^(Inserter|Drill) \d+/.exec(e.text)?.[0]} — , ${', '.repeat(Math.max(0, e.imgs.length - 1))}: `)
+            && /: \S/.test(e.text) && e.imgs.length > 0 && e.imgs.every((alt) => alt && !/^[a-z0-9-]+$/.test(alt));
+        await chk(rec, `${p} each wiring row is a combinator ("Inserter 3", "Inserters 1, 2", "Drill 1"), each of its inserters with its item's icon and its ends`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => /^(Inserters?|Drills?) [\d, ]+$/.test(r[0] || '')) && card.wiring.entries.length > 0 && card.wiring.entries.every(entryOk), detail: show(card.wiring && (card.wiring.entries.filter((e) => !entryOk(e)).slice(0, 3).concat(card.wiring.entries.slice(0, 1)))) }));
     }
     if ((path || drills !== undefined) && !noWire && !drillsOnly) {
         // from the clock (its drill combinators) when the copied string is known; else from the build

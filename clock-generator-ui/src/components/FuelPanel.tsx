@@ -7,7 +7,7 @@ import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { InserterStatus, MachineStatus } from 'clock-generator/light';
-import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS } from './colors';
+import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS, TIMELINE_TRACK_COLOR } from './colors';
 import { Panel } from './Panel';
 import { durationText } from '../utils/numberText';
 
@@ -195,7 +195,7 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit, label }: { leve
             aria-label={CHART_NAMES.fuelLevel(label)}
             viewBox={`0 0 ${durationTicks} ${LEVEL_HEIGHT}`}
             preserveAspectRatio="none"
-            sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: 'action.hover', borderRadius: 0.5 }}
+            sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: TIMELINE_TRACK_COLOR, borderRadius: 0.5 }}
         >
             <polygon points={[`0,${LEVEL_HEIGHT}`, ...steps(levels.max), `${durationTicks},${LEVEL_HEIGHT}`].join(' ')} fill={LEVEL_COLOR} fillOpacity={0.3} />
             <polyline points={steps(levels.min).join(' ')} fill="none" stroke={LEVEL_COLOR} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
@@ -255,7 +255,7 @@ function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInser
                     every {inserter.modulus}
                 </Typography>
             </Box>
-            <Box sx={{ flex: 1, height: ROW_HEIGHT, position: 'relative', bgcolor: 'action.hover', borderRadius: 0.5 }}>
+            <Box sx={{ flex: 1, height: ROW_HEIGHT, position: 'relative', bgcolor: TIMELINE_TRACK_COLOR, borderRadius: 0.5 }}>
                 <Box
                     component="svg"
                     role="img"
