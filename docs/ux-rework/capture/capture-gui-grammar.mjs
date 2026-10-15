@@ -29,7 +29,8 @@
 // Guessed selectors are marked `// SELECTOR: confirm`. A missing element is a FAIL line, never a crash.
 //
 // Copy this file and lib.mjs into a folder with `node_modules` -> /tmp/ux-capture/node_modules and run it there.
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
     forWidths, previewServer, sample, LOGISTIC, SMALL_SAMPLE, SLOW_SAMPLE, UI_DIR, importFile, goConfigure, goResults, validate, generate,
@@ -51,6 +52,21 @@ const FUEL = sample('gleba/biochamber-fuel/nutrients-from-yumako-mash-fuel-bonus
 const BELOW = sample('science/utility-science/utility-science-direct-insert-lds.json');
 const BAD = sample('intermediates/accumulator/accumulator-bad-config.json');
 const SHARED = sample('science/production-science/production-science-shared.json'); // chests, drills, many enable rules
+/** A Sidecar export of the logistic build (2.1: Paste from Factorio takes the mod's export, not a build file), as capture-first-visit builds it */
+const SIDECAR_EXPORT = (() => {
+    const { target_output: _t, overrides: _o, ...rest } = JSON.parse(readFileSync(LOGISTIC, 'utf8'));
+    return JSON.stringify({
+        sidecar_version: '0.7.0',
+        ...rest,
+        machines: rest.machines.map((m) => ({ type: 'machine', ...m })),
+        inserters: rest.inserters.map((i) => (i.source?.type === 'belt' ? { ...i, source: { near_lane: 1, ...i.source } } : i)),
+        drills: { mining_productivity_level: 0, configs: [] },
+        chests: [],
+    });
+})();
+/** A build file that is not JSON: opening it raises the urgent error message (2.1 shows a bad paste in its dialog instead) */
+const BROKEN_FILE = join(mkdtempSync(join(tmpdir(), 'gui-grammar-')), 'broken-build.json');
+writeFileSync(BROKEN_FILE, '{ not json');
 
 const stopPreview = process.env.BASE_URL ? null : await previewServer({ port: Number(process.env.PREVIEW_PORT ?? 5236) });
 const base = process.env.BASE_URL ?? stopPreview.url;
@@ -900,9 +916,13 @@ async function stepStale({ page, rec, width }) {
     await goConfigure(page);
     await rateField(page).scrollIntoViewIfNeeded();
     const current = Number(await rateField(page).inputValue().catch(() => '0')) || 1;
-    // lower, not higher: since 2.1 W a rate above what the machines can make is a problem, which takes Generate's fill
-    await rateField(page).fill(String(current > 1 ? current - 1 : current / 2));
-    await rateField(page).blur();
+    // lower, not higher: since 2.1 W a rate above what the machines can make is a problem, which takes Generate's fill.
+    // Typed as a player does: the number field adds a programmatic fill to what it holds
+    await rateField(page).click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type(String(current > 1 ? current - 1 : current / 2));
+    await page.keyboard.press('Tab');
     await page.waitForTimeout(500);
     await toTop(page);
     await rec.shot(page, 'configure-stale', { desc: 'Stale: Configure' });
@@ -971,7 +991,7 @@ async function stepDialogs({ page, rec, width }) {
     await importChecked(page, SHARED);
     await rec.step('paste confirm dialog', async () => {
         await withClipboard(async () => {
-            await page.evaluate((t) => navigator.clipboard.writeText(t), readFileSync(LOGISTIC, 'utf8'));
+            await page.evaluate((t) => navigator.clipboard.writeText(t), SIDECAR_EXPORT);
             // 2.1 moved Paste from Factorio out of the menu into the header (ui.pasteFromFactorio)
             await ui.pasteFromFactorio(page).click();
             await page.getByRole('dialog').first().waitFor({ timeout: 8000 });
@@ -1061,14 +1081,11 @@ async function stepMenu({ page, rec, width }) {
         await page.keyboard.press('Escape');
     }, page);
     await rec.step('error snackbar', async () => {
-        await withClipboard(async () => {
-            await page.evaluate(() => navigator.clipboard.writeText('not a factorio export'));
-            // 2.1 moved Paste from Factorio out of the menu into the header (ui.pasteFromFactorio)
-            await ui.pasteFromFactorio(page).click();
-            await page.locator('.MuiSnackbar-root').first().waitFor({ timeout: 6000 });
-        });
+        // 2.1 shows a bad paste inside its paste dialog; a build file that does not read is the urgent error message
+        await page.setInputFiles('input[type=file]', BROKEN_FILE);
+        await page.locator('.MuiSnackbar-root').first().waitFor({ timeout: 6000 });
         await page.waitForTimeout(400);
-        await rec.shot(page, 'snackbar-error', { desc: 'The error snackbar (bad paste)' });
+        await rec.shot(page, 'snackbar-error', { desc: 'The urgent error message (a build file that does not open)' });
         const label = 'error snackbar';
         // accepted at the 2.7 A review: an urgent message keeps the filled colour of its severity (the error's dark red,
         // black text at 5.45:1, measured below); the others are on the card surface (the Undo step)
