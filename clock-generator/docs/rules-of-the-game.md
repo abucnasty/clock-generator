@@ -31,6 +31,12 @@ Stack inserters behave functionally different than a bulk inserter in factorio. 
 
 The reason that stack inserters are chosen by most end game designs where clocking is applicable is that it has the advantage of transferring 4 extra items (stack size 16) over a bulk inserter (stack size 12). This reduces the amount of inventory transfers from one machine to another, saving update time in the game (goal 2).
 
+### An inserter's swing, by its prototype and quality
+
+Since 0.14.0 an inserter's prototype and quality come from the config, and its swing from the game data: its rotation speed ω is the prototype's `rotation_speed` times 1 + 0.3 × the quality's level (normal 0, uncommon 1, rare 2, epic 3, legendary 5). It turns for ceil(0.5 / ω) − 2 ticks each way, and takes 1 tick to pick up from a machine or chest and 1 tick to drop into one, so a swing from machine to machine is 2 · ceil(0.5 / ω) − 2 ticks: 8 for a legendary stack inserter, 24 for a normal fast inserter, 70 for a normal inserter. Its hand at full research is 1, plus the prototype's stack size bonus, plus the research's bonus for its kind: 16 for a stack inserter, 12 for a bulk inserter, 4 for the others. A `stack_size` in the config overrides the hand. Picking up from a belt and dropping onto one keep the timing measured on the legendary stack inserter, which is not checked for any other prototype or quality (follow-up F7).
+
+Mechanic: the swing and the hand by prototype and quality, standing Measured once (25 type and quality pairs, chest to chest, harness, 2.1.21), not yet in docs/mechanics.
+
 ## Constraint Exceptions
 
 Mining drills are an exception to the insertion limit rule as defined in the function: `clock-generator/src/entities/drill/mining-drill-ext.ts`

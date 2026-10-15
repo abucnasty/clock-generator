@@ -84,7 +84,7 @@ function beltSpec(belt: BeltConfig | undefined, nearLane: number | undefined): s
 
 function inserterLabel(inserter: InserterConfig): string {
     const filters = [...(inserter.filters ?? [])].sort().join(',');
-    return `inserter|${inserter.stack_size}|${filters}|${JSON.stringify(inserter.overrides ?? null)}`;
+    return `inserter|${inserter.prototype ?? ''}|${inserter.quality ?? ''}|${inserter.stack_size ?? ''}|${filters}|${JSON.stringify(inserter.overrides ?? null)}`;
 }
 
 /** The unit-node an inserter endpoint refers to, or the spec of what is outside the units */

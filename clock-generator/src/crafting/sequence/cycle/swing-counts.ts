@@ -1,8 +1,18 @@
 import Fraction, { fraction } from "../../../data-types/fraction";
-import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, InserterStackSize, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
+import { Belt, Chest, Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
 import { MapExtended } from "../../../data-types";
 import { Logger, defaultLogger } from "../../../common/logger";
+
+/**
+ * Items a mining drill's "swing" stands for. A drill drops what it mines straight into the machine it faces, with no
+ * inserter and no hand, so the number is not any inserter's hand: it is the unit in which the plan counts a drill's
+ * output per cycle (swings = items / 16), which sets how many whole drops a base cycle holds and so the cycle's length
+ * together with the inserters' hands. It was the hand of the legendary stack inserter that the samples are built with, and
+ * it is kept at 16 for every build so that a drill's plan does not move when an inserter's prototype does. Nothing in the
+ * game data says what a drill's unit should be; whether it should follow the hand of the inserters beside it is open.
+ */
+const DRILL_ITEMS_PER_SWING = 16;
 
 export interface ItemTransfer {
     item_name: string;
@@ -498,7 +508,7 @@ function planMachineLoaders(
             const amount_per_drill = amount_needed.divide(num_drills);
             // Calculate the number of swings needed to deliver this amount
             // swing_count = amount_per_drill / stack_size
-            const drill_stack_size = InserterStackSize.SIZE_16
+            const drill_stack_size = DRILL_ITEMS_PER_SWING
             const swing_count = amount_per_drill.divide(drill_stack_size);
 
             addTransfers(result, {

@@ -1,4 +1,4 @@
-import { FactorioData, Ingredient, Item, ItemName, MiningDrillSpec, Recipe, Resource, ResourceName } from "./factorio-data-types";
+import { FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualitySpec, Recipe, Resource, ResourceName } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
 
@@ -172,6 +172,29 @@ export class FactorioDataService {
         const spec = this.getData()["mining-drill"][type];
         assert(spec, `Mining drill spec for type ${type} was not found`);
         return spec;
+    }
+
+    /** The inserter prototype of that name; an unknown name is refused (own keys only: "constructor" is no inserter) */
+    public static findInserterOrThrow(name: string): InserterPrototype {
+        const inserters = this.getData().inserter;
+        if (!Object.prototype.hasOwnProperty.call(inserters, name)) {
+            throw new Error(`${name} is not an inserter of the game data`);
+        }
+        return inserters[name];
+    }
+
+    /** The quality of that name; an unknown name is refused */
+    public static findQualityOrThrow(name: string): QualitySpec {
+        const qualities = this.getData().quality;
+        if (!Object.prototype.hasOwnProperty.call(qualities, name)) {
+            throw new Error(`${name} is not a quality of the game data`);
+        }
+        return qualities[name];
+    }
+
+    /** What all the technologies together add to the hand of an inserter */
+    public static inserterResearch(): InserterResearch {
+        return this.getData().inserter_research;
     }
 
     public static getResourceOrThrow(itemName: ResourceName): Resource {

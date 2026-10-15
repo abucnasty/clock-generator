@@ -251,6 +251,36 @@ The tool generates a Factorio blueprint containing:
 
 ## Advanced Configuration
 
+### Inserter Prototype, Quality and Hand
+
+An inserter is a legendary stack inserter with a hand of 16 unless its config says otherwise. Three optional fields
+change that:
+
+- `prototype`: the inserter's name in the game data, `"inserter"`, `"fast-inserter"`, `"long-handed-inserter"`,
+  `"bulk-inserter"` or `"stack-inserter"` (the default). The burner inserter needs fuel and is refused, as is a name
+  that is not an inserter of the game data.
+- `quality`: `"normal"`, `"uncommon"`, `"rare"`, `"epic"` or `"legendary"` (the default). A better quality turns the arm
+  faster; it does not change the hand.
+- `stack_size`: the items in the hand. Without it the hand is what all the research gives the prototype: 16 for a stack
+  inserter, 12 for a bulk inserter, 4 for the others. With it, it overrides that, as when a technology is not researched.
+
+The swing comes from the game data (`inserter` and `quality` in `data-filtered.json`): the arm turns each way for
+`ceil(0.5 / ω) - 2` ticks, where ω is the prototype's `rotation_speed` times 1 + 0.3 times the quality's level (normal
+0, uncommon 1, rare 2, epic 3, legendary 5), and picking up from or dropping into a machine or chest takes 1 tick. The
+swing from machine to machine is 8 ticks for a legendary stack inserter, 24 for a normal fast inserter and 70 for a
+normal inserter. Picking up from a belt (4 ticks) and dropping onto one are still the timings of the legendary stack
+inserter, which are not checked for any other prototype or quality. The simulator also gives every inserter the stack
+inserter's wait for a full hand, which the other prototypes do not have in the game.
+
+```json
+{
+  "source": { "id": 1, "type": "machine" },
+  "sink": { "id": 2, "type": "machine" },
+  "prototype": "fast-inserter",
+  "quality": "normal"
+}
+```
+
 ### Mining Drill Support
 
 For direct-insertion mining setups. A drill's `speed_bonus` comes from `/c game.print(game.player.selected.speed_bonus)`:

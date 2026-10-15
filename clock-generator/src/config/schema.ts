@@ -325,7 +325,19 @@ export const InserterConfigSchema = z.object({
         InserterMachineConfigSchema,
         InserterChestConfigSchema
     ]),
-    stack_size: z.number().int().positive(),
+    /**
+     * The inserter's prototype name in the game data: "inserter", "fast-inserter", "long-handed-inserter",
+     * "bulk-inserter" or "stack-inserter" (default). The burner inserter needs fuel and is refused. The prototype sets
+     * how long a swing takes, with the quality, and how many items the hand holds, with the research.
+     */
+    prototype: z.string().optional(),
+    /** The inserter's quality (default "legendary"); the higher it is, the faster the arm turns. It does not change the hand. */
+    quality: z.enum(["normal", "uncommon", "rare", "epic", "legendary"]).optional(),
+    /**
+     * Items in the hand. Without it the hand is what all the research gives the prototype (16 for a stack inserter, 12
+     * for a bulk inserter, 4 for the others); with it, it overrides that, as when a technology is not researched.
+     */
+    stack_size: z.number().int().positive().optional(),
     filters: z.array(z.string()).optional(),
     overrides: InserterOverridesConfigSchema.optional()
 });

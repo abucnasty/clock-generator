@@ -78,6 +78,22 @@ function mapRawDataToFilteredFactorioData(rawData) {
         recipe.categories = categories;
     }
 
+    // the inserters, with only what the swing and the hand are made from
+    filtered["inserter"] = {};
+    for (const [name, inserter] of Object.entries(rawData.inserter ?? {})) {
+        filtered["inserter"][name] = mapAsInserter(inserter);
+    }
+
+    // the qualities a build can name; the hidden one (quality-unknown) is not one of them
+    filtered["quality"] = {};
+    for (const [name, quality] of Object.entries(rawData.quality ?? {})) {
+        if (!quality.hidden) {
+            filtered["quality"][name] = { name: quality.name, level: quality.level };
+        }
+    }
+
+    filtered["inserter_research"] = inserterResearch(rawData.technology ?? {});
+
     filtered["item"] = {};
 
     for (const category of item_categories) {
@@ -96,6 +112,37 @@ function mapRawDataToFilteredFactorioData(rawData) {
     };
 
     return filtered;
+}
+
+function mapAsInserter(struct) {
+    return {
+        name: struct.name,
+        rotation_speed: struct.rotation_speed,
+        extension_speed: struct.extension_speed,
+        stack_size_bonus: struct.stack_size_bonus,
+        bulk: struct.bulk,
+        pickup_position: struct.pickup_position,
+        insert_position: struct.insert_position,
+    };
+}
+
+/**
+ * What the technologies add to the hand of an inserter when all of them are researched: the sum of the modifiers of
+ * every "inserter-stack-size-bonus" effect (inserters, fast and long-handed ones, stack inserters) and of every
+ * "bulk-inserter-capacity-bonus" effect (the bulk inserters).
+ */
+function inserterResearch(technologies) {
+    const total = { inserter_stack_size_bonus: 0, bulk_inserter_capacity_bonus: 0 };
+    for (const technology of Object.values(technologies)) {
+        for (const effect of Array.isArray(technology.effects) ? technology.effects : []) {
+            if (effect.type === "inserter-stack-size-bonus") {
+                total.inserter_stack_size_bonus += effect.modifier;
+            } else if (effect.type === "bulk-inserter-capacity-bonus") {
+                total.bulk_inserter_capacity_bonus += effect.modifier;
+            }
+        }
+    }
+    return total;
 }
 
 function mapAsItem(struct) {
