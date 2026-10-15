@@ -10,6 +10,8 @@ export const ANNOUNCEMENTS = {
     finishedNoLabel: 'Finished generating.',
     copied: 'Blueprint copied.',
     showing: (selectedLabel: string) => `Showing the clock: ${selectedLabel}.`,
+    developerToolsOn: 'Developer tools on. They are at the end of Results.',
+    developerToolsOff: 'Developer tools off.',
 } as const;
 
 /** The parts of the workflow bar's state that are announced when they change */

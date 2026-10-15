@@ -5,12 +5,14 @@ import {
     FIELD_NAMES,
     PROGRESS_NAMES,
     SELECT_NAMES,
+    TABLIST_NAMES,
     clockHelpName,
     deleteLaneName,
     recipeName,
     removeFilterName,
     reorderAnnouncements,
     reorderName,
+    termsHelpName,
 } from './a11yLabels';
 import { entityLabel, type LabelKind } from './entityLabel';
 
@@ -38,6 +40,7 @@ describe('names built from a row', () => {
 
     it('name the help button after the clock it explains', () => {
         expect(clockHelpName('Fixed 4 + 2')).toBe('About Fixed 4 + 2');
+        expect(termsHelpName('Works?')).toBe('Terms for Works?');
     });
 });
 
@@ -48,6 +51,7 @@ describe('the constant names', () => {
             ...Object.values(BUTTON_NAMES),
             ...Object.values(FIELD_NAMES),
             ...Object.values(PROGRESS_NAMES),
+            ...Object.values(TABLIST_NAMES),
             CLOCK_TABLE_NAME,
         ];
         expect(all.length).toBeGreaterThan(10);

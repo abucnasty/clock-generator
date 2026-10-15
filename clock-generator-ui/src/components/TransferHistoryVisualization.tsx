@@ -296,7 +296,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
         <>
             <Paper sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6" component="h2">
+                    <Typography variant="h6" component="h3">
                         Transfer Activity Timeline
                     </Typography>
                     <Tooltip title="Open fullscreen">
