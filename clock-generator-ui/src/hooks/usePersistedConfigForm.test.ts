@@ -3,6 +3,7 @@ import { ChestType } from 'clock-generator/light';
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import * as edits from '../utils/configForm/edits';
 import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
+import { backupKey } from '../utils/buildLibrary';
 import { backUpSavedConfig, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
 
 afterEach(() => {
@@ -72,15 +73,22 @@ describe('serializeConfig', () => {
 describe('backUpSavedConfig', () => {
     it('keeps the saved config under the backup key and says where', () => {
         const storage = new Map<string, string>();
-        const message = backUpSavedConfig({ setItem: (key, value) => storage.set(key, value) }, '{"broken": true}');
+        const message = backUpSavedConfig({ setItem: (key, value) => storage.set(key, value) }, '{"broken": true}', backupKey('default'));
         expect(storage.get('clock-generator-config.backup')).toBe('{"broken": true}');
         expect(message).toContain('could not be loaded');
         expect(message).toContain('"clock-generator-config.backup"');
     });
 
+    it("names a library build's own backup key", () => {
+        const storage = new Map<string, string>();
+        const message = backUpSavedConfig({ setItem: (key, value) => storage.set(key, value) }, '{"broken": true}', backupKey('abc'));
+        expect(storage.get('clock-generator-build:abc.backup')).toBe('{"broken": true}');
+        expect(message).toContain('"clock-generator-build:abc.backup"');
+    });
+
     it('says so when the copy cannot be kept, and logs the config instead', () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => { });
-        const message = backUpSavedConfig({ setItem: () => { throw new Error('quota exceeded'); } }, '{"broken": true}');
+        const message = backUpSavedConfig({ setItem: () => { throw new Error('quota exceeded'); } }, '{"broken": true}', backupKey('default'));
         expect(message).toContain('could not be kept');
         expect(warn).toHaveBeenCalledWith(expect.any(String), '{"broken": true}', expect.any(Error));
     });

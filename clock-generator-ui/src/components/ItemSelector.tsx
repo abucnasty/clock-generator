@@ -71,6 +71,16 @@ export function ItemSelector({
         const shown = searchIds(query, offered, nameOf);
         return searchOnly.length > 0 ? [...shown, ...searchIds(query, searchOnly, nameOf)] : shown;
     };
+    // The text in the field, kept here: with freeSolo, MUI keeps what the field showed when the value goes to none (a
+    // Reset, an Undo, a New build or another build opened), so the field would still show the old name. It follows the
+    // value whenever that changes from outside, and what is typed otherwise.
+    const shownName = value && !iconOnly ? nameOf(value) : '';
+    const [inputText, setInputText] = useState(shownName);
+    const [shownFor, setShownFor] = useState({ value, name: shownName });
+    if (shownFor.value !== value || shownFor.name !== shownName) {
+        setShownFor({ value, name: shownName });
+        setInputText(shownName);
+    }
     // For iconOnly mode, use a more compact width
     const effectiveMinWidth = iconOnly && value ? 80 : minWidth;
 
@@ -84,7 +94,9 @@ export function ItemSelector({
             open={open}
             onOpen={() => setOpen(true)}
             onClose={() => setOpen(false)}
+            inputValue={inputText}
             onInputChange={(_, text, reason) => {
+                setInputText(text);
                 typed.current = reason === 'input' ? text : null;
                 if (reason === 'input') highlightedBy.current = null;
             }}

@@ -17,7 +17,7 @@ import type {
     MachineFormData,
 } from '../utils/configForm/formData';
 import { applyInserterFix } from '../utils/configForm/inserterFix';
-import { usePersistedConfigForm } from './usePersistedConfigForm';
+import { usePersistedConfigForm, type BuildLibrary } from './usePersistedConfigForm';
 
 // The form data types and helpers, for the components that use the form
 export {
@@ -53,6 +53,8 @@ interface UseConfigFormResult {
     /** Tells the user the saved config could not be loaded and where it was backed up; null when there is no news */
     loadNotice: string | null;
     dismissLoadNotice: () => void;
+    /** Your builds: the builds kept in this browser, and the one open in this tab */
+    library: BuildLibrary;
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>;
     
     // Target output
@@ -118,7 +120,7 @@ interface UseConfigFormResult {
 }
 
 export function useConfigForm(): UseConfigFormResult {
-    const { config, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice } = usePersistedConfigForm();
+    const { config, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library } = usePersistedConfigForm();
 
     // Each edit applies its plain function of the form state
     const edits = useMemo(() => {
@@ -187,6 +189,7 @@ export function useConfigForm(): UseConfigFormResult {
         loadError,
         loadNotice,
         dismissLoadNotice,
+        library,
         setConfig,
         ...edits,
         importConfig,

@@ -145,14 +145,23 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                 // compact: one line is 32px, lower than the fullscreen diagram's title bar row, so it adds no height there.
                 // An urgent one is filled in its colour; the others are a card with an edge (1px each side, taken off the
                 // padding, so still 32px), the severity in the icon, and the action (Undo) in the accent orange
-                sx={{
+                sx={(theme) => ({
                     alignItems: 'center',
                     maxWidth: '100%',
                     py: 0,
                     '& .MuiAlert-icon, & .MuiAlert-message': { py: urgent ? '5px' : '4px' },
                     '& .MuiAlert-action': { pt: 0 },
                     ...(!urgent && { bgcolor: SURFACE.panel, color: 'text.primary', border: `1px solid ${CONTROL.edge}` }),
-                }}
+                    // below 600px an action's button gets a row of its own under the text, which would otherwise be
+                    // squeezed into a column a word wide
+                    ...(message.action && {
+                        [theme.breakpoints.down('sm')]: {
+                            flexWrap: 'wrap',
+                            '& .MuiAlert-message': { flex: '1 1 0', minWidth: 0 },
+                            '& .MuiAlert-action': { flexBasis: '100%', justifyContent: 'flex-end', ml: 0, pl: 0, pb: '4px' },
+                        },
+                    }),
+                })}
                 onClose={message.action ? undefined : () => leave()}
                 action={message.action && (
                     <>
@@ -160,6 +169,8 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                             color={urgent ? 'inherit' : 'primary'}
                             size="small"
                             aria-keyshortcuts={message.action.keyShortcuts}
+                            // one line: the text beside it wraps instead
+                            sx={{ whiteSpace: 'nowrap' }}
                             onClick={() => leave(message.action?.onClick)}
                         >
                             {message.action.label}
