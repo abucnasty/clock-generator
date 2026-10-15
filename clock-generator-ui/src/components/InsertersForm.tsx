@@ -387,7 +387,8 @@ function InsertersFormComponent({
 
                     {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
                     <Box sx={{ ...PICKER_GROUP_SX, ...DESTINATION_CELL_SX }}>
-                        <Typography variant="body2" color="text.secondary">
+                        {/* between the two when they share a line; under Source the line itself says it, and the fields line up */}
+                        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
                             →
                         </Typography>
                         <Autocomplete
