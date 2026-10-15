@@ -1,4 +1,5 @@
 import { Box } from '@mui/material';
+import { useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
 import { nameWithId } from '../utils/gameNames';
 
@@ -9,21 +10,23 @@ interface FactorioIconProps {
     alt?: string;
     /** Shows "Name (id)" on hover. For icons that stand alone and are not inside a Tooltip, which has its own text. */
     titled?: boolean;
+    /** Shown in place of the picture when the item has no icon; nothing by default */
     fallback?: React.ReactNode;
 }
 
 /**
  * Displays a Factorio icon if available in public/icons folder.
- * Falls back to nothing or a custom fallback if the icon doesn't exist.
+ * Shows `fallback` (nothing by default) if the icon doesn't exist.
  */
-export function FactorioIcon({ name, size = 24, alt, titled = false, fallback: _fallback = null }: FactorioIconProps) {
+export function FactorioIcon({ name, size = 24, alt, titled = false, fallback = null }: FactorioIconProps) {
     const { iconLabel } = useGameNames();
     const label = iconLabel(name);
-    // Note: fallback not yet implemented - could be used to show placeholder
-    void _fallback;
+    // the path of the picture that failed to load
+    const [failedPath, setFailedPath] = useState<string | null>(null);
     // Normalize the name to match icon file naming convention
     const iconName = name.toLowerCase().replace(/_/g, '-');
     const iconPath = `/icons/${iconName}.png`;
+    if (failedPath === iconPath) return <>{fallback}</>;
 
     return (
         <Box
@@ -39,11 +42,7 @@ export function FactorioIcon({ name, size = 24, alt, titled = false, fallback: _
                 objectFit: 'contain',
                 imageRendering: 'pixelated', // Crisp pixel art scaling
             }}
-            onError={(e) => {
-                // Hide the image if it fails to load
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-            }}
+            onError={() => setFailedPath(iconPath)}
         />
     );
 }

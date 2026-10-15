@@ -1,8 +1,8 @@
 import { Autocomplete, Box, TextField, Tooltip, type AutocompleteHighlightChangeReason } from '@mui/material';
-import { useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
-import { useGameNames } from '../hooks/useGameNames';
+import { SearchOnlyRecipesContext, useGameNames } from '../hooks/useGameNames';
 import { nameWithId, resolveTyped, searchIds } from '../utils/gameNames';
 
 interface ItemSelectorProps {
@@ -52,6 +52,15 @@ export function ItemSelector({
     const highlightedBy = useRef<AutocompleteHighlightChangeReason | null>(null);
     // the chosen value stays an option, even one the list would not offer (a mod's, or a hidden recipe of an imported build)
     const offered = value && !options.includes(value) && nameOf(value) !== value ? [value, ...options] : options;
+    // Recipes the open list leaves out (recycling) but a typed query finds, after the visible matches
+    const searchOnlyAll = useContext(SearchOnlyRecipesContext);
+    const searchOnly = kind === 'recipe' ? searchOnlyAll.filter((id) => !offered.includes(id)) : [];
+    const everyOption = searchOnly.length > 0 ? [...offered, ...searchOnly] : offered;
+    const matchesOf = (query: string): string[] => {
+        if (query.trim() === '') return offered;
+        const shown = searchIds(query, offered, nameOf);
+        return searchOnly.length > 0 ? [...shown, ...searchIds(query, searchOnly, nameOf)] : shown;
+    };
     // For iconOnly mode, use a more compact width
     const effectiveMinWidth = iconOnly && value ? 80 : minWidth;
 
@@ -60,7 +69,7 @@ export function ItemSelector({
             id={inputId}
             size={size}
             sx={{ minWidth: effectiveMinWidth, ...sx }}
-            options={offered}
+            options={everyOption}
             value={value}
             open={open}
             onOpen={() => setOpen(true)}
@@ -74,9 +83,9 @@ export function ItemSelector({
             }}
             onKeyDown={(event: React.KeyboardEvent & { defaultMuiPrevented?: boolean }) => {
                 // Enter after typing takes the best match (row 1). The list highlights the chosen value instead when that
-                // matches too ("Wall recycling" for "Wall"), and Enter on it would keep it.
+                // matches too ("Wall" is chosen and "wall" is typed), and Enter on it would keep it.
                 if (event.key !== 'Enter' || event.nativeEvent.isComposing || !open || highlightedBy.current !== null || !typed.current?.trim()) return;
-                const best = searchIds(typed.current, offered, nameOf)[0];
+                const best = matchesOf(typed.current)[0];
                 if (best === undefined || best === value) return;
                 event.defaultMuiPrevented = true;
                 event.preventDefault();
@@ -85,11 +94,11 @@ export function ItemSelector({
                 onChange(best);
             }}
             // a typed name or id (freeSolo's Enter) is stored as its id; anything else as typed
-            onChange={(_, newValue) => onChange(typeof newValue === 'string' ? resolveTyped(newValue, offered, nameOf) : newValue)}
+            onChange={(_, newValue) => onChange(typeof newValue === 'string' ? resolveTyped(newValue, everyOption, nameOf) : newValue)}
             // When iconOnly, don't show the text in the input field
             getOptionLabel={(option) => iconOnly ? '' : nameOf(option)}
             // by the name and the id, in any word order, best first
-            filterOptions={(ids, state) => searchIds(state.inputValue, ids, nameOf)}
+            filterOptions={(_ids, state) => matchesOf(state.inputValue)}
             renderInput={(params) => (
                 <TextField
                     {...params}

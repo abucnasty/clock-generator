@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+    hiddenRecipeIds,
     iconName,
     pickerIds,
     itemName,
     matchesQuery,
-    nameBracketedIds,
+    nameIdsInText,
     nameWithId,
     normalizeForSearch,
     recipeName,
@@ -223,13 +224,21 @@ describe('pickerIds', () => {
     });
 });
 
-describe('nameBracketedIds', () => {
+describe('nameIdsInText', () => {
     const names: GameNames = { item: { 'iron-plate': 'Iron plate' }, recipe: { 'iron-gear-wheel': 'Iron gear wheel' } };
 
     it('says a known id in brackets as its name, and leaves other brackets alone', () => {
-        expect(nameBracketedIds(names, 'Machine 1 (iron-gear-wheel)')).toBe('Machine 1 (Iron gear wheel)');
-        expect(nameBracketedIds(names, 'Belt 1 (iron-plate) to Machine 2')).toBe('Belt 1 (Iron plate) to Machine 2');
-        expect(nameBracketedIds(names, 'Machine 1 (unknown-id) and (3 ticks)')).toBe('Machine 1 (unknown-id) and (3 ticks)');
-        expect(nameBracketedIds(names, 'no brackets')).toBe('no brackets');
+        expect(nameIdsInText(names, 'Machine 1 (iron-gear-wheel)')).toBe('Machine 1 (Iron gear wheel)');
+        expect(nameIdsInText(names, 'Belt 1 (iron-plate) to Machine 2')).toBe('Belt 1 (Iron plate) to Machine 2');
+        expect(nameIdsInText(names, 'Machine 1 (unknown-id) and (3 ticks)')).toBe('Machine 1 (unknown-id) and (3 ticks)');
+        expect(nameIdsInText(names, 'no brackets')).toBe('no brackets');
+        expect(nameIdsInText(names, 'It needs iron-plate to make iron-gear-wheel, not unknown-id or inserter')).toBe('It needs Iron plate to make Iron gear wheel, not unknown-id or inserter');
+    });
+});
+
+describe('hiddenRecipeIds', () => {
+    it('lists the recipes the data marks hidden, in order', () => {
+        expect(hiddenRecipeIds({ a: { hidden: true }, b: {}, c: { hidden: true }, d: { hidden: false } })).toEqual(['a', 'c']);
+        expect(hiddenRecipeIds(undefined)).toEqual([]);
     });
 });

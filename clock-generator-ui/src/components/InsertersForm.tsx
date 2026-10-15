@@ -319,7 +319,7 @@ function InsertersFormComponent({
                                         {...rest}
                                         sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                                     >
-                                        <FactorioIcon name={option.icon} size={24} />
+                                        <FactorioIcon name={option.icon} size={24} alt="" />
                                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                                             <Typography variant="body2">{option.label}</Typography>
                                             {option.sublabel ? (
@@ -417,7 +417,7 @@ function InsertersFormComponent({
                                         {...rest}
                                         sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                                     >
-                                        <FactorioIcon name={option.icon} size={24} />
+                                        <FactorioIcon name={option.icon} size={24} alt="" />
                                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                                             <Typography variant="body2">{option.label}</Typography>
                                             {option.sublabel ? (

@@ -265,7 +265,7 @@ async function configStep({ page, rec }) {
         named(rec, 'facts: Machine Facts inputs read "Transport belt"', text, 'transport-belt', il('transport-belt'));
         named(rec, 'facts: Machine Facts inputs read "Inserter"', text, 'inserter', il('inserter'));
         await rec.shot(page, 'text-machine-facts', { desc: 'Machine Facts open: output item and inputs by name' });
-        await checkLabelInName(rec, page, page.getByRole('button', { name: /^Machine Facts/ }).first(), 'Machine Facts accordion');
+        await labelInName(rec, page, page.getByRole('button', { name: /^Machine Facts/ }).first(), 'Machine Facts', 'Machine Facts accordion');
     } else rec.check('facts: Machine Facts accordion is on the page', false, 'no button named Machine Facts');
 
     // the swing plan (Advanced Overrides, after Check only)
@@ -328,7 +328,7 @@ async function configStep({ page, rec }) {
     rec.check('types: the chosen belt type reads in sentence case ("Turbo transport belt")', shownBelt === il('turbo-transport-belt'), show(shownBelt));
     const machineOpts = await optionsOf(page, page.getByRole('combobox', { name: 'Machine type', exact: true }).first());
     rec.check('types: Machine type options are in sentence case', machineOpts.length > 0 && machineOpts.every(isSentenceCase), show(machineOpts));
-    await checkLabelInName(rec, page, beltCombo, 'Belt type picker');
+    await labelInName(rec, page, beltCombo, 'Belt type', 'Belt type picker');
     await checkNoIds(rec, page, 'config: Configure (List, Machine Facts and swing plan open) shows no id');
     await rec.shot(page, 'text-configure', { desc: 'Configure with Machine Facts and the swing plan open', fullPage: true });
     const side = await noSideScroll(page);
@@ -353,10 +353,24 @@ async function optionIds(page, input, query) {
     await input.selectText().catch(() => {});
     await page.keyboard.type(query, { delay: 5 });
     await page.waitForTimeout(350);
-    const ids = await page.locator('[role="listbox"] [role="option"]').evaluateAll((lis) => lis.map((li) => li.getAttribute('title') ?? li.querySelector('[title]')?.getAttribute('title') ?? '')); // SELECTOR: confirm (each row has its id as title, 2.8 a)
+    const ids = await page.locator('[role="listbox"] [role="option"]').evaluateAll((lis) => lis.map((li) => (li.getAttribute('title') ?? li.querySelector('[title]')?.getAttribute('title') ?? '').replace(/^.*\(([^()]+)\)$/, '$1'))); // SELECTOR: confirm (each row has its id as title, 2.8 a)
     await page.keyboard.press('Escape');
     await page.waitForTimeout(150);
     return ids;
+}
+
+/**
+ * Label in name for a control whose visible text is more than its label (a select shows its value; an accordion's text runs
+ * on without spaces in `textContent`): the accessible name, read from the browser, holds the visible label.
+ */
+async function closeAnyList(page) {
+    await page.keyboard.press('Escape').catch(() => {});
+}
+
+async function labelInName(rec, page, locator, visibleLabel, label) {
+    const name = await accessibleName(page, locator);
+    const norm = (t) => t.replace(/\s+/g, ' ').trim().toLowerCase();
+    return rec.check(`label in name ${label}`, norm(name).includes(norm(visibleLabel)), `visible label "${visibleLabel}", accessible name "${name}"`);
 }
 
 async function pickersStep({ page, rec }) {
@@ -379,6 +393,21 @@ async function pickersStep({ page, rec }) {
             rec.check(`pickers: the ${what}, typing ${show(q)}, lists no mod or internal entry`, bad.length === 0, bad.length ? show(bad.slice(0, 5)) : `${ids.length} rows`);
         }
     }
+    // recycling recipes: out of the open list, found by a typed query after the visible matches, and stored as ids
+    const recipeInput = page.locator('#machine-recipe-1');
+    const gear = await optionIds(page, recipeInput, 'gear recycling');
+    const firstRecycling = gear.findIndex((i) => i.endsWith('-recycling'));
+    const lastPlain = gear.map((i) => i.endsWith('-recycling')).lastIndexOf(false);
+    rec.check('pickers: typing "gear recycling" lists iron-gear-wheel-recycling', gear.includes('iron-gear-wheel-recycling'), `${gear.length} rows`);
+    rec.check('pickers: the recycling matches come after the visible matches', firstRecycling > lastPlain, `first recycling row ${firstRecycling}, last other row ${lastPlain}`);
+    await recipeInput.click();
+    await recipeInput.selectText().catch(() => {});
+    await page.keyboard.type('gear recycling', { delay: 5 });
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    const storedText = await page.evaluate(() => localStorage.getItem('clock-generator-config') ?? '');
+    rec.check('pickers: "gear recycling" then Enter stores a recycling id and no name', /iron-gear-wheel-recycling/.test(storedText) && !storedText.includes('Iron gear wheel recycling'), storedText.match(/"[a-z-]*recycling"/)?.[0] ?? 'no recycling id stored');
+    await closeAnyList(page);
     await rec.shot(page, 'text-pickers', { desc: 'Configure after the picker checks (lists closed)' });
     await checkAxe(rec, page, 'Configure, pickers closed');
     await fresh(page);
@@ -459,15 +488,18 @@ async function resultsStep({ page, rec }) {
     // Wake windows (the default tab): rows and table
     const wake = panelOf(page, 'wakeWindows');
     await checkNoIds(rec, page, 'wake: the Wake windows view shows no id', '#results-panel-wakeWindows');
+    await page.locator('[role=group][aria-label^="Inserter 1,"]').first().scrollIntoViewIfNeeded().catch(() => {});
     await rec.shot(page, 'text-wake', { desc: 'Wake windows: rows by item icon' });
-    const toggle = page.getByRole('checkbox', { name: 'Show as table' }); // SELECTOR: confirm ("Show as table" is a switch)
+    const toggle = page.getByRole('switch', { name: /Show as table/ });
     if ((await toggle.count()) > 0) {
-        await toggle.first().check({ force: true }).catch(() => toggle.first().click());
+        await toggle.first().click();
         await page.waitForTimeout(400);
         await checkNoIds(rec, page, 'wake: the Wake windows tables show no id', '#results-panel-wakeWindows');
-        await rec.shot(page, 'text-wake-table', { desc: 'Wake windows shown as tables' });
-        await toggle.first().uncheck({ force: true }).catch(() => {});
-    } else rec.info('wake: Show as table', 'no checkbox named "Show as table" (not a verdict)');
+        await page.locator('table').first().scrollIntoViewIfNeeded().catch(() => {});
+        await rec.shot(page, 'text-wake-table', { desc: 'Wake windows shown as tables: the Moves column by icon' });
+        await toggle.first().click();
+        await page.waitForTimeout(300);
+    } else rec.check('wake: the Show as table switch is on the page', false, 'no switch named "Show as table"');
     void wake;
 
     // Timelines: the transfer legend
@@ -572,6 +604,7 @@ async function iconsStep({ page, rec }) {
                 show(lab.group.slice(0, 120)),
             );
         }
+        await rows.first().scrollIntoViewIfNeeded().catch(() => {});
         await rec.shot(page, `text-icons-${label}`, { desc: `Wake windows rows, ${label} sample: the item's icon in place of the id` });
         await checkAxe(rec, page, `Results, Wake windows rows (${label})`);
 

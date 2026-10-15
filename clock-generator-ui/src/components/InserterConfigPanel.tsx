@@ -125,7 +125,7 @@ function InserterEditSection({
         const { key, ...rest } = props;
         return (
             <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FactorioIcon name={option.icon} size={24} />
+                <FactorioIcon name={option.icon} size={24} alt="" />
                 <Box>
                     <Typography variant="body2">{option.label}</Typography>
                     {option.sublabel ? (

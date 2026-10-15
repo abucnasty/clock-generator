@@ -33,13 +33,15 @@ export function iconName(names: GameNames, id: string): string {
 }
 
 /**
- * Text the engine wrote with an id in brackets, "Machine 1 (logistic-science-pack)", with the id said as its game name:
- * "Machine 1 (Logistic science pack)". Brackets that hold anything else are left as they are.
+ * Text the engine wrote with ids in it, with each known id said as its game name: "Machine 1 (logistic-science-pack)" is
+ * "Machine 1 (Logistic science pack)", and "needs iron-plate" is "needs Iron plate". An id of one word is named only in
+ * brackets, so that "inserter" in a sentence stays a word; anything unknown is left as it is.
  */
-export function nameBracketedIds(names: GameNames, text: string): string {
-    return text.replace(/\(([^()]+)\)/g, (whole, inner: string) => {
-        const known = Object.hasOwn(names.recipe, inner) || Object.hasOwn(names.item, inner);
-        return known ? `(${recipeName(names, inner)})` : whole;
+export function nameIdsInText(names: GameNames, text: string): string {
+    const known = (id: string) => Object.hasOwn(names.recipe, id) || Object.hasOwn(names.item, id);
+    return text.replace(/\(([^()]+)\)|\b[a-z0-9]+(?:[-_][a-z0-9]+)+\b/g, (whole, inner: string | undefined) => {
+        if (inner !== undefined) return known(inner) ? `(${recipeName(names, inner)})` : whole;
+        return known(whole) ? recipeName(names, whole) : whole;
     });
 }
 
@@ -57,6 +59,11 @@ const INTERNAL_ID = /^(ee-|rcalc-|region-cloner_|parameter-)/;
  */
 export function pickerIds(ids: readonly string[], hidden: ReadonlySet<string> = new Set()): string[] {
     return ids.filter((id) => !INTERNAL_ID.test(id) && !hidden.has(id));
+}
+
+/** The ids of the recipes the game data marks `hidden`, in the data's order */
+export function hiddenRecipeIds(recipes: Record<string, { hidden?: boolean }> | undefined): string[] {
+    return Object.entries(recipes ?? {}).filter(([, recipe]) => recipe.hidden === true).map(([id]) => id);
 }
 
 /** Lower case, with dashes, underscores and punctuation as single spaces: "Fluoroketone (Cold)" and `fluoroketone-cold` agree */

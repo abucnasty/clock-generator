@@ -68,7 +68,7 @@ async function readRows(page) {
     return optionRows(page).evaluateAll((lis) =>
         lis.map((li) => ({
             text: (li.textContent ?? '').replace(/\s+/g, ' ').trim(),
-            title: li.getAttribute('title') ?? li.querySelector('[title]')?.getAttribute('title') ?? '',
+            title: (li.getAttribute('title') ?? li.querySelector('[title]')?.getAttribute('title') ?? '').replace(/^.*\(([^()]+)\)$/, '$1'),
         })),
     );
 }
@@ -319,7 +319,7 @@ async function fallbackStep({ page, rec }) {
     await closeList(page);
     const paramRows = await search(page, item, 'parameter-0');
     rec.check('fallback: parameter-0 is not offered by the picker', !paramRows.some((r) => r.title === 'parameter-0'), rowsSummary(paramRows));
-    await rec.shot(page, 'names-fallback', { desc: 'Item picker, "parameter-0" typed: the fallback name' });
+    await rec.shot(page, 'names-fallback', { desc: 'Item picker, "parameter-0" typed: no row, as mod ids are not offered' });
     await closeList(page);
     // typed ids the page has never heard of stay as typed, and a prototype property name is not read as a name
     for (const typed of ['zz-not-an-item', 'constructor', '__proto__']) {

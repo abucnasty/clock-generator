@@ -9,7 +9,7 @@
 import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
-import { NO_NAMES, type GameNames } from '../utils/gameNames';
+import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
 import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
@@ -37,7 +37,7 @@ async function handleInitialize(factorioData: string): Promise<void> {
         const parsed = JSON.parse(factorioData);
         clockGenerator.FactorioDataService.initialize(parsed);
         gameNames = parsed.names ?? NO_NAMES;
-        hiddenRecipes = Object.entries<{ hidden?: boolean }>(parsed.recipe ?? {}).filter(([, recipe]) => recipe.hidden === true).map(([name]) => name);
+        hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
         postResponse({ type: 'initialized' });
     } catch (error) {

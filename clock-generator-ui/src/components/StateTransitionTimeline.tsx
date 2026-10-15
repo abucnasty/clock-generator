@@ -378,7 +378,7 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                     placement="left"
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <FactorioIcon name={iconName} size={18} />
+                        <FactorioIcon name={iconName} size={18} alt="" />
                         <Typography
                             variant="body2"
                             noWrap
