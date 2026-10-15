@@ -11,15 +11,15 @@
 //   STEPS        optional regexp: run only the steps whose name matches, e.g. STEPS="^(P|G)" (names start with a letter and a digit)
 //
 // Steps, per width (1440x900, 720x900, 390x844 at once, each with its own context and localStorage):
-//   P1  the import message ("Build imported." with Undo): in the header, never over a focused control (Recipe, Items per Second, Copies,
+//   P1  the import message ("Build file opened." with Undo): in the header, never over a focused control (Recipe, Items per Second, Copies,
 //       List/Diagram toggle, first row's delete, Generate) at scroll 0 and 600, layout shift (INFO), short-window focus, axe, mouse on Undo
-//   P2  a paste error: not over Recipe (390 is the case), strict focus on Recipe; mouse on Close
+//   P2  a file error ("Could not open that file", 2.1 made a failed paste a dialog): not over Recipe (390 is the case), strict focus on Recipe; mouse on Close
 //   P3  the longest removal message (delete Machine 1 of production science): no sideways scroll, header height at 390 (<= 50%)
-//   P4  Results: Export's "Build exported." and the "... Generate again" action (clickable, disjoint, Tab reaches it, strict focus), Copy
+//   P4  Results: Export's "Build saved to a file." and the "... Generate again" action (clickable, disjoint, Tab reaches it, strict focus), Copy
 //   S1  (720) focus is brought back from under a header that grows
-//   D1  changelog over "Build imported.": nothing of the message over the dialog, Undo still there afterwards, Undo restores
+//   D1  changelog over "Build file opened.": nothing of the message over the dialog, Undo still there afterwards, Undo restores
 //   D2  messages without an action close when a dialog opens
-//   D3  a paste error closes when Paste starts again; a failed import closes when a file is chosen again; the confirm dialog's title
+//   D3  a file error closes when a paste starts (the paste dialog or the confirm dialog) or a file is chosen again; the confirm dialog's title
 //   D4  "Copy old clock..." dialog text is never under a message
 //   G1  the fullscreen diagram: the message is in its title bar; G2: moves between header and title bar, one message at a time
 //   K1  keyboard: Tab to Undo (<= 12 presses, before <main>), Shift+Tab, Enter, Ctrl/Cmd+Z, Escape
@@ -36,7 +36,7 @@ import {
     forWidths, previewServer, sample, LOGISTIC, SLOW_SAMPLE,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll, isClickable,
     contrastPairs, tabTo, checkTabTo, focusNotObscured, checkFocusNotObscured, checkFocusNotObscuredAtHeight,
-    checkAnnounced, checkAxe, checkMouseActivationVisible,
+    checkAnnounced, checkAxe, checkMouseActivationVisible, ui, chooseMenuItem,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -157,34 +157,52 @@ const KINDS = {
     drill: { title: 'Mining Drills', key: 'drills', re: /^Deleted Drill \d+\./ },
 };
 
+/** 2.1: Save build file, a ⋮ menu item at every width ("Build saved to a file.") */
 async function exportConfig(page) {
-    const direct = page.getByRole('button', { name: 'Export Config' }); // SELECTOR: confirm (a button in the app bar at 900px and up, a menu item below)
-    if (await direct.count()) {
-        await direct.first().click();
-    } else {
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Export Config' }).click(); // SELECTOR: confirm
-    }
+    await chooseMenuItem(page, 'Save build file');
 }
 
-/** Clipboard text, then the menu's Paste from Factorio; holds the shared clipboard until the paste has been read (dialog or message) */
+/**
+ * Clipboard text, then the header's Paste from Factorio (2.1); holds the shared clipboard until the paste has been read: the
+ * confirm dialog, or the Paste from Factorio dialog saying why the clipboard could not be used (2.1 turned a failed paste into
+ * that dialog; there is no "Failed to paste" message any more)
+ */
 function pasteFromMenu(page, text) {
     return withClipboard(async () => {
         await page.evaluate((t) => navigator.clipboard.writeText(t), text);
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+        await ui.pasteFromFactorio(page).click();
         await Promise.race([
             page.getByRole('dialog').getByText('Confirm Import from Factorio').waitFor({ timeout: 8000 }),
-            // the paste's own error, not any message: an Undo message already up would let the next width write the
-            // clipboard before this paste has read it
-            snack(page).filter({ hasText: /^Failed to paste/ }).first().waitFor({ timeout: 8000 }),
+            page.locator('#paste-from-factorio-title').waitFor({ timeout: 8000 }),
         ]).catch(() => {});
     });
 }
 
+/** A broken build file through Open build file…'s input: "Could not open that file: …", the error message since 2.1 */
+async function openBrokenFile(page) {
+    await page.setInputFiles('input[type=file]', BROKEN);
+    return waitMessage(page, /^Could not open that file/, 3500);
+}
+
 const importDialog = (page) => page.getByRole('dialog').filter({ hasText: 'Confirm Import from Factorio' });
 
-async function pasteOk(page, text = readFileSync(LOGISTIC, 'utf8')) {
+/**
+ * The text of a Sidecar export of a sample build, as capture-first-visit.mjs builds it: since 2.1 a paste reads only the
+ * mod's export (with `sidecar_version`), and a build file's text opens the Paste from Factorio dialog instead
+ */
+function sidecarExportOf(file) {
+    const { target_output: _t, overrides: _o, ...rest } = JSON.parse(readFileSync(file, 'utf8'));
+    return JSON.stringify({
+        sidecar_version: '0.7.0',
+        ...rest,
+        machines: rest.machines.map((m) => ({ type: 'machine', ...m })),
+        inserters: rest.inserters.map((i) => (i.source?.type === 'belt' ? { ...i, source: { near_lane: 1, ...i.source } } : i)),
+        drills: { mining_productivity_level: 0, configs: [] },
+        chests: [],
+    });
+}
+
+async function pasteOk(page, text = sidecarExportOf(LOGISTIC)) {
     await pasteFromMenu(page, text);
     await importDialog(page).waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
@@ -192,12 +210,12 @@ async function pasteOk(page, text = readFileSync(LOGISTIC, 'utf8')) {
 }
 
 /**
- * "No items selected for import." cannot be reached with a real click: Import Selected is disabled when nothing is ticked.
+ * "Nothing was imported: no box was ticked." cannot be reached with a real click: Import Selected is disabled when nothing is ticked.
  * So the dialog is opened, everything unticked, and the button's React onClick is called directly (it works with the disabled prop).
  * If the new code makes this message reachable, replace this with a plain click.
  */
 async function pasteNoItems(page) {
-    await pasteFromMenu(page, readFileSync(LOGISTIC, 'utf8'));
+    await pasteFromMenu(page, sidecarExportOf(LOGISTIC));
     const dlg = importDialog(page);
     await dlg.waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
@@ -212,8 +230,7 @@ async function pasteNoItems(page) {
 }
 
 async function resetViaMenu(page) {
-    await openMenu(page);
-    await page.getByRole('menuitem', { name: 'Reset Configuration' }).click(); // SELECTOR: confirm
+    await chooseMenuItem(page, 'Reset build');
 }
 
 
@@ -431,11 +448,11 @@ async function checkFocusedControl(page, rec, label, loc, { scrollY = null } = {
     return checkFocusNotObscured(rec, page, label, { strict: true });
 }
 
-/** Raises "Build imported." (with Undo) by importing a sample, from a clean state; returns the message locator or null */
+/** Raises "Build file opened." (with Undo) by importing a sample, from a clean state; returns the message locator or null */
 async function raiseImport(page, file = LOGISTIC) {
     await dismissMessage(page);
     await page.setInputFiles('input[type=file]', file);
-    const m = await waitMessage(page, /^Build imported\./, 4000);
+    const m = await waitMessage(page, /^Build file opened\./, 4000);
     await page.waitForTimeout(500);
     return m;
 }
@@ -571,10 +588,10 @@ try {
             await toTop(page);
             const h0 = await headerInfo(page);
             const m = await raiseImport(page, LOGISTIC);
-            rec.check('import message: "Build imported." shows with an Undo button', !!m && (await undoBtn(page).count()) === 1);
+            rec.check('import message: "Build file opened." shows with an Undo button', !!m && (await undoBtn(page).count()) === 1);
             const h1 = await headerInfo(page);
             rec.info('layout shift when the message comes (scroll 0)', `header ${Math.round(h0.height)} -> ${Math.round(h1.height)}px (+${Math.round(h1.height - h0.height)}), Target Output top ${h0.targetTop === null ? 'n/a' : Math.round(h0.targetTop)} -> ${h1.targetTop === null ? 'n/a' : Math.round(h1.targetTop)} (moved ${h0.targetTop === null || h1.targetTop === null ? 'n/a' : Math.round(h1.targetTop - h0.targetTop)}px)`);
-            await messageStateChecks(page, rec, 'p1-import', { re: /^Build imported\./, label: 'import message', desc: 'Import Config: "Build imported." with Undo, in the header', contrastOn: true, action: true, axeView: 'import message up (Configure)' });
+            await messageStateChecks(page, rec, 'p1-import', { re: /^Build file opened\./, label: 'import message', desc: 'Open build file…: "Build file opened." with Undo, in the header', contrastOn: true, action: true, axeView: 'import message up (Configure)' });
 
             const controls = [
                 ['Recipe', page.locator('#target-recipe')], // SELECTOR: confirm (id from the Target Output form)
@@ -601,24 +618,25 @@ try {
             rec.info('layout shift when the message goes (Undo)', `header ${Math.round(h1.height)} -> ${Math.round(h2.height)}px, Target Output top ${h2.targetTop === null ? 'n/a' : Math.round(h2.targetTop)} (was ${h0.targetTop === null ? 'n/a' : Math.round(h0.targetTop)} before the message)`);
         }, page);
 
-        // ------------------------------------------------------------------------------------ P2. a paste error
-        await rec.step('P2 paste error: not over Recipe', async () => {
+        // ------------------------------------------------------------------------------------ P2. a file error
+        // 2.1 turned a failed paste into the Paste from Factorio dialog: the error message left is a build file that cannot be opened
+        await rec.step('P2 file error: not over Recipe', async () => {
             await fresh(page, LOGISTIC);
             await toTop(page);
-            await pasteFromMenu(page, 'not a factorio export');
-            const m = await messageStateChecks(page, rec, 'p2-paste-error', { re: /Failed to paste/, label: 'paste error', desc: 'Paste from Factorio with ordinary text on the clipboard: the error, in the header', contrastOn: true, axeView: 'paste error up (Configure)' });
+            await openBrokenFile(page);
+            const m = await messageStateChecks(page, rec, 'p2-file-error', { re: /^Could not open that file/, label: 'file error', desc: 'Open build file… with a broken file: the error, in the header', contrastOn: true, axeView: 'file error up (Configure)' });
             const h = await headerInfo(page);
-            rec.info('header with the paste error', `${Math.round(h.height)}px of ${h.ih}px (${Math.round((h.height / h.ih) * 100)}%)`);
+            rec.info('header with the file error', `${Math.round(h.height)}px of ${h.ih}px (${Math.round((h.height / h.ih) * 100)}%)`);
             if (m) {
                 const recipe = await boxOf(page.locator('#target-recipe')); // SELECTOR: confirm
                 const mr = await msgRect(page);
                 const area = overlapArea(mr, recipe);
-                rec.check('paste error: the Recipe field\'s box and the message\'s box are disjoint', area === 0, `message ${fmt(mr)}, Recipe ${fmt(recipe)}${area ? `, ${area}px2 overlap` : ''}`);
+                rec.check('file error: the Recipe field\'s box and the message\'s box are disjoint', area === 0, `message ${fmt(mr)}, Recipe ${fmt(recipe)}${area ? `, ${area}px2 overlap` : ''}`);
             }
-            await checkFocusedControl(page, rec, 'paste error: focus Recipe', page.locator('#target-recipe'), { scrollY: 0 });
+            await checkFocusedControl(page, rec, 'file error: focus Recipe', page.locator('#target-recipe'), { scrollY: 0 });
             await page.evaluate(() => document.activeElement?.blur());
-            await checkMouseActivationVisible(rec, page, closeBtn(page), 'Close of the paste error');
-            rec.check('paste error: Close closes it', await goneWithin(page, null, 1500));
+            await checkMouseActivationVisible(rec, page, closeBtn(page), 'Close of the file error');
+            rec.check('file error: Close closes it', await goneWithin(page, null, 1500));
         }, page);
 
         // ------------------------------------------------------------------------------------ P3. the longest removal message
@@ -655,9 +673,9 @@ try {
             rec.check('Results: the belt question\'s action "... Generate again" is on the page', hadAction, `${await action.count()} found`);
             await toTop(page);
             await exportConfig(page);
-            const m = await waitMessage(page, /^Build exported\./, 3500);
+            const m = await waitMessage(page, /^Build saved to a file\./, 3500);
             if (m) await page.mouse.move(Math.round((await boxOf(m)).left + 10), Math.round((await boxOf(m)).top + 10)); // hover pauses the 6 s timer while the checks run
-            await messageStateChecks(page, rec, 'p4-results-export', { re: /^Build exported\./, label: 'export message on Results', desc: 'Results with "Build exported." up: the belt action and the message', axeView: 'export message up (Results)' });
+            await messageStateChecks(page, rec, 'p4-results-export', { re: /^Build saved to a file\./, label: 'export message on Results', desc: 'Results with "Build saved to a file." up: the belt action and the message', axeView: 'export message up (Results)' });
             if (hadAction) {
                 rec.check('Results: the action is clickable (elementFromPoint at its centre)', await isClickable(page, action));
                 const ar = await boxOf(action);
@@ -724,7 +742,7 @@ try {
         }
 
         // ------------------------------------------------------------------------------------ D1. the changelog over a message
-        await rec.step('D1 changelog over "Build imported.": the dialog is on top, Undo survives', async () => {
+        await rec.step('D1 changelog over "Build file opened.": the dialog is on top, Undo survives', async () => {
             await fresh(page, PROD);
             const prod = await readState(page);
             await raiseImport(page, LOGISTIC);
@@ -732,7 +750,7 @@ try {
             if (!rec.check('changelog: opens from the footer\'s version chip with the import message up', opened)) return;
             await page.waitForTimeout(500);
             await dialogHits(page, rec, 'changelog over the import message');
-            await rec.shot(page, 'd1-changelog-over-message', { desc: 'The changelog open with "Build imported." up behind it' });
+            await rec.shot(page, 'd1-changelog-over-message', { desc: 'The changelog open with "Build file opened." up behind it' });
             await checkAxe(rec, page, 'changelog open over the import message');
             await checkFocusNotObscuredAtHeight(rec, page, { height: shortHeight, walk: page.getByRole('dialog').first(), max: 30 });
             await page.keyboard.press('Escape');
@@ -746,19 +764,18 @@ try {
         await rec.step('D2 messages without an action close when a dialog opens', async () => {
             await fresh(page, LOGISTIC);
             await toTop(page);
-            await pasteFromMenu(page, 'not a factorio export');
-            await waitMessage(page, /Failed to paste/, 3500);
+            await openBrokenFile(page);
             const opened = await openChangelog(page);
-            rec.check('paste error: the changelog opens', opened);
-            rec.check('paste error: no message is left in the DOM once the changelog is open', await goneWithin(page, null, 1500), `${await snack(page).count()} message(s)`);
-            await rec.shot(page, 'd2-error-then-changelog', { desc: 'A paste error was up; the changelog is open: no message left' });
+            rec.check('file error: the changelog opens', opened);
+            rec.check('file error: no message is left in the DOM once the changelog is open', await goneWithin(page, null, 1500), `${await snack(page).count()} message(s)`);
+            await rec.shot(page, 'd2-error-then-changelog', { desc: 'A file error was up; the changelog is open: no message left' });
             await page.keyboard.press('Escape');
             await page.waitForTimeout(500);
 
             await dismissMessage(page); // today's error stays over the app bar; in the new build it is gone already
             await toTop(page);
             await exportConfig(page);
-            await waitMessage(page, /^Build exported\./, 3500);
+            await waitMessage(page, /^Build saved to a file\./, 3500);
             const opened2 = await openChangelog(page);
             rec.check('export success: the changelog opens', opened2);
             rec.check('export success: no message is left in the DOM once the changelog is open', await goneWithin(page, null, 1500), `${await snack(page).count()} message(s)`);
@@ -767,23 +784,45 @@ try {
         }, page);
 
         // ------------------------------------------------------------------------------------ D3. the action starts again
-        await rec.step('D3 a failed paste or import closes when the action starts again', async () => {
+        // 2.1: a failed paste is the Paste from Factorio dialog, not a message; the error left is a build file that cannot be opened,
+        // which goes when the player opens a file again or starts a paste
+        await rec.step('D3 a failed open closes when a file is opened or a paste starts again', async () => {
             await fresh(page, PROD);
             await toTop(page);
-            await pasteFromMenu(page, 'not a factorio export');
-            await waitMessage(page, /Failed to paste/, 3500);
-            const again = await pasteFromMenu(page, readFileSync(LOGISTIC, 'utf8')).then(() => true, (e) => String(e?.message ?? e).split('\n')[0]);
+            const fileError = () => snack(page).filter({ hasText: /^Could not open that file/ });
+            // a paste of ordinary text: the Paste from Factorio dialog, with no error behind it
+            await openBrokenFile(page);
+            const again0 = await pasteFromMenu(page, 'not a factorio export').then(() => true, (e) => String(e?.message ?? e).split('\n')[0]);
+            rec.check('paste after a file error: Paste from Factorio can be started while the error is up', again0 === true, again0 === true ? '' : again0);
+            const pasteDlg = page.getByRole('dialog').filter({ has: page.locator('#paste-from-factorio-title') });
+            const open0 = await pasteDlg.waitFor({ timeout: 8000 }).then(() => true, () => false);
+            rec.check('paste after a file error: the Paste from Factorio dialog opens (the clipboard was not an export)', open0);
+            await page.waitForTimeout(500);
+            rec.check('paste after a file error: no "Could not open that file" message is in the DOM while that dialog is visible', (await fileError().count()) === 0, `${await fileError().count()} found`);
+            const title0 = await page.evaluate(() => {
+                const t = document.getElementById('paste-from-factorio-title');
+                if (!t) return null;
+                const r = t.getBoundingClientRect();
+                const hit = document.elementFromPoint(r.left + Math.min(r.width / 2, 120), r.top + r.height / 2);
+                return { inTitle: !!hit && t.contains(hit), text: (t.textContent ?? '').trim() };
+            });
+            rec.check('paste after a file error: elementFromPoint at the Paste from Factorio dialog\'s title is the title', !!title0 && title0.inTitle, title0 ? `"${title0.text}"` : 'no title');
+            if (open0) await page.keyboard.press('Escape');
+            await page.waitForTimeout(600);
+
+            // a paste of an export: the confirm dialog
+            await openBrokenFile(page);
+            const again = await pasteFromMenu(page, sidecarExportOf(LOGISTIC)).then(() => true, (e) => String(e?.message ?? e).split('\n')[0]);
             if (again !== true) {
-                // today the error can sit over the app bar's menu button, so Paste cannot be started again by a click
-                rec.check('paste again: Paste from Factorio can be started while the error is up (the menu button is reachable)', false, again);
+                rec.check('paste again: Paste from Factorio can be started while the error is up', false, again);
                 await dismissMessage(page);
-                await pasteFromMenu(page, readFileSync(LOGISTIC, 'utf8'));
+                await pasteFromMenu(page, sidecarExportOf(LOGISTIC));
             }
             const dlg = importDialog(page);
             const open = await dlg.waitFor({ timeout: 8000 }).then(() => true, () => false);
             rec.check('paste again: the confirm dialog opens', open);
             await page.waitForTimeout(500);
-            rec.check('paste again: no "Failed to paste" message is in the DOM while the confirm dialog is visible', (await snack(page).filter({ hasText: /Failed to paste/ }).count()) === 0, `${await snack(page).filter({ hasText: /Failed to paste/ }).count()} found`);
+            rec.check('paste again: no "Could not open that file" message is in the DOM while the confirm dialog is visible', (await fileError().count()) === 0, `${await fileError().count()} found`);
             const title = await page.evaluate(() => {
                 const d = [...document.querySelectorAll('[role=dialog]')].pop();
                 const t = d && document.getElementById(d.getAttribute('aria-labelledby') ?? '');
@@ -800,7 +839,7 @@ try {
 
             // an Undo message up, then the confirm dialog: its title is never under the message
             await raiseImport(page, LOGISTIC);
-            await pasteFromMenu(page, readFileSync(PROD, 'utf8'));
+            await pasteFromMenu(page, sidecarExportOf(PROD));
             const open2 = await importDialog(page).waitFor({ timeout: 8000 }).then(() => true, () => false);
             rec.check('confirm dialog over an Undo message: opens', open2);
             await page.waitForTimeout(400);
@@ -811,11 +850,11 @@ try {
             // a failed import, then a good file
             await dismissMessage(page);
             await page.setInputFiles('input[type=file]', BROKEN);
-            await waitMessage(page, /Failed to import/, 3500);
+            await waitMessage(page, /Could not open that file/, 3500);
             await page.setInputFiles('input[type=file]', LOGISTIC);
-            const good = await waitMessage(page, /^Build imported\./, 4000);
-            rec.check('import again: "Build imported." shows', !!good);
-            rec.check('import again: the "Failed to import" error is gone', (await snack(page).filter({ hasText: /Failed to import/ }).count()) === 0);
+            const good = await waitMessage(page, /^Build file opened\./, 4000);
+            rec.check('import again: "Build file opened." shows', !!good);
+            rec.check('import again: the "Could not open that file" error is gone', (await snack(page).filter({ hasText: /Could not open that file/ }).count()) === 0);
             rec.check('import again: one message only', (await snack(page).count()) === 1, `${await snack(page).count()}`);
             await dismissMessage(page);
         }, page);
@@ -996,7 +1035,7 @@ try {
                 const msg = document.querySelector('.MuiSnackbar-root[data-message]');
                 return !!bar && !!msg && bar.contains(msg);
             });
-            rec.check('fullscreen toggle: with "Build imported." up, opening fullscreen shows it in the title bar', inBar);
+            rec.check('fullscreen toggle: with "Build file opened." up, opening fullscreen shows it in the title bar', inBar);
             await rec.shot(page, 'g2-fullscreen-open-with-import', { desc: 'The import message moved into the fullscreen diagram\'s title bar' });
             await page.getByRole('button', { name: 'Exit fullscreen' }).click();
             await page.waitForTimeout(1000);
@@ -1240,7 +1279,7 @@ try {
                 }, { content, label: pressLabel, busy: busyText });
                 if (!r.ok) return rec.info(`offer during a run (${what})`, `${r.why}; unchecked`);
                 await page.waitForTimeout(300);
-                const raised = (await snack(page).filter({ hasText: /^Build imported\./ }).count()) === 1;
+                const raised = (await snack(page).filter({ hasText: /^Build file opened\./ }).count()) === 1;
                 // the import itself usually ends the run it started during, so the busy label is gone by the time the message shows: what
                 // counts is that the file was handed to the page while the label was up (the press came first, the offer after)
                 rec.info(`offer during a run (${what})`, `busy label up when the file was handed over: ${r.sawBusy}; at the moment the message showed: ${r.busyAtMessage}`);
@@ -1248,7 +1287,7 @@ try {
                     return rec.info(`offer during a run (${what})`, `the run was too fast to catch on this machine (busy label seen ${r.sawBusy}); unchecked, not a FAIL${raised ? '' : '; the import message did not show'}`);
                 }
                 await waitIdle(page);
-                rec.check(`offer during a run (${what}): "Build imported." with Undo is still there after the run has ended or been dropped`, (await undoBtn(page).count()) === 1, `${await undoBtn(page).count()} Undo`);
+                rec.check(`offer during a run (${what}): "Build file opened." with Undo is still there after the run has ended or been dropped`, (await undoBtn(page).count()) === 1, `${await undoBtn(page).count()} Undo`);
                 const imported = await readState(page);
                 await page.getByRole('button', { name: /^(List view|Configure)$/ }).first().focus().catch(() => {});
                 await page.keyboard.press('ControlOrMeta+z');
@@ -1311,58 +1350,57 @@ try {
             await watchAnnouncements(page);
             await raiseImport(page, LOGISTIC);
             await page.waitForTimeout(600);
-            const imp = (await announcedWrites(page)).filter((w) => /^Build imported\./.test(w.text));
-            rec.check('"Build imported." is written once into a polite region', imp.length === 1, `${imp.length} write(s)`);
-            rec.check('"Build imported." is written into a region with no aria-hidden ancestor at that moment', imp.length > 0 && imp.every((w) => !w.hidden), imp.map((w) => `${w.onBody ? 'body' : 'app'} region${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written');
-            const holders = await page.evaluate(() => [...document.querySelectorAll('[data-message-announcer], [role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')].filter((el) => /^Build imported\./.test(el.textContent ?? '')).length);
-            rec.check('"Build imported." is held by one region only', holders === 1, `${holders} region(s)`);
-            await checkAnnounced(rec, page, /Build imported\./, '"Build imported." (live region, accessibility tree)');
+            const imp = (await announcedWrites(page)).filter((w) => /^Build file opened\./.test(w.text));
+            rec.check('"Build file opened." is written once into a polite region', imp.length === 1, `${imp.length} write(s)`);
+            rec.check('"Build file opened." is written into a region with no aria-hidden ancestor at that moment', imp.length > 0 && imp.every((w) => !w.hidden), imp.map((w) => `${w.onBody ? 'body' : 'app'} region${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written');
+            const holders = await page.evaluate(() => [...document.querySelectorAll('[data-message-announcer], [role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')].filter((el) => /^Build file opened\./.test(el.textContent ?? '')).length);
+            rec.check('"Build file opened." is held by one region only', holders === 1, `${holders} region(s)`);
+            await checkAnnounced(rec, page, /Build file opened\./, '"Build file opened." (live region, accessibility tree)');
             rec.check('no new live region while the message is up', (await liveCount()) === idle, `${idle} idle, ${await liveCount()} with the message`);
             // opening and closing the fullscreen diagram writes nothing more
             await page.getByRole('button', { name: 'Diagram view' }).click().catch(() => {});
             await page.waitForTimeout(1200);
-            const w0 = (await announcedWrites(page)).filter((w) => /^Build imported\./.test(w.text)).length;
+            const w0 = (await announcedWrites(page)).filter((w) => /^Build file opened\./.test(w.text)).length;
             await page.getByRole('button', { name: 'Fullscreen', exact: true }).click().catch(() => {});
             await page.waitForTimeout(1000);
             await page.getByRole('button', { name: 'Exit fullscreen' }).click().catch(() => {});
             await page.waitForTimeout(1000);
-            const w1 = (await announcedWrites(page)).filter((w) => /^Build imported\./.test(w.text)).length;
-            rec.check('opening and closing the fullscreen diagram writes nothing more of the message', w1 === w0 && w1 === 1, `${w0} -> ${w1} writes of "Build imported."`);
+            const w1 = (await announcedWrites(page)).filter((w) => /^Build file opened\./.test(w.text)).length;
+            rec.check('opening and closing the fullscreen diagram writes nothing more of the message', w1 === w0 && w1 === 1, `${w0} -> ${w1} writes of "Build file opened."`);
             await page.getByRole('button', { name: 'List view' }).click().catch(() => {});
             await dismissMessage(page);
 
-            // "No items selected for import." is raised as the confirm dialog closes
+            // "Nothing was imported: no box was ticked." is raised as the confirm dialog closes
             await watchAnnouncements(page);
             await pasteNoItems(page);
             await page.waitForTimeout(900);
-            const no = (await announcedWrites(page)).filter((w) => /^No items selected for import\./.test(w.text));
-            rec.check('"No items selected for import." is written once, into a region with no aria-hidden ancestor', no.length === 1 && no.every((w) => !w.hidden), no.map((w) => `${w.onBody ? 'body' : 'app'} region${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written');
-            await checkAnnounced(rec, page, /No items selected for import\./, '"No items selected for import." (live region, accessibility tree)');
+            const no = (await announcedWrites(page)).filter((w) => /^Nothing was imported: no box was ticked\./.test(w.text));
+            rec.check('"Nothing was imported: no box was ticked." is written once, into a region with no aria-hidden ancestor', no.length === 1 && no.every((w) => !w.hidden), no.map((w) => `${w.onBody ? 'body' : 'app'} region${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written');
+            await checkAnnounced(rec, page, /Nothing was imported: no box was ticked\./, '"Nothing was imported: no box was ticked." (live region, accessibility tree)');
             const roleNo = await page.evaluate(() => document.querySelectorAll('[data-message][role=alert], [data-message] [role=alert]').length);
-            rec.check('"No items selected for import." has no role=alert', roleNo === 0, `${roleNo}`);
+            rec.check('"Nothing was imported: no box was ticked." has no role=alert', roleNo === 0, `${roleNo}`);
             await dismissMessage(page);
             await page.keyboard.press('Escape');
             await page.waitForTimeout(400);
 
-            // "Failed to paste: ..."
+            // "Could not open that file: ..." (2.1: the error message left; a failed paste is a dialog now)
             await watchAnnouncements(page);
-            await pasteFromMenu(page, 'not a factorio export');
-            await waitMessage(page, /Failed to paste/, 3500);
+            await openBrokenFile(page);
             await page.waitForTimeout(600);
-            const fp = (await announcedWrites(page)).filter((w) => /^Failed to paste/.test(w.text));
-            rec.check('"Failed to paste: ..." is written once, into a region with no aria-hidden ancestor', fp.length === 1 && fp.every((w) => !w.hidden), fp.map((w) => `${w.onBody ? 'body' : 'app'} region${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written');
-            await checkAnnounced(rec, page, /Failed to paste/, '"Failed to paste: ..." (live region, accessibility tree)');
+            const fp = (await announcedWrites(page)).filter((w) => /^Could not open that file/.test(w.text));
+            rec.check('"Could not open that file: ..." is written once, into a region with no aria-hidden ancestor', fp.length === 1 && fp.every((w) => !w.hidden), fp.map((w) => `${w.onBody ? 'body' : 'app'} region${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written');
+            await checkAnnounced(rec, page, /Could not open that file/, '"Could not open that file: ..." (live region, accessibility tree)');
             const roleErr = await page.evaluate(() => document.querySelectorAll('[data-message][role=alert], [data-message] [role=alert]').length);
-            rec.check('"Failed to paste: ..." has no role=alert', roleErr === 0, `${roleErr}`);
+            rec.check('"Could not open that file: ..." has no role=alert', roleErr === 0, `${roleErr}`);
             rec.check('no new live region while the error is up', (await liveCount()) === idle, `${idle} idle, ${await liveCount()} with the error: ${(await liveRegions()).join(', ')}`);
             rec.check('at most one spare announcer region on <body> while the error is up', (await spareCount()) <= 1, `${await spareCount()}`);
             await dismissMessage(page);
 
             // a success
             await exportConfig(page);
-            await waitMessage(page, /^Build exported\./, 3500);
+            await waitMessage(page, /^Build saved to a file\./, 3500);
             const roleOk = await page.evaluate(() => document.querySelectorAll('[data-message][role=alert], [data-message] [role=alert]').length);
-            rec.check('"Build exported." has no role=alert', roleOk === 0, `${roleOk}`);
+            rec.check('"Build saved to a file." has no role=alert', roleOk === 0, `${roleOk}`);
             await dismissMessage(page);
         }, page);
 
