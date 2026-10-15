@@ -313,7 +313,7 @@ export function ClockAlternativesPanel({
             <Accordion
                 disableGutters
                 elevation={0}
-                slotProps={{ heading: { component: 'h3' } }}
+                slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': 'how-clocks-are-chosen-summary' } }}
                 sx={{ mb: 1, maxWidth: '72ch' }}
             >
                 <AccordionSummary

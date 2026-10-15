@@ -137,6 +137,7 @@ function InsightTable({ table, title }: { table: NonNullable<ClockInsight['table
 export function InsightsPanel({ insights, children }: InsightsPanelProps) {
     const build = insights.filter(insight => insight.scope === 'build');
     const clock = insights.filter(insight => insight.scope === 'clock');
+    const buildSummaryId = useId();
 
     return (
         <Box>
@@ -152,8 +153,8 @@ export function InsightsPanel({ insights, children }: InsightsPanelProps) {
             </Panel>
 
             {build.length > 0 && (
-                <Accordion disableGutters variant="outlined" slotProps={{ heading: { component: 'h3' } }}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Accordion disableGutters variant="outlined" slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': buildSummaryId } }}>
+                    <AccordionSummary id={buildSummaryId} expandIcon={<ExpandMoreIcon />}>
                         <Typography variant="subtitle1" component="span" sx={{ fontWeight: 600 }}>{INSIGHTS_COPY.buildHeading}</Typography>
                     </AccordionSummary>
                     <AccordionDetails>

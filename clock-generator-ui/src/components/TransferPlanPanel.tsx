@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import {
     Accordion,
     AccordionDetails,
@@ -63,9 +63,10 @@ function TransferPlanPanelComponent({
     };
     const isLcmOverridden = usedLcm !== computed_lcm;
 
+    const summaryId = useId();
     return (
-        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' } }} sx={{ mt: 1 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId } }} sx={{ mt: 1 }}>
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Swing Plan
                 </Typography>
