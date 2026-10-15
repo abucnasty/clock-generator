@@ -25,6 +25,7 @@
     "build": "tsc",
     "verify": "tsc && node dist/verify-recording.js",
     "record": "tsc && node dist/record-in-factorio.js",
+    "calls": "tsc && node dist/rule-calls.js",
     "test": "vitest run --project unit",
     "test:generation": "vitest run --project generation",
     "test:all": "vitest run",
