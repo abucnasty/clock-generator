@@ -10,7 +10,6 @@ import {
     Menu,
     MenuItem,
     Tooltip,
-    lighten,
     useMediaQuery,
     useTheme,
 } from '@mui/material';
@@ -139,11 +138,9 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 container={container}
                 disableScrollLock
-                // the plain paper colour, without the dark theme's elevation overlay, as the ⋮ menu: Delete build's red
-                // stays 4.5:1 when hovered or focused
                 slotProps={{
                     list: { 'aria-label': BUILDS_HEADING },
-                    paper: { sx: { backgroundImage: 'none', maxWidth: 'min(28rem, calc(100vw - 32px))' } },
+                    paper: { sx: { maxWidth: 'min(28rem, calc(100vw - 32px))' } },
                 }}
             >
                 <ListSubheader sx={{ lineHeight: 2.5, bgcolor: 'background.paper' }}>{BUILDS_HEADING}</ListSubheader>
@@ -176,8 +173,8 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
                     </ListItemIcon>
                     <ListItemText>Rename build…</ListItemText>
                 </MenuItem>
-                {/* in the error colour, lightened as Reset build is: it throws the build away (Undo brings it back) */}
-                <MenuItem onClick={run(onDelete)} disabled={readOnly} sx={{ color: (theme) => lighten(theme.palette.error.main, 0.3) }}>
+                {/* in the error text red (TEXT.error), as Reset build: it throws the build away (Undo brings it back) */}
+                <MenuItem onClick={run(onDelete)} disabled={readOnly} sx={{ color: 'error.light' }}>
                     <ListItemIcon sx={{ color: 'inherit' }}>
                         <DeleteOutline fontSize="small" />
                     </ListItemIcon>
