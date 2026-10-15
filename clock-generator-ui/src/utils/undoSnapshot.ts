@@ -116,8 +116,8 @@ function idList(ids: number[]): string {
 }
 
 /** The Undo message after an example replaced the build: "Example loaded: Logistic science pack." */
-export function exampleUndoMessage(example: Pick<ExampleBuild, 'recipe'>): string {
-    return `Example loaded: ${exampleTitle(example)}.`;
+export function exampleUndoMessage(example: Pick<ExampleBuild, 'recipe'>, name: (id: string) => string): string {
+    return `Example loaded: ${exampleTitle(example, name)}.`;
 }
 
 /** "3 machines", "1 machine" */

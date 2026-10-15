@@ -38,8 +38,12 @@ describe('readExampleManifest', () => {
 });
 
 describe('exampleTitle', () => {
-    it('is the recipe in sentence case', () => {
-        expect(exampleTitle(logistic)).toBe('Logistic science pack');
+    it("is the game's name of the recipe", () => {
+        expect(exampleTitle(logistic, (id) => (id === 'logistic-science-pack' ? 'Logistic science pack (named)' : id))).toBe('Logistic science pack (named)');
+    });
+
+    it('is the recipe in sentence case when the game data has no name for it', () => {
+        expect(exampleTitle(logistic, (id) => id)).toBe('Logistic science pack');
     });
 });
 

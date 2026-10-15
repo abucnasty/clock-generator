@@ -350,7 +350,7 @@ describe('the messages', () => {
     it('name a build file, a reset and an example in the words of the menu', () => {
         expect(UNDO_IMPORT_MESSAGE).toBe('Build file opened.');
         expect(UNDO_RESET_MESSAGE).toBe('Build reset.');
-        expect(exampleUndoMessage({ recipe: 'logistic-science-pack' })).toBe('Example loaded: Logistic science pack.');
+        expect(exampleUndoMessage({ recipe: 'logistic-science-pack' }, (id) => id)).toBe('Example loaded: Logistic science pack.');
     });
 });
 

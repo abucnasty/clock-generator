@@ -25,9 +25,12 @@ export function targetToFill(suggestion: SuggestedTarget): TargetValues {
 /** "1 copy", "3 copies" */
 const copiesText = (copies: number) => `${copies} ${copies === 1 ? 'copy' : 'copies'}`;
 
-/** The Target Output row of the paste's confirm dialog: "Target Output: logistic-science-pack at up to 22.968/s, 1 copy" */
-export function targetRowLabel(target: TargetValues): string {
-    return `Target Output: ${target.recipe} at up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
+/**
+ * The Target Output row of the paste's confirm dialog, with the recipe's name given by `name`: "Target Output: Logistic
+ * science pack at up to 22.968/s, 1 copy"
+ */
+export function targetRowLabel(target: TargetValues, name: (id: string) => string): string {
+    return `Target Output: ${name(target.recipe)} at up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
 }
 
 /** Where the suggestion came from, and that it is a ceiling */
@@ -39,8 +42,8 @@ export function targetRowCaption(source: SuggestedTarget['source']): string {
 }
 
 /** Said under the row when Target Output is already set, so the row starts unticked */
-export function replacesTargetNote(current: TargetValues): string {
-    return `This replaces your current target (${current.recipe} at ${formatNumberText(current.items_per_second)}/s).`;
+export function replacesTargetNote(current: TargetValues, name: (id: string) => string): string {
+    return `This replaces your current target (${name(current.recipe)} at ${formatNumberText(current.items_per_second)}/s).`;
 }
 
 export const NO_TARGET_NOTE = 'Could not tell what the build makes. Set Target Output after importing.';

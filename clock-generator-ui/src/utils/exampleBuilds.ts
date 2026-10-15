@@ -46,8 +46,15 @@ export function readExampleManifest(text: string): ExampleBuild[] {
     return Array.isArray(parsed) && parsed.every(isExampleBuild) ? parsed : [];
 }
 
-/** "Logistic science pack": the recipe in sentence case, until item names come from the game */
-export function exampleTitle(example: Pick<ExampleBuild, 'recipe'>): string {
+/**
+ * "Logistic science pack": the game's name of the build's recipe, given by `name`; the id in sentence case when the
+ * game data has no name for it
+ */
+export function exampleTitle(example: Pick<ExampleBuild, 'recipe'>, name: (id: string) => string): string {
+    const named = name(example.recipe);
+    if (named !== example.recipe) {
+        return named;
+    }
     const words = example.recipe.replace(/-/g, ' ');
     return words.charAt(0).toUpperCase() + words.slice(1);
 }

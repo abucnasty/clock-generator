@@ -5,6 +5,7 @@ import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
 import { useNotify } from '../hooks/useMessages';
+import { useGameNames } from '../hooks/useGameNames';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExport';
@@ -93,6 +94,7 @@ export function ConfigImportExport({
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
     const narrow = useMediaQuery(useTheme().breakpoints.down('sm'));
     const notify = useNotify();
+    const { recipeLabel } = useGameNames();
 
     // State for the hamburger menu
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -254,12 +256,12 @@ export function ConfigImportExport({
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            await importConfigText(await response.text(), exampleUndoMessage(example));
+            await importConfigText(await response.text(), exampleUndoMessage(example, recipeLabel));
         } catch (error) {
             console.error('Example error:', error);
             notify({ severity: 'error', text: EXAMPLE_FAILED_MESSAGE });
         }
-    }, [importConfigText, notify]);
+    }, [importConfigText, notify, recipeLabel]);
 
     const openExamples = useCallback(() => setExamplesOpen(true), []);
     const handleCloseExamples = useCallback(() => setExamplesOpen(false), []);
@@ -486,11 +488,11 @@ export function ConfigImportExport({
                                                 slotProps={{ input: { 'aria-describedby': TARGET_CAPTION_ID } }}
                                             />
                                         }
-                                        label={targetRowLabel(pendingImport.fill.values)}
+                                        label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
                                     />
                                     <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
                                         {targetRowCaption(pendingImport.fill.source)}
-                                        {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget)}`}
+                                        {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
                                     </Typography>
                                 </Box>
                             ) : (

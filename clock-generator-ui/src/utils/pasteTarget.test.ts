@@ -25,11 +25,13 @@ describe('targetToFill', () => {
 });
 
 describe('the words of the Target Output row', () => {
+    const name = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
+
     it('names the target as a ceiling', () => {
-        expect(targetRowLabel({ recipe: 'logistic-science-pack', items_per_second: 22.968, copies: 1 }))
-            .toBe('Target Output: logistic-science-pack at up to 22.968/s, 1 copy');
-        expect(targetRowLabel({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }))
-            .toBe('Target Output: logistic-science-pack at up to 240/s, 11 copies');
+        expect(targetRowLabel({ recipe: 'logistic-science-pack', items_per_second: 22.968, copies: 1 }, name))
+            .toBe('Target Output: Logistic science pack at up to 22.968/s, 1 copy');
+        expect(targetRowLabel({ recipe: 'iron-gear-wheel', items_per_second: 240, copies: 11 }, name))
+            .toBe('Target Output: iron-gear-wheel at up to 240/s, 11 copies');
     });
 
     it('says where the target came from, and to lower it to what is needed', () => {
@@ -38,8 +40,8 @@ describe('the words of the Target Output row', () => {
     });
 
     it('says which target it replaces', () => {
-        expect(replacesTargetNote({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }))
-            .toBe('This replaces your current target (logistic-science-pack at 240/s).');
+        expect(replacesTargetNote({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, name))
+            .toBe('This replaces your current target (Logistic science pack at 240/s).');
     });
 
     it('says what to do when it could not tell', () => {

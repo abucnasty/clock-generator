@@ -2,6 +2,7 @@ import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, Di
 import { useEffect, useState } from 'react';
 import { EXAMPLE_MANIFEST_URL, exampleSummary, exampleTitle, readExampleManifest, type ExampleBuild } from '../utils/exampleBuilds';
 import { FactorioIcon } from './FactorioIcon';
+import { useGameNames } from '../hooks/useGameNames';
 
 const TITLE_ID = 'examples-dialog-title';
 const INTRO = 'Pick a sample build to see how the tool works. It replaces your current build; Undo brings it back.';
@@ -17,6 +18,7 @@ interface ExamplesDialogProps {
  * mounted, so each opening reads the list again.
  */
 export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
+    const { recipeLabel } = useGameNames();
     // null while the list loads
     const [examples, setExamples] = useState<ExampleBuild[] | null>(null);
 
@@ -63,7 +65,7 @@ export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
                                     <FactorioIcon name={example.recipe} size={28} alt="" />
                                 </ListItemIcon>
                                 {/* the space keeps the title and the summary two words apart in the row's text, as in its name */}
-                                <ListItemText primary={`${exampleTitle(example)} `} secondary={exampleSummary(example)} />
+                                <ListItemText primary={`${exampleTitle(example, recipeLabel)} `} secondary={exampleSummary(example)} />
                             </ListItemButton>
                         ))}
                     </List>

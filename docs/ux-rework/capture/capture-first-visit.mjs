@@ -634,7 +634,8 @@ try {
                 await rec.shot(page, 'confirm-inferred', { desc: 'Confirm dialog, export without suggested_target: the inferred target', aria: true });
                 if (rec.check('inferred: a Target Output row', r.has, r.t.slice(0, 200))) {
                     rec.check('inferred: the row is ticked (Target Output is empty)', r.checked === true);
-                    rec.check('inferred: names logistic-science-pack at 22.968/s', /logistic-science-pack/.test(r.rowName + r.t) && /22\.968\/s/.test(r.t), r.rowName);
+                    // 2.8 a gives the game's names: the row names the recipe "Logistic science pack" (its id where the data has no name)
+                rec.check('inferred: names Logistic science pack at 22.968/s', /logistic-science-pack|Logistic science pack/.test(r.rowName + r.t) && /22\.968\/s/.test(r.t), r.rowName);
                     rec.check('inferred: worded as a maximum ("up to 22.968/s")', /up to 22\.968\/s/i.test(r.t), r.rowName);
                     rec.check('inferred: "lower it to what you need"', /lower it to what you need/i.test(r.t));
                     rec.check('inferred: says "Worked out from your machines"', /Worked out from your machines/i.test(r.t));
@@ -731,7 +732,7 @@ try {
             if (await appears(confirmDlg(page), 12_000)) {
                 const r = await readConfirm(page);
                 await rec.shot(page, 'confirm-two-products', { desc: 'Confirm dialog, a paste with two final products: the faster one is suggested (2.2)' });
-                rec.check('two products: the row names the product made fastest (copper-cable at up to 3/s, 2.2\'s rule)', r.has && /copper-cable/.test(r.rowName) && /up to 3\/s/.test(r.rowName), r.rowName);
+                rec.check('two products: the row names the product made fastest (copper-cable at up to 3/s, 2.2\'s rule)', r.has && /copper-cable|Copper cable/.test(r.rowName) && /up to 3\/s/.test(r.rowName), r.rowName);
                 rec.check('two products: worked out from the machines', /Worked out from your machines/i.test(r.t));
             } else rec.check('two products: the confirm dialog opens', false);
             await closeDialogs(page);
