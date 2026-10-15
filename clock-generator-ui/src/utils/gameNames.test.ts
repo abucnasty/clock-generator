@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+    hiddenRecipeIds,
     iconName,
+    pickerIds,
     itemName,
     matchesQuery,
+    nameIdsInText,
     nameWithId,
     normalizeForSearch,
     recipeName,
@@ -210,5 +213,35 @@ describe('resolveTyped', () => {
     it('keeps a name two ids share as typed', () => {
         const twins: GameNames = { item: { 'wall-a': 'Wall', 'wall-b': 'Wall' }, recipe: {} };
         expect(resolveTyped('Wall', ['wall-a', 'wall-b'], (id) => itemName(twins, id))).toBe('Wall');
+    });
+});
+
+describe('pickerIds', () => {
+    it('leaves out mod and internal ids and the hidden ones, and keeps the order', () => {
+        const ids = ['iron-plate', 'ee-a', 'rcalc-a', 'region-cloner_a', 'parameter-0', 'copper-plate', 'hidden-thing'];
+        expect(pickerIds(ids, new Set(['hidden-thing']))).toEqual(['iron-plate', 'copper-plate']);
+        expect(pickerIds(ids).length).toBe(3);
+    });
+});
+
+describe('nameIdsInText', () => {
+    const names: GameNames = { item: { 'iron-plate': 'Iron plate' }, recipe: { 'iron-gear-wheel': 'Iron gear wheel' } };
+
+    it('says a known id in brackets as its name, and leaves other brackets alone', () => {
+        expect(nameIdsInText(names, 'Machine 1 (iron-gear-wheel)')).toBe('Machine 1 (Iron gear wheel)');
+        expect(nameIdsInText(names, 'Belt 1 (iron-plate) to Machine 2')).toBe('Belt 1 (Iron plate) to Machine 2');
+        expect(nameIdsInText(names, 'Machine 1 (unknown-id) and (3 ticks)')).toBe('Machine 1 (unknown-id) and (3 ticks)');
+        expect(nameIdsInText(names, 'no brackets')).toBe('no brackets');
+        const barrel = 'wat' + 'er-barr' + 'el';
+        const both: GameNames = { item: { [barrel]: 'Water barrel' }, recipe: { [barrel]: 'Fill Water barrel' } };
+        expect(nameIdsInText(both, `Machine 1 (${barrel}) takes ${barrel}`)).toBe('Machine 1 (Fill Water barrel) takes Water barrel');
+        expect(nameIdsInText(names, 'It needs iron-plate to make iron-gear-wheel, not unknown-id or inserter')).toBe('It needs Iron plate to make Iron gear wheel, not unknown-id or inserter');
+    });
+});
+
+describe('hiddenRecipeIds', () => {
+    it('lists the recipes the data marks hidden, in order', () => {
+        expect(hiddenRecipeIds({ a: { hidden: true }, b: {}, c: { hidden: true }, d: { hidden: false } })).toEqual(['a', 'c']);
+        expect(hiddenRecipeIds(undefined)).toEqual([]);
     });
 });

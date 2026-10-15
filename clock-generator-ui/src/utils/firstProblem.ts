@@ -3,6 +3,10 @@ import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
 import { isTargetAboveMax, maxRateText, type MachinesMax } from './targetRateLimit';
 
+/** The game name of an item id */
+type LabelOf = (id: string) => string;
+const identity: LabelOf = (id) => id;
+
 /**
  * Every sentence that says what stops the build being clocked, and so where Generate goes. The tooltips, the note in the
  * workflow bar and the problem chip all read from here, so the words are changed in one place.
@@ -14,8 +18,10 @@ export const PROBLEM_TEXT = {
     noMachines: 'Add a machine',
     rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
-    missingInput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter bringing in ${item}`,
-    missingOutput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter taking ${item} out`,
+    missingInput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
+        `${entityLabel('machine', machineId)} has no inserter bringing in ${itemLabel(item)}`,
+    missingOutput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
+        `${entityLabel('machine', machineId)} has no inserter taking ${itemLabel(item)} out`,
     validationFailed: 'The last check failed. Show why',
     /** On a build with nothing entered yet: its next step, said neutrally rather than as problems */
     start: 'Start: pick the recipe you want to make',
@@ -68,6 +74,8 @@ interface ProblemsInput {
     coverageIssues: CoverageIssueKey[];
     /** The most the machines making the target recipe can make; null or left out while it is not known */
     machinesMax?: MachinesMax | null;
+    /** The game name of an item id for the sentences; left out, the ids are said as they are */
+    itemLabel?: LabelOf;
 }
 
 /**
@@ -75,7 +83,7 @@ interface ProblemsInput {
  * than the machines can make (which their recipes change), then the inserters the engine found missing, in its order.
  * Empty when the build can be generated.
  */
-export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax = null }: ProblemsInput): Problem[] {
+export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax = null, itemLabel = identity }: ProblemsInput): Problem[] {
     const problems: Problem[] = [];
     if (!targetOutput.recipe) {
         problems.push({ text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } });
@@ -107,8 +115,8 @@ export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax
     for (const { kind, machine_id, item_name } of coverageIssues) {
         problems.push({
             text: kind === 'missing_input_inserter'
-                ? PROBLEM_TEXT.missingInput(machine_id, item_name)
-                : PROBLEM_TEXT.missingOutput(machine_id, item_name),
+                ? PROBLEM_TEXT.missingInput(machine_id, item_name, itemLabel)
+                : PROBLEM_TEXT.missingOutput(machine_id, item_name, itemLabel),
             target: { kind: 'coverage-issue', issue: { kind, machine_id, item_name } },
         });
     }

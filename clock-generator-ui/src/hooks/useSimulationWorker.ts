@@ -8,7 +8,7 @@ import type { GeneratedFor } from '../utils/resultsStaleness';
 import { PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
 import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
 import { planGenerationRun } from '../utils/deeperSearch';
-import { NO_NAMES, type GameNames } from '../utils/gameNames';
+import { NO_NAMES, pickerIds, type GameNames } from '../utils/gameNames';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -28,6 +28,8 @@ interface UseSimulationWorkerResult {
     /** Progress lives outside React state so its frequent updates only re-render what reads it */
     progressStore: GenerationProgressStore;
     recipeNames: string[];
+    /** Recipes the open list leaves out and a typed search finds */
+    searchOnlyRecipes: string[];
     itemNames: string[];
     resourceNames: string[];
     /** The in-game names of the ids above */
@@ -151,6 +153,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const [isRunning, setIsRunning] = useState(false);
     const [progressStore] = useState(createProgressStore);
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
+    const [searchOnlyRecipes, setSearchOnlyRecipes] = useState<string[]>([]);
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
     const [gameNames, setGameNames] = useState<GameNames>(NO_NAMES);
@@ -357,9 +360,12 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             })));
 
             const lookups = await askEngine({ kind: 'lookups' });
-            setRecipeNames(lookups.recipeNames);
-            setItemNames(lookups.itemNames);
-            setResourceNames(lookups.resourceNames);
+            // the pickers offer no mod, internal or hidden entry; a build that holds one still shows it
+            setRecipeNames(pickerIds(lookups.recipeNames, new Set(lookups.hiddenRecipes)));
+            // recycling recipes stay out of the open list, and a typed search finds them
+            setSearchOnlyRecipes(pickerIds(lookups.hiddenRecipes.filter(name => name.endsWith('-recycling'))));
+            setItemNames(pickerIds(lookups.itemNames));
+            setResourceNames(pickerIds(lookups.resourceNames));
             setGameNames(lookups.names);
             setRecipes(lookups.recipes);
             await workersReady;
@@ -470,6 +476,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         isRunning,
         progressStore,
         recipeNames,
+        searchOnlyRecipes,
         resourceNames,
         itemNames,
         gameNames,

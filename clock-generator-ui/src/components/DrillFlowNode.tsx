@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 import { DRILL_NODE_WIDTH, type DrillNodeData } from '../utils/buildFlowGraph';
 import { entityLabel } from '../utils/entityLabel';
 import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
@@ -39,10 +40,9 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                         </Typography>
                         {data.minedItem ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <FactorioIcon name={data.minedItem} size={14} />
+                                <FactorioIcon name={data.minedItem} size={14} alt="" />
                                 <Typography
                                     variant="caption"
-                                    title={data.minedItem}
                                     sx={{
                                         fontSize: FLOW_NODE_FONT_SIZE,
                                         color: 'text.secondary',
@@ -52,7 +52,7 @@ export function DrillFlowNode({ data }: NodeProps<DrillFlowNodeType>) {
                                         whiteSpace: 'nowrap',
                                     }}
                                 >
-                                    {data.minedItem}
+                                    <GameName id={data.minedItem} />
                                 </Typography>
                             </Box>
                         ) : (

@@ -1,4 +1,5 @@
 import { useGameNames } from '../hooks/useGameNames';
+import { nameWithId } from '../utils/gameNames';
 
 interface GameNameProps {
     id: string;
@@ -6,8 +7,9 @@ interface GameNameProps {
     kind?: 'item' | 'recipe';
 }
 
-/** The in-game name of an id, with the id in the hover title */
+/** The in-game name of an id, with the name and id in the hover title */
 export function GameName({ id, kind = 'item' }: GameNameProps) {
     const { itemLabel, recipeLabel } = useGameNames();
-    return <span title={id}>{kind === 'recipe' ? recipeLabel(id) : itemLabel(id)}</span>;
+    const label = kind === 'recipe' ? recipeLabel(id) : itemLabel(id);
+    return <span title={nameWithId(label, id)}>{label}</span>;
 }
