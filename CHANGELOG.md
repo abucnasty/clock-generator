@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.14.0] - 2026-10-15
+
+### Changed
+- The game data is from Factorio 2.1.21: the ore melting recipes are named as 2.1 names them (iron ore melting, copper ore melting), every recipe carries 2.1's list of crafting categories, and the version of the game the data came from is recorded and shown in the header of the clocking advice. No clock, selection or call on the sample builds changes with the data.
+- A build that cannot be clocked is refused with the reason: a recipe whose only products are fluids says so (fluid products wait on a later release), and a car, cargo wagon, rocket silo or recycler in a config says it is not supported yet and which release brings it, instead of listing the kinds that are.
+- An inserter dropping onto a belt or into a chest may be filtered to any item, such as the spoilage it clears off a machine. Before, a filter had to name something the sink used, which refused such builds.
+- A config that holds several identical copies of one unit side by side (the same machines and inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`. What `copies` assumes is documented, with how to give Node a larger heap for a chain that has no repeating unit.
+
+### Fixed
+- Long production chains with uneven crafting speeds no longer fail with "Invalid input format" from the fraction arithmetic. A fraction that outgrows exact arithmetic is bounded instead of thrown away.
+
 ## [0.13.0] - 2026-10-15
 
 ### Changed
