@@ -10,8 +10,8 @@
 //   WIDTHS=1440,720  the widths (default 1440,720)
 //   STEPS=list,search  only these steps (a comma list; default all)
 //        names     the pickers show names on import: target and machine recipe, belt ingredient, chest item filter, drill resource, filter slot popover; the id is the hover title
-//        list      the open recipe list: "science pack", "logistic", "logistic-science-pack" list "Logistic science pack" (first), each row's title is its id
-//        search    by name, by id, any word order: stone-wall / stone wall / wall -> "Wall"; fluoroketone cold, long handed, uranium, teslagun, electronic-circuit
+//        list      the open recipe list: "logistic", "logistic-science-pack" list "Logistic science pack" first; "science pack" lists every pack, Logistic in the first 10; each row's title is its id
+//        search    by name, by id, any word order: stone-wall / stone wall / wall -> "Wall"; fluoroketone cold (the barrel), long handed, uranium, teslagun, electronic-circuit
 //        collide   recipe and item water-barrel keep their own names ("Fill Water barrel" vs "Water barrel")
 //        fallback  a mod id with no locale shows a sentence-case name; an unknown or prototype-like typed id (constructor) shows as typed and is kept as typed
 //        stores    choosing a row, and typing a name then Enter, store the ID (localStorage holds no name); survives a reload and shows the name again
@@ -35,6 +35,9 @@ if (!OUT) {
     console.error('usage: node capture-item-names.mjs <out dir>');
     process.exit(2);
 }
+
+/** The recipes of every science pack in the game data */
+const SCIENCE_PACKS = ['automation', 'logistic', 'military', 'chemical', 'production', 'utility', 'space', 'metallurgic', 'agricultural', 'electromagnetic', 'cryogenic', 'promethium'].map((p) => `${p}-science-pack`);
 
 const ALL_STEPS = ['names', 'list', 'search', 'collide', 'fallback', 'stores', 'export', 'a11y', 'dialog', 'layout'];
 const STEPS = new Set((process.env.STEPS ?? ALL_STEPS.join(',')).split(',').map((s) => s.trim()).filter(Boolean));
@@ -197,8 +200,16 @@ async function listStep({ page, rec }) {
     const machine = machineInput(page);
     for (const q of ['science pack', 'logistic-science-pack', 'logistic']) {
         const rows = await search(page, machine, q);
-        // the spec says each of the three lists it first; "logistic" also matches other names that start with it (ties keep the data order)
-        checkRow(rec, `list: typing ${show(q)} lists "Logistic science pack" first`, rows, 'Logistic science pack', 'logistic-science-pack', { first: true });
+        if (q === 'science pack') {
+            // every pack ties ("a word of the name starts with it"), and ties keep the data order, where Automation comes first
+            // (the orchestrator's decision, 2.8a): every pack is listed, and Logistic science pack is among the first 10 rows
+            const missing = SCIENCE_PACKS.filter((id) => !rows.some((r) => r.title === id));
+            rec.check('list: typing "science pack" lists every science pack', missing.length === 0, missing.length ? `missing ${show(missing)}; ${rowsSummary(rows)}` : `${SCIENCE_PACKS.length} packs among ${rows.length} rows`);
+            const at = rows.findIndex((r) => r.text === 'Logistic science pack' && r.title === 'logistic-science-pack');
+            rec.check('list: typing "science pack" lists "Logistic science pack" among the first 10 rows', at >= 0 && at < 10, at >= 0 ? `at position ${at + 1} of ${rows.length}` : `no such row; ${rowsSummary(rows)}`);
+        } else {
+            checkRow(rec, `list: typing ${show(q)} lists "Logistic science pack" first`, rows, 'Logistic science pack', 'logistic-science-pack', { first: true });
+        }
         if (q === 'science pack') await rec.shot(page, 'names-picker-open', { desc: 'Machine 1 recipe picker open, "science pack" typed' });
         const titled = rows.length > 0 && rows.every((r) => r.title !== '');
         rec.check(`list: every row has its id as title (${show(q)})`, titled, titled ? `${rows.length} rows` : `${rows.filter((r) => r.title === '').length} of ${rows.length} rows have no title; ${rowsSummary(rows, 2)}`);
@@ -248,7 +259,8 @@ async function searchStep({ page, rec }) {
     checkRow(rec, 'search: item picker, "uranium 235" lists "Uranium-235" first', await search(page, item, 'uranium 235'), 'Uranium-235', 'uranium-235', { first: true });
     await rec.shot(page, 'names-search-item', { desc: 'Belt Ingredient picker, "uranium 235" typed: the row reads "Uranium-235"' });
     await closeList(page);
-    checkRow(rec, 'search: item picker, "fluoroketone cold" lists "Fluoroketone (Cold)" first', await search(page, item, 'fluoroketone cold'), 'Fluoroketone (Cold)', 'fluoroketone-cold', { first: true });
+    // fluids are not in the pickers (out of scope, the orchestrator's decision, 2.8a): the barrel still tests word order and the brackets
+    checkRow(rec, 'search: item picker, "fluoroketone cold" lists "Fluoroketone (Cold) barrel" first', await search(page, item, 'fluoroketone cold'), 'Fluoroketone (Cold) barrel', 'fluoroketone-cold-barrel', { first: true });
     await closeList(page);
     const nothing = await search(page, item, 'zzqq-no-such-item');
     rec.check('search: a query nothing matches lists no rows', nothing.length === 0, rowsSummary(nothing));
