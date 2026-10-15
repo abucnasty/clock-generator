@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.12.0] - 2026-10-15
+
+### Changed
+- The clock-or-unwired advice of `npm run calls` counts wake-ups in true starts: an input waiting for space is counted as woken when its machine starts a craft, not when the machine pays out a productivity bonus, which wakes no input. The thresholds are the series' in that count: below 53.0 leave unwired, from 158.6 clock, marginal between 53.0 and 175.7. Each call has the series' original count and its call beside it. On machines with productivity the original count counted more: on the advanced circuit inputs at +175%, 1,164 wake-ups a minute where the game makes 625. On the series' timed builds one group's call changes: the utility science baseline's electronic circuit into processing units (+300%), from a marginal "clock" at 169.3 to a marginal "leave unwired" at 67.8. No call changes on the three recorded scaffolds. The thresholds in true starts are a prediction still to be judged on fresh saves, and the mechanism they rest on is measured on one build. It changes no clock and no selection.
+
 ## [0.11.0] - 2026-10-14
 
 ### Added
