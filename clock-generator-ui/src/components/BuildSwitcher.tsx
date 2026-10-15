@@ -14,7 +14,7 @@ import {
     useMediaQuery,
     useTheme,
 } from '@mui/material';
-import { useCallback, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
 import { BUILDS_HEADING } from '../utils/buildLibrary';
 
 interface BuildRow {
@@ -36,16 +36,20 @@ interface BuildSwitcherProps {
     onDuplicate: () => void;
     onRename: () => void;
     onDelete: () => void;
+    /** A newer version of the site wrote the list of builds: what would change it is off */
+    readOnly?: boolean;
 }
 
 /**
  * Your builds, in the app bar after the title: the open build's name, which opens a menu of the builds and of New,
  * Duplicate, Rename and Delete build. Below 600px it is an icon button, with the name in its accessible name.
  */
-export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, onNew, onDuplicate, onRename, onDelete }: BuildSwitcherProps) {
+export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, onNew, onDuplicate, onRename, onDelete, readOnly = false }: BuildSwitcherProps) {
     const wide = useMediaQuery(useTheme().breakpoints.up('sm'));
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const open = anchor !== null;
+    // ArrowUp opens the menu on its last item, as a menu button does
+    const [fromEnd, setFromEnd] = useState(false);
     const close = useCallback(() => setAnchor(null), []);
     // the menu is mounted in the header, as the ⋮ menu is, so it stays inside the banner landmark
     const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -55,6 +59,16 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
         if (typeof ref === 'function') ref(element);
         else if (ref) ref.current = element;
     }, [ref]);
+
+    // after MUI has focused the first item
+    useEffect(() => {
+        if (!open || !fromEnd) return;
+        const timer = window.setTimeout(() => {
+            const items = document.querySelectorAll<HTMLElement>(`[role="menu"][aria-label="${BUILDS_HEADING}"] [role^="menuitem"]:not(.Mui-disabled)`);
+            items[items.length - 1]?.focus();
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [open, fromEnd]);
 
     const run = (action: () => void) => () => {
         close();
@@ -69,11 +83,15 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
     const buttonProps = {
         ref: setButton,
         color: 'inherit' as const,
-        onClick: (event: React.MouseEvent<HTMLElement>) => setAnchor(event.currentTarget),
+        onClick: (event: React.MouseEvent<HTMLElement>) => {
+            setFromEnd(false);
+            setAnchor(event.currentTarget);
+        },
         // a menu button opens on the arrow keys too
         onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
+                setFromEnd(event.key === 'ArrowUp');
                 setAnchor(event.currentTarget);
             }
         },
@@ -123,7 +141,10 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
                 disableScrollLock
                 // the plain paper colour, without the dark theme's elevation overlay, as the ⋮ menu: Delete build's red
                 // stays 4.5:1 when hovered or focused
-                slotProps={{ list: { 'aria-label': BUILDS_HEADING }, paper: { sx: { backgroundImage: 'none', maxWidth: 'min(28rem, calc(100vw - 32px))' } } }}
+                slotProps={{
+                    list: { 'aria-label': BUILDS_HEADING },
+                    paper: { sx: { backgroundImage: 'none', maxWidth: 'min(28rem, calc(100vw - 32px))' } },
+                }}
             >
                 <ListSubheader sx={{ lineHeight: 2.5, bgcolor: 'background.paper' }}>{BUILDS_HEADING}</ListSubheader>
                 {builds.map((build) => (
@@ -137,26 +158,26 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
                     </MenuItem>
                 ))}
                 <Divider />
-                <MenuItem onClick={run(onNew)}>
+                <MenuItem onClick={run(onNew)} disabled={readOnly}>
                     <ListItemIcon>
                         <Add fontSize="small" />
                     </ListItemIcon>
                     <ListItemText>New build</ListItemText>
                 </MenuItem>
-                <MenuItem onClick={run(onDuplicate)}>
+                <MenuItem onClick={run(onDuplicate)} disabled={readOnly}>
                     <ListItemIcon>
                         <ContentCopy fontSize="small" />
                     </ListItemIcon>
                     <ListItemText>Duplicate build</ListItemText>
                 </MenuItem>
-                <MenuItem onClick={run(onRename)}>
+                <MenuItem onClick={run(onRename)} disabled={readOnly}>
                     <ListItemIcon>
                         <Edit fontSize="small" />
                     </ListItemIcon>
                     <ListItemText>Rename build…</ListItemText>
                 </MenuItem>
                 {/* in the error colour, lightened as Reset build is: it throws the build away (Undo brings it back) */}
-                <MenuItem onClick={run(onDelete)} sx={{ color: (theme) => lighten(theme.palette.error.main, 0.3) }}>
+                <MenuItem onClick={run(onDelete)} disabled={readOnly} sx={{ color: (theme) => lighten(theme.palette.error.main, 0.3) }}>
                     <ListItemIcon sx={{ color: 'inherit' }}>
                         <DeleteOutline fontSize="small" />
                     </ListItemIcon>

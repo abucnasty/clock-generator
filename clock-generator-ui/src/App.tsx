@@ -628,10 +628,16 @@ function App() {
     // Delete offers Undo, which brings the build back and opens it
     const handleDeleteBuild = useCallback(async () => {
         const deleted = library.currentMeta;
-        // the blank build made when the only one goes, which the Undo takes out again
-        const made: { id?: string } = {};
-        offerUndo(deletedBuildMessage(currentTitle), { revert: (form) => library.restore({ meta: deleted, form, removeId: made.id }) });
-        made.id = (await library.deleteBuild()).madeId ?? undefined;
+        // an Undo waits for the delete to finish (it first checks the build it opens next), then brings the build back
+        // and takes out the blank one made when it was the only build
+        let deleting: Promise<{ madeId: string | null }> | null = null;
+        offerUndo(deletedBuildMessage(currentTitle), {
+            revert: (form) => {
+                void deleting?.then(({ madeId }) => library.restore({ meta: deleted, form, removeId: madeId ?? undefined }));
+            },
+        });
+        deleting = library.deleteBuild();
+        await deleting;
         handleBuildReplaced();
     }, [library, currentTitle, offerUndo, handleBuildReplaced]);
 
@@ -650,6 +656,8 @@ function App() {
                     onClick: () => {
                         loadOtherTabVersion(() => offerUndo(LOADED_OTHER_TAB_MESSAGE)).then((loaded) => {
                             if (loaded) handleBuildReplaced();
+                            // the message and its button are gone: focus goes to the switcher, not the page's top
+                            focusSwitcher();
                         });
                     },
                 },
@@ -660,7 +668,7 @@ function App() {
             dismiss(conflictMessageRef.current);
             conflictMessageRef.current = null;
         }
-    }, [conflictStatus, notify, dismiss, loadOtherTabVersion, closeConflict, offerUndo, handleBuildReplaced]);
+    }, [conflictStatus, notify, dismiss, loadOtherTabVersion, closeConflict, offerUndo, handleBuildReplaced, focusSwitcher]);
 
     // a share link: asked first, then added as a new build (or in the place of an empty one), with Undo
     const shared = useSharedBuildLink(isInitialized);
@@ -725,6 +733,7 @@ function App() {
                                 onDuplicate={handleDuplicateBuild}
                                 onRename={handleRenameBuild}
                                 onDelete={handleDeleteBuild}
+                                readOnly={!library.writable}
                             />
                         )}
                         <Box sx={{ flexGrow: 1 }} />
@@ -1070,7 +1079,7 @@ function App() {
             <OpenSharedBuildDialog
                 open={shared.pending !== null}
                 title={sharedShown ? sharedTitle(sharedShown) : ''}
-                summary={sharedShown ? sharedBuildSummary(sharedShown.config, recipeLabel) : ''}
+                summary={sharedShown ? sharedBuildSummary(sharedShown.config, recipeLabel, { withRecipe: sharedShown.name !== null }) : ''}
                 placeNote={sharedPlaceNote(sharedReplacesBlank, currentTitle)}
                 onOpen={handleOpenShared}
                 onCancel={shared.cancel}

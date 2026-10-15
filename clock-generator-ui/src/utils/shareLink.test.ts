@@ -212,5 +212,6 @@ describe('sharedBuildSummary', () => {
         const label = (id: string) => (id === 'iron-gear-wheel' ? 'Iron gear wheel' : id);
         expect(sharedBuildSummary(smallBuild(), label)).toBe('Iron gear wheel at 2.5/s · 1 copy · 1 machine, 1 inserter, 1 chest');
         expect(sharedBuildSummary(bigBuild(), (id) => id)).toBe('Electronic circuit at 30/s · 4 copies · 2 machines, 1 drill, 2 inserters, 1 belt, 2 chests');
+        expect(sharedBuildSummary(smallBuild(), label, { withRecipe: false })).toBe('2.5/s · 1 copy · 1 machine, 1 inserter, 1 chest');
     });
 });

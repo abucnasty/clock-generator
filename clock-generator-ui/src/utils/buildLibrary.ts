@@ -158,8 +158,9 @@ export function mostRecent(index: LibraryIndex, exceptId?: string): BuildMeta | 
 }
 
 /**
- * Opens the library: the index as saved, or made for the first time (a save from before builds is the first build,
- * `default`, as it is), or rebuilt from the builds' keys when it cannot be read. The index is written when it was made
+ * Opens the library: the index as saved, or made from the builds' keys when there is none or it cannot be read (the
+ * first time, a save from before builds is the first build, `default`, as it is; an index removed since, by another tab
+ * or by hand, leaves no build out). The index is written when it was made
  * or rebuilt, unless a newer page wrote it; a write that throws (storage full or blocked) leaves it in memory, and the
  * next load tries again. A build's own key is never touched. The tab opens the build it had, or else the most recently
  * opened one.
@@ -176,9 +177,6 @@ export function openLibrary(local: StorageLike, session: Pick<Storage, 'getItem'
     if (read.kind === 'ok') {
         index = read.index;
         writable = read.writable;
-    } else if (read.kind === 'missing') {
-        index = { version: LIBRARY_VERSION, builds: [newMeta(LEGACY_BUILD_ID, recipeOfSavedText(readItem(local, LEGACY_BUILD_KEY)), now)] };
-        changed = true;
     } else {
         index = rebuildIndex(local, now);
         changed = true;

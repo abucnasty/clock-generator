@@ -117,7 +117,7 @@ const EXAMPLES = [
     ['Chemical science', 'chemical-science'], ['Electromagnetic science', 'electromagnetic-science'], ['Military science', 'military-science'],
     ['Production science', 'production-science'], ['Metallurgic science', 'metallurgic-science'], ['Agricultural science', 'agriculture-science'],
 ];
-const MENU_ORDER = ['Open build file…', 'Save build file', 'Try an example…', 'Getting started', 'Reset build'];
+const MENU_ORDER = ['Open build file…', 'Save build file', 'Copy share link', 'Try an example…', 'Getting started', 'Reset build'];
 
 // ---------------------------------------------------------------------------------------------------------- helpers
 

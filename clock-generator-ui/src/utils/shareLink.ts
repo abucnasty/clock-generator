@@ -133,8 +133,11 @@ export function shareLinkNotice(length: number): 'ok' | 'long' | 'too-long' {
     return length > LONG_LINK_CHARS ? 'long' : 'ok';
 }
 
-/** "Logistic science pack at 240/s · 11 copies · 1 machine, 3 inserters, 2 belts", leaving out what there is none of */
-export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => string): string {
+/**
+ * "Logistic science pack at 240/s · 11 copies · 1 machine, 3 inserters, 2 belts", leaving out what there is none of.
+ * Without `withRecipe` it starts at the rate, for a build already named after its recipe in the line above.
+ */
+export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => string, { withRecipe = true } = {}): string {
     const { recipe, items_per_second, copies } = config.target_output;
     const counts = [
         [config.machines.length, 'machine', 'machines'],
@@ -143,8 +146,9 @@ export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => 
         [config.belts.length, 'belt', 'belts'],
         [config.chests?.length ?? 0, 'chest', 'chests'],
     ] as const;
+    const rate = `${formatNumberText(items_per_second)}/s`;
     const parts = [
-        `${recipe === '' ? 'No target recipe' : recipeTitle(recipe, recipeLabel)} at ${formatNumberText(items_per_second)}/s`,
+        withRecipe ? `${recipe === '' ? 'No target recipe' : recipeTitle(recipe, recipeLabel)} at ${rate}` : rate,
         countOf(copies, 'copy', 'copies'),
     ];
     const entities = counts.filter(([n]) => n > 0).map(([n, one, many]) => countOf(n, one, many));
@@ -161,7 +165,7 @@ export const SHARE_FALLBACK_TEXT = 'Your browser did not let this page copy. Cop
 export const SHARE_PROBLEM_MESSAGES: Record<ShareProblem, string> = {
     broken: 'This share link is broken or was cut short, so nothing was opened. Ask for the link again.',
     'newer-version': 'This share link was made by a newer version of the site. Reload the page, then open the link again.',
-    'too-big': 'This share link is too big to open.',
+    'too-big': 'This share link is too big to open. Ask for the build file instead.',
     unsupported: SHARE_UNSUPPORTED_MESSAGE,
 };
 
@@ -182,5 +186,5 @@ export function sharedOpenedMessage(name: string): string {
 export function sharedPlaceNote(replacesBlank: boolean, currentTitle: string): string {
     return replacesBlank
         ? 'It takes the place of your empty build.'
-        : `It is added to Your builds as a new build. ${currentTitle} stays as it is.`;
+        : `It is added to Your builds as a new build. The build open now, ${currentTitle}, stays as it is.`;
 }

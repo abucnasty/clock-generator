@@ -187,6 +187,14 @@ function storedIndex(): LibraryIndex | null {
     return read.kind === 'ok' ? read.index : null;
 }
 
+/**
+ * The index as saved now, for the other tabs' changes; when it is gone or cannot be read (removed by another tab or by
+ * hand), the one in memory, less the builds whose keys are gone, so the menu neither empties nor hides a build
+ */
+function indexNow(memory: LibraryIndex): LibraryIndex {
+    return storedIndex() ?? { ...memory, builds: memory.builds.filter((build) => readItem(buildKey(build.id)) !== null) };
+}
+
 /** The build open in this tab: its id and its form, which always change together */
 interface OpenBuild {
     id: string;
@@ -205,6 +213,8 @@ const newBuildMeta = (id: string, form: ConfigFormData, name: string | null, now
 export interface BuildLibrary {
     /** The index's rows, in the order saved */
     builds: BuildMeta[];
+    /** False when a newer version of the site wrote the list: it is read, and never written here */
+    writable: boolean;
     currentId: string;
     currentMeta: BuildMeta;
     /** Checks and opens a saved build; false (with the load notice set) when it cannot be loaded */
@@ -402,7 +412,7 @@ export function usePersistedConfigForm() {
             } catch {
                 return;
             }
-            const saved = event.key === null ? storedIndex() ?? { version: 1, builds: [] } : indexRef.current;
+            const saved = event.key === null ? indexNow(indexRef.current) : indexRef.current;
             const change = classifyStorageEvent(event, { activeId: idRef.current, lastText: lastTextRef.current, index: saved });
             if (change === 'ignore') return;
             if (change === 'changed-elsewhere') {
@@ -415,7 +425,7 @@ export function usePersistedConfigForm() {
                 lastTextRef.current = null;
                 notify({ severity: 'warning', text: DELETED_ELSEWHERE_MESSAGE });
             }
-            showIndex(storedIndex() ?? { version: 1, builds: [] });
+            showIndex(indexNow(indexRef.current));
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
@@ -587,6 +597,7 @@ export function usePersistedConfigForm() {
     );
     const library = useMemo((): BuildLibrary => ({
         builds: index.builds,
+        writable,
         currentId: current.id,
         currentMeta,
         openBuild,
@@ -599,7 +610,7 @@ export function usePersistedConfigForm() {
         conflict,
         loadOtherTabVersion,
         closeConflict,
-    }), [index.builds, current.id, currentMeta, openBuild, newBuild, duplicateBuild, renameBuild, deleteBuild, addBuild, restore, conflict, loadOtherTabVersion, closeConflict]);
+    }), [index.builds, writable, current.id, currentMeta, openBuild, newBuild, duplicateBuild, renameBuild, deleteBuild, addBuild, restore, conflict, loadOtherTabVersion, closeConflict]);
 
     return { config: current.form, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library };
 }

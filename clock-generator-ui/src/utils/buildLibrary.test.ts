@@ -87,6 +87,15 @@ describe('openLibrary: migration', () => {
         expect(map.get(LEGACY_BUILD_KEY)).toBe('{broken');
     });
 
+    it('rebuilds a removed index from the builds, so none is hidden', () => {
+        const { storage, writes } = fakeStorage({
+            [LEGACY_BUILD_KEY]: savedForm('iron-gear-wheel'),
+            'clock-generator-build:abc': savedForm('electronic-circuit'),
+        });
+        expect(openLibrary(storage, null, 100).index.builds.map((build) => build.id)).toEqual(['default', 'abc']);
+        expect(writes).toEqual([LIBRARY_KEY]);
+    });
+
     it('leaves an index that exists alone', () => {
         const index = indexOf(meta('default', { recipe: 'iron-gear-wheel' }), meta('abc', { openedAt: 5 }));
         const { storage, writes } = fakeStorage({ [LIBRARY_KEY]: JSON.stringify(index) });

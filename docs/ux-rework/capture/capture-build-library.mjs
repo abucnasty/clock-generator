@@ -11,7 +11,7 @@
 //   SAMPLES_DIR / UI_DIR  as in lib.mjs
 //
 // Steps, per width (each opens its own browser contexts, so their storage never meets):
-//   migration  empty-storage  corrupt-index  new-and-back  tab-memory  two-tabs  rename  duplicate  delete-undo  switch-ends-undo
+//   migration  empty-storage  corrupt-index  new-and-back  reset-fields  index-removed  tab-memory  two-tabs  rename  duplicate  delete-undo  switch-ends-undo
 //   save-file  other-tab  share-copy  share-roundtrip  share-blank  share-cancel-hashchange  share-bad-links  long-link  keyboard
 //   dialogs-focus  contrast-names  reach  geometry (first width only: 960, 800 and 720)
 //
@@ -417,12 +417,19 @@ try {
                 rec.check(`New build: the switcher shows "${UNTITLED}"`, (await swName(page)) === `Build: ${UNTITLED}`, JSON.stringify(await swName(page)));
                 rec.check('New build: the menu lists two builds', (await menuTitles(page)).length === 2);
                 rec.check('New build: the form is blank (a different saved text)', (await currentText(page)) !== firstText);
+                // the Recipe fields are freeSolo comboboxes, which kept the last build's text when the value went to none
+                for (const owner of ['Target Output', 'Machine 1']) {
+                    const shown = await ui.recipeField(page, owner).inputValue({ timeout: 4000 }).catch((e) => `ERR ${e.message.split('\n')[0]}`);
+                    rec.check(`New build: the Recipe field of ${owner} is empty, not the last build's recipe`, shown === '', JSON.stringify(shown));
+                }
                 rec.check("New build: the first build's text is untouched", (await lsGet(page, firstKey)) === firstText);
                 await rec.shot(page, 'new-build', { desc: 'After New build: blank form, switcher "Untitled build"' });
                 await openBuildAt(page, 1); // most recent first: the first build is second
                 await checkAnnounced(rec, page, /Opened build: /i, '"Opened build: {name}."');
                 rec.check("switch back: the first build's serialized form is restored exactly", (await currentText(page)) === firstText);
                 rec.check('switch back: the switcher shows the first build again', (await swName(page)) === firstName, JSON.stringify(await swName(page)));
+                const backShown = await ui.recipeField(page, 'Target Output').inputValue({ timeout: 4000 }).catch(() => null);
+                rec.check("switch back: Target Output's Recipe field shows the first build's recipe again", backShown === LOGISTIC_TITLE, JSON.stringify(backShown));
                 const pressed = await ui.viewToggle(page, 'Configure').getAttribute('aria-pressed').catch(() => null); // SELECTOR: confirm
                 rec.check('switch back: the view is Configure', pressed === 'true' || (await ui.targetCopies(page).isVisible().catch(() => false)));
                 rec.check('switch back: Results are cleared (no Clocks table)', (await ui.clockTable(page).count()) === 0);
@@ -431,6 +438,43 @@ try {
         });
 
         // ------------------------------------------------------------------------------------------------ tab memory
+        if (want('reset-fields')) await rec.step('Reset build empties the Recipe fields, and Undo fills them', async () => {
+            await withContexts(browser, base, width, rec, async (open) => {
+                const { page } = await open({ seed: LOG });
+                const fields = { 'Target Output': ui.recipeField(page, 'Target Output'), 'Machine 1': ui.recipeField(page, 'Machine 1') };
+                const before = {};
+                for (const [owner, field] of Object.entries(fields)) before[owner] = await field.inputValue({ timeout: 4000 }).catch(() => null);
+                rec.check('reset: the Recipe fields show the recipe first', before['Target Output'] === LOGISTIC_TITLE && Boolean(before['Machine 1']), JSON.stringify(before));
+                await chooseMenuItem(page, 'Reset build');
+                await page.waitForTimeout(400);
+                for (const [owner, field] of Object.entries(fields)) {
+                    const shown = await field.inputValue({ timeout: 4000 }).catch((e) => `ERR ${e.message.split('\n')[0]}`);
+                    rec.check(`reset: the Recipe field of ${owner} is empty`, shown === '', JSON.stringify(shown));
+                }
+                await rec.shot(page, 'reset-empty-fields', { desc: 'After Reset build: the Recipe fields are empty' });
+                await ui.messageUndo(page).click({ timeout: 3000 }).catch(() => {});
+                await page.waitForTimeout(400);
+                for (const [owner, field] of Object.entries(fields)) {
+                    const shown = await field.inputValue({ timeout: 4000 }).catch(() => null);
+                    rec.check(`reset: Undo shows the recipe in the Recipe field of ${owner} again`, shown === before[owner], JSON.stringify(shown));
+                }
+            });
+        });
+
+        if (want('index-removed')) await rec.step('a removed index hides no build', async () => {
+            await withContexts(browser, base, width, rec, async (open) => {
+                const { context: ctx, page: p1 } = await open({ seed: LOG });
+                await swDo(p1, 'New build');
+                const p2 = await otherTab(ctx, rec, base);
+                await p2.evaluate((key) => localStorage.removeItem(key), INDEX_KEY);
+                await p1.waitForTimeout(400);
+                rec.check('index removed in another tab: the menu still lists both builds', (await menuTitles(p1)).length === 2, JSON.stringify(await menuTitles(p1)));
+                await p1.reload();
+                await waitReadyQuick(p1);
+                rec.check('index removed: after a reload both builds are listed again (rebuilt from their keys)', (await menuTitles(p1)).length === 2, JSON.stringify(await menuTitles(p1)));
+            });
+        });
+
         if (want('tab-memory')) await rec.step('tabs keep their own build', async () => {
             await withContexts(browser, base, width, rec, async (open) => {
                 const { context: ctx, page: p1 } = await open({ seed: LOG });
@@ -654,7 +698,9 @@ try {
                 await setCopies(p2, 21);
                 const warn = await waitMsg(p1, MSG.changedElsewhere, 6000);
                 rec.check('other tab: page 1 shows "This build was changed in another tab. Your next edit here will save over that change."', Boolean(warn), (await msgNow(p1)).slice(0, 120));
-                rec.check("other tab: the warning has a \"Load the other tab's version\" button", (await msg(p1).getByRole('button', { name: MSG.loadOther, exact: true }).count()) === 1); // SELECTOR: confirm
+                rec.check("other tab: the warning has a \"Load the other tab's version\" button", (await msg(p1).getByRole('button', { name: MSG.loadOther, exact: true }).count()) === 1);
+                const actionBox = await msg(p1).getByRole('button', { name: MSG.loadOther, exact: true }).boundingBox().catch(() => null);
+                rec.check("other tab: the action's label stays on one line (no column of words at narrow widths)", Boolean(actionBox) && actionBox.height <= 40, JSON.stringify(actionBox));
                 await p1.evaluate(() => document.querySelector('[data-message]')?.setAttribute('data-ux-probe', '1'));
                 await rec.shot(p1, 'other-tab-warning', { aria: true, desc: 'Page 1 after page 2 edited the same build: the warning with its action' });
                 await checkAnnounced(rec, p1, MSG.changedElsewhere, 'the other-tab warning (polite region)');
@@ -686,6 +732,7 @@ try {
                 const c1 = await getCopies(p1);
                 const c2 = await getCopies(p2);
                 rec.check("Load the other tab's version: page 1 now shows page 2's form", c1 === c2 && c1 === '31', `page 1 ${c1}, page 2 ${c2}`);
+                rec.check("Load the other tab's version: focus goes to the switcher, not the page's top", await focusIsOn(p1, sw(p1)), await p1.evaluate(() => document.activeElement?.tagName ?? 'none'));
                 rec.check('Load the other tab\'s version: "Loaded the version from the other tab." offers Undo', Boolean(await waitMsg(p1, MSG.loadedOther)) && (await ui.messageUndo(p1).count()) === 1, (await msgNow(p1)).slice(0, 100));
                 await checkAnnounced(rec, p1, MSG.loadedOther, "loaded the other tab's version");
                 await rec.shot(p1, 'other-tab-loaded', { desc: "After Load: page 2's form and the Undo message" });
@@ -767,7 +814,8 @@ try {
                 rec.check('round trip: "Open a shared build?" opens', await dlg.isVisible().catch(() => false));
                 const t = ((await dlg.textContent().catch(() => '')) ?? '').replace(/\s+/g, ' ');
                 rec.check('round trip: the dialog names the build', new RegExp(LOGISTIC_TITLE, 'i').test(t), t.slice(0, 160));
-                rec.check('round trip: the summary reads "… at 240/s · 11 copies · 1 machine, 3 inserters …"', /at 240\/s · 11 copies · 1 machine, 3 inserters/.test(t), t.slice(0, 220));
+                // a build without a name of its own is titled by its recipe on the line above, so its summary starts at the rate
+                rec.check('round trip: the summary reads "240/s · 11 copies · 1 machine, 3 inserters …"', /(^|[^0-9.])240\/s · 11 copies · 1 machine, 3 inserters/.test(t) && !/ at 240\/s/.test(t), t.slice(0, 220));
                 rec.check('round trip: it says the build is added to Your builds as a new build, and the current one stays', /added to Your builds as a new build/i.test(t) && /stays as it is/i.test(t), t.slice(0, 260));
                 await rec.shot(page, 'share-dialog-new', { aria: true, desc: 'Open a shared build? with a non-blank current build' });
                 await axeIf(rec, page, 'shared-build dialog', sharedDialog(page));
@@ -942,6 +990,12 @@ try {
                     await closeSwMenu(page);
                 }
                 rec.check('keyboard: Escape closes the menu and returns focus to the switcher', await focusIsOn(page, sw(page)));
+                await page.keyboard.press('ArrowUp');
+                await swMenu(page).waitFor({ state: 'visible', timeout: 2500 }).catch(() => {});
+                await page.waitForTimeout(300);
+                const lastFocused = await page.evaluate(() => (document.activeElement?.textContent ?? '').replace(/\s+/g, ' ').trim());
+                rec.check('keyboard: ArrowUp opens the menu on its last item (Delete build)', lastFocused.startsWith('Delete build'), JSON.stringify(lastFocused));
+                await closeSwMenu(page);
                 await sw(page).focus();
                 await page.keyboard.press('Enter');
                 await swMenu(page).waitFor({ state: 'visible' }).catch(() => {});

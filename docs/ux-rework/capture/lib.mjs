@@ -1457,6 +1457,8 @@ export const ui = {
     add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add Drill' }[key] ?? `Add ${key}`),
     /** Chests are added by type: 'buffer' (default) or 'infinity' (owner: 1.x Configure cards) */
     addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity Chest' : 'Buffer Chest'),
+    /** A Recipe field (an ItemSelector combobox) by its owner: 'Target Output', 'Machine 1', … (recipeName in a11yLabels) (owner: 3.4 build library) */
+    recipeField: (page, owner) => page.getByRole('combobox', { name: `Recipe, ${owner}`, exact: true }),
     /** Target Output's Items per Second input (ELEMENT_IDS.targetRate) (owner: 1.10 numbers) */
     targetRate: (page) => page.locator('#target-items-per-second'),
     /** Target Output's Copies input (ELEMENT_IDS.targetCopies) (owner: 1.10 numbers) */
