@@ -1,6 +1,7 @@
 import { Add, Close } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover, TextField, Button } from '@mui/material';
 import { useRef, useState } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
 import { removeFilterName } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
@@ -31,6 +32,7 @@ export function ChestFilterSlotSelector({
     quantityLabel = 'Count',
     canAddMore = true,
 }: ChestFilterSlotSelectorProps) {
+    const { itemLabel } = useGameNames();
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
     const [pendingItem, setPendingItem] = useState<string | null>(null);
@@ -113,7 +115,7 @@ export function ChestFilterSlotSelector({
                         role="button"
                         aria-label={
                             filter.item_name
-                                ? `Filter ${slotIndex + 1}: ${filter.item_name} (${filter.quantity})`
+                                ? `Filter ${slotIndex + 1}: ${itemLabel(filter.item_name)} (${filter.quantity})`
                                 : `Configure filter ${slotIndex + 1}`
                         }
                         onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
@@ -151,7 +153,7 @@ export function ChestFilterSlotSelector({
                     >
                         {filter.item_name ? (
                             <>
-                                <FactorioIcon name={filter.item_name} size={32} />
+                                <FactorioIcon name={filter.item_name} size={32} alt="" titled />
                                 {/* Quantity badge */}
                                 <Box
                                     sx={{
@@ -182,7 +184,7 @@ export function ChestFilterSlotSelector({
                     {filter.item_name && (
                         <IconButton
                             size="small"
-                            aria-label={removeFilterName(slotIndex + 1, filter.item_name)}
+                            aria-label={removeFilterName(slotIndex + 1, itemLabel(filter.item_name))}
                             onClick={() => removeFilter(slotIndex)}
                             sx={{
                                 position: 'absolute',

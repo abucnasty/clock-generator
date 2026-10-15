@@ -169,9 +169,17 @@ function nodeAriaLabel(...parts: (string | undefined)[]): string {
     return parts.filter(Boolean).join(', ');
 }
 
-function listText(items: string[] | undefined): string | undefined {
-    return items && items.length > 0 ? items.join(' and ') : undefined;
+function listText(items: string[] | undefined, label: (id: string) => string): string | undefined {
+    return items && items.length > 0 ? items.map(label).join(' and ') : undefined;
 }
+
+/** The game names the screen-reader labels say; the ids when no names are known */
+interface FlowLabels {
+    itemLabel: (id: string) => string;
+    recipeLabel: (id: string) => string;
+}
+
+const ID_LABELS: FlowLabels = { itemLabel: (id) => id, recipeLabel: (id) => id };
 
 export function buildFlowGraph(
     machines: MachineFormData[],
@@ -181,6 +189,7 @@ export function buildFlowGraph(
     drills?: DrillFormData[],
     getRecipeInfo?: (name: string) => RecipeInfo | null,
     detailMode?: boolean,
+    { itemLabel, recipeLabel }: FlowLabels = ID_LABELS,
 ): { nodes: Node[], edges: Edge[] } {
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
@@ -235,7 +244,7 @@ export function buildFlowGraph(
             id,
             type: 'entityNode',
             position: { x: 0, y: 0 },
-            ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${machine.recipe}` : 'no recipe'),
+            ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${recipeLabel(machine.recipe)}` : 'no recipe'),
             data: {
                 entityType: 'machine',
                 entityId: machine.id,
@@ -262,7 +271,7 @@ export function buildFlowGraph(
             label: entityLabel('belt', belt.id),
             iconName: belt.type,
             filterIcons: filterIcons.length > 0 ? filterIcons : undefined,
-        }, filterIcons.length > 0 ? `carries ${listText(filterIcons)}` : undefined);
+        }, filterIcons.length > 0 ? `carries ${listText(filterIcons, itemLabel)}` : undefined);
     });
 
     chests.forEach(chest => {
@@ -282,7 +291,7 @@ export function buildFlowGraph(
             label: entityLabel('chest', chest.id),
             iconName,
             filterIcons,
-        }, filterIcons ? `holds ${listText(filterIcons)}` : undefined);
+        }, filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
     });
 
     // --- Inserter nodes + edges ---
@@ -304,7 +313,7 @@ export function buildFlowGraph(
         }
         drawn.set(inserterNodeId, { w: width, h: height });
         const label = entityLabel('inserter', inserter.id);
-        const items = listText(filterIcons);
+        const items = listText(filterIcons, itemLabel);
         const route = `from ${entityLabel(inserter.source.type, inserter.source.id)} to ${entityLabel(inserter.sink.type, inserter.sink.id)}`;
         nodes.push({
             id: inserterNodeId,
@@ -345,7 +354,7 @@ export function buildFlowGraph(
             id: drillNodeId,
             type: 'drillNode',
             position: { x: 0, y: 0 },
-            ariaLabel: nodeAriaLabel(entityLabel('drill', drill.id), drill.mined_item_name ? `mines ${drill.mined_item_name}` : 'no resource'),
+            ariaLabel: nodeAriaLabel(entityLabel('drill', drill.id), drill.mined_item_name ? `mines ${itemLabel(drill.mined_item_name)}` : 'no resource'),
             data: {
                 drillId: drill.id,
                 drillType: drill.type,

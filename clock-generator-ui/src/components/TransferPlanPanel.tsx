@@ -19,7 +19,9 @@ import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { EnableControlMode } from 'clock-generator/light';
 import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
+import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 
 interface TransferPlanPanelProps {
     transferPlan: SerializableTransferPlan;
@@ -43,6 +45,7 @@ function TransferPlanPanelComponent({
     onExcludeChange,
 }: TransferPlanPanelProps) {
     const { entities, computed_lcm } = transferPlan;
+    const { itemLabel } = useGameNames();
 
     const toggleExclude = (itemName: string) => {
         if (excludedIngredients.includes(itemName)) {
@@ -142,7 +145,7 @@ function TransferPlanPanelComponent({
                                                         color: isExcluded ? 'text.disabled' : 'text.primary',
                                                     }}
                                                 >
-                                                    {transfer.item_name}
+                                                    <GameName id={transfer.item_name} />
                                                 </Typography>
                                             </Box>
                                         </TableCell>
@@ -168,7 +171,7 @@ function TransferPlanPanelComponent({
                                             >
                                                 <Chip
                                                     // starts with the word on the chip, and says what it is about
-                                                    aria-label={`${isExcluded ? 'Excluded from' : 'Included in'} LCM: ${transfer.item_name}`}
+                                                    aria-label={`${isExcluded ? 'Excluded from' : 'Included in'} LCM: ${itemLabel(transfer.item_name)}`}
                                                     icon={isExcluded ? <BlockIcon /> : undefined}
                                                     label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"

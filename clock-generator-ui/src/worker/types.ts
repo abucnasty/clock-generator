@@ -288,6 +288,8 @@ export interface FactorioLookups {
     recipes: Map<string, RecipeInfo>;
     /** The in-game names of the ids, from the data's `names` key (none when the data has no such key) */
     names: GameNames;
+    /** The recipes the data marks hidden (recycling, parameters, mod and unused recipes) */
+    hiddenRecipes: string[];
 }
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;

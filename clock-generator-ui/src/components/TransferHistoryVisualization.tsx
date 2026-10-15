@@ -4,6 +4,7 @@ import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 import { COLOR_BLIND_PALETTE, ITEM_COLOR_COUNT, TIMELINE_TRACK_COLOR, itemColorMap } from './colors';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
@@ -28,8 +29,8 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
             title={
                 <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                        <FactorioIcon name={transfer.item_name} size={16} />
-                        <Typography variant="body2">{transfer.item_name}</Typography>
+                        <FactorioIcon name={transfer.item_name} size={16} alt="" />
+                        <Typography variant="body2"><GameName id={transfer.item_name} /></Typography>
                     </Box>
                     <Typography variant="caption" display="block">
                         Amount: {transfer.amount}
@@ -217,8 +218,8 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                                 borderRadius: 0.25,
                             }}
                         />
-                        <FactorioIcon name={item} size={14} />
-                        <Typography variant="caption">{item}</Typography>
+                        <FactorioIcon name={item} size={14} alt="" />
+                        <Typography variant="caption"><GameName id={item} /></Typography>
                     </Box>
                 ))}
             </Box>

@@ -126,11 +126,18 @@ export function axisMarkText(tick: number): { ticks: string; seconds: string } {
     return { ticks: tick === 0 ? '0 ticks' : num(tick), seconds: secondsText(tick) };
 }
 
-/** What a row moves and between what: "iron-plate: Belt 1 to Machine 2"; a drill's "iron-ore: into Machine 1" */
-export function rowDetailText(items: readonly string[], source: string | null, sink: string | null): string {
-    const what = items.join(', ');
-    const where = source && sink ? `${source} to ${sink}` : sink ? `into ${sink}` : source ? `from ${source}` : '';
-    return what && where ? `${what}: ${where}` : what || where;
+/** Where a row moves items: "Belt 1 to Machine 2"; a drill's "into Machine 1"; empty when the run does not say */
+export function rowRouteText(source: string | null, sink: string | null): string {
+    return source && sink ? `${source} to ${sink}` : sink ? `into ${sink}` : source ? `from ${source}` : '';
+}
+
+/**
+ * What a row moves and between what, in words: "Iron plate: Belt 1 to Machine 2"; a drill's "Iron ore: into Machine 1".
+ * `itemLabel` gives an item's game name; the screen shows the items as icons, this is for the spoken name.
+ */
+export function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemLabel: (id: string) => string = id => id): string {
+    const what = row.items.map(itemLabel).join(', ');
+    return what && row.route ? `${what}: ${row.route}` : what || row.route;
 }
 
 /** "Own clock: on 6 ticks every 400 (fuel)" */
@@ -210,15 +217,16 @@ export function summaryText(args: { periodTicks: number; inserters: number; dril
 }
 
 /**
- * A row's accessible name, everything the row shows: "Inserter 3, iron-plate: Belt 1 to Machine 2. 2 windows: ticks
+ * A row's accessible name, everything the row shows: "Inserter 3, Iron plate: Belt 1 to Machine 2. 2 windows: ticks
  * 0–28 and 212–240, the last 4 ticks of each are belt slack. On for 10% of the clock period. Wake-ups/min: 12.3."
  */
 export function rowSummary(
     row: WakeWindowRow,
     periodTicks: number,
-    ctx: { mostWakeUpsId: string | null } = { mostWakeUpsId: null },
+    ctx: { mostWakeUpsId: string | null; itemLabel?: (id: string) => string } = { mostWakeUpsId: null },
 ): string {
-    const parts = [row.detail ? `${row.label}, ${row.detail}.` : `${row.label}.`];
+    const detail = rowDetailText(row, ctx.itemLabel);
+    const parts = [detail ? `${row.label}, ${detail}.` : `${row.label}.`];
     const mode = modeText(row);
     if (mode !== null) {
         parts.push(`${mode}.`);

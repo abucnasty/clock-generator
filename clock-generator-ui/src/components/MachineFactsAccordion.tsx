@@ -10,7 +10,9 @@ import {
     Tooltip,
 } from '@mui/material';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
+import type { ReactNode } from 'react';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 import { TICK_DECIMALS, formatNumberText, maxRateLabel } from '../utils/numberText';
 
 interface MachineFactsAccordionProps {
@@ -78,7 +80,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                         <FactItem
                             icon={facts.output_item}
                             label="Output Item"
-                            value={facts.output_item}
+                            value={<GameName id={facts.output_item} />}
                         />
                         <FactItem
                             label="Amount Per Craft"
@@ -136,7 +138,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                             <FactItem
                                 icon={facts.fuel.item_name}
                                 label="Fuel"
-                                value={`${formatNumberText(facts.fuel.consumption_rate_per_second)}/s`}
+                                value={<>{`${formatNumberText(facts.fuel.consumption_rate_per_second)}/s `}<GameName id={facts.fuel.item_name} /></>}
                                 tooltip={`${facts.fuel.consumption_rate_per_second}/s while crafting`}
                             />
                             <FactItem
@@ -175,7 +177,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                     >
                                         <FactorioIcon name={input.item_name} size={24} alt="" />
                                         <Typography variant="body2" sx={{ minWidth: 120 }}>
-                                            {input.item_name}
+                                            <GameName id={input.item_name} />
                                         </Typography>
                                         <Tooltip title={`${input.consumption_rate_per_second}/s`} arrow describeChild>
                                             <span>
@@ -222,7 +224,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
 interface FactItemProps {
     icon?: string;
     label: string;
-    value: string;
+    value: ReactNode;
     tooltip?: string;
 }
 

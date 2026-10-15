@@ -17,6 +17,7 @@ import type {
     MachineFormData,
 } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { useGameNames } from '../hooks/useGameNames';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { describeEnableRule } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
@@ -63,13 +64,14 @@ function InserterEditSection({
     getRecipeInfo: (name: string) => RecipeInfo | null;
     onUpdate: (index: number, updates: Partial<InserterFormData>) => void;
 }) {
+    const { itemLabel, recipeLabel } = useGameNames();
     const entityOptions = useMemo<EntityOption[]>(() => {
         const options: EntityOption[] = [];
         machines.forEach(m => options.push({
             type: TargetType.MACHINE, id: m.id,
             label: entityLabel('machine', m.id),
             icon: m.recipe || 'assembling-machine-3',
-            sublabel: m.recipe || 'No recipe',
+            sublabel: m.recipe ? recipeLabel(m.recipe) : 'No recipe',
         }));
         belts.forEach(b => {
             const ingredientIcons = b.lanes.map(l => l.ingredient).filter(Boolean);
@@ -83,10 +85,10 @@ function InserterEditSection({
             type: TargetType.CHEST, id: c.id,
             label: entityLabel('chest', c.id),
             icon: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest',
-            sublabel: isBufferChest(c) ? (c.item_filter || 'No filter') : undefined,
+            sublabel: isBufferChest(c) ? (c.item_filter ? itemLabel(c.item_filter) : 'No filter') : undefined,
         }));
         return options;
-    }, [machines, belts, chests]);
+    }, [machines, belts, chests, itemLabel, recipeLabel]);
 
     const findOption = (type: SourceSinkType, id: number) =>
         entityOptions.find(o => o.type === type && o.id === id);
@@ -114,8 +116,8 @@ function InserterEditSection({
     const renderAdornment = (opt: EntityOption | undefined) =>
         opt ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
-                <FactorioIcon name={opt.icon} size={20} />
-                {opt.ingredientIcons?.map((ing, i) => <FactorioIcon key={i} name={ing} size={16} />)}
+                <FactorioIcon name={opt.icon} size={20} titled />
+                {opt.ingredientIcons?.map((ing, i) => <FactorioIcon key={i} name={ing} size={16} titled />)}
             </Box>
         ) : null;
 

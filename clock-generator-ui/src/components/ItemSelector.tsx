@@ -50,6 +50,8 @@ export function ItemSelector({
     // list placed it, which it does on the chosen value when that matches what was typed, rather than on the best match)
     const typed = useRef<string | null>(null);
     const highlightedBy = useRef<AutocompleteHighlightChangeReason | null>(null);
+    // the chosen value stays an option, even one the list would not offer (a mod's, or a hidden recipe of an imported build)
+    const offered = value && !options.includes(value) && nameOf(value) !== value ? [value, ...options] : options;
     // For iconOnly mode, use a more compact width
     const effectiveMinWidth = iconOnly && value ? 80 : minWidth;
 
@@ -58,7 +60,7 @@ export function ItemSelector({
             id={inputId}
             size={size}
             sx={{ minWidth: effectiveMinWidth, ...sx }}
-            options={options}
+            options={offered}
             value={value}
             open={open}
             onOpen={() => setOpen(true)}
@@ -74,7 +76,7 @@ export function ItemSelector({
                 // Enter after typing takes the best match (row 1). The list highlights the chosen value instead when that
                 // matches too ("Wall recycling" for "Wall"), and Enter on it would keep it.
                 if (event.key !== 'Enter' || event.nativeEvent.isComposing || !open || highlightedBy.current !== null || !typed.current?.trim()) return;
-                const best = searchIds(typed.current, options, nameOf)[0];
+                const best = searchIds(typed.current, offered, nameOf)[0];
                 if (best === undefined || best === value) return;
                 event.defaultMuiPrevented = true;
                 event.preventDefault();
@@ -83,7 +85,7 @@ export function ItemSelector({
                 onChange(best);
             }}
             // a typed name or id (freeSolo's Enter) is stored as its id; anything else as typed
-            onChange={(_, newValue) => onChange(typeof newValue === 'string' ? resolveTyped(newValue, options, nameOf) : newValue)}
+            onChange={(_, newValue) => onChange(typeof newValue === 'string' ? resolveTyped(newValue, offered, nameOf) : newValue)}
             // When iconOnly, don't show the text in the input field
             getOptionLabel={(option) => iconOnly ? '' : nameOf(option)}
             // by the name and the id, in any word order, best first

@@ -1,5 +1,6 @@
 import { Box, MenuItem, TextField, Tooltip } from '@mui/material';
 import { useId, useState } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
 import type { BeltFormData, InserterFormData } from '../hooks/useConfigForm';
 import { nearLaneItems, withNearLane } from '../utils/nearLane';
 import { FactorioIcon } from './FactorioIcon';
@@ -24,12 +25,13 @@ interface NearLaneSelectProps {
  */
 /** A lane's icon and "Lane 1: bioflux"; the text ends in an ellipsis where the field is narrow, with the whole in its title */
 function LaneText({ lane, item }: { lane: number; item: string }) {
-    const text = `Lane ${lane}: ${item}`;
+    const { itemLabel } = useGameNames();
+    const text = `Lane ${lane}: ${itemLabel(item)}`;
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-            {/* the text names the item: the icon's alt would say it twice ("bioflux Lane 1: bioflux") */}
+            {/* the text names the item: the icon's alt would say it twice ("Bioflux Lane 1: Bioflux") */}
             <Box component="span" aria-hidden sx={{ display: 'flex', flexShrink: 0 }}>
-                <FactorioIcon name={item} size={18} />
+                <FactorioIcon name={item} size={18} alt="" />
             </Box>
             <Box component="span" title={text} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</Box>
         </Box>

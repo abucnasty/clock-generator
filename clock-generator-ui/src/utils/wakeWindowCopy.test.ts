@@ -28,7 +28,8 @@ function row(extra: Partial<WakeWindowRow> = {}): WakeWindowRow {
         kind: 'inserter',
         number: 3,
         label: 'Inserter 3',
-        detail: 'iron-plate: Belt 1 to Machine 2',
+        items: ['iron-plate'],
+        route: 'Belt 1 to Machine 2',
         windows,
         mode: 'windows',
         onTicks,
@@ -66,6 +67,11 @@ describe('summaryText', () => {
 });
 
 describe('rowSummary', () => {
+    it('names the items by their game names when given a label function', () => {
+        const text = rowSummary(row(), 600, { mostWakeUpsId: null, itemLabel: id => (id === 'iron-plate' ? 'Iron plate' : id) });
+        expect(text).toContain('Inserter 3, Iron plate: Belt 1 to Machine 2.');
+    });
+
     it('reads one window', () => {
         const text = rowSummary(row(), 600);
         expect(text).toBe('Inserter 3, iron-plate: Belt 1 to Machine 2. 1 wake window: ticks 212–240. '
@@ -115,7 +121,7 @@ describe('rowSummary', () => {
         const rows = [
             row(),
             row({ windows: windowsOf([{ start: 0, end: 4 }, { start: 540, end: 550.957 }], 550.957, 3), onShare: 16 / 550.957, wakeUpsPerMinute: 1 / 3 }),
-            row({ mode: 'always-on', windows: [], onShare: 1, wakeUpsPerMinute: null, detail: '' }),
+            row({ mode: 'always-on', windows: [], onShare: 1, wakeUpsPerMinute: null, items: [], route: '' }),
             row({ mode: 'own-clock', windows: [], ownClock: { windowTicks: 6, everyTicks: 400, perMinute: 9, item: 'coal' }, onShare: 0.015 }),
         ];
         for (const each of rows) {

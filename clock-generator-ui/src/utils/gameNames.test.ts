@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     iconName,
+    pickerIds,
     itemName,
     matchesQuery,
     nameWithId,
@@ -210,5 +211,13 @@ describe('resolveTyped', () => {
     it('keeps a name two ids share as typed', () => {
         const twins: GameNames = { item: { 'wall-a': 'Wall', 'wall-b': 'Wall' }, recipe: {} };
         expect(resolveTyped('Wall', ['wall-a', 'wall-b'], (id) => itemName(twins, id))).toBe('Wall');
+    });
+});
+
+describe('pickerIds', () => {
+    it('leaves out mod and internal ids and the hidden ones, and keeps the order', () => {
+        const ids = ['iron-plate', 'ee-a', 'rcalc-a', 'region-cloner_a', 'parameter-0', 'copper-plate', 'hidden-thing'];
+        expect(pickerIds(ids, new Set(['hidden-thing']))).toEqual(['iron-plate', 'copper-plate']);
+        expect(pickerIds(ids).length).toBe(3);
     });
 });

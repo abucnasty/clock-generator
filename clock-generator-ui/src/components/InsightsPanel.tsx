@@ -1,6 +1,8 @@
 import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import type { ClockInsight } from 'clock-generator/browser';
+import { useGameNames } from '../hooks/useGameNames';
+import { GameName } from './GameName';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
 interface InsightsPanelProps {
@@ -36,6 +38,12 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
 }
 
 function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) {
+    const { names } = useGameNames();
+    // a cell that is exactly an id of the game data shows its name; the engine's other text is left as it is
+    const cellOf = (cell: string): ReactNode => {
+        if (Object.hasOwn(names.recipe, cell) && !Object.hasOwn(names.item, cell)) return <GameName id={cell} kind="recipe" />;
+        return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : cell;
+    };
     return (
         <>
             {(
@@ -49,7 +57,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
                         <TableBody>
                             {table.rows.map((row, index) => (
                                 <TableRow key={index}>
-                                    {row.map((cell, column) => <TableCell key={column}>{cell}</TableCell>)}
+                                    {row.map((cell, column) => <TableCell key={column}>{cellOf(cell)}</TableCell>)}
                                 </TableRow>
                             ))}
                         </TableBody>

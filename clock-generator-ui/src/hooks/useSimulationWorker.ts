@@ -8,7 +8,7 @@ import type { GeneratedFor } from '../utils/resultsStaleness';
 import { PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
 import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
 import { planGenerationRun } from '../utils/deeperSearch';
-import { NO_NAMES, type GameNames } from '../utils/gameNames';
+import { NO_NAMES, pickerIds, type GameNames } from '../utils/gameNames';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -357,9 +357,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             })));
 
             const lookups = await askEngine({ kind: 'lookups' });
-            setRecipeNames(lookups.recipeNames);
-            setItemNames(lookups.itemNames);
-            setResourceNames(lookups.resourceNames);
+            // the pickers offer no mod, internal or hidden entry; a build that holds one still shows it
+            setRecipeNames(pickerIds(lookups.recipeNames, new Set(lookups.hiddenRecipes)));
+            setItemNames(pickerIds(lookups.itemNames));
+            setResourceNames(pickerIds(lookups.resourceNames));
             setGameNames(lookups.names);
             setRecipes(lookups.recipes);
             await workersReady;

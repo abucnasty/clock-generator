@@ -284,7 +284,8 @@ function App() {
         machines: config.machines,
         coverageIssues: checkedCoverageIssues ?? [],
         machinesMax,
-    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax]);
+        itemLabel: (id) => itemName(gameNames, id),
+    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax, gameNames]);
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);

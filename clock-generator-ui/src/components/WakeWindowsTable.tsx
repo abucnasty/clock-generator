@@ -17,6 +17,7 @@ import {
     windowEndText,
     windowOrdinalText,
 } from '../utils/wakeWindowCopy';
+import { WakeRowMoves } from './WakeRowMoves';
 
 interface WakeWindowsTableProps {
     rows: WakeWindowRow[];
@@ -55,7 +56,7 @@ export function WakeWindowsTable({ rows, periodTicks, mostWakeUpsId }: WakeWindo
                         {rows.map(row => (
                             <TableRow key={row.id}>
                                 <TableCell component="th" scope="row" sx={{ whiteSpace: 'nowrap' }}>{row.label}</TableCell>
-                                <TableCell sx={{ minWidth: 200 }}>{row.detail}</TableCell>
+                                <TableCell sx={{ minWidth: 200 }}><WakeRowMoves row={row} /></TableCell>
                                 <TableCell align="right">{onShareText(row.onShare)}</TableCell>
                                 <TableCell align="right">{windowCountText(row)}</TableCell>
                                 <TableCell align="right">{wakeUpsText(row)}</TableCell>

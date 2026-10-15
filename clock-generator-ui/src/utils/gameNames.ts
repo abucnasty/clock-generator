@@ -37,6 +37,17 @@ export function nameWithId(name: string, id: string): string {
     return name === id ? id : `${name} (${id})`;
 }
 
+/** Ids of mods and the editor, which no build is made of: Editor Extensions, Recipe Calculator, Region Cloner and the parameter signals */
+const INTERNAL_ID = /^(ee-|rcalc-|region-cloner_|parameter-)/;
+
+/**
+ * The ids a picker offers: without the mod and internal ids, and without those in `hidden` (the data's hidden entries).
+ * A build that already holds one still shows it; the picker keeps its chosen value.
+ */
+export function pickerIds(ids: readonly string[], hidden: ReadonlySet<string> = new Set()): string[] {
+    return ids.filter((id) => !INTERNAL_ID.test(id) && !hidden.has(id));
+}
+
 /** Lower case, with dashes, underscores and punctuation as single spaces: "Fluoroketone (Cold)" and `fluoroketone-cold` agree */
 export function normalizeForSearch(text: string): string {
     return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
