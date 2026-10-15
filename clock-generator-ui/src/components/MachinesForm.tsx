@@ -20,6 +20,7 @@ import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
+import { SidecarModLink } from './IntroCard';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
@@ -110,6 +111,10 @@ function MachinesFormComponent({
                                     {copied ? 'Copied!' : 'Copy'}
                                 </Button>
                             </Box>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                                A /c command turns off achievements for that save. The <SidecarModLink /> copies the
+                                crafting speeds of your build without one: then click Paste from Factorio.
+                            </Typography>
                         </Box>
                     </Popover>
                 </Box>

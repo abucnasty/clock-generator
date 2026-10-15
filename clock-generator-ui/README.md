@@ -16,6 +16,9 @@ Install with `npm install`. The dev server needs the engine built first (`npm ru
   `dist/`.
 - `npm run lint` runs ESLint; `npm run lint:fix` fixes what it can.
 - `npm run preview` serves the built `dist/`.
+- `node scripts/copy-factorio-data.mjs` copies the game data and the example builds ("Try an example") from
+  `../clock-generator/resources` into `public/`. It runs before `dev` and `build`; run it by hand when npm's
+  `ignore-scripts` is on.
 
 ## Words in the UI
 
@@ -32,7 +35,7 @@ replace. The words of the engine's own text (clock names and descriptions, the I
 | wake-up (provisional) | One time the game wakes an inserter that is switched on and waiting, because a machine finished a craft. Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS. | "one start of a wake window" |
 | start point | The place in the clock period where the clock starts. | "one start of the clock" |
 | copies | How many identical copies of your build you will place. "Copy" stays a verb ("Copy blueprint"). | copy as any other noun |
-| build | The machines, inserters, belts and chests you set up, which the clocks are made for. | configuration, config (in sentences; the Import, Export and Reset button names change in 2.1) |
+| build | The machines, inserters, belts and chests you set up, which the clocks are made for. Saved as a build file (Open build file…, Save build file, Reset build). | configuration, config |
 | clock | The set of combinators that switches your inserters on in their wake windows and repeats every clock period. The tool makes several and recommends one. | potential clock |
 | blueprint | The Factorio string you paste in the game. It holds a clock's combinators, not your build. | "blueprint" for a clock or a build |
 | check | Test that your build can be clocked, without making any clocks. The Validate button and its chips keep their names until the Check only rework (2.3). | validation, "run a simulation", "re-run the simulation" (in sentences) |

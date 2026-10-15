@@ -28,6 +28,7 @@ import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
+import { useIntroCard } from './hooks/useIntroCard';
 import { TargetOutputForm } from './components/TargetOutputForm';
 import { MachinesForm } from './components/MachinesForm';
 import { InsertersForm } from './components/InsertersForm';
@@ -35,7 +36,8 @@ import { BeltsForm } from './components/BeltsForm';
 import { ChestsForm } from './components/ChestsForm';
 import { DrillsForm } from './components/DrillsForm';
 import { OverridesForm } from './components/OverridesForm';
-import { ConfigImportExport } from './components/ConfigImportExport';
+import { ConfigImportExport, type BuildEntryHandle } from './components/ConfigImportExport';
+import { IntroCard } from './components/IntroCard';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
@@ -56,6 +58,8 @@ import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { a11yThemeComponents } from './utils/a11yTheme';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
+import { isBlankBuild } from './utils/introCard';
+import type { TargetValues } from './utils/pasteTarget';
 
 const baseTheme = createTheme({
     palette: {
@@ -183,6 +187,25 @@ function App() {
     } = useConfigForm();
 
     const { offerUndo } = useUndo(config, setConfig, isConfigLoaded);
+
+    // the intro card shows above Target Output while nothing has been entered; its ways in are the app bar's
+    const { visible: introVisible, dismiss: dismissIntro, buildByHand, show: showIntro, afterReset } = useIntroCard(isBlankBuild(config));
+    const buildEntryRef = useRef<BuildEntryHandle>(null);
+    const handleBuildByHand = useCallback(() => {
+        // the card goes first: focus then moves to the recipe, which takes its place at the top
+        flushSync(() => buildByHand());
+        focusProblemTarget({ kind: 'target-recipe' });
+    }, [buildByHand]);
+    const handleReset = useCallback(() => {
+        resetConfig();
+        afterReset();
+    }, [resetConfig, afterReset]);
+    // a paste that fills in Target Output
+    const replaceTarget = useCallback((target: TargetValues) => {
+        updateTargetOutput('recipe', target.recipe);
+        updateTargetOutput('items_per_second', target.items_per_second);
+        updateTargetOutput('copies', target.copies);
+    }, [updateTargetOutput]);
 
     // the page waits for the workers and for the saved config, which the engine's worker checks
     const isInitialized = workersReady && isConfigLoaded;
@@ -481,17 +504,21 @@ function App() {
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
                         <ConfigImportExport
+                            ref={buildEntryRef}
                             config={exportableConfig}
+                            target={config.target_output}
                             onImport={handleImportConfig}
+                            onReplaceTarget={replaceTarget}
                             onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
                             onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
                             onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
                             onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
-                            onReset={resetConfig}
+                            onReset={handleReset}
                             onBuildReplaced={handleBuildReplaced}
                             onUndoable={offerUndoOfReplace}
+                            onShowIntro={showIntro}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -546,6 +573,15 @@ function App() {
                                 </Alert>
                             )}
                             <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null} />
+
+                            {introVisible && (
+                                <IntroCard
+                                    onPaste={() => buildEntryRef.current?.pasteFromFactorio()}
+                                    onTryExample={() => buildEntryRef.current?.openExamples()}
+                                    onBuildByHand={handleBuildByHand}
+                                    onDismiss={dismissIntro}
+                                />
+                            )}
 
                             <TargetOutputForm
                                 recipe={config.target_output.recipe}

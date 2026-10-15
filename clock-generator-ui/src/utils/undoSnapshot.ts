@@ -3,13 +3,14 @@ import * as edits from './configForm/edits';
 import { isInfinityChest, type ConfigFormData, type EntityKind } from './configForm/formData';
 import { deleteButtonLabel, entityLabel, type LabelKind } from './entityLabel';
 import type { MessageInput } from './messages';
+import { exampleTitle, type ExampleBuild } from './exampleBuilds';
 
 // Every text of the Undo messages, so that the copy changes in one place. An Undo message has no timer: it stays until
 // the build is edited, another action offers Undo, or it is closed (the owner, 2026-10-14). The notice after it has one.
 const UNDO_NOTICE_DURATION_MS = 8_000;
 const UNDO_LABEL = 'Undo';
 export const UNDO_RESET_MESSAGE = 'Build reset.';
-export const UNDO_IMPORT_MESSAGE = 'Build imported.';
+export const UNDO_IMPORT_MESSAGE = 'Build file opened.';
 const UNDO_DRILLS_OFF_MESSAGE = 'Mining drills turned off.';
 export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Generate to make them again.';
 /** Read out when an editing dialog opening takes the offer away */
@@ -112,6 +113,11 @@ const itemsOf = (form: ConfigFormData, kind: EntityKind): { id: number; _uuid: s
 function idList(ids: number[]): string {
     const consecutive = ids.every((id, i) => i === 0 || id === ids[i - 1] + 1);
     return consecutive && ids.length > 1 ? `${ids[0]}–${ids[ids.length - 1]}` : ids.join(', ');
+}
+
+/** The Undo message after an example replaced the build: "Example loaded: Logistic science pack." */
+export function exampleUndoMessage(example: Pick<ExampleBuild, 'recipe'>): string {
+    return `Example loaded: ${exampleTitle(example)}.`;
 }
 
 /** "3 machines", "1 machine" */
