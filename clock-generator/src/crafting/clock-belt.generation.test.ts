@@ -186,10 +186,13 @@ describe("the belt a clock is made for", () => {
             expect(batched.description).toContain("Inserters 1, 2 and 11 take fuel off the belt as well as an ingredient and stay enabled 4 more ticks");
         });
 
-        // It was the clock selected until a clock had to get back from a backpressure loss as well (GOALS.md)
-        it("does not select it: the build does not get back to its rate under it once the nutrients have run out", () => {
-            expect(batched.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["nutrients stops arriving"] });
-            expect(selected.id).toBe("swings-2");
+        // It was the clock selected until a clock had to get back from a backpressure loss as well (GOALS.md), and from
+        // then the 2-swing clock was, since the build did not get back to its rate under it once the nutrients had run
+        // out. Since the rules of issue 152 (GOALS.md, "When a waiting inserter acts") it gets back from every loss, and
+        // is selected again; the game tests recorded it on 2026-10-14, 400 in every period.
+        it("selects it: the build gets back to its rate under it from every loss", () => {
+            expect(batched.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
+            expect(selected.id).toBe("planned-belt-slack");
             expect(selected.ranking.meets_target_rate).toBe(true);
             expect(selected.belt).toEqual({ kind: "non_moving" });
         });
