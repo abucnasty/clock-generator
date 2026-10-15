@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AA, contrastRatio } from './contrast';
-import { CONTROL, ROLE, SURFACE, TEXT, TOKEN_PAIRS } from './tokens';
+import { CONTROL, ROLE, SURFACE, SURFACE_HOVER, TEXT, TOKEN_PAIRS } from './tokens';
 
 const has = (fg: string, bg: string) => TOKEN_PAIRS.some(pair => pair.fg === fg && pair.bg === bg);
 
@@ -48,6 +48,7 @@ describe('the tokens', () => {
     it('are six-digit hex colours, so the theme and the table cannot drift to a named colour', () => {
         const values = [
             ...Object.values(SURFACE),
+            ...Object.values(SURFACE_HOVER),
             ...Object.values(ROLE).flatMap(role => Object.values(role)),
             ...Object.values(CONTROL),
         ];
