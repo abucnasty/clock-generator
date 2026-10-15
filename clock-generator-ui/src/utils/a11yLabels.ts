@@ -65,8 +65,8 @@ export const CHART_NAMES = {
         `${rowLabel} state the game shows, ${changes} ${changes === 1 ? 'change' : 'changes'}`,
     /** "Machine 1 fuel level over the run" */
     fuelLevel: (machineLabel: string) => `${machineLabel} fuel level over the run`,
-    /** "Inserter 2 fuel clock windows and swings" */
-    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock windows and swings`,
+    /** "Inserter 2 fuel clock wake windows and swings" */
+    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock wake windows and swings`,
 } as const;
 
 /** The name of a row's drag handle, "Reorder Inserter 2" */
