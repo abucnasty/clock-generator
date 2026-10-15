@@ -136,6 +136,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
     - deleting from the diagram
   - Then show "{What happened}. Undo" until the next edit to the build, the next undoable action, Close or Escape (no
     timer: the owner, 2026-10-14, for WCAG 2.2.1; this replaces "for 10 seconds"). Ctrl/Cmd+Z undoes while it is offered.
+    The offer also ends when a check or a generation starts: running the build accepts it (the owner, 2026-10-14,
+    after the Phase 1 end review; built in 1.5 F).
     Undo restores the snapshot, and the existing persistence saves it.
   - In the ⋮ menu, put Reset below a divider, in the error colour.
 - **Done when:** there are vitest tests for snapshot and restore.
@@ -264,6 +266,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - The confirm dialog for a paste pre-fills Target Output from the export (2.2). Older exports infer it from the
     machines.
   - Reword the old-mod warning (A17).
+  - An untouched build shows its next step neutrally, not a red problem count. When the target rate is more than the
+    machines can make, a warning under the field says so; it doesn't block Check or Generate (the owner, 2026-10-14,
+    after the Phase 1 end review).
 
 **2.2 Sidecar mod changes** (`clock-generator-sidecar/`, version 0.8.0 in the final PR)
 - **Export a suggested target.** Add the final product to the export in `scripts/export.lua`: the recipe whose output
@@ -404,6 +409,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - Templates ask for the item and confirm before replacing the current rule; the hard-coded 32 goes.
   - The editor says whether rules reach the blueprint or only shape the planning simulation. Find out which from the
     engine.
+  - The "Latched Output Drain" template releases on the source's level, as the owner's sample does (the owner,
+    2026-10-14). A Clocked range's end may equal its start (the engine's ranges include both ends).
 
 **3.2 Editing at scale** (B17, B22, B26)
 - **What:**
@@ -414,6 +421,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - New rows scroll into view and get focus.
   - Fewer tab stops per row.
   - The filter picker lists the source's items first.
+  - Drag reorder stays, with a message and Undo like a delete, and Move up / Move down for keyboard and single-pointer
+    users. Every Diagram dialog is a draft with Save and Cancel (the owner, 2026-10-14, after the Phase 1 end review).
 
 **3.3 Cancel, and keep the results** (B11, B18)
 - **What:**
@@ -421,12 +430,17 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - Copy is held back until generation ends, or labelled "Copy current best" while it runs.
   - Keep the last generation and the chosen clock per config key in IndexedDB, and restore them on reload.
   - Keep the player's pick across a regeneration when that clock still exists.
+  - Undo of an Import, Paste or Reset brings the clocks back; the stale banner lists what changed and when the clocks
+    were made (Phase 1 end review). Native IndexedDB, up to 10 builds and about 64 MB, no new dependency (the owner,
+    2026-10-14).
 
 **3.4 Build library and share links** (B20)
 - **What:**
   - Named builds with a switcher. Migrate the single `clock-generator-config` slot into it.
   - Warn when another tab edits the same build (the `storage` event).
   - "Copy share link" carries the compressed config in the URL hash. Opening a link imports it with a confirm and Undo.
+  - The glossary gains "Your builds" and "share link". No new dependency: links need a 2023-or-later browser (the
+    owner, 2026-10-14).
 
 **Phase 3 done when:**
 - the items above are merged

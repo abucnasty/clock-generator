@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.10.0] - 2026-10-14
+
+### Added
+- A potential clock called "Even hands". Every inserter gets one window for each hand it moves in the clock period, spread evenly over the period, and each window is a tick shorter than the inserter's hand cycle, so it moves one hand whenever in it the source has the hand and the machine it puts into takes it. Inserters that move the same hands per period get the same windows and share one window decider: the two halves of a build that do the same thing open and close together, and two inserters that take from one machine at the same rate take from it on the same ticks. It is made straight from the plan, without a search, and is offered where every inserter takes from a machine or a chest and moves a whole number of hands per period, and the build has no mining drills, no loop of machines and no fuel or by-product inserters.
+
+### Fixed
+- The planning of fractional swings counted an inserter's hands into a machine as if the machine's stock had to stay at or under the insertion limit after each drop. In the game a machine takes a hand while its stock is under the limit, and the hand goes in whole. Fractional swings can now be planned on builds where it failed before with "maximum allowed is 2 due to insertion limits", and is listed there.
+
+### Changed
+- Accumulators at 640 a second ([#152](https://github.com/abucnasty/clock-generator/issues/152)) select even hands: 602 wake-ups per minute against 2,907 for the clock 0.9.1 selected, with 5 window deciders, one for each thing the two halves do. Recorded in the game: 576 accumulators in every period. The searches are no longer run for this build.
+- Chemical science with belts moving selects fractional swings, at 10.1 wake-ups per minute against 20.4. Not checked in the game: that sample has no scaffold.
+- Utility science with direct-insert low density structures, with "Belts do not move" on, selects fractional swings, which is nearer the target rate than the clock it selected before. No clock holds the target rate on that build, as before.
+
+## [0.9.1] - 2026-10-14
+
+### Fixed
+- A clock could hold the target rate in the simulator and fall short in the game on builds where machines feed machines directly, such as accumulators at 640 a second ([#152](https://github.com/abucnasty/clock-generator/issues/152)): the clock 0.9.0 selected for that build made 512 to 544 of its 576 accumulators a period in the game. The simulator now follows two rules of the game it had wrong. An inserter whose window opens in the tick another inserter takes the products of the machine it puts into takes its first items a tick later, unless that other inserter's window opened in the same tick. An inserter holding part of a hand from a machine takes no more while the machine it puts into is full at its output. Such a clock is now unstable, and the clock selected instead holds the rate in the game.
+
+### Changed
+- Agricultural science selects batched swings (5 output swings per cycle) again, with fewer wake-ups than the 2-swing clock it selected since 0.6.0: under the corrected rules it gets back to its rate after the nutrients run out. The inserters that bring eggs to the science biochamber are no longer clocked in that build; they stay always enabled.
+- Other builds can get another selected clock or other wake-up figures. On the sample builds, utility science with direct-insert low density structures and the chain always on selects uneven output swings, since batched swings no longer gets back after the coal runs out.
+
 ## [0.9.0] - 2026-10-14
 
 ### Changed

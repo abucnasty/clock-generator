@@ -43,10 +43,9 @@ export interface SwingCapacityConstraints {
  * The key insight is that during each swing animation, the machine consumes items,
  * freeing up inventory space for subsequent swings.
  * 
- * Peak inventory occurs right after a swing completes insertion, before consumption
- * during the next swing:
- * - After swing 1: effective_stack_size items (peak before any consumption)
- * - After swing N: N * effective_stack_size - (N-1) * items_consumed_per_swing
+ * A swing is taken while the stock before it is under the insertion limit, and goes in whole:
+ * - Before swing 1: nothing
+ * - Before swing N: (N-1) * effective_stack_size - (N-1) * items_consumed_per_swing
  * 
  * Note: effective_stack_size is min(stack_size, automated_insertion_limit) because
  * inserters will only transfer up to the available space in the machine.
@@ -82,14 +81,13 @@ export function computeMaxSwingsPerSubCycle(constraints: SwingCapacityConstraint
     // Net inventory increase per swing after the first
     const net_items_per_swing = effective_stack_size - items_consumed_per_swing;
     
-    // Peak inventory after N swings: effective_stack_size + (N-1) * net_items_per_swing
-    // Constraint: effective_stack_size + (N-1) * net_items_per_swing <= automated_insertion_limit
-    // Solving: N <= 1 + (automated_insertion_limit - effective_stack_size) / net_items_per_swing
-    
-    const additional_swings = Math.floor(
-        (automated_insertion_limit - effective_stack_size) / net_items_per_swing
-    );
-    
+    // A machine takes a hand while the ingredient is under its insertion limit, and the hand goes in whole, so the
+    // stock may end over the limit (Factorio 2.1.21: factorio-benchmarks docs/mechanics machines.md, rules 1 and 3 and
+    // section 5, "A swung hand is inserted whole"). The N-th swing finds (N-1) * net_items_per_swing before it.
+    // Constraint: (N-1) * net_items_per_swing < automated_insertion_limit
+    // Solving: N <= ceil(automated_insertion_limit / net_items_per_swing)
+    const additional_swings = Math.ceil(automated_insertion_limit / net_items_per_swing) - 1;
+
     return 1 + additional_swings;
 }
 

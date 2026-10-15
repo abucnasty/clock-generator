@@ -24,6 +24,9 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
                 root: { '&.Mui-focusVisible': ring },
             },
         },
+        // a Chip that takes Tab but is not clickable (the Status and swing plan chips) is not a ButtonBase,
+        // and MUI sets `outline: 0` on it
+        MuiChip: { styleOverrides: { root: { '&:focus-visible': ring } } },
         // an accordion's title keeps the ring outside: some have no side padding, where a ring inside would touch the text
         // the ring marks a tab moved to with the arrow keys; its focus ripple on top would be a second marker
         MuiTab: { defaultProps: { disableFocusRipple: true }, styleOverrides: { root: insetRing } },

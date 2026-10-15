@@ -32,10 +32,10 @@ come from here.
 
 ## Current state
 
-- **Phase:** 1 (started 2026-10-14)
-- **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** none yet; the Phase 1 merge into `feat/ux-rework` will need the owner's approval
-- **Phase 1:** all 14 items merged (#145–#164); phase end (three-designer review, retro) running
+- **Phase:** 2 (Phase 1 merged into `feat/ux-rework`, #170, 877989d)
+- **Branch:** [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2); the ledger lives here now (`feat/ux-rework-p1` is kept for the links in its PRs)
+- **Open checkpoints:** 2.5 A's install steps in game (owner)
+- **Phase 1:** merged into `feat/ux-rework` (#170) after the end review, its fixes (#168) and the owner's approval
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
 ## Phase 1: stop the harm, quick wins
@@ -61,38 +61,40 @@ come from here.
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | spec | | | Spec final; counts as two units. After 2.2, 1.5 + 1.3 and 1.4. Uses 2.2's `suggestedTargetOf` |
+| [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | implementing | | | `feat/ux-rework-p2-first-visit`. One unit under coach run 5's counting (about 11 existing files). Also owns: the contradictory old-mod sentence (`sidecar-version.ts:94`; 2.2's A17 is only partly fixed), the red "2 problems" on a blank form (Phase 1 end), the raw JSON import error |
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | merged (p2) | [#154](https://github.com/abucnasty/clock-generator/pull/154) | 0 | Into `feat/ux-rework-p2`. CI green. **In-game check: passed** (owner, 2026-10-14: "looks good"). Code review opus PASS (Lua read line by line; checks re-run); UX audit sonnet FIX on the owner steps only (fixed by the orchestrator). A17, Q3 fixed; A2, A3 partly (site side is 2.1); B19 to 2.1. Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | merged (p2) | [#161](https://github.com/abucnasty/clock-generator/pull/161) | 1 | Round 0: code review opus PASS (races fine); UX audit opus FIX (a mouse click on Check only looked silent). Round 1: a visible landing and the reason in the tooltip, plan stays mounted, alert named, announcements in 1.11 A's rule set; merged 2.11 and 1.11 A. Re-review both PASS: A12, B10 fixed. CI green |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | merged (p2) | [#163](https://github.com/abucnasty/clock-generator/pull/163) | 0 | Code review opus PASS (storage, 2.3 interplay, double press, hint all checked; deviations accepted); UX audit opus PASS: A10 fixed, C7 (2.4's part) fixed. 498 tests; capture 274 PASS, 1 FAIL = 1.5's message over the action at 720 (ledgered). CI green |
-| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A fix-1 | | A 1 | Two PRs. A (opus): code review FIX (drills taken from the form, not the clock; decoded ~300 exported clocks from 45 samples and every other step held); UX audit FIX (the wiring list gives only numbers); A21 fixed, A8/A19/A20/C§2.3 partly. Round 1 running, also takes 2.4's `beltAction` into the card. Then the owner's in-game check of the install steps. B after A |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A owner check | | A 2 | Two PRs. A (opus): round 0 code review FIX (drills taken from the form, not the clock), UX audit FIX (the wiring list gives only numbers). Round 1 (merged 2.4 and p2's glossary; drills read from the clock, wiring rows with item and ends, nothing-to-wire step): both re-reviews PASS. Minors round (no-wire Copy hidden, no-belt line, step 4 wording, drill cross-check with `drill:N` keys): UX re-check PASS, code re-check running. A21 fixed; A8 in app (owner's in-game check pending); A19, A20, C§2.3 A's share fixed. Owner checkpoint: install steps in game. B after A (gains "Stable" in the reason, the Works? column, Phase 1 end items) |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | merged (p2) | [#156](https://github.com/abucnasty/clock-generator/pull/156) | 1 | Code review opus PASS (window maths correct; checks re-run), UX audit opus PASS (C2 fixed for the new chart; old charts → 2.5/2.10); one minors round, re-checked. CI green. Follow-up PR: switch to `announce()`, drop `scrollMarginBottom` |
-| [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | spec | | | Spec final; two PRs (A tokens and roles after 2.3 and 2.5 A; B layout after 2.1 and 2.4, before 2.9) |
-| [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | spec | | | Spec final; about 42 files, two PRs (2.8a opus: dump, names, pickers; 2.8b sonnet: text sites, late) |
-| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. After 2.1-2.7, before 2.10 and 2.11 |
-| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | fix-1 | | 1 | On `feat/ux-rework-p2-timelines` (sonnet): 516 tests; capture 208 PASS, 0 FAIL. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name fixed). A minors round (Blocked painted last, device-pixel rounding) before merge |
+| [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | A implementing | | | Two PRs. A `feat/ux-rework-p2-gui-grammar`, stacked on 2.5 A (coach run 5); capture writer alongside. Gains from the Phase 1 end: Copy blueprint the one filled button on fresh Results (C3), the Recommended chip vs selection orange, red only for problems (trash icons, filter ×), keep the MuiChip focus ring. B layout after 2.1 |
+| [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | a merged (p2) | a [#171](https://github.com/abucnasty/clock-generator/pull/171) | a 1 | 2.8a (opus) `feat/ux-rework-p2-item-names`, 18 files: 397 item and 746 recipe names from the 2.0.77 locale, 102 fallbacks. Two spec checks were wrong (ties keep data order; no picker lists fluids): changed by the orchestrator. Code review opus PASS (data regenerated byte for byte), UX audit opus PASS (A27 2.8a share fixed); one minors round (Enter takes row 1, icon reset, no id in the accessible description, Name (id) hover), re-checks PASS. CI green. 2.8b gains: hide `ee-`/`rcalc-`/`region-cloner_`/`parameter-*`/hidden entries from pickers, Title Case entity labels, keep forms behind `isInitialized` 2.8b (sonnet, text sites) late |
+| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. Runs after 2.5 B, in parallel with 2.7 (coach run 5: its order after 2.7 was only so the layout is final; 2.7 runs the geometry sweep). Gains: header height and the reason line (Phase 1 end) |
+| [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | merged (p2) | [#165](https://github.com/abucnasty/clock-generator/pull/165) | 1 | Sonnet. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name); one minors round (Blocked painted last, device-pixel rounding), re-check PASS. CI green |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
+| [1.5 F](specs/1.5F-messages-clear.md) | Messages that don't cover the page | opus | spec | | | Phase 1 follow-up, built on p2 (`feat/ux-rework-p2-messages-clear`). Messages move into the sticky header under the bar; the fullscreen Diagram shows them in its title bar; non-action messages close when a dialog opens; Undo ends when a check or generation starts (owner). 13 files, one unit |
 
-**Phase 2 chains** (coach run 3; a freed slot goes to the unblocked item heading the longest chain):
+**Phase 2 chains** (re-derived at the Phase 1 end, coach run 5; a freed slot goes to the unblocked item heading the longest chain):
 
 | Chain | Length | Next unblocked |
 |---|---|---|
-| 2.3 → 2.4 → 2.7 B → 2.9 → 2.10 | 5 | 2.3 (now) |
-| 2.6 → 2.5 A → 2.7 A (also after 2.3) → 2.7 B | 4 | 2.5 A once 2.6 merges |
-| 2.1 (two units; after 1.5 + 1.3) → 2.7 B | 3 | 2.1 once 1.5 + 1.3 is in p2 |
-| 2.5 A → 2.5 B | 2 | after 2.5 A |
-| 2.8 a → 2.8 b (late) | 2 | 2.8 a, any idle slot |
-| 2.11 (2.9 re-sweeps the diagram afterwards) | 1 | merged |
-| 2.10 (2.9 re-sweeps the timelines afterwards) | 1 | in progress |
+| 2.5 A → 2.7 A → 2.7 B | 3 | 2.7 A, stacked on 2.5 A (running) |
+| 2.1 → 2.7 B | 2 | 2.1 (running) |
+| 2.5 A → 2.5 B → 2.9 | 3 | 2.5 B once 2.5 A merges |
+| 2.8 a → 2.8 b | 2 | 2.8 a in review |
+| 1.5 F | 1 | next free slot |
+| 2.7 A → 3.1, 3.3 (3.3 also after 1.5 F) | | after 2.7 A |
+| 2.1 → 3.4 (also after 1.5 F) | | after 2.1 |
+| 2.7 B, 2.8 b → 3.2 A → 3.2 B (also after 1.5 F) | | after 2.7 B and 2.8 b |
 
 ## Phase 3: expert depth
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| 3.1 | Rule editor upgrades | opus | todo | | | |
-| 3.2 | Editing at scale | opus | todo | | | |
-| 3.3 | Cancel, and keep the results | opus | todo | | | |
-| 3.4 | Build library and share links | opus | todo | | | |
+| [3.1](specs/3.1-rule-editor.md) | Rule editor upgrades | opus | spec | | | Spec final. One unit (17 existing, 11 new files). After 2.7 A and 2.8 a. Engine: rules never reach the blueprint, they only shape the planning run; a Conditional rule on a drill fails generation (blocked in the editor) |
+| [3.2](specs/3.2-editing-at-scale.md) | Editing at scale | opus | spec | | | Spec final. Two PRs: A (one inserter editor, draft dialogs, B26; one unit) after 2.7 B and 2.8 b; B (duplicate, reorder with Undo, bulk edit; two units) after A and 1.5 F |
+| [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus | spec | | | Spec final. One unit (20 existing, 12 new files). After 2.7 A and 1.5 F. `offerUndo` loses `resultsCleared` (also in 3.4) |
+| [3.4](specs/3.4-build-library.md) | Build library and share links | opus | spec | | | Spec final. One unit (8 existing, 9 new files). After 2.1 and 1.5 F |
 
 ## Decisions log
 
@@ -182,6 +184,32 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
 - 2026-10-14: `master` moved outside the rework: the owner merged #158 (engine fix for issue 152, release 0.9.1;
   24 files in `clock-generator/`). Done (coach run 4): `master` merged into `feat/ux-rework` at 2d6aff4; engine 734 tests and UI checks pass; generation tests run 38651863631 passed; both phase branches merge it cleanly, run the engine and generation tests there, and start the final PR's version bump from
   0.9.1.
+
+- 2026-10-14: Phase 1 end review ([reviews and synthesis](review/phase1-end/)). Owner: **the Undo offer ends when a check
+  or a generation starts** (review B; recommended); [PLAN.md](PLAN.md) 1.3 updated; built in the new item 1.5 F
+  (messages in the sticky header). Phase-end fixes on p1: the chip focus ring, the belt lane row at 390, the stale
+  "Clock-only output" copy.
+- 2026-10-14: Process coach run 5 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated). Applied: (1) Phase 3 scouts start now
+  and specs name the items they follow; (2) stack whenever the predecessor is only in review, fix, minors or owner check
+  (2.7 A on 2.5 A), and the install steps go to the owner alongside the minors round; (3) a chain edge needs a file or an
+  API, not a final layout: 2.9 runs after 2.5 B, beside 2.7; (4) the 20-file rule counts existing files only (2.1 is
+  one unit), and a two-unit chain head is passed over at most once; (5) a shared selector map and tooltip and menu
+  helpers in `lib.mjs`. Not paying off: the chain table went stale (re-derived now, after every unblocking merge).
+- 2026-10-14: 2.8 a: the spec's "science pack lists Logistic first" and "fluoroketone cold lists the fluid" can't hold
+  (ties keep data order; no picker lists fluids). The orchestrator changed both checks; the spec is corrected.
+
+- 2026-10-14: Phase 1 merged into `feat/ux-rework` (#170, merge commit 877989d; the owner approved; CI passed).
+- 2026-10-14: `master` moved again outside the rework: #166 (the even hands clock, release 0.10.0). Merged into
+  `feat/ux-rework` (3306841; engine 739 and UI tests pass; generation tests run 38661710992 passed) and on into
+  `feat/ux-rework-p2` (3e4c8d7). A scout found no UI change needed: the clock is grouped, named ("Fewest wake-ups" in
+  the card) and wired correctly. The final PR's version bump starts from 0.10.0.
+- 2026-10-14: Owner decisions after the Phase 1 end review: a target above what the machines can make **warns, doesn't
+  block** (2.1); drag reorder **stays with a message and Undo** and Move up/down (3.2); Diagram dialogs are **drafts
+  with Save** (3.2); the terms **"Your builds" and "share link"** are approved with **no new dependency** (3.4);
+  results storage **10 builds, about 64 MB, no fake-indexeddb** (3.3); the latched template **releases on the
+  source's level** like the owner's sample (3.1). [PLAN.md](PLAN.md) 2.1 and 3.1–3.4 updated; Phase 3 specs committed.
+- 2026-10-14: 2.5 A install steps: step 6 and the nothing-to-wire step were wrong for an inserter set to Never on (found
+  by the 3.1 spec writer); corrected, and the owner is asked how a player should keep one switched off in game.
 
 ## Open questions
 
@@ -315,7 +343,7 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
   selection); an intended exception. After 1.11 A merges, check no double ring on nodes.
 - 2.11 → 1.5: the untimed "Build imported. Undo" message sits over the fullscreen Diagram and can cover a node; close it
   or anchor it below the dialog's title bar when fullscreen opens.
-- 1.11 A → 2.9: at 390 a belt lane's Stack Size field is squeezed to 14px beside the lane delete button (unusable;
+- (Fixed at the Phase 1 end on p1.) 1.11 A → 2.9: at 390 a belt lane's Stack Size field is squeezed to 14px beside the lane delete button (unusable;
   axe target-size); pre-existing `BeltsForm` layout.
 - 1.11 A → 1.5: at 390 the message host draws "Build imported / Undo" over an open dialog (the changelog) and covers its
   text; stack messages below a modal's title bar or close them when a dialog opens.
@@ -358,7 +386,72 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 1.14 → 1.10/2.7: MUI's upper-casing turns "200/s" into "200/S" on the below-target Copy button.
 - 1.5 → 2.1: "No items selected for import." and the menu names (Reset Configuration, Import/Export Config) keep
   "configuration"/"config" until 2.1 renames them.
+- **Phase 1 end review:** the deduplicated new findings, each with an owner, are in
+  [review/phase1-end/SYNTHESIS.md](review/phase1-end/SYNTHESIS.md) section 3; the 16 not listed above are filed from
+  there at the end. Open owner questions: drag reorder renumbering (3.2), diagram dialog commit model (3.2), a target
+  above what the machines can make (block or warn).
+- 1.12 B on p2: the swing plan says "Each output inserter makes N swings", but N is the total over the first output
+  machine's inserters (`validate-config.ts:41-48`); pre-existing (1.12 spec Risks) → 2.5 B or the engine.
+- capture-wake-windows: the drills sample's "one row per inserter then drill" check fails on p2 (6 inserters and 1
+  drill against an expected developer-timeline count of 0); script or 2.5 B.
+- 2.5 A: in the nothing-to-wire case the bar still shows the yellow Copy blueprint → 2.7 A.
+- 2.8 a: knip inside `.claude/worktrees` lists the 3 `scripts/*.mjs` as unused (location only; passes elsewhere).
+- master 0.10.0: `SLOW_TASKS` (`useSimulationWorker.ts:87`) does not list `even-hands`; add it if timing shows it is
+  slow. The engine's even hands name and description use "hand" for a trip and a bare "window" → the engine-text pass
+  (2.5).
+- 2.5 A: when the first clock arrives with no belt, the belt action unmounts and focus can drop to the body.
 
 ## Retros
 
 One section per phase, written at the phase end.
+
+### Phase 1 (2026-10-14)
+
+**Result:** all 14 items merged in 13 PRs (#145–#164; three bundles: 1.5+1.3, 1.4+1.14, 1.6+1.7; 1.11 and 1.12 in two
+PRs each). The phase-end review (three opus designers, capture at 4 widths) graded 34 of 47 finding ids fixed and 13
+partly fixed. Measured: a11y 256 PASS / 10 FAIL, a11y-names 482 PASS / 1 FAIL, from two defects. Phase-end fixes on p1:
+the chip focus ring, the lane row at 390, the stale "Clock-only output" copy. 12 findings carried (below).
+
+**What went well**
+- Fix rounds stayed small: 11 of 14 items merged after one round, often minors only; 1.2 and 1.5+1.3 used both rounds.
+  No item hit the cap with a FIX outstanding.
+- Round-0 FIX verdicts caught real defects that capture alone would have shipped: focus under the header (1.2),
+  the polite region inside `#root` hidden by MUI's modal (1.5+1.3), prompt contrast (1.8), keyboard on the stale plan
+  (1.9), the Save bar over a field (1.11 A), focusable chips inside an accordion button (1.11 B).
+- Escalations were few and quick: the Undo timer (2.2.1 → owner: no timer), the 1.9 id question (owner), the 2.11
+  minZoom ruling (orchestrator).
+- Throughput rose with the coach's changes: 23.7 → 19.2 → 18 min per merge (runs 1–4); bundles, four units, zero-unit
+  waiting and read-only agents, and Phase 2 started early in idle slots (6 Phase 2 items merged before Phase 1 ended).
+- Model choices: opus implementers for anything touching layout, focus or the worker; sonnet did well on mechanical
+  breadth (1.12 B, 40 files, one round; 1.13; 1.11 B stacked on A). Opus code review throughout after the first three
+  Fable reviews.
+
+**What didn't**
+- Per-item captures check only the item's own states. 1.11 B made the Status chips focusable (`tabIndex={0}`) and
+  nobody ran the ring check on Results until the phase end: 8 FAILs. → Run the full `a11y` capture before the last
+  a11y-touching item of a phase merges.
+- A follow-up was routed to an item whose scope excludes it: the 390 lane field went to 2.9, which requires nothing
+  below 720. → When ledgering to an item, check its spec's scope; measured AA failures stay with the phase that can fix
+  them.
+- Copy drift between items: 1.10 renamed a column, and the sentence naming it (one line from 1.12 B's edit) kept the old
+  name. → The glossary pass greps for every renamed header and label, not only the glossary terms.
+- The untimed Undo message was flagged by three audits during the phase (1.11 A, 2.11, 2.4) and still shipped over the
+  page; all three phase-end reviewers raised it. A raised-priority follow-up needs an owner and a slot at once (now 1.5 F).
+- A 48-minute stall after a restart (coach run 4) before agents were resumed.
+
+**Carried into Phase 2/3:** A6 (red count on a blank form → 2.1), A16 and B27 (target range check, select-on-focus,
+silent fallback → owner Q4), A25/B32/C30 (Stable/Unstable, Fuel copy → 2.5 B; Paste "items" → 2.1; legend chips → follow-up),
+B14 and C7 (compact table, sorting → 2.5 B; widths → 2.9; chip colour → 2.7 A), C3 (one filled button → 2.7 A),
+C10 (hover-only help → 2.7 A, 2.5 B Terms), C24 (red trash, row grid, empty slots → 2.7 A/B), C26 (durations,
+Insights alignment → 2.5 B).
+
+**New findings:** 53 deduplicated; 8 already fixed on p2 (2.3, 2.4, 2.10, 2.11); 3 fixed at phase end; Undo lifetime
+and messages over dialogs → 1.5 F; reorder renumbering, diagram commit model, target check → owner; the rest → 2.1,
+2.5 B, 2.7 A/B, 2.8, 2.9, 3.2, 3.3 or Follow-ups (16 new lines added).
+
+**PLAN.md changes:** 1.3 (made: the owner chose that the Undo offer ends when a check or generation starts); 2.1 (a blank build shows its
+next step neutrally, not as red problems); 2.5 B (gains: the clock (i) popover, the blueprint string's padding, the
+recommended row first, "Copied" reset on a change, Debug Output while generating); 2.9 (header height and the reason
+line); 3.2 (reorder message and Undo per Q2, diagram dialogs per Q3); 3.3 (Undo of an import restores the clocks; the
+stale banner lists what changed). Ledger corrections: 2.2's "A17 fixed" → only the export part (2.1 owns the warning);
+close line 318 (lane field, fixed on p1).
