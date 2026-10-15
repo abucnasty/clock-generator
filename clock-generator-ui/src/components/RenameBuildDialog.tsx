@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 interface RenameBuildDialogProps {
     open: boolean;
-    /** The build's own name, or '' when it is named after its target recipe */
+    /** The name the build shows: its own, or its recipe's when it is named after its target recipe */
     initialName: string;
     /** The text as typed; the caller cleans it */
     onSave: (name: string) => void;

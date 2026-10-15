@@ -42,8 +42,8 @@ function returnTarget(record: ReturnFocus): HTMLElement | null {
  * The safety net for the actions that throw part of the build away: each says what it did in a message with an Undo
  * button, which puts the whole form back as it was just before. Ctrl+Z (Cmd+Z) does the same while Undo is offered,
  * outside a text field and an editing dialog. There is one slot, and no timer: the offer lasts until another action
- * replaces it, the message is closed, an editing dialog opens, the player starts a check or a generation, or the form
- * changes some other way, since putting the old form back would also throw that change away.
+ * replaces it, the message is closed, an editing dialog opens, the player starts a check or a generation or opens
+ * another build, or the form changes some other way, since putting the old form back would also throw that change away.
  */
 export function useUndo(
     config: ConfigFormData,
