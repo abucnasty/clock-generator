@@ -22,7 +22,7 @@ export const SIDECAR_COPY_STEPS = [
 
 export const INTRO_HEADING = 'Make a clock for your build';
 export const INTRO_SENTENCE =
-    'This tool makes a circuit clock that switches your inserters on only when they have work, so your build keeps the rate you want and costs less UPS.';
+    'This tool makes a circuit clock that switches your inserters on only when they have work, so your build holds the rate you want and costs less UPS.';
 export const INTRO_STEPS = {
     getBuildIn: 'Get your build in. With the Sidecar mod:',
     getBuildInLast: 'Then click Paste from Factorio here.',
@@ -63,17 +63,25 @@ export const PASTE_PROMPTS: Record<SidecarExportProblem | ClipboardProblem, Past
     },
 };
 
+/** The mod's export, said once in the Paste from Factorio dialog: the word the prompts use */
+export const EXPORT_DEFINITION = 'it copies the build as text, its export.';
+
 /** A sentence ends with a full stop, so the next one can follow it */
 const asSentence = (text: string) => {
     const trimmed = text.trim();
     return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 };
 
-/** The export was read but an entry in it is not one the generator can use */
+/**
+ * The export was read but an entry in it is not one the generator can use. The engine's message ("Invalid machine at
+ * index 0: …") gives the kind and the place; the player sees those, numbered from 1, and never the schema's own words.
+ */
 export function invalidExportPrompt(message: string): PastePrompt {
+    const where = /^Invalid (machine|drill|inserter|belt|chest) at index (\d+)/.exec(message);
+    const problem = where ? `The export has a problem with ${where[1]} ${Number(where[2]) + 1}.` : 'The export has a problem.';
     return {
         severity: 'error',
-        text: `The export has a problem: ${asSentence(message)} Copy it again from Factorio. If it keeps happening, update the Sidecar mod.`,
+        text: `${problem} Copy it again from Factorio. If it keeps happening, update the Sidecar mod.`,
     };
 }
 

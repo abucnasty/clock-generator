@@ -606,13 +606,13 @@ try {
         // ------------------------------------------------------------------------------------ B. 1.5 messages
         await rec.step('B import ok', async () => {
             await goConfigure(page);
-            await messageState(page, rec, 'msg-import-ok', { re: /^Build imported\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), desc: 'Import Config with the logistic sample: the import message' });
-            await messageState(page, rec, 'msg-import-ok', { re: /^Build imported\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), scrolled: true, desc: 'Import Config with the logistic sample' });
+            await messageState(page, rec, 'msg-import-ok', { re: /^Build file opened\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), desc: 'Open build file… with the logistic sample: the message' });
+            await messageState(page, rec, 'msg-import-ok', { re: /^Build file opened\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), scrolled: true, desc: 'Open build file… with the logistic sample' });
         }, page);
 
         await rec.step('B export, and a repeat restarts the timer', async () => {
-            await messageState(page, rec, 'msg-export', { re: /^Build exported\./, run: exportConfig, contrastOn: true, desc: 'Export Config: "Build exported."' });
-            await messageState(page, rec, 'msg-export', { re: /^Build exported\./, run: exportConfig, scrolled: true, desc: 'Export Config' });
+            await messageState(page, rec, 'msg-export', { re: /^Build saved to a file\./, run: exportConfig, contrastOn: true, desc: 'Save build file: "Build saved to a file."' });
+            await messageState(page, rec, 'msg-export', { re: /^Build saved to a file\./, run: exportConfig, scrolled: true, desc: 'Save build file' });
             // the repeat: second click 4 s after the first; the message must still be on screen 7 s after the first click and 5 s after the second
             await dismissMessage(page);
             await scrollTo(page, 0);
@@ -769,13 +769,13 @@ try {
                     rgb: m3 ? [Number(m3[1]), Number(m3[2]), Number(m3[3])] : null,
                 };
             });
-            rec.check('Reset menu: Reset Configuration is the last item', info.names[info.names.length - 1] === 'Reset Configuration', info.names.join(', '));
+            rec.check('Reset menu: Reset build is the last item', info.names[info.names.length - 1] === 'Reset build', info.names.join(', '));
             rec.check('Reset menu: a divider sits directly before it (at every width)', info.dividerBefore);
             rec.check('Reset menu: it is in the error colour (red)', !!info.rgb && info.rgb[0] >= 180 && info.rgb[1] <= 140 && info.rgb[2] <= 140, info.color);
-            const reset = menu.getByRole('menuitem', { name: 'Reset Configuration' });
+            const reset = menu.getByRole('menuitem', { name: 'Reset build' });
             await contrastPairs(page, [
-                { name: 'Reset Configuration text against the open menu (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true },
-                { name: 'Reset Configuration icon', locator: reset.locator('svg').first(), required: 3 },
+                { name: 'Reset build text against the open menu (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true },
+                { name: 'Reset build icon', locator: reset.locator('svg').first(), required: 3 },
             ], rec);
             // and while it is hovered, and focused from the keyboard (MUI lightens the item's background for both)
             await reset.hover();

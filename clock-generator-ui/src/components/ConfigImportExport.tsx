@@ -12,6 +12,7 @@ import { looksLikeSidecarExport, readSidecarExport } from '../utils/sidecarExpor
 import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, type PastePrompt } from '../utils/sidecarGuide';
 import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
+import { focusTargetOutputHeading } from '../utils/introCard';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -112,8 +113,11 @@ export function ConfigImportExport({
     });
 
     // the Paste from Factorio dialog, open when the clipboard could not be used, with why
-    const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null } | null>(null);
-    const [pasteBusy, setPasteBusy] = useState(false);
+    const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number } | null>(null);
+    const promptCountRef = useRef(0);
+    const showPastePrompt = useCallback((prompt: PastePrompt) => setPasteDialog({ prompt, id: ++promptCountRef.current }), []);
+    // what had the focus when the confirm dialog opened, for it to go back to; see handleConfirmExited
+    const confirmOpenerRef = useRef<Element | null>(null);
     const [examplesOpen, setExamplesOpen] = useState(false);
 
     const handleExport = useCallback(() => {
@@ -174,6 +178,7 @@ export function ConfigImportExport({
         }
         const suggestion = Option.toNullable(validated.suggested_target);
         const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source } : null;
+        confirmOpenerRef.current = document.activeElement;
         setPendingImport({ ...validated, miningProductivityLevel: read.miningProductivityLevel, fill });
         // everything there is, except a target the player has already set; the first exports had machines only
         setImportSelections({
@@ -199,7 +204,7 @@ export function ConfigImportExport({
                     // an export of the mod saved to a file goes to the paste
                     const prompt = await startPaste(content);
                     if (prompt) {
-                        setPasteDialog({ prompt });
+                        showPastePrompt(prompt);
                     }
                 } else {
                     await importConfigText(content, UNDO_IMPORT_MESSAGE);
@@ -212,7 +217,7 @@ export function ConfigImportExport({
             // Reset the input so the same file can be opened again
             input.value = '';
         },
-        [startPaste, importConfigText, notify]
+        [startPaste, importConfigText, notify, showPastePrompt]
     );
 
     // the clipboard is read in the click itself: a browser refuses a read after an await or a timer
@@ -228,24 +233,26 @@ export function ConfigImportExport({
             async (text) => {
                 const prompt = await startPaste(text);
                 if (prompt) {
-                    setPasteDialog({ prompt });
+                    showPastePrompt(prompt);
                 }
             },
-            () => setPasteDialog({ prompt: PASTE_PROMPTS.unreadable }),
+            () => showPastePrompt(PASTE_PROMPTS.unreadable),
         );
-    }, [startPaste]);
+    }, [startPaste, showPastePrompt]);
 
     // a paste into the dialog's box, or Continue; one at a time
     const pasteBusyRef = useRef(false);
     const handlePasteSubmit = useCallback(async (text: string) => {
         if (pasteBusyRef.current) return;
         pasteBusyRef.current = true;
-        setPasteBusy(true);
         const prompt = await startPaste(text);
         pasteBusyRef.current = false;
-        setPasteBusy(false);
-        setPasteDialog(prompt ? { prompt } : null);
-    }, [startPaste]);
+        if (prompt) {
+            showPastePrompt(prompt);
+        } else {
+            setPasteDialog(null);
+        }
+    }, [startPaste, showPastePrompt]);
 
     const handleClosePasteDialog = useCallback(() => setPasteDialog(null), []);
 
@@ -323,6 +330,18 @@ export function ConfigImportExport({
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);
+    }, []);
+
+    // the dialog puts the focus back itself: on its opener, unless an import took that off the page (the intro card's
+    // Paste button, or the paste box), then on the Target Output heading rather than the page's body
+    const handleConfirmExited = useCallback(() => {
+        const opener = confirmOpenerRef.current;
+        confirmOpenerRef.current = null;
+        if (opener instanceof HTMLElement && opener.isConnected) {
+            opener.focus();
+        } else {
+            focusTargetOutputHeading();
+        }
     }, []);
 
     const handleSelectionChange = useCallback((key: keyof ImportSelections) => {
@@ -464,7 +483,14 @@ export function ConfigImportExport({
             />
 
             {/* Import Confirmation Dialog */}
-            <Dialog open={pendingImport !== null} onClose={handleCancelImport} maxWidth="sm" fullWidth>
+            <Dialog
+                open={pendingImport !== null}
+                onClose={handleCancelImport}
+                maxWidth="sm"
+                fullWidth
+                disableRestoreFocus
+                slotProps={{ transition: { onExited: handleConfirmExited } }}
+            >
                 <DialogTitle>Confirm Import from Factorio</DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" sx={{ mb: 2 }}>
@@ -571,7 +597,7 @@ export function ConfigImportExport({
             {pasteDialog && (
                 <PasteFromFactorioDialog
                     prompt={pasteDialog.prompt}
-                    busy={pasteBusy}
+                    promptId={pasteDialog.id}
                     onSubmit={handlePasteSubmit}
                     onClose={handleClosePasteDialog}
                 />

@@ -1,5 +1,7 @@
 import { Close, ContentPaste } from '@mui/icons-material';
 import { Box, Button, IconButton, Link, Paper, Typography } from '@mui/material';
+import { useLayoutEffect, useRef } from 'react';
+import { focusTargetOutputHeading } from '../utils/introCard';
 import {
     INTRO_BUTTONS,
     INTRO_HEADING,
@@ -47,8 +49,20 @@ interface IntroCardProps {
  * and the ways in. Paste from Factorio is the next step; an example and building by hand are the others.
  */
 export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: IntroCardProps) {
+    // when the card goes (hidden, or the build replaced) with the focus in it, the focus moves to the Target Output
+    // heading below it instead of falling to the page. Run before the card leaves the page, while the focus is still in it
+    const rootRef = useRef<HTMLElement>(null);
+    useLayoutEffect(() => {
+        const root = rootRef.current;
+        return () => {
+            if (root?.contains(document.activeElement)) {
+                focusTargetOutputHeading();
+            }
+        };
+    }, []);
+
     return (
-        <Paper component="section" aria-labelledby={HEADING_ID} sx={{ p: 2, mb: 2 }}>
+        <Paper ref={rootRef} component="section" aria-labelledby={HEADING_ID} sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                 <Typography id={HEADING_ID} variant="h6" component="h2" sx={{ flex: 1 }}>
                     {INTRO_HEADING}

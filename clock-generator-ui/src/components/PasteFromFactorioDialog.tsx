@@ -1,15 +1,17 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material';
-import { useState } from 'react';
-import { PASTE_DIALOG, SIDECAR_NEEDS, type PastePrompt } from '../utils/sidecarGuide';
+import { useEffect, useRef, useState } from 'react';
+import { useAnnounce } from '../hooks/useMessages';
+import { EXPORT_DEFINITION, PASTE_DIALOG, SIDECAR_NEEDS, type PastePrompt } from '../utils/sidecarGuide';
 import { SidecarCopySteps, SidecarModLink } from './IntroCard';
 
 const TITLE_ID = 'paste-from-factorio-title';
+const PROMPT_ID = 'paste-from-factorio-prompt';
 
 interface PasteFromFactorioDialogProps {
     /** Why the clipboard could not be used; null when there is nothing to say */
     prompt: PastePrompt | null;
-    /** While what was pasted is being read */
-    busy: boolean;
+    /** A new number for each prompt, so the same failure twice is read out twice */
+    promptId: number;
     onSubmit: (text: string) => void;
     onClose: () => void;
 }
@@ -18,20 +20,31 @@ interface PasteFromFactorioDialogProps {
  * Opens when Paste from Factorio cannot use the clipboard: why, how to copy the build with the mod, and a box to paste
  * it into. A paste into the box carries on at once; Continue sends what was typed or changed. Open while mounted.
  */
-export function PasteFromFactorioDialog({ prompt, busy, onSubmit, onClose }: PasteFromFactorioDialogProps) {
+export function PasteFromFactorioDialog({ prompt, promptId, onSubmit, onClose }: PasteFromFactorioDialogProps) {
     const [text, setText] = useState('');
+    const announce = useAnnounce();
+    // the dialog's description reads the prompt it opens with; each later one (after a paste in the box or Continue, the
+    // same failure again too) is read out through the page's live region
+    const promptText = prompt?.text ?? null;
+    const openedWithRef = useRef(promptId);
+    useEffect(() => {
+        if (promptText && promptId !== openedWithRef.current) {
+            announce(promptText);
+        }
+    }, [promptId, promptText, announce]);
 
     return (
-        <Dialog open onClose={onClose} maxWidth="sm" fullWidth aria-labelledby={TITLE_ID}>
+        <Dialog open onClose={onClose} maxWidth="sm" fullWidth aria-labelledby={TITLE_ID} aria-describedby={prompt ? PROMPT_ID : undefined}>
             <DialogTitle id={TITLE_ID}>{PASTE_DIALOG.title}</DialogTitle>
             <DialogContent>
                 {prompt && (
-                    <Alert severity={prompt.severity} sx={{ mb: 2 }}>
+                    // not an alert of its own: it is read out once, through the page's live region
+                    <Alert id={PROMPT_ID} role="none" severity={prompt.severity} sx={{ mb: 2 }}>
                         {prompt.text}
                     </Alert>
                 )}
                 <Typography variant="body2" component="div">
-                    Copy your build with the <SidecarModLink />. {SIDECAR_NEEDS}
+                    Copy your build with the <SidecarModLink />: {EXPORT_DEFINITION} {SIDECAR_NEEDS}
                     <SidecarCopySteps />
                     {PASTE_DIALOG.boxStep}
                 </Typography>
@@ -52,7 +65,8 @@ export function PasteFromFactorioDialog({ prompt, busy, onSubmit, onClose }: Pas
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>{PASTE_DIALOG.cancel}</Button>
-                <Button variant="contained" color="secondary" disabled={busy || text.trim() === ''} onClick={() => onSubmit(text)}>
+                {/* stays focusable while a paste is read: the parent takes one at a time */}
+                <Button variant="contained" color="secondary" disabled={text.trim() === ''} onClick={() => onSubmit(text)}>
                     {PASTE_DIALOG.continue}
                 </Button>
             </DialogActions>

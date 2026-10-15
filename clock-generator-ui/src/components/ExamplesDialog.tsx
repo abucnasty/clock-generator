@@ -59,8 +59,9 @@ export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
                     </Typography>
                 ) : (
                     <List dense disablePadding>
-                        {examples.map((example) => (
-                            <ListItemButton key={example.id} onClick={() => onPick(example)}>
+                        {examples.map((example, index) => (
+                            // the focus starts on the first build once the list is there
+                            <ListItemButton key={example.id} autoFocus={index === 0} onClick={() => onPick(example)}>
                                 <ListItemIcon sx={{ minWidth: 40 }}>
                                     <FactorioIcon name={example.recipe} size={28} alt="" />
                                 </ListItemIcon>
