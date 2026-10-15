@@ -38,9 +38,9 @@ try {
             if (width >= 720) {
                 await rec.step('how-made tooltip', async () => {
                     // an icon with an aria-label (aria-hidden, so not a "button" to the accessibility tree)
-                    await page.locator('[aria-label^="How "][aria-label$=" is made"]').nth(2).hover();
+                    await page.locator('table [aria-label^="About "][aria-haspopup="dialog"]').nth(2).hover();
                     await settle(page, 900);
-                    await rec.shot(page, 'alternative-how-made-tooltip', { desc: 'Results: hovering the (i) icon next to the selected potential clock ("How <clock> is made")' });
+                    await rec.shot(page, 'alternative-how-made-tooltip', { desc: 'Results: hovering the (i) icon next to the selected potential clock ("About <clock>")' });
                     await page.mouse.move(0, 0);
                 }, page);
             }

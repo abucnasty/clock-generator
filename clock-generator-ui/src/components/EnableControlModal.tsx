@@ -349,8 +349,8 @@ export function EnableControlFormContent({
                             )}
                         </Box>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                            {onCancel && <Button onClick={onCancel}>Cancel</Button>}
-                            <Button onClick={handleSave} variant="contained" color="primary">
+                            {onCancel && <Button onClick={onCancel} color="inherit">Cancel</Button>}
+                            <Button onClick={handleSave} variant="contained" color="secondary">
                                 Save
                             </Button>
                         </Box>

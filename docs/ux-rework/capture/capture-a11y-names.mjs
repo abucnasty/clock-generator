@@ -535,13 +535,13 @@ const STEP_LIST = [
             // an open popover hides the page from role queries (aria-hidden), so keep the table by a marker as well
             await tableRole.evaluate((el) => el.setAttribute('data-ux-table', '')).catch(() => {});
             const table = page.locator('[data-ux-table]');
-            const infoName = /^How .+ is made$/; // SELECTOR: confirm (clockHelpName)
+            const infoName = /^About .+$/; // SELECTOR: confirm (clockHelpName; 2.7 renamed it from "How … is made")
             const infos = table.getByRole('button', { name: infoName });
             if ((await infos.count()) === 0) {
-                rec.check('the (i) next to a clock is a button named "How {clock} is made"', false, 'no such button in the clock table');
+                rec.check('the (i) next to a clock is a button named "About {clock}"', false, 'no such button in the clock table');
                 return;
             }
-            rec.check('the (i) next to a clock is a button named "How {clock} is made"', true, `${await infos.count()} buttons, e.g. "${await accessibleName(page, infos.first())}"`);
+            rec.check('the (i) next to a clock is a button named "About {clock}"', true, `${await infos.count()} buttons, e.g. "${await accessibleName(page, infos.first())}"`);
             // Tab from the selected clock's radio reaches the selected row's (i)
             const selectedRow = table.locator('tr').filter({ has: page.locator('input[type=radio]:checked') });
             const infoRole = selectedRow.getByRole('button', { name: infoName });

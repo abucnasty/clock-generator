@@ -73,7 +73,7 @@ export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={onClose} color="inherit">Cancel</Button>
             </DialogActions>
         </Dialog>
     );

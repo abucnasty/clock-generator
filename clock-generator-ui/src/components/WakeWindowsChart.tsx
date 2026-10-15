@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import { InfoOutlined, Loop, MoreTime, TimerOutlined, TrendingUp } from '@mui/icons-material';
+import { Loop, MoreTime, TimerOutlined, ToggleOnOutlined, TrendingUp } from '@mui/icons-material';
 import {
     memo,
     useCallback,
@@ -211,7 +211,8 @@ function Track({ row, periodTicks, marks, selectedIndex, ticksPerPx, onTap }: Tr
 
 /** An icon for each kind of note, so a note never rests on colour alone; the words carry the meaning */
 const NOTE_ICONS: Record<WatchNoteKind, ComponentType<{ fontSize?: 'inherit'; 'aria-hidden'?: boolean }>> = {
-    'mostly-on': InfoOutlined,
+    // a switch that is on, not an (i): that is the help control's look
+    'mostly-on': ToggleOnOutlined,
     slack: MoreTime,
     short: TimerOutlined,
     wraps: Loop,

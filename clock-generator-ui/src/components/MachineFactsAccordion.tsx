@@ -23,7 +23,7 @@ interface MachineFactsAccordionProps {
 export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionProps) {
     if (error) {
         return (
-            <Typography variant="caption" color="error">
+            <Typography variant="caption" sx={{ color: 'error.light' }}>
                 Error computing facts: {error}
             </Typography>
         );
@@ -61,7 +61,6 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     <Chip
                         size="small"
                         label={maxRateLabel(facts.output_rate_per_second)}
-                        color="primary"
                         variant="outlined"
                         sx={{ height: 20, fontSize: '0.7rem' }}
                     />
@@ -205,7 +204,6 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                 <Chip
                                                     size="small"
                                                     label={`limit: ${input.automated_insertion_limit}`}
-                                                    color="secondary"
                                                     variant="outlined"
                                                     sx={{ height: 20, fontSize: '0.7rem' }}
                                                 />

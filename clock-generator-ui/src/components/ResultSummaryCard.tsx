@@ -1,6 +1,6 @@
-import { Cancel, Check, CheckCircle, ContentCopy, HelpOutline, Warning } from '@mui/icons-material';
-import { Alert, Box, Button, Chip, Paper, Typography } from '@mui/material';
-import { useEffect, useId, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { Cancel, Check, CheckCircle, ContentCopy, RemoveCircleOutline, Warning } from '@mui/icons-material';
+import { Alert, Box, Button, Typography } from '@mui/material';
+import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
 import {
     beltLine,
@@ -15,7 +15,10 @@ import {
 import { REQUIRES_FACTORIO, needsNoClock } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { buildWakeWindowRows } from '../utils/wakeWindows';
+import { SURFACE } from '../theme/tokens';
 import { InstallSteps } from './InstallSteps';
+import { Panel } from './Panel';
+import { RecommendedChip } from './RecommendedChip';
 import { CopyLabel } from './WorkflowBar';
 
 /** Every string of the card that is not the clock's own, in one place */
@@ -47,6 +50,8 @@ interface ResultSummaryCardProps {
     onCopy: () => void;
     /** "Copy blueprint", "Copy blueprint (192/s, below target)" or "Copy old clock…" */
     copyLabel: string;
+    /** The Copy is the page's one filled button: the clocks are fresh and nothing runs */
+    copyIsNextStep: boolean;
     /** What to warn of for the selected clock; null when nothing */
     rateWarning: string | null;
     /** The clocks are for an earlier build */
@@ -61,7 +66,8 @@ interface ResultSummaryCardProps {
 /** One fact of the clock in an inset tile: its name, the value, and a line under it */
 function Tile({ label, value, sub, icon }: { label: string; value: string; sub: string; icon?: ReactNode }) {
     return (
-        <Box sx={{ bgcolor: 'background.default', p: 1.5, minWidth: 0 }} data-summary-tile={label}>
+        // a row of the card, as an entity row is on Configure
+        <Box sx={{ bgcolor: SURFACE.row, p: 1.5, minWidth: 0 }} data-summary-tile={label}>
             <Typography variant="body2" color="text.secondary" component="p">{label}</Typography>
             <Typography variant="h6" component="p" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }} data-tile-value>
                 {icon}
@@ -75,7 +81,8 @@ function Tile({ label, value, sub, icon }: { label: string; value: string; sub: 
 const RECOVERS_ICON = {
     'yes': <CheckCircle fontSize="small" aria-hidden sx={{ color: 'secondary.light' }} />,
     'no': <Cancel fontSize="small" aria-hidden sx={{ color: 'warning.main' }} />,
-    'not-tested': <HelpOutline fontSize="small" aria-hidden sx={{ color: 'text.secondary' }} />,
+    // not a "?": that is the help control's icon
+    'not-tested': <RemoveCircleOutline fontSize="small" aria-hidden sx={{ color: 'text.secondary' }} />,
 } as const;
 
 type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView };
@@ -106,12 +113,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                     {plainClockName(alternatives, selectedIndex)}
                 </Typography>
                 {isRecommended && (
-                    <Chip
-                        size="small"
-                        color="primary"
-                        label={isGenerating ? RECOMMENDED_COPY.chipWhileGenerating : RECOMMENDED_COPY.chip}
-                        data-card-chip
-                    />
+                    <RecommendedChip isGenerating={isGenerating} data-card-chip="" />
                 )}
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-engine-name>
@@ -172,10 +174,11 @@ function ClockCopy(props: SelectedProps) {
             {/* a build that needs no clock has nothing to copy: the steps say so (a stale one keeps "Copy old clock…") */}
             {(props.stale || !needsNoClock(selected.install)) && <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 1, mt: 2 }}>
                 <Button
-                    // the one filled green button of the page; yellow with the warning icon when there is something to
-                    // warn of, and outlined for an earlier build's clock, the copy to think twice about
-                    variant={props.stale ? 'outlined' : 'contained'}
-                    color={warns ? 'warning' : 'secondary'}
+                    // the one filled green button of the page while the clocks are fresh; yellow with the warning icon
+                    // when there is something to warn of. Outlined while Generate is the next step (a run, or a changed
+                    // build, whose old clock is the copy to think twice about)
+                    variant={props.copyIsNextStep && !props.stale ? 'contained' : 'outlined'}
+                    color={warns ? 'warning' : props.copyIsNextStep ? 'secondary' : 'inherit'}
                     onClick={props.onCopy}
                     startIcon={props.copied ? <Check /> : warns ? <Warning /> : <ContentCopy />}
                     data-card-copy
@@ -196,7 +199,6 @@ function ClockCopy(props: SelectedProps) {
  */
 export function ResultSummaryCard(props: ResultSummaryCardProps) {
     const { alternatives, selectedIndex, isGenerating } = props;
-    const headingId = useId();
     const nameRef = useRef<HTMLHeadingElement>(null);
     const selected = alternatives[selectedIndex];
 
@@ -220,8 +222,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     // focus, when the run it starts empties the list of clocks
     const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     return (
-        <Paper variant="outlined" component="section" aria-labelledby={headingId} sx={{ p: 2, mb: 2 }} data-result-card>
-            <Typography id={headingId} component="h2" variant="h6">{CARD_COPY.heading}</Typography>
+        <Panel title={CARD_COPY.heading} data-result-card="">
             {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
@@ -234,6 +235,6 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                 {showBeltAction && props.beltAction}
             </Box>
             {selected ? <ClockCopy {...props} selected={selected} /> : null}
-        </Paper>
+        </Panel>
     );
 }

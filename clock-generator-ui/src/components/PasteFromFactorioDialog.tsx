@@ -64,7 +64,7 @@ export function PasteFromFactorioDialog({ prompt, promptId, onSubmit, onClose }:
                 />
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>{PASTE_DIALOG.cancel}</Button>
+                <Button onClick={onClose} color="inherit">{PASTE_DIALOG.cancel}</Button>
                 {/* stays focusable while a paste is read: the parent takes one at a time */}
                 <Button variant="contained" color="secondary" disabled={text.trim() === ''} onClick={() => onSubmit(text)}>
                     {PASTE_DIALOG.continue}
