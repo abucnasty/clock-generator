@@ -25,9 +25,8 @@ interface ClockRow<T> {
 export const RECOMMENDED_COPY = {
     chip: 'Recommended',
     chipWhileGenerating: 'Best so far',
-    intro: 'Each clock was tested in the simulator. Select a row to see its blueprint and timelines.',
-    lead: (label: string) => `Recommended: ${label}.`,
-    leadWhileGenerating: (label: string) => `Best so far: ${label}.`,
+    intro: 'Each clock was tested in the simulator. Select a row to show it in Your clock above. Fewer wake-ups are '
+        + 'better: each one costs a little UPS.',
     backToRecommended: 'Back to recommended',
     backWhileGenerating: 'Back to the pick',
     unstableDivider: 'Unstable clocks',
@@ -36,8 +35,9 @@ export const RECOMMENDED_COPY = {
         'Each clock is tested in the simulator, driven only by its wake windows and started at several points. A '
             + 'clock that holds the target rate is then starved (each input stops arriving for a while) and jammed '
             + '(each output stops being taken away for a while), and the build has to get back to its rate by itself. '
-            + 'A clock that does all of that is Stable.',
-        'The clock picked for you is the Stable one with the fewest wake-ups; on a build with a deadlock risk, the one '
+            + 'A clock that does all of that holds the rate and recovers.',
+        'The clock picked for you is the one that holds the rate and recovers with the fewest wake-ups; on a build '
+            + 'with a deadlock risk, the one '
             + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one with fewer wake '
             + 'windows. If none qualifies, the one that runs nearest to the target rate.',
         'A clock made for a moving belt keeps each belt inserter\'s wake window open a few ticks longer (belt slack). '
@@ -47,15 +47,18 @@ export const RECOMMENDED_COPY = {
     runMovingBelts: 'This run assumed moving belts.',
     runStillBelts: 'This run assumed belts that stand still.',
     runSearched: 'The slower searches for fewer wake-ups were run.',
-    runSearchedWhenNeeded: 'The slower searches were only run if no other clock was stable.',
+    runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered.',
     provisional: 'More clocks are still being made, so this may change. ',
     beltStill: ' with belts that stand still',
     beltMoving: ' on a moving belt',
-    /** The clocks the pick was compared with: the Stable ones, or on a build with a deadlock risk those that hold the rate */
-    contenders: (rate: string, deadlock: boolean) => deadlock ? `the clocks that hold ${rate}/s` : `the Stable clocks at ${rate}/s`,
+    /**
+     * The clocks the pick was compared with: those that hold the rate and recover, or on a build with a deadlock risk
+     * those that hold the rate (the glossary's words, not the table's old "Stable")
+     */
+    contenders: (rate: string, deadlock: boolean) => deadlock ? `the clocks that hold ${rate}/s` : `the clocks that hold ${rate}/s and recover`,
     fewestWakeUps: (contenders: string, belt: string) => `Fewest wake-ups among ${contenders}${belt}.`,
     onlyContender: (rate: string, belt: string, deadlock: boolean) =>
-        deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only Stable clock at ${rate}/s${belt}.`,
+        deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and recovers${belt}.`,
     wakeUpsNotCounted: (contenders: string, belt: string) =>
         `Fewest wake windows among ${contenders}${belt}. Wake-ups could not be counted for them.`,
     tieOnWakeUps: (others: number, kind: string) =>
@@ -69,13 +72,13 @@ export const RECOMMENDED_COPY = {
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
         ? `No clock made for a moving belt holds ${rate}/s.`
-        : `No Stable clock made for a moving belt runs at ${rate}/s.`,
+        : `No clock made for a moving belt holds ${rate}/s and recovers.`,
     stillOnly: ' This one, made for belts that stand still, does.',
     stillFewestWakeUps: ' Of those made for belts that stand still, this one has the fewest wake-ups.',
     stillWakeUpsNotCounted: ' Of those made for belts that stand still, this one has the fewest wake windows; wake-ups '
         + 'could not be counted for them.',
     mayFailOnMovingBelt: ' It may fail on a moving belt.',
-    noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No Stable clock runs at ${rate}/s.`,
+    noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and recovers.`,
     atRateHolds: (rate: string, fewest: boolean) =>
         ` This one holds ${rate}/s from a clean start${fewest ? ' with the fewest wake-ups' : ''}.`,
     atRateRuns: (rate: string, fewest: boolean) => ` This one runs at ${rate}/s${fewest ? ' with the fewest wake-ups' : ''}.`,
@@ -213,11 +216,18 @@ export function disclosureRunLine(rule: PickRule | null): string {
         + (rule?.searchedForFewerWakeUps ? RECOMMENDED_COPY.runSearched : RECOMMENDED_COPY.runSearchedWhenNeeded);
 }
 
+/** The recommended clock's row first, the others in the order given */
+function recommendedFirst<T>(rows: ClockRow<T>[], recommendedIndex: number | null): ClockRow<T>[] {
+    const recommended = rows.filter(({ index }) => index === recommendedIndex);
+    return recommended.length === 0 ? rows : [...recommended, ...rows.filter(({ index }) => index !== recommendedIndex)];
+}
+
 /**
  * The rows of the clock table in two groups: the stable clocks, then the others under a divider, so showing the
  * unstable ones never moves a stable row. While the unstable ones are hidden (and something is stable) only the selected
  * and the recommended of them stay. Shown, the rows in `pinnedIds` (those that stayed while hidden) come first in the
- * group, so showing the others does not move them either; the rest follow in list order.
+ * group, so showing the others does not move them either; the rest follow in list order. The recommended clock is
+ * first in its group, so the answer leads the table.
  */
 export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | 'verdict'>>(
     alternatives: T[],
@@ -236,8 +246,8 @@ export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | '
             ...allUnstable.filter(({ alternative }) => !pinned.has(alternative.id)),
         ];
     return {
-        stable,
-        unstable,
+        stable: recommendedFirst(stable, options.recommendedIndex),
+        unstable: recommendedFirst(unstable, options.recommendedIndex),
         unstableCount: allUnstable.length,
         hiddenCount: allUnstable.length - unstable.length,
         anyStable,

@@ -72,8 +72,10 @@ export const INSTALL_COPY = {
     },
     others: {
         title: 'Leave the other inserters alone.',
-        // the engine gives no wake windows, so no combinator, to an inserter set to Always on or Never on; Never on is
-        // the simulator's setting, and an unwired inserter in the game runs all the time, so the player keeps it off
+        // the engine gives no wake windows, so no combinator, to an inserter set to Always on. Never on is the
+        // simulator's setting, which the engine does not always keep out of the clock (some builds still put such an
+        // inserter in the list: an engine follow-up); an unwired inserter in the game runs all the time, so the player
+        // keeps it off
         detail: 'An inserter that is not in the list gets no combinator. One set to Always on, or with nothing to wait '
             + 'for, runs all the time: do not wire it. One set to Never on is never switched on by the clock: keep it '
             + 'off in the game yourself. If this clock replaces an older one, an inserter the old clock switched and '

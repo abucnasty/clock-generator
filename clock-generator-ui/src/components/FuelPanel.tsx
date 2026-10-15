@@ -6,18 +6,21 @@ import { CHART_NAMES } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
-import { COLOR_BLIND_PALETTE } from './colors';
+import { InserterStatus, MachineStatus } from 'clock-generator/light';
+import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS } from './colors';
 import { Panel } from './Panel';
+import { durationText } from '../utils/numberText';
 
 const LEVEL_COLOR = COLOR_BLIND_PALETTE.skyBlue;
 const WINDOW_COLOR = COLOR_BLIND_PALETTE.lightGrey;
-const SWING_COLOR = COLOR_BLIND_PALETTE.orange;
-const EMPTY_COLOR = COLOR_BLIND_PALETTE.vermillion;
+// the colours the Detailed state chart gives the same things: an inserter's swing, and a machine with no fuel
+const SWING_COLOR = INSERTER_STATUS_COLORS[InserterStatus.SWING];
+const EMPTY_COLOR = MACHINE_STATUS_COLORS[MachineStatus.NO_FUEL];
 const LABEL_WIDTH = 200;
 const LEVEL_HEIGHT = 56;
 const ROW_HEIGHT = 20;
 
-const ticksAndSeconds = (ticks: number) => `${Math.round(ticks)} ticks (${(ticks / 60).toFixed(1)} s)`;
+const ticksAndSeconds = (ticks: number) => durationText(Math.round(ticks));
 const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
 
 interface FuelPanelProps {
@@ -137,12 +140,12 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
                     <TableRow>
                         <TableCell>Inserter</TableCell>
                         <TableCell>Feeds</TableCell>
-                        <TableCell align="right">Enabled every</TableCell>
-                        <TableCell align="right">For ticks</TableCell>
-                        <TableCell align="right">Enables</TableCell>
+                        <TableCell align="right">Switched on every</TableCell>
+                        <TableCell align="right">Wake window (ticks)</TableCell>
+                        <TableCell align="right">Wake windows</TableCell>
                         <TableCell align="right">A hand lasts</TableCell>
                         <TableCell align="right">Expected swings</TableCell>
-                        <TableCell align="right">Enables that swing</TableCell>
+                        <TableCell align="right">Wake windows with a swing</TableCell>
                         {run && <TableCell align="right">Simulated swings</TableCell>}
                     </TableRow>
                 </TableHead>
@@ -164,7 +167,7 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
                                 <TableCell align="right">{percent(inserter.swing_share)}</TableCell>
                                 {run && (
                                     <TableCell align="right">
-                                        {swings.length} of {enables} enables ({(swings.length / run.durationTicks * 3600).toFixed(1)}/min)
+                                        {swings.length} in {enables} wake windows ({(swings.length / run.durationTicks * 3600).toFixed(1)}/min)
                                     </TableCell>
                                 )}
                             </TableRow>
@@ -296,7 +299,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
         <>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 <LegendItem color={LEVEL_COLOR} label="Fuel in the machine" />
-                <LegendItem color={WINDOW_COLOR} label="Fuel clock enables the inserter" opacity={0.6} />
+                <LegendItem color={WINDOW_COLOR} label="Fuel clock switches the inserter on" opacity={0.6} />
                 <LegendItem color={SWING_COLOR} label="Inserter swings" />
                 <LegendItem color={EMPTY_COLOR} label="No fuel" opacity={0.5} />
             </Box>
@@ -369,25 +372,27 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
         <Box>
             {run && <RanOutAlert run={run} />}
 
-            <Panel title="Fuel consumption">
+            {/* inside Results' Details, under its Fuel tab: the cards are a level below the section */}
+            <Panel title="Fuel consumption" level={3}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A machine burns fuel only while it crafts, so it burns its crafting share of the rate over a clock period.
                 </Typography>
                 <MachineTable machines={plan.machines} run={run} />
             </Panel>
 
-            <Panel title="Fuel clocks">
+            <Panel title="Fuel clocks" level={3}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    A fuel inserter is enabled for a few ticks as often as the fuel slot's limit lasts, whatever the clock period is.
-                    It only swings when the slot is below the limit, so most enables pass without a swing. {exportedClockText(fuel)}
+                    A fuel clock switches its inserter on for a few ticks (a wake window) as often as the fuel slot's limit
+                    lasts, whatever the clock period is. The inserter only swings when the slot is below the limit, so most
+                    wake windows pass without a swing. {exportedClockText(fuel)}
                 </Typography>
                 <InserterTable inserters={plan.inserters} run={run} />
             </Panel>
 
             {run && (
-                <Panel title="Fuel timeline" sx={{ mb: 0 }}>
+                <Panel title="Fuel timeline" level={3} sx={{ mb: 0 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        The exported clock run for {run.periods} clock periods: {run.durationTicks} ticks ({(run.durationTicks / 60).toFixed(1)} seconds).
+                        The exported clock run for {run.periods} clock periods: {durationText(run.durationTicks)}.
                         The dashed line is the fuel slot's limit.
                     </Typography>
                     <FuelTimeline fuel={fuel} run={run} />

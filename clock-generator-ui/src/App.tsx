@@ -19,7 +19,7 @@ import {
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
-import { AccountTree, FullscreenExit, List, LocalCafe } from '@mui/icons-material';
+import { AccountTree, Code, FullscreenExit, List, LocalCafe, MenuBook } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
@@ -38,7 +38,8 @@ import { BeltsForm } from './components/BeltsForm';
 import { ChestsForm } from './components/ChestsForm';
 import { DrillsForm } from './components/DrillsForm';
 import { OverridesForm } from './components/OverridesForm';
-import { ConfigImportExport, type BuildEntryHandle } from './components/ConfigImportExport';
+import { ConfigImportExport, type BuildEntryHandle, type ToolsMenuItem } from './components/ConfigImportExport';
+import { TermsPopover } from './components/TermsPopover';
 import { IntroCard } from './components/IntroCard';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
@@ -60,6 +61,13 @@ import { clockTechnicalName, plainClockName } from './utils/clockSummary';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
+import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
+
+/** The page's own items in ⋮ */
+const TOOLS_MENU = {
+    terms: 'Terms',
+    developerTools: 'Developer tools',
+};
 import { appTheme } from './theme/theme';
 import { nextStepOf } from './utils/nextStep';
 import { needsNoClock } from './utils/installSteps';
@@ -203,6 +211,13 @@ function App() {
         simulate: false,
     });
     const [streamLogs, setStreamLogs] = useState(false);
+    // ⋮ > Developer tools, or `?debug`: the timelines and the log. While they are off their switches are out of sight,
+    // so a generation runs without them
+    const [developerTools, setDeveloperTools] = useState(() => developerToolsInitial(window.location.search, readDeveloperTools()));
+    const runDebugSteps = developerTools ? debugSteps : NO_DEBUG_STEPS;
+    const runStreamLogs = developerTools && streamLogs;
+    // ⋮ > Terms: the popover hangs from the ⋮ button
+    const [termsAnchor, setTermsAnchor] = useState<HTMLElement | null>(null);
 
     const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
@@ -272,10 +287,33 @@ function App() {
         setSelectionQuiet(false);
         selectAlternative(index);
     }, [selectAlternative]);
-    const handleSelectRecommended = useCallback(() => {
-        setSelectionQuiet(false);
-        selectRecommended();
-    }, [selectRecommended]);
+    // ⋮ > Terms and ⋮ > Developer tools; the setting is kept for the next visit, and said, as the section it adds is at
+    // the end of Results
+    const toggleDeveloperTools = useCallback(() => {
+        setDeveloperTools(on => {
+            writeDeveloperTools(!on);
+            return !on;
+        });
+    }, []);
+    const firstToggle = useRef(true);
+    useEffect(() => {
+        if (firstToggle.current) {
+            firstToggle.current = false;
+            return;
+        }
+        announce(developerTools ? ANNOUNCEMENTS.developerToolsOn : ANNOUNCEMENTS.developerToolsOff);
+    }, [developerTools, announce]);
+    const toolsMenuItems = useMemo<ToolsMenuItem[]>(() => [
+        { key: 'terms', label: TOOLS_MENU.terms, icon: <MenuBook fontSize="small" />, onClick: setTermsAnchor },
+        {
+            key: 'developer-tools',
+            label: TOOLS_MENU.developerTools,
+            icon: <Code fontSize="small" />,
+            checked: developerTools,
+            onClick: toggleDeveloperTools,
+        },
+    ], [developerTools, toggleDeveloperTools]);
+
     const handleCardBackToRecommended = useCallback(() => {
         setSelectionQuiet(true);
         selectRecommended();
@@ -405,10 +443,10 @@ function App() {
     }, [exportConfig, validate]);
 
     const handleGenerate = useCallback(() => runChecked((config) => {
-        runSimulation(config, debugSteps, streamLogs);
+        runSimulation(config, runDebugSteps, runStreamLogs);
         // progress and the clocks arrive there
         setView('results');
-    }), [runChecked, runSimulation, debugSteps, streamLogs]);
+    }), [runChecked, runSimulation, runDebugSteps, runStreamLogs]);
 
     // Moving stores nothing, Standing `non_moving_belts: true`
     const handleBeltAnswer = useCallback(
@@ -425,10 +463,10 @@ function App() {
             if (beltQuestionOf(config).answer !== answer) {
                 handleBeltAnswer(answer);
             }
-            runSimulation(withBeltAnswer(config, answer), debugSteps, streamLogs);
+            runSimulation(withBeltAnswer(config, answer), runDebugSteps, runStreamLogs);
             setView('results');
         });
-    }, [busy, runChecked, handleBeltAnswer, runSimulation, debugSteps, streamLogs]);
+    }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs]);
     // the clocks on screen, read for belts that stand still; nothing while they may still change
     const beltAssumption = generatedFor?.beltQuestion ?? null;
     const beltHint = useMemo(
@@ -524,12 +562,12 @@ function App() {
             // the form's key once the switch is on, so the results are not taken for out of date
             const kept = withDeeperSearch(config);
             updateOverrides('search_for_fewer_wake_ups', true);
-            runSimulation(kept, debugSteps, streamLogs);
+            runSimulation(kept, runDebugSteps, runStreamLogs);
         } else {
-            runSimulation(config, debugSteps, streamLogs, true);
+            runSimulation(config, runDebugSteps, runStreamLogs, true);
         }
         setView('results');
-    }), [runChecked, updateOverrides, runSimulation, debugSteps, streamLogs]);
+    }), [runChecked, updateOverrides, runSimulation, runDebugSteps, runStreamLogs]);
 
     return (
         <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes}>
@@ -560,6 +598,7 @@ function App() {
                             onUndoable={offerUndoOfReplace}
                             onShowIntro={showIntro}
                             pasteIsNextStep={blankBuild && !introVisible}
+                            toolsMenuItems={toolsMenuItems}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -784,7 +823,6 @@ function App() {
                                 selectedIndex={selectedAlternativeIndex}
                                 onSelect={handleSelectClock}
                                 recommendedIndex={recommendedIndex}
-                                onSelectRecommended={handleSelectRecommended}
                                 onCardBackToRecommended={handleCardBackToRecommended}
                                 pickRule={pickRule}
                                 pending={pendingAlternatives}
@@ -804,6 +842,7 @@ function App() {
                                 clockWindows={clockWindows}
                                 shiftOptions={shiftOptions}
                                 swingBackoffReport={swingBackoffReport}
+                                developerTools={developerTools}
                                 logs={logs}
                                 debugSteps={debugSteps}
                                 onDebugStepsChange={setDebugSteps}
@@ -874,6 +913,7 @@ function App() {
             </Box>
 
             <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />
+            <TermsPopover anchorEl={termsAnchor} onClose={() => setTermsAnchor(null)} />
 
             {/* Fullscreen diagram dialog */}
             <Dialog
