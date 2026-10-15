@@ -14,8 +14,11 @@
 
 import { FactorioInserterState } from "../state/factorio-entity-state";
 
-/** What the end of an inserter is */
-export type EndKind = "machine" | "belt" | "chest" | "vehicle" | "none" | "other";
+/**
+ * What the end of an inserter is. Any other end is named by its entity type, as the series names it ("car", "rocket-silo"),
+ * and is a group of its own: "car to machine" is not "other to machine".
+ */
+export type EndKind = "machine" | "belt" | "chest" | "vehicle" | "none" | (string & {});
 
 export interface RuleCountInserter {
     inserter_id: string;

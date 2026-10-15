@@ -147,7 +147,8 @@ function kindOf(entity: StaticEntity | undefined): EndKind {
     if (entity.type.includes("wagon")) {
         return "vehicle";
     }
-    return "other";
+    // fuller.py's kind() names any other end by its type: a car is "car", not "other"
+    return entity.type;
 }
 
 /** The name the game gives a status code in the sample header, or "unknown" for a code the header does not name */
@@ -176,11 +177,11 @@ function statusName(code: number, header: Record<string, string>): string {
  *   tile of `pp`/`dp` (machines, belts, containers and cargo wagons take the tiles of their size, the size from the
  *   prototype's `tw`). Its kind is "machine" for an assembling machine or furnace, "belt" for the belt types, "chest"
  *   for a type with "container" in it, "vehicle" for one with "wagon" in it, "none" when there is no entity, and
- *   "other" for the rest (poles, lamps, rocket silos and so on).
+ *   the entity's type for the rest ("car", "rocket-silo" and so on), as fuller.py names them.
  * - `source_machine_id` and `sink_machine_id` are set only for an end that has DATA (an `sm` record with `pf`, as
  *   fuller.py takes its events from `fin`/`start`, which hold nothing else): they are null for a machine the samples do
  *   not cover, while `source_kind`/`sink_kind` still say "machine". An id always names a machine in `machines`. (An
- *   end that has data and is not a machine, such as a mining drill, would keep its id and its kind "other", as the
+ *   end that has data and is not a machine, such as a mining drill, would keep its id and its type as its kind, as the
  *   series counts it; no inserter of the dumps is known to end at one.)
  * - `items` are the filter and hand items seen in the samples (`it`) and the item in the hand at the start, sorted.
  * - `wired` is a circuit wire on the entity (`w`) and the enable/disable condition on (`cb.circuit_enable_disable`).
