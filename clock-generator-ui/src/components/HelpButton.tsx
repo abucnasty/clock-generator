@@ -1,18 +1,19 @@
-import { InfoOutlined } from '@mui/icons-material';
+import { HelpOutline } from '@mui/icons-material';
 import { IconButton, Popover } from '@mui/material';
 import { useState, type ReactNode } from 'react';
 
-interface InfoPopoverButtonProps {
-    /** What the button is called, and what the popover is called: "How Fixed 4 + 2 is made" */
+interface HelpButtonProps {
+    /** What the button is called, and what the popover is called: "About Fixed 4 + 2" */
     label: string;
     children: ReactNode;
 }
 
 /**
- * An (i) that opens a short explanation. A button: the keyboard reaches it, Enter or Space opens the popover, Esc closes
- * it and puts the focus back here, and a finger can open it, which a hover tooltip on a bare icon cannot offer.
+ * The site's one help control: a grey "?" that opens a short explanation. A button: the keyboard reaches it, Enter or
+ * Space opens the popover, Esc closes it and puts the focus back here, and a finger can open it, which a hover tooltip
+ * on a bare icon cannot offer. Grey, so that it is not taken for a selection (orange) or a status (blue or green).
  */
-export function InfoPopoverButton({ label, children }: InfoPopoverButtonProps) {
+export function HelpButton({ label, children }: HelpButtonProps) {
     const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
     const open = anchor !== null;
 
@@ -24,12 +25,13 @@ export function InfoPopoverButton({ label, children }: InfoPopoverButtonProps) {
                 aria-haspopup="dialog"
                 aria-expanded={open}
                 onClick={(event) => {
-                    // the button sits in a table row that selects its clock when clicked
+                    // the button can sit in a table row that selects its clock when clicked
                     event.stopPropagation();
                     setAnchor(event.currentTarget);
                 }}
+                sx={{ width: 30, height: 30, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
             >
-                <InfoOutlined fontSize="small" color="action" />
+                <HelpOutline fontSize="small" />
             </IconButton>
             <Popover
                 open={open}

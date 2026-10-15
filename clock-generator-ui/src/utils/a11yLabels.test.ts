@@ -37,7 +37,7 @@ describe('names built from a row', () => {
     });
 
     it('name the help button after the clock it explains', () => {
-        expect(clockHelpName('Fixed 4 + 2')).toBe('How Fixed 4 + 2 is made');
+        expect(clockHelpName('Fixed 4 + 2')).toBe('About Fixed 4 + 2');
     });
 });
 

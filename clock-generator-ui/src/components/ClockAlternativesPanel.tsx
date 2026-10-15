@@ -8,7 +8,6 @@ import {
     Button,
     Chip,
     CircularProgress,
-    Paper,
     Radio,
     Table,
     TableBody,
@@ -26,7 +25,9 @@ import { CLOCK_TABLE_NAME, clockHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
 import { BELT_COPY } from '../utils/beltQuestion';
-import { InfoPopoverButton } from './InfoPopoverButton';
+import { HelpButton } from './HelpButton';
+import { Panel } from './Panel';
+import { RecommendedChip } from './RecommendedChip';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, rateHeader } from '../utils/numberText';
 import {
     RECOMMENDED_COPY,
@@ -137,18 +138,14 @@ export function ClockAlternativesPanel({
             <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                     {alternative.label}
-                    <InfoPopoverButton label={clockHelpName(alternative.label)}>
+                    <HelpButton label={clockHelpName(alternative.label)}>
                         <Typography variant="body2">{alternative.description}</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                             Status: {statusDetail(alternative)}
                         </Typography>
-                    </InfoPopoverButton>
+                    </HelpButton>
                     {index === recommendedIndex && (
-                        <Chip
-                            size="small"
-                            color="primary"
-                            label={isGenerating ? RECOMMENDED_COPY.chipWhileGenerating : RECOMMENDED_COPY.chip}
-                        />
+                        <RecommendedChip isGenerating={isGenerating} />
                     )}
                 </Box>
             </TableCell>
@@ -185,6 +182,9 @@ export function ClockAlternativesPanel({
                         label={VERDICT_LABEL[alternative.verdict]}
                         color={VERDICT_COLOR[alternative.verdict]}
                         variant="outlined"
+                        // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
+                        // words under 4.5:1
+                        sx={{ bgcolor: 'background.paper' }}
                     />
                 </Tooltip>
             </TableCell>
@@ -192,8 +192,7 @@ export function ClockAlternativesPanel({
     );
 
     return (
-        <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
-            <Typography variant="h6" component="h2">Clocks</Typography>
+        <Panel title="Clocks" sx={{ mt: 2, mb: 0 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                 {RECOMMENDED_COPY.intro}
             </Typography>
@@ -233,17 +232,17 @@ export function ClockAlternativesPanel({
                 disableGutters
                 elevation={0}
                 slotProps={{ heading: { component: 'h3' } }}
-                sx={{ mb: 1, maxWidth: '72ch', '&::before': { display: 'none' } }}
+                sx={{ mb: 1, maxWidth: '72ch' }}
             >
                 <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     id="how-clocks-are-chosen-summary"
                     aria-controls="how-clocks-are-chosen-details"
-                    sx={{ px: 0 }}
+                    sx={{ px: 1.5 }}
                 >
                     <Typography variant="body2" component="span">{RECOMMENDED_COPY.disclosureTitle}</Typography>
                 </AccordionSummary>
-                <AccordionDetails sx={{ px: 0, pt: 0 }}>
+                <AccordionDetails sx={{ px: 1.5, pt: 0 }}>
                     {RECOMMENDED_COPY.disclosure.map(paragraph => (
                         <Typography key={paragraph} variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                             {paragraph}
@@ -357,6 +356,6 @@ export function ClockAlternativesPanel({
                 </Box>
             )}
             {notice}
-        </Paper>
+        </Panel>
     );
 }

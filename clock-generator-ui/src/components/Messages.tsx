@@ -6,6 +6,7 @@ import { ANNOUNCER_ATTRIBUTE, announceText } from '../utils/announcer';
 import { isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput } from '../utils/messages';
 import { entersOtherDialog, isEscapeForSomethingElse } from '../utils/undoKeys';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { CONTROL, SURFACE } from '../theme/tokens';
 
 /** Holds the one message shown, for any component to raise with `useNotify()`; goes above `App`, which raises some */
 export function MessageProvider({ children }: { children: ReactNode }) {
@@ -141,13 +142,16 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                 // read out through the polite region, once, when it is raised
                 role="none"
                 elevation={0}
-                // compact: one line is 32px, lower than the fullscreen diagram's title bar row, so it adds no height there
+                // compact: one line is 32px, lower than the fullscreen diagram's title bar row, so it adds no height there.
+                // An urgent one is filled in its colour; the others are a card with an edge (1px each side, taken off the
+                // padding, so still 32px), the severity in the icon, and the action (Undo) in the accent orange
                 sx={(theme) => ({
                     alignItems: 'center',
                     maxWidth: '100%',
                     py: 0,
-                    '& .MuiAlert-icon, & .MuiAlert-message': { py: '5px' },
+                    '& .MuiAlert-icon, & .MuiAlert-message': { py: urgent ? '5px' : '4px' },
                     '& .MuiAlert-action': { pt: 0 },
+                    ...(!urgent && { bgcolor: SURFACE.panel, color: 'text.primary', border: `1px solid ${CONTROL.edge}` }),
                     // below 600px an action's button gets a row of its own under the text, which would otherwise be
                     // squeezed into a column a word wide
                     ...(message.action && {
@@ -162,7 +166,7 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                 action={message.action && (
                     <>
                         <Button
-                            color="inherit"
+                            color={urgent ? 'inherit' : 'primary'}
                             size="small"
                             aria-keyshortcuts={message.action.keyShortcuts}
                             // one line: the text beside it wraps instead

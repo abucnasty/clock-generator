@@ -79,8 +79,8 @@ const SCAN_FN = ({ bannedSrc, lineSrc, rawSrc, allowSrcs, engineAll }) => {
     const rawRe = new RegExp(rawSrc);
     const allow = allowSrcs.map((s) => new RegExp(s.src, s.flags));
     const isBanned = (t) => re.test(t) || lineRe.test(t);
-    const labels = [...document.querySelectorAll('[aria-label^="How "]')]
-        .map((e) => e.getAttribute('aria-label').replace(/^How /, '').replace(/ is made$/, ''))
+    const labels = [...document.querySelectorAll('table [aria-label^="About "][aria-haspopup="dialog"]')]
+        .map((e) => e.getAttribute('aria-label').replace(/^About /, ''))
         .sort((a, b) => b.length - a.length);
     let cards = [...document.querySelectorAll('.MuiPaper-outlined')].filter((p) => {
         const ls = p.innerText.split('\n').map((l) => l.trim());
@@ -641,7 +641,7 @@ const PART_B_AFTER_GENERATE = [
             lacks(rec, 'Belt tooltip no longer says "belt pickup slack"', belt, /belt pickup slack/i);
             lacks(rec, 'Belt tooltip: "window" only as "wake window"', belt, /(?<!wake )\bwindows?\b/i);
             for (const tab of ['Timelines', 'Insights', 'Blueprint', 'Log']) await checkLabelInName(rec, page, page.getByRole('tab', { name: tab, exact: true }), `Results tab "${tab}"`);
-            const info = page.getByLabel(/^How .* is made$/).first();
+            const info = page.locator('table').getByLabel(/^About /).first();
             await info.scrollIntoViewIfNeeded().catch(() => {});
             await info.click().catch(() => {}); // the (i) opens a popover on click, not a tooltip on hover
             await page.locator('.MuiPopover-paper').first().waitFor({ timeout: 3000 }).catch(() => {});

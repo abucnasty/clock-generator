@@ -1,4 +1,4 @@
-import { Box, FormControlLabel, Paper, Switch, Typography } from '@mui/material';
+import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
 import { useCallback, useId, useMemo, useState } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
 import type { ClockAlternativeView } from '../worker/types';
@@ -29,6 +29,7 @@ import {
     WakeWindowsChart,
 } from './WakeWindowsChart';
 import { WakeWindowsTable } from './WakeWindowsTable';
+import { Panel } from './Panel';
 
 interface WakeWindowsViewProps {
     /** The selected clock; nothing is shown without one */
@@ -93,7 +94,8 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
     const [asTable, setAsTable] = useState(false);
     // keyed on the clock object, not its id: a new generation repeats the ids, and its selection must start empty
     const [selection, setSelection] = useState<{ alternative: ClockAlternativeView; rowId: string; windowIndex: number } | null>(null);
-    const headingId = useId();
+    const viewId = useId();
+    const headingId = `${viewId}-title`;
     const hintId = useId();
     const rows = useMemo(() => (alternative ? buildWakeWindowRows(alternative) : []), [alternative]);
     const announce = useAnnounce();
@@ -127,8 +129,7 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
     });
 
     return (
-        <Paper variant="outlined" component="section" aria-labelledby={headingId} sx={{ p: 2 }} data-wake-view>
-            <Typography id={headingId} component={headingLevel} variant="h6">{VIEW_HEADING}</Typography>
+        <Panel id={viewId} title={VIEW_HEADING} level={headingLevel === 'h2' ? 2 : 3} sx={{ mb: 0 }} data-wake-view="">
             <Typography variant="body2" color="text.secondary">{VIEW_INTRO}</Typography>
             <Typography variant="body2" sx={{ mt: 1 }} data-wake-summary>{summary}</Typography>
             {!counted && (
@@ -208,6 +209,6 @@ export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindow
                     </>
                 )}
             </Box>
-        </Paper>
+        </Panel>
     );
 }

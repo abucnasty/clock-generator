@@ -1,5 +1,5 @@
 import { Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, HelpOutline, Link } from '@mui/icons-material';
-import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, lighten, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
@@ -84,8 +84,11 @@ interface ConfigImportExportProps {
     onUndoable: (message: string) => void;
     /** "Getting started": shows the intro card again */
     onShowIntro: () => void;
-    /** The intro card is shown, with its own filled Paste: the header's is outlined then, one filled next step per state */
-    introShown: boolean;
+    /**
+     * The header's Paste is the next step, and so the filled button: a blank build with the intro card closed. With the card
+     * shown its own Paste is the filled one; with a build, Generate or Copy is (one filled next step per state)
+     */
+    pasteIsNextStep: boolean;
     /** The open build's own name, which a share link carries; null when it is named after its target recipe */
     buildName: string | null;
     /** The open build's title, which Save build file names the file after */
@@ -115,7 +118,7 @@ export function ConfigImportExport({
     onBuildReplaced,
     onUndoable,
     onShowIntro,
-    introShown,
+    pasteIsNextStep,
     buildName,
     buildTitle,
 }: ConfigImportExportProps) {
@@ -493,8 +496,8 @@ export function ConfigImportExport({
                 {/* the way in: below 600px it says only "Paste", and keeps its full name */}
                 <Button
                     onClick={handlePasteFromFactorio}
-                    variant={introShown ? 'outlined' : 'contained'}
-                    color={introShown ? 'inherit' : 'secondary'}
+                    variant={pasteIsNextStep ? 'contained' : 'outlined'}
+                    color={pasteIsNextStep ? 'secondary' : 'inherit'}
                     size="small"
                     startIcon={narrow ? undefined : <ContentPaste />}
                     aria-label={narrow ? INTRO_BUTTONS.paste : undefined}
@@ -531,9 +534,7 @@ export function ConfigImportExport({
                     // menu stays by its button and the page needs no scroll lock
                     container={menuContainer}
                     disableScrollLock
-                    // the plain paper colour, without the dark theme's elevation overlay (a background image), which
-                    // lightens it so far that Reset's red is below 4.5:1 when hovered or focused
-                    slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions }, paper: { sx: { backgroundImage: 'none' } } }}
+                    slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions } }}
                 >
                     <MenuItem onClick={handleMenuImport}>
                         <ListItemIcon>
@@ -566,8 +567,8 @@ export function ConfigImportExport({
                         <ListItemText>Getting started</ListItemText>
                     </MenuItem>
                     <Divider />
-                    {/* in the error colour, lightened to stay 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
-                    <MenuItem onClick={handleMenuReset} sx={{ color: (theme) => lighten(theme.palette.error.main, 0.3) }}>
+                    {/* in the error text red (TEXT.error), 4.5:1 on the menu when hovered or focused: it throws the build away (Undo brings it back) */}
+                    <MenuItem onClick={handleMenuReset} sx={{ color: 'error.light' }}>
                         <ListItemIcon sx={{ color: 'inherit' }}>
                             <RestartAlt fontSize="small" />
                         </ListItemIcon>
@@ -684,7 +685,7 @@ export function ConfigImportExport({
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCancelImport}>Cancel</Button>
+                    <Button onClick={handleCancelImport} color="inherit">Cancel</Button>
                     <Button 
                         onClick={handleConfirmImport} 
                         variant="contained" 

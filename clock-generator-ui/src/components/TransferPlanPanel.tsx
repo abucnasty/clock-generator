@@ -97,7 +97,6 @@ function TransferPlanPanelComponent({
                             icon={<BlockIcon />}
                             label={`${excludedIngredients.length} excluded`}
                             size="small"
-                            color="secondary"
                             variant="outlined"
                         />
                     )}
@@ -180,7 +179,6 @@ function TransferPlanPanelComponent({
                                                     icon={isExcluded ? <BlockIcon /> : undefined}
                                                     label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"
-                                                    color={isExcluded ? 'secondary' : 'default'}
                                                     variant={isExcluded ? 'filled' : 'outlined'}
                                                     onClick={() => toggleExclude(transfer.item_name)}
                                                     sx={{ cursor: 'pointer' }}

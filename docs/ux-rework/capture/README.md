@@ -65,6 +65,11 @@ preview unless you are debugging.
   `#1b1b1b` track and legend chips, 3:1 contrast of every colour drawn, the six item colours and the repeat caption, bars
   and Blocked runs at least 3px, the strip legend row, Detailed-mode swatches, canvas and SVG `role="img"` names, the
   fuel chart, fullscreen, and the drill label's orange. `BASE_URL`, `WIDTHS` and `STEPS` as above.
+- `capture-gui-grammar.mjs <out dir>` (on `lib.mjs`) checks the GUI grammar's tokens and components (item 2.7 PR A) at
+  1440, 720 and 390px: one filled next-step button per state (first visit, ready, fresh on both views, below target,
+  stale, in flight), the colour roles of confirm, cancel, danger and selection, square chips, title bars on cards,
+  dialogs and accordions, the help controls, focus rings (black in a filled alert), messages and menus on the card
+  surface, and that each surface is its token. `BASE_URL`, `UI_DIR`, `WIDTHS` and `STEPS` as above.
 - `capture-messages-clear.mjs <out dir>` (on `lib.mjs`) checks messages that don't cover the page (item 1.5 F) at 1440,
   720 and 390px: the message in the header's flow and in the fullscreen diagram's title bar, never over a focused
   control or a dialog, errors closing when a dialog opens or the action starts again, keyboard reach of Undo, the Undo

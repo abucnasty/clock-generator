@@ -1,4 +1,4 @@
-import { Alert, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { memo } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
@@ -7,6 +7,7 @@ import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { COLOR_BLIND_PALETTE } from './colors';
+import { Panel } from './Panel';
 
 const LEVEL_COLOR = COLOR_BLIND_PALETTE.skyBlue;
 const WINDOW_COLOR = COLOR_BLIND_PALETTE.lightGrey;
@@ -115,7 +116,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                                     </TableCell>
                                 )}
                                 {run && (
-                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.main' : undefined }}>
+                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.light' : undefined }}>
                                         {levels ? levels.min_level.toFixed(2) : '-'}
                                     </TableCell>
                                 )}
@@ -368,32 +369,29 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
         <Box>
             {run && <RanOutAlert run={run} />}
 
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" component="h2">Fuel consumption</Typography>
+            <Panel title="Fuel consumption">
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A machine burns fuel only while it crafts, so it burns its crafting share of the rate over a clock period.
                 </Typography>
                 <MachineTable machines={plan.machines} run={run} />
-            </Paper>
+            </Panel>
 
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" component="h2">Fuel clocks</Typography>
+            <Panel title="Fuel clocks">
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A fuel inserter is enabled for a few ticks as often as the fuel slot's limit lasts, whatever the clock period is.
                     It only swings when the slot is below the limit, so most enables pass without a swing. {exportedClockText(fuel)}
                 </Typography>
                 <InserterTable inserters={plan.inserters} run={run} />
-            </Paper>
+            </Panel>
 
             {run && (
-                <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6" component="h2">Fuel timeline</Typography>
+                <Panel title="Fuel timeline" sx={{ mb: 0 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         The exported clock run for {run.periods} clock periods: {run.durationTicks} ticks ({(run.durationTicks / 60).toFixed(1)} seconds).
                         The dashed line is the fuel slot's limit.
                     </Typography>
                     <FuelTimeline fuel={fuel} run={run} />
-                </Paper>
+                </Panel>
             )}
         </Box>
     );

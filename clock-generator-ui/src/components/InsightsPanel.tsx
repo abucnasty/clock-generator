@@ -1,8 +1,9 @@
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import type { ClockInsight } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import { GameName } from './GameName';
+import { Panel } from './Panel';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
 interface InsightsPanelProps {
@@ -27,14 +28,13 @@ function Part({ label, text }: { label: string; text: string }) {
 function InsightCard({ insight }: { insight: ClockInsight }) {
     const { nameIdsIn } = useGameNames();
     return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>{nameIdsIn(insight.title)}</Typography>
+        <Panel title={nameIdsIn(insight.title)} level={3}>
             <Part label="What" text={nameIdsIn(insight.what)} />
             <Part label="Why" text={nameIdsIn(insight.why)} />
             <Part label="Explanation" text={nameIdsIn(insight.explanation)} />
             {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}
             {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} /></ExactTicks> : <InsightTable table={insight.table} />)}
-        </Paper>
+        </Panel>
     );
 }
 
@@ -80,23 +80,25 @@ export function InsightsPanel({ insights, clockLabel, children }: InsightsPanelP
 
     return (
         <Box>
-            <Typography variant="h6" component="h2">About this clock{clockLabel ? `: ${clockLabel}` : ''}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                What is particular to the clock selected above.
-            </Typography>
-            {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
-            {children}
-            {clock.length === 0 && !children && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Nothing stands out: this clock swings as planned and holds the target rate.
+            <Panel title={`About this clock${clockLabel ? `: ${clockLabel}` : ''}`}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    What is particular to the clock selected above.
                 </Typography>
-            )}
+                {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
+                {children}
+                {clock.length === 0 && !children && (
+                    <Typography variant="body2" color="text.secondary">
+                        Nothing stands out: this clock swings as planned and holds the target rate.
+                    </Typography>
+                )}
+            </Panel>
 
-            <Typography variant="h6" component="h2" sx={{ mt: 3 }}>About this build</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                The limits every clock for this build has to work within.
-            </Typography>
-            {build.map(insight => <InsightCard key={insight.id} insight={insight} />)}
+            <Panel title="About this build" sx={{ mb: 0 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    The limits every clock for this build has to work within.
+                </Typography>
+                {build.map(insight => <InsightCard key={insight.id} insight={insight} />)}
+            </Panel>
         </Box>
     );
 }

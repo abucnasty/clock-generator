@@ -412,8 +412,8 @@ export function InserterConfigPanel({
                         Unsaved changes
                     </Typography>
                 )}
-                <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained" disabled={!dirty}>
+                <Button onClick={onClose} color="inherit">Cancel</Button>
+                <Button onClick={handleSave} variant="contained" color="secondary" disabled={!dirty}>
                     Save
                 </Button>
             </Box>

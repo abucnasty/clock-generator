@@ -82,6 +82,8 @@ interface ResultsWorkspaceProps {
     onCopy: () => void;
     /** What the Copy buttons say: "Copy blueprint", "… below target", or "Copy old clock…" */
     copyLabel: string;
+    /** The card's Copy is the page's one filled button (the bar's is then outlined) */
+    copyIsNextStep: boolean;
     /**
      * What the clocks assume of the input belts, with the action for the other answer (2.4's BeltAssumptionLine), shown in
      * the card in place of its own belt line
@@ -163,6 +165,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 copied={props.copied}
                 onCopy={props.onCopy}
                 copyLabel={props.copyLabel}
+                copyIsNextStep={props.copyIsNextStep}
                 rateWarning={rateWarning}
                 stale={props.staleFor !== null}
                 beltAction={props.beltAction}
