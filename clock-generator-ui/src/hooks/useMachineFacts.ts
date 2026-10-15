@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
 import { askEngine } from '../worker/engineClient';
+import { machinesMaxOf, type MachinesMax } from '../utils/targetRateLimit';
 
 interface UseMachineFactsParams {
     recipe: string;
@@ -18,6 +19,18 @@ interface UseMachineFactsResult {
 // The facts of every machine setting asked for so far; machines configured alike share them
 const requests = new Map<string, Promise<SerializableMachineFacts | null>>();
 const known = new Map<string, SerializableMachineFacts | null>();
+
+type FactsKey = [string, number, number, UseMachineFactsParams['type'] | null, number | null];
+
+function keyOf({ recipe, productivity, crafting_speed, type, energy_consumption_bonus }: UseMachineFactsParams): string {
+    const key: FactsKey = [recipe, productivity, crafting_speed, type ?? null, energy_consumption_bonus ?? null];
+    return JSON.stringify(key);
+}
+
+function paramsOf(key: string): UseMachineFactsParams {
+    const [recipe, productivity, crafting_speed, type, energy_consumption_bonus] = JSON.parse(key) as FactsKey;
+    return { recipe, productivity, crafting_speed, type: type ?? undefined, energy_consumption_bonus: energy_consumption_bonus ?? undefined };
+}
 
 function requestFacts(key: string, params: UseMachineFactsParams): Promise<SerializableMachineFacts | null> {
     let request = requests.get(key);
@@ -41,7 +54,7 @@ function requestFacts(key: string, params: UseMachineFactsParams): Promise<Seria
  */
 export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsResult {
     const { recipe, productivity, crafting_speed, type, energy_consumption_bonus } = params;
-    const key = JSON.stringify([recipe, productivity, crafting_speed, type ?? null, energy_consumption_bonus ?? null]);
+    const key = keyOf(params);
     const [shown, setShown] = useState<UseMachineFactsResult>({ facts: null, error: null });
 
     useEffect(() => {
@@ -67,4 +80,45 @@ export function useMachineFacts(params: UseMachineFactsParams): UseMachineFactsR
     }
     const facts = known.get(key);
     return facts !== undefined ? { facts, error: null } : shown;
+}
+
+interface MachineSettings extends UseMachineFactsParams {
+    id: number;
+}
+
+/**
+ * The most the machines making the target `recipe` can make together in one copy of the build, from their Machine
+ * Facts (see `machinesMaxOf`). Null when none makes it, and while the facts of a machine are still being worked out.
+ */
+export function useMachinesMax(recipe: string, machines: MachineSettings[]): MachinesMax | null {
+    const withRecipe = recipe ? machines.filter((machine) => machine.recipe !== '') : [];
+    const keys = withRecipe.map(keyOf);
+    const wanted = JSON.stringify(keys.filter((key) => !known.has(key)));
+    // counts the facts that have come in, so that the page is drawn again with them
+    const [, setArrived] = useState(0);
+
+    useEffect(() => {
+        let current = true;
+        for (const key of JSON.parse(wanted) as string[]) {
+            requestFacts(key, paramsOf(key)).then(
+                () => {
+                    if (current) setArrived((count) => count + 1);
+                },
+                // facts that fail leave the sum unknown: no problem found, rather than one from a sum that is too low
+                () => {},
+            );
+        }
+        return () => {
+            current = false;
+        };
+    }, [wanted]);
+
+    const max = machinesMaxOf(recipe, withRecipe.map((machine, index) => ({ id: machine.id, facts: known.get(keys[index]) })));
+    // the same object while the machines and their sum are the same, for what is worked out from it
+    const ids = max?.machineIds.join(',') ?? null;
+    const perCopy = max?.perCopy ?? null;
+    return useMemo(
+        () => (ids === null || perCopy === null ? null : { machineIds: ids.split(',').map(Number), perCopy }),
+        [ids, perCopy],
+    );
 }
