@@ -1,8 +1,7 @@
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
-import { formatNumberText } from './numberText';
-import { isTargetAboveMax, type MachinesMax } from './targetRateLimit';
+import { isTargetAboveMax, maxRateText, type MachinesMax } from './targetRateLimit';
 
 /**
  * Every sentence that says what stops the build being clocked, and so where Generate goes. The tooltips, the note in the
@@ -13,7 +12,7 @@ export const PROBLEM_TEXT = {
     noRate: 'Set Items per Second in Target Output to more than 0',
     noCopies: 'Set Copies in Target Output to 1 or more',
     noMachines: 'Add a machine',
-    rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${formatNumberText(total)}/s)`,
+    rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter bringing in ${item}`,
     missingOutput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter taking ${item} out`,

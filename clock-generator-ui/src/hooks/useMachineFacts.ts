@@ -87,12 +87,12 @@ interface MachineSettings extends UseMachineFactsParams {
 }
 
 /**
- * The most the machines making `recipe` can make together in one copy of the build, from their Machine Facts. Null
- * when none makes it, and while the facts of one of them are still being worked out (or could not be).
+ * The most the machines making the target `recipe` can make together in one copy of the build, from their Machine
+ * Facts (see `machinesMaxOf`). Null when none makes it, and while the facts of a machine are still being worked out.
  */
 export function useMachinesMax(recipe: string, machines: MachineSettings[]): MachinesMax | null {
-    const making = recipe ? machines.filter((machine) => machine.recipe === recipe) : [];
-    const keys = making.map(keyOf);
+    const withRecipe = recipe ? machines.filter((machine) => machine.recipe !== '') : [];
+    const keys = withRecipe.map(keyOf);
     const wanted = JSON.stringify(keys.filter((key) => !known.has(key)));
     // counts the facts that have come in, so that the page is drawn again with them
     const [, setArrived] = useState(0);
@@ -113,10 +113,7 @@ export function useMachinesMax(recipe: string, machines: MachineSettings[]): Mac
         };
     }, [wanted]);
 
-    const max = machinesMaxOf(making.map((machine, index) => ({
-        id: machine.id,
-        maxRate: known.get(keys[index])?.output_rate_per_second,
-    })));
+    const max = machinesMaxOf(recipe, withRecipe.map((machine, index) => ({ id: machine.id, facts: known.get(keys[index]) })));
     // the same object while the machines and their sum are the same, for what is worked out from it
     const ids = max?.machineIds.join(',') ?? null;
     const perCopy = max?.perCopy ?? null;

@@ -129,11 +129,11 @@ describe('problemsOf', () => {
 });
 
 describe('a target more than the machines can make', () => {
-    // Machine 1 of the logistic science sample makes at most 22.97/s; 11 copies 252.66/s
-    const machinesMax = { machineIds: [1], perCopy: 22.968749205271 };
+    // Machine 1 of the logistic science sample: 11 copies make 252.656…/s, printed rounded down as 252.65
+    const machinesMax = { machineIds: [1], perCopy: 22.96874920527133 };
     const target = (items_per_second: number) => ({ recipe: 'logistic-science-pack', items_per_second, copies: 11 });
     const tooHigh = filledIn({ targetOutput: target(240200), machinesMax });
-    const rateProblem: Problem = { text: 'Items per Second is more than the machines can make (at most 252.66/s)', target: { kind: 'target-rate' } };
+    const rateProblem: Problem = { text: 'Items per Second is more than the machines can make (at most 252.65/s)', target: { kind: 'target-rate' } };
 
     it('is a problem that goes to Items per Second', () => {
         expect(problemsOf(tooHigh)).toEqual([rateProblem]);
@@ -149,10 +149,10 @@ describe('a target more than the machines can make', () => {
         expect(problems.map((p) => p.target?.kind)).toEqual(['machine-recipe', 'target-rate', 'coverage-issue']);
     });
 
-    it('is not there for a target the copies make, at the max as printed, or while the max is not known', () => {
+    it('is not there for a target the copies make (252.65 is, 252.66 is not), or while the most is not known', () => {
         expect(problemsOf(filledIn({ targetOutput: target(240), machinesMax }))).toEqual([]);
-        expect(problemsOf(filledIn({ targetOutput: target(252.66), machinesMax }))).toEqual([]);
-        expect(problemsOf(filledIn({ targetOutput: target(252.67), machinesMax }))).toEqual([rateProblem]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.65), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.66), machinesMax }))).toEqual([rateProblem]);
         expect(problemsOf({ ...tooHigh, machinesMax: null })).toEqual([]);
         expect(problemsOf({ ...tooHigh, machinesMax: undefined })).toEqual([]);
     });

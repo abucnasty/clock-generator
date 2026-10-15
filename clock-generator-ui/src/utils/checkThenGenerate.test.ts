@@ -56,7 +56,7 @@ describe('decideGenerate', () => {
     });
 
     it('goes to Items per Second for a target more than the machines can make, and never checks', () => {
-        const problem: Problem = { text: PROBLEM_TEXT.rateAboveMax(252.66), target: { kind: 'target-rate' } };
+        const problem: Problem = { text: PROBLEM_TEXT.rateAboveMax(252.656), target: { kind: 'target-rate' } };
         for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
             expect(decideGenerate({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'go-to-problem', problem });
             expect(decideCheckOnly({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'show-problems' });

@@ -3,31 +3,33 @@
 // engine's check refuses such a target anyway, so it blocks, with the clear line. Every check prints PASS or FAIL.
 //
 // Usage (copy this file and lib.mjs into a folder whose node_modules has playwright-core and axe-core):
-//   BASE_URL=http://localhost:5244 node capture-rate-warning.mjs /tmp/ux-capture/out/2.1W
+//   BASE_URL=http://localhost:5244 node capture-rate-limit.mjs /tmp/ux-capture/out/2.1W
 //   BASE_URL   an app that is already running (a `vite preview` of the build); without it the script serves the build itself
 //              (PREVIEW_PORT, default 5244; UI_DIR names the checkout)
 //   WIDTHS     default 1440,720,390
 //
 // Steps, per width (each width in its own context):
-//   R1  the logistic science sample as it is (240/s, 11 copies, under the 252.66/s its machine makes): no line, no problem
+//   R1  the logistic science sample as it is (240/s, 11 copies, under the 252.656…/s its machine makes): no line, no problem
 //   R2  Items per Second 240200: the line under the field with the exact numbers, in the lighter error red at >= 4.5:1, the
 //       field invalid and described by it, not a live region, nothing announced; "1 problem" in the bar and the note names it;
 //       axe; focus not obscured at a short height
 //   R3  the note, Generate and Check only: Generate goes to Items per Second, Check only to the note; neither starts a run,
 //       no check result, none of the engine's words anywhere
-//   R4  Copies 12: the line follows; a target at the max as printed (252.66) and one under it: nothing; 252.67: the line
+//   R4  Copies 12: the line follows; the most as printed (252.65, rounded down) is no problem and the engine's check passes;
+//       252.66 is a problem (the engine refuses it); one copy: 22.96 passes the check, 22.97 is a problem
 import { LOGISTIC, forWidths, previewServer, importFile, goConfigure, contrast, checkAxe, checkFocusNotObscuredAtHeight, checkMouseActivationVisible, accessibleName, ui } from './lib.mjs';
 
 const OUT = process.argv[2];
 if (!OUT) {
-    console.error('usage: node capture-rate-warning.mjs <out dir>');
+    console.error('usage: node capture-rate-limit.mjs <out dir>');
     process.exit(2);
 }
 const WIDTHS = (process.env.WIDTHS ?? '1440,720,390').split(',').map(Number);
 
-const LINE_240200 = 'Machine 1 makes at most 22.97/s; 11 copies make 252.66/s.';
-const LINE_12_COPIES = 'Machine 1 makes at most 22.97/s; 12 copies make 275.62/s.'; // 12 x 22.9687492… = 275.6249…
-const NOTE_240200 = 'Items per Second is more than the machines can make (at most 252.66/s)';
+const LINE_240200 = 'At most 252.65/s: Machine 1 makes 22.96/s, times 11 copies. Lower the rate, or raise Copies or add machines.';
+const LINE_12_COPIES = 'At most 275.62/s: Machine 1 makes 22.96/s, times 12 copies. Lower the rate, or raise Copies or add machines.'; // 12 x 22.9687492… = 275.6249…
+const LINE_ONE_COPY = 'At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or add machines.';
+const NOTE_240200 = 'Items per Second is more than the machines can make (at most 252.65/s)';
 const ERROR_LIGHT = 'rgb(255, 122, 121)'; // error.light, as the bar's problem note; error.main #ff5958 is 4.4:1 on a card
 const ENGINE_WORDS = /cannot meet the target production rate|Total output capacity/;
 const SHORT_HEIGHT = { 1440: 640, 720: 560, 390: 600 };
@@ -156,21 +158,45 @@ try {
             await rec.shot(page, 'r3-check-only', { desc: 'After Check only: the focus on the bar\'s note; no check' });
         }, page);
 
-        await rec.step('R4 copies, and a target at the max', async () => {
+        await rec.step('R4 copies, and a target at the most', async () => {
+            const lineText = async () => ((await ui.targetRateProblem(page).textContent().catch(() => '')) ?? '').trim();
+            /** Check only, then the check's chip; '' when it did not end in 60 s */
+            const checkNow = async () => {
+                await ui.checkOnly(page).click();
+                await page.waitForFunction(() => [...document.querySelectorAll('.MuiChip-label')].some((c) => /^Check (passed|failed)$/.test(c.textContent ?? '')), null, { timeout: 60_000 }).catch(() => {});
+                return checkChip(page);
+            };
+            const engineWords = async () => ENGINE_WORDS.exec((await page.locator('body').textContent()) ?? '')?.[0] ?? 'none';
+
             await setCopies(page, 12);
-            const text12 = ((await ui.targetRateProblem(page).textContent().catch(() => '')) ?? '').trim();
-            rec.check('R4 Copies 12: the line counts every copy', text12 === LINE_12_COPIES, show(text12));
+            rec.check('R4 Copies 12: the line counts every copy', (await lineText()) === LINE_12_COPIES, show(await lineText()));
             await setCopies(page, 11);
-            await setRate(page, 252.66);
-            rec.check('R4 a target at the max as printed (252.66): no line', (await ui.targetRateProblem(page).count()) === 0);
-            rec.check('R4 a target at the max: no problem count', (await ui.problemCount(page).count()) === 0);
-            rec.check('R4 a target at the max: the field is valid', (await ui.targetRate(page).getAttribute('aria-invalid')) !== 'true');
+
+            await setRate(page, 252.65);
+            rec.check('R4 the most as printed (252.65): no line', (await ui.targetRateProblem(page).count()) === 0);
+            rec.check('R4 the most as printed: no problem count', (await ui.problemCount(page).count()) === 0);
+            rec.check('R4 the most as printed: the field is valid', (await ui.targetRate(page).getAttribute('aria-invalid')) !== 'true');
+            const at252_65 = await checkNow();
+            rec.check('R4 252.65 x 11 copies: the engine\'s check passes', at252_65 === 'Check passed', `${show(at252_65)}; engine words: ${await engineWords()}`);
             await page.evaluate(() => window.scrollTo(0, 0));
-            await rec.shot(page, 'r4-at-max', { locator: ui.card(page, 'target'), desc: 'Items per Second 252.66, the max as printed: no line' });
-            await setRate(page, 252.67);
-            rec.check('R4 just over the max (252.67): the line and 1 problem', (await ui.targetRateProblem(page).count()) === 1 && (await ui.problemCount(page).count()) === 1);
+            await rec.shot(page, 'r4-at-most', { locator: ui.card(page, 'target'), desc: 'Items per Second 252.65, the most as printed: no line' });
+
+            await setRate(page, 252.66);
+            rec.check('R4 252.66 (above 252.656…): the line and 1 problem', (await ui.targetRateProblem(page).count()) === 1 && (await ui.problemCount(page).count()) === 1);
+
+            await setCopies(page, 1);
+            await setRate(page, 22.97);
+            rec.check('R4 one copy at 22.97: the line names one machine and what to do', (await lineText()) === LINE_ONE_COPY, show(await lineText()));
+            await page.evaluate(() => window.scrollTo(0, 0));
+            await rec.shot(page, 'r4-one-copy', { locator: ui.card(page, 'target'), desc: 'One copy at 22.97: the line' });
+            await setRate(page, 22.96);
+            rec.check('R4 one copy at 22.96: no line', (await ui.targetRateProblem(page).count()) === 0);
+            const at22_96 = await checkNow();
+            rec.check('R4 22.96 x 1 copy: the engine\'s check passes', at22_96 === 'Check passed', `${show(at22_96)}; engine words: ${await engineWords()}`);
+
+            await setCopies(page, 11);
             await setRate(page, 240);
-            rec.check('R4 back to 240: no line', (await ui.targetRateProblem(page).count()) === 0);
+            rec.check('R4 back to 240 x 11: no line', (await ui.targetRateProblem(page).count()) === 0);
         }, page);
     }, { out: OUT, base });
     code = run.finish({ title: 'Item 2.1 W: a target more than the machines can make' });
