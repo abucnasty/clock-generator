@@ -103,6 +103,8 @@ export interface RuleCountGroup extends RuleCountGroupKey {
     wake_ups_per_minute: number;
     /** Sink wake-ups of the group's inserters that have a true-start count, by the inferred starts (to lay against the next) */
     sink_wake_ups_where_true_starts_known: number;
+    /** Inserters of the group that have a true-start count */
+    inserters_with_true_starts: number;
     /** Sink wake-ups of those same inserters by the true starts; null when no inserter of the group has them */
     sink_wake_ups_true_starts: number | null;
 }
@@ -287,7 +289,8 @@ export function ruleCount(
         if (group === undefined) {
             group = {
                 ...key, key: text, inserters: 0, wired: 0, source_wake_ups: 0, sink_wake_ups: 0, pickups: 0, wake_ups: 0,
-                wake_ups_per_minute: 0, sink_wake_ups_where_true_starts_known: 0, sink_wake_ups_true_starts: null,
+                wake_ups_per_minute: 0, sink_wake_ups_where_true_starts_known: 0, inserters_with_true_starts: 0,
+                sink_wake_ups_true_starts: null,
             };
             groups.set(text, group);
         }
@@ -298,6 +301,7 @@ export function ruleCount(
         group.pickups += pickups;
         group.wake_ups += wake_ups;
         if (sink_true !== null) {
+            group.inserters_with_true_starts++;
             group.sink_wake_ups_where_true_starts_known += sink_wake_ups;
             group.sink_wake_ups_true_starts = (group.sink_wake_ups_true_starts ?? 0) + sink_true;
         }
@@ -306,4 +310,28 @@ export function ruleCount(
         group.wake_ups_per_minute = per_minute(group.wake_ups);
     }
     return { ticks, minutes, inserters: counts, groups: [...groups.values()], start_rule_fallback: fallback };
+}
+
+/** How the sink wake-ups counted with the inferred starts compare with those counted with the true starts, for a group */
+export interface TrueStartAgreement {
+    key: string;
+    /** Inserters of the group whose sink machine has true starts */
+    inserters: number;
+    /** Their sink wake-ups by the starts the rule infers */
+    inferred: number;
+    /** Their sink wake-ups by the simulator's true starts */
+    true_starts: number;
+    /** `inferred - true_starts` */
+    difference: number;
+}
+
+/** Per group of a simulated run, the sink wake-ups by inferred starts against those by true starts; only groups that have the latter */
+export function trueStartAgreementOf(run: RuleCountRun): TrueStartAgreement[] {
+    return run.groups.flatMap(group => group.sink_wake_ups_true_starts === null ? [] : [{
+        key: group.key,
+        inserters: group.inserters_with_true_starts,
+        inferred: group.sink_wake_ups_where_true_starts_known,
+        true_starts: group.sink_wake_ups_true_starts,
+        difference: group.sink_wake_ups_where_true_starts_known - group.sink_wake_ups_true_starts,
+    }]);
 }
