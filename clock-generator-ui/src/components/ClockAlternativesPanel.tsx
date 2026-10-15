@@ -13,7 +13,6 @@ import {
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
     Tooltip,
@@ -22,13 +21,14 @@ import {
 import { useId, useState, type ReactNode } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
-import { CLOCK_TABLE_NAME, clockHelpName, termsHelpName } from '../utils/a11yLabels';
+import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
 import { BELT_COPY } from '../utils/beltQuestion';
 import { beltCellText, clockTechnicalName, foldedMakes, plainClockName, worksOf } from '../utils/clockSummary';
 import { TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
+import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { TermsList } from './TermsPopover';
@@ -151,6 +151,17 @@ interface ClockAlternativesPanelProps {
  * The other clocks of the generation, to compare with the one at the top: by default a compact table (the plain name,
  * what it makes, its wake-ups and whether it works), with every column one press away. A row selects its clock.
  */
+/**
+ * Half-width, the full table (Show all columns; the compact one fits 720 on its own): the Clock column keeps 200px, the name wrapping to a few lines, and every other cell stays on one line, so
+ * that the table scrolls sideways in its box (ScrollX) instead of breaking each word of the name onto its own line. A
+ * header may wrap but is never narrower than 72px.
+ */
+const FULL_CLOCK_TABLE_SX = {
+    '& th': { minWidth: 72 },
+    '& tbody td:nth-of-type(2)': { minWidth: 200, maxWidth: 280 },
+    '& tbody td:not(:nth-of-type(2))': { whiteSpace: 'nowrap' },
+} as const;
+
 export function ClockAlternativesPanel({
     alternatives,
     selectedIndex,
@@ -343,8 +354,8 @@ export function ClockAlternativesPanel({
                     {COMPARE_COPY.showAll}
                 </Button>
             </Box>
-            <TableContainer>
-                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME}>
+            <ScrollX label={CLOCK_TABLE_REGION}>
+                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME} sx={allColumns ? FULL_CLOCK_TABLE_SX : undefined}>
                     <TableHead>
                         <TableRow>
                             <TableCell padding="checkbox">
@@ -400,7 +411,7 @@ export function ClockAlternativesPanel({
                         ))}
                     </TableBody>
                 </Table>
-            </TableContainer>
+            </ScrollX>
             {anyStable && (showUnstable ? unstableCount > 0 : hiddenCount > 0) && (
                 <Box sx={{ mt: 1 }}>
                     <Button

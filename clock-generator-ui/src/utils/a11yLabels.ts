@@ -47,6 +47,22 @@ export const PROGRESS_NAMES = {
 
 export const CLOCK_TABLE_NAME = 'Clocks';
 
+/** The box the clock table scrolls in when it is wider than the window (Show all columns) */
+export const CLOCK_TABLE_REGION = 'Clock comparison';
+
+/** The boxes that hold the charts and tables that scroll sideways below their floor, by what they hold */
+export const SCROLL_REGION_NAMES = {
+    detailsTable: 'Details table',
+    fuelConsumption: 'Fuel consumption',
+    fuelClocks: 'Fuel clocks',
+    fuelTimeline: 'Fuel timeline',
+    stateTimeline: 'State transition timeline',
+    transferTimeline: 'Transfer activity timeline',
+    shiftRange: 'Shift range chart',
+    swingComparison: 'Swing comparison chart',
+    swingPlan: 'Swing plan',
+} as const;
+
 /** The box the install steps' wiring list scrolls in, past 8 rows */
 export const WIRING_LIST_NAME = 'Wiring list';
 

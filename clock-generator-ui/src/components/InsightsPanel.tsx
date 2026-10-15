@@ -9,7 +9,6 @@ import {
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
     Typography,
@@ -19,6 +18,8 @@ import type { ClockInsight } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import { GameName } from './GameName';
 import { Panel } from './Panel';
+import { ScrollX } from './ScrollX';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
 /** Every string of the panel that is not the engine's */
@@ -107,7 +108,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
         return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : nameIdsIn(cell);
     };
     return (
-        <TableContainer sx={{ mt: 1 }}>
+        <ScrollX label={SCROLL_REGION_NAMES.detailsTable} sx={{ mt: 1 }}>
             <Table size="small">
                 <TableHead>
                     <TableRow>
@@ -126,7 +127,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
                     ))}
                 </TableBody>
             </Table>
-        </TableContainer>
+        </ScrollX>
     );
 }
 

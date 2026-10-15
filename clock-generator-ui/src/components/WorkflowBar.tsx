@@ -14,6 +14,8 @@ export type WorkflowView = 'configure' | 'results';
 
 /** Before the selected clock's name in the bar */
 const SELECTED_CLOCK_PREFIX = 'Selected clock: ';
+/** The note's line in the bar: its button (23px) and the 8px under it */
+const NOTE_LINE_HEIGHT = 31;
 
 interface WorkflowBarProps {
     view: WorkflowView;
@@ -188,7 +190,7 @@ export function WorkflowBar({
                                     color="text.secondary"
                                     noWrap
                                     title={selectedEngineName ?? undefined}
-                                    sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', sm: 'block' } }}
+                                    sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', md: 'block' } }}
                                     data-selected-clock
                                 >
                                     {SELECTED_CLOCK_PREFIX}{selectedLabel}
@@ -277,10 +279,24 @@ export function WorkflowBar({
                     </Tooltip>
                 </Box>
             </Toolbar>
-            {note && (
-                // under the buttons it explains, from md up; under the toggle in a narrow window, where the bar wraps
-                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1, mt: -0.5, minWidth: 0, display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, textAlign: { xs: 'left', md: 'right' } }}>
-                    {note.target ? (
+            {/* The line is always in the layout, empty when there is no note, so that the bar (which is pinned) keeps its height as the
+                note comes and goes, on every edit and check. Under the buttons it explains, from md up; under the toggle in a narrow
+                window, where the bar wraps */}
+            <Box
+                sx={{
+                    px: { xs: 2, sm: 3 },
+                    pb: 1,
+                    mt: -0.5,
+                    // one line of the note's button (23px) and the padding under it
+                    minHeight: NOTE_LINE_HEIGHT,
+                    minWidth: 0,
+                    display: 'flex',
+                    justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                    textAlign: { xs: 'left', md: 'right' },
+                }}
+            >
+                {note && (
+                    note.target ? (
                         <Button
                             id={ELEMENT_IDS.blockReason}
                             variant="text"
@@ -312,9 +328,9 @@ export function WorkflowBar({
                         <Typography id={ELEMENT_IDS.blockReason} variant="body2" color="text.secondary">
                             {note.text}
                         </Typography>
-                    )}
-                </Box>
-            )}
+                    )
+                )}
+            </Box>
             {isLoading && (
                 <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1 }}>
                     <GenerationProgressStatus store={progressStore} />
