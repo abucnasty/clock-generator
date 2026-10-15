@@ -190,8 +190,9 @@ function statusName(code: number, header: Record<string, string>): string {
  * - `working` of a machine is its status code being 1, `products_finished` its `pf` as whole numbers.
  *
  * @param base the path of the files without `.static.ndjson` / `.samples.ndjson`
+ * @param samples_base the path of the samples file without `.samples.ndjson`, when it is not beside the static file
  */
-export async function readExtractorDump(base: string): Promise<ExtractorDump> {
+export async function readExtractorDump(base: string, samples_base: string = base): Promise<ExtractorDump> {
     const source = base.split(/[\\/]/).pop() ?? base;
 
     // the samples first, as they are small and tell which entities of the whole map are wanted
@@ -199,7 +200,7 @@ export async function readExtractorDump(base: string): Promise<ExtractorDump> {
     let statusNames: Record<string, string> = {};
     const inserter_samples = new Map<number, { s: ChangeList; h?: ChangeList; it?: ChangeList }>();
     const machine_samples = new Map<number, { s: ChangeList; pf?: ChangeList }>();
-    for await (const line of openLines(`${base}.samples.ndjson`)) {
+    for await (const line of openLines(`${samples_base}.samples.ndjson`)) {
         if (!line.startsWith("{")) {
             continue;
         }
@@ -214,7 +215,7 @@ export async function readExtractorDump(base: string): Promise<ExtractorDump> {
         }
     }
     if (length === null) {
-        throw new Error(`${base}.samples.ndjson has no sample header (k "sh")`);
+        throw new Error(`${samples_base}.samples.ndjson has no sample header (k "sh")`);
     }
 
     const entities = new Map<number, StaticEntity>();
