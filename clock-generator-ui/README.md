@@ -39,7 +39,7 @@ replace. The words of the engine's own text (clock names and descriptions, the I
 | clock | The set of combinators that switches your inserters on in their wake windows and repeats every clock period. The tool makes several and recommends one. | potential clock |
 | blueprint | The Factorio string you paste in the game. It holds a clock's combinators, not your build. | "blueprint" for a clock or a build |
 | check | Test that your build can be clocked, without making any clocks. The Validate button and its chips keep their names until the Check only rework (2.3). | validation, "run a simulation", "re-run the simulation" (in sentences) |
-| enable rule ("rule" for short) | The rule that says when an inserter or drill is switched on. Modes: Auto, Always on, Never on, Clocked, Conditional. | enable control, override (only Advanced Overrides keeps "override"), AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL |
+| enable rule ("rule" for short) | The rule that says when an inserter or drill is switched on. Modes: Auto, Always on, Never on, Clocked, Conditional. | enable control, override (only the Advanced section keeps "override"), AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL |
 | assembling machine | The Type option for an ordinary crafting machine (the others are Furnace and Biochamber). "Machine" stays the word for any of the three. | assembler, machine as a type |
 | holds the rate | The clock makes the target rate for as long as nothing runs out and nothing backs up. | "meets the target rate" |
 | starved | An input runs out. | input loss |
@@ -47,7 +47,7 @@ replace. The words of the engine's own text (clock names and descriptions, the I
 | recovers | After the build is starved or jammed, it gets back to its rate by itself. | survives backpressure loss, no recovery |
 | belt slack | Extra ticks added to a wake window so a late pickup from a moving belt can still finish. | belt pickup slack |
 | simulator | The tool's own model of your build, used to test each clock. It is not Factorio. | simulation, for a button press |
-| LCM (expert) | The number of crafting cycles in one clock period. Only in the Swing Plan and Advanced Overrides, glossed where it first appears. | LCM cycles, LCM period |
+| LCM (expert) | The number of crafting cycles in one clock period. Only in the Swing Plan and Advanced, glossed where it first appears. | LCM cycles, LCM period |
 | hand | What an inserter is holding right now. Only for the load, never for the trip. | hand for a swing |
 
 Kept as they are: tick, UPS, combinator, insertion limit, Sidecar mod, Configure and Results, Generate, Stack Size and

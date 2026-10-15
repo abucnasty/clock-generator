@@ -4,7 +4,6 @@ import {
     Box,
     Button,
     IconButton,
-    Paper,
     TextField,
     Typography,
 } from '@mui/material';
@@ -13,6 +12,8 @@ import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { SURFACE } from '../theme/tokens';
+import { PanelSection } from './Panel';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
@@ -26,9 +27,42 @@ import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
-/** Below md the source and destination share the row's first line, each at least 220px wide */
-const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', flex: { xs: '1 1 220px', md: '0 0 auto' } };
-const PICKER_SX = { flex: 1, minWidth: { md: 250 } };
+/** An inserter's filter slots in the game */
+const MAX_FILTERS = 5;
+
+/**
+ * An inserter row is a grid: the handle and number, Source, Destination, then Stack Size, the filters, the enable rule
+ * and delete. Source and Destination take the room the others leave, so their names show in full where they fit. Below
+ * lg the row is two lines, Source and Destination on the first; below sm each has a line of its own.
+ */
+const ROW_GRID_SX = {
+    display: 'grid',
+    alignItems: 'center',
+    columnGap: 2,
+    rowGap: 1.5,
+    mb: 2,
+    p: 2,
+    bgcolor: SURFACE.row,
+    gridTemplateColumns: {
+        xs: 'minmax(0, 1fr)',
+        sm: 'auto minmax(0, 1fr) minmax(0, 1fr)',
+        lg: 'auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto auto',
+    },
+};
+/** Stack Size, the filters, the rule and delete: cells of the row's grid on one line, a line of their own below lg */
+const ROW_REST_SX = {
+    display: { xs: 'flex', lg: 'contents' },
+    gridColumn: { xs: '1 / -1', lg: 'auto' },
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 2,
+};
+/** At the end of the second line when the row wraps; in its own column on one line */
+const DELETE_SX = { ml: { xs: 'auto', lg: 0 } };
+const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0 };
+/** The source's lane select goes under it when the cell is narrow */
+const SOURCE_GROUP_SX = { ...PICKER_GROUP_SX, flexWrap: 'wrap' };
+const PICKER_SX = { flex: '1 1 160px', minWidth: 0 };
 
 interface EntityOption {
     type: SourceSinkType;
@@ -196,7 +230,8 @@ function InsertersFormComponent({
 
     const handleFilterChange = (inserterIndex: number, slotIndex: number, item: string) => {
         const inserter = inserters[inserterIndex];
-        const filters = [...(inserter.filters || [])];
+        // the slots show the auto filters while none is set, and the "+" after them: setting one keeps the others
+        const filters = inserter.filters?.length ? [...inserter.filters] : getInferredFilters(inserter).slice(0, MAX_FILTERS);
         filters[slotIndex] = item;
         // Remove empty trailing slots
         while (filters.length > 0 && !filters[filters.length - 1]) {
@@ -253,7 +288,7 @@ function InsertersFormComponent({
                 >
                     {dragHandle}
                     {/* Source, and the lane of its belt */}
-                    <Box sx={PICKER_GROUP_SX}>
+                    <Box sx={SOURCE_GROUP_SX}>
                         <Autocomplete
                             size="small"
                             sx={PICKER_SX}
@@ -336,16 +371,15 @@ function InsertersFormComponent({
                             autoHighlight
                             disableClearable
                         />
+                        {/* the same select as the diagram's inserter dialog; a new source drops the lane, as there */}
+                        <NearLaneSelect
+                            compact
+                            source={inserter.source}
+                            belts={belts}
+                            entityLabel={entityLabel('inserter', inserter.id)}
+                            onChange={(source) => onUpdate(index, { source })}
+                        />
                     </Box>
-
-                    {/* the same select as the diagram's inserter dialog; a new source drops the lane, as there */}
-                    <NearLaneSelect
-                        compact
-                        source={inserter.source}
-                        belts={belts}
-                        entityLabel={entityLabel('inserter', inserter.id)}
-                        onChange={(source) => onUpdate(index, { source })}
-                    />
 
                     {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
                     <Box sx={PICKER_GROUP_SX}>
@@ -436,6 +470,7 @@ function InsertersFormComponent({
                         />
                     </Box>
 
+                    <Box sx={ROW_REST_SX}>
                     <NumberField
                         label="Stack Size"
                         value={inserter.stack_size}
@@ -454,7 +489,7 @@ function InsertersFormComponent({
                         itemNames={itemNames}
                         onFilterChange={(slotIndex, item) => handleFilterChange(index, slotIndex, item)}
                         onRemoveFilter={(slotIndex) => handleRemoveFilter(index, slotIndex)}
-                        maxSlots={5}
+                        maxSlots={MAX_FILTERS}
                     />
 
                     <EnableRuleChip
@@ -465,9 +500,10 @@ function InsertersFormComponent({
                         onClick={() => setEnableControlModalInserterIndex(index)}
                     />
 
-                    <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
+                    <IconButton onClick={() => remove(index)} color="error" sx={DELETE_SX} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
                         <Delete />
                     </IconButton>
+                    </Box>
                 </Box>
                     )}
                 </SortableItem>
@@ -581,7 +617,7 @@ function InsertersFormComponent({
                     setEnableControlModalInserterIndex(null);
                 }}
             />
-        </Paper>
+        </PanelSection>
     );
 }
 

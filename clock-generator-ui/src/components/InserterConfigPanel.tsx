@@ -360,7 +360,7 @@ export function InserterConfigPanel({
                     icon={
                         savedRule.quiet
                             ? undefined
-                            : <Chip label={savedRule.chip} title={savedRule.summary} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
+                            : <Chip label={savedRule.chip} title={savedRule.summary} size="small" color="primary" sx={{ fontSize: '0.7rem' }} />
                     }
                 />
             </Tabs>

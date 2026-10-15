@@ -15,8 +15,9 @@ import {
     type Edge,
     type EdgeChange,
 } from '@xyflow/react';
-import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
-import { Add, Fullscreen, InfoOutlined } from '@mui/icons-material';
+import { Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
+import { Add, Fullscreen } from '@mui/icons-material';
+import { SURFACE } from '../theme/tokens';
 import { useGameNames } from '../hooks/useGameNames';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
 import { buildFlowGraph, flowNodeEntity } from '../utils/buildFlowGraph';
@@ -368,20 +369,16 @@ function FlowContent({
             <Controls showInteractive={false} fitViewOptions={fitViewOptions} />
             <Panel position="top-left">
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <IconButton
+                    {/* a toggle with its words, not an (i): it shows the machines' rates on the nodes, it is not help */}
+                    <ToggleButton
+                        value="rates"
                         size="small"
-                        onClick={toggleDetailedMode}
-                        title={detailedMode ? 'Hide machine facts' : 'Show machine facts'}
-                        sx={{
-                            bgcolor: detailedMode ? '#fca30033' : '#232323',
-                            border: `1px solid ${detailedMode ? '#fca300' : '#555'}`,
-                            borderRadius: 0,
-                            color: detailedMode ? '#fca300' : '#ccc',
-                            '&:hover': { bgcolor: detailedMode ? '#fca30055' : '#2d2d2d', borderColor: '#888' },
-                        }}
+                        selected={detailedMode}
+                        onChange={toggleDetailedMode}
+                        sx={{ py: 0.25, bgcolor: SURFACE.panel, textTransform: 'none' }}
                     >
-                        <InfoOutlined fontSize="small" />
-                    </IconButton>
+                        Show rates
+                    </ToggleButton>
                     {onRequestFullscreen && (
                         <IconButton
                             size="small"

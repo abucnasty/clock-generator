@@ -20,6 +20,9 @@ interface OverridesFormProps {
     onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
     /** The swing plan of the last check, under the fields */
     planSlot?: ReactNode;
+    /** Closed on a first visit, and again when the build is replaced (Import, Paste, Reset) */
+    expanded: boolean;
+    onExpandedChange: (expanded: boolean) => void;
 }
 
 export function OverridesForm({
@@ -29,12 +32,14 @@ export function OverridesForm({
     searchForFewerWakeUps,
     onUpdate,
     planSlot,
+    expanded,
+    onExpandedChange,
 }: OverridesFormProps) {
     return (
-        <Accordion slotProps={{ heading: { component: 'h2' } }}>
+        <Accordion expanded={expanded} onChange={(_, open) => onExpandedChange(open)} slotProps={{ heading: { component: 'h2' } }}>
             <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
-                    Advanced Overrides (Optional)
+                    Advanced
                 </Typography>
             </AccordionSummary>
             <AccordionDetails>

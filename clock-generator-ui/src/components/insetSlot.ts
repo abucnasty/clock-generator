@@ -37,3 +37,38 @@ export function insetSlotSx({ auto = false, open = false }: InsetSlotState = {})
         '&:hover, &:focus-visible': { borderColor: ROLE.orange.main },
     };
 }
+
+/** The word AUTO under an auto-filled slot: 11px grey on the slot's own dark, with its dashed edge (9:1) */
+export const AUTO_BADGE_SX: SxProps<Theme> = {
+    position: 'absolute',
+    bottom: -9,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    bgcolor: SURFACE.inset,
+    color: 'text.secondary',
+    border: `1px dashed ${CONTROL.border}`,
+    fontSize: 11,
+    fontWeight: 700,
+    lineHeight: 1,
+    px: 0.5,
+    py: '1px',
+    pointerEvents: 'none',
+};
+
+/** A slot's count (an infinity chest's request): 11px white on the slot's dark, at its bottom right as in the game */
+export const SLOT_COUNT_SX: SxProps<Theme> = {
+    position: 'absolute',
+    bottom: -7,
+    right: -6,
+    bgcolor: SURFACE.inset,
+    color: 'text.primary',
+    border: `1px solid ${CONTROL.border}`,
+    fontSize: 11,
+    fontWeight: 700,
+    lineHeight: 1,
+    px: 0.5,
+    py: '1px',
+    minWidth: 16,
+    textAlign: 'center',
+    pointerEvents: 'none',
+};
