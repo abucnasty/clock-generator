@@ -72,13 +72,16 @@ export const INSTALL_COPY = {
     },
     others: {
         title: 'Leave the other inserters alone.',
-        detail: 'An inserter that is not in the list runs all the time: it is set to Always on, or it has nothing to '
-            + 'wait for. Do not wire it. If this clock replaces an older one, an inserter the old clock switched and '
-            + 'this list does not name stays off for good: remove its wire, or untick Enable/disable.',
+        // the engine gives no wake windows, so no combinator, to an inserter set to Always on or Never on
+        detail: 'An inserter that is not in the list gets no combinator: one set to Always on, or with nothing to wait '
+            + 'for, runs all the time; one set to Never on stays off. Do not wire it. If this clock replaces an older '
+            + 'one, an inserter the old clock switched and this list does not name stays off for good: remove its '
+            + 'wire, or untick Enable/disable.',
     },
     none: {
         title: 'Nothing to place or wire.',
-        detail: 'Every inserter runs all the time, so this build needs no clock.',
+        detail: 'No inserter or drill is on the clock: each one runs all the time or is set to Never on, so this build '
+            + 'needs no clock.',
     },
     lock: {
         title: 'Know the lock.',
@@ -88,7 +91,7 @@ export const INSTALL_COPY = {
     },
 } as const;
 
-/** No combinator switches an inserter or a drill on: every one runs all the time, so there is no clock to place */
+/** No combinator switches an inserter or a drill on: each runs all the time or is set to Never on, so there is no clock to place */
 export function needsNoClock(input: Pick<InstallInput, 'wiring' | 'drills'>): boolean {
     return input.wiring.length === 0 && input.drills.length === 0;
 }

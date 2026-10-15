@@ -95,11 +95,11 @@ const STEP_PHRASES = {
     wire: ['green wire', 'connect its output to each inserter in the list below', 'names the same inserters; this list has all of it', 'Clock lock,'],
     drills: ['Drill 1 for', 'green wire', 'Anything > 0'],
     enable: ['Circuit network connection', 'Enable/disable', 'Anything > 0'],
-    others: ['An inserter that is not in the list runs all the time', 'remove its wire, or untick Enable/disable'],
-    none: ['Every inserter runs all the time, so this build needs no clock.'],
+    others: ['An inserter that is not in the list gets no combinator', 'one set to Never on stays off', 'remove its wire, or untick Enable/disable'],
+    none: ['No inserter or drill is on the clock: each one runs all the time or is set to Never on, so this build needs no clock.'],
     lock: ['The small constant combinator under the clock is the lock', 'a tick off'],
 };
-const NOTHING_TO_WIRE = 'Every inserter runs all the time, so this build needs no clock.';
+const NOTHING_TO_WIRE = 'No inserter or drill is on the clock: each one runs all the time or is set to Never on, so this build needs no clock.';
 const WIRING_CAPTION = 'Combinator → what to wire to its output';
 const DRILL_SENTENCE = 'A mining drill is wired and set the same way.';
 const REQUIRES = 'Needs Factorio 2.1.';

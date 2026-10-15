@@ -17,11 +17,11 @@ describe('installSteps', () => {
         expect(detailOf(steps, 'book')).toContain('the book opens on it');
     });
 
-    it('needs no clock when every inserter runs all the time and no drill is on the clock: one step', () => {
+    it('needs no clock when no inserter or drill is on the clock (each Always on, Never on, or with nothing to wait for): one step', () => {
         for (const book of [false, true]) {
             const steps = installSteps({ book, wiring: [], drills: [] });
             expect(ids(steps)).toEqual(['none']);
-            expect(steps[0].detail).toBe('Every inserter runs all the time, so this build needs no clock.');
+            expect(steps[0].detail).toBe('No inserter or drill is on the clock: each one runs all the time or is set to Never on, so this build needs no clock.');
         }
     });
 
@@ -61,6 +61,14 @@ describe('installSteps', () => {
         expect(wire).toContain('Clock lock,');
         expect(wire).toContain('The combinator\'s description names the same inserters; this list has all of it.');
         expect(wire).not.toMatch(/500 bytes/);
+    });
+
+    it('says what an inserter outside the list does, true for Always on, Never on and nothing to wait for', () => {
+        const others = detailOf(installSteps(plain), 'others');
+        expect(others).toContain('gets no combinator');
+        expect(others).toContain('one set to Always on, or with nothing to wait for, runs all the time');
+        expect(others).toContain('one set to Never on stays off');
+        expect(others).not.toMatch(/not in the list runs all the time/);
     });
 
     it('says the lock is off', () => {
