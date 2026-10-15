@@ -292,6 +292,7 @@ function DrillsFormComponent({
                 open={enableControlModalDrillIndex !== null}
                 onClose={() => setEnableControlModalDrillIndex(null)}
                 entityType="drill"
+                entityId={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.id ?? 0 : 0}
                 entityLabel={enableControlModalDrillIndex !== null && drills[enableControlModalDrillIndex] ? entityLabel('drill', drills[enableControlModalDrillIndex].id) : ''}
                 currentOverride={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.overrides?.enable_control : undefined}
                 sinkType="machine"

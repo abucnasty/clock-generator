@@ -832,7 +832,7 @@ const STEP_LIST = [
             if ((await clocked.count()) > 0) {
                 await clocked.click();
                 await page.waitForTimeout(300);
-                rec.check('the range delete button is named "Remove wake window"', (await dialog.getByRole('button', { name: exactly('Remove wake window') }).count()) === 1, `${await dialog.getByRole('button', { name: exactly('Remove wake window') }).count()} found`);
+                rec.check('the range delete button is named "Remove wake window 1" (numbered since 3.1)', (await dialog.getByRole('button', { name: exactly('Remove wake window 1') }).count()) === 1, `${await dialog.getByRole('button', { name: exactly('Remove wake window 1') }).count()} found`);
             }
             const inv = await inventory(page, '[role=dialog]');
             judgeNames(rec, 'the enable-rule modal (Clocked)', inv);

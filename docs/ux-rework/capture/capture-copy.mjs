@@ -21,7 +21,7 @@
 // Against today's UI the new-wording checks FAIL by design; the steps must still run.
 import { appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { forWidths, previewServer, SMALL_SAMPLE, sample, importFile, goConfigure, goResults, validate, generate, checkLabelInName, accessibleName, waitReady } from './lib.mjs';
+import { forWidths, previewServer, SMALL_SAMPLE, sample, importFile, goConfigure, goResults, validate, generate, checkLabelInName, accessibleName, waitReady, ui } from './lib.mjs';
 
 const OUT = process.argv[2];
 if (!OUT) {
@@ -755,7 +755,7 @@ const PART_B_AFTER_GENERATE = [
             // discard dialog
             const dialog = await openRuleModal(page);
             await modeRadio(dialog, 2).check({ force: true }).catch(() => {});
-            await dialog.getByRole('button').nth(1).click(); // SELECTOR: confirm (the modal's close icon has no name: it is the button after Fullscreen)
+            await ui.ruleClose(page).click(); // the rule dialog's close X (ui map, 3.1)
             await page.waitForTimeout(500);
             const discard = page.getByRole('dialog').last();
             await snap(page, rec, 'discard-dialog', { gate: true, desc: 'Discard changes dialog over the rule editor' });

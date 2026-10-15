@@ -23,6 +23,7 @@ import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { inferInserterItems } from '../utils/inferInserterItems';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
@@ -493,6 +494,15 @@ function InsertersFormComponent({
                 open={enableControlModalInserterIndex !== null}
                 onClose={() => setEnableControlModalInserterIndex(null)}
                 entityType="inserter"
+                entityId={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.id ?? 0 : 0}
+                stackSize={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.stack_size : undefined}
+                movedItems={(() => {
+                    const inserter = enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex] : undefined;
+                    if (!inserter) return [];
+                    // the filters the player set first, else the items the game would pick for it
+                    const filters = inserter.filters?.filter(Boolean) ?? [];
+                    return filters.length > 0 ? filters : inferInserterItems(inserter, machines, belts, chests, getRecipeInfo);
+                })()}
                 entityLabel={enableControlModalInserterIndex !== null && inserters[enableControlModalInserterIndex] ? entityLabel('inserter', inserters[enableControlModalInserterIndex].id) : ''}
                 currentOverride={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.overrides?.enable_control : undefined}
                 sourceType={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.source?.type : undefined}
