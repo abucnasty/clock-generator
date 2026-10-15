@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GLOSSARY, TERMS_FOCUS, glossaryWithFocus, type GlossaryId } from './glossary';
 
 const IDS: GlossaryId[] = [
-    'swing', 'swing-plan', 'crafting-cycle', 'clock-period', 'wake-window', 'wake-up', 'start-point', 'copies', 'build',
+    'swing', 'swing-plan', 'crafting-cycle', 'clock-period', 'wake-window', 'wake-up', 'start-point', 'copies', 'build', 'your-builds', 'share-link',
     'clock', 'blueprint', 'check', 'enable-rule', 'assembling-machine', 'holds-the-rate', 'starved', 'jammed', 'recovers',
     'belt-slack', 'simulator', 'hand', 'lcm',
 ];
