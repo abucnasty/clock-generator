@@ -6,6 +6,7 @@
     "src/light.ts",
     "src/record-in-factorio.ts",
     "src/verify-recording.ts",
+    "src/rule-calls.ts",
     "src/rules-of-the-game.ts",
     "src/**/*.test.ts",
     "scripts/**/*.js",

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.11.0] - 2026-10-14
+
+### Added
+- Advice on which inserters are worth clocking, from the inserter cost series of factorio-benchmarks: `npm run calls` in `clock-generator` gives a call for each group of inserters of a build, "clock" or "leave unwired", firm or marginal, from the wake-ups a minute a clock removes from each of its inserters (below 63.5 leave unwired, from 158.6 clock, marginal between 63.5 and 207.6). It reads a sample or a config (its selected clock against the same build with every inserter always enabled, in the simulator), two recordings of the game, or two dumps of the series' extractor, one unwired and one clocked. It is advice about update time only: it changes no clock and no selection, and is never a reason to drop a clock a build needs for its rate. The rule was measured on saves of 91,000 to 606,000 entities, and a call from the simulator was checked against the game on one build. See "The rule's count and the clock-or-unwired advice" in `clock-generator/GOALS.md`.
+
 ## [0.10.0] - 2026-10-14
 
 ### Added
