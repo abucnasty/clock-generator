@@ -267,7 +267,7 @@ export function InserterConfigPanel({
     const id = useId();
     const [activeTab, setActiveTab] = useState(0);
     const [draft, setDraft] = useState(inserter);
-    const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false });
+    const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false, problems: [] });
 
     // the tab's chip shows the saved rule, in the words of the List row's chip
     const currentOverride = inserter.overrides?.enable_control;
@@ -298,6 +298,12 @@ export function InserterConfigPanel({
         addFromEntity(draft.sink.type, draft.sink.id);
         return [...items];
     }, [draft.source, draft.sink, machines, belts, chests, getRecipeInfo]);
+
+    // the items the inserter moves: its filters, else what the game would pick; a template's item picker starts on them
+    const movedItems = useMemo<string[]>(() => {
+        const filters = draft.filters?.filter(Boolean) ?? [];
+        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo);
+    }, [draft, machines, belts, chests, getRecipeInfo]);
 
     const copyFromOptions = useMemo<CopyFromOption[]>(() => {
         return inserters
@@ -379,6 +385,9 @@ export function InserterConfigPanel({
             <Box role="tabpanel" id={`${id}-tabpanel-1`} aria-labelledby={`${id}-tab-1`} hidden={activeTab !== 1} sx={{ p: 2 }}>
                 <EnableControlFormContent
                     entityType="inserter"
+                    entityId={inserter.id}
+                    stackSize={draft.stack_size}
+                    movedItems={movedItems}
                     currentOverride={currentOverride}
                     onDraftChange={setRule}
                     hideActions

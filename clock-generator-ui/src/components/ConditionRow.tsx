@@ -4,6 +4,7 @@ import type { TargetType } from 'clock-generator/browser';
 import { ComparisonOperator, ValueReferenceType } from 'clock-generator/light';
 import type { Condition, ValueReference } from '../hooks/useConfigForm';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
+import { itemFieldId, type RuleProblem } from '../utils/ruleProblems';
 import { StatusConditionRow } from './StatusConditionRow';
 import { ValueReferenceSelector } from './ValueReferenceSelector';
 
@@ -26,6 +27,11 @@ interface ConditionRowProps {
     sourceType: SourceSinkType;
     sinkType: SourceSinkType;
     canDelete: boolean;
+    /** The condition's place in the rule, "rule.0.1", which its fields' ids are made from */
+    path: string;
+    idPrefix: string;
+    /** The form's problems by field id */
+    problems: ReadonlyMap<string, RuleProblem>;
 }
 
 export function ConditionRow({
@@ -36,7 +42,12 @@ export function ConditionRow({
     sourceType,
     sinkType,
     canDelete,
+    path,
+    idPrefix,
+    problems,
 }: ConditionRowProps) {
+    const leftId = itemFieldId(idPrefix, path, 'left');
+    const rightId = itemFieldId(idPrefix, path, 'right');
     // Use specialized row for MACHINE_STATUS enum conditions
     if (condition.left.type === ValueReferenceType.MACHINE_STATUS) {
         return (
@@ -89,6 +100,8 @@ export function ConditionRow({
                 sourceType={sourceType}
                 sinkType={sinkType}
                 compact
+                itemFieldId={leftId}
+                itemError={problems.get(leftId)?.text}
             />
 
             <FormControl size="small" sx={{ minWidth: 60 }}>
@@ -112,6 +125,8 @@ export function ConditionRow({
                 sourceType={sourceType}
                 sinkType={sinkType}
                 compact
+                itemFieldId={rightId}
+                itemError={problems.get(rightId)?.text}
             />
 
             <IconButton

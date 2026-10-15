@@ -10,19 +10,19 @@ import {
 } from '@mui/material';
 import { ValueReferenceType, EntityReference, TargetType } from 'clock-generator/light';
 import type { ValueReference } from '../hooks/useConfigForm';
-import { SELECT_NAMES } from '../utils/a11yLabels';
+import { GROUP_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useFullscreen } from './FullscreenContext';
 import { ItemSelector } from './ItemSelector';
 
 const VALUE_TYPES = [
     { value: ValueReferenceType.CONSTANT, label: 'Constant' },
-    { value: ValueReferenceType.INVENTORY_ITEM, label: 'Inventory Item' },
-    { value: ValueReferenceType.AUTOMATED_INSERTION_LIMIT, label: 'Insertion Limit' },
-    { value: ValueReferenceType.OUTPUT_BLOCK, label: 'Output Block' },
-    { value: ValueReferenceType.CRAFTING_PROGRESS, label: 'Crafting Progress %' },
-    { value: ValueReferenceType.BONUS_PROGRESS, label: 'Bonus Progress %' },
-    { value: ValueReferenceType.HAND_QUANTITY, label: 'Hand Quantity' },
-    { value: ValueReferenceType.INSERTER_STACK_SIZE, label: 'Inserter Stack Size' },
+    { value: ValueReferenceType.INVENTORY_ITEM, label: 'Inventory item' },
+    { value: ValueReferenceType.AUTOMATED_INSERTION_LIMIT, label: 'Insertion limit' },
+    { value: ValueReferenceType.OUTPUT_BLOCK, label: 'Output block' },
+    { value: ValueReferenceType.CRAFTING_PROGRESS, label: 'Crafting progress %' },
+    { value: ValueReferenceType.BONUS_PROGRESS, label: 'Bonus progress %' },
+    { value: ValueReferenceType.HAND_QUANTITY, label: 'Items in hand' },
+    { value: ValueReferenceType.INSERTER_STACK_SIZE, label: 'Stack size' },
 ] as const;
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
@@ -34,6 +34,10 @@ interface ValueReferenceSelectorProps {
     sourceType: SourceSinkType;
     sinkType: SourceSinkType;
     compact?: boolean;
+    /** The element id of the item picker, which a problem with it points at */
+    itemFieldId?: string;
+    /** The problem with the item picker, shown under it */
+    itemError?: string;
 }
 
 function getDefaultValueReference(type: ValueReference['type']): ValueReference {
@@ -97,6 +101,8 @@ export function ValueReferenceSelector({
     sourceType,
     sinkType,
     compact = false,
+    itemFieldId,
+    itemError,
 }: ValueReferenceSelectorProps) {
     const isFullscreen = useFullscreen();
     
@@ -149,12 +155,13 @@ export function ValueReferenceSelector({
                     exclusive
                     onChange={handleEntityChange}
                     size="small"
+                    aria-label={GROUP_NAMES.whichEnd}
                 >
                     <ToggleButton value={EntityReference.SOURCE} disabled={entityDisabled(EntityReference.SOURCE)}>
-                        Src
+                        Source
                     </ToggleButton>
                     <ToggleButton value={EntityReference.SINK} disabled={entityDisabled(EntityReference.SINK)}>
-                        Sink
+                        Destination
                     </ToggleButton>
                 </ToggleButtonGroup>
             )}
@@ -181,6 +188,8 @@ export function ValueReferenceSelector({
                     label="Item"
                     minWidth={itemSelectorWidth}
                     iconOnly
+                    inputId={itemFieldId}
+                    errorText={itemError}
                 />
             )}
 

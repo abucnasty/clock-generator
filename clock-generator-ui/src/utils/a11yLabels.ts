@@ -32,12 +32,34 @@ export const BUTTON_NAMES = {
     removeRange: 'Remove wake window',
     close: 'Close',
     moreOptions: 'More options',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
+    useClockWindows: "Use the clock's wake windows",
+    replaceConditions: 'Replace conditions',
+    useTemplate: 'Use template',
+    replaceRule: 'Replace rule',
+} as const;
+
+/** The rule editor's numbered buttons: "Remove wake window 2", "Remove group 1" */
+export const removeRangeName = (n: number) => `${BUTTON_NAMES.removeRange} ${n}`;
+export const removeGroupName = (n: number) => `Remove group ${n}`;
+
+/** The rule editor's tick fields: "Start tick, wake window 1", which holds the visible label "Start tick" */
+export function windowFieldName(side: 'start' | 'end', n: number): string {
+    return `${side === 'start' ? 'Start tick' : 'End tick'}, wake window ${n}`;
+}
+
+/** The names of the rule editor's toggle groups, which have no visible label */
+export const GROUP_NAMES = {
+    joinConditions: 'Join conditions with',
+    whichEnd: 'Which end',
+    whichMachine: 'Which machine',
 } as const;
 
 /** Fields with no visible label of their own */
 export const FIELD_NAMES = {
     blueprintString: 'Blueprint string',
-    latchedMode: 'Latched mode',
+    latchedMode: 'Latched',
 } as const;
 
 export const PROGRESS_NAMES = {

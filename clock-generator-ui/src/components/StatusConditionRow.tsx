@@ -16,15 +16,11 @@ import {
     ValueReferenceType 
 } from 'clock-generator/light';
 import type { Condition } from '../hooks/useConfigForm';
-import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
+import { BUTTON_NAMES, GROUP_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
+import { STATUS_LABELS } from '../utils/ruleSentence';
 import { useFullscreen } from './FullscreenContext';
 
-const MACHINE_STATUSES = [
-    { value: MachineStatus.INGREDIENT_SHORTAGE, label: 'Ingredient Shortage' },
-    { value: MachineStatus.WORKING, label: 'Working' },
-    { value: MachineStatus.OUTPUT_FULL, label: 'Output Full' },
-    { value: MachineStatus.NO_FUEL, label: 'No Fuel' },
-] as const;
+const MACHINE_STATUSES = Object.entries(STATUS_LABELS).map(([value, label]) => ({ value: value as MachineStatus, label }));
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
@@ -103,12 +99,13 @@ export function StatusConditionRow({
                 exclusive
                 onChange={handleEntityChange}
                 size="small"
+                aria-label={GROUP_NAMES.whichMachine}
             >
                 <ToggleButton value={EntityReference.SOURCE} disabled={entityDisabled(EntityReference.SOURCE)}>
                     Source
                 </ToggleButton>
                 <ToggleButton value={EntityReference.SINK} disabled={entityDisabled(EntityReference.SINK)}>
-                    Sink
+                    Destination
                 </ToggleButton>
             </ToggleButtonGroup>
 
