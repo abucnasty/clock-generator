@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entersEditingDialog, isEscapeForSomethingElse, isInOtherDialog, isTextField, isUndoShortcut } from './undoKeys';
+import { entersEditingDialog, entersOtherDialog, isEscapeForSomethingElse, isInOtherDialog, isTextField, isUndoShortcut } from './undoKeys';
 
 const key = (key: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }> = {}) =>
     ({ key, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...mods });
@@ -85,5 +85,30 @@ describe('entersEditingDialog', () => {
         expect(entersEditingDialog(inDialog, otherInside)).toBe(false);
         expect(entersEditingDialog({ tagName: 'BUTTON', closest: () => null }, outside)).toBe(false);
         expect(entersEditingDialog(null, outside)).toBe(false);
+    });
+});
+
+describe('entersOtherDialog', () => {
+    const outside = { tagName: 'BUTTON' };
+    const otherInside = { tagName: 'INPUT' };
+    const dialog = { contains: (node: unknown) => node === otherInside };
+    const OTHER_DIALOG = '.MuiDialog-root:not([data-fullscreen-diagram])';
+    const inDialog = { tagName: 'DIV', closest: (selector: string) => (selector === OTHER_DIALOG ? dialog : null) };
+    // the fullscreen diagram is a `.MuiDialog-root` too, but has `data-fullscreen-diagram`
+    const inFullscreenDiagram = { tagName: 'DIV', closest: () => null };
+
+    it('is true when focus comes into a dialog from the page, or from nowhere', () => {
+        expect(entersOtherDialog(inDialog, outside)).toBe(true);
+        expect(entersOtherDialog(inDialog, null)).toBe(true);
+    });
+
+    it('is false when focus moves inside the dialog', () => {
+        expect(entersOtherDialog(inDialog, otherInside)).toBe(false);
+    });
+
+    it('is false into the fullscreen diagram, outside any dialog, or with nothing focused', () => {
+        expect(entersOtherDialog(inFullscreenDiagram, outside)).toBe(false);
+        expect(entersOtherDialog({ tagName: 'BUTTON', closest: () => null }, outside)).toBe(false);
+        expect(entersOtherDialog(null, outside)).toBe(false);
     });
 });

@@ -43,7 +43,7 @@ import { IntroCard } from './components/IntroCard';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
-import { MessageHost } from './components/Messages';
+import { MessageHost, MessageSlot } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { CheckErrorAlert } from './components/CheckErrorAlert';
@@ -52,7 +52,7 @@ import { BeltAssumption } from './components/BeltAssumption';
 import { BeltAssumptionLine } from './components/BeltAssumptionLine';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
-import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate } from './utils/checkThenGenerate';
+import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate, startsRun } from './utils/checkThenGenerate';
 import { copyBlueprintLabelOf, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
@@ -166,7 +166,7 @@ function App() {
         reorderDrills,
     } = useConfigForm();
 
-    const { offerUndo } = useUndo(config, setConfig, isConfigLoaded);
+    const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded);
 
     // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
     // where to start instead of counting problems
@@ -346,6 +346,9 @@ function App() {
     const runChecked = useCallback((start: (config: Config) => void) => {
         const config = exportConfig();
         const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        // running the build accepts it: an Undo offered before this press ends here, once (not when the check's own
+        // generation starts later)
+        if (startsRun(decision)) withdrawUndo();
         switch (decision.kind) {
             case 'wait':
                 return;
@@ -374,18 +377,19 @@ function App() {
                 });
                 return;
         }
-    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, goToTarget, goToCheckError, validate, setCheckingFor]);
+    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
 
     // checks without moving the page: the result shows as the chip, the alert and the swing plan
     const handleCheckOnly = useCallback(() => {
         const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        if (startsRun(decision)) withdrawUndo();
         if (decision.kind === 'show-problems') {
             focusBarNote();
         } else if (decision.kind === 'check') {
             setCheckedForGenerate(false);
             validate(exportConfig());
         }
-    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, validate, exportConfig]);
+    }, [isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, validate, exportConfig]);
 
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
@@ -585,6 +589,8 @@ function App() {
                             onGoToProblem={handleGoToProblem}
                         />
                     )}
+                    {/* outside the condition: a message can come before the workflow bar is there */}
+                    <MessageSlot active={!diagramFullscreen} />
                 </AppBar>
 
                 <Container component="main" maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
@@ -879,6 +885,8 @@ function App() {
                     <Box
                         sx={{
                             display: 'flex',
+                            flexWrap: 'wrap',
+                            columnGap: 1,
                             alignItems: 'center',
                             px: 2,
                             py: 1,
@@ -889,6 +897,8 @@ function App() {
                         }}
                     >
                         <Typography id="diagram-fullscreen-title" variant="h6" component="h2" sx={{ flex: 1 }}>Flow Diagram</Typography>
+                        {/* the page's header is behind this dialog, so its message shows here */}
+                        <MessageSlot active={diagramFullscreen} inBar />
                         <IconButton onClick={() => setDiagramFullscreen(false)} size="small" aria-label="Exit fullscreen">
                             <FullscreenExit />
                         </IconButton>

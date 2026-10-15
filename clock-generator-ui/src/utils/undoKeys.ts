@@ -56,6 +56,23 @@ export function entersEditingDialog(
     to: ElementLike | null,
     from: unknown,
 ): boolean {
-    const dialog = to?.closest?.(EDITING_DIALOG) as { contains?: (node: unknown) => boolean } | null | undefined;
+    return entersDialogMatching(EDITING_DIALOG, to, from);
+}
+
+/**
+ * Whether focus moving from `from` to `to` enters a dialog other than the fullscreen diagram, which means it just
+ * opened: then a message without an action, which the dialog would hide, closes. Focus moving about inside one is not
+ * entering it.
+ */
+export function entersOtherDialog(
+    to: ElementLike | null,
+    from: unknown,
+): boolean {
+    return entersDialogMatching(OTHER_DIALOG, to, from);
+}
+
+/** Focus comes into the dialog `selector` finds around `to`, from outside it or from nowhere */
+function entersDialogMatching(selector: string, to: ElementLike | null, from: unknown): boolean {
+    const dialog = to?.closest?.(selector) as { contains?: (node: unknown) => boolean } | null | undefined;
     return Boolean(dialog) && !(from && dialog?.contains?.(from));
 }
