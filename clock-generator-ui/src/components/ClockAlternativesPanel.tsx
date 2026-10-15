@@ -182,6 +182,9 @@ export function ClockAlternativesPanel({
                         label={VERDICT_LABEL[alternative.verdict]}
                         color={VERDICT_COLOR[alternative.verdict]}
                         variant="outlined"
+                        // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
+                        // words under 4.5:1
+                        sx={{ bgcolor: 'background.paper' }}
                     />
                 </Tooltip>
             </TableCell>

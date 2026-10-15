@@ -59,7 +59,6 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                     <Chip
                         size="small"
                         label={maxRateLabel(facts.output_rate_per_second)}
-                        color="primary"
                         variant="outlined"
                         sx={{ height: 20, fontSize: '0.7rem' }}
                     />

@@ -269,7 +269,8 @@ function App() {
     // the one filled button of the bar and the card: Generate, or the Copy of the clocks it made
     const primaryAction = nextStepOf({
         problemCount: problems.length,
-        isRunning: busy,
+        // a generation, with the check Generate starts first; Check only alone leaves fresh clocks the next step
+        isRunning: isRunning || checkingFor !== null,
         hasBlueprint: blueprintString !== null,
         stale: resultsAreStale,
         view,
