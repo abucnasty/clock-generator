@@ -17,6 +17,11 @@ const SCAFFOLDS = {
     AUTOMATION_SCIENCE: { scaffold: "science/automation-science/automation-science-scaffold.txt", warmup: 300, settle: 4800 },
     ACCUMULATOR_640: { scaffold: "intermediates/accumulator/accumulator-640-scaffold.txt", warmup: 3600, settle: 7200 },
     LOW_DENSITY_STRUCTURE: { scaffold: "intermediates/low-density-structure/low-density-structure-scaffold.txt", warmup: 3600, settle: 2400 },
+    // the egg loop cannot start itself, so the egg machines are given eggs to begin with, as the game tests do
+    AGRICULTURAL_SCIENCE: {
+        scaffold: "science/agriculture-science/agriculture-science-scaffold.txt", warmup: 300, settle: 4800,
+        seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
+    },
 };
 const PERIODS = 20;
 
@@ -49,7 +54,7 @@ const PERIODS = 20;
             await recordInFactorio({
                 factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE, blueprint,
                 out: path.join(out, `${SAMPLE}-${name}.json`), ticks: period * (PERIODS + 1),
-                warmup_ticks: build.warmup, settle_ticks: build.settle, seed: [],
+                warmup_ticks: build.warmup, settle_ticks: build.settle, seed: build.seed ?? [],
                 clock: unclocked ? undefined : clock, config: unclocked ? undefined : config, unclocked,
                 game_speed: 1000, timeout_seconds: 900, log: () => { },
             });
