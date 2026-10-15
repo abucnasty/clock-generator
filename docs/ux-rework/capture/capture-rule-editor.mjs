@@ -431,6 +431,25 @@ const run = await forWidths(
                 await fieldLabelInName(rec, page, U.repeat(page), 'Repeat every field');
                 await captureState(rec, page, 'rule-clocked-nocheck', 'Clocked before any check: the "Run Check only" line, one empty window, no strip');
 
+                // problems show only once a field is left, or after a refused Save (fix round 1). The capture above walks the
+                // focus through every field, which leaves them all, so this starts from a freshly opened dialog
+                await closeRule(page);
+                await openRule(page, 'Inserter 1');
+                await pickMode(page, 'clocked');
+                const invalidCount = () => U.dialog(page).first().locator('input[aria-invalid="true"]').count();
+                rec.check('choosing Clocked shows no error on the untouched empty window', (await invalidCount()) === 0 && !(await has(page, /Enter a tick\./)), `${await invalidCount()} invalid input(s)`);
+                same(rec, 'sentence for an untouched empty window', await sentence(page), 'No wake windows yet: enter a start and an end tick.');
+                await U.start(page, 1).focus();
+                await page.keyboard.press('Tab');
+                await page.waitForTimeout(200);
+                const startAfterBlur = await U.start(page, 1).getAttribute('aria-invalid').catch(() => null);
+                const endAfterBlur = await U.end(page, 1).getAttribute('aria-invalid').catch(() => null);
+                rec.check('leaving the empty Start shows "Enter a tick." on it, and not yet on the untouched End', startAfterBlur === 'true' && endAfterBlur !== 'true' && (await has(page, /Enter a tick\./)), `start aria-invalid="${startAfterBlur}", end "${endAfterBlur}"`);
+                await click(U.save(page));
+                await page.waitForTimeout(400);
+                const endAfterSave = await U.end(page, 1).getAttribute('aria-invalid').catch(() => null);
+                rec.check('a refused Save shows the untouched End\'s problem too, and keeps the dialog open', endAfterSave === 'true' && (await U.dialog(page).count()) === 1, `end aria-invalid="${endAfterSave}"`);
+
                 // a valid window reads in the sentence without a period
                 await fill(U.start(page, 1), '10');
                 await fill(U.end(page, 1), '20');
@@ -461,15 +480,12 @@ const run = await forWidths(
                 await fill(U.start(page, 1), '');
                 await fill(U.end(page, 1), '5');
                 await page.keyboard.press('Tab');
-                if (!(await has(page, /Enter a tick\./))) await click(U.save(page));
                 rec.check('a cleared Start shows "Enter a tick."', await has(page, /Enter a tick\./));
                 await fill(U.start(page, 1), '1.5');
                 await page.keyboard.press('Tab');
-                if (!(await has(page, /Enter a whole number, 0 or more\./))) await click(U.save(page));
                 rec.check('a fractional Start shows "Enter a whole number, 0 or more."', await has(page, /Enter a whole number, 0 or more\./));
                 await fill(U.start(page, 1), '0');
                 await setRepeat(page, 0);
-                if (!(await has(page, /Enter a whole number of ticks, 1 or more, or leave it empty\./))) await click(U.save(page));
                 rec.check('"Repeat every" 0 shows "Enter a whole number of ticks, 1 or more, or leave it empty."', await has(page, /Enter a whole number of ticks, 1 or more, or leave it empty\./));
                 await setRepeat(page, '');
 
@@ -482,6 +498,18 @@ const run = await forWidths(
                 const chip = (await chipLabel(page, 'Inserter 1')) ?? '';
                 rec.check('the row chip reads "Clocked 12–12 …" (a 1-tick window is kept, not dropped)', /^Clocked 12–12/.test(chip), chip);
                 if (!closed) await closeRule(page);
+
+                // a half-typed window, which Save would leave out, still makes Esc ask first (fix round 1)
+                if (closed) {
+                    await openRule(page, 'Inserter 1');
+                    await click(U.addWindow(page));
+                    await page.waitForTimeout(250);
+                    await fill(U.start(page, 2), '40');
+                    await page.keyboard.press('Escape');
+                    await page.waitForTimeout(400);
+                    rec.check('Esc with a half-typed second window opens the discard prompt', (await U.discard(page).count()) > 0);
+                    await closeRule(page);
+                }
                 await page.close();
             });
 
@@ -518,7 +546,6 @@ const run = await forWidths(
                         await fill(U.end(page, 1), String(p));
                         await page.keyboard.press('Tab');
                         const past = `Past the end of the ${p}-tick period: the last tick is ${p - 1}.`;
-                        if (!(await has(page, new RegExp(esc(past))))) await click(U.save(page));
                         rec.check(`End ${p} shows "${past}"`, await has(page, new RegExp(esc(past))));
                         await fill(U.end(page, 1), String(p - 1));
                         await page.keyboard.press('Tab');
@@ -527,7 +554,7 @@ const run = await forWidths(
                         while (p % r === 0) r++;
                         await setRepeat(page, r);
                         await fill(U.end(page, 1), '6');
-                        const warn = `${r} ticks doesn't fit a whole number of times into the ${p}-tick clock period, so the blueprint can't repeat this rule exactly.`;
+                        const warn = `${r} ticks doesn't fit a whole number of times into the ${p}-tick clock period, so the clock can't follow this rule exactly.`;
                         rec.check(`Repeat every ${r} shows the non-blocking warning`, norm(await dialogText(page)).includes(warn), warn);
                         await textContrast(rec, page, 'the warning text', dlg.getByText(/doesn't fit a whole number of times/));
                         await captureState(rec, page, 'rule-clocked-check', 'Clocked after Check only: the period line from the check, the strip with your window, the repeat warning');
@@ -673,6 +700,9 @@ const run = await forWidths(
                 await pickMode(page, 'conditional');
                 const o1 = await optionNames();
                 rec.check('belt → machine lists only "Destination below its insertion limit"', o1.length === 1 && /^Destination below its insertion limit/.test(o1[0]), JSON.stringify(o1));
+                // a condition with no item: no error while untouched (fix round 1), then it shows after a refused Save
+                const untouchedInvalid = await U.dialog(page).first().locator('input[aria-invalid="true"]').count();
+                rec.check('a new condition\'s untouched item picker shows no error yet', untouchedInvalid === 0 && !(await has(page, /Pick an item\./)), `${untouchedInvalid} invalid input(s)`);
                 // a condition with no item blocks Save
                 await click(U.save(page));
                 await page.waitForTimeout(400);
@@ -721,18 +751,26 @@ const run = await forWidths(
                 rec.check("…its release reads the source's output block", s !== null && s.includes(`stays on until ${moved} in the source < the source's output block.`), `"${s}"`);
                 const headFocus = await U.conditionsHeading(page).evaluate((h) => h === document.activeElement).catch(() => false);
                 rec.check('focus is on the "Conditions" heading', headFocus, `focus is on "${await activeName(page)}"`);
-                await checkAnnounced(rec, page, 'Conditions replaced with the template Latched output drain.', 'the template replace, with the dialog open');
+                // nothing of the player's was replaced, so the announcement says it was applied (fix round 1 nit)
+                await checkAnnounced(rec, page, 'Template Latched output drain applied.', 'the template applied over the untouched default, with the dialog open');
                 // a second template replaces a real rule: the confirm sentence
                 await click(U.templates(page));
                 await click(page.getByRole('option', { name: /^Source output full/ }));
                 await page.waitForTimeout(350);
-                rec.check('with a rule in place the step says "This replaces your 1 condition and the latch."', await has(page, /This replaces your 1 condition and the latch\./));
+                rec.check('with a rule in place the step says "This replaces your 1 condition and your release conditions."', await has(page, /This replaces your 1 condition and your release conditions\./));
                 const replaceBtn = U.dialog(page).first().getByRole('button', { name: 'Replace conditions', exact: true });
                 rec.check('…and offers "Replace conditions"', (await replaceBtn.count()) === 1);
                 await lin(rec, page, replaceBtn, 'Replace conditions');
                 await click(ui.ruleTemplateCancel(U.dialog(page).first()));
                 await page.waitForTimeout(250);
                 rec.check('Cancel keeps the latched template rule', eq(await sentence(page), s), `"${await sentence(page)}"`);
+                // Replace conditions over a real rule: the same template again, confirmed
+                await click(U.templates(page));
+                await click(page.getByRole('option', { name: /^Latched output drain/ }));
+                await page.waitForTimeout(350);
+                await click(U.dialog(page).first().getByRole('button', { name: 'Replace conditions', exact: true }));
+                await page.waitForTimeout(300);
+                await checkAnnounced(rec, page, 'Conditions replaced with the template Latched output drain.', 'the template replace, with the dialog open');
                 // save it, reopen: the saved release reads the source
                 const closed = await saveAndWaitClosed(page);
                 rec.check('the latched rule saves', closed);
@@ -791,7 +829,7 @@ const run = await forWidths(
                 rec.check("a drill's mode group is named \"Choose when this mining drill is switched on.\"", rgName === LEGEND('mining drill') || gName === LEGEND('mining drill'), `radiogroup "${rgName}", first group "${gName}"`);
                 const cond = U.mode(page, 'Conditional');
                 rec.check('the Conditional radio is disabled', await cond.isDisabled().catch(() => false));
-                rec.check('…with "Not available for mining drills."', await has(page, /Not available for mining drills\./));
+                rec.check('…with "Not available for mining drills: conditions read an inserter\'s source, destination and hand."', await has(page, /Not available for mining drills: conditions read an inserter's source, destination and hand\./));
                 await U.mode(page, 'Auto').focus().catch(() => {});
                 await checkInertFromKeyboard(rec, page, cond, "the drill's Conditional radio (arrows skip it)");
                 for (const key of ['auto', 'always', 'never', 'clocked']) {
