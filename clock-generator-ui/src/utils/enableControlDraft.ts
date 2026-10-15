@@ -101,11 +101,17 @@ export function buildEnableControlOverride(draft: EnableControlDraft): EnableCon
 }
 
 /**
- * Whether the form would save something other than what it was opened with. Both are built into the rule they save,
- * so a field the save leaves out (a range while ALWAYS is picked, an inverted range) does not count.
+ * Whether the form holds something other than what it was opened with. Both are built into the rule they save, so a
+ * field the save leaves out while another mode is picked (a range while ALWAYS is) does not count. While Clocked is
+ * picked the windows and "Repeat every" count as typed, so a half-typed window, which the save would leave out, is
+ * still a change that Esc asks about.
  */
 export function enableControlDraftChanged(draft: EnableControlDraft, initial: EnableControlDraft): boolean {
-    return JSON.stringify(buildEnableControlOverride(draft)) !== JSON.stringify(buildEnableControlOverride(initial));
+    if (JSON.stringify(buildEnableControlOverride(draft)) !== JSON.stringify(buildEnableControlOverride(initial))) return true;
+    return (
+        draft.mode === EnableControlMode.CLOCKED &&
+        (JSON.stringify(draft.ranges) !== JSON.stringify(initial.ranges) || draft.periodDuration !== initial.periodDuration)
+    );
 }
 
 /**

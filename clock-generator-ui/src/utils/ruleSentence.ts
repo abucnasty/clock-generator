@@ -30,6 +30,7 @@ export const RULE_COPY = {
     always: 'On all the time.',
     never: 'Never on.',
     noWindows: 'No wake windows yet.',
+    noWindowsTyped: 'No wake windows yet: enter a start and an end tick.',
     leftOut: (numbers: number[]) =>
         numbers.length === 1
             ? ` Wake window ${numbers[0]} is left out until its problem is fixed.`
@@ -131,7 +132,7 @@ interface SentenceContext {
     itemLabel: ItemLabel;
     /** The crafting cycle, which a Clocked rule with no "Repeat every" repeats with */
     cycleTicks: number | null;
-    /** Numbers (from 1) of the wake windows left out of the rule for a problem */
+    /** Numbers (from 1) of the wake windows left out of the rule for a problem; a window with nothing typed in it is not one */
     invalidWindows?: number[];
 }
 
@@ -149,8 +150,9 @@ export function ruleSentenceOf(override: EnableControlOverride | undefined, ctx:
                 : ctx.cycleTicks !== null
                     ? `crafting cycle (${ticksText(ctx.cycleTicks)} ticks)`
                     : 'crafting cycle';
-            const on = clocked.ranges.length > 0 ? `On at ${windowsText(clocked.ranges)} of every ${every}.` : RULE_COPY.noWindows;
             const invalid = ctx.invalidWindows ?? [];
+            if (clocked.ranges.length === 0 && invalid.length === 0) return RULE_COPY.noWindowsTyped;
+            const on = clocked.ranges.length > 0 ? `On at ${windowsText(clocked.ranges)} of every ${every}.` : RULE_COPY.noWindows;
             return invalid.length > 0 ? `${on}${RULE_COPY.leftOut(invalid)}` : on;
         }
         case EnableControlMode.CONDITIONAL: {

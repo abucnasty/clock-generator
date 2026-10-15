@@ -36,6 +36,8 @@ interface ValueReferenceSelectorProps {
     compact?: boolean;
     /** The element id of the item picker, which a problem with it points at */
     itemFieldId?: string;
+    /** The item picker's accessible name, which says which condition it belongs to: "Item, condition 2" */
+    itemAriaLabel?: string;
     /** The problem with the item picker, shown under it */
     itemError?: string;
 }
@@ -103,6 +105,7 @@ export function ValueReferenceSelector({
     compact = false,
     itemFieldId,
     itemError,
+    itemAriaLabel,
 }: ValueReferenceSelectorProps) {
     const isFullscreen = useFullscreen();
     
@@ -190,6 +193,7 @@ export function ValueReferenceSelector({
                     iconOnly
                     inputId={itemFieldId}
                     errorText={itemError}
+                    inputAriaLabel={itemAriaLabel}
                 />
             )}
 

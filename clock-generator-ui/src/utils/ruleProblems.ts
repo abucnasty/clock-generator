@@ -23,7 +23,7 @@ export const PROBLEM_TEXT = {
     wholeTick: 'Enter a whole number, 0 or more.',
     endBeforeStart: (start: number) => `The end must not be before the start (${start}).`,
     // the config file holds a window's end as a number above 0, so a window can't end at tick 0
-    endAtZero: 'The end must be tick 1 or later.',
+    endAtZero: "The end must be tick 1 or later: a wake window can't end at tick 0.",
     pastPeriod: (period: number) => `Past the end of the ${period}-tick period: the last tick is ${period - 1}.`,
     repeat: 'Enter a whole number of ticks, 1 or more, or leave it empty.',
     pickItem: 'Pick an item.',
@@ -32,7 +32,7 @@ export const PROBLEM_TEXT = {
 
 /** The non-blocking warning of a "Repeat every" that the clock period is not a whole number of */
 const repeatWarning = (repeat: number, period: number) =>
-    `${repeat} ticks doesn't fit a whole number of times into the ${period}-tick clock period, so the blueprint can't repeat this rule exactly.`;
+    `${repeat} ticks doesn't fit a whole number of times into the ${period}-tick clock period, so the clock can't follow this rule exactly.`;
 
 /** The DOM id of one of the rule form's fields: the form's prefix, then its place ("start", 0) */
 export function ruleFieldId(idPrefix: string, ...place: (string | number)[]): string {
@@ -88,21 +88,25 @@ function needsItem(value: ValueReference): boolean {
     );
 }
 
+/**
+ * The name of a condition's item picker, from the condition's path: "Item, condition 2" for "rule.1", "Second item,
+ * condition 2.1" for the right side of "rule.1.0", "Item, release condition 1" for "release.0"
+ */
+export function itemFieldName(conditionPath: string, side: 'left' | 'right'): string {
+    const [root, ...indexes] = conditionPath.split('.');
+    const number = indexes.map((index) => Number(index) + 1).join('.');
+    const where = root === 'release' ? `release condition ${number}` : `condition ${number}`;
+    return `${side === 'left' ? 'Item' : 'Second item'}, ${where}`;
+}
+
 /** Conditions depth first, left before right: an item picker left empty in each */
-function itemProblems(ruleSet: RuleSet, path: string, label: string, idPrefix: string): RuleProblem[] {
+function itemProblems(ruleSet: RuleSet, path: string, idPrefix: string): RuleProblem[] {
     return ruleSet.rules.flatMap((rule, index) => {
         const childPath = `${path}.${index}`;
-        const childLabel = label ? `${label}.${index + 1}` : `${index + 1}`;
-        if (!isCondition(rule)) return itemProblems(rule, childPath, childLabel, idPrefix);
-        const where = path.startsWith('release') ? `release condition ${childLabel}` : `condition ${childLabel}`;
-        const problems: RuleProblem[] = [];
-        if (needsItem(rule.left)) {
-            problems.push({ fieldId: itemFieldId(idPrefix, childPath, 'left'), field: `Item, ${where}`, text: PROBLEM_TEXT.pickItem });
-        }
-        if (needsItem(rule.right)) {
-            problems.push({ fieldId: itemFieldId(idPrefix, childPath, 'right'), field: `Second item, ${where}`, text: PROBLEM_TEXT.pickItem });
-        }
-        return problems;
+        if (!isCondition(rule)) return itemProblems(rule, childPath, idPrefix);
+        return (['left', 'right'] as const)
+            .filter((side) => needsItem(rule[side]))
+            .map((side) => ({ fieldId: itemFieldId(idPrefix, childPath, side), field: itemFieldName(childPath, side), text: PROBLEM_TEXT.pickItem }));
     });
 }
 
@@ -134,9 +138,9 @@ export function ruleProblemsOf(draft: EnableControlDraft, { entityType, timing, 
         if (entityType === 'drill') {
             problems.push({ fieldId: modeFieldId(idPrefix, EnableControlMode.CONDITIONAL), field: 'Mode', text: PROBLEM_TEXT.drillConditional });
         }
-        problems.push(...itemProblems(draft.ruleSet, 'rule', '', idPrefix));
+        problems.push(...itemProblems(draft.ruleSet, 'rule', idPrefix));
         if (draft.latchEnabled && draft.releaseCondition) {
-            problems.push(...itemProblems(draft.releaseCondition, 'release', '', idPrefix));
+            problems.push(...itemProblems(draft.releaseCondition, 'release', idPrefix));
         }
     }
     return problems;

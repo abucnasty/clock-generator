@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultRuleSet } from '../components/ruleSetUtils';
 import type { Condition, RuleSet } from './configForm/formData';
 import { enableControlDraftOf, type EnableControlDraft } from './enableControlDraft';
-import { blockedSummaryOf, PROBLEM_TEXT, ruleProblemsOf, ruleWarningsOf } from './ruleProblems';
+import { blockedSummaryOf, itemFieldName, PROBLEM_TEXT, ruleProblemsOf, ruleWarningsOf } from './ruleProblems';
 import { NO_TIMING, type RuleTiming } from './ruleTiming';
 
 const known: RuleTiming = { cycleTicks: 132, periodTicks: 264, from: 'check', windows: null };
@@ -35,7 +35,7 @@ describe('ruleProblemsOf, Clocked', () => {
     });
 
     it('refuses a window that ends at tick 0, which the config file can\'t hold', () => {
-        expect(texts(clockedDraft([['0', '0']]))).toEqual(['End tick, wake window 1: The end must be tick 1 or later.']);
+        expect(texts(clockedDraft([['0', '0']]))).toEqual(["End tick, wake window 1: The end must be tick 1 or later: a wake window can't end at tick 0."]);
     });
 
     it('checks the ticks against the crafting cycle when there is no "Repeat every"', () => {
@@ -117,6 +117,14 @@ describe('ruleProblemsOf, Conditional', () => {
     });
 });
 
+describe('itemFieldName', () => {
+    it('names an item picker by its side and the condition\'s place', () => {
+        expect(itemFieldName('rule.1', 'left')).toBe('Item, condition 2');
+        expect(itemFieldName('rule.1.0', 'right')).toBe('Second item, condition 2.1');
+        expect(itemFieldName('release.0', 'left')).toBe('Item, release condition 1');
+    });
+});
+
 describe('ruleProblemsOf, order', () => {
     it('is reading order: start then end, window by window, then "Repeat every"', () => {
         expect(ruleProblemsOf(clockedDraft([['', ''], ['9', '3']], '0'), ctx).map((p) => p.fieldId)).toEqual([
@@ -128,7 +136,7 @@ describe('ruleProblemsOf, order', () => {
 describe('ruleWarningsOf', () => {
     it('warns of a "Repeat every" the clock period is not a whole number of', () => {
         expect(ruleWarningsOf(clockedDraft([['0', '5']], '100'), known)).toEqual([
-            '100 ticks doesn\'t fit a whole number of times into the 264-tick clock period, so the blueprint can\'t repeat this rule exactly.',
+            '100 ticks doesn\'t fit a whole number of times into the 264-tick clock period, so the clock can\'t follow this rule exactly.',
         ]);
         expect(ruleWarningsOf(clockedDraft([['0', '5']], '132'), known)).toEqual([]);
         expect(ruleWarningsOf(clockedDraft([['0', '5']], ''), known)).toEqual([]);

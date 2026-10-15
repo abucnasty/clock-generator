@@ -63,6 +63,10 @@ describe('ruleSentenceOf', () => {
             .toBe('No wake windows yet. Wake windows 1 and 2 are left out until their problems are fixed.');
     });
 
+    it('asks for ticks when no window has anything typed in it', () => {
+        expect(ruleSentenceOf(clocked([]), ctx)).toBe('No wake windows yet: enter a start and an end tick.');
+    });
+
     it('reads the electromagnetic-science sample as the acceptance sentence', () => {
         expect(ruleSentenceOf(ELECTROMAGNETIC, { ...ctx, itemLabel: identity })).toBe(
             'On while electromagnetic-science-pack in the source ≥ 32 or the source is Output full. Once on, it stays on until electromagnetic-science-pack in the source < the source\'s output block.',

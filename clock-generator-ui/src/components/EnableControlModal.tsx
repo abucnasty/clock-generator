@@ -100,7 +100,7 @@ const MODES: EnableControlMode[] = [
     EnableControlMode.CONDITIONAL,
 ];
 
-const DRILL_NO_CONDITIONAL = 'Not available for mining drills.';
+const DRILL_NO_CONDITIONAL = "Not available for mining drills: conditions read an inserter's source, destination and hand.";
 const REPEAT_HELPER = (cycleTicks: number | null) =>
     cycleTicks === null
         ? 'Leave empty to repeat every crafting cycle.'
@@ -110,7 +110,8 @@ const PLANNED_CAPTION = (label: string, ranges: { start: number; end: number }[]
 const NO_PLANNED_CAPTION = (label: string) => `The clock on Results has no wake windows for ${label}.`;
 const COPY_FROM_QUESTION = (label: string, summary: string) => `Replace this rule with ${label}'s (${summary})?`;
 const COPIED = (label: string) => `Rule copied from ${label}.`;
-const TEMPLATE_APPLIED = (name: string) => `Conditions replaced with the template ${name}.`;
+const TEMPLATE_REPLACED = (name: string) => `Conditions replaced with the template ${name}.`;
+const TEMPLATE_APPLIED = (name: string) => `Template ${name} applied.`;
 
 function joinRanges(ranges: { start: number; end: number }[]): string {
     const parts = ranges.map((r) => (r.start === r.end ? `${r.start}` : `${r.start}–${r.end}`));
@@ -148,6 +149,8 @@ interface EnableControlFormContentProps {
     /** The items the inserter moves, which a template's item picker starts on */
     movedItems?: string[];
     copyFromOptions?: CopyFromOption[];
+    /** A host with its own Save raises this when that Save is refused, so that every problem shows */
+    revealProblems?: number;
 }
 
 export function EnableControlFormContent({
@@ -165,6 +168,7 @@ export function EnableControlFormContent({
     stackSize,
     movedItems = [],
     copyFromOptions = [],
+    revealProblems = 0,
 }: EnableControlFormContentProps) {
     const idPrefix = useId();
     const timing = useRuleTiming();
@@ -204,21 +208,40 @@ export function EnableControlFormContent({
     const problemMap = useMemo(() => new Map(problems.map((p) => [p.fieldId, p])), [problems]);
     const warnings = useMemo(() => ruleWarningsOf(draft, timing), [draft, timing]);
 
-    // the rule in words: a wake window with a problem is left out, and the sentence says so
+    // A field's problem shows once the field has lost focus, or after a refused Save, not while it is still untouched
+    // (a new empty window, a new condition). Save refuses and focuses the first problem whether it shows or not.
+    const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
+    const touchAll = (ids: readonly string[]) =>
+        setTouched((previous) => (ids.every((id) => previous.has(id)) ? previous : new Set([...previous, ...ids])));
+    // the host's refused Save (the Diagram dialog's) asks for every problem to show: adjusted while rendering, as React
+    // recommends for state that follows a prop
+    const [revealSeen, setRevealSeen] = useState(revealProblems);
+    if (revealProblems !== revealSeen) {
+        setRevealSeen(revealProblems);
+        touchAll(problems.map((p) => p.fieldId));
+    }
+    const modeId = modeFieldId(idPrefix, EnableControlMode.CONDITIONAL);
+    const shownProblems = useMemo(
+        // the drill's problem is the stored rule's, not a field's: it always shows
+        () => new Map(problems.filter((p) => p.fieldId === modeId || touched.has(p.fieldId)).map((p) => [p.fieldId, p])),
+        [problems, touched, modeId],
+    );
+
+    // the rule in words: a wake window with a problem is left out, and the sentence says so; one with nothing typed in it
+    // is just not there yet
     const sentence = useMemo(() => {
         if (mode !== EnableControlMode.CLOCKED || override?.mode !== EnableControlMode.CLOCKED) {
             return ruleSentenceOf(override, { itemLabel, cycleTicks: timing.cycleTicks });
         }
-        const invalid = ranges
-            .map((_, i) => i)
-            .filter((i) => problemMap.has(ruleFieldId(idPrefix, 'start', i)) || problemMap.has(ruleFieldId(idPrefix, 'end', i)));
+        const withProblem = (i: number) => problemMap.has(ruleFieldId(idPrefix, 'start', i)) || problemMap.has(ruleFieldId(idPrefix, 'end', i));
+        const blank = (window: DraftWindow) => window.start.trim() === '' && window.end.trim() === '';
         const valid = ranges
-            .filter((_, i) => !invalid.includes(i))
+            .filter((_, i) => !withProblem(i))
             .map((window) => ({ start: wholeTicksOf(window.start)!, end: wholeTicksOf(window.end)! }));
         return ruleSentenceOf({ ...override, ranges: valid }, {
             itemLabel,
             cycleTicks: timing.cycleTicks,
-            invalidWindows: invalid.map((i) => i + 1),
+            invalidWindows: ranges.flatMap((window, i) => (withProblem(i) && !blank(window) ? [i + 1] : [])),
         });
     }, [mode, override, ranges, problemMap, idPrefix, itemLabel, timing.cycleTicks]);
 
@@ -267,6 +290,7 @@ export function EnableControlFormContent({
     const handleSave = () => {
         if (problems.length > 0) {
             setSaveRefused(true);
+            touchAll(problems.map((p) => p.fieldId));
             document.getElementById(problems[0].fieldId)?.focus();
             announce(blockedSummaryOf(problems));
             return;
@@ -274,7 +298,7 @@ export function EnableControlFormContent({
         onSave?.(override);
     };
 
-    const handleApplyTemplate = (templateRuleSet: RuleSet, templateRelease: RuleSet | undefined, templateName: string) => {
+    const handleApplyTemplate = (templateRuleSet: RuleSet, templateRelease: RuleSet | undefined, templateName: string, replaced: boolean) => {
         setRuleSet(templateRuleSet);
         if (templateRelease) {
             setLatchEnabled(true);
@@ -284,7 +308,7 @@ export function EnableControlFormContent({
             setReleaseCondition(undefined);
         }
         focusAfterRender.current = conditionsHeadingId;
-        announce(TEMPLATE_APPLIED(templateName));
+        announce(replaced ? TEMPLATE_REPLACED(templateName) : TEMPLATE_APPLIED(templateName));
     };
 
     const applyCopy = (option: CopyFromOption) => {
@@ -319,7 +343,7 @@ export function EnableControlFormContent({
     // a drill can't run a Conditional rule (the engine needs an inserter for it); a stored one stays pickable, with its
     // problem, so that the player sees what it is
     const conditionalOff = entityType === 'drill' && currentOverride?.mode !== EnableControlMode.CONDITIONAL;
-    const modeProblem = problemMap.get(modeFieldId(idPrefix, EnableControlMode.CONDITIONAL));
+    const modeProblem = shownProblems.get(modeId);
 
     const rulePeriod = mode === EnableControlMode.CLOCKED ? rulePeriodOf(draft, timing) : null;
     const reference = planned && rulePeriod === timing.periodTicks ? planned : null;
@@ -329,11 +353,12 @@ export function EnableControlFormContent({
             .filter(({ i }) => !problemMap.has(ruleFieldId(idPrefix, 'start', i)) && !problemMap.has(ruleFieldId(idPrefix, 'end', i)))
             .map(({ window }) => ({ start: wholeTicksOf(window.start)!, end: wholeTicksOf(window.end)! }))
         : [];
-    const repeatProblem = problemMap.get(ruleFieldId(idPrefix, 'repeat'));
+    const repeatProblem = shownProblems.get(ruleFieldId(idPrefix, 'repeat'));
 
     return (
         <FullscreenProvider value={isFullscreen}>
-            <Box>
+            {/* a field that loses focus shows its problem from then on (focusout bubbles to here) */}
+            <Box onBlur={(e) => { if (e.target.id) touchAll([e.target.id]); }}>
                 {/* Copy From dropdown */}
                 {copyFromOptions.length > 0 && (
                     <Box sx={{ mb: 3 }}>
@@ -467,7 +492,7 @@ export function EnableControlFormContent({
                 {/* CLOCKED mode fields */}
                 {mode === EnableControlMode.CLOCKED && (
                     <Box sx={{ mt: 3, pl: { xs: 0, sm: 4 } }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                        <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
                             Wake windows
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} data-rule-period="">
@@ -478,10 +503,12 @@ export function EnableControlFormContent({
                             const n = index + 1;
                             const startId = ruleFieldId(idPrefix, 'start', index);
                             const endId = ruleFieldId(idPrefix, 'end', index);
-                            const startProblem = problemMap.get(startId);
-                            const endProblem = problemMap.get(endId);
+                            const startProblem = shownProblems.get(startId);
+                            const endProblem = shownProblems.get(endId);
+                            // narrower fields at phone width, and the End field keeps its remove button beside it
+                            const fieldSx = { width: { xs: 104, sm: 130 } };
                             return (
-                                <Box key={index} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', flexWrap: 'wrap', mb: 1.5 }}>
+                                <Box key={index} sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'flex-start', flexWrap: 'wrap', mb: 1.5 }}>
                                     <TextField
                                         id={startId}
                                         label="Start tick"
@@ -489,34 +516,36 @@ export function EnableControlFormContent({
                                         value={range.start}
                                         onChange={(e) => handleUpdateRange(index, 'start', e.target.value)}
                                         size="small"
-                                        sx={{ width: 130 }}
+                                        sx={fieldSx}
                                         error={startProblem !== undefined}
                                         helperText={startProblem?.text}
                                         slotProps={{ htmlInput: { min: 0, inputMode: 'numeric', 'aria-label': windowFieldName('start', n) } }}
                                     />
                                     <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>to</Typography>
-                                    <TextField
-                                        id={endId}
-                                        label="End tick"
-                                        type="number"
-                                        value={range.end}
-                                        onChange={(e) => handleUpdateRange(index, 'end', e.target.value)}
-                                        size="small"
-                                        sx={{ width: 130 }}
-                                        error={endProblem !== undefined}
-                                        helperText={endProblem?.text}
-                                        slotProps={{ htmlInput: { min: 0, inputMode: 'numeric', 'aria-label': windowFieldName('end', n) } }}
-                                    />
-                                    <IconButton
-                                        onClick={() => handleRemoveRange(index)}
-                                        disabled={ranges.length <= 1}
-                                        size="small"
-                                        color="error"
-                                        aria-label={removeRangeName(n)}
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        <Delete fontSize="small" />
-                                    </IconButton>
+                                    <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 1.5 }, alignItems: 'flex-start' }}>
+                                        <TextField
+                                            id={endId}
+                                            label="End tick"
+                                            type="number"
+                                            value={range.end}
+                                            onChange={(e) => handleUpdateRange(index, 'end', e.target.value)}
+                                            size="small"
+                                            sx={fieldSx}
+                                            error={endProblem !== undefined}
+                                            helperText={endProblem?.text}
+                                            slotProps={{ htmlInput: { min: 0, inputMode: 'numeric', 'aria-label': windowFieldName('end', n) } }}
+                                        />
+                                        <IconButton
+                                            onClick={() => handleRemoveRange(index)}
+                                            disabled={ranges.length <= 1}
+                                            size="small"
+                                            color="error"
+                                            aria-label={removeRangeName(n)}
+                                            sx={{ mt: 0.5 }}
+                                        >
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    </Box>
                                 </Box>
                             );
                         })}
@@ -570,7 +599,8 @@ export function EnableControlFormContent({
                 {/* CONDITIONAL mode fields */}
                 {mode === EnableControlMode.CONDITIONAL && (
                     <Box sx={{ mt: 3, pl: { xs: 0, sm: 2 } }}>
-                        <QuickTemplateSelect
+                        {/* the templates read an inserter's ends; a drill's stored Conditional rule gets none */}
+                        {entityType === 'inserter' && <QuickTemplateSelect
                             sourceType={sourceType}
                             sinkType={sinkType}
                             movedItems={movedItems}
@@ -580,7 +610,7 @@ export function EnableControlFormContent({
                             latchEnabled={latchEnabled}
                             idPrefix={idPrefix}
                             onApply={handleApplyTemplate}
-                        />
+                        />}
 
                         <Typography
                             variant="subtitle2"
@@ -600,7 +630,7 @@ export function EnableControlFormContent({
                             sinkType={sinkType}
                             path="rule"
                             idPrefix={idPrefix}
-                            problems={problemMap}
+                            problems={shownProblems}
                         />
 
                         <LatchConfigEditor
@@ -613,7 +643,7 @@ export function EnableControlFormContent({
                             sinkType={sinkType}
                             entityType={entityType}
                             idPrefix={idPrefix}
-                            problems={problemMap}
+                            problems={shownProblems}
                         />
                     </Box>
                 )}

@@ -4,7 +4,7 @@ import type { TargetType } from 'clock-generator/browser';
 import { ComparisonOperator, ValueReferenceType } from 'clock-generator/light';
 import type { Condition, ValueReference } from '../hooks/useConfigForm';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
-import { itemFieldId, type RuleProblem } from '../utils/ruleProblems';
+import { itemFieldId, itemFieldName, type RuleProblem } from '../utils/ruleProblems';
 import { StatusConditionRow } from './StatusConditionRow';
 import { ValueReferenceSelector } from './ValueReferenceSelector';
 
@@ -102,6 +102,7 @@ export function ConditionRow({
                 compact
                 itemFieldId={leftId}
                 itemError={problems.get(leftId)?.text}
+                itemAriaLabel={itemFieldName(path, 'left')}
             />
 
             <FormControl size="small" sx={{ minWidth: 60 }}>
@@ -127,6 +128,7 @@ export function ConditionRow({
                 compact
                 itemFieldId={rightId}
                 itemError={problems.get(rightId)?.text}
+                itemAriaLabel={itemFieldName(path, 'right')}
             />
 
             <IconButton

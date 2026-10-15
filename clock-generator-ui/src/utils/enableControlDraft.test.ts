@@ -123,6 +123,15 @@ describe('enableControlDraftChanged', () => {
         expect(enableControlDraftChanged(changed, initial)).toBe(true);
         expect(enableControlDraftChanged({ ...changed, periodDuration: '60' }, initial)).toBe(false);
     });
+
+    it('is true for a half-typed window or "Repeat every" while Clocked is picked, which the save would leave out', () => {
+        const initial = enableControlDraftOf(clocked);
+        expect(enableControlDraftChanged({ ...initial, ranges: [...initial.ranges, { start: '5', end: '' }] }, initial)).toBe(true);
+        expect(enableControlDraftChanged({ ...initial, periodDuration: 'x' }, initial)).toBe(true);
+        const fresh = { ...enableControlDraftOf(), mode: 'CLOCKED' as const };
+        expect(enableControlDraftChanged({ ...fresh, ranges: [{ start: '12', end: '' }] }, fresh)).toBe(true);
+        expect(enableControlDraftChanged(fresh, fresh)).toBe(false);
+    });
 });
 
 describe('enableControlOverrideChanged', () => {

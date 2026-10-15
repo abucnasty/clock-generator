@@ -38,6 +38,13 @@ describe('plannedWindowsOf', () => {
         expect(plannedWindowsOf(wrapped, 'inserter:1')).toEqual([{ start: 0, end: 5 }, { start: 250, end: 263 }]);
     });
 
+    it('widens a part that ends at tick 0 to ticks 0–1, which a rule can hold', () => {
+        const atZero: RuleTiming = { ...timing, windows: { 'inserter:1': [{ start: 250, end: 263 }, { start: 0, end: 0 }] } };
+        expect(plannedWindowsOf(atZero, 'inserter:1')).toEqual([{ start: 0, end: 1 }, { start: 250, end: 263 }]);
+        const single: RuleTiming = { ...timing, windows: { 'inserter:1': [{ start: 0, end: 0 }] } };
+        expect(plannedWindowsOf(single, 'inserter:1')).toEqual([{ start: 0, end: 1 }]);
+    });
+
     it('is null for a missing key, an entity with no window, a fractional period, or a check', () => {
         expect(plannedWindowsOf(timing, 'inserter:9')).toBeNull();
         expect(plannedWindowsOf(timing, 'inserter:2')).toBeNull();

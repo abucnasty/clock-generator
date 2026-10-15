@@ -54,6 +54,9 @@ export function plannedWindowsOf(timing: RuleTiming, key: string): { start: numb
     if (raw === undefined) return null;
     const ranges = normalizeWindows(raw, period)
         .flatMap((window) => window.segments)
+        // a window that wraps by one tick ends its second part at tick 0, which a rule can't hold (its end is 1 or
+        // more): it is widened to ticks 0–1. The windows are merged, so the next one starts at 2 or later
+        .map((range) => (range.start === 0 && range.end === 0 ? { start: 0, end: 1 } : range))
         .sort((a, b) => a.start - b.start);
     return ranges.length > 0 ? ranges : null;
 }

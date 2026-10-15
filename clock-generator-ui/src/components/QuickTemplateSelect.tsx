@@ -24,7 +24,7 @@ const STEP_COPY = {
     amount: 'Switch on at (items)',
     amountProblem: 'Enter a whole number, 1 or more.',
     replaces: (count: number, latch: boolean) =>
-        `This replaces your ${count} ${count === 1 ? 'condition' : 'conditions'}${latch ? ' and the latch' : ''}.`,
+        `This replaces your ${count} ${count === 1 ? 'condition' : 'conditions'}${latch ? ' and your release conditions' : ''}.`,
 } as const;
 
 interface QuickTemplateSelectProps {
@@ -40,8 +40,8 @@ interface QuickTemplateSelectProps {
     latchEnabled: boolean;
     /** The prefix of the form's field ids */
     idPrefix: string;
-    /** Called on Replace, with the template's rule and its name */
-    onApply: (ruleSet: RuleSet, release: RuleSet | undefined, templateName: string) => void;
+    /** Called on Replace, with the template's rule, its name and whether it replaced a rule of the player's */
+    onApply: (ruleSet: RuleSet, release: RuleSet | undefined, templateName: string, replaced: boolean) => void;
 }
 
 /**
@@ -108,6 +108,9 @@ export function QuickTemplateSelect({
         focusAfterRender.current = 'select';
     };
 
+    // nothing of the player's is lost: the rule is the untouched default and has no latch
+    const untouched = isDefaultRuleSet(ruleSet) && !latchEnabled;
+
     const replace = () => {
         if (!chosen) return;
         if (itemProblem || amountProblem) {
@@ -117,10 +120,9 @@ export function QuickTemplateSelect({
         }
         const rule = templateRule(chosen.id, { item, amount: amountNumber ?? 0 });
         setChosen(null);
-        onApply(rule.ruleSet, rule.release, chosen.name);
+        onApply(rule.ruleSet, rule.release, chosen.name, !untouched);
     };
 
-    const untouched = isDefaultRuleSet(ruleSet) && !latchEnabled;
 
     return (
         <Box sx={{ mb: 2 }}>
@@ -160,8 +162,11 @@ export function QuickTemplateSelect({
                     data-template-step=""
                     sx={{ mt: 1.5, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}
                 >
-                    <Typography id={headingId} variant="subtitle2" component="h3" sx={{ mb: 1.5 }}>
+                    <Typography id={headingId} variant="subtitle2" component="h3">
                         {STEP_COPY.heading(chosen.name)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                        {chosen.description}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                         {chosen.needsItem && (
@@ -171,7 +176,8 @@ export function QuickTemplateSelect({
                                 onChange={(value) => setItem(value ?? '')}
                                 label={STEP_COPY.item}
                                 inputId={itemId}
-                                minWidth={220}
+                                minWidth={0}
+                                sx={{ width: { xs: '100%', sm: 300 } }}
                                 errorText={tried ? itemProblem : undefined}
                             />
                         )}

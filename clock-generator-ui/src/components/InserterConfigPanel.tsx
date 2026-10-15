@@ -290,6 +290,8 @@ export function InserterConfigPanel({
     }, []);
     // whether Save was pressed while the rule had problems: the bar says why until they are fixed
     const [saveRefused, setSaveRefused] = useState(false);
+    // raised on each refused Save, so that the rule form shows every problem
+    const [revealProblems, setRevealProblems] = useState(0);
     const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false, problems: [] });
 
     // the tab's chip shows the saved rule, in the words of the List row's chip
@@ -364,6 +366,7 @@ export function InserterConfigPanel({
             flushSync(() => {
                 setActiveTab(1);
                 setSaveRefused(true);
+                setRevealProblems((n) => n + 1);
             });
             document.getElementById(rule.problems[0].fieldId)?.focus();
             announce(blockedSummaryOf(rule.problems));
@@ -429,6 +432,7 @@ export function InserterConfigPanel({
                     sinkType={draft.sink.type}
                     availableItems={availableItems}
                     copyFromOptions={copyFromOptions}
+                    revealProblems={revealProblems}
                 />
             </Box>
 
