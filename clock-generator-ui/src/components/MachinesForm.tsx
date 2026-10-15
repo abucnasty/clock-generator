@@ -1,6 +1,5 @@
 import { Add, Delete, Info } from '@mui/icons-material';
 import {
-    Autocomplete,
     Box,
     Button,
     FormControl,
@@ -10,7 +9,6 @@ import {
     Paper,
     Popover,
     Select,
-    TextField,
     Typography,
 } from '@mui/material';
 import { useState, memo } from 'react';
@@ -19,6 +17,7 @@ import { useMachineFacts } from '../hooks/useMachineFacts';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { MACHINE_TYPE_LABELS } from './entityTypes';
 import { FactorioIcon } from './FactorioIcon';
+import { ItemSelector } from './ItemSelector';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { SidecarModLink } from './IntroCard';
 import { NumberField } from './NumberField';
@@ -184,43 +183,19 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                 }}
             >
                 {dragHandle}
-                <Autocomplete
-                    id={machineRecipeElementId(machine.id)}
-                    sx={{ minWidth: 250, flex: 1 }}
+                <ItemSelector
+                    kind="recipe"
+                    inputId={machineRecipeElementId(machine.id)}
+                    sx={{ flex: 1 }}
+                    minWidth={250}
                     options={recipeNames}
                     value={machine.recipe || null}
-                    onChange={(_, newValue) => onUpdate(index, 'recipe', newValue || '')}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Recipe"
-                            placeholder="Search recipes..."
-                            size="small"
-                            slotProps={{
-                                // the label says "Recipe" in every row: say whose it is
-                                htmlInput: { ...params.inputProps, 'aria-label': recipeName(entityLabel('machine', machine.id)) },
-                                input: {
-                                    ...params.InputProps,
-                                    startAdornment: machine.recipe ? (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                            <FactorioIcon name={machine.recipe} size={20} alt="" />
-                                        </Box>
-                                    ) : null,
-                                },
-                            }}
-                        />
-                    )}
-                    renderOption={(props, option) => {
-                        const { key, ...rest } = props;
-                        return (
-                            <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={option} size={20} alt="" />
-                                {option}
-                            </Box>
-                        );
-                    }}
+                    onChange={(newValue) => onUpdate(index, 'recipe', newValue || '')}
+                    label="Recipe"
+                    placeholder="Search recipes..."
+                    // the label says "Recipe" in every row: say whose it is
+                    inputAriaLabel={recipeName(entityLabel('machine', machine.id))}
                     freeSolo
-                    autoHighlight
                 />
                 <NumberField
                     label="Productivity (%)"

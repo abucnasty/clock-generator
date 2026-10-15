@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import {
     AppBar,
@@ -56,6 +56,8 @@ import { withDeeperSearch } from './utils/deeperSearch';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { a11yThemeComponents } from './utils/a11yTheme';
+import { itemName, type GameNames } from './utils/gameNames';
+import { GameNamesContext } from './hooks/useGameNames';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
@@ -100,6 +102,15 @@ const baseTheme = createTheme({
 // the focus ring and other accessibility rules take their colours from the palette above
 const darkTheme = createTheme(baseTheme, { components: a11yThemeComponents(baseTheme) });
 
+/** The theme, and the in-game names every picker and label reads */
+function PageProviders({ gameNames, children }: { gameNames: GameNames; children: ReactNode }) {
+    return (
+        <ThemeProvider theme={darkTheme}>
+            <GameNamesContext value={gameNames}>{children}</GameNamesContext>
+        </ThemeProvider>
+    );
+}
+
 
 function App() {
     const {
@@ -109,6 +120,7 @@ function App() {
         recipeNames,
         resourceNames,
         itemNames,
+        gameNames,
         logs,
         blueprintString,
         transferHistory,
@@ -241,13 +253,14 @@ function App() {
     // Extract IDs for dropdown population
     const machineIds = useMemo(() => config.machines.map((m) => m.id), [config.machines]);
 
-    // All item names (from recipes and resources)
+    // All item ids (from recipes and resources), in the order of their in-game names
     const itemNamesComposite = useMemo(() => {
         const names = new Set<string>();
         itemNames.forEach((name) => names.add(name));
         resourceNames.forEach((name) => names.add(name));
-        return Array.from(names).sort();
-    }, [itemNames, resourceNames]);
+        const nameOf = (id: string) => itemName(gameNames, id);
+        return Array.from(names).sort((a, b) => nameOf(a).localeCompare(nameOf(b)) || a.localeCompare(b));
+    }, [itemNames, resourceNames, gameNames]);
 
     // the clocks on screen are for the build as it was when Generate was pressed
     const configKey = useMemo(() => configKeyOf(exportConfig()), [exportConfig]);
@@ -494,7 +507,7 @@ function App() {
     }), [runChecked, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
-        <ThemeProvider theme={darkTheme}>
+        <PageProviders gameNames={gameNames}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
@@ -865,7 +878,7 @@ function App() {
             </Dialog>
 
             <MessageHost />
-        </ThemeProvider>
+        </PageProviders>
     );
 }
 

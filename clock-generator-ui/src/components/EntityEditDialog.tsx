@@ -1,6 +1,5 @@
 import { Close, DeleteOutline } from '@mui/icons-material';
 import {
-    Autocomplete,
     Box,
     Button,
     Dialog,
@@ -92,39 +91,14 @@ function MachineEditSection({
 }) {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Autocomplete
+            <ItemSelector
+                kind="recipe"
                 options={recipeNames}
                 value={machine.recipe || null}
-                onChange={(_, newValue) => onUpdate(entityIndex, 'recipe', newValue || '')}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Recipe"
-                        placeholder="Search recipes..."
-                        size="small"
-                        slotProps={{
-                            input: {
-                                ...params.InputProps,
-                                startAdornment: machine.recipe ? (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                        <FactorioIcon name={machine.recipe} size={20} />
-                                    </Box>
-                                ) : null,
-                            },
-                        }}
-                    />
-                )}
-                renderOption={(props, option) => {
-                    const { key, ...rest } = props;
-                    return (
-                        <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name={option} size={20} />
-                            {option}
-                        </Box>
-                    );
-                }}
+                onChange={(newValue) => onUpdate(entityIndex, 'recipe', newValue || '')}
+                label="Recipe"
+                placeholder="Search recipes..."
                 freeSolo
-                autoHighlight
             />
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                 <NumberField
