@@ -9,13 +9,9 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import { useCallback, useState } from 'react';
-import { useAnnounce } from '../hooks/useMessages';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
-import { ANNOUNCEMENTS } from '../utils/workflowAnnouncement';
-import { StaleCopyDialog } from './StaleCopyDialog';
 
 interface BlueprintOutputProps {
     blueprintString: string | null;
@@ -27,28 +23,17 @@ interface BlueprintOutputProps {
      * copied by hand, and copying asks first. Null when not
      */
     staleFor?: GeneratedFor | null;
+    /** Every Copy button says "Copied" for a moment after any of them copied */
+    copied: boolean;
+    /** The copy every Copy button shares: it asks first for the clock of an earlier build */
+    onCopy: () => void;
 }
 
+/** Under the string */
+const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. The steps are at the top of Results.';
+
 /** The selected clock's blueprint string, for reading or copying by hand */
-export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor }: BlueprintOutputProps) {
-    const [copied, setCopied] = useState(false);
-    const [confirmingOld, setConfirmingOld] = useState(false);
-    const announce = useAnnounce();
-
-    const handleCopy = useCallback(async () => {
-        if (!blueprintString) return;
-        
-        try {
-            await navigator.clipboard.writeText(blueprintString);
-            setCopied(true);
-            // the rate warning, if any, is the alert above, already on screen
-            announce(ANNOUNCEMENTS.copied);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
-    }, [blueprintString, announce]);
-
+export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor, copied, onCopy }: BlueprintOutputProps) {
     if (!blueprintString) {
         return null;
     }
@@ -73,20 +58,11 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         variant="outlined"
                         size="small"
                         color="warning"
-                        onClick={() => setConfirmingOld(true)}
+                        onClick={onCopy}
                         startIcon={copied ? <Check /> : <Warning />}
                     >
                         {copied ? 'Copied' : STALE_COPY_LABEL}
                     </Button>
-                    <StaleCopyDialog
-                        open={confirmingOld && staleFor !== null}
-                        generatedFor={staleFor}
-                        onCancel={() => setConfirmingOld(false)}
-                        onConfirm={() => {
-                            setConfirmingOld(false);
-                            handleCopy();
-                        }}
-                    />
                 </Box>
             ) : (
                 <Box sx={{ position: 'relative' }}>
@@ -101,7 +77,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         }}
                     />
                     <IconButton
-                        onClick={handleCopy}
+                        onClick={onCopy}
                         aria-label={copied ? BUTTON_NAMES.blueprintCopied : BUTTON_NAMES.copyBlueprintString}
                         sx={{
                             position: 'absolute',
@@ -117,7 +93,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
             )}
             {!staleFor && (
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    Copy this string and paste it in Factorio (Ctrl+V while in blueprint library)
+                    {STRING_CAPTION}
                 </Typography>
             )}
         </Paper>

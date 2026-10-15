@@ -185,7 +185,7 @@ export function barsToDraw(windows: readonly WakeWindow[], minTicks: number, kee
     return bars;
 }
 
-const ID_PATTERN =/^(inserter|drill):(\d+)$/;
+const ID_PATTERN = /^(inserter|drill):(\d+)$/;
 const LABEL_KINDS: Record<string, LabelKind> = {
     machine: 'machine',
     furnace: 'machine',

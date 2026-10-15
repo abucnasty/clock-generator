@@ -47,6 +47,9 @@ export const PROGRESS_NAMES = {
 
 export const CLOCK_TABLE_NAME = 'Clocks';
 
+/** The box the install steps' wiring list scrolls in, past 8 rows */
+export const WIRING_LIST_NAME = 'Wiring list';
+
 /** The name of the (i) button beside a clock in the table */
 export function clockHelpName(clockLabel: string): string {
     return `How ${clockLabel} is made`;

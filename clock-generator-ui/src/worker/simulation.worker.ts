@@ -9,6 +9,7 @@
 import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
+import { installFactsOf } from './installFacts';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
 import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
@@ -120,6 +121,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         terminalSwingCount: result.used_terminal_swing_count,
         cycleTicks: result.crafting_cycle_plan.total_duration.ticks,
         blueprintString: clockGenerator.encodeBlueprintFileBrowser(clockGenerator.blueprintFileFor(result)),
+        install: installFactsOf(result),
         transferHistory: result.serializable_transfer_history,
         stateTransitionHistory: result.serializable_state_transition_history,
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,

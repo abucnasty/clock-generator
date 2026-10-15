@@ -559,7 +559,9 @@ async function iconsStep({ page, rec }) {
         await validate(page);
         await generate(page);
         await goResults(page);
-        await ui.resultsTab(page, 'Wake windows').click();
+        // a tab until 2.5 A, which shows Wake windows as a section under the card
+        const wakeTab = ui.resultsTab(page, 'Wake windows');
+        if ((await wakeTab.count()) > 0) await wakeTab.click();
         await page.waitForTimeout(500);
         const config = cfg(file);
         const rows = page.locator('[data-wake-row]'); // SELECTOR: confirm (each row is a role=group with data-wake-row="inserter:1")
@@ -614,12 +616,12 @@ async function iconsStep({ page, rec }) {
             rec.info(`icons (${label}): Results card wiring list`, 'the card ("Your clock", 2.5 A) is not on this build: skipped');
             continue;
         }
-        const wiring = card.locator('table').first(); // SELECTOR: confirm (the wiring list is the card's only table, caption "Combinator → inserters")
+        const wiring = card.locator('[data-wiring-list]').first(); // the wiring list: one item per combinator, one entry per inserter or drill
         if ((await wiring.count()) === 0) {
-            rec.info(`icons (${label}): Results card wiring list`, 'this build has nothing to wire (no wiring table)');
+            rec.info(`icons (${label}): Results card wiring list`, 'this build has nothing to wire (no wiring list)');
             continue;
         }
-        const trs = wiring.locator('tbody tr');
+        const trs = wiring.locator('[data-wiring-entry]');
         const info = await trs.evaluateAll((els) =>
             els.map((tr) => {
                 const copy = tr.cloneNode(true);

@@ -44,7 +44,7 @@ The worst problems today:
 | Results charts | The current timelines mostly serve the owner. Add a new player-facing **Wake windows** view as the default chart. The timelines, Plan and Detailed mode move behind **Developer tools** and get light fixes only. |
 | Entity numbers | **Renumber, but consistently.** Every view shows the same current number (see 1.9). |
 | Safety net | **An Undo snackbar** on every destructive action. No full undo/redo history. |
-| Install steps | **The agent derives them** from the blueprint code and the in-game harness. The owner reviews them before merge. |
+| Install steps | **The agent derives them** from the blueprint code and the in-game harness. The owner reviews them in game before the Phase 2 PR merges into `feat/ux-rework` (the owner, 2026-10-15). |
 | Visual direction | **Factorio GUI grammar:** green filled means confirm or commit, orange means selection or accent, title-bar panel headers, inset slots. |
 | Accessibility | **Full WCAG 2.2 AA** for player-facing views. The developer timelines get light fixes only. |
 | Phase 3 scope | All four: rule editor upgrades, editing at scale, cancel and keep results, build library and share links. |

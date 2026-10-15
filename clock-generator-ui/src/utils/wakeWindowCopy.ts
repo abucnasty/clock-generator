@@ -11,7 +11,7 @@ import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 
 /** Glossary, "wake window" */
 export const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock switches an inserter or drill on. '
-    + 'Between its wake windows the inserter is off, so the game has nothing to wake.';
+    + 'Between its wake windows it is off, so the game has nothing to wake.';
 
 /** Glossary, "wake-up" (option (b), approved provisionally on 2026-10-14) */
 export const WAKE_UP_DEFINITION =
