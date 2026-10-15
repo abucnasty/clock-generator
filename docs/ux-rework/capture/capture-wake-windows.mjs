@@ -507,7 +507,8 @@ const need = (s) => {
 };
 const countsOf = (file) => {
     const c = JSON.parse(readFileSync(file, 'utf8'));
-    return { inserters: c.inserters?.length ?? 0, drills: c.drills?.length ?? 0 };
+    // a build file's drills are `drills.configs` (beside `mining_productivity_level`), not an array
+    return { inserters: c.inserters?.length ?? 0, drills: c.drills?.configs?.length ?? 0 };
 };
 const labelOf = (name) => /^(?:Inserter|Drill|Machine) \d+/.exec(name ?? '')?.[0] ?? '';
 const kindNumber = (label) => {
