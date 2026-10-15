@@ -20,10 +20,8 @@ const CONFIG_SAMPLES_DIR = path.resolve(__dirname, '../../resources/config-sampl
 export const ConfigPaths = {
     ADVANCED_CIRCUIT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'advanced-circuit', 'advanced-circuit.json'),
     ADVANCED_CIRCUIT_230: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'advanced-circuit', 'advanced-circuit-230.json'),
-    CHEMICAL_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science.json'),
-    CHEMICAL_SCIENCE_ADVANCED_CIRCUIT: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science-advanced-circuit.json'),
-    CHEMICAL_SCIENCE_DI_ENGINE: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science-direct-insert-engine.json'),
-    CHEMICAL_SCIENCE_ENGINES: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science-engines.json'),
+    /** One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes for all four engines; 5.5 copies make 240 a second */
+    CHEMICAL_SCIENCE_SHARED_FOUNDRY: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science-shared-foundry.json'),
     ELECTRIC_FURNACE: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'electric-furnace', 'electric-furnace.json'),
     LOGISTIC_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science.json'),
     LOGISTIC_SCIENCE_SHARED_INSERTER: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-shared-inserter.json'),

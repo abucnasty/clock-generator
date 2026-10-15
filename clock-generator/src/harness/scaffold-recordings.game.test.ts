@@ -145,6 +145,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 4800,
     },
+    // One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes of all four
+    // engines, all legendary with legendary modules and 40 legendary beacons: 5.5 copies of it make 240 a second. The
+    // owner's build of 2026-10-15; the warm-up and settle are a first guess, not yet recorded. Without a clock it makes
+    // 44.0 a second, a hair over the 43.636 the target asks of one block.
+    "chemical science with a shared foundry": {
+        scaffold: path.join(SAMPLES, "science", "chemical-science", "chemical-science-shared-foundry-scaffold.txt"),
+        config: ConfigPaths.CHEMICAL_SCIENCE_SHARED_FOUNDRY,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 4800,
+    },
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
     "utility science": {

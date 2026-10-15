@@ -66,8 +66,7 @@ In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample, direct-insert): the 1-swing label of the shared-inserter
    and sample configs flipped from unstable to stable; direct-insert's selection changed.
 2. **science/production-science** (shared): its rate changed in the sweep.
-3. **science/chemical-science** (advanced circuit, engines): selections changed.
-4. **science/metallurgic-science**: the selected clock changed and rates moved, and changed again on 2026-10-09 from the
+3. **science/metallurgic-science**: the selected clock changed and rates moved, and changed again on 2026-10-09 from the
    planned 1-swing clock to the full-hand one (both 45 a second). The planned clock only passed the long run because
    that run under-counted a fractional period; counted right, the simulator moves 32 too many in periods 40 to 120,
    the tail of a start-up surplus of 48 that is gone by period 160. Simulator only, and in the simulator both clocks
@@ -78,9 +77,9 @@ In the order they would settle the most:
    (1,716). That selected a clock the long run calls unstable over one that holds its output and has no recovery, so
    the ranking now parts two clocks equally near the target by whether they hold (GOALS.md, "Wake-ups"), and the
    full-hand subtick clock is selected again, from the same day.
-5. **intermediates/processing-units** (belt export): rates moved slightly.
-6. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
-7. **science/electromagnetic-science**, **science/military-science**, **intermediates/flying-robot-frame**,
+4. **intermediates/processing-units** (belt export): rates moved slightly.
+5. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
+6. **science/electromagnetic-science**, **science/military-science**, **intermediates/flying-robot-frame**,
    **intermediates/lithium-plates**, **intermediates/electric-engine-unit**, **intermediates/productivity-module**,
    **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 
