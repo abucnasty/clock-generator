@@ -7,7 +7,7 @@ function group(key: string, inserters: number, wired: number, wake_ups: number, 
     const [role, items, recipes] = key.split(" | ");
     return {
         key, role, items, recipes, inserters, wired, source_wake_ups: wake_ups, sink_wake_ups: 0, pickups: 0, wake_ups,
-        wake_ups_per_minute: 0, true_sink_wake_ups: 0, true_pickups: 0, true_wake_ups, true_wake_ups_per_minute: 0,
+        wake_ups_per_minute: 0, true_sink_wake_ups: 0, true_pickups: 0, true_wake_ups, true_wake_ups_per_minute: 0, true_start_standing: null,
     };
 }
 

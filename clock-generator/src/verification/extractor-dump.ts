@@ -381,6 +381,9 @@ export async function readExtractorDump(base: string, samples_base: string = bas
         if (params !== null) {
             const starts = trueStartsOfDump(status_codes, products_finished, params.delta, params.productivity_bonus, length);
             machine.true_starts = starts.start;
+            machine.true_start_method = {
+                machine_name: entity.name, recipe: entity.recipe, delta: params.delta, productivity_bonus: params.productivity_bonus,
+            };
             machine.crafting = {
                 ...params, diag: starts.diag, craft_out_count: starts.craft_out.filter(out => out).length,
             };

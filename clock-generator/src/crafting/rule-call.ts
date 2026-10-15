@@ -1,4 +1,5 @@
 import { RuleCountGroup, RuleCountRun } from "./rule-count";
+import { TrueStartStanding, worseStanding } from "./true-start-standing";
 
 /**
  * The clock-or-unwired call of the inserter cost series, from how many wake-ups a clock removes from an inserter.
@@ -103,6 +104,8 @@ export interface RuleRemovalGroup {
     /** The group's call; null when it is not wired */
     call: RuleCall | null;
     status: "newly wired" | "not wired";
+    /** How far the true starts of the group's sinks can be trusted, the worse of the two runs; null where not inferred */
+    true_start_standing: TrueStartStanding | null;
 }
 
 export interface RuleRemoval {
@@ -161,6 +164,7 @@ export function removedBetween(unwired_run: RuleCountRun, clocked_run: RuleCount
             newly_wired, w_unwired, w_clocked, w_removed,
             call: w_removed === null ? null : ruleCallOf(w_removed, count),
             status: newly_wired ? "newly wired" : "not wired",
+            true_start_standing: worseStanding(a?.true_start_standing ?? null, b?.true_start_standing ?? null),
         });
     }
     const w_removed_pooled = newly_wired_inserters === 0 ? null : removed_per_minute / newly_wired_inserters;

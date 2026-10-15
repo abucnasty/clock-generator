@@ -13,6 +13,7 @@
  */
 
 import { FactorioInserterState } from "../state/factorio-entity-state";
+import { TrueStartMethodInput, TrueStartStanding, trueStartStandingOf, worseStanding } from "./true-start-standing";
 
 /**
  * What the end of an inserter is. Any other end is named by its entity type, as the series names it ("car", "rocket-silo"),
@@ -59,6 +60,8 @@ export interface RuleCountMachine {
      * series' original count infers, and names the machine.
      */
     true_starts?: readonly boolean[];
+    /** What the true-start method read this machine's true starts with (game data only), for their standing */
+    true_start_method?: TrueStartMethodInput;
 }
 
 /** An inserter's per-index counts of the rule over the counted indices */
@@ -121,6 +124,11 @@ export interface RuleCountGroup extends RuleCountGroupKey {
     /** The group's `w` in true starts */
     true_wake_ups: number;
     true_wake_ups_per_minute: number;
+    /**
+     * How far the true starts of the group's sink machines can be trusted (true-start-standing.ts): the worst over
+     * them. Null when no sink is a machine whose starts the method worked out (a simulated run counts its own).
+     */
+    true_start_standing: TrueStartStanding | null;
 }
 
 /** A machine whose true starts are not known, so the true-start count uses the starts the original count infers */
@@ -166,6 +174,8 @@ interface MachineEvents {
     started: Uint8Array;
     /** The true starts, or the inferred starts where they are not known */
     started_true: Uint8Array;
+    /** The standing of the method on this machine; null where it did not work them out */
+    standing: TrueStartStanding | null;
 }
 
 function isWaitingForSource(state: string): boolean {
@@ -254,7 +264,9 @@ export function ruleCount(
         } else {
             unknown.push({ machine_id: machine.machine_id, recipe: machine.recipe });
         }
-        events.set(machine.machine_id, { recipe: machine.recipe, finished, started: inferred, started_true });
+        const standing = machine.true_starts !== undefined && machine.true_start_method !== undefined
+            ? trueStartStandingOf(machine.true_start_method) : null;
+        events.set(machine.machine_id, { recipe: machine.recipe, finished, started: inferred, started_true, standing });
     }
 
     const counts: InserterRuleCount[] = [];
@@ -329,6 +341,7 @@ export function ruleCount(
             group = {
                 ...key, key: text, inserters: 0, wired: 0, source_wake_ups: 0, sink_wake_ups: 0, pickups: 0, wake_ups: 0,
                 wake_ups_per_minute: 0, true_sink_wake_ups: 0, true_pickups: 0, true_wake_ups: 0, true_wake_ups_per_minute: 0,
+                true_start_standing: null,
             };
             groups.set(text, group);
         }
@@ -341,6 +354,7 @@ export function ruleCount(
         group.true_sink_wake_ups += true_sink_wake_ups;
         group.true_pickups += true_pickups;
         group.true_wake_ups += true_wake_ups;
+        group.true_start_standing = worseStanding(group.true_start_standing, sink?.standing ?? null);
     }
     for (const group of groups.values()) {
         group.wake_ups_per_minute = per_minute(group.wake_ups);

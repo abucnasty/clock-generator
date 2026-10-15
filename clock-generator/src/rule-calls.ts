@@ -8,6 +8,7 @@ import { EntityId } from "./entities";
 import { RULE_CALL_CAVEATS, RULE_THRESHOLDS, removedBetween, RuleCall, RuleRemoval } from "./crafting/rule-call";
 import { ruleCallsOfSample } from "./crafting/rule-calls-of-sample";
 import { ruleCount, RuleCountRun } from "./crafting/rule-count";
+import { TRUE_START_KNOWN_MISSES, TrueStartStanding, worseStanding } from "./crafting/true-start-standing";
 import { FactorioInserterState } from "./state/factorio-entity-state";
 import { readExtractorDump } from "./verification/extractor-dump";
 import { parseRecording } from "./verification/recording";
@@ -90,6 +91,9 @@ async function runOf(at: string, samples_at: string | undefined): Promise<{ run:
 const callText = (call: RuleCall | null): string =>
     call === null ? "not wired" : `${call.call} (${call.firm ? "firm" : "marginal"}, ${call.region})`;
 
+const standingText = (standing: TrueStartStanding | null): string => standing === null ? "-" : standing === "checked"
+    ? "checked" : standing === "known miss" ? "known miss" : "true starts not checked on this machine type";
+
 /** The machines whose true starts could not be read, by recipe: their inferred starts stand in for them */
 function printUnknownStarts(runs: { unwired: RuleCountRun; clocked: RuleCountRun }): void {
     for (const [name, run] of Object.entries(runs)) {
@@ -106,14 +110,14 @@ function printUnknownStarts(runs: { unwired: RuleCountRun; clocked: RuleCountRun
 function print(removal: RuleRemoval, original: RuleRemoval, runs: { unwired: RuleCountRun; clocked: RuleCountRun }, notes: string[]): void {
     const f = (x: number | null | undefined) => x === null || x === undefined ? "-" : x.toFixed(1);
     const original_by_key = new Map(original.groups.map(g => [g.key, g]));
-    console.log("| Group | Inserters | Wired | w unwired | w clocked | w removed | Call | Original count: w removed | Its call |");
-    console.log("|---|---|---|---|---|---|---|---|---|");
+    console.log("| Group | Inserters | Wired | w unwired | w clocked | w removed | Call | True starts of its sinks | Original count: w removed | Its call |");
+    console.log("|---|---|---|---|---|---|---|---|---|---|");
     const groups = [...removal.groups].sort((a, b) => Number(b.newly_wired) - Number(a.newly_wired) || a.key.localeCompare(b.key));
     for (const g of groups) {
         const o = original_by_key.get(g.key);
-        console.log(`| ${g.key.split(" | ").join("; ")} | ${g.inserters_clocked} | ${g.wired_clocked} | ${f(g.w_unwired)} | ${f(g.w_clocked)} | ${f(g.w_removed)} | ${callText(g.call)} | ${f(o?.w_removed)} | ${o ? callText(o.call) : "-"} |`);
+        console.log(`| ${g.key.split(" | ").join("; ")} | ${g.inserters_clocked} | ${g.wired_clocked} | ${f(g.w_unwired)} | ${f(g.w_clocked)} | ${f(g.w_removed)} | ${callText(g.call)} | ${standingText(g.true_start_standing)} | ${f(o?.w_removed)} | ${o ? callText(o.call) : "-"} |`);
     }
-    console.log(`| design, a wired inserter (pooled) | ${removal.newly_wired_inserters} | | | | ${f(removal.w_removed_pooled)} | ${callText(removal.call)} | ${f(original.w_removed_pooled)} | ${callText(original.call)} |`);
+    console.log(`| design, a wired inserter (pooled) | ${removal.newly_wired_inserters} | | | | ${f(removal.w_removed_pooled)} | ${callText(removal.call)} | ${standingText(groups.reduce<TrueStartStanding | null>((worst, g) => worseStanding(worst, g.true_start_standing), null))} | ${f(original.w_removed_pooled)} | ${callText(original.call)} |`);
     for (const [name, run] of Object.entries(runs)) {
         const by_recipe = new Map<string, number>();
         for (const m of run.start_rule_fallback) {
@@ -159,6 +163,11 @@ async function main() {
         }
         return;
     }
+    const game_notes = [
+        "Game data: the true starts are worked out by the series' method from status and products_finished. Checked against the machines' "
+        + "input balance on four recorded builds (exact on the advanced circuit, battery, accumulator, low density structure casting and "
+        + `slow plastic machines); known misses: ${TRUE_START_KNOWN_MISSES.join("; ")}. Machine types never recorded are not checked.`,
+    ];
     const unwired = await runOf(unwired_at!, argValue("unwired-samples"));
     const clocked = await runOf(clocked_at!, argValue("clocked-samples"));
     const removal = removedBetween(unwired.run, clocked.run);
@@ -166,7 +175,7 @@ async function main() {
     console.log(header);
     console.log(`unwired: ${unwired.source} (${unwired.run.ticks} ticks); clocked: ${clocked.source} (${clocked.run.ticks} ticks)`);
     console.log("");
-    print(removal, removal_original, { unwired: unwired.run, clocked: clocked.run }, []);
+    print(removal, removal_original, { unwired: unwired.run, clocked: clocked.run }, game_notes);
     if (json_at) {
         fs.writeFileSync(json_at, JSON.stringify({
             generator, thresholds: RULE_THRESHOLDS,

@@ -1,3 +1,4 @@
+import { trueStartsOfDump } from "./true-starts";
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
@@ -140,16 +141,20 @@ describe("the rule count of a recording of the game", () => {
         expect(run.groups[0]).toMatchObject({ key: "machine to belt | gear | gear > ", wired: 0 });
     });
 
-    it("reads a machine's true starts from its crafting progress, with the crafting speed of the recorded config", () => {
-        // iron gear wheels take 0.5 s: at crafting speed 9 a craft moves 0.3 a tick; it starts from rest at 1 and wraps at 4
-        const with_progress = parseRecording({
+    it("works out a machine's true starts by the series' method, from its status and products_finished", () => {
+        // iron gear wheels take 0.5 s: at crafting speed 9 a craft moves 0.3 a tick
+        const with_speed = parseRecording({
             ...JSON.parse(JSON.stringify(recording)),
-            config: { inserters: [], belts: [], machines: [{ id: 7, recipe: "iron-gear-wheel", crafting_speed: 9 }] },
-            machines: [{ ...JSON.parse(JSON.stringify(recording.machines[0])), recipe: "iron-gear-wheel",
-                samples: { ...recording.machines[0].samples, crafting_progress: [0, 0.3, 0.6, 0.9, 0.2, 0.5] } }],
+            config: { inserters: [], belts: [], machines: [{ id: 7, recipe: "iron-gear-wheel", crafting_speed: 9, productivity: 50 }] },
+            machines: [{ ...JSON.parse(JSON.stringify(recording.machines[0])), recipe: "iron-gear-wheel" }],
         });
-        const input = ruleCountInputOfRecording(with_progress, () => false);
-        expect(input.machines[0].true_starts).toEqual([false, true, false, false, true, false]);
+        const input = ruleCountInputOfRecording(with_speed, () => false);
+        // the cut a dump holds: working (1) at samples 0 to 2, then a shortage
+        const expected = trueStartsOfDump([1, 1, 1, 0, 0, 0], [0, 0, 0, 1, 1, 1], 0.3, 0.5, 6).start;
+        expect(input.machines[0].true_starts).toEqual(expected);
+        expect(input.machines[0].true_start_method).toEqual({
+            machine_name: "assembling-machine-3", recipe: "iron-gear-wheel", delta: 0.3, productivity_bonus: 0.5,
+        });
         // without the crafting speed the true starts are not known
         expect(ruleCountInputOfRecording(recording, () => false).machines[0].true_starts).toBeUndefined();
     });
