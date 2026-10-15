@@ -27,7 +27,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
     forWidths, previewServer, sample, LOGISTIC, importFile, goConfigure, goResults, validate, generate, ui, UI_DIR, itemLabel,
-    openTooltip, chooseMenuItem, accessibleName, checkLabelInName, checkAxe, checkAnnounced, noSideScroll,
+    openTooltip, chooseMenuItem, accessibleName, checkLabelInName, checkAxe, checkAnnounced, noSideScroll, setDeveloperTools,
 } from './lib.mjs';
 
 void chooseMenuItem; // imported for scripts that copy this one; the steps below need no menu
@@ -100,8 +100,8 @@ async function sweepIds(page, scope = 'body') {
             const sgRe = new RegExp(`(?:^|, |: |\\(| - |· |— )(?:${single.map(e).join('|')})(?:\\)|:|,|\\s*$)`);
             const root = document.querySelector(scope);
             if (!root) return { missing: true, found: [] };
-            const SKIP = '#results-panel-log, #results-panel-blueprint, textarea, pre, script, style, [data-ui-sweep-skip]';
-            const skipped = (el) => !!el.closest(SKIP) || (!!el.closest('#results-panel-insights') && !el.closest('table'));
+            const SKIP = '#developer-panel-log, #details-panel-blueprint, textarea, pre, script, style, [data-ui-sweep-skip]';
+            const skipped = (el) => !!el.closest(SKIP) || (!!el.closest('#details-panel-insights') && !el.closest('table'));
             const visible = (el) => (el.checkVisibility ? el.checkVisibility({ checkVisibilityCSS: true }) : el.getClientRects().length > 0);
             const found = [];
             const test = (kind, raw, el) => {
@@ -158,7 +158,19 @@ async function openAccordion(page, name) {
     return true;
 }
 
-const panelOf = (page, key) => page.locator(`#results-panel-${key}`); // SELECTOR: confirm (the Results tab panels: wakeWindows, timelines, fuel, insights, blueprint, log)
+/**
+ * Where a part of Results is (2.5 B): Wake windows is a section (data-wake-view), Insights, Fuel and the blueprint are
+ * Details' tab panels, the Timelines and the Log are Developer tools' (on only through ⋮ > Developer tools)
+ */
+const PANEL = {
+    wakeWindows: '[data-wake-view]',
+    insights: '#details-panel-insights',
+    fuel: '#details-panel-fuel',
+    blueprint: '#details-panel-blueprint',
+    timelines: '#developer-panel-timelines',
+    log: '#developer-panel-log',
+};
+const panelOf = (page, key) => page.locator(PANEL[key]);
 const nodeOf = (page, text) => page.locator('.react-flow__node').filter({ hasText: text });
 
 /** Opens a MUI Select/combobox, returns the options' texts, closes it again */
@@ -487,14 +499,14 @@ async function resultsStep({ page, rec }) {
 
     // Wake windows (the default tab): rows and table
     const wake = panelOf(page, 'wakeWindows');
-    await checkNoIds(rec, page, 'wake: the Wake windows view shows no id', '#results-panel-wakeWindows');
+    await checkNoIds(rec, page, 'wake: the Wake windows view shows no id', PANEL.wakeWindows);
     await page.locator('[role=group][aria-label^="Inserter 1,"]').first().scrollIntoViewIfNeeded().catch(() => {});
     await rec.shot(page, 'text-wake', { desc: 'Wake windows: rows by item icon' });
     const toggle = page.getByRole('switch', { name: /Show as table/ });
     if ((await toggle.count()) > 0) {
         await toggle.first().click();
         await page.waitForTimeout(400);
-        await checkNoIds(rec, page, 'wake: the Wake windows tables show no id', '#results-panel-wakeWindows');
+        await checkNoIds(rec, page, 'wake: the Wake windows tables show no id', PANEL.wakeWindows);
         await page.locator('table').first().scrollIntoViewIfNeeded().catch(() => {});
         await rec.shot(page, 'text-wake-table', { desc: 'Wake windows shown as tables: the Moves column by icon' });
         await toggle.first().click();
@@ -502,26 +514,27 @@ async function resultsStep({ page, rec }) {
     } else rec.check('wake: the Show as table switch is on the page', false, 'no switch named "Show as table"');
     void wake;
 
-    // Timelines: the transfer legend
+    // Timelines: the transfer legend, in Developer tools (2.5 B)
+    await setDeveloperTools(page, true);
     await ui.resultsTab(page, 'Timelines').click();
     await page.waitForTimeout(700);
     const tl = await panelOf(page, 'timelines').innerText();
     for (const [id, name] of [[R, rl(R)], ['transport-belt', il('transport-belt')], ['inserter', il('inserter')]]) {
         named(rec, `timelines: the transfer legend reads "${name}"`, tl, id, name);
     }
-    await checkNoIds(rec, page, 'timelines: the Timelines tab shows no id (legends, icon names)', '#results-panel-timelines');
+    await checkNoIds(rec, page, 'timelines: the Timelines tab shows no id (legends, icon names)', PANEL.timelines);
     await rec.shot(page, 'text-timelines', { desc: 'Timelines: the legend reads item names', fullPage: true });
     await checkAxe(rec, page, 'Results, Timelines');
+    await setDeveloperTools(page, false);
 
     // Insights: a cell that equals an id becomes a name
     await ui.resultsTab(page, 'Insights').click();
     await page.waitForTimeout(500);
     const cells = await panelOf(page, 'insights').locator('td, th').count();
     if (cells === 0) rec.info('insights: table cells', 'this build\'s Insights has no table cell to check (the prose is the engine\'s text, not checked)');
-    else await checkNoIds(rec, page, 'insights: table cells show names, not ids (prose is the engine\'s, skipped)', '#results-panel-insights');
+    else await checkNoIds(rec, page, 'insights: table cells show names, not ids (prose is the engine\'s, skipped)', PANEL.insights);
     await rec.shot(page, 'text-insights', { desc: 'Insights tab' });
     await checkAxe(rec, page, 'Results, Insights');
-    await ui.resultsTab(page, 'Wake windows').click();
 }
 
 async function fuelStep({ page, rec }) {
@@ -539,7 +552,7 @@ async function fuelStep({ page, rec }) {
     const recipe = cfg(FUEL).machines?.[0]?.recipe;
     const text = await panelOf(page, 'fuel').innerText();
     if (recipe) named(rec, `fuel: the Fuel panel shows "${rl(recipe)}" for Machine 1`, text, recipe, rl(recipe));
-    await checkNoIds(rec, page, 'fuel: the Fuel tab shows no id', '#results-panel-fuel');
+    await checkNoIds(rec, page, 'fuel: the Fuel tab shows no id', PANEL.fuel);
     await rec.shot(page, 'text-fuel', { desc: 'Fuel tab: recipe and fuel by name', fullPage: true });
     await checkAxe(rec, page, 'Results, Fuel');
     // the same build's Machine Facts (Fuel row) on Configure
@@ -654,9 +667,12 @@ async function sweepStep({ page, rec }) {
     await generate(page);
     await goResults(page);
     for (const [tab, key] of [['Wake windows', 'wakeWindows'], ['Timelines', 'timelines'], ['Insights', 'insights']]) {
-        await ui.resultsTab(page, tab).click();
+        // Wake windows is a section, not a tab; the Timelines are in Developer tools (2.5 B)
+        if (key === 'timelines') await setDeveloperTools(page, true);
+        if (key !== 'wakeWindows') await ui.resultsTab(page, tab).click();
         await page.waitForTimeout(600);
-        await checkNoIds(rec, page, `sweep: Results, ${tab} tab shows no id`, `#results-panel-${key}`);
+        await checkNoIds(rec, page, `sweep: Results, ${tab} shows no id`, PANEL[key]);
+        if (key === 'timelines') await setDeveloperTools(page, false);
     }
     await checkNoIds(rec, page, 'sweep: Results, the whole page (Log, Blueprint and the Insights prose skipped) shows no id', 'main');
     await rec.shot(page, 'text-results', { desc: 'Results, Insights tab' });

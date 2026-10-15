@@ -28,7 +28,7 @@ export const BELT_COPY = {
     resultsStanding: 'These clocks assume your input belts are backed up and standing still.',
     actionStanding: 'My belts move. Generate again',
     hint: (standing: number, moving: number) =>
-        `On belts that stand still, this build may do with ${standing} wake-ups a minute instead of ${moving}.`,
+        `On belts that stand still, this build may do with ${standing} wake-ups a minute instead of ${moving}; fewer is better, as each one costs a little UPS.`,
     /** Under the Belt column of a clock made without belt slack, in a run for moving belts */
     onlyIfStanding: 'Only if your input belts stand still',
 } as const;

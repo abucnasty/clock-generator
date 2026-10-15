@@ -5,8 +5,8 @@ import { HelpButton } from './HelpButton';
 
 interface PanelProps {
     title: string;
-    /** The heading's level: 2 for a card of the page, 3 for a card inside a section */
-    level?: 2 | 3;
+    /** The heading's level: 2 for a card of the page, 3 for a card inside a section, 4 for a card inside that */
+    level?: 2 | 3 | 4;
     /** The heading's id is `${id}-title`; one is made up when not given */
     id?: string;
     /**
@@ -60,7 +60,7 @@ export function Panel({ title, level = 2, id, focusableTitleId, help, actions, c
                     id={titleId}
                     tabIndex={focusableTitleId ? -1 : undefined}
                     component={`h${level}`}
-                    variant={level === 2 ? 'h6' : 'subtitle1'}
+                    variant={level === 2 ? 'h6' : level === 3 ? 'subtitle1' : 'subtitle2'}
                     sx={{ fontWeight: 600 }}
                 >
                     {title}

@@ -1,3 +1,4 @@
+import { Cancel, CheckCircle, Warning } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
     Accordion,
@@ -18,31 +19,70 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useRef, useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
-import { CLOCK_TABLE_NAME, clockHelpName } from '../utils/a11yLabels';
+import { CLOCK_TABLE_NAME, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
 import { BELT_COPY } from '../utils/beltQuestion';
+import { beltCellText, clockTechnicalName, foldedMakes, plainClockName, worksOf } from '../utils/clockSummary';
+import { TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
-import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, rateHeader } from '../utils/numberText';
-import {
-    RECOMMENDED_COPY,
-    disclosureRunLine,
-    partitionClockRows,
-    recommendationReason,
-    type PickRule,
-} from '../utils/recommendedClock';
+import { TermsList } from './TermsPopover';
+import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
+import { RECOMMENDED_COPY, disclosureRunLine, partitionClockRows, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
-const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Stable', 'no recovery': 'No recovery', unstable: 'Unstable' };
+/** Every string of the panel that is not the clocks' own or the pick's */
+const COMPARE_COPY = {
+    heading: 'Compare other clocks',
+    terms: 'Terms',
+    showAll: 'Show all columns',
+    clock: 'Clock',
+    works: 'Works?',
+    status: 'Status',
+    howMadeHeading: 'How it is made',
+    worksHeading: 'Does it work?',
+    beltHelp: 'The belt the clock is made for. Moving: each wake window of an inserter that picks up from a belt stays '
+        + 'open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of '
+        + 'thumb, not a simulated belt. Standing still: the wake windows fit a belt that is full and does not move, which '
+        + 'is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A '
+        + 'subtick clock is always made for a belt that stands still, and is not ranked behind other clocks for it. Blank '
+        + 'when no clocked inserter picks up from a belt.',
+    swingsHelp: 'Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of crafting '
+        + 'cycles (the clock period).',
+    windowsHelp: 'How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on.',
+    wakeUpsHelp: 'How many times a minute a machine that finishes a craft wakes an inserter that is switched on and waiting '
+        + 'for it, summed over the inserters of one copy of the build in a long run of this clock. Fewer are better: each '
+        + 'wake-up is a small check that moves little or nothing, so fewer wake-ups cost less UPS. Shown for clocks that '
+        + 'were run long enough to count them. It is the count from one start point; a clock can settle into another '
+        + 'steady state from another start point, with another count.',
+    noneRecover: 'None of the clocks tried recovers when the build is starved or jammed, which can be a limit of the build '
+        + 'and not of its clocks. They are listed for what they are: a clock that holds the target rate has to be '
+        + 'restarted after the build is starved or jammed.',
+    noneHold: 'None of the clocks tried holds the target rate, so they are all listed.',
+    deadlock: 'The tests that starve and jam the build do not see this, so on this build they do not decide which clock '
+        + 'is selected for you: the clocks that hold the target rate are ranked by their wake-ups.',
+    computing: (label: string) => `${label}: computing…`,
+    showUnstable: (hidden: number) => `Show ${hidden} unstable clock${hidden === 1 ? '' : 's'} that ${hidden === 1 ? 'was' : 'were'} tried`,
+    hideUnstable: (count: number) => `Hide ${count} unstable clock${count === 1 ? '' : 's'}`,
+};
+
+/** The full table's Status: the glossary's words for the verdict */
+const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Recovers', 'no recovery': 'Does not recover', unstable: 'Unstable' };
 const VERDICT_COLOR: Record<ClockVerdict, 'success' | 'warning' | 'error'> = { stable: 'success', 'no recovery': 'warning', unstable: 'error' };
 
+/** The icon beside the words of Works?: never the colour alone */
+const WORKS_ICON = {
+    yes: <CheckCircle fontSize="small" aria-hidden sx={{ color: 'secondary.light' }} />,
+    caution: <Warning fontSize="small" aria-hidden sx={{ color: 'warning.main' }} />,
+    no: <Cancel fontSize="small" aria-hidden sx={{ color: 'error.light' }} />,
+} as const;
 
 function statusDetail(alternative: ClockAlternativeView): string {
     const check = alternative.asBuilt;
@@ -54,12 +94,39 @@ function statusDetail(alternative: ClockAlternativeView): string {
         return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
             + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run that starves and jams the build.');
     }
-    const phases = `Checked from ${check.start_phases_checked} start point(s)`;
+    const phases = `Checked from ${check.start_phases_checked} start point${check.start_phases_checked === 1 ? '' : 's'}`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
         return phases;
     }
     return `${phases}. The build repeats every ${check.repeat_periods} clock periods, moving ${check.repeat_output_items} of `
         + `${alternative.expectedOutputItems * check.repeat_periods} items over them`;
+}
+
+/** The engine's description in sentences, so the popover reads as short paragraphs and not one block */
+const sentencesOf = (text: string) => text.split(/(?<=\.)\s+(?=[A-Z])/).filter(Boolean);
+
+/** A header with its (i), which opens the Terms with the column's terms first */
+function TermsHeader({ label, focus }: { label: string; focus: readonly GlossaryId[] }) {
+    return (
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
+            {label}
+            <HelpButton label={termsHelpName(label)}>
+                <TermsList focus={focus} />
+            </HelpButton>
+        </Box>
+    );
+}
+
+/** A header of the full table with the help that was its hover text */
+function HelpHeader({ label, help }: { label: string; help: string }) {
+    return (
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
+            {label}
+            <HelpButton label={`About ${label}`}>
+                <Typography variant="body2">{help}</Typography>
+            </HelpButton>
+        </Box>
+    );
 }
 
 interface ClockAlternativesPanelProps {
@@ -68,8 +135,6 @@ interface ClockAlternativesPanelProps {
     onSelect: (index: number) => void;
     /** The clock the selection rule picks, which gets the "Recommended" chip; null while there are none */
     recommendedIndex: number | null;
-    /** Selects the recommended clock and lets the selection follow it again */
-    onSelectRecommended: () => void;
     /** What the selection rule was given by the latest generation's config; null before one */
     pickRule: PickRule | null;
     /** While true more clocks may still arrive, so the recommendation is the best so far */
@@ -82,12 +147,15 @@ interface ClockAlternativesPanelProps {
     holdNotice?: boolean;
 }
 
+/**
+ * The other clocks of the generation, to compare with the one at the top: by default a compact table (the plain name,
+ * what it makes, its wake-ups and whether it works), with every column one press away. A row selects its clock.
+ */
 export function ClockAlternativesPanel({
     alternatives,
     selectedIndex,
     onSelect,
     recommendedIndex,
-    onSelectRecommended,
     pickRule,
     isGenerating,
     pending = [],
@@ -95,10 +163,10 @@ export function ClockAlternativesPanel({
     holdNotice = false,
 }: ClockAlternativesPanelProps) {
     const [showUnstable, setShowUnstable] = useState(false);
+    const [allColumns, setAllColumns] = useState(false);
     // the unstable rows that were on screen when the others were shown
     const [pinnedIds, setPinnedIds] = useState<string[]>([]);
-    // where "Back to recommended" leaves the keyboard focus, as the link itself goes away
-    const recommendedRadioRef = useRef<HTMLInputElement>(null);
+    const tableId = useId();
 
     if (alternatives.length === 0 && pending.length === 0 && !holdNotice) {
         return null;
@@ -106,126 +174,129 @@ export function ClockAlternativesPanel({
 
     const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(
         alternatives,
-        { selectedIndex, recommendedIndex, showUnstable, pinnedIds },
+        // the recommended row leads once the run is over: while it runs the pick can change, and rows must not jump
+        // under the pointer
+        { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
-    const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const anyHolds = alternatives.some(alternative => alternative.verdict !== 'unstable');
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
+    // a Makes column that says the same on every row is one line above the table instead
+    const fold = allColumns ? null : foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
+    const columnCount = allColumns ? 10 : fold === null ? 5 : 4;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
-    const renderRow = ({ alternative, index }: { alternative: ClockAlternativeView; index: number }) => (
-        <TableRow
-            key={alternative.id}
-            hover
-            selected={index === selectedIndex}
-            onClick={() => onSelect(index)}
-            sx={{ cursor: 'pointer' }}
-        >
-            <TableCell padding="checkbox">
-                <Radio
-                    // one native group, so the arrow keys move between the clocks; the row's own click selects too
-                    name="clock"
-                    value={index}
-                    checked={index === selectedIndex}
-                    onChange={() => onSelect(index)}
-                    slotProps={{ input: { 'aria-label': alternative.label } }}
-                    size="small"
-                    inputRef={index === recommendedIndex ? recommendedRadioRef : undefined}
-                />
-            </TableCell>
-            <TableCell>
-                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-                    {alternative.label}
-                    <HelpButton label={clockHelpName(alternative.label)}>
-                        <Typography variant="body2">{alternative.description}</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            Status: {statusDetail(alternative)}
-                        </Typography>
-                    </HelpButton>
-                    {index === recommendedIndex && (
-                        <RecommendedChip isGenerating={isGenerating} />
-                    )}
-                </Box>
-            </TableCell>
-            <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                {alternative.beltLabel}
-                {/* made without belt slack in a run for moving belts: ranked after those made for them */}
-                {!alternative.ranking.matches_belt_choice && (
-                    <Typography variant="caption" component="div" color="text.secondary" sx={{ whiteSpace: 'normal', maxWidth: '16ch' }}>
-                        {BELT_COPY.onlyIfStanding}
-                    </Typography>
-                )}
-            </TableCell>
-            <TableCell align="right">
-                {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
-            </TableCell>
-            <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
-            <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
-            <TableCell align="right">
-                {alternative.assessment.wake_ups_per_minute !== null
-                    ? Math.round(alternative.assessment.wake_ups_per_minute)
-                    : '—'}
-            </TableCell>
-            <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
-            <TableCell align="right">
-                {alternative.asBuilt
-                    ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
-                    : '—'}
-            </TableCell>
-            <TableCell>
-                <Tooltip title={statusDetail(alternative)} arrow describeChild>
-                    <Chip
-                        tabIndex={0}
+    const renderRow = ({ alternative, index }: { alternative: ClockAlternativeView; index: number }) => {
+        const works = worksOf(alternative);
+        return (
+            <TableRow
+                key={alternative.id}
+                hover
+                selected={index === selectedIndex}
+                onClick={() => onSelect(index)}
+                sx={{ cursor: 'pointer' }}
+            >
+                <TableCell padding="checkbox">
+                    <Radio
+                        // one native group, so the arrow keys move between the clocks; the row's own click selects too
+                        name="clock"
+                        value={index}
+                        checked={index === selectedIndex}
+                        onChange={() => onSelect(index)}
+                        slotProps={{ input: { 'aria-label': `${plainClockName(alternatives, index)}: ${alternative.label}` } }}
                         size="small"
-                        label={VERDICT_LABEL[alternative.verdict]}
-                        color={VERDICT_COLOR[alternative.verdict]}
-                        variant="outlined"
-                        // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
-                        // words under 4.5:1
-                        sx={{ bgcolor: 'background.paper' }}
                     />
-                </Tooltip>
-            </TableCell>
-        </TableRow>
-    );
+                </TableCell>
+                <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
+                        <Box component="span" sx={{ fontWeight: 600 }}>{plainClockName(alternatives, index)}</Box>
+                        {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
+                        <span data-engine-name="">{clockTechnicalName(alternative)}</span>
+                        <HelpButton label={clockHelpName(alternative.label)}>
+                            <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
+                            {sentencesOf(alternative.description).map(sentence => (
+                                <Typography key={sentence} variant="body2" sx={{ mb: 0.75 }}>{sentence}</Typography>
+                            ))}
+                            <Typography variant="subtitle2" component="p" sx={{ mt: 1.5, mb: 0.5 }}>{COMPARE_COPY.worksHeading}</Typography>
+                            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                                {WORKS_ICON[works.kind]}{works.text}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
+                        </HelpButton>
+                    </Box>
+                </TableCell>
+                {allColumns ? (
+                    <>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            {beltCellText(alternative.beltLabel)}
+                            {/* made without belt slack in a run for moving belts: ranked after those made for them */}
+                            {!alternative.ranking.matches_belt_choice && (
+                                <Typography variant="caption" component="div" color="text.secondary" sx={{ whiteSpace: 'normal', maxWidth: '16ch' }}>
+                                    {BELT_COPY.onlyIfStanding}
+                                </Typography>
+                            )}
+                        </TableCell>
+                        <TableCell align="right">
+                            {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
+                        </TableCell>
+                        <TableCell align="right">{formatTicks(alternative.simulationDurationTicks)} ticks</TableCell>
+                        <TableCell align="right">{alternative.inserterWindowCount}</TableCell>
+                        <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
+                        <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
+                        <TableCell align="right">
+                            {alternative.asBuilt
+                                ? `${alternative.asBuilt.actual_output_items} / ${alternative.expectedOutputItems}`
+                                : '—'}
+                        </TableCell>
+                        <TableCell>
+                            <Tooltip title={statusDetail(alternative)} arrow describeChild>
+                                <Chip
+                                    tabIndex={0}
+                                    size="small"
+                                    label={VERDICT_LABEL[alternative.verdict]}
+                                    color={VERDICT_COLOR[alternative.verdict]}
+                                    variant="outlined"
+                                    // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
+                                    // words under 4.5:1
+                                    sx={{ bgcolor: 'background.paper' }}
+                                />
+                            </Tooltip>
+                        </TableCell>
+                    </>
+                ) : (
+                    <>
+                        {fold === null && (
+                            <TableCell align="right">{formatNumberText(alternative.assessment.items_per_second)}</TableCell>
+                        )}
+                        <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
+                        <TableCell>
+                            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                                {WORKS_ICON[works.kind]}
+                                {works.text}
+                            </Box>
+                        </TableCell>
+                    </>
+                )}
+            </TableRow>
+        );
+    };
 
     return (
-        <Panel title="Clocks" sx={{ mt: 2, mb: 0 }}>
+        <Panel
+            title={COMPARE_COPY.heading}
+            help={{ label: COMPARE_COPY.terms, content: <TermsList /> }}
+            sx={{ mt: 2, mb: 0 }}
+            data-compare-clocks=""
+        >
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
                 {RECOMMENDED_COPY.intro}
             </Typography>
-            {recommended && (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1, mb: 1, maxWidth: '72ch' }}>
-                    <Typography variant="body2">
-                        <strong>
-                            {isGenerating ? RECOMMENDED_COPY.leadWhileGenerating(recommended.label) : RECOMMENDED_COPY.lead(recommended.label)}
-                        </strong>{' '}
-                        {recommendationReason(alternatives, recommendedIndex, pickRule, !isGenerating)}
-                    </Typography>
-                    {selectedIndex !== recommendedIndex && (
-                        <Button
-                            size="small"
-                            onClick={() => {
-                                onSelectRecommended();
-                                recommendedRadioRef.current?.focus();
-                            }}
-                        >
-                            {isGenerating ? RECOMMENDED_COPY.backWhileGenerating : RECOMMENDED_COPY.backToRecommended}
-                        </Button>
-                    )}
-                </Box>
-            )}
             {!anyStable && alternatives.length > 0 && pending.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1, maxWidth: '72ch' }}>
-                    {anyHolds ? (
-                        <>None of the clocks tried recovers when the build is starved or jammed, which can be a limit of
-                            the build and not of its clocks. They are listed for what they are: a clock that holds the
-                            target rate has to be restarted after the build is starved or jammed.</>
-                    ) : (
-                        <>None of the clocks tried holds the target rate, so they are all listed.</>
-                    )}
+                    {anyHolds ? COMPARE_COPY.noneRecover : COMPARE_COPY.noneHold}
                 </Typography>
             )}
             <Accordion
@@ -238,7 +309,8 @@ export function ClockAlternativesPanel({
                     expandIcon={<ExpandMoreIcon />}
                     id="how-clocks-are-chosen-summary"
                     aria-controls="how-clocks-are-chosen-details"
-                    sx={{ px: 1.5 }}
+                    // the chevron next to its words, not at the far end of the line
+                    sx={{ px: 1.5, justifyContent: 'flex-start', '& .MuiAccordionSummary-content': { flexGrow: 0, mr: 1 } }}
                 >
                     <Typography variant="body2" component="span">{RECOMMENDED_COPY.disclosureTitle}</Typography>
                 </AccordionSummary>
@@ -253,58 +325,50 @@ export function ClockAlternativesPanel({
             </Accordion>
             {deadlockRisk !== null && (
                 <Alert severity="warning" sx={{ mb: 1 }}>
-                    {deadlockRisk} The tests that starve and jam the build do not see this, so on this build they do not decide
-                    which clock is selected for you: the clocks that hold the target rate are ranked by their wake-ups.
+                    {deadlockRisk} {COMPARE_COPY.deadlock}
                 </Alert>
             )}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 0.5, mb: 0.5 }}>
+                {fold !== null && <Typography variant="body2" data-makes-fold="">{fold}</Typography>}
+                <Button
+                    size="small"
+                    aria-expanded={allColumns}
+                    aria-controls={tableId}
+                    onClick={() => setAllColumns(shown => !shown)}
+                    // the chevron turns, as Why? does, so the state shows on screen too
+                    endIcon={<ExpandMoreIcon sx={{ transform: allColumns ? 'rotate(180deg)' : 'none' }} />}
+                    sx={{ ml: 'auto' }}
+                >
+                    {/* the same name both ways: the state is in aria-expanded and the chevron */}
+                    {COMPARE_COPY.showAll}
+                </Button>
+            </Box>
             <TableContainer>
-                <Table size="small" aria-label={CLOCK_TABLE_NAME}>
+                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME}>
                     <TableHead>
                         <TableRow>
                             <TableCell padding="checkbox">
                                 <Box component="span" sx={VISUALLY_HIDDEN}>Select</Box>
                             </TableCell>
-                            <TableCell>Clock</TableCell>
-                            <TableCell>
-                                <Tooltip
-                                    title="The belt the clock is made for. Moving: each wake window of an inserter that picks up from a belt stays open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of thumb, not a simulated belt. Non-moving belt: the wake windows fit a belt that is full and does not move, which is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A subtick clock is always made for a non-moving belt, and is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt."
-                                    arrow
-                                    describeChild
-                                >
-                                    <span tabIndex={0}>Belt</span>
-                                </Tooltip>
-                            </TableCell>
-                            <TableCell align="right">
-                                <Tooltip
-                                    title="Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of crafting cycles (the clock period)."
-                                    arrow
-                                    describeChild
-                                >
-                                    <span tabIndex={0}>Output swings</span>
-                                </Tooltip>
-                            </TableCell>
-                            <TableCell align="right">Clock period</TableCell>
-                            <TableCell align="right">
-                                <Tooltip
-                                    title="How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on."
-                                    arrow
-                                    describeChild
-                                >
-                                    <span tabIndex={0}>Wake windows</span>
-                                </Tooltip>
-                            </TableCell>
-                            <TableCell align="right">
-                                <Tooltip
-                                    title="How many times a minute a machine that finishes a craft wakes an inserter that is switched on and waiting for it, summed over the inserters of one copy of the build in a long run of this clock. Each wake-up is a small check that moves little or nothing, so fewer wake-ups cost less UPS. Shown for clocks that were run long enough to count them. It is the count from one start point; a clock can settle into another steady state from another start point, with another count."
-                                    arrow
-                                    describeChild
-                                >
-                                    <span tabIndex={0}>{WAKE_UPS_HEADER}</span>
-                                </Tooltip>
-                            </TableCell>
-                            <TableCell align="right">{rateHeader(copies)}</TableCell>
-                            <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
-                            <TableCell>Status</TableCell>
+                            <TableCell>{COMPARE_COPY.clock}</TableCell>
+                            {allColumns ? (
+                                <>
+                                    <TableCell><HelpHeader label="Belt" help={COMPARE_COPY.beltHelp} /></TableCell>
+                                    <TableCell align="right"><HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} /></TableCell>
+                                    <TableCell align="right">Clock period</TableCell>
+                                    <TableCell align="right"><HelpHeader label="Wake windows" help={COMPARE_COPY.windowsHelp} /></TableCell>
+                                    <TableCell align="right"><HelpHeader label={WAKE_UPS_HEADER} help={COMPARE_COPY.wakeUpsHelp} /></TableCell>
+                                    <TableCell align="right">{rateHeader(copies)}</TableCell>
+                                    <TableCell align="right">{OUTPUT_PER_PERIOD_HEADER}</TableCell>
+                                    <TableCell><TermsHeader label={COMPARE_COPY.status} focus={TERMS_FOCUS.works} /></TableCell>
+                                </>
+                            ) : (
+                                <>
+                                    {fold === null && <TableCell align="right">{makesHeader(copies)}</TableCell>}
+                                    <TableCell align="right"><TermsHeader label={WAKE_UPS_HEADER} focus={TERMS_FOCUS.wakeUps} /></TableCell>
+                                    <TableCell><TermsHeader label={COMPARE_COPY.works} focus={TERMS_FOCUS.works} /></TableCell>
+                                </>
+                            )}
                         </TableRow>
                     </TableHead>
                     <TableBody>{stable.map(renderRow)}</TableBody>
@@ -316,7 +380,7 @@ export function ClockAlternativesPanel({
                                     // a heading for the rows below it, not a cell of data
                                     component="th"
                                     scope="rowgroup"
-                                    colSpan={10}
+                                    colSpan={columnCount}
                                     sx={{ color: 'text.secondary', borderTop: 1, borderColor: 'divider', fontWeight: 'bold' }}
                                 >
                                     {RECOMMENDED_COPY.unstableDivider}
@@ -329,8 +393,8 @@ export function ClockAlternativesPanel({
                                 <TableCell padding="checkbox">
                                     <CircularProgress size={16} sx={{ ml: 1.5 }} aria-hidden />
                                 </TableCell>
-                                <TableCell colSpan={9} sx={{ color: 'text.secondary' }}>
-                                    {label}: computing…
+                                <TableCell colSpan={columnCount - 1} sx={{ color: 'text.secondary' }}>
+                                    {COMPARE_COPY.computing(label)}
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -349,13 +413,17 @@ export function ClockAlternativesPanel({
                             setShowUnstable(shown => !shown);
                         }}
                     >
-                        {showUnstable
-                            ? `Hide ${unstableCount} unstable clock${unstableCount === 1 ? '' : 's'}`
-                            : `Show ${hiddenCount} unstable clock${hiddenCount === 1 ? '' : 's'} that ${hiddenCount === 1 ? 'was' : 'were'} tried`}
+                        {showUnstable ? COMPARE_COPY.hideUnstable(unstableCount) : COMPARE_COPY.showUnstable(hiddenCount)}
                     </Button>
                 </Box>
             )}
             {notice}
         </Panel>
     );
+}
+
+/** The wake-ups of one copy, rounded; a dash when they were not counted */
+function wakeUpsCell(alternative: ClockAlternativeView): string {
+    const perMinute = alternative.assessment.wake_ups_per_minute;
+    return perMinute !== null ? `${Math.round(perMinute)}` : '—';
 }

@@ -2,14 +2,17 @@ import { describe, expect, it } from 'vitest';
 import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
 import {
     SUMMARY_COPY,
+    beltCellText,
     beltLine,
     beltValue,
     clockTechnicalName,
     differenceFromRecommended,
+    foldedMakes,
     makesText,
     plainClockName,
     recoversOf,
     wakeUpsText,
+    worksOf,
     type SummaryClock,
 } from './clockSummary';
 
@@ -192,6 +195,15 @@ describe('beltLine and beltValue', () => {
     });
 });
 
+describe('beltCellText', () => {
+    it('says the belt in the belt question\'s words, with the slack', () => {
+        expect(beltCellText('moving (+4 ticks)')).toBe('Moving (+4 ticks belt slack)');
+        expect(beltCellText('moving (+2–4 ticks)')).toBe('Moving (+2–4 ticks belt slack)');
+        expect(beltCellText('non-moving')).toBe('Standing still');
+        expect(beltCellText('')).toBe('');
+    });
+});
+
 describe('differenceFromRecommended', () => {
     const recommended = clock('r', { wake_ups_per_minute: 10 });
 
@@ -221,6 +233,50 @@ describe('differenceFromRecommended', () => {
     it('keeps to two sentences', () => {
         const selected = clock('s', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48, wake_ups_per_minute: 30, matches_belt_choice: false });
         expect(differenceFromRecommended(selected, recommended).match(/\./g)?.length).toBe(2);
+    });
+});
+
+describe('foldedMakes', () => {
+    it('folds 3 or more clocks that make the same rate into one line', () => {
+        expect(foldedMakes([clock('a'), clock('b'), clock('c')])).toBe('All 3 clocks make 240/s.');
+    });
+
+    it('keeps the column for two clocks', () => {
+        expect(foldedMakes([clock('a'), clock('b')])).toBeNull();
+    });
+
+    it('keeps the column when one clock differs at the second decimal', () => {
+        expect(foldedMakes([clock('a'), clock('b'), clock('c', { rate_off_target: -0.01 })])).toBeNull();
+    });
+
+    it('folds clocks that differ only past the second decimal', () => {
+        expect(foldedMakes([clock('a'), clock('b', { rate_off_target: 0.001 }), clock('c', { rate_off_target: -0.002 })]))
+            .toBe('All 3 clocks make 240/s.');
+    });
+});
+
+describe('worksOf', () => {
+    it('says yes for a clock that holds the rate and recovers, made for the belt asked for', () => {
+        expect(worksOf(clock('a'))).toEqual({ kind: 'yes', text: 'Yes' });
+    });
+
+    it('says a clock for belts that stand still is only for them', () => {
+        expect(worksOf(clock('a', { matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Only for belts that stand still' });
+    });
+
+    it('names the rate a clock that holds a rate misses, before whether it recovers', () => {
+        expect(worksOf(clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 })))
+            .toEqual({ kind: 'no', text: 'Misses the rate (192/s)' });
+    });
+
+    it('calls a clock that does not hold its rate unstable, whatever rate it runs at', () => {
+        expect(worksOf(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })))
+            .toEqual({ kind: 'no', text: 'Unstable' });
+    });
+
+    it('says a clock that does not recover so, and one that does not hold its rate is unstable', () => {
+        expect(worksOf(clock('a', { verdict: 'no recovery', matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Does not recover' });
+        expect(worksOf(clock('b', { verdict: 'unstable' }))).toEqual({ kind: 'no', text: 'Unstable' });
     });
 });
 

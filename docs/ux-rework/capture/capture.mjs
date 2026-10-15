@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import {
     forWidths, previewServer, sample, LOGISTIC, SLOW_SAMPLE,
     importFile, goConfigure, goResults, validate, generate, captureInFlight, openMenu, noSideScroll, isClickable,
+    setDeveloperTools, ui,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -65,15 +66,17 @@ async function layoutPass(page, rec) {
         await rec.shot(page, 'logistic-validated-top', { desc: 'After Check only, back at the top (workflow bar state)' });
         await generate(page);
         await goResults(page);
-        await rec.shot(page, 'logistic-results-timelines', { fullPage: true, aria: true, desc: 'Results finished, default tab (Timelines)' });
+        await rec.shot(page, 'logistic-results', { fullPage: true, aria: true, desc: 'Results finished (Developer tools off)' });
         const side = await noSideScroll(page);
         rec.check('Results does not scroll sideways', side.pass, side.detail);
     }, page);
 
-    for (const tab of ['Insights', 'Blueprint', 'Log']) {
+    // Details' tabs; the Timelines and the Log are in Developer tools (2.5 B)
+    for (const tab of ['Insights', 'Blueprint string', 'Timelines', 'Log']) {
         await rec.step(`tab ${tab}`, async () => {
             await page.evaluate(() => window.scrollTo(0, 0));
-            await page.getByRole('tab', { name: tab, exact: true }).click();
+            if (tab === 'Timelines') await setDeveloperTools(page, true);
+            await ui.resultsTab(page, tab).click();
             await settle(page, 500);
             await rec.shot(page, `logistic-results-${tab.toLowerCase()}`, { fullPage: true, desc: `Results, ${tab} tab` });
         }, page);
@@ -188,27 +191,30 @@ async function walkthrough(page, rec, base) {
 
     await rec.step('generate', async () => {
         await generate(page);
-        await rec.shot(page, 'logistic-results-timelines', { fullPage: true, aria: true, desc: 'Logistic science build: Results finished, default tab (Timelines)' });
+        await rec.shot(page, 'logistic-results', { fullPage: true, aria: true, desc: 'Logistic science build: Results finished (Developer tools off)' });
     }, page);
 
     await rec.step('plan toggle', async () => {
+        // the Timelines and their Plan toggle are in Developer tools (2.5 B)
+        await setDeveloperTools(page, true);
         await page.getByRole('button', { name: 'Plan', exact: true }).click();
         await settle(page, 1200);
         await rec.shot(page, 'logistic-results-timelines-plan', { fullPage: true, desc: 'Logistic science build: Timelines tab with "Plan" chosen instead of "Exported clock"' });
         await page.getByRole('button', { name: 'Exported clock', exact: true }).click();
     }, page);
 
-    for (const tab of ['Insights', 'Blueprint', 'Log']) {
+    for (const tab of ['Insights', 'Blueprint string', 'Log']) {
         await rec.step(`tab ${tab}`, async () => {
             await page.evaluate(() => window.scrollTo(0, 0));
-            await page.getByRole('tab', { name: tab, exact: true }).click();
+            await ui.resultsTab(page, tab).click();
             await settle(page, 1000);
             await rec.shot(page, `logistic-results-${tab.toLowerCase()}`, { fullPage: true, desc: `Logistic science build: Results, ${tab} tab` });
         }, page);
     }
 
     await rec.step('how is it made', async () => {
-        await page.getByRole('tab', { name: 'Timelines', exact: true }).click();
+        await ui.resultsTab(page, 'Timelines').click();
+        await setDeveloperTools(page, false);
         await page.evaluate(() => window.scrollTo(0, 0));
         // an icon with an aria-label (aria-hidden, so not a "button" to the accessibility tree)
         await page.locator('table [aria-label^="About "][aria-haspopup="dialog"]').first().click();
@@ -225,7 +231,7 @@ async function walkthrough(page, rec, base) {
 
     await rec.step('copy blueprint', async () => {
         await page.evaluate(() => window.scrollTo(0, 0));
-        await page.getByRole('button', { name: 'Copy blueprint' }).click();
+        await ui.copyBlueprint(page).click();
         await settle(page, 500);
         await rec.shot(page, 'copy-blueprint-clicked', { desc: 'Workflow bar "Copy blueprint" just clicked' });
     }, page);

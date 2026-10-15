@@ -39,6 +39,7 @@ export const SUMMARY_COPY = {
     beltMoving: 'Moving',
     beltStill: 'Standing still',
     beltNone: 'No belt',
+    beltCellMoving: (slack: string) => `Moving (${slack} belt slack)`,
     beltLineMoving: 'Made for moving belts.',
     beltLineStill: 'Made for belts that stand still.',
     beltLineNone: 'No inserter on the clock picks up from a belt.',
@@ -50,6 +51,13 @@ export const SUMMARY_COPY = {
     differsNoRecovery: 'It does not recover after it is starved or jammed.',
     differsUnstable: 'It does not hold its rate.',
     differsNothing: 'It is not the recommended clock.',
+    // the compare table
+    foldedMakes: (count: number, rate: string) => `All ${count} clocks make ${rate}/s.`,
+    worksYes: 'Yes',
+    worksStillBelts: 'Only for belts that stand still',
+    worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
+    worksNoRecovery: 'Does not recover',
+    worksUnstable: 'Unstable',
 };
 
 /** A rate as the summary prints it: at most two decimals ("240", "12.5") */
@@ -159,6 +167,18 @@ export function beltValue(rule: PickRule | null, beltLabel: string): string {
     return { moving: SUMMARY_COPY.beltMoving, still: SUMMARY_COPY.beltStill, none: SUMMARY_COPY.beltNone }[beltKindOf(rule, beltLabel)];
 }
 
+/**
+ * The full clock table's Belt cell in the belt question's words: "Moving (+4 ticks belt slack)", "Standing still", or
+ * nothing when no clocked inserter picks up from a belt. The engine's label is "moving (+4 ticks)" or "non-moving".
+ */
+export function beltCellText(beltLabel: string): string {
+    if (beltLabel === '') {
+        return '';
+    }
+    const slack = /^moving \((.+)\)$/.exec(beltLabel);
+    return slack ? SUMMARY_COPY.beltCellMoving(slack[1]) : beltLabel.startsWith('moving') ? SUMMARY_COPY.beltMoving : SUMMARY_COPY.beltStill;
+}
+
 /** The sentence under the tiles about the belt the clock is made for (2.4 may change its words, not its place) */
 export function beltLine(rule: PickRule | null, beltLabel: string): string {
     return { moving: SUMMARY_COPY.beltLineMoving, still: SUMMARY_COPY.beltLineStill, none: SUMMARY_COPY.beltLineNone }[beltKindOf(rule, beltLabel)];
@@ -192,4 +212,41 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
         sentences.push(SUMMARY_COPY.differsUnstable);
     }
     return sentences.length === 0 ? SUMMARY_COPY.differsNothing : sentences.slice(0, 2).join(' ');
+}
+
+/** Fewer rows than this keep the Makes column: one or two rows read as easily as a sentence */
+const FOLD_MIN_ROWS = 3;
+
+/**
+ * "All 5 clocks make 240/s." when 3 or more clocks shown make the same rate at two decimals, so the compare table can
+ * leave out a column that says the same on every row; null when they differ, or there are too few to fold.
+ */
+export function foldedMakes(clocks: Pick<SummaryClock, 'assessment'>[]): string | null {
+    if (clocks.length < FOLD_MIN_ROWS) {
+        return null;
+    }
+    const rates = new Set(clocks.map(clock => clock.assessment.items_per_second.toFixed(2)));
+    return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(clocks[0].assessment.items_per_second)) : null;
+}
+
+/**
+ * The compare table's "Works?": "Yes" for a clock that holds the rate and recovers, made for the belt asked for;
+ * otherwise what is wrong, the worst first: that it does not hold its rate (the word of the group it is listed under;
+ * its rate is in its name and in Makes), the rate it misses, that it needs a restart after a jam, or that it is only for
+ * belts that stand still. `kind` picks the icon; the words say it without the colour.
+ */
+export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment'>): { kind: 'yes' | 'caution' | 'no'; text: string } {
+    if (clock.verdict === 'unstable') {
+        return { kind: 'no', text: SUMMARY_COPY.worksUnstable };
+    }
+    if (isOffTarget(clock)) {
+        return { kind: 'no', text: SUMMARY_COPY.worksOffTarget(rateText(clock.assessment.items_per_second)) };
+    }
+    if (clock.verdict === 'no recovery') {
+        return { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery };
+    }
+    if (!clock.ranking.matches_belt_choice) {
+        return { kind: 'caution', text: SUMMARY_COPY.worksStillBelts };
+    }
+    return { kind: 'yes', text: SUMMARY_COPY.worksYes };
 }

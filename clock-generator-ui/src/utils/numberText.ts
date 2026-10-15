@@ -84,6 +84,17 @@ export function rateHeader(copies: number): string {
     return copies > 1 ? `Rate (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : 'Rate (items/s)';
 }
 
+/** The compact clocks table's header of the same rate, which says what the clock makes */
+export function makesHeader(copies: number): string {
+    return copies > 1 ? `Makes (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : 'Makes (items/s)';
+}
+
+/** A stretch of time as Results prints every one: "240 ticks (4 s)", "1.5 ticks (0.03 s)" */
+export function durationText(ticks: number, locale?: Intl.LocalesArgument): string {
+    const seconds = formatNumberText(ticks / 60, { locale });
+    return `${formatNumberText(ticks, { maxDecimals: TICK_DECIMALS, locale })} ticks (${seconds}${NBSP}s)`;
+}
+
 /** The diagram machine node's last line: "5.224t craft · insertion limit ×15", the ticks at the precision Machine Facts uses */
 export function machineNodeCraftLine(ticksPerCraft: number, overloadMultiplier: number, locale?: Intl.LocalesArgument): string {
     const ticks = formatNumberText(ticksPerCraft, { maxDecimals: TICK_DECIMALS, locale });

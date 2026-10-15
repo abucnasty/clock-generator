@@ -172,7 +172,7 @@ describe('standingBeltsHint', () => {
     it('says how few wake-ups the build may do with on belts that stand still', () => {
         const clocks = [clock({ wake_ups_per_minute: 177 }), still(0)];
         expect(standingBeltsHint(clocks, 0, 'moving'))
-            .toBe('On belts that stand still, this build may do with 0 wake-ups a minute instead of 177.');
+            .toBe('On belts that stand still, this build may do with 0 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
     });
 
     it('says nothing on a standing-belt result, or with no pick', () => {
@@ -199,7 +199,7 @@ describe('standingBeltsHint', () => {
 
     it('prints the numbers rounded, as the table does', () => {
         expect(standingBeltsHint([clock({ wake_ups_per_minute: 176.6 }), still(3.2)], 0, 'moving'))
-            .toBe('On belts that stand still, this build may do with 3 wake-ups a minute instead of 177.');
+            .toBe('On belts that stand still, this build may do with 3 wake-ups a minute instead of 177; fewer is better, as each one costs a little UPS.');
     });
 
     it('says nothing when the difference rounds away', () => {

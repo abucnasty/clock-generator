@@ -254,16 +254,21 @@ function readTable() {
             const cells = [...tr.children].map((c) => clean(c.textContent));
             const labelCell = tr.children[1];
             const first = labelCell && labelCell.firstElementChild && labelCell.firstElementChild.firstChild;
+            // 2.5 B: the Clock cell leads with the plain name; the engine's name is the line marked data-engine-name
+            const engine = labelCell && labelCell.querySelector('[data-engine-name]');
             return {
                 index,
-                label: clean(first ? first.textContent : labelCell ? labelCell.textContent : ''),
+                label: clean(engine ? engine.textContent : first ? first.textContent : labelCell ? labelCell.textContent : ''),
                 selected: tr.querySelector('input[type=radio]').checked,
                 chip: [...tr.querySelectorAll('.MuiChip-label')].map((c) => clean(c.textContent)).find((t) => /^(Recommended|Best so far)$/.test(t)) || null,
                 cells,
             };
         });
     const pending = [...table.querySelectorAll('tbody tr')].filter((tr) => !tr.querySelector('input[type=radio]') && tr.querySelector('.MuiCircularProgress-root')).length;
-    return { present: true, heads, cols: { belt: at(/^Belt/), rate: at(/^(Rate|Makes)/), wake: at(/^Wake-ups/), status: at(/^Status/) }, rows, pending, text: clean(table.innerText).slice(0, 400) };
+    // 2.5 B: when every shown clock makes the same rate, the compact table says it in one line above it instead of a column
+    const panel = table.closest('.MuiPaper-root');
+    const foldNode = panel ? panel.querySelector('[data-makes-fold]') : null;
+    return { present: true, heads, cols: { belt: at(/^Belt/), rate: at(/^(Rate|Makes)/), wake: at(/^Wake-ups/), status: at(/^Status/) }, rows, pending, fold: foldNode ? clean(foldNode.textContent) : null, text: clean(table.innerText).slice(0, 400) };
 }
 
 /** Pinned (fixed/sticky) boxes near the top of the viewport: the bottom of the lowest one */
@@ -388,7 +393,8 @@ async function cardChecks({ page, rec, tag = 'card', path = LOGISTIC }) {
     // the numbers equal the selected row's, at 2 decimals
     await chk(rec, `${p} Makes equals the selected row's rate at 2 decimals; sub-line "all N copies"`, async () => {
         const t = card.tiles.Makes;
-        const cell = sel && table.cols.rate >= 0 ? sel.cells[table.cols.rate] : null;
+        // the selected row's rate cell, or the line "All 5 clocks make 240/s." that stands for that column when it is folded (2.5 B)
+        const cell = sel && table.cols.rate >= 0 ? sel.cells[table.cols.rate] : sel && table.fold ? table.fold.replace(/^All \d+ clocks make /, '') : null;
         const a = Number((/(\d+(?:\.\d+)?)/.exec((t && t.value) || '') || [])[1]);
         const b = Number((/(\d+(?:\.\d+)?)/.exec(cell || '') || [])[1]);
         const copies = (/all (\d+) copies/.exec((table.heads || [])[table.cols.rate] || '') || [])[1];
@@ -461,8 +467,11 @@ async function stepChecks({ rec, card, p, path, book, noWire = false, drillsOnly
     } else {
         await chk(rec, `${p} the wiring list has its caption "${WIRING_CAPTION}"`, async () => ({ pass: Boolean(card.wiring) && card.wiring.caption === WIRING_CAPTION, detail: show(card.wiring && card.wiring.caption) }));
         // each entry: "Inserter 1 — [item icon]: Belt 1 to Machine 1" (2.8 b); its text is "Inserter 1 — , : Belt 1 to Machine 1"
-        // (the dash hidden from screen readers, the ", " hidden from sight, the item an icon named with its game name)
-        await chk(rec, `${p} each wiring row is a combinator ("Inserter 3", "Inserters 1, 2", "Drill 1"), each of its inserters with its item's icon and its ends`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => /^(Inserters?|Drills?) [\d, ]+$/.test(r[0] || '')) && card.wiring.entries.length > 0 && card.wiring.entries.every((e) => /^(Inserter|Drill) \d+ — , : \S/.test(e.text) && e.imgs.length > 0 && e.imgs.every((alt) => alt && !/^[a-z0-9-]+$/.test(alt))), detail: show(card.wiring && card.wiring.entries.slice(0, 3)) }));
+        // (the dash hidden from screen readers, the ", " hidden from sight, the item an icon named with its game name); since
+        // 2.5 B an entry of several items has a ", " hidden from sight between their icons too, one fewer than the icons
+        const entryOk = (e) => e.text.startsWith(`${/^(Inserter|Drill) \d+/.exec(e.text)?.[0]} — , ${', '.repeat(Math.max(0, e.imgs.length - 1))}: `)
+            && /: \S/.test(e.text) && e.imgs.length > 0 && e.imgs.every((alt) => alt && !/^[a-z0-9-]+$/.test(alt));
+        await chk(rec, `${p} each wiring row is a combinator ("Inserter 3", "Inserters 1, 2", "Drill 1"), each of its inserters with its item's icon and its ends`, async () => ({ pass: Boolean(card.wiring) && card.wiring.rows.length > 0 && card.wiring.rows.every((r) => /^(Inserters?|Drills?) [\d, ]+$/.test(r[0] || '')) && card.wiring.entries.length > 0 && card.wiring.entries.every(entryOk), detail: show(card.wiring && (card.wiring.entries.filter((e) => !entryOk(e)).slice(0, 3).concat(card.wiring.entries.slice(0, 1)))) }));
     }
     if ((path || drills !== undefined) && !noWire && !drillsOnly) {
         // from the clock (its drill combinators) when the copied string is known; else from the build

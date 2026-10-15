@@ -72,8 +72,10 @@ export const INSTALL_COPY = {
     },
     others: {
         title: 'Leave the other inserters alone.',
-        // the engine gives no wake windows, so no combinator, to an inserter set to Always on or Never on; Never on is
-        // the simulator's setting, and an unwired inserter in the game runs all the time, so the player keeps it off
+        // the engine gives no wake windows, so no combinator, to an inserter set to Always on.
+        // Never on is the simulator's setting, which the engine does not always keep out of the clock: some builds still
+        // put such an inserter in the list (an engine follow-up). An unwired inserter in the game runs all the time, so
+        // the player keeps it off
         detail: 'An inserter that is not in the list gets no combinator. One set to Always on, or with nothing to wait '
             + 'for, runs all the time: do not wire it. One set to Never on is never switched on by the clock: keep it '
             + 'off in the game yourself. If this clock replaces an older one, an inserter the old clock switched and '
@@ -93,7 +95,10 @@ export const INSTALL_COPY = {
     },
 } as const;
 
-/** No combinator switches an inserter or a drill on: each runs all the time or is set to Never on, so there is no clock to place */
+/**
+ * The clock names no inserter and no drill to wire (each runs all the time, as far as the engine is concerned), so
+ * there is no clock to place
+ */
 export function needsNoClock(input: Pick<InstallInput, 'wiring' | 'drills'>): boolean {
     return input.wiring.length === 0 && input.drills.length === 0;
 }
