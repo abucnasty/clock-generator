@@ -28,9 +28,12 @@ import { ruleCountInputOfRecording } from "./verification/recording-rule-count";
  * writes all of it with the version and the commit of the generator that counted it.
  */
 
-const SIMULATOR_NOTE = "Simulated. The simulator's count was laid against the game on three builds only, the advanced circuit, "
-    + "accumulator and low density structure scaffolds (2026-10-15): every call agreed in both counts; w removed differed by up to 28% "
-    + "pooled and up to 131% for a group, most on outputs that take part hands (GOALS.md, \"The rule's count and the clock-or-unwired advice\").";
+const SIMULATOR_NOTE = "Simulated. The simulator's count was laid against the game on four builds only (2026-10-15). On the advanced "
+    + "circuit, accumulator and low density structure scaffolds every call agreed, but the simulator's pooled w was higher by 9%, 3% and "
+    + "42% (low density structure: inputs +24% and +27%, output +131%), most on outputs that take part hands. On the agricultural science "
+    + "scaffold two calls differ in both counts: the input of bioflux and nutrients into the science biochamber (game -184, simulator 218 "
+    + "in true starts; -240 against 257 in the original count) and the pooled figure (106 against 213); why is not known "
+    + "(GOALS.md, \"The rule's count and the clock-or-unwired advice\").";
 
 function argValue(name: string): string | undefined {
     return process.argv.find(arg => arg.startsWith(`--${name}=`))?.split("=").slice(1).join("=");

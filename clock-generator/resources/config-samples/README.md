@@ -348,35 +348,43 @@ waiting on its plant where the game shows it working, so the simulator counts a 
 counts a pickup (760). The inputs into the plants count about 8% more sink wake-ups in the game, unclocked; why was
 not looked into. No call changes, so both are left (working rule 2).
 
-In true starts (the call since 0.12.0), the same recordings and those of the accumulator and low density structure
-scaffolds (2026-10-15, the same way: warmup and settle as in the game tests, the first period left out), w removed a
-minute for each inserter, game against simulator, with the original count after it:
+In true starts (the call since 0.12.0), the same recordings and those of the accumulator, low density structure and
+agricultural science scaffolds (2026-10-15, the same way: warmup, settle and seed as in the game tests, the first period
+left out), the game read by the series' method as every recording is, w removed a minute for each inserter, game
+against simulator, with the original count after it:
 
 | Build | Group | True starts | Original count |
 |---|---|---|---|
 | Advanced circuit | electronic circuit from the belt | 589 / 584 | 1,096 / 998 |
 | | copper cable from the foundries | 653 / 653 | 1,178 / 1,089 |
 | | plastic from the cryogenic plant | 641 / 641 | 1,180 / 1,091 |
-| | coal from the belt | 232 / 326 | 441 / 410 |
+| | coal from the belt | 232 / 325 | 441 / 410 |
 | | advanced circuit output | 743 / 951 | 743 / 951 |
 | | pooled | 609 / 665 | 982 / 963 |
 | Accumulator | accumulator output | 567 / 563 | 567 / 563 |
-| | battery into the accumulators | 462 / 499 | 463 / 499 |
-| | iron into the accumulators | 773 / 804 | 774 / 804 |
+| | battery into the accumulators | 462 / 499 | 462 / 499 |
+| | iron into the accumulators | 774 / 804 | 774 / 804 |
 | | copper into the batteries | 1,111 / 1,141 | 1,520 / 1,559 |
 | | iron into the batteries | 1,101 / 1,141 | 1,511 / 1,559 |
 | | pooled | 803 / 830 | 967 / 997 |
 | Low density structure | plastic from the chest | 695 / 859 | 1,450 / 1,800 |
 | | plastic from the cryogenic plant | 702 / 893 | 1,457 / 1,834 |
 | | low density structure output | 251 / 579 | 251 / 579 |
-| | pooled | 633 / 809 | 1,088 / 1,439 |
+| | pooled | 568 / 809 | 1,088 / 1,439 |
+| Agricultural science | bioflux and nutrients into the nutrient biochambers | 127 / 70 | 159 / 117 |
+| | nutrients into the egg biochambers | 116 / 129 | 202 / 266 |
+| | bioflux and nutrients into the science biochamber | **-184 / 218** | **-240 / 257** |
+| | science output | 721 / 945 | 721 / 945 |
+| | pooled | **106 / 213** | **98 / 283** |
 
-Every call is "clock", firm, in both counts and in both the game and the simulator. The true starts of the advanced
-circuit plants, read from their crafting progress, are the series' (625.4 sink wake-ups a minute an input, unclocked).
-The low density structure output differs most: as with the advanced circuit output, the simulator counts craft
-wake-ups where the game counts pickups of part hands. The coal into the plastic plant (a craft of about a tick) and the
-low density structure inputs differ too; why was not looked into. No call changes, so they are left (working rule 2).
-The comparisons are in `.scratch/geppetto/recordings-0.12/` on the machine they were made on.
+On the first three builds every call is "clock", firm, in both counts and in both the game and the simulator. The
+output of a part-hand machine differs most (the simulator counts craft wake-ups where the game counts pickups), and the
+low density structure inputs, on sinks where the method is exact, count about 25% more in the simulator. On
+agricultural science, whose input sinks are all biochambers, where the method is a known miss, two calls differ in both
+counts (in bold): in the game the input into the science biochamber wakes more on the clock than without it, and it
+waits for space with part of a hand on 431 samples on the clock against none without. Why is not known. No selection
+depends on these calls, so they are left (working rule 2). The comparisons are in `.scratch/geppetto/recordings-0.12/`
+on the machine they were made on.
 
 The last row is the clock that rule was read from (`src/crafting/wake-after-output-block.test.ts`). One plant made its
 352 a period and the other 264, from the first period the clock ran on the build. That plant held 14 advanced circuits
