@@ -29,6 +29,7 @@ import type {
     SuggestedTarget,
     SwingBackoffReport,
 } from 'clock-generator/browser';
+import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
@@ -129,6 +130,8 @@ export interface ClockAlternativeView {
     /** Length of one crafting cycle; the clock period is a whole number of them */
     cycleTicks: number;
     blueprintString: string;
+    /** What installing the blueprint takes: whether it is a book, and which inserters each combinator is wired to */
+    install: ClockInstallFacts;
     transferHistory: SerializableTransferHistory;
     stateTransitionHistory: SerializableStateTransitionHistory;
     /**

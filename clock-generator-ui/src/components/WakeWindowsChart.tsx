@@ -64,8 +64,6 @@ const WIDE_PX = 900;
 const LABEL_COLUMN_PX = 220;
 const NUMBERS_COLUMN_PX = 150;
 const COLUMN_GAP_PX = 14;
-/** Room kept below a focused row for the page's sticky footer */
-const FOOTER_CLEARANCE_PX = 72;
 
 /** Width of an element, kept up to date */
 function useWidth(): [(element: HTMLElement | null) => (() => void) | undefined, number] {
@@ -305,12 +303,6 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
             case 'ArrowUp':
                 props.onMoveRow(props.rowIndex, -1);
                 break;
-            case 'Escape':
-                if (selectedIndex === null) {
-                    return;
-                }
-                onSelect(null);
-                break;
             default:
                 return;
         }
@@ -354,8 +346,6 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                     borderTop: 1,
                     borderColor: 'divider',
                     outline: 'none',
-                    // the page's sticky footer would cover a row focused at the bottom of the window
-                    scrollMarginBottom: FOOTER_CLEARANCE_PX,
                     '&:focus-visible': { outline: `2px solid ${WAKE_SELECTED_COLOR}`, outlineOffset: '2px' },
                 }}
             >
@@ -448,7 +438,20 @@ export function WakeWindowsChart(props: WakeWindowsChartProps) {
     }, [rows, onSelect]);
 
     return (
-        <Box ref={rootRef} role="group" aria-labelledby={props.labelledBy} aria-describedby={props.describedBy} data-wake-chart>
+        <Box
+            ref={rootRef}
+            role="group"
+            aria-labelledby={props.labelledBy}
+            aria-describedby={props.describedBy}
+            // Escape clears the selected window from anywhere in the chart, whichever row has the focus
+            onKeyDown={event => {
+                if (event.key === 'Escape' && selected !== null) {
+                    onSelect(null);
+                    event.preventDefault();
+                }
+            }}
+            data-wake-chart
+        >
             <Box sx={{ display: 'grid', gridTemplateColumns: gridColumnsOf(wide), columnGap: `${COLUMN_GAP_PX}px` }}>
                 <Box sx={{ gridColumn: wide ? '2' : '1 / -1' }}>
                     <Axis periodTicks={periodTicks} marks={marks} />

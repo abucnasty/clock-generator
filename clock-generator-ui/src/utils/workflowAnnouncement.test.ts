@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from './workflowAnnouncement';
 
-const idle: WorkflowSnapshot = { checkStatus: 'none', checkedForGenerate: false, isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null };
+const idle: WorkflowSnapshot = { checkStatus: 'none', checkedForGenerate: false, isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null, selectedId: null, selectionQuiet: false };
 const at = (changes: Partial<WorkflowSnapshot>, from: WorkflowSnapshot = idle): WorkflowSnapshot => ({ ...from, ...changes });
 
 describe('workflowAnnouncement: a check from Check only (or the swing plan)', () => {
@@ -85,6 +85,42 @@ describe('workflowAnnouncement: generation', () => {
     });
 });
 
+describe('workflowAnnouncement: choosing a clock', () => {
+    const showing = at({ checkStatus: 'valid', hasBlueprint: true, selectedLabel: 'Fewest wake-ups', selectedId: 'a' });
+
+    it('names the clock chosen while nothing runs', () => {
+        expect(workflowAnnouncement(showing, at({ selectedLabel: 'Fewest wake windows', selectedId: 'b' }, showing)))
+            .toBe('Showing the clock: Fewest wake windows.');
+    });
+
+    it('names a clock of the same name too, as the card changed', () => {
+        expect(workflowAnnouncement(showing, at({ selectedId: 'c' }, showing))).toBe('Showing the clock: Fewest wake-ups.');
+    });
+
+    it('says nothing when Back to recommended in the card moved the focus to its name, which reads it', () => {
+        expect(workflowAnnouncement(showing, at({ selectedId: 'r', selectedLabel: 'Fewest wake windows', selectionQuiet: true }, showing))).toBeNull();
+        // and the next row chosen in the table is said again
+        const quiet = at({ selectedId: 'r', selectionQuiet: true }, showing);
+        expect(workflowAnnouncement(quiet, at({ selectedId: 'd', selectionQuiet: false }, quiet))).toBe('Showing the clock: Fewest wake-ups.');
+    });
+
+    it('says nothing while a run goes on', () => {
+        const running = at({ isLoading: true }, showing);
+        expect(workflowAnnouncement(running, at({ selectedLabel: 'X', selectedId: 'x' }, running))).toBeNull();
+    });
+
+    it('says nothing when the clocks first appear or are cleared', () => {
+        expect(workflowAnnouncement(idle, at({ hasBlueprint: true, selectedLabel: 'X', selectedId: 'x' }))).toBeNull();
+        expect(workflowAnnouncement(showing, idle)).toBeNull();
+    });
+
+    it('says only that the run finished when it ends on another clock', () => {
+        const running = at({ isLoading: true }, showing);
+        expect(workflowAnnouncement(running, at({ isLoading: false, selectedLabel: 'Y', selectedId: 'y' }, running)))
+            .toBe('Finished generating. Selected clock: Y.');
+    });
+});
+
 describe('workflowAnnouncement: order and repeats', () => {
     it('looks at generation before the check when both change', () => {
         const before = at({ checkStatus: 'running' });
@@ -102,7 +138,7 @@ describe('workflowAnnouncement: order and repeats', () => {
     });
 
     it('keeps every message a non-empty sentence, in the glossary\'s words', () => {
-        const texts = [...Object.values(ANNOUNCEMENTS).filter((it) => typeof it === 'string'), ANNOUNCEMENTS.finished('X')];
+        const texts = [...Object.values(ANNOUNCEMENTS).filter((it) => typeof it === 'string'), ANNOUNCEMENTS.finished('X'), ANNOUNCEMENTS.showing('X')];
         for (const text of texts) {
             expect(text).toMatch(/^[A-Z].*\.$/);
             expect(text).not.toMatch(/configuration|valid/i);

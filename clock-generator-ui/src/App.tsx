@@ -28,6 +28,8 @@ import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
+import { useCopyBlueprint } from './hooks/useCopyBlueprint';
+import { useAnnounce, useNotify } from './hooks/useMessages';
 import { useIntroCard } from './hooks/useIntroCard';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
@@ -44,6 +46,7 @@ import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
+import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { CheckErrorAlert } from './components/CheckErrorAlert';
 import { CheckPlanSection } from './components/CheckPlanSection';
 import { BeltAssumption } from './components/BeltAssumption';
@@ -54,6 +57,8 @@ import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, de
 import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './utils/rateWarning';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
+import { clockTechnicalName, plainClockName } from './utils/clockSummary';
+import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { a11yThemeComponents } from './utils/a11yTheme';
@@ -278,6 +283,41 @@ function App() {
         () => beltQuestionOf({ inserters: config.inserters, belts: config.belts, overrides: config.overrides }),
         [config.inserters, config.belts, config.overrides]
     );
+
+    // the selected clock as the bar, the card and the announcements name it
+    const selectedClock = alternatives[selectedAlternativeIndex];
+    const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
+    const rateWarning = rateWarningOf(selectedClock);
+    const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale);
+
+    // one copy for every Copy button: the bar's, the card's and the string's
+    const notify = useNotify();
+    const announce = useAnnounce();
+    const handleCopied = useCallback((warning: string | null) => {
+        if (warning !== null) {
+            // the warning's own message says that it was copied
+            notify({ severity: 'warning', text: `Copied. ${warning}` });
+        } else {
+            announce(ANNOUNCEMENTS.copied);
+        }
+    }, [notify, announce]);
+    const copy = useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCopied: handleCopied });
+
+    // another clock is announced ("Showing the clock: …"), except after the card's Back to recommended, which moves the
+    // focus to the card's name and so reads it out already
+    const [selectionQuiet, setSelectionQuiet] = useState(false);
+    const handleSelectClock = useCallback((index: number) => {
+        setSelectionQuiet(false);
+        selectAlternative(index);
+    }, [selectAlternative]);
+    const handleSelectRecommended = useCallback(() => {
+        setSelectionQuiet(false);
+        selectRecommended();
+    }, [selectRecommended]);
+    const handleCardBackToRecommended = useCallback(() => {
+        setSelectionQuiet(true);
+        selectRecommended();
+    }, [selectRecommended]);
 
     // the most the machines making the target recipe can make: a target above it is a problem
     const machinesMax = useMachinesMax(config.target_output.recipe, config.machines);
@@ -564,11 +604,16 @@ function App() {
                             checkedForGenerate={checkedForGenerate}
                             chip={checkChipOf({ checkStatus, clocksAreForThisBuild: generatedFor !== null && !resultsAreStale })}
                             blueprintString={blueprintString}
-                            selectedLabel={alternatives[selectedAlternativeIndex]?.label ?? null}
-                            rateWarning={rateWarningOf(alternatives[selectedAlternativeIndex])}
-                            copyLabel={copyBlueprintLabelOf(alternatives[selectedAlternativeIndex], resultsAreStale)}
-                            belowTarget={isBelowTarget(alternatives[selectedAlternativeIndex])}
+                            selectedLabel={selectedName}
+                            selectedEngineName={selectedClock ? clockTechnicalName(selectedClock) : null}
+                            selectedId={selectedClock?.id ?? null}
+                            selectionQuiet={selectionQuiet}
+                            rateWarning={rateWarning}
+                            copyLabel={copyLabel}
+                            belowTarget={isBelowTarget(selectedClock)}
                             staleFor={staleFor}
+                            copied={copy.copied}
+                            onCopy={copy.request}
                             problems={problems}
                             note={note}
                             startHere={blankBuild && problems.length > 0}
@@ -763,9 +808,10 @@ function App() {
                                 error={error}
                                 alternatives={alternatives}
                                 selectedIndex={selectedAlternativeIndex}
-                                onSelect={selectAlternative}
+                                onSelect={handleSelectClock}
                                 recommendedIndex={recommendedIndex}
-                                onSelectRecommended={selectRecommended}
+                                onSelectRecommended={handleSelectRecommended}
+                                onCardBackToRecommended={handleCardBackToRecommended}
                                 pickRule={pickRule}
                                 pending={pendingAlternatives}
                                 skippedSearches={skippedSearches}
@@ -791,14 +837,18 @@ function App() {
                                 onStreamLogsChange={setStreamLogs}
                                 onClearLogs={clearLogs}
                                 staleFor={staleFor}
-                                beltAction={(
+                                copied={copy.copied}
+                                onCopy={copy.request}
+                                copyLabel={copyLabel}
+                                // only when the run asked the belt question; otherwise the card says the belt itself
+                                beltAction={beltAssumption?.ask ? (
                                     <BeltAssumptionLine
                                         assumption={beltAssumption}
                                         hint={beltHint}
                                         busy={busy}
                                         onSwitch={handleSwitchBelts}
                                     />
-                                )}
+                                ) : undefined}
                             />
                         </Box>
                         </>
@@ -896,6 +946,15 @@ function App() {
                     )}
                 </Box>
             </Dialog>
+
+            {staleFor && (
+                <StaleCopyDialog
+                    open={copy.confirmingStale}
+                    generatedFor={staleFor}
+                    onCancel={copy.cancel}
+                    onConfirm={copy.confirm}
+                />
+            )}
 
             <MessageHost />
         </PageProviders>

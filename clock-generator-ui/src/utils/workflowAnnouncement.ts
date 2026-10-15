@@ -9,6 +9,7 @@ export const ANNOUNCEMENTS = {
     finished: (selectedLabel: string) => `Finished generating. Selected clock: ${selectedLabel}.`,
     finishedNoLabel: 'Finished generating.',
     copied: 'Blueprint copied.',
+    showing: (selectedLabel: string) => `Showing the clock: ${selectedLabel}.`,
 } as const;
 
 /** The parts of the workflow bar's state that are announced when they change */
@@ -23,7 +24,15 @@ export interface WorkflowSnapshot {
     /** The run stopped on an error; clocks that arrived before it may still be on screen */
     failed: boolean;
     hasBlueprint: boolean;
+    /** The selected clock's name, by what it is for ("Fewest wake-ups") */
     selectedLabel: string | null;
+    /** The selected clock's id, which tells apart two clocks of the same name */
+    selectedId: string | null;
+    /**
+     * The selection last changed by a press that moves the focus to the card's name (Back to recommended in the card),
+     * which reads the name out itself
+     */
+    selectionQuiet: boolean;
 }
 
 /**
@@ -43,6 +52,11 @@ export function workflowAnnouncement(prev: WorkflowSnapshot, next: WorkflowSnaps
             return null;
         }
         return next.selectedLabel ? ANNOUNCEMENTS.finished(next.selectedLabel) : ANNOUNCEMENTS.finishedNoLabel;
+    }
+    // another clock chosen in the table changes the card above it, out of sight of the row
+    const otherClock = prev.selectedId !== next.selectedId || prev.selectedLabel !== next.selectedLabel;
+    if (!next.isLoading && prev.hasBlueprint && next.hasBlueprint && otherClock && next.selectedLabel && !next.selectionQuiet) {
+        return ANNOUNCEMENTS.showing(next.selectedLabel);
     }
     if (prev.checkStatus === next.checkStatus || next.checkedForGenerate) {
         return null;
