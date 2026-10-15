@@ -348,6 +348,36 @@ waiting on its plant where the game shows it working, so the simulator counts a 
 counts a pickup (760). The inputs into the plants count about 8% more sink wake-ups in the game, unclocked; why was
 not looked into. No call changes, so both are left (working rule 2).
 
+In true starts (the call since 0.12.0), the same recordings and those of the accumulator and low density structure
+scaffolds (2026-10-15, the same way: warmup and settle as in the game tests, the first period left out), w removed a
+minute for each inserter, game against simulator, with the original count after it:
+
+| Build | Group | True starts | Original count |
+|---|---|---|---|
+| Advanced circuit | electronic circuit from the belt | 589 / 584 | 1,096 / 998 |
+| | copper cable from the foundries | 653 / 653 | 1,178 / 1,089 |
+| | plastic from the cryogenic plant | 641 / 641 | 1,180 / 1,091 |
+| | coal from the belt | 232 / 326 | 441 / 410 |
+| | advanced circuit output | 743 / 951 | 743 / 951 |
+| | pooled | 609 / 665 | 982 / 963 |
+| Accumulator | accumulator output | 567 / 563 | 567 / 563 |
+| | battery into the accumulators | 462 / 499 | 463 / 499 |
+| | iron into the accumulators | 773 / 804 | 774 / 804 |
+| | copper into the batteries | 1,111 / 1,141 | 1,520 / 1,559 |
+| | iron into the batteries | 1,101 / 1,141 | 1,511 / 1,559 |
+| | pooled | 803 / 830 | 967 / 997 |
+| Low density structure | plastic from the chest | 695 / 859 | 1,450 / 1,800 |
+| | plastic from the cryogenic plant | 702 / 893 | 1,457 / 1,834 |
+| | low density structure output | 251 / 579 | 251 / 579 |
+| | pooled | 633 / 809 | 1,088 / 1,439 |
+
+Every call is "clock", firm, in both counts and in both the game and the simulator. The true starts of the advanced
+circuit plants, read from their crafting progress, are the series' (625.4 sink wake-ups a minute an input, unclocked).
+The low density structure output differs most: as with the advanced circuit output, the simulator counts craft
+wake-ups where the game counts pickups of part hands. The coal into the plastic plant (a craft of about a tick) and the
+low density structure inputs differ too; why was not looked into. No call changes, so they are left (working rule 2).
+The comparisons are in `.scratch/geppetto/recordings-0.12/` on the machine they were made on.
+
 The last row is the clock that rule was read from (`src/crafting/wake-after-output-block.test.ts`). One plant made its
 352 a period and the other 264, from the first period the clock ran on the build. That plant held 14 advanced circuits
 when the clock started and 9 after its first output window, so it was over its output block of 21 before every
