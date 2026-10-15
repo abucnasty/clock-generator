@@ -118,7 +118,8 @@ describe('staleResultsMessage', () => {
             'These clocks are for logistic-science-pack at 240/s, made at 14:02. Since then you changed Items per second (240 → 200).');
         expect(message(240, ['Items per second (240 → 200)', 'Inserter 3'])).toContain('you changed Items per second (240 → 200) and Inserter 3.');
         expect(message(240, ['Recipe', 'Copies (1 → 2)', 'Inserter 3'])).toContain('you changed Recipe, Copies (1 → 2) and Inserter 3.');
-        expect(message(240, ['Recipe', 'Copies (1 → 2)', 'Inserter 3 and 2 more'])).toContain('you changed Recipe, Copies (1 → 2), Inserter 3 and 2 more.');
+        expect(message(240, ['Recipe', 'Copies (1 → 2)', 'Inserter 3 and 2 more changes'])).toContain('you changed Recipe, Copies (1 → 2), Inserter 3 and 2 more changes.');
+        expect(message(240, ['Recipe', 'Copies (1 → 2)', 'Inserter 3 and 1 more change'])).toContain('Inserter 3 and 1 more change.');
     });
 
     it('says the recipe by its game name when given a label function', () => {

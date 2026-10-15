@@ -379,7 +379,7 @@ export function WorkflowBar({
                         )}
                     </Box>
                     {/* described by its tooltip (describeChild); the progress beside it has a name of its own */}
-                    <Tooltip title={CHECK_TEXT.cancelTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
+                    <Tooltip title={isLoading ? CHECK_TEXT.cancelTooltip : CHECK_TEXT.cancelCheckTooltip} arrow describeChild placement="bottom" slotProps={{ popper: { disablePortal: true } }}>
                         <Button
                             ref={cancelRef}
                             variant="text"

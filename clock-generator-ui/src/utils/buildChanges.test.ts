@@ -96,7 +96,7 @@ describe('buildChangesText', () => {
         expect(buildChangesText(formDataToConfig(form()), formDataToConfig(five(form())))).toEqual([
             'Items per second (240 → 200)',
             'Copies (1 → 2)',
-            'Inserters (3 → 4) and 2 more',
+            'Inserters (3 → 4) and 2 more changes',
         ]);
     });
 

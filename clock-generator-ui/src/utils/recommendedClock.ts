@@ -49,6 +49,7 @@ export const RECOMMENDED_COPY = {
     runSearched: 'The slower searches for fewer wake-ups were run.',
     runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and recovered.',
     provisional: 'More clocks are still being made, so this may change. ',
+    stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
     beltStill: ' with belts that stand still',
     beltMoving: ' on a moving belt',
     /**
@@ -121,20 +122,25 @@ export function recommendedIndexOf(alternatives: Pick<PickableClock, 'ranking'>[
 
 /**
  * Why the rule picks the clock at `recommendedIndex`, in a sentence or two for after "Recommended: {label}.". While
- * the clocks are still being made (`final` false) it says the pick may change. Empty when nothing is recommended.
+ * the clocks are still being made (`final` false) it says the pick may change; after a run the player stopped
+ * (`stopped`), that a better clock may not have been made. Empty when nothing is recommended.
  */
 export function recommendationReason(
     alternatives: PickableClock[],
     recommendedIndex: number | null,
     rule: PickRule | null,
     final: boolean,
+    stopped = false,
 ): string {
     const pick = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     if (!pick) {
         return '';
     }
     const reason = reasonOf(alternatives, pick, rule);
-    return final ? reason : RECOMMENDED_COPY.provisional + reason;
+    if (final) {
+        return reason;
+    }
+    return (stopped ? RECOMMENDED_COPY.stopped : RECOMMENDED_COPY.provisional) + reason;
 }
 
 function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {

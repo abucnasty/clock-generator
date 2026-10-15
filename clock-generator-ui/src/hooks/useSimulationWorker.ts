@@ -5,14 +5,14 @@ import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-genera
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
 import type { GeneratedFor } from '../utils/resultsStaleness';
-import { PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
+import { CHECK_TEXT, PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
 import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
 import { planGenerationRun } from '../utils/deeperSearch';
 import { NO_NAMES, pickerIds, type GameNames } from '../utils/gameNames';
 import { plainClockName } from '../utils/clockSummary';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
-import { openResultsStore, type ResultsStore } from '../utils/resultsStore';
-import { busyWorkersOf, replaceWorkers } from '../worker/pool';
+import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
+import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -261,9 +261,23 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     useEffect(() => terminateWorkers, [terminateWorkers]);
 
-    /** Terminates `busy` and starts a worker in each of their places */
+    /**
+     * Terminates `busy` and starts a worker in each of their places. A check still waiting for its answer on the first
+     * worker is sent again to the one that takes its place (which holds it until it has loaded the data)
+     */
     const replace = useCallback((busy: Worker[]) => {
-        workersRef.current = replaceWorkers(workersRef.current, busy, () => startWorkerRef.current());
+        const before = workersRef.current;
+        workersRef.current = replaceWorkers(before, busy, () => startWorkerRef.current());
+        const resend = checkToResend(before, workersRef.current, checkRunningRef.current ? validationRef.current : null);
+        if (resend) {
+            workersRef.current[0].postMessage({ type: 'validate', requestId: resend.requestId, config: resend.config } satisfies WorkerRequest);
+        }
+    }, []);
+
+    /** What is on screen, kept for a Cancel and, by its key, for a reload of this tab */
+    const setShown = useCallback((shown: ShownResults | null) => {
+        shownRef.current = shown;
+        writeShownMarker(shown?.results.generatedFor.key ?? null);
     }, []);
 
     /** The workers the generation keeps busy: every one running a task, and the first one while it plans */
@@ -308,11 +322,11 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     /** Keeps results that are on screen now, for a reload and a Cancel to bring back */
     const keepShown = useCallback((shown: ShownResults) => {
-        shownRef.current = shown;
+        setShown(shown);
         if (shown.results.alternatives.length > 0) {
             void storeRef.current?.put(shown.results, shown.pick, Date.now());
         }
-    }, []);
+    }, [setShown]);
 
     /** Puts results on screen as a run would leave them, the pick selected when they have it */
     const showResults = useCallback((shown: ShownResults) => {
@@ -320,7 +334,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const { index, pickGone: lost } = selectionAfterRun(results.alternatives, shown.pick, recommendedIndexOf(results.alternatives));
         const pick = lost ? null : shown.pick;
         userSelectionRef.current = pick;
-        shownRef.current = { results, pick };
+        setShown({ results, pick });
         alternativesRef.current = results.alternatives;
         setAlternatives(results.alternatives);
         setSelectedAlternativeIndex(index);
@@ -333,11 +347,11 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setPickGone(null);
         setLogs([]);
         setError(null);
-    }, []);
+    }, [setShown]);
 
     /** Empties Results */
     const showNothing = useCallback(() => {
-        shownRef.current = null;
+        setShown(null);
         alternativesRef.current = [];
         setAlternatives([]);
         setSelectedAlternativeIndex(0);
@@ -348,7 +362,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setGeneratedFor(null);
         setStoppedEarly(false);
         setPickGone(null);
-    }, []);
+    }, [setShown]);
 
     /** Ends the generation where it stands: its workers are replaced, and the screen is what `afterCancel` says */
     const stopGeneration = useCallback((generation: Generation): RunStop['kept'] => {
@@ -381,11 +395,13 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         }
         replace(busyWorkersFor(generation).filter(worker => worker !== except));
         generationRef.current = null;
+        // the clocks on screen are part of a failed run: a pick among them is not kept for the build shown before it
+        setShown(null);
         setError(message);
         progressStore.set(null);
         setPendingAlternatives([]);
         setIsRunning(false);
-    }, [busyWorkersFor, progressStore, replace]);
+    }, [busyWorkersFor, progressStore, replace, setShown]);
 
     const dispatchTasks = useCallback((generation: Generation) => {
         if (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0) {
@@ -498,28 +514,42 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     /**
      * A worker that stopped unexpectedly: a check it was running ends as failed (and Generate checks again), a
-     * generation running ends with the error, and the worker is replaced
+     * generation running ends with an error, and the worker is replaced once it had started (one that never loaded the
+     * data is not, or a page that cannot load a worker would keep trying). The player is told it was not their build;
+     * the browser's own words go to the Log.
      */
-    const handleCrash = useCallback((worker: Worker, message: string) => {
+    const handleCrash = useCallback((worker: Worker, detail: string, started: boolean) => {
         if (!workersRef.current.includes(worker)) {
             return;
         }
+        setLogs(previous => [...previous, { level: 'error', message: `A simulation worker stopped: ${detail}`, timestamp: Date.now() }]);
+        console.error('Simulation worker stopped:', detail);
         const check = validationRef.current;
-        if (checkRunningRef.current && check && worker === workersRef.current[0]) {
+        const outcome = crashOutcome({
+            started,
+            isCheckWorker: worker === workersRef.current[0],
+            checkRunning: checkRunningRef.current && check !== null,
+            runOnScreen: generationRef.current !== null,
+        });
+        if (outcome.settleCheck && check) {
             checkRunningRef.current = false;
-            setValidation({ status: 'invalid', config: check.config, message, crashed: true });
-            pendingChecks.settle(check.requestId, { kind: 'invalid', message });
+            setValidation({ status: 'invalid', config: check.config, message: CHECK_TEXT.crashText, crashed: true });
+            pendingChecks.settle(check.requestId, { kind: 'invalid', message: CHECK_TEXT.crashText });
         }
         // any crash ends a generation on screen (one dropped by Import, Paste or Reset is not on screen)
-        endRunWithError(message, worker);
-        replace([worker]);
+        if (outcome.endRun) {
+            endRunWithError(CHECK_TEXT.generationCrashed, worker);
+        }
+        if (outcome.replace) {
+            replace([worker]);
+        }
     }, [endRunWithError, pendingChecks, replace]);
 
     /**
      * Starts a worker and hands it the game data; `ready` resolves once it has loaded it. A worker started in place of
      * another is used at once: it holds its requests until it is ready.
      */
-    const startWorker = useCallback((): { worker: Worker; ready: Promise<void> } => {
+    const startWorker = useCallback((replacement: boolean): { worker: Worker; ready: Promise<void> } => {
         const worker = createSimulationWorker();
         let started = false;
         const ready = new Promise<void>((resolve, reject) => {
@@ -536,11 +566,13 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             worker.onerror = (event) => {
                 const message = event.message || 'The simulation worker stopped unexpectedly';
                 if (!started) {
-                    // one that never started is not replaced, or a page that cannot load a worker would keep trying
                     reject(new Error(message));
-                    return;
+                    // one of the first pool fails the page's start; a replacement still loading ends what it was given
+                    if (!replacement) {
+                        return;
+                    }
                 }
-                handleCrash(worker, message);
+                handleCrash(worker, message, started);
             };
             loadFactorioData().then(
                 data => worker.postMessage({ type: 'initialize', factorioData: data } satisfies WorkerRequest),
@@ -553,14 +585,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [handleCrash, handleResponse]);
 
     useEffect(() => {
-        startWorkerRef.current = () => startWorker().worker;
+        startWorkerRef.current = () => startWorker(true).worker;
     }, [startWorker]);
 
     const initialize = useCallback(async () => {
         try {
             // Generation runs in a pool of workers; the names and recipes for the forms come from the query worker
             terminateWorkers();
-            const pool = Array.from({ length: workerPoolSize() }, () => startWorker());
+            const pool = Array.from({ length: workerPoolSize() }, () => startWorker(false));
             workersRef.current = pool.map(it => it.worker);
             const workersReady = Promise.all(pool.map(it => it.ready));
 
@@ -691,10 +723,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         userSelectionRef.current = pick;
         const shown = shownRef.current;
         if (!generationRef.current && shown) {
-            shownRef.current = { ...shown, pick };
+            setShown({ ...shown, pick });
             void storeRef.current?.setPick(shown.results.generatedFor.key, pick);
         }
-    }, []);
+    }, [setShown]);
 
     const selectAlternative = useCallback((index: number) => {
         const clock = alternatives[index];
@@ -715,24 +747,26 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const store = storeRef.current;
         const entries = store?.entries() ?? [];
         const dropped = droppedRef.current;
-        const choice = keyToShow({ currentKey: key, mode, entries, dropped });
+        const choice = keyToShow({ currentKey: key, mode, entries, dropped, shownKey: mode === 'load' ? readShownMarker() : null });
         if (choice === null) {
             return false;
         }
         let shown: ShownResults | null = null;
-        if (choice.from === 'dropped') {
-            shown = dropped!.shown;
-        } else if (store) {
+        if (choice.from === 'kept' && store) {
             const results = await store.get(choice.key);
             const pick = entries.find(entry => entry.key === choice.key)?.pick ?? null;
             shown = results && { results, pick };
+        }
+        // set aside by Import, Paste or Reset: also when the kept copy could not be read (or is not written yet)
+        if (!shown && dropped !== null && dropped.formKey === key) {
+            shown = dropped.shown;
         }
         if (!shown || token !== restoreTokenRef.current || generationRef.current) {
             return false;
         }
         showResults(shown);
-        if (choice.from === 'kept') {
-            void store?.touch(choice.key, Date.now());
+        if (choice.from === 'kept' && store?.has(choice.key)) {
+            void store.touch(choice.key, Date.now());
         }
         if (mode === 'replace' && options?.announce !== false) {
             setRestoredId(id => id + 1);

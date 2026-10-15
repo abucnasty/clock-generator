@@ -74,7 +74,8 @@ const WORDS = {
     stoppedNone: 'Stopped. No clocks were made.',
     stoppedCheck: 'Stopped the check.',
     checkingProgress: 'Checking your build…',
-    cancelTooltip: 'Stops making clocks. What was made so far is kept.',
+    cancelTooltip: 'Stops at once. No clocks you already have are lost.',
+    stoppedReason: 'You stopped this run early, so a better clock may not have been made yet.',
     copyBest: 'Copy current best',
     copyBestTooltip: 'More clocks are still being made. This copies the best one so far.',
     copiedBest: /Copied the best clock so far: .+\. It stays selected\./,
@@ -179,6 +180,12 @@ const selectedLabel = (p) => ui.clockTable(p).locator('input[type=radio]:checked
  * made, so two rows are the same clock when their engine names are
  */
 const engineOf = (label) => (label ?? '').split(': ').slice(1).join(': ');
+/** The rows' names, and which of them carries the Recommended chip (-1 when none does) */
+const rowsWithRecommended = (p) => radios(p).evaluateAll((els) => {
+    const labels = els.map((e) => e.getAttribute('aria-label'));
+    const recommended = els.findIndex((e) => [...(e.closest('tr')?.querySelectorAll('.MuiChip-label') ?? [])].some((c) => (c.textContent ?? '').trim() === 'Recommended'));
+    return { labels, recommended };
+});
 const pickRow = async (p, i) => {
     await radios(p).nth(i).locator('xpath=ancestor::tr[1]').locator('td').last().click();
     await p.waitForTimeout(300);
@@ -463,6 +470,12 @@ const run = await forWidths(
                 rec.check('after Cancel the clocks made so far are kept (rows stay, none are added later)', pressed && after >= 1 && after === nStopped, `${nStopped} before, ${after} after`);
                 rec.check('after Cancel Results shows the stopped note', (await runNote(page).count()) > 0);
                 rec.check('after Cancel there is no "Best so far" chip or lead (the run is over)', pressed && (await page.getByText(/Best so far/).count()) === 0);
+                // the card does not make a final claim from a run cut short
+                {
+                    const chip = await ui.resultsCard(page).locator('[data-card-chip]').count();
+                    const reason = ((await ui.resultsCard(page).locator('[data-card-reason]').first().textContent().catch(() => '')) ?? '').trim();
+                    rec.check('after Cancel the card\'s reason for the recommended clock says the run was stopped early', chip === 0 || reason.startsWith(WORDS.stoppedReason), JSON.stringify(reason.slice(0, 120)));
+                }
                 const copy = ((await copyBar(page).first().textContent().catch(() => '')) ?? '').trim();
                 rec.check('after Cancel the bar\'s Copy reads "Copy blueprint" (or the below-target label)', pressed && /^Copy blueprint/.test(copy), JSON.stringify(copy));
                 await checkAnnounced(rec, page, WORDS.stoppedPartial, 'cancel with clocks made');
@@ -610,15 +623,22 @@ const run = await forWidths(
                 await goResults(page);
                 rowsBefore = await labelsOf(page);
                 rec.check('LOGISTIC made at least two clocks', rowsBefore.length >= 2, `${rowsBefore.length}`);
-                if (rowsBefore.length >= 2) await pickRow(page, 1);
+                // a row without the Recommended chip: picking the recommended clock would test nothing
+                const before = await rowsWithRecommended(page);
+                const target = before.labels.findIndex((_, i) => i !== before.recommended);
+                rec.check('a row other than the recommended one can be picked', before.recommended >= 0 && target >= 0, JSON.stringify(before));
+                if (target >= 0) await pickRow(page, target);
                 pickedLabel = await selectedLabel(page);
                 rec.info('picked clock', String(pickedLabel));
+                rec.check('the picked clock is not the recommended one', pickedLabel !== null && pickedLabel !== before.labels[before.recommended], `${pickedLabel} vs recommended ${before.labels[before.recommended]}`);
                 // 220, not the spec's 239: LOGISTIC at 239/s makes other clocks (subtick ones), so no pick could be made again; at 220/s it makes the same five
                 await setRate(page, 220);
                 await generate(page);
                 await goResults(page);
                 const now = await selectedLabel(page);
                 rec.check('after Items per second 240 -> 220 and Generate the same clock (by engine name) is selected', pickedLabel !== null && engineOf(now) === engineOf(pickedLabel) && engineOf(now) !== '', `${pickedLabel} -> ${now}`);
+                const after = await rowsWithRecommended(page);
+                rec.check('after the regenerate the selected clock is still not the recommended one', after.recommended >= 0 && now !== after.labels[after.recommended], `${now} vs recommended ${after.labels[after.recommended]}`);
             });
         }
 
@@ -627,6 +647,10 @@ const run = await forWidths(
                 // current state: LOGISTIC at 220, generated, pick = pickedLabel
                 await goResults(page);
                 const snap = await resultsSnapshot(page);
+                {
+                    const rows = await rowsWithRecommended(page);
+                    rec.check('before the reload the selected clock is not the recommended one', rows.recommended >= 0 && snap.selected !== rows.labels[rows.recommended], `${snap.selected} vs recommended ${rows.labels[rows.recommended]}`);
+                }
                 const seen = await annMark(page);
                 await reload(page);
                 await goResults(page);
@@ -676,6 +700,8 @@ const run = await forWidths(
                 const dlg = page.getByRole('dialog');
                 const open = await until(async () => (await dlg.count()) > 0, 2000);
                 const first = changesOf(text).split(', ')[0] ?? '';
+                // past the open transition, so the shot shows the dialog whole
+                await sleep(400);
                 const dtext = open ? ((await dlg.first().innerText()) ?? '').replace(/\s+/g, ' ') : '';
                 rec.check('the Copy-old dialog lists the same change as the banner', !!open && first !== '' && dtext.includes(first), JSON.stringify(first));
                 await rec.shot(page, 'stale-dialog', { desc: 'The Copy old clock dialog with the list of changes' });

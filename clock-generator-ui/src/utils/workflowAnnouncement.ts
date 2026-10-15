@@ -16,6 +16,8 @@ export const ANNOUNCEMENTS = {
     stoppedNone: 'Stopped. No clocks were made.',
     stoppedCheck: 'Stopped the check.',
     clocksBack: (selectedLabel: string) => `Your clocks for this build are back. Selected clock: ${selectedLabel}.`,
+    /** After "Opened build: …" when the build's kept clocks come back with it */
+    itsClocksBack: 'Its clocks are back.',
     pickGone: pickGoneNote,
     copiedCurrentBest: (selectedLabel: string) => `Copied the best clock so far: ${selectedLabel}. It stays selected.`,
     developerToolsOn: 'Developer tools on. They are at the end of Results.',

@@ -97,7 +97,7 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
 
 /**
  * The changes as the stale banner and the Copy-old dialog list them: at most `max`, the last of them with "and N more"
- * when there are more ("Inserter 3 and 2 more")
+ * when there are more ("Inserter 3 and 2 more changes")
  */
 export function buildChangesText(generated: Config, current: Config, max = 3, recipeLabel?: (id: string) => string): string[] {
     const changes = buildChangesOf(generated, current, recipeLabel);
@@ -105,6 +105,7 @@ export function buildChangesText(generated: Config, current: Config, max = 3, re
         return changes;
     }
     const shown = changes.slice(0, max);
-    shown[max - 1] = `${shown[max - 1]} and ${changes.length - max} more`;
+    const more = changes.length - max;
+    shown[max - 1] = `${shown[max - 1]} and ${more} more ${more === 1 ? 'change' : 'changes'}`;
     return shown;
 }

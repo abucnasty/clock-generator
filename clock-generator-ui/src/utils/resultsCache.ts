@@ -159,13 +159,16 @@ export interface DroppedResults {
 /**
  * Which results to show on an empty Results page for the build with `currentKey`, first match wins: the ones kept for
  * this build; the ones set aside by the last Import, Paste or Reset of this build (its Undo); on load only, the ones
- * shown most recently, as they were (stale when the build changed since). Null when none.
+ * that were on screen when the page was left (`shownKey`), as they were (stale when the build changed since). Null
+ * when none: a page left with nothing on screen opens with nothing.
  */
-export function keyToShow({ currentKey, mode, entries, dropped }: {
+export function keyToShow({ currentKey, mode, entries, dropped, shownKey = null }: {
     currentKey: string;
     mode: 'load' | 'replace';
     entries: Pick<KeptEntry, 'key' | 'shownAt'>[];
     dropped: Pick<DroppedResults, 'formKey'> | null;
+    /** The key of the results on screen when the page was left; null when nothing was */
+    shownKey?: string | null;
 }): { from: 'kept'; key: string } | { from: 'dropped' } | null {
     if (entries.some((entry) => entry.key === currentKey)) {
         return { from: 'kept', key: currentKey };
@@ -173,9 +176,8 @@ export function keyToShow({ currentKey, mode, entries, dropped }: {
     if (dropped !== null && dropped.formKey === currentKey) {
         return { from: 'dropped' };
     }
-    if (mode === 'load' && entries.length > 0) {
-        const latest = entries.reduce((a, b) => (b.shownAt > a.shownAt ? b : a));
-        return { from: 'kept', key: latest.key };
+    if (mode === 'load' && shownKey !== null && entries.some((entry) => entry.key === shownKey)) {
+        return { from: 'kept', key: shownKey };
     }
     return null;
 }

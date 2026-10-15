@@ -161,13 +161,18 @@ describe('keyToShow', () => {
         expect(keyToShow({ currentKey: 'c', mode: 'replace', entries, dropped: { formKey: 'd' } })).toBeNull();
     });
 
-    it('falls back on load to the ones shown most recently', () => {
-        expect(keyToShow({ currentKey: 'c', mode: 'load', entries, dropped: null })).toEqual({ from: 'kept', key: 'b' });
-        expect(keyToShow({ currentKey: 'c', mode: 'load', entries: [], dropped: null })).toBeNull();
+    it('falls back on load to the ones on screen when the page was left', () => {
+        expect(keyToShow({ currentKey: 'c', mode: 'load', entries, dropped: null, shownKey: 'a' })).toEqual({ from: 'kept', key: 'a' });
+        expect(keyToShow({ currentKey: 'c', mode: 'load', entries: [], dropped: null, shownKey: 'a' })).toBeNull();
+    });
+
+    it('shows nothing on load when nothing was on screen (after Reset, New build, or a build never generated)', () => {
+        expect(keyToShow({ currentKey: 'c', mode: 'load', entries, dropped: null, shownKey: null })).toBeNull();
+        expect(keyToShow({ currentKey: 'c', mode: 'load', entries, dropped: null })).toBeNull();
     });
 
     it('does not fall back when replacing', () => {
-        expect(keyToShow({ currentKey: 'c', mode: 'replace', entries, dropped: null })).toBeNull();
+        expect(keyToShow({ currentKey: 'c', mode: 'replace', entries, dropped: null, shownKey: 'a' })).toBeNull();
     });
 });
 

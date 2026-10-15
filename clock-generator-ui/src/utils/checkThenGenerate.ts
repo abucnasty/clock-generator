@@ -18,8 +18,12 @@ export const CHECK_TEXT = {
     planFailed: 'The last check failed, so there is no swing plan. The reason is at the top of Configure.',
     planOutOfDate: 'You changed the build since this plan was made. Check only (or Generate) makes a new one.',
     cancel: 'Cancel',
-    cancelTooltip: 'Stops making clocks. What was made so far is kept.',
+    cancelTooltip: 'Stops at once. No clocks you already have are lost.',
+    cancelCheckTooltip: 'Stops the check.',
     checkingProgress: 'Checking your build…',
+    crashTitle: 'The check stopped unexpectedly',
+    crashText: 'This was not caused by your build. Press Generate or Check only to try again.',
+    generationCrashed: 'Making clocks stopped unexpectedly. This was not caused by your build. Press Generate to try again.',
 } as const;
 
 /** Where the check stands for the build as it is now */

@@ -426,6 +426,8 @@ try {
                 await rec.shot(page, 'new-build', { desc: 'After New build: blank form, switcher "Untitled build"' });
                 await openBuildAt(page, 1); // most recent first: the first build is second
                 await checkAnnounced(rec, page, /Opened build: /i, '"Opened build: {name}."');
+                // 3.3: one message says both when the build's kept clocks come back (made at 1440 only)
+                if (width === 1440) await checkAnnounced(rec, page, /Opened build: .+\. Its clocks are back\./, '"Opened build: {name}. Its clocks are back."');
                 rec.check("switch back: the first build's serialized form is restored exactly", (await currentText(page)) === firstText);
                 rec.check('switch back: the switcher shows the first build again', (await swName(page)) === firstName, JSON.stringify(await swName(page)));
                 const backShown = await ui.recipeField(page, 'Target Output').inputValue({ timeout: 4000 }).catch(() => null);

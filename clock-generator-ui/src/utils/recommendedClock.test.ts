@@ -273,6 +273,12 @@ describe('recommendationReason', () => {
         expect(recommendationReason(clocks, 0, MOVING, true)).not.toContain('still being made');
     });
 
+    it('says a better clock may not have been made after a run the player stopped', () => {
+        const clocks = [clock('a'), ...others];
+        expect(recommendationReason(clocks, 0, MOVING, false, true))
+            .toBe('You stopped this run early, so a better clock may not have been made yet. Fewest wake-ups among the clocks that hold 240/s and recover on a moving belt.');
+    });
+
     it('is empty when nothing is recommended', () => {
         expect(recommendationReason([], null, MOVING, true)).toBe('');
         expect(recommendationReason([clock('a')], null, MOVING, false)).toBe('');

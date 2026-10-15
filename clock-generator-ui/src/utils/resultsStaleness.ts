@@ -63,12 +63,12 @@ export function madeAtText(at: number, now: number = Date.now(), locale?: string
 }
 
 /**
- * "Items per second (240 → 200), Copies (1 → 2) and Inserter 3" as one list; a list that ends in "and 2 more"
+ * "Items per second (240 → 200), Copies (1 → 2) and Inserter 3" as one list; a list that ends in "and 2 more changes"
  * (`buildChangesText`) is joined by commas only
  */
 function changesList(changes: string[]): string {
     const last = changes[changes.length - 1] ?? '';
-    if (changes.length <= 1 || / and \d+ more$/.test(last)) {
+    if (changes.length <= 1 || / and \d+ more changes?$/.test(last)) {
         return changes.join(', ');
     }
     return `${changes.slice(0, -1).join(', ')} and ${last}`;

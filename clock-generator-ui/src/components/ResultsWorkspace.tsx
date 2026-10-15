@@ -140,6 +140,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 onSelectRecommended={props.onCardBackToRecommended}
                 pickRule={props.pickRule}
                 isGenerating={props.isRunning}
+                stoppedEarly={props.stoppedEarly}
                 copied={props.copied}
                 onCopy={props.onCopy}
                 copyLabel={props.copyLabel}

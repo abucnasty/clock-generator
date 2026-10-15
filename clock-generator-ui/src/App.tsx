@@ -310,19 +310,28 @@ function App() {
     // an empty Results shows the clocks kept for the build it now has: after an Undo of Import, Paste or Reset, a
     // build switched back to, or an edit back to a build that has them
     const resultsEmpty = alternatives.length === 0 && !isRunning && error === null;
-    // set by a switch to another build (Open, New, Duplicate), which says "Opened build: …" itself: the clocks that come
-    // back with it are not announced over that. Good for the render right after the switch only
-    const quietRestoreRef = useRef(false);
+    // set by a switch to another build (Open, New, Duplicate) to what it says ("Opened build: …"): said once the restore
+    // is known, with "Its clocks are back." when they are, so one message says both. Good for the render right after the
+    // switch only
+    const announce = useAnnounce();
+    const switchMessageRef = useRef<string | null>(null);
     // bumped by every replace of the build, which drops a restore still on its way: the one for the build that is now
     // in the form starts again, even when the form already had it (a switch that set the form before it was handled)
     const [replacedCount, setReplacedCount] = useState(0);
     useEffect(() => {
+        const switched = switchMessageRef.current;
         if (isInitialized && resultsEmpty) {
-            void restoreResultsFor(configKey, 'replace', { announce: !quietRestoreRef.current });
+            void restoreResultsFor(configKey, 'replace', { announce: switched === null }).then((back) => {
+                if (switched !== null) {
+                    announce(back ? `${switched} ${ANNOUNCEMENTS.itsClocksBack}` : switched);
+                }
+            });
+        } else if (switched !== null) {
+            announce(switched);
         }
-    }, [configKey, isInitialized, resultsEmpty, replacedCount, restoreResultsFor]);
+    }, [configKey, isInitialized, resultsEmpty, replacedCount, restoreResultsFor, announce]);
     useEffect(() => {
-        quietRestoreRef.current = false;
+        switchMessageRef.current = null;
     });
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(exportConfig()), [exportConfig]);
@@ -356,7 +365,6 @@ function App() {
 
     // one copy for every Copy button: the bar's, the card's and the string's
     const notify = useNotify();
-    const announce = useAnnounce();
     const handleCopied = useCallback((warning: string | null, whileRunning: boolean) => {
         // the best clock so far stays selected: said, with its name
         const copied = whileRunning && selectedName ? ANNOUNCEMENTS.copiedCurrentBest(selectedName) : null;
@@ -647,9 +655,9 @@ function App() {
         setReplacedCount((count) => count + 1);
         setView('configure');
     }, [clearResults, setReplacedCount]);
-    // the same for a switch to another build, which announces itself
-    const handleBuildSwitched = useCallback(() => {
-        quietRestoreRef.current = true;
+    // the same for a switch to another build, which says `message` once it is known whether its clocks come back
+    const handleBuildSwitched = useCallback((message: string) => {
+        switchMessageRef.current = message;
         handleBuildReplaced();
     }, [handleBuildReplaced]);
 
@@ -677,24 +685,21 @@ function App() {
     const handleOpenBuild = useCallback(async (id: string) => {
         if (await library.openBuild(id)) {
             withdrawUndo();
-            handleBuildSwitched();
-            announce(openedBuildAnnouncement(titleOf(id)));
+            handleBuildSwitched(openedBuildAnnouncement(titleOf(id)));
         }
-    }, [library, withdrawUndo, handleBuildSwitched, announce, titleOf]);
+    }, [library, withdrawUndo, handleBuildSwitched, titleOf]);
     const handleNewBuild = useCallback(() => {
         library.newBuild();
         withdrawUndo();
-        handleBuildSwitched();
+        handleBuildSwitched(NEW_BUILD_ANNOUNCEMENT);
         // blank: the intro card shows again, unless it was closed
         afterReset();
-        announce(NEW_BUILD_ANNOUNCEMENT);
-    }, [library, withdrawUndo, handleBuildSwitched, afterReset, announce]);
+    }, [library, withdrawUndo, handleBuildSwitched, afterReset]);
     const handleDuplicateBuild = useCallback(() => {
         const copy = library.duplicateBuild();
         withdrawUndo();
-        handleBuildSwitched();
-        announce(duplicatedAnnouncement(titleOf(copy.id, copy)));
-    }, [library, withdrawUndo, handleBuildSwitched, announce, titleOf]);
+        handleBuildSwitched(duplicatedAnnouncement(titleOf(copy.id, copy)));
+    }, [library, withdrawUndo, handleBuildSwitched, titleOf]);
     // a new dialog for each opening, so its field starts from the name
     const [renaming, setRenaming] = useState({ key: 0, open: false });
     const handleRenameBuild = useCallback(() => setRenaming((state) => ({ key: state.key + 1, open: true })), []);
@@ -908,7 +913,10 @@ function App() {
                                     {error}
                                 </Alert>
                             )}
-                            <CheckErrorAlert message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null} />
+                            <CheckErrorAlert
+                                message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null}
+                                crashed={validation.status === 'invalid' && validation.crashed === true}
+                            />
 
                             {introVisible && (
                                 <IntroCard

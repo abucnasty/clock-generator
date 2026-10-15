@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { busyWorkersOf, replaceWorkers } from './pool';
+import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from './pool';
 
 const fakeWorker = (name: string) => ({ name, terminate: vi.fn() });
 
@@ -44,5 +44,39 @@ describe('replaceWorkers', () => {
         expect(next).toEqual(pool);
         expect(start).not.toHaveBeenCalled();
         pool.forEach((worker) => expect(worker.terminate).not.toHaveBeenCalled());
+    });
+});
+
+describe('checkToResend', () => {
+    const [a, b, c] = [fakeWorker('a'), fakeWorker('b'), fakeWorker('c')];
+    const check = { requestId: 4, config: {} };
+
+    it('sends a waiting check again when the first worker was replaced (a Cancel or an error during a generation)', () => {
+        expect(checkToResend([a, b], [c, b], check)).toBe(check);
+    });
+
+    it('sends nothing when the first worker stayed, or no check waits', () => {
+        expect(checkToResend([a, b], [a, c], check)).toBeNull();
+        expect(checkToResend([a, b], [c, b], null)).toBeNull();
+    });
+});
+
+describe('crashOutcome', () => {
+    const base = { started: true, isCheckWorker: true, checkRunning: true, runOnScreen: false };
+
+    it('ends a check waiting on the worker that stopped, and replaces it', () => {
+        expect(crashOutcome(base)).toEqual({ settleCheck: true, endRun: false, replace: true });
+    });
+
+    it('ends the check also when the worker stopped while it was still loading the data, without starting another', () => {
+        expect(crashOutcome({ ...base, started: false })).toEqual({ settleCheck: true, endRun: false, replace: false });
+    });
+
+    it('ends the generation on screen whichever worker stopped', () => {
+        expect(crashOutcome({ ...base, isCheckWorker: false, checkRunning: false, runOnScreen: true })).toEqual({ settleCheck: false, endRun: true, replace: true });
+    });
+
+    it('leaves a check on another worker alone', () => {
+        expect(crashOutcome({ ...base, isCheckWorker: false }).settleCheck).toBe(false);
     });
 });

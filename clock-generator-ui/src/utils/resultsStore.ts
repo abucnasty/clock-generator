@@ -148,6 +148,29 @@ export function createMemoryResultsStore(appVersion: string = __APP_VERSION__): 
     }, [], appVersion);
 }
 
+/** Per tab, kept over a reload: the key of the results on screen, so a reload shows them and nothing else */
+const SHOWN_MARKER = 'clock-generator-results-shown';
+
+export function readShownMarker(): string | null {
+    try {
+        return sessionStorage.getItem(SHOWN_MARKER);
+    } catch {
+        return null;
+    }
+}
+
+export function writeShownMarker(key: string | null): void {
+    try {
+        if (key === null) {
+            sessionStorage.removeItem(SHOWN_MARKER);
+        } else {
+            sessionStorage.setItem(SHOWN_MARKER, key);
+        }
+    } catch {
+        // a page without storage opens with nothing on screen
+    }
+}
+
 const DATABASE = 'clock-generator-results';
 const DATABASE_VERSION = 1;
 const ENTRIES = 'entries';
@@ -165,7 +188,7 @@ function requestResult<T>(request: IDBRequest<T>): Promise<T> {
 function transactionDone(transaction: IDBTransaction): Promise<void> {
     return new Promise((resolve, reject) => {
         transaction.oncomplete = () => resolve();
-        transaction.onerror = () => reject(transaction.error);
+        // a failed request (a put over the quota) aborts the transaction, which then holds its error
         transaction.onabort = () => reject(transaction.error ?? new DOMException('The write was aborted', 'AbortError'));
     });
 }
@@ -204,7 +227,8 @@ function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
 }
 
 function indexedDbBackend(db: IDBDatabase): StoreBackend {
-    // another tab upgrading the database asks this one to let go of it; what is kept here then stays in memory
+    // another tab upgrading the database asks this one to let go of it: closed, later writes fail quietly, and the
+    // entries read when the page opened stay in memory for this visit
     db.onversionchange = () => db.close();
     return {
         persistent: true,
