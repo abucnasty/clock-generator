@@ -191,8 +191,10 @@ export function WorkflowBar({
                                     {SELECTED_CLOCK_PREFIX}{selectedLabel}
                                 </Typography>
                             )}
-                            {/* describeChild: the tooltip describes the button, which keeps its label as its name */}
-                            <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild>
+                            {/* describeChild: the tooltip describes the button, which keeps its label as its name. Above
+                                it, as the others, and never in the way of a click (disableInteractive): under the bar
+                                are the messages, and at 390 the ⋮ is over it */}
+                            <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild placement="top" disableInteractive>
                                 <Button
                                     variant={copyFilled ? 'contained' : 'outlined'}
                                     size="small"
@@ -232,7 +234,7 @@ export function WorkflowBar({
                     )}
                     {/* the note under the buttons says where they go instead of checking; it describes both, and is their
                         tooltip too. Above the buttons, so that the tooltip does not cover the note it repeats */}
-                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top">
+                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top" disableInteractive>
                         {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
                         <span>
                             <Button
@@ -252,7 +254,7 @@ export function WorkflowBar({
                             </Button>
                         </span>
                     </Tooltip>
-                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top">
+                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top" disableInteractive>
                         <span>
                             <Button
                                 variant={generateFilled ? 'contained' : 'outlined'}

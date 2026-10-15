@@ -21,7 +21,7 @@ interface MachineFactsAccordionProps {
 export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionProps) {
     if (error) {
         return (
-            <Typography variant="caption" color="error">
+            <Typography variant="caption" sx={{ color: 'error.light' }}>
                 Error computing facts: {error}
             </Typography>
         );

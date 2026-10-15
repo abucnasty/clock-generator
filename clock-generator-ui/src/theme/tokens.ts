@@ -36,6 +36,11 @@ export const TEXT = {
     primary: '#ffffff',
     secondary: 'rgba(255, 255, 255, 0.7)',
     disabled: 'rgba(255, 255, 255, 0.5)',
+    /**
+     * Words in the danger colour (a field's problem, Discard, the red chips): the lighter red, 4.5:1 or more on every
+     * surface and on a hovered grey. `ROLE.red.main` stays for fills, borders and icons
+     */
+    error: ROLE.red.light,
 } as const;
 
 export const CONTROL = {
@@ -85,6 +90,9 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...on('yellow text', ROLE.yellow.main, SURFACES, 'text'),
     ...on('green text', ROLE.green.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
     ...on('red text', ROLE.red.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
+    ...on('error text', TEXT.error, SURFACES, 'text', 'field problems, Discard, Clear rule, the red chips'),
+    { name: 'error text on a hovered row', fg: TEXT.error, bg: '#3f3f3f', kind: 'text', note: '8% white on row' },
+    { name: 'error text on a hovered card or menu item', fg: TEXT.error, bg: '#353535', kind: 'text', note: '8% white on panel' },
     ...on('blue text', ROLE.blue.main, INFO_TEXT_SURFACES, 'text', 'info alerts only'),
     // the clock table's Status chips carry their own panel fill, so a selected or hovered row's tint is not under them
     ...(['green', 'yellow', 'red'] as const).map(role => ({

@@ -115,7 +115,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                                     </TableCell>
                                 )}
                                 {run && (
-                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.main' : undefined }}>
+                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.light' : undefined }}>
                                         {levels ? levels.min_level.toFixed(2) : '-'}
                                     </TableCell>
                                 )}

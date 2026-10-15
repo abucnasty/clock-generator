@@ -61,7 +61,7 @@ const base = process.env.BASE_URL ?? stopPreview.url;
 const RGB = {
     page: 'rgb(64, 64, 64)', titleBar: 'rgb(58, 58, 58)', bar: 'rgb(54, 54, 54)', row: 'rgb(46, 46, 46)', panel: 'rgb(35, 35, 35)', inset: 'rgb(26, 26, 26)',
     orange: 'rgb(252, 163, 0)', green: 'rgb(94, 182, 100)', greenDark: 'rgb(79, 158, 85)', yellow: 'rgb(255, 225, 77)', yellowDark: 'rgb(178, 157, 53)',
-    red: 'rgb(255, 122, 121)', redDark: 'rgb(226, 96, 95)', black: 'rgb(0, 0, 0)', controlBorder: 'rgb(158, 158, 158)', textSecondary: 'rgba(255, 255, 255, 0.7)',
+    red: 'rgb(255, 122, 121)', redDark: 'rgb(226, 96, 95)', errorText: 'rgb(255, 148, 147)', black: 'rgb(0, 0, 0)', controlBorder: 'rgb(158, 158, 158)', textSecondary: 'rgba(255, 255, 255, 0.7)',
 };
 const show = (v) => JSON.stringify(v);
 const norm = (t) => String(t ?? '').replace(/\s+/g, ' ').trim();
@@ -453,7 +453,8 @@ async function roleChecks(page, rec, label, { overlayOnly = false } = {}) {
             rec.check(`${label}: confirm "${name}" is green filled with black text`, b.bg === RGB.green && b.color === RGB.black, `bg ${b.bg}, text ${b.color}`);
         }
         if (/^(Discard|Clear Override|Clear rule)$/i.test(name) && once(name)) {
-            rec.check(`${label}: danger "${name}" is red`, b.color === RGB.red, `text ${b.color}`);
+            // danger words are the lighter red, TEXT.error (2.7 A review: error.main text fell under 4.5:1 on some surfaces)
+            rec.check(`${label}: danger "${name}" is the error text red ${RGB.errorText}`, b.color === RGB.errorText, `text ${b.color}`);
         }
         if (b.variant === 'toggle' && b.selected && once(`toggle:${name}`)) {
             rec.check(`${label}: selected toggle "${name || b.label}" is filled orange with black text`, b.bg === RGB.orange && b.color === RGB.black, `bg ${b.bg}, text ${b.color}`);
@@ -683,6 +684,27 @@ async function stepFirst({ page, rec, width }) {
     await accordionBandChecks(page, rec, label);
     await narrowBarChecks(page, rec, width, 'bar, first visit (row 11)');
     if (width <= 480) await rec.shot(page, 'bar-first-visit', { desc: 'The bar at first visit (row 11)' });
+    await rec.step(`${label}: a field's problem text`, async () => {
+        // the danger words are the lighter red (TEXT.error), 4.5:1 on the card (2.7 A review: error.main was 4.41 on p2)
+        const field = rateField(page);
+        if (!(await count(field))) return rec.check(`contrast ${label}: field problem text`, false, 'no Items per Second field');
+        // typed as a player does: the number field ignores a programmatic fill
+        await field.click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.type('0');
+        await page.keyboard.press('Tab');
+        await page.waitForTimeout(300);
+        const helper = page.locator('.MuiFormHelperText-root.Mui-error').first(); // SELECTOR: confirm (MUI's error helper)
+        const errorLabel = page.locator('label.Mui-error').first();
+        if (!(await count(helper))) return rec.check(`contrast ${label}: field problem text`, false, 'no error helper text after Items per Second 0');
+        await helper.scrollIntoViewIfNeeded();
+        await contrastPairs(page, [
+            { name: `${label}: field problem text ("Must be more than 0")`, locator: helper },
+            ...((await count(errorLabel)) ? [{ name: `${label}: the field's label in its error state`, locator: errorLabel }] : []),
+        ], rec);
+        await rec.shot(page, 'field-problem-text', { locator: helper.locator('xpath=ancestor::div[contains(@class,"MuiFormControl-root")][1]'), desc: 'Items per Second 0: the problem text under the field' });
+    }, page);
     await finalChecks(page, rec, width, 'first visit');
 }
 
