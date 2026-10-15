@@ -11,8 +11,15 @@ interface CopyBlueprintOptions {
     rateWarning: string | null;
     /** What the clocks were made for, while the build has changed since: copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
-    /** Called once the string is on the clipboard, with the warning it was copied with */
-    onCopied: (rateWarning: string | null) => void;
+    /** A generation is still making clocks: what is copied is the best clock so far */
+    running: boolean;
+    /** Called once the string is on the clipboard, with the warning it was copied with and whether a run was going */
+    onCopied: (rateWarning: string | null, whileRunning: boolean) => void;
+    /**
+     * Called when the best clock so far is copied, to keep it selected: a better clock arriving later must not
+     * silently replace the clock the player copied
+     */
+    onPinned?: () => void;
 }
 
 /** One copy of the blueprint, shared by every Copy button: the bar's, the card's and the string's */
@@ -32,7 +39,7 @@ interface CopyBlueprint {
  * The one copy of the blueprint that every Copy button uses, so that all of them say "Copied" together, the stale
  * question is asked in one dialog, and what is said after a copy is said once.
  */
-export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCopied }: CopyBlueprintOptions): CopyBlueprint {
+export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, running, onCopied, onPinned }: CopyBlueprintOptions): CopyBlueprint {
     // what was copied, and for which earlier build the question is open: another clock is not "Copied", and a question
     // asked about clocks that have since become current (or been made again) is not open any more
     const [copiedString, setCopiedString] = useState<string | null>(null);
@@ -51,10 +58,13 @@ export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCop
             return;
         }
         setCopiedString(blueprintString);
-        onCopied(rateWarning);
+        if (running) {
+            onPinned?.();
+        }
+        onCopied(rateWarning, running);
         clearTimeout(timer.current);
         timer.current = setTimeout(() => setCopiedString(null), COPIED_MS);
-    }, [blueprintString, rateWarning, onCopied]);
+    }, [blueprintString, rateWarning, running, onCopied, onPinned]);
 
     const request = useCallback(() => {
         if (staleFor) {

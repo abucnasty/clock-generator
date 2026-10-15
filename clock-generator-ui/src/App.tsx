@@ -58,6 +58,7 @@ import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, type FocusTarget, type Problem } from './utils/firstProblem';
 import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate, startsRun } from './utils/checkThenGenerate';
 import { copyBlueprintLabelOf, rateWarningOf } from './utils/rateWarning';
+import { buildChangesText } from './utils/buildChanges';
 import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 import { clockTechnicalName, plainClockName } from './utils/clockSummary';
@@ -145,6 +146,13 @@ function App() {
         runSimulation,
         generatedFor,
         clearResults,
+        cancel,
+        lastStop,
+        stoppedEarly,
+        pickGone,
+        restoredId,
+        restoreResultsFor,
+        resultsStoreReady,
         clearLogs,
         getRecipeInfo,
     } = useSimulationWorker();
@@ -219,8 +227,10 @@ function App() {
         updateTargetOutput('copies', target.copies);
     }, [updateTargetOutput]);
 
-    // the page waits for the workers and for the saved config, which the engine's worker checks
-    const isInitialized = workersReady && isConfigLoaded;
+    // the clocks kept for the build (or shown last) come back once the saved build is loaded, before the page shows
+    const [resultsRestored, setResultsRestored] = useState(false);
+    // the page waits for the workers, for the saved config, which the engine's worker checks, and for its kept clocks
+    const isInitialized = workersReady && isConfigLoaded && resultsRestored;
     // until the workers are ready, an error is one that stopped them starting
     const startupError = (!workersReady && error) || configLoadError;
 
@@ -264,6 +274,32 @@ function App() {
     const configKey = useMemo(() => configKeyOf(exportConfig()), [exportConfig]);
     const resultsAreStale = isStale(generatedFor, configKey);
     const staleFor = resultsAreStale ? generatedFor : null;
+    // what changed since the clocks on screen were made, for the stale banner and the Copy-old dialog
+    const recipeLabel = useCallback((id: string) => recipeName(gameNames, id), [gameNames]);
+    const staleChanges = useMemo(
+        () => (staleFor ? buildChangesText(JSON.parse(staleFor.key) as Config, exportConfig(), 3, recipeLabel) : []),
+        [staleFor, exportConfig, recipeLabel],
+    );
+    // the key of the form as last rendered: a build replaced as a whole still has it when its replacement is handled
+    const configKeyRef = useRef(configKey);
+    useEffect(() => {
+        configKeyRef.current = configKey;
+    }, [configKey]);
+
+    // on load: the clocks kept for the saved build, else the ones shown last (out of date, as they were on screen)
+    useEffect(() => {
+        if (isConfigLoaded && resultsStoreReady && !resultsRestored) {
+            void restoreResultsFor(configKeyRef.current, 'load').finally(() => setResultsRestored(true));
+        }
+    }, [isConfigLoaded, resultsStoreReady, resultsRestored, restoreResultsFor]);
+    // an empty Results shows the clocks kept for the build it now has: after an Undo of Import, Paste or Reset, a
+    // build switched back to, or an edit back to a build that has them
+    const resultsEmpty = alternatives.length === 0 && !isRunning && error === null;
+    useEffect(() => {
+        if (isInitialized && resultsEmpty) {
+            void restoreResultsFor(configKey, 'replace');
+        }
+    }, [configKey, isInitialized, resultsEmpty, restoreResultsFor]);
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(exportConfig()), [exportConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
@@ -277,7 +313,7 @@ function App() {
     const selectedClock = alternatives[selectedAlternativeIndex];
     const selectedName = selectedClock ? plainClockName(alternatives, selectedAlternativeIndex) : null;
     const rateWarning = rateWarningOf(selectedClock);
-    const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale);
+    const copyLabel = copyBlueprintLabelOf(selectedClock, resultsAreStale, isRunning);
 
     // what the rule editor checks a rule against: the selected clock while it is for this build, else the last check
     const timingClock = generatedFor !== null && !resultsAreStale ? selectedClock ?? null : null;
@@ -297,15 +333,19 @@ function App() {
     // one copy for every Copy button: the bar's, the card's and the string's
     const notify = useNotify();
     const announce = useAnnounce();
-    const handleCopied = useCallback((warning: string | null) => {
+    const handleCopied = useCallback((warning: string | null, whileRunning: boolean) => {
+        // the best clock so far stays selected: said, with its name
+        const copied = whileRunning && selectedName ? ANNOUNCEMENTS.copiedCurrentBest(selectedName) : null;
         if (warning !== null) {
             // the warning's own message says that it was copied
-            notify({ severity: 'warning', text: `Copied. ${warning}` });
+            notify({ severity: 'warning', text: `${copied ?? 'Copied.'} ${warning}` });
         } else {
-            announce(ANNOUNCEMENTS.copied);
+            announce(copied ?? ANNOUNCEMENTS.copied);
         }
-    }, [notify, announce]);
-    const copy = useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCopied: handleCopied });
+    }, [notify, announce, selectedName]);
+    // copying the best clock so far picks it, as a click on its row does
+    const pinSelected = useCallback(() => selectAlternative(selectedAlternativeIndex), [selectAlternative, selectedAlternativeIndex]);
+    const copy = useCopyBlueprint({ blueprintString, rateWarning, staleFor, running: isRunning, onCopied: handleCopied, onPinned: pinSelected });
 
     // another clock is announced ("Showing the clock: …"), except after the card's Back to recommended, which moves the
     // focus to the card's name and so reads it out already
@@ -391,7 +431,9 @@ function App() {
      */
     const runChecked = useCallback((start: (config: Config) => void) => {
         const config = exportConfig();
-        const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        // a check whose worker crashed did not judge the build: Generate checks again instead of going to its error
+        const lastCheckCrashed = validation.status === 'invalid' && validation.crashed === true;
+        const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems, lastCheckCrashed });
         // running the build accepts it: an Undo offered before this press ends here, once (not when the check's own
         // generation starts later)
         if (startsRun(decision)) withdrawUndo();
@@ -423,7 +465,13 @@ function App() {
                 });
                 return;
         }
-    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
+    }, [exportConfig, isInitialized, isRunning, checkingFor, checkStatus, validation, problems, withdrawUndo, goToTarget, goToCheckError, validate, setCheckingFor]);
+
+    // stops the generation, or the check Generate started (whose Generate then does not start)
+    const handleCancel = useCallback(() => {
+        cancel();
+        setCheckingFor(null);
+    }, [cancel, setCheckingFor]);
 
     // checks without moving the page: the result shows as the chip, the alert and the swing plan
     const handleCheckOnly = useCallback(() => {
@@ -495,16 +543,14 @@ function App() {
             disableDrills: () => { offerUndo(describeDrillsOff); disableDrills(); },
         };
     }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, disableDrills]);
-    // Import, Paste and Reset clear the generated clocks, which their Undo does not bring back; read when the build is
-    // replaced, which for an import is after the file has been checked
-    const hasResultsRef = useRef(false);
-    useEffect(() => {
-        hasResultsRef.current = alternatives.length > 0 || isRunning;
-    }, [alternatives, isRunning]);
-    const offerUndoOfReplace = useCallback(
-        (message: string) => offerUndo(message, { resultsCleared: hasResultsRef.current }),
-        [offerUndo]
-    );
+    // the key of the build an action with Undo is about to replace as a whole (Import, Paste, Reset, an example, Delete
+    // build, a share link, another tab's version): its clocks are set aside under it, and its Undo brings them back
+    const replacedKeyRef = useRef<string | null>(null);
+    const offerUndoOfBuild = useCallback((message: string, options?: Parameters<typeof offerUndo>[1]) => {
+        replacedKeyRef.current = configKeyRef.current;
+        offerUndo(message, options);
+    }, [offerUndo]);
+    const offerUndoOfReplace = useCallback((message: string) => offerUndoOfBuild(message), [offerUndoOfBuild]);
 
     const drillConfigs = useMemo(() => config.drills?.configs ?? [], [config.drills]);
     const openDiagramFullscreen = useCallback(() => setDiagramFullscreen(true), []);
@@ -553,15 +599,17 @@ function App() {
         importConfig(imported);
     }, [importConfig]);
 
-    // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown
+    // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown. The
+    // clocks are set aside for the Undo offered just before, if any
     const handleBuildReplaced = useCallback(() => {
-        clearResults();
+        const formKey = replacedKeyRef.current ?? undefined;
+        replacedKeyRef.current = null;
+        clearResults({ formKey });
         setView('configure');
     }, [clearResults]);
 
     // ---- Your builds
     const dismiss = useDismissMessage();
-    const recipeLabel = useCallback((id: string) => recipeName(gameNames, id), [gameNames]);
     const titles = useMemo(() => buildTitles(library.builds, recipeLabel), [library.builds, recipeLabel]);
     /** The title a build has, or would have with `extra` in the list (one just made or renamed) */
     const titleOf = useCallback((id: string, extra?: BuildMeta) => {
@@ -623,7 +671,7 @@ function App() {
         // an Undo waits for the delete to finish (it first checks the build it opens next), then brings the build back
         // and takes out the blank one made when it was the only build
         let deleting: Promise<{ madeId: string | null }> | null = null;
-        offerUndo(deletedBuildMessage(currentTitle), {
+        offerUndoOfBuild(deletedBuildMessage(currentTitle), {
             revert: (form) => {
                 void deleting?.then(({ madeId }) => library.restore({ meta: deleted, form, removeId: madeId ?? undefined }));
             },
@@ -631,7 +679,7 @@ function App() {
         deleting = library.deleteBuild();
         await deleting;
         handleBuildReplaced();
-    }, [library, currentTitle, offerUndo, handleBuildReplaced]);
+    }, [library, currentTitle, offerUndoOfBuild, handleBuildReplaced]);
 
     // another tab saved this build: one warning per episode, whose action loads that tab's version (with Undo)
     const conflictStatus = library.conflict.status;
@@ -646,7 +694,7 @@ function App() {
                 action: {
                     label: LOAD_OTHER_TAB_LABEL,
                     onClick: () => {
-                        loadOtherTabVersion(() => offerUndo(LOADED_OTHER_TAB_MESSAGE)).then((loaded) => {
+                        loadOtherTabVersion(() => offerUndoOfBuild(LOADED_OTHER_TAB_MESSAGE)).then((loaded) => {
                             if (loaded) handleBuildReplaced();
                             // the message and its button are gone: focus goes to the switcher, not the page's top
                             focusSwitcher();
@@ -660,7 +708,7 @@ function App() {
             dismiss(conflictMessageRef.current);
             conflictMessageRef.current = null;
         }
-    }, [conflictStatus, notify, dismiss, loadOtherTabVersion, closeConflict, offerUndo, handleBuildReplaced, focusSwitcher]);
+    }, [conflictStatus, notify, dismiss, loadOtherTabVersion, closeConflict, offerUndoOfBuild, handleBuildReplaced, focusSwitcher]);
 
     // a share link: asked first, then added as a new build (or in the place of an empty one), with Undo
     const shared = useSharedBuildLink(isInitialized);
@@ -681,12 +729,12 @@ function App() {
             ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
         // the build the link added, which its Undo takes out again (none when it took the empty build's place)
         const added: { id?: string } = {};
-        offerUndo(sharedOpenedMessage(title), {
+        offerUndoOfBuild(sharedOpenedMessage(title), {
             revert: (form) => library.restore({ meta: previous, form, removeId: replaceId === undefined ? added.id : undefined }),
         });
         added.id = library.addBuild(configToFormData(build.config), build.name, { replaceId }).id;
         handleBuildReplaced();
-    }, [shared, library, sharedReplacesBlank, recipeLabel, offerUndo, handleBuildReplaced]);
+    }, [shared, library, sharedReplacesBlank, recipeLabel, offerUndoOfBuild, handleBuildReplaced]);
 
     // Generate with the slower searches, checked first as Generate is: for this run only, or, kept on, by turning the
     // switch on in the form (one the check does not read, so it stays current)
@@ -779,6 +827,11 @@ function App() {
                             note={note}
                             startHere={blankBuild && problems.length > 0}
                             onGoToProblem={handleGoToProblem}
+                            running={isRunning || checkingFor !== null}
+                            onCancel={handleCancel}
+                            lastStop={lastStop}
+                            restoredId={restoredId}
+                            pickGone={pickGone?.label ?? null}
                         />
                     )}
                     {/* outside the condition: a message can come before the workflow bar is there */}
@@ -999,6 +1052,11 @@ function App() {
                                 onStreamLogsChange={setStreamLogs}
                                 onClearLogs={clearLogs}
                                 staleFor={staleFor}
+                                changes={staleChanges}
+                                onGenerate={handleGenerate}
+                                canGenerate={!busy}
+                                stoppedEarly={stoppedEarly}
+                                pickGone={pickGone}
                                 copied={copy.copied}
                                 onCopy={copy.request}
                                 copyLabel={copyLabel}
@@ -1131,6 +1189,7 @@ function App() {
                 <StaleCopyDialog
                     open={copy.confirmingStale}
                     generatedFor={staleFor}
+                    changes={staleChanges}
                     onCancel={copy.cancel}
                     onConfirm={copy.confirm}
                 />

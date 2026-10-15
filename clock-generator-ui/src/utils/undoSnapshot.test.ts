@@ -108,7 +108,7 @@ describe('Undo after Reset, Import and Paste', () => {
         ['Import', () => configToFormData(otherConfig)],
     ])('puts back the form from before %s', (_, action) => {
         const original = form();
-        const { entry } = act(original, action, true);
+        const { entry } = act(original, action);
         expect(undoOutcome(entry)!.form).toBe(original);
     });
 

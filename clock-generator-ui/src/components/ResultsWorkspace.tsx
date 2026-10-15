@@ -19,6 +19,7 @@ import { ResultSummaryCard } from './ResultSummaryCard';
 import { InsightsPanel } from './InsightsPanel';
 import { ShiftRangePanel } from './ShiftRangePanel';
 import { StaleResultsBanner } from './StaleResultsBanner';
+import { RunNotes } from './RunNotes';
 import { StateTransitionTimeline } from './StateTransitionTimeline';
 import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 import { TransferHistoryVisualization } from './TransferHistoryVisualization';
@@ -76,6 +77,16 @@ interface ResultsWorkspaceProps {
     onClearLogs: () => void;
     /** What the clocks were made for, while the build has changed since. Null when not */
     staleFor: GeneratedFor | null;
+    /** What changed since the clocks were made, for the stale banner */
+    changes: string[];
+    /** Generate, from the stale banner */
+    onGenerate: () => void;
+    /** False whenever Generate would be disabled */
+    canGenerate: boolean;
+    /** The clocks shown are of a run the player stopped */
+    stoppedEarly: boolean;
+    /** The clock the player picked, which the last run did not make */
+    pickGone: { label: string } | null;
     /** Every Copy button says "Copied" for a moment after any of them copied */
     copied: boolean;
     /** The copy every Copy button shares */
@@ -139,13 +150,17 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
     return (
         <Box>
-            {props.staleFor !== null && hasResults && <StaleResultsBanner generatedFor={props.staleFor} />}
+            {props.staleFor !== null && hasResults && (
+                <StaleResultsBanner generatedFor={props.staleFor} changes={props.changes} onGenerate={props.onGenerate} canGenerate={props.canGenerate} />
+            )}
 
             {props.error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                     {props.error}
                 </Alert>
             )}
+
+            {!props.isRunning && hasResults && <RunNotes stoppedEarly={props.stoppedEarly} pickGone={props.pickGone} />}
 
             {!hasResults && !props.isRunning && !props.error && (
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>

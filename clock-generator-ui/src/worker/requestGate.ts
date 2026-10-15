@@ -3,7 +3,7 @@
  * gets its requests at once, before its `initialize` has finished; they wait here, in the order they came, and then
  * run. When loading failed, every waiting and later request fails with the same error.
  */
-export interface ReadyGate {
+interface ReadyGate {
     open(): void;
     fail(error: Error): void;
     /** Resolves once the gate is open (at once when it is); rejects once it has failed */
