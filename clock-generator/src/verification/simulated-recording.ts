@@ -86,6 +86,7 @@ export function recordingOfStock(stock: StockRecording, config: Config, clock_ti
                     crafting_progress: [],
                     bonus_progress: [],
                     products_finished: series.products_finished,
+                    crafts_started: series.crafts_started,
                     inputs: series.inputs,
                     outputs: series.outputs,
                     fuel: series.fuel !== undefined && fuel_item !== undefined ? { [fuel_item]: series.fuel } : undefined,

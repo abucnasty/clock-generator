@@ -45,8 +45,15 @@ export interface WatchingInserter {
 
 export interface WatchedMachine {
     machine_id: string;
-    /** Crafts finished and productivity bars paid out so far, after each tick */
+    /** Crafts finished and productivity bars paid out so far, after each tick: what alarms the inserters that take from it */
     products_finished: readonly number[];
+    /**
+     * The machine truly started a craft in the tick (consumed its ingredients), per tick: what alarms the inserters that
+     * put into it (docs/mechanics D7 a1: a payout wakes no input). From the simulator's own count, or worked out from a
+     * recording. Absent when it cannot be known: the rises of `products_finished` then stand in, as they did before
+     * 0.13.0, and the machine is named in `true_starts_unknown`.
+     */
+    true_starts?: readonly boolean[];
 }
 
 export interface InserterWakeUps {
@@ -67,6 +74,8 @@ export interface WakeUps {
     /** Sum over the inserters, a minute */
     wake_ups_per_minute: number;
     inserters: InserterWakeUps[];
+    /** Machines without `true_starts`, whose finishes and payouts alarmed their sink lists instead */
+    true_starts_unknown: string[];
 }
 
 const TICKS_PER_MINUTE = 3600;
@@ -74,10 +83,13 @@ const TICKS_PER_MINUTE = 3600;
 /**
  * Wake-ups of every inserter over the ticks `from_tick` (inclusive) to `to_tick` (exclusive) of a run.
  *
- * A machine that finishes a craft, or pays out a productivity bar, in a tick wakes the inserters that were asleep on
- * its list when the tick began, so the state of an inserter after the tick before decides whether it is woken. It
- * wakes them once in that tick, however many products it finishes in it. A belt and a chest finish no crafts and
- * wake no one here.
+ * A machine wakes the inserters that were asleep on its list when the tick began, so the state of an inserter after
+ * the tick before decides whether it is woken, and once in that tick at most. What wakes which list (factorio-benchmarks
+ * docs/mechanics, machines.md D7): the inserters that take from a machine are woken when it finishes a craft or pays
+ * out a productivity bar (D7 b, part hands); the inserters that put into a machine are woken when it starts a craft,
+ * consuming its ingredients, and not by a payout (D7 a1, confirmed on two designs of one machine type, the advanced
+ * circuit electromagnetic plant; other machine types untested). Before 0.13.0 both lists were woken by finishes and
+ * payouts. A belt and a chest finish no crafts and wake no one here.
  */
 export function wakeUps(
     inserters: readonly WatchingInserter[],
@@ -88,18 +100,29 @@ export function wakeUps(
     const first = Math.max(1, from_tick);
     const ticks = Math.max(0, to_tick - first);
     const finished = new Map(machines.map(machine => [machine.machine_id, machine.products_finished]));
+    const started = new Map(machines.flatMap(machine => machine.true_starts === undefined ? [] : [[machine.machine_id, machine.true_starts] as const]));
+    const true_starts_unknown = machines.filter(machine => machine.true_starts === undefined).map(machine => machine.machine_id);
+    // a tick at which the machine alarmed the list: the sink list on a true start, the source list on a finish or payout
+    const alarmed = (end: WatchedEnd, machine_id: string | null): ((tick: number) => number) | undefined => {
+        if (machine_id === null) {
+            return undefined;
+        }
+        const starts = end === "sink" ? started.get(machine_id) : undefined;
+        if (starts !== undefined) {
+            return tick => starts[tick] ? 1 : 0;
+        }
+        const list = finished.get(machine_id);
+        return list === undefined ? undefined : tick => list[tick] > list[tick - 1] ? 1 : 0;
+    };
     const per_minute = (count: number) => ticks === 0 ? 0 : count * TICKS_PER_MINUTE / ticks;
     const share = (count: number) => ticks === 0 ? 0 : count / ticks;
 
     const counted = inserters.map(inserter => {
-        const lists: Record<WatchedEnd, readonly number[] | undefined> = {
-            source: inserter.source_machine_id === null ? undefined : finished.get(inserter.source_machine_id),
-            sink: inserter.sink_machine_id === null ? undefined : finished.get(inserter.sink_machine_id),
+        const lists: Record<WatchedEnd, ((tick: number) => number) | undefined> = {
+            source: alarmed("source", inserter.source_machine_id),
+            sink: alarmed("sink", inserter.sink_machine_id),
         };
-        const alarmedIn = (end: WatchedEnd, tick: number) => {
-            const list = lists[end];
-            return list !== undefined && list[tick] > list[tick - 1] ? 1 : 0;
-        };
+        const alarmedIn = (end: WatchedEnd, tick: number) => lists[end]?.(tick) ?? 0;
         let woken = 0;
         let alarms = 0;
         let enabled = 0;
@@ -131,6 +154,7 @@ export function wakeUps(
             enabled_share: share(it.enabled),
             waiting_share: share(it.waiting),
         })),
+        true_starts_unknown,
     };
 }
 
@@ -148,5 +172,10 @@ export function wakeUpsOfStock(stock: StockRecording, ends: readonly InserterEnd
         const series = states.get(end.inserter_id);
         return series === undefined ? [] : [{ ...end, states: series }];
     });
-    return wakeUps(inserters, stock.machines, from_tick, stock.ticks);
+    const machines: WatchedMachine[] = stock.machines.map(machine => ({
+        machine_id: machine.machine_id,
+        products_finished: machine.products_finished,
+        true_starts: machine.crafts_started.map((started, tick) => tick > 0 && started > machine.crafts_started[tick - 1]),
+    }));
+    return wakeUps(inserters, machines, from_tick, stock.ticks);
 }

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.13.0] - 2026-10-15
+
+### Changed
+- The wake-ups a clock is ranked and selected by now count an inserter waiting to put items into a machine as woken when the machine starts a craft, not when it finishes one or pays out a productivity bonus, which wakes no input. The inserters that take from a machine are still woken by its finished crafts and payouts. On builds with productivity the figures shown for every clock fall: on the advanced circuit build with its belts standing still, from 509.6 to 400.6 wake-ups a minute; on the low density structure build from 703.1 to 590.6; on agricultural science from 3,651 to 2,703. A few rise, where a machine stands idle between crafts and its start falls on another tick than its last finish: metallurgic science from 954 to 1,089. No build selects another clock. A recording of the game shows the same count, read from each machine's status and finished products, and says for each machine how far that reading has been checked: on biochambers it is known to miss, on machines never recorded it is not checked.
+
 ## [0.12.1] - 2026-10-15
 
 ### Changed

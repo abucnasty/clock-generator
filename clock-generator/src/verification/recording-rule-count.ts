@@ -2,8 +2,7 @@ import { RuleCountInput } from "../crafting/rule-count-stock";
 import { EndKind } from "../crafting/rule-count";
 import { EntityId } from "../entities";
 import { FactorioMachineState } from "../state/factorio-entity-state";
-import { FactorioDataService } from "../data/factorio-data-service";
-import { STATUS_FULL_OUTPUT, STATUS_WORKING, trueStartsOfDump } from "../crafting/true-starts";
+import { trueStartsOfRecordedMachine } from "./recording-true-starts";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording } from "./recording";
 
@@ -38,19 +37,14 @@ export function ruleCountInputOfRecording(
             return [];
         }
         const status = expandChangeList(machine.samples.status, recording.sample_count, "");
-        const params = craftingParameters(recording, machine.id, machine.recipe);
+        const read = trueStartsOfRecordedMachine(recording, machine);
         return [{
             machine_id,
             recipe: machine.recipe,
             products_finished: machine.samples.products_finished,
             working: status.map(it => it === FactorioMachineState.WORKING),
-            true_starts: params === null ? undefined : trueStartsOfDump(
-                status.map(it => it === FactorioMachineState.WORKING ? STATUS_WORKING : it === "full_output" ? STATUS_FULL_OUTPUT : 0),
-                machine.samples.products_finished, params.delta, params.productivity_bonus, recording.sample_count,
-            ).start,
-            true_start_method: params === null ? undefined : {
-                machine_name: machine.name, recipe: machine.recipe, delta: params.delta, productivity_bonus: params.productivity_bonus,
-            },
+            true_starts: read?.true_starts,
+            true_start_method: read === null || read.method === "simulator" ? undefined : read.method,
         }];
     });
     const inserters = recording.inserters.flatMap(inserter => {
@@ -75,24 +69,4 @@ export function ruleCountInputOfRecording(
         }];
     });
     return { inserters, machines };
-}
-
-/**
- * Crafting progress a tick of a recorded machine (its crafting speed in the recorded config over 60 times the recipe's
- * energy) and its productivity bonus (the config's productivity, a percentage)
- */
-function craftingParameters(recording: Recording, machine_id: number, recipe: string): { delta: number; productivity_bonus: number } | null {
-    const machines = (recording.config as { machines?: { id: number; crafting_speed?: number; productivity?: number }[] }).machines ?? [];
-    const machine = machines.find(it => it.id === machine_id);
-    if (machine?.crafting_speed === undefined) {
-        return null;
-    }
-    try {
-        return {
-            delta: machine.crafting_speed / (60 * FactorioDataService.findRecipeOrThrow(recipe).energy_required),
-            productivity_bonus: (machine.productivity ?? 0) / 100,
-        };
-    } catch {
-        return null;
-    }
 }
