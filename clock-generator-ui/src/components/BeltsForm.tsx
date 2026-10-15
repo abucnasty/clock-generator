@@ -203,7 +203,7 @@ function BeltsFormComponent({
                                     }
                                     label="Ingredient"
                                     freeSolo
-                                    sx={{ flex: '1 1 180px' }}
+                                    sx={{ flex: '1 1 200px' }}
                                 />
                                 <NumberField
                                     label="Stack Size"
