@@ -1,5 +1,5 @@
 import assert from "../../common/assert";
-import { handSizeFor, Inserter, InserterStackSize, Machine } from "../../entities";
+import { fullResearchHandSize, handSizeFor, Inserter, Machine } from "../../entities";
 import { EntityTransferCount } from "./cycle/swing-counts";
 
 export const SimulationMode = {
@@ -22,7 +22,7 @@ export function simulationModeForInput(
 
     const any_filtered_item_has_low_insertion_limit = machine_inputs
         .filter(it => filtered_items.has(it.item_name))
-        .some(it => it.automated_insertion_limit.quantity < InserterStackSize.SIZE_16)
+        .some(it => it.automated_insertion_limit.quantity < fullResearchHandSize(inserter.metadata.type))
 
     if (any_filtered_item_has_low_insertion_limit) {
         return SimulationMode.LOW_INSERTION_LIMITS;

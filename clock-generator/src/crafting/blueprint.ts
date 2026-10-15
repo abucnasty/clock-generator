@@ -1,4 +1,4 @@
-import Fraction from "fractionability";
+import Fraction from "../data-types/fraction";
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
 import { Direction, Entity as CircuitEntity, Position, SignalId, Wire, WireConnection } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";

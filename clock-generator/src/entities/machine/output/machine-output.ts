@@ -1,4 +1,4 @@
-import Fraction from "fractionability";
+import Fraction from "../../../data-types/fraction";
 import { ProductionRate } from "./production-rate";
 import { OutputBlock } from "./output-block";
 import { EnrichedIngredient } from "../../../data";

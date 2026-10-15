@@ -1,5 +1,5 @@
 import assert from "../../../common/assert";
-import Fraction, { fraction } from "fractionability";
+import Fraction, { fraction } from "../../../data-types/fraction";
 import { Duration } from "../../../data-types/duration";
 import { TargetProductionRate } from "../../target-production-rate";
 import { EntityTransferCountMap, outputInsertersOf } from "./swing-counts";

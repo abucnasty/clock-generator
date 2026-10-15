@@ -36,7 +36,15 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
  * 
  * @property recipe - The recipe name to produce
  * @property items_per_second - Target production rate in items per second
- * @property copies - Number of duplicate setups being modeled (multiplier for ratio calculations)
+ * @property copies - How many identical units the build holds side by side. The config describes ONE unit, and the
+ *   generator plans that unit and multiplies the output rate by `copies`. This assumes:
+ *   - the units are identical: the same machines, recipes, crafting speeds, productivity, inserters, filters, stack
+ *     sizes and chests;
+ *   - no inserter joins one unit to another: machine-to-machine and machine-to-chest-to-machine inserters stay
+ *     inside a unit;
+ *   - the belts are shared between the units: every unit takes from and drops onto the same belt lanes.
+ *   A config that itself holds several identical units (copies of one unit side by side, each with its own inserters)
+ *   is refused with a CopiesError: describe one unit and set `copies` to the number of units instead.
  */
 export const TargetProductionRateConfigSchema = z.object({
     recipe: z.string(),
@@ -317,7 +325,19 @@ export const InserterConfigSchema = z.object({
         InserterMachineConfigSchema,
         InserterChestConfigSchema
     ]),
-    stack_size: z.number().int().positive(),
+    /**
+     * The inserter's prototype name in the game data: "inserter", "fast-inserter", "long-handed-inserter",
+     * "bulk-inserter" or "stack-inserter" (default). The burner inserter needs fuel and is refused. The prototype sets
+     * how long a swing takes, with the quality, and how many items the hand holds, with the research.
+     */
+    prototype: z.string().optional(),
+    /** The inserter's quality (default "legendary"); the higher it is, the faster the arm turns. It does not change the hand. */
+    quality: z.enum(["normal", "uncommon", "rare", "epic", "legendary"]).optional(),
+    /**
+     * Items in the hand. Without it the hand is what all the research gives the prototype (16 for a stack inserter, 12
+     * for a bulk inserter, 4 for the others); with it, it overrides that, as when a technology is not researched.
+     */
+    stack_size: z.number().int().positive().optional(),
     filters: z.array(z.string()).optional(),
     overrides: InserterOverridesConfigSchema.optional()
 });

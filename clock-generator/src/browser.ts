@@ -62,11 +62,16 @@ export { Option } from './data-types/option';
 export {
     ConfigValidationError,
     ConfigValidationIssue,
+    CopiesError,
+    CopiesUnit,
     InserterCoverageError,
     InserterCoverageIssue,
     InserterCoverageIssueKind,
     InserterFixOption,
 } from './config/errors';
+
+export { validateCopies, findRepeatedUnits } from './config/copies-validator';
+export type { RepeatedUnits } from './config/copies-validator';
 
 export {
     validateInserterCoverage,

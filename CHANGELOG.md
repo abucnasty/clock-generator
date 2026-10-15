@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.14.0] - 2026-10-15
+
+### Changed
+- Game data from Factorio 2.1.21; the calls header shows the game version.
+- Unsupported builds are refused with the reason and the roadmap item that adds them (docs/ROADMAP.md).
+- Inserters onto a belt or into a chest may filter any item.
+- Inserters can name their kind and quality (`prototype`, `quality`); `stack_size` is now optional. Belt timing for kinds other than the legendary stack inserter is not checked yet.
+- A config that repeats one unit several times is refused; describe one unit and set `copies`.
+
+### Fixed
+- Long chains no longer fail with "Invalid input format".
+
 ## [0.13.0] - 2026-10-15
 
 ### Changed
