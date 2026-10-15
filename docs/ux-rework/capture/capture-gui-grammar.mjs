@@ -854,13 +854,23 @@ async function stepFresh({ page, rec, width }) {
     await rec.step(`${label}: Status chip on the selected row, hovered`, async () => {
         // the selected row is tinted orange, and more so hovered: the chip's words must stay at 4.5:1 (2.7 A review, 1.4.3)
         const row = page.locator('table tbody tr.Mui-selected').first(); // SELECTOR: confirm (MUI's selected row)
-        const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Stable|Unstable|No recovery)$/ }).first();
-        if (!(await count(chip))) return rec.check(`contrast ${label}: Status chip on the selected row`, false, 'no Status chip in the selected row');
+        // 2.5 B: the default columns say it in "Works?" (an icon and words in the last cell); "Show all columns" keeps a
+        // chip, now Recovers / Does not recover / Unstable. Whichever is shown is measured, words and icon, rest and hovered
+        const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Recovers|Does not recover|Unstable)$/ }).first();
+        const works = row.locator('td').last().locator('span').first();
+        const isChip = (await count(chip)) > 0;
+        if (!isChip && !(await count(works))) return rec.check(`contrast ${label}: Status words on the selected row`, false, 'no status chip and no Works? cell in the selected row');
+        const pairs = (state) => isChip
+            ? [{ name: `${label}: Status chip on the selected row (${state})`, locator: chip.locator('.MuiChip-label') }]
+            : [
+                { name: `${label}: Works? words on the selected row (${state})`, locator: works },
+                { name: `${label}: Works? icon on the selected row (${state}, non-text 3:1)`, locator: works.locator('svg').first(), required: 3 },
+            ];
         await row.scrollIntoViewIfNeeded();
-        await contrastPairs(page, [{ name: `${label}: Status chip on the selected row (rest)`, locator: chip.locator('.MuiChip-label') }], rec);
+        await contrastPairs(page, pairs('rest'), rec);
         await row.locator('td').nth(3).hover();
         await page.waitForTimeout(300);
-        await contrastPairs(page, [{ name: `${label}: Status chip on the selected row (row hovered)`, locator: chip.locator('.MuiChip-label') }], rec);
+        await contrastPairs(page, pairs('row hovered'), rec);
         await page.mouse.move(1, 899);
     }, page);
     await commonChecks(page, rec, label);
