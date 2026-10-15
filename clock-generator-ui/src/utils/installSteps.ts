@@ -72,16 +72,18 @@ export const INSTALL_COPY = {
     },
     others: {
         title: 'Leave the other inserters alone.',
-        // the engine gives no wake windows, so no combinator, to an inserter set to Always on or Never on
-        detail: 'An inserter that is not in the list gets no combinator: one set to Always on, or with nothing to wait '
-            + 'for, runs all the time; one set to Never on stays off. Do not wire it. If this clock replaces an older '
-            + 'one, an inserter the old clock switched and this list does not name stays off for good: remove its '
-            + 'wire, or untick Enable/disable.',
+        // the engine gives no wake windows, so no combinator, to an inserter set to Always on or Never on; Never on is
+        // the simulator's setting, and an unwired inserter in the game runs all the time, so the player keeps it off
+        detail: 'An inserter that is not in the list gets no combinator. One set to Always on, or with nothing to wait '
+            + 'for, runs all the time: do not wire it. One set to Never on is never switched on by the clock: keep it '
+            + 'off in the game yourself. If this clock replaces an older one, an inserter the old clock switched and '
+            + 'this list does not name stays off for good: remove its wire, or untick Enable/disable.',
     },
     none: {
         title: 'Nothing to place or wire.',
-        detail: 'No inserter or drill is on the clock: each one runs all the time or is set to Never on, so this build '
-            + 'needs no clock.',
+        // generic: the clock's facts do not say whether the build has an inserter set to Never on
+        detail: 'No inserter or drill is on the clock, so this build needs no clock. Leave the ones set to Never on '
+            + 'switched off in the game.',
     },
     lock: {
         title: 'Know the lock.',

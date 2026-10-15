@@ -21,7 +21,7 @@ describe('installSteps', () => {
         for (const book of [false, true]) {
             const steps = installSteps({ book, wiring: [], drills: [] });
             expect(ids(steps)).toEqual(['none']);
-            expect(steps[0].detail).toBe('No inserter or drill is on the clock: each one runs all the time or is set to Never on, so this build needs no clock.');
+            expect(steps[0].detail).toBe('No inserter or drill is on the clock, so this build needs no clock. Leave the ones set to Never on switched off in the game.');
         }
     });
 
@@ -66,8 +66,8 @@ describe('installSteps', () => {
     it('says what an inserter outside the list does, true for Always on, Never on and nothing to wait for', () => {
         const others = detailOf(installSteps(plain), 'others');
         expect(others).toContain('gets no combinator');
-        expect(others).toContain('one set to Always on, or with nothing to wait for, runs all the time');
-        expect(others).toContain('one set to Never on stays off');
+        expect(others).toContain('One set to Always on, or with nothing to wait for, runs all the time: do not wire it.');
+        expect(others).toContain('One set to Never on is never switched on by the clock: keep it off in the game yourself.');
         expect(others).not.toMatch(/not in the list runs all the time/);
     });
 
