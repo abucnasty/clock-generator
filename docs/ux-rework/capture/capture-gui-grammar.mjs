@@ -34,7 +34,7 @@ import { join } from 'node:path';
 import {
     forWidths, previewServer, sample, LOGISTIC, SMALL_SAMPLE, SLOW_SAMPLE, UI_DIR, importFile, goConfigure, goResults, validate, generate,
     waitReady, noSideScroll, isClickable, contrast, contrastPairs, tabTo, checkTabTo, checkAxe,
-    checkFocusNotObscuredAtHeight, checkMouseActivationVisible, openMenu,
+    checkFocusNotObscuredAtHeight, checkMouseActivationVisible, openMenu, ui,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -661,7 +661,8 @@ async function stepFirst({ page, rec, width }) {
     await goConfigure(page);
     await rec.shot(page, 'configure-empty', { fullPage: true, aria: true, desc: 'First visit: empty Configure' });
     const label = 'first visit';
-    await filledRule(page, rec, label, []);
+    // 2.1: on a first visit the intro card's Paste from Factorio is the one next step, so the one filled button
+    await filledRule(page, rec, label, [{ re: /^Paste from Factorio$/, color: 'green', where: 'main' }]);
     // accepted at the 2.7 A review: 2.3 keeps Generate on with problems (it goes to the first one), so it is outlined
     // grey, not filled, and the first problem is the text beside it (1.4)
     await chk(rec, `${label}: Generate is outlined grey (not filled) and the first problem is shown as text beside it (1.4)`, async () => {
@@ -899,7 +900,8 @@ async function stepStale({ page, rec, width }) {
     await goConfigure(page);
     await rateField(page).scrollIntoViewIfNeeded();
     const current = Number(await rateField(page).inputValue().catch(() => '0')) || 1;
-    await rateField(page).fill(String(current + 1));
+    // lower, not higher: since 2.1 W a rate above what the machines can make is a problem, which takes Generate's fill
+    await rateField(page).fill(String(current > 1 ? current - 1 : current / 2));
     await rateField(page).blur();
     await page.waitForTimeout(500);
     await toTop(page);
@@ -970,8 +972,8 @@ async function stepDialogs({ page, rec, width }) {
     await rec.step('paste confirm dialog', async () => {
         await withClipboard(async () => {
             await page.evaluate((t) => navigator.clipboard.writeText(t), readFileSync(LOGISTIC, 'utf8'));
-            await openMenu(page);
-            await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+            // 2.1 moved Paste from Factorio out of the menu into the header (ui.pasteFromFactorio)
+            await ui.pasteFromFactorio(page).click();
             await page.getByRole('dialog').first().waitFor({ timeout: 8000 });
             await page.waitForTimeout(500);
         });
@@ -1061,8 +1063,8 @@ async function stepMenu({ page, rec, width }) {
     await rec.step('error snackbar', async () => {
         await withClipboard(async () => {
             await page.evaluate(() => navigator.clipboard.writeText('not a factorio export'));
-            await openMenu(page);
-            await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+            // 2.1 moved Paste from Factorio out of the menu into the header (ui.pasteFromFactorio)
+            await ui.pasteFromFactorio(page).click();
             await page.locator('.MuiSnackbar-root').first().waitFor({ timeout: 6000 });
         });
         await page.waitForTimeout(400);
