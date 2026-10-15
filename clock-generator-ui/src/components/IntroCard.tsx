@@ -17,7 +17,8 @@ const HEADING_ID = 'intro-card-heading';
 /** The link to the Sidecar mod's page, which opens in a new tab and says so */
 export function SidecarModLink() {
     return (
-        <Link href={SIDECAR_MOD_URL} target="_blank" rel="noopener noreferrer" underline="always">
+        // padded to a target of 24px or more (WCAG 2.5.8); still inline, so it wraps with the sentence
+        <Link href={SIDECAR_MOD_URL} target="_blank" rel="noopener noreferrer" underline="always" sx={{ py: '2px' }}>
             {SIDECAR_MOD_NAME} mod {NEW_TAB_CUE}
         </Link>
     );

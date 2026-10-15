@@ -62,7 +62,8 @@ export function ExamplesDialog({ onPick, onClose }: ExamplesDialogProps) {
                                 <ListItemIcon sx={{ minWidth: 40 }}>
                                     <FactorioIcon name={example.recipe} size={28} alt="" />
                                 </ListItemIcon>
-                                <ListItemText primary={exampleTitle(example)} secondary={exampleSummary(example)} />
+                                {/* the space keeps the title and the summary two words apart in the row's text, as in its name */}
+                                <ListItemText primary={`${exampleTitle(example)} `} secondary={exampleSummary(example)} />
                             </ListItemButton>
                         ))}
                     </List>
