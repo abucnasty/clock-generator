@@ -26,8 +26,9 @@ import { ruleCountInputOfRecording } from "./verification/recording-rule-count";
  * writes all of it with the version and the commit of the generator that counted it.
  */
 
-const SIMULATOR_NOTE = "Simulated: the simulator's count was laid against two recordings of the game of one build (the advanced "
-    + "circuit scaffold, unclocked and on its selected clock) before this release; see GOALS.md, \"The rule's count\".";
+const SIMULATOR_NOTE = "Simulated. The simulator's count was laid against the game on one build only, the advanced circuit "
+    + "scaffold (2026-10-14): every call agreed; on the clock w agreed within 10 a minute a group, unclocked by -8% to +24% "
+    + "(GOALS.md, \"The rule's count and the clock-or-unwired advice\").";
 
 function argValue(name: string): string | undefined {
     return process.argv.find(arg => arg.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
