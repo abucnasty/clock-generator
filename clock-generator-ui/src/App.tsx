@@ -31,7 +31,6 @@ import { useSharedBuildLink } from './hooks/useSharedBuildLink';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
 import { useCopyBlueprint } from './hooks/useCopyBlueprint';
-import { useAnnounce, useNotify } from './hooks/useMessages';
 import { useIntroCard } from './hooks/useIntroCard';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
@@ -568,12 +567,8 @@ function App() {
         setView('configure');
     }, [clearResults]);
 
-    // Generate with the slower searches, checked first as Generate is: for this run only, or, kept on, by turning the
-    // switch on in the form (one the check does not read, so it stays current)
     // ---- Your builds
-    const notify = useNotify();
     const dismiss = useDismissMessage();
-    const announce = useAnnounce();
     const recipeLabel = useCallback((id: string) => recipeName(gameNames, id), [gameNames]);
     const titles = useMemo(() => buildTitles(library.builds, recipeLabel), [library.builds, recipeLabel]);
     /** The title a build has, or would have with `extra` in the list (one just made or renamed) */
@@ -693,6 +688,8 @@ function App() {
         handleBuildReplaced();
     }, [shared, library, sharedReplacesBlank, recipeLabel, offerUndo, handleBuildReplaced]);
 
+    // Generate with the slower searches, checked first as Generate is: for this run only, or, kept on, by turning the
+    // switch on in the form (one the check does not read, so it stays current)
     const handleSearchDeeper = useCallback((keepOn: boolean) => runChecked((config) => {
         if (keepOn) {
             // the form's key once the switch is on, so the results are not taken for out of date
