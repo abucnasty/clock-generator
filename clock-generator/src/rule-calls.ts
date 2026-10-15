@@ -1,4 +1,5 @@
 import { execFileSync } from "child_process";
+import { dataVersionText } from "./data/data-version";
 import fs from "fs";
 import path from "path";
 import { loadConfigFromFile } from "./config/loader";
@@ -60,8 +61,8 @@ function usage(): never {
     process.exit(2);
 }
 
-/** The version and the commit of the generator that counts, so a call can be locked with what made it */
-function generatorVersion(): { version: string; commit: string } {
+/** The version and the commit of the generator that counts, and the game its data is from, so a call can be locked with what made it */
+function generatorVersion(): { version: string; commit: string; game_data: string } {
     const root = path.join(__dirname, "..");
     const version = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version as string;
     let commit = "unknown";
@@ -74,7 +75,7 @@ function generatorVersion(): { version: string; commit: string } {
     } catch {
         // not a checkout: the version alone
     }
-    return { version, commit };
+    return { version, commit, game_data: dataVersionText() };
 }
 
 /** A run of the build from a dump or a recording */
@@ -152,7 +153,7 @@ async function main() {
     }
     const generator = generatorVersion();
     const call_page = RULE_THRESHOLDS["true starts"];
-    const header = `clock-generator ${generator.version}, commit ${generator.commit}; call in true starts from ${call_page.page} (sha256 ${call_page.sha256})`;
+    const header = `clock-generator ${generator.version}, commit ${generator.commit}, game data from ${generator.game_data}; call in true starts from ${call_page.page} (sha256 ${call_page.sha256})`;
 
     if (sample !== undefined) {
         const config_path = (ConfigPaths as Record<string, string>)[sample] ?? sample;

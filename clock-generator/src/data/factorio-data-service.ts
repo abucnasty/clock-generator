@@ -7,8 +7,14 @@ export type EnrichedIngredient = Ingredient & {
 }
 
 export interface EnrichedRecipe extends Recipe {
+    /** The item ingredients; the fluids are in `fluid_ingredients` */
     ingredients: EnrichedIngredient[];
+    /** The item results; the fluids are in `fluid_results` */
     results: EnrichedIngredient[];
+    /** The fluid ingredients, as the game data lists them: not simulated, kept to say so */
+    fluid_ingredients: Ingredient[];
+    /** The fluid results, as the game data lists them: not simulated, kept to refuse a fluid-only recipe by name */
+    fluid_results: Ingredient[];
 }
 
 export class FactorioDataService {
@@ -110,6 +116,8 @@ export class FactorioDataService {
         }
 
         const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : []
+        // a recipe without results is an empty Lua table in the dump, which is {} in JSON
+        const results = Array.isArray(recipe.results) ? recipe.results : []
 
         const enriched_ingredients: EnrichedIngredient[] = ingredients
             .filter(it => it.type != "fluid")
@@ -121,7 +129,7 @@ export class FactorioDataService {
                 }
             })
 
-        const enriched_results: EnrichedIngredient[] = recipe.results
+        const enriched_results: EnrichedIngredient[] = results
             .filter(it => it.type != "fluid")
             .map(result => {
                 const item = this.findItemOrThrow(result.name);
@@ -135,6 +143,8 @@ export class FactorioDataService {
             ...recipe,
             ingredients: enriched_ingredients,
             results: enriched_results,
+            fluid_ingredients: ingredients.filter(it => it.type == "fluid"),
+            fluid_results: results.filter(it => it.type == "fluid"),
             energy_required: recipe.energy_required ?? this.DEFAULT_ENERGY_REQUIRED,
         }
     }

@@ -71,8 +71,7 @@ function maybeBiochamber(machine: ImportedMachine): boolean {
         return true;
     }
     try {
-        const category = FactorioDataService.findRecipeOrThrow(machine.recipe).category;
-        return category === "organic" || category === "organic-or-assembling";
+        return FactorioDataService.findRecipeOrThrow(machine.recipe).categories.includes("organic");
     } catch {
         return false;
     }

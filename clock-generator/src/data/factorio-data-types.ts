@@ -18,7 +18,12 @@ export type Recipe = {
   ingredients: Ingredient[]
   results: Ingredient[]
   allow_productivity: boolean
-  category: string
+  /**
+   * The crafting categories the recipe can be made in. Factorio 2.1 gives a recipe several (`categories` in the
+   * data; before 2.1 one `category`, with combined ones such as "organic-or-assembling"); resources/filter-raw.js
+   * writes the list for either, "crafting" when the data names none.
+   */
+  categories: string[]
 } & Record<string, any>
 
 export type Item = {
