@@ -7,7 +7,11 @@ interface LocaleNames {
         raw: Record<string, Record<string, unknown>>,
         filtered: Record<string, Record<string, unknown>>,
         table: Record<string, string>,
-    ): { names: { item: Record<string, string>; recipe: Record<string, string> }; fallbackIds: string[] };
+    ): {
+        names: { item: Record<string, string>; recipe: Record<string, string> };
+        fallbackIds: string[];
+        fallbackCount: { item: number; recipe: number };
+    };
 }
 
 // resources/ is plain CommonJS outside src, which the data dump (filter-raw.js) runs with node
@@ -75,6 +79,12 @@ describe("evaluateLocalised", () => {
         expect(evaluateLocalised(["item-name.filled-barrel", ["fluid-name.missing"]], table)).toBeNull();
         expect(evaluateLocalised(["item-name.filled-barrel"], table)).toBeNull();
         expect(evaluateLocalised(["constructor"], table)).toBeNull();
+    });
+
+    it("returns null when the text keeps a __…__ it does not evaluate", () => {
+        const plural = { "item-name.ores": "__1__ __plural_for_parameter__1__{1=ore|rest=ores}__", "item-name.tile": "__TILE__stone-path__" };
+        expect(evaluateLocalised(["item-name.ores", "2"], plural)).toBeNull();
+        expect(evaluateLocalised(["item-name.tile"], plural)).toBeNull();
     });
 });
 
@@ -156,7 +166,7 @@ describe("buildNames", () => {
             "capture-robot-rocket": { name: "capture-robot-rocket" },
         },
     };
-    const { names, fallbackIds } = buildNames(raw, filtered, table);
+    const { names, fallbackIds, fallbackCount } = buildNames(raw, filtered, table);
 
     it("names an item by its own localised_name", () => {
         expect(names.item["water-barrel"]).toBe("Water barrel");
@@ -198,6 +208,7 @@ describe("buildNames", () => {
         expect(names.item["ee-infinity-chest"]).toBe("Ee infinity chest");
         expect(names.recipe["ee-infinity-chest"]).toBe("Ee infinity chest");
         expect(fallbackIds).toEqual(["ee-infinity-chest"]);
+        expect(fallbackCount).toEqual({ item: 1, recipe: 1 });
     });
 
     it("names every item, ingredient and result, and writes the ids in order", () => {

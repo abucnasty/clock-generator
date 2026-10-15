@@ -28,10 +28,13 @@ async function main() {
     try {
         const filtered = mapRawDataToFilteredFactorioData(rawData)
         const table = await readLocale(FACTORIO_DATA_DIR)
-        const { names, fallbackIds } = buildNames(rawData, filtered, table)
+        const { names, fallbackIds, fallbackCount } = buildNames(rawData, filtered, table)
         filtered["names"] = names
-        console.log(`${Object.keys(names.item).length} item and ${Object.keys(names.recipe).length} recipe names from the locale in ${FACTORIO_DATA_DIR}`)
-        console.log(`${fallbackIds.length} ids have no locale text and get a sentence-case name: ${fallbackIds.join(", ")}`)
+        for (const kind of ["item", "recipe"]) {
+            const count = Object.keys(names[kind]).length
+            console.log(`${kind} names: ${count - fallbackCount[kind]} from the locale in ${FACTORIO_DATA_DIR}, ${fallbackCount[kind]} sentence-case fallbacks, ${count} in all`)
+        }
+        console.log(`The ${fallbackIds.length} ids with a fallback name: ${fallbackIds.join(", ")}`)
         await fs.writeFile("./data-filtered.json", JSON.stringify(filtered, null, 2))
         console.log("Done")
     } catch (err) {

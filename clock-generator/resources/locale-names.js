@@ -62,7 +62,8 @@ const MACRO_SECTIONS = { ITEM: "item-name", FLUID: "fluid-name", ENTITY: "entity
  * `__FLUID__x__`, `__ENTITY__x__`, `__EQUIPMENT__x__` by the names of `x` (the id itself if it has none).
  * @param {unknown} localised
  * @param {Record<string, string>} table
- * @returns {string | null} null when the key or any param has no text, so the caller can fall back
+ * @returns {string | null} null when the key or any param has no text, or the text keeps a `__…__` this does not
+ *   evaluate (like `__plural_for_parameter__…`), so the caller can fall back
  */
 function evaluateLocalised(localised, table) {
     if (typeof localised === "string") return localised;
@@ -87,7 +88,7 @@ function evaluateLocalised(localised, table) {
         const sectionKey = `${MACRO_SECTIONS[kind]}.${id}`;
         return Object.prototype.hasOwnProperty.call(table, sectionKey) ? table[sectionKey] : id;
     });
-    return missing ? null : text;
+    return missing || text.includes("__") ? null : text;
 }
 
 /**
@@ -106,10 +107,14 @@ const listOf = (value) => (Array.isArray(value) ? value : []);
  * @param {Record<string, Record<string, any>>} raw the game's `--dump-data` output
  * @param {Record<string, Record<string, any>>} filtered what filter-raw.js keeps of it
  * @param {Record<string, string>} table the parsed locale
- * @returns {{ names: { item: Record<string, string>, recipe: Record<string, string> }, fallbackIds: string[] }}
+ * @returns {{
+ *   names: { item: Record<string, string>, recipe: Record<string, string> },
+ *   fallbackIds: string[],
+ *   fallbackCount: { item: number, recipe: number },
+ * }} `fallbackIds`: the ids of either table that got the sentence-case name; `fallbackCount`: how many entries of each did
  */
 function buildNames(raw, filtered, table) {
-    const lookup = (key) => (Object.prototype.hasOwnProperty.call(table, key) ? table[key] : null);
+    const lookup = (key) => evaluateLocalised([key], table);
 
     /** The locale name of an item, fluid or entity id, or null */
     function itemText(id) {
@@ -153,18 +158,20 @@ function buildNames(raw, filtered, table) {
     }
 
     const fallbackIds = new Set();
-    const named = (id, text) => {
+    const fallbackCount = { item: 0, recipe: 0 };
+    const named = (kind, id, text) => {
         if (text !== null) return text;
         fallbackIds.add(id);
+        fallbackCount[kind]++;
         return sentenceCase(id);
     };
 
     const item = {};
-    for (const id of [...itemIds].sort()) item[id] = named(id, itemText(id));
+    for (const id of [...itemIds].sort()) item[id] = named("item", id, itemText(id));
     const recipe = {};
-    for (const id of Object.keys(filtered.recipe ?? {}).sort()) recipe[id] = named(id, recipeText(id, filtered.recipe[id]));
+    for (const id of Object.keys(filtered.recipe ?? {}).sort()) recipe[id] = named("recipe", id, recipeText(id, filtered.recipe[id]));
 
-    return { names: { item, recipe }, fallbackIds: [...fallbackIds].sort() };
+    return { names: { item, recipe }, fallbackIds: [...fallbackIds].sort(), fallbackCount };
 }
 
 module.exports = { parseLocale, evaluateLocalised, buildNames };
