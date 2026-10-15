@@ -23,6 +23,12 @@ export const SURFACE = {
     inset: '#1a1a1a',
 } as const;
 
+/** What the surfaces become under the pointer: MUI's 8% white hover over a row, and over a card, menu or dialog */
+export const SURFACE_HOVER = {
+    row: '#3f3f3f',
+    panel: '#353535',
+} as const;
+
 /** Each role's fill, its hover (`dark`), a lighter shade, and the text on any of the three */
 export const ROLE = {
     orange: { main: '#fca300', light: '#ffba37', dark: '#b07200', on: '#000000' },
@@ -91,8 +97,8 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
     ...on('green text', ROLE.green.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
     ...on('red text', ROLE.red.main, STATUS_TEXT_SURFACES, 'text', 'the placement rule: not on the page'),
     ...on('error text', TEXT.error, SURFACES, 'text', 'field problems, Discard, Clear rule, the red chips'),
-    { name: 'error text on a hovered row', fg: TEXT.error, bg: '#3f3f3f', kind: 'text', note: '8% white on row' },
-    { name: 'error text on a hovered card or menu item', fg: TEXT.error, bg: '#353535', kind: 'text', note: '8% white on panel' },
+    { name: 'error text on a hovered row', fg: TEXT.error, bg: SURFACE_HOVER.row, kind: 'text' },
+    { name: 'error text on a hovered card or menu item', fg: TEXT.error, bg: SURFACE_HOVER.panel, kind: 'text' },
     ...on('blue text', ROLE.blue.main, INFO_TEXT_SURFACES, 'text', 'info alerts only'),
     // the clock table's Status chips carry their own panel fill, so a selected or hovered row's tint is not under them
     ...(['green', 'yellow', 'red'] as const).map(role => ({
