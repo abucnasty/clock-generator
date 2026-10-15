@@ -102,6 +102,24 @@ export function decideCheckOnly({ initialized, generating, checkStatus, problems
     return { kind: 'check' };
 }
 
+const STARTS_RUN: Record<GenerateDecision['kind'] | CheckOnlyDecision['kind'], boolean> = {
+    'generate': true,
+    'check-first': true,
+    'check': true,
+    'wait': false,
+    'go-to-problem': false,
+    'go-to-check-error': false,
+    'show-problems': false,
+};
+
+/**
+ * Whether a press of Generate or Check only runs something, which ends an Undo offer: running the build accepts it (the
+ * owner, 2026-10-14). Going to a problem, or waiting for a run already going, runs nothing.
+ */
+export function startsRun(decision: GenerateDecision | CheckOnlyDecision): boolean {
+    return STARTS_RUN[decision.kind];
+}
+
 /** What Generate does once the check it started has ended */
 export function afterCheck(outcome: CheckOutcome): 'generate' | 'go-to-check-error' | 'stop' {
     switch (outcome.kind) {

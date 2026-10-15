@@ -65,6 +65,10 @@ preview unless you are debugging.
   `#1b1b1b` track and legend chips, 3:1 contrast of every colour drawn, the six item colours and the repeat caption, bars
   and Blocked runs at least 3px, the strip legend row, Detailed-mode swatches, canvas and SVG `role="img"` names, the
   fuel chart, fullscreen, and the drill label's orange. `BASE_URL`, `WIDTHS` and `STEPS` as above.
+- `capture-messages-clear.mjs <out dir>` (on `lib.mjs`) checks messages that don't cover the page (item 1.5 F) at 1440,
+  720 and 390px: the message in the header's flow and in the fullscreen diagram's title bar, never over a focused
+  control or a dialog, errors closing when a dialog opens or the action starts again, keyboard reach of Undo, the Undo
+  offer ending when a check or generation starts, and the announcements. `BASE_URL`, `WIDTHS` and `STEPS` as above.
 
 ## Shared helpers
 

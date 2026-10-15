@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useImperativeHandle, type Ref } from 're
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
 import { readConfigFile } from '../hooks/useConfigForm';
-import { useNotify } from '../hooks/useMessages';
+import { useDismissMessage, useNotify } from '../hooks/useMessages';
 import { useGameNames } from '../hooks/useGameNames';
 import { countOf, describePaste, exampleUndoMessage, UNDO_IMPORT_MESSAGE, UNDO_RESET_MESSAGE } from '../utils/undoSnapshot';
 import { BUTTON_NAMES } from '../utils/a11yLabels';
@@ -99,6 +99,15 @@ export function ConfigImportExport({
     const narrow = useMediaQuery(useTheme().breakpoints.down('sm'));
     const notify = useNotify();
     const { recipeLabel } = useGameNames();
+    const dismiss = useDismissMessage();
+    // the last error of opening a build file or loading an example, which goes as soon as the player tries again
+    const errorIdRef = useRef<number | null>(null);
+    const closeLastError = useCallback(() => {
+        if (errorIdRef.current !== null) {
+            dismiss(errorIdRef.current);
+            errorIdRef.current = null;
+        }
+    }, [dismiss]);
 
     // State for the hamburger menu
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -200,6 +209,7 @@ export function ConfigImportExport({
             const input = event.target;
             const file = input.files?.[0];
             if (!file) return;
+            closeLastError();
 
             try {
                 const content = await file.text();
@@ -214,17 +224,18 @@ export function ConfigImportExport({
                 }
             } catch (error) {
                 console.error('Open build file error:', error);
-                notify({ severity: 'error', text: openFileProblem(error) });
+                errorIdRef.current = notify({ severity: 'error', text: openFileProblem(error) });
             }
 
             // Reset the input so the same file can be opened again
             input.value = '';
         },
-        [startPaste, importConfigText, notify, showPastePrompt]
+        [closeLastError, startPaste, importConfigText, notify, showPastePrompt]
     );
 
     // the clipboard is read in the click itself: a browser refuses a read after an await or a timer
     const handlePasteFromFactorio = useCallback(() => {
+        closeLastError();
         let reading: Promise<string>;
         try {
             reading = navigator.clipboard.readText();
@@ -241,7 +252,7 @@ export function ConfigImportExport({
             },
             () => showPastePrompt(PASTE_PROMPTS.unreadable),
         );
-    }, [startPaste, showPastePrompt]);
+    }, [closeLastError, startPaste, showPastePrompt]);
 
     // a paste into the dialog's box, or Continue; one at a time
     const pasteBusyRef = useRef(false);
@@ -261,6 +272,7 @@ export function ConfigImportExport({
 
     const handlePickExample = useCallback(async (example: ExampleBuild) => {
         setExamplesOpen(false);
+        closeLastError();
         try {
             const response = await fetch(`/examples/${example.file}`);
             if (!response.ok) {
@@ -269,9 +281,9 @@ export function ConfigImportExport({
             await importConfigText(await response.text(), exampleUndoMessage(example, recipeLabel));
         } catch (error) {
             console.error('Example error:', error);
-            notify({ severity: 'error', text: EXAMPLE_FAILED_MESSAGE });
+            errorIdRef.current = notify({ severity: 'error', text: EXAMPLE_FAILED_MESSAGE });
         }
-    }, [importConfigText, notify, recipeLabel]);
+    }, [closeLastError, importConfigText, notify, recipeLabel]);
 
     const openExamples = useCallback(() => setExamplesOpen(true), []);
     const handleCloseExamples = useCallback(() => setExamplesOpen(false), []);
