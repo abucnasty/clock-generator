@@ -5,7 +5,7 @@ import type { Config } from "../config/schema";
 import { simulateClockOnly } from "./generate-blueprint";
 import { generateClockAlternatives } from "./alternatives";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { ruleCallsOfClock } from "./rule-calls-of-sample";
+import { ruleCallsOfClock, ruleCallsOfSample } from "./rule-calls-of-sample";
 import { ruleCount } from "./rule-count";
 import { ruleCountInputOfStock } from "./rule-count-stock";
 import { parseRecording } from "../verification/recording";
@@ -21,6 +21,13 @@ describe("the rule count of a simulated run", () => {
         config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE);
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         clock = alternatives[selected_index];
+    });
+
+    it("generates the clock itself when ruleCallsOfSample is not given the alternatives, and finds the same calls", () => {
+        const given = ruleCallsOfClock(config, clock);
+        const generated = ruleCallsOfSample(config, { logger: quiet });
+        expect(generated.clock.id).toBe(given.clock.id);
+        expect(generated.removal.w_removed_pooled).toBe(given.removal.w_removed_pooled);
     });
 
     const stockOf = (periods: number) => simulateClockOnly(
