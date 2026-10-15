@@ -88,7 +88,7 @@ export { beltPickupSlackTicks } from "./crafting/clock";
 export { fuelHandRoomTicks } from "./crafting/clock";
 
 /**
- * 12. Wake-ups (GOALS.md "Wake-ups, the measure for goal 2"): a machine that finishes a craft wakes the enabled
+ * 12. Wake-ups (GOALS.md "Wake-ups, the measure for goal 2 for now"): a machine that finishes a craft wakes the enabled
  * inserters asleep on its list, at most once a tick. Cases: `crafting/wake-ups.test.ts`; against the game,
  * `crafting/clock-from-windows.test.ts` (355 and 395.5 a minute by where the clock starts, 354.6 in the game) and
  * `crafting/belt-near-lane.test.ts` (10.7, 26.8 and 32.1).

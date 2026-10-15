@@ -153,7 +153,7 @@ export function shiftRangesForCircuitLatency(ranges: OpenRange[], period: number
 
 /**
  * The belt a clock is made for. The simulator's belts are always full and do not move; an inserter changes its tick
- * timing on a moving belt, and more so on one with gaps (see "Wake-ups, the measure for goal 2" in GOALS.md).
+ * timing on a moving belt, and more so on one with gaps (see "Wake-ups, the measure for goal 2 for now" in GOALS.md).
  */
 export type ClockBelt =
     /** Belt pickup slack lengthened the windows of its belt-fed inserters, by these ticks (each value once, ascending) */

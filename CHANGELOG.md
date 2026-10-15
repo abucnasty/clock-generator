@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.12.0] - 2026-10-15
+
+### Changed
+- The advice on which inserters are worth clocking counts wake-ups in true craft starts: an inserter waiting to put items into a machine counts as woken when the machine starts a craft, not when it pays out a productivity bonus, which wakes no input. The thresholds follow: below 53 wake-ups a minute leave unwired, from 158.6 clock, marginal between 53 and 175.7. The count 0.11.0 used, and its call, are still shown beside each group. On machines with productivity that count ran high: on the advanced circuit build at +175%, 1,164 wake-ups a minute where the game makes 625. Each group also says how far its count has been checked against the game. The thresholds are a prediction still to be judged on fresh saves, and the mechanism they rest on is measured on one build. No clock and no selection changes.
+
 ## [0.11.0] - 2026-10-14
 
 ### Added
-- Advice on which inserters are worth clocking, from the inserter cost series of factorio-benchmarks: `npm run calls` in `clock-generator` gives a call for each group of inserters of a build, "clock" or "leave unwired", firm or marginal, from the wake-ups a minute a clock removes from each of its inserters (below 63.5 leave unwired, from 158.6 clock, marginal between 63.5 and 207.6). It reads a sample or a config (its selected clock against the same build with every inserter always enabled, in the simulator), two recordings of the game, or two dumps of the series' extractor, one unwired and one clocked. It is advice about update time only: it changes no clock and no selection, and is never a reason to drop a clock a build needs for its rate. The rule was measured on saves of 91,000 to 606,000 entities, and a call from the simulator was checked against the game on one build. See "The rule's count and the clock-or-unwired advice" in `clock-generator/GOALS.md`.
+- Advice on which inserters are worth clocking, from the inserter cost benchmarks: each group of inserters of a build gets a call, "clock" or "leave unwired", firm or marginal, from the wake-ups a minute a clock removes from each of its inserters (below 63.5 leave unwired, from 158.6 clock, marginal between 63.5 and 207.6). It is worked out for a build's selected clock against the same build with every inserter always enabled, or from two recordings of the game, one unwired and one clocked. It is advice about update time only: it changes no clock and no selection, and is never a reason to drop a clock a build needs for its rate. The rule was measured on saves of 91,000 to 606,000 entities, and a call from the simulator was checked against the game on one build.
 
 ## [0.10.0] - 2026-10-14
 
