@@ -81,7 +81,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     const plannedChecked = options.rows.some(row => row.shifts.some(shift => shift.shift_ticks === 0));
 
     return (
-        <Panel title={options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'} level={3}>
+        <Panel title={options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'} level={4}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 {options.moved === 'swings' && options.plannedTicks
                     ? <>This clock moves the swings planned in clock ticks {options.plannedTicks.start}–{options.plannedTicks.end} ({options.movedDescription}) together, </>

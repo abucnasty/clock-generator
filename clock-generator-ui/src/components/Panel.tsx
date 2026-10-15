@@ -5,8 +5,8 @@ import { HelpButton } from './HelpButton';
 
 interface PanelProps {
     title: string;
-    /** The heading's level: 2 for a card of the page, 3 for a card inside a section */
-    level?: 2 | 3;
+    /** The heading's level: 2 for a card of the page, 3 for a card inside a section, 4 for a card inside that */
+    level?: 2 | 3 | 4;
     /** The heading's id is `${id}-title`; one is made up when not given */
     id?: string;
     /** A "?" after the title that opens this */
@@ -49,7 +49,7 @@ export function Panel({ title, level = 2, id, help, actions, children, sx, ...da
                 }}
             >
                 {/* the level is set: the theme makes a subtitle a paragraph */}
-                <Typography id={titleId} component={`h${level}`} variant={level === 2 ? 'h6' : 'subtitle1'} sx={{ fontWeight: 600 }}>
+                <Typography id={titleId} component={`h${level}`} variant={level === 2 ? 'h6' : level === 3 ? 'subtitle1' : 'subtitle2'} sx={{ fontWeight: 600 }}>
                     {title}
                 </Typography>
                 {help && <HelpButton label={help.label}>{help.content}</HelpButton>}

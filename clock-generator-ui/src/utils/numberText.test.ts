@@ -4,9 +4,11 @@ import {
     OUTPUT_PER_PERIOD_HEADER,
     TICK_DECIMALS,
     WAKE_UPS_HEADER,
+    durationText,
     formatNumberText,
     itemsPerSecondHelper,
     machineNodeCraftLine,
+    makesHeader,
     maxRateLabel,
     rateHeader,
     shownNumberText,
@@ -105,6 +107,21 @@ describe('rateHeader', () => {
     it('names the copies the rate is the total of', () => {
         expect(rateHeader(11)).toBe('Rate (items/s,\u00a0all\u00a011\u00a0copies)');
         expect(rateHeader(1)).toBe('Rate (items/s)');
+    });
+});
+
+describe('makesHeader', () => {
+    it('says what the clock makes, for every copy', () => {
+        expect(makesHeader(11)).toBe('Makes (items/s, all 11 copies)');
+        expect(makesHeader(1)).toBe('Makes (items/s)');
+    });
+});
+
+describe('durationText', () => {
+    it('gives the ticks and the seconds in one form', () => {
+        expect(durationText(240, locale)).toBe('240 ticks (4 s)');
+        expect(durationText(1234.5678, locale)).toBe('1234.568 ticks (20.58 s)');
+        expect(durationText(1.5, locale)).toBe('1.5 ticks (0.03 s)');
     });
 });
 

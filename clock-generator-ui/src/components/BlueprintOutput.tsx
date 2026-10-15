@@ -11,7 +11,7 @@ import {
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
 import { SURFACE } from '../theme/tokens';
-import { Panel } from './Panel';
+import { durationText } from '../utils/numberText';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
 
 interface BlueprintOutputProps {
@@ -32,19 +32,23 @@ interface BlueprintOutputProps {
 
 /** Under the string */
 const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. The steps are at the top of Results.';
+/** Before the clock's period over the string */
+const CLOCK_PERIOD_LABEL = 'Clock period:';
 
-/** The selected clock's blueprint string, for reading or copying by hand */
+/**
+ * The selected clock's blueprint string, for reading or copying by hand. The Details tab it is in names it, so it has
+ * no heading of its own.
+ */
 export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor, copied, onCopy }: BlueprintOutputProps) {
     if (!blueprintString) {
         return null;
     }
 
     return (
-        <Panel title="Blueprint string" sx={{ mb: 0 }}>
+        <Box>
             {simulationDurationTicks !== undefined && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Simulation duration: {simulationDurationTicks} ticks (
-                    {(simulationDurationTicks / 60).toFixed(2)} seconds)
+                    {CLOCK_PERIOD_LABEL} {durationText(simulationDurationTicks)}
                 </Typography>
             )}
             {rateWarning && (
@@ -66,7 +70,8 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                     </Button>
                 </Box>
             ) : (
-                <Box sx={{ position: 'relative' }}>
+                // the Copy button beside the box, not over it, so it never covers the string
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                     <TextField
                         multiline
                         rows={6}
@@ -81,13 +86,8 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                     <IconButton
                         onClick={onCopy}
                         aria-label={copied ? BUTTON_NAMES.blueprintCopied : BUTTON_NAMES.copyBlueprintString}
-                        sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            bgcolor: 'background.paper',
-                        }}
                         color={copied ? 'success' : 'default'}
+                        sx={{ flexShrink: 0 }}
                     >
                         {copied ? <Check /> : <ContentCopy />}
                     </IconButton>
@@ -98,7 +98,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                     {STRING_CAPTION}
                 </Typography>
             )}
-        </Panel>
+        </Box>
     );
 }
 

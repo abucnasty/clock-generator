@@ -1,5 +1,7 @@
 import { Box } from '@mui/material';
+import { Fragment } from 'react';
 import type { WakeWindowRow } from '../utils/wakeWindows';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 
@@ -13,8 +15,12 @@ export function WakeRowMoves({ row }: { row: Pick<WakeWindowRow, 'items' | 'rout
     return (
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap', maxWidth: '100%', verticalAlign: 'middle' }}>
             <Box component="span" sx={{ display: 'inline-flex', flexShrink: 0, gap: 0.5 }}>
-                {row.items.map(item => (
-                    <FactorioIcon key={item} name={item} size={20} titled fallback={<GameName id={item} />} />
+                {row.items.map((item, index) => (
+                    <Fragment key={item}>
+                        {/* the icons stand apart on screen; a screen reader hears "Bioflux, Jelly", not one run of names */}
+                        {index > 0 && <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>}
+                        <FactorioIcon name={item} size={20} titled fallback={<GameName id={item} />} />
+                    </Fragment>
                 ))}
             </Box>
             <Box component="span" sx={{ minWidth: 0 }}>{colon}{row.route}</Box>

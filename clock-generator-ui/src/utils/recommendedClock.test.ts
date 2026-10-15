@@ -130,8 +130,8 @@ describe('recommendedIndexOf', () => {
 describe('recommendationReason', () => {
     const others = [clock('b', { wake_ups_per_minute: 20 }), clock('c', { wake_ups_per_minute: 30 })];
 
-    it('says the pick has the fewest wake-ups among the Stable clocks at the rate on a moving belt', () => {
-        expect(reason([clock('a'), ...others])).toBe('Fewest wake-ups among the Stable clocks at 240/s on a moving belt.');
+    it('says the pick has the fewest wake-ups among the clocks that hold the rate and recover on a moving belt', () => {
+        expect(reason([clock('a'), ...others])).toBe('Fewest wake-ups among the clocks that hold 240/s and recover on a moving belt.');
     });
 
     it('says "hold" only on a build with a deadlock risk, where a clock that holds the rate counts without recovering', () => {
@@ -141,16 +141,16 @@ describe('recommendationReason', () => {
 
     it('says the belts stand still when the build says so', () => {
         const still = [clock('a', { beltLabel: 'non-moving' }), ...others];
-        expect(reason(still, STILL)).toBe('Fewest wake-ups among the Stable clocks at 240/s with belts that stand still.');
+        expect(reason(still, STILL)).toBe('Fewest wake-ups among the clocks that hold 240/s and recover with belts that stand still.');
     });
 
     it('leaves the belt out when no clocked inserter picks up from a belt', () => {
-        expect(reason([clock('a', { beltLabel: '' }), ...others])).toBe('Fewest wake-ups among the Stable clocks at 240/s.');
+        expect(reason([clock('a', { beltLabel: '' }), ...others])).toBe('Fewest wake-ups among the clocks that hold 240/s and recover.');
     });
 
     it('leaves the belt out for a subtick clock, made for a non-moving belt, on a build with moving belts', () => {
         expect(reason([clock('subtick', { beltLabel: 'non-moving' }), ...others]))
-            .toBe('Fewest wake-ups among the Stable clocks at 240/s.');
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover.');
     });
 
     describe('a clock made for belts that stand still, picked because none for a moving belt meets the rate', () => {
@@ -159,19 +159,19 @@ describe('recommendationReason', () => {
 
         it('says it is the only one when it is', () => {
             expect(reason([still('slackless'), short('b', 1)]))
-                .toBe('No Stable clock made for a moving belt runs at 240/s. This one, made for belts that stand still, '
+                .toBe('No clock made for a moving belt holds 240/s and recovers. This one, made for belts that stand still, '
                     + 'does. It may fail on a moving belt.');
         });
 
         it('says it has the fewest wake-ups of those that do', () => {
             expect(reason([still('a', { wake_ups_per_minute: 30 }), still('b'), short('c', 1)]))
-                .toBe('No Stable clock made for a moving belt runs at 240/s. Of those made for belts that stand still, '
+                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for belts that stand still, '
                     + 'this one has the fewest wake-ups. It may fail on a moving belt.');
         });
 
         it('says what broke a tie on wake-ups', () => {
             expect(reason([still('a', { window_count: 3 }), still('b')]))
-                .toBe('No Stable clock made for a moving belt runs at 240/s. Of those made for belts that stand still, '
+                .toBe('No clock made for a moving belt holds 240/s and recovers. Of those made for belts that stand still, '
                     + 'this one has the fewest wake-ups. 1 other clock ties on wake-ups, so the one with fewer wake '
                     + 'windows was picked. It may fail on a moving belt.');
         });
@@ -186,34 +186,34 @@ describe('recommendationReason', () => {
     describe('when no clock meets the rate', () => {
         it('says how near the pick runs', () => {
             expect(reason([short('far', -3), short('near', -0.5)]))
-                .toBe('No Stable clock runs at 240/s. This one runs nearest to it, at 239.5/s.');
+                .toBe('No clock holds 240/s and recovers. This one runs nearest to it, at 239.5/s.');
         });
 
         it('says the pick holds its output when an equally near clock does not', () => {
             expect(reason([short('drifts', -0.5, false), short('holds', 0.5)]))
-                .toBe('No Stable clock runs at 240/s. This one runs nearest to it, at 240.5/s. Of the equally near '
+                .toBe('No clock holds 240/s and recovers. This one runs nearest to it, at 240.5/s. Of the equally near '
                     + 'clocks, it is the one that holds its output from a clean start.');
         });
 
         it('does not say so when no other clock is equally near', () => {
             expect(reason([short('drifts', -2, false), short('holds', 0.5)]))
-                .toBe('No Stable clock runs at 240/s. This one runs nearest to it, at 240.5/s.');
+                .toBe('No clock holds 240/s and recovers. This one runs nearest to it, at 240.5/s.');
         });
 
         it('does not call a clock at the target rate the nearest: it holds the rate from a clean start', () => {
             const atRate = [short('more', 0, true, { wake_ups_per_minute: 30 }), short('fewer', 0), short('far', -2)];
-            expect(reason(atRate)).toBe('No Stable clock runs at 240/s. This one holds 240/s from a clean start with '
+            expect(reason(atRate)).toBe('No clock holds 240/s and recovers. This one holds 240/s from a clean start with '
                 + 'the fewest wake-ups.');
         });
 
         it('says a clock at the rate that does not hold its output only runs at it', () => {
-            expect(reason([short('drifts', 0, false)])).toBe('No Stable clock runs at 240/s. This one runs at 240/s with the fewest wake-ups.');
+            expect(reason([short('drifts', 0, false)])).toBe('No clock holds 240/s and recovers. This one runs at 240/s with the fewest wake-ups.');
             expect(reason([short('uncounted', 0, true, { wake_ups_per_minute: null })]))
-                .toBe('No Stable clock runs at 240/s. This one holds 240/s from a clean start.');
+                .toBe('No clock holds 240/s and recovers. This one holds 240/s from a clean start.');
         });
 
         it('does not print the same rate twice when the pick is off by less than the printed figure', () => {
-            expect(reason([short('close', 0.002)])).toBe('No Stable clock runs at 240/s. This one runs nearest to it.');
+            expect(reason([short('close', 0.002)])).toBe('No clock holds 240/s and recovers. This one runs nearest to it.');
         });
 
         it('says no clock holds the rate on a build with a deadlock risk', () => {
@@ -230,46 +230,46 @@ describe('recommendationReason', () => {
 
     it('says how many clocks for a moving belt tie on wake-ups and that the one with fewer wake windows was picked', () => {
         expect(reason([clock('a', { window_count: 3 }), clock('b', { wake_ups_per_minute: 10.0004 }), ...others]))
-            .toBe('Fewest wake-ups among the Stable clocks at 240/s on a moving belt. 1 other clock for a moving belt '
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover on a moving belt. 1 other clock for a moving belt '
                 + 'ties on wake-ups, so the one with fewer wake windows was picked.');
         expect(reason([clock('a', { window_count: 3 }), clock('b'), clock('c', { window_count: 8 })]))
-            .toBe('Fewest wake-ups among the Stable clocks at 240/s on a moving belt. 2 other clocks for a moving belt '
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover on a moving belt. 2 other clocks for a moving belt '
                 + 'tie on wake-ups, so the one with fewer wake windows was picked.');
     });
 
     it('says the windows are counted without the extra ones when the table does not show the pick with fewer', () => {
         expect(reason([clock('a', { window_count: 3, shownWindows: 7 }), clock('b', { window_count: 4, shownWindows: 6 })]))
-            .toBe('Fewest wake-ups among the Stable clocks at 240/s on a moving belt. 1 other clock for a moving belt '
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover on a moving belt. 1 other clock for a moving belt '
                 + 'ties on wake-ups, so the one with fewer wake windows was picked, not counting the extra wake windows that '
                 + 'only cut wake-ups.');
     });
 
     it('leaves the belt out of the tie with belts that stand still', () => {
         expect(reason([clock('a', { window_count: 3, beltLabel: 'non-moving' }), clock('b', { beltLabel: 'non-moving' })], STILL))
-            .toBe('Fewest wake-ups among the Stable clocks at 240/s with belts that stand still. 1 other clock ties on '
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover with belts that stand still. 1 other clock ties on '
                 + 'wake-ups, so the one with fewer wake windows was picked.');
     });
 
     it('says the first listed was picked when the windows tie too', () => {
         expect(reason([clock('a'), clock('b'), ...others]))
-            .toBe('Fewest wake-ups among the Stable clocks at 240/s on a moving belt. 1 other clock for a moving belt '
+            .toBe('Fewest wake-ups among the clocks that hold 240/s and recover on a moving belt. 1 other clock for a moving belt '
                 + 'ties on wake-ups and on wake windows, so the first listed was picked.');
     });
 
-    it('says when the pick is the only Stable clock at the rate', () => {
-        expect(reason([short('b', 1), clock('a'), short('c', -1)])).toBe('The only Stable clock at 240/s on a moving belt.');
+    it('says when the pick is the only clock that holds the rate and recovers', () => {
+        expect(reason([short('b', 1), clock('a'), short('c', -1)])).toBe('The only clock that holds 240/s and recovers on a moving belt.');
         expect(reason([clock('a', { deadlock: true }), short('b', 1)])).toBe('The only clock that holds 240/s on a moving belt.');
     });
 
     it('goes by the windows when the wake-ups were not counted', () => {
         expect(reason([clock('a', { wake_ups_per_minute: null, window_count: 3 }), clock('b', { wake_ups_per_minute: null })]))
-            .toBe('Fewest wake windows among the Stable clocks at 240/s on a moving belt. Wake-ups could not be counted for them.');
+            .toBe('Fewest wake windows among the clocks that hold 240/s and recover on a moving belt. Wake-ups could not be counted for them.');
     });
 
     it('says the pick may change while clocks are still being made, and not after', () => {
         const clocks = [clock('a'), ...others];
         expect(recommendationReason(clocks, 0, MOVING, false))
-            .toBe('More clocks are still being made, so this may change. Fewest wake-ups among the Stable clocks at 240/s on a moving belt.');
+            .toBe('More clocks are still being made, so this may change. Fewest wake-ups among the clocks that hold 240/s and recover on a moving belt.');
         expect(recommendationReason(clocks, 0, MOVING, true)).not.toContain('still being made');
     });
 
@@ -280,9 +280,9 @@ describe('recommendationReason', () => {
 
     it('prints the target rate as the rate warning does', () => {
         const at = (rate: number) => [{ ...clock('a'), assessment: { items_per_second: rate } }];
-        expect(reason(at(240))).toBe('The only Stable clock at 240/s on a moving belt.');
-        expect(reason(at(12.5))).toBe('The only Stable clock at 12.5/s on a moving belt.');
-        expect(reason(at(1 / 3))).toBe('The only Stable clock at 0.33/s on a moving belt.');
+        expect(reason(at(240))).toBe('The only clock that holds 240/s and recovers on a moving belt.');
+        expect(reason(at(12.5))).toBe('The only clock that holds 12.5/s and recovers on a moving belt.');
+        expect(reason(at(1 / 3))).toBe('The only clock that holds 0.33/s and recovers on a moving belt.');
     });
 
     it('does not change with the search mode, which only changes which clocks there are', () => {
@@ -296,8 +296,8 @@ describe('recommendationReason', () => {
 });
 
 describe('RECOMMENDED_COPY', () => {
-    it('leads with "Best so far" and offers "Back to the pick" while clocks are still being made', () => {
-        expect(RECOMMENDED_COPY.leadWhileGenerating('3 output swings per cycle')).toBe('Best so far: 3 output swings per cycle.');
+    it('says "Best so far" and offers "Back to the pick" while clocks are still being made', () => {
+        expect(RECOMMENDED_COPY.chipWhileGenerating).toBe('Best so far');
         expect(RECOMMENDED_COPY.backWhileGenerating).toBe('Back to the pick');
     });
 
@@ -308,8 +308,8 @@ describe('RECOMMENDED_COPY', () => {
 
 describe('disclosureRunLine', () => {
     it('says the belt the clocks were made for and whether the searches ran', () => {
-        expect(disclosureRunLine(MOVING)).toBe('This run assumed moving belts. The slower searches were only run if no other clock was stable.');
-        expect(disclosureRunLine(STILL)).toBe('This run assumed belts that stand still. The slower searches were only run if no other clock was stable.');
+        expect(disclosureRunLine(MOVING)).toBe('This run assumed moving belts. The slower searches were only run if no other clock held the rate and recovered.');
+        expect(disclosureRunLine(STILL)).toBe('This run assumed belts that stand still. The slower searches were only run if no other clock held the rate and recovered.');
         expect(disclosureRunLine({ nonMovingBelts: false, searchedForFewerWakeUps: true }))
             .toBe('This run assumed moving belts. The slower searches for fewer wake-ups were run.');
         expect(disclosureRunLine({ nonMovingBelts: true, searchedForFewerWakeUps: true }))
@@ -367,19 +367,30 @@ describe('partitionClockRows', () => {
             selectedIndex: 0, recommendedIndex: 5, showUnstable: true, pinnedIds: hidden.unstable.map(row => row.alternative.id),
         });
         expect(indexes(shown.unstable)).toEqual([5, 2, 3, 6]);
-        // with an unstable row selected too, both stay in place
+        // with an unstable row selected too, both stay in place, the recommended first
         const both = partitionClockRows(utility, { selectedIndex: 3, recommendedIndex: 5, showUnstable: false });
-        expect(indexes(both.unstable)).toEqual([3, 5]);
+        expect(indexes(both.unstable)).toEqual([5, 3]);
         expect(indexes(partitionClockRows(utility, {
             selectedIndex: 3, recommendedIndex: 5, showUnstable: true, pinnedIds: both.unstable.map(row => row.alternative.id),
-        }).unstable)).toEqual([3, 5, 2, 6]);
+        }).unstable)).toEqual([5, 3, 2, 6]);
+    });
+
+    it('puts the recommended clock first in its group, the others in list order', () => {
+        const rows = partitionClockRows(clocks, { selectedIndex: 0, recommendedIndex: 2, showUnstable: true });
+        expect(indexes(rows.stable)).toEqual([2, 0]);
+        expect(indexes(rows.unstable)).toEqual([1, 3, 4]);
+    });
+
+    it('keeps list order while a run can still change the pick', () => {
+        const rows = partitionClockRows(clocks, { selectedIndex: 0, recommendedIndex: 2, showUnstable: true, recommendedFirst: false });
+        expect(indexes(rows.stable)).toEqual([0, 2]);
     });
 
     it('shows every clock in one group when none is stable', () => {
         const none = rowsOf(['unstable', 'no recovery']);
         const rows = partitionClockRows(none, { selectedIndex: 1, recommendedIndex: 1, showUnstable: false });
         expect(rows.stable).toEqual([]);
-        expect(indexes(rows.unstable)).toEqual([0, 1]);
+        expect(indexes(rows.unstable)).toEqual([1, 0]);
         expect(rows.anyStable).toBe(false);
         expect(rows.hiddenCount).toBe(0);
         expect(rows.unstableCount).toBe(2);
