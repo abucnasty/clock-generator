@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.15.0] - 2026-10-15
+
+### Changed
+- `copies` may be a fraction such as 5.5, for a build that holds part of a block.
+- The chemical science samples are replaced by one shared-foundry block at 5.5 copies.
+
 ## [0.14.0] - 2026-10-15
 
 ### Changed
