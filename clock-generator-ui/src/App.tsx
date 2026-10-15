@@ -313,11 +313,14 @@ function App() {
     // set by a switch to another build (Open, New, Duplicate), which says "Opened build: …" itself: the clocks that come
     // back with it are not announced over that. Good for the render right after the switch only
     const quietRestoreRef = useRef(false);
+    // bumped by every replace of the build, which drops a restore still on its way: the one for the build that is now
+    // in the form starts again, even when the form already had it (a switch that set the form before it was handled)
+    const [replacedCount, setReplacedCount] = useState(0);
     useEffect(() => {
         if (isInitialized && resultsEmpty) {
             void restoreResultsFor(configKey, 'replace', { announce: !quietRestoreRef.current });
         }
-    }, [configKey, isInitialized, resultsEmpty, restoreResultsFor]);
+    }, [configKey, isInitialized, resultsEmpty, replacedCount, restoreResultsFor]);
     useEffect(() => {
         quietRestoreRef.current = false;
     });
@@ -641,8 +644,9 @@ function App() {
         const formKey = replacedKeyRef.current ?? undefined;
         replacedKeyRef.current = null;
         clearResults({ formKey });
+        setReplacedCount((count) => count + 1);
         setView('configure');
-    }, [clearResults]);
+    }, [clearResults, setReplacedCount]);
     // the same for a switch to another build, which announces itself
     const handleBuildSwitched = useCallback(() => {
         quietRestoreRef.current = true;

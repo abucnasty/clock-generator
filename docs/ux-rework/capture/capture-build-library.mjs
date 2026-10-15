@@ -432,7 +432,12 @@ try {
                 rec.check("switch back: Target Output's Recipe field shows the first build's recipe again", backShown === LOGISTIC_TITLE, JSON.stringify(backShown));
                 const pressed = await ui.viewToggle(page, 'Configure').getAttribute('aria-pressed').catch(() => null); // SELECTOR: confirm
                 rec.check('switch back: the view is Configure', pressed === 'true' || (await ui.targetCopies(page).isVisible().catch(() => false)));
-                rec.check('switch back: Results are cleared (no Clocks table)', (await ui.clockTable(page).count()) === 0);
+                // 3.3: the clocks kept for a build come back with it (made at 1440 only); the view is Configure, where the Clocks
+                // table is hidden, so the bar's Copy says whether there are clocks
+                {
+                    const copies = await page.getByRole('banner').getByRole('button', { name: /^Copy (blueprint|current best|old clock)/ }).count();
+                    rec.check(width === 1440 ? 'switch back: the clocks kept for the build are back (the bar has Copy)' : 'switch back: no clocks (none were made for it; the bar has no Copy)', width === 1440 ? copies === 1 : copies === 0, `${copies} Copy button(s)`);
+                }
                 rec.check('switching offers no Undo (nothing is lost)', (await ui.messageUndo(page).count()) === 0);
             });
         });
