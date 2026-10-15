@@ -1546,6 +1546,16 @@ export const ui = {
     ruleCopyFrom: (scope) => scope.getByRole('combobox', { name: /^Copy from another/ }),
     ruleReplaceRule: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Replace rule', exact: true }),
     ruleCopyCancel: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Cancel', exact: true }),
+    /** The header's Cancel, at the end of the progress row while a generation or Generate's check runs (owner: 3.3 cancel) */
+    cancel: (page) => page.getByRole('banner').getByRole('button', { name: /^Cancel\b/ }),
+    /** The header's progress bar: the generation's, or the indeterminate one of Generate's check (owner: 3.3 cancel) */
+    progressRow: (page) => page.getByRole('banner').locator('.MuiLinearProgress-root'),
+    /** The stale banner over Results ("These clocks are for …, made at …") (owner: 3.3 cancel) */
+    staleBanner: (page) => page.getByRole('main').locator('[data-stale-banner]'),
+    /** The stale banner's Generate again (owner: 3.3 cancel) */
+    generateAgain: (page) => page.getByRole('main').locator('[data-stale-banner]').getByRole('button', { name: 'Generate again', exact: true }),
+    /** The notes under the stale banner: a stopped run, a pick the run did not make (owner: 3.3 cancel) */
+    runNote: (page) => page.getByRole('main').locator('[data-run-notes]'),
 };
 
 let namesCache;

@@ -385,6 +385,8 @@ export function WorkflowBar({
                             variant="text"
                             color="inherit"
                             size="small"
+                            // named in its own case: the button's capitals are only CSS, which Chrome reads into the name
+                            aria-label={CHECK_TEXT.cancel}
                             sx={{ flexShrink: 0, mt: -0.5 }}
                             onClick={() => {
                                 cancelledRef.current = true;

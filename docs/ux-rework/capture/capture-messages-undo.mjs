@@ -1268,33 +1268,20 @@ try {
                     await goConfigure(page);
                     await expectRestored(page, rec, 'results: row delete', before);
                 }
-                // Reset, then Undo: the form is back, the clocks are not, and a notice says so
+                // Reset, then Undo: the form is back, and so are the clocks (3.3), with no notice after it
                 await dismissMessage(page);
                 await goConfigure(page);
                 const beforeReset = await readState(page);
                 await resetViaMenu(page);
                 await waitMessage(page, /^Build reset\./);
                 if (await clickUndo(page, rec, 'results: reset')) {
-                    const tUndo = Date.now();
-                    // the notice shows where Undo was clicked, and a hovered message waits (MUI pauses its timer): move off it
                     await page.mouse.move(5, page.viewportSize().height - 5);
-                    const notice = await checkMessage(page, rec, 'undo-notice', { re: /Build restored/, label: 'notice after Undo with clocks generated', desc: 'Undo of Reset after Generate: the "Build restored..." notice' });
-                    if (notice) {
-                        const text = (await notice.textContent()) ?? '';
-                        // (not a 1.5 F change: Phase 2's wording says "click Generate", Validate being Check only now)
-                        rec.check('notice: it says the clocks were cleared and to click Generate', /clocks you had generated were cleared/i.test(text) && /click Generate/i.test(text), text.slice(0, 120));
-                        rec.check('notice: no Undo button on it (message only)', (await undoBtn(page).count()) === 0);
-                        await sleepUntil(tUndo + 6000);
-                        rec.check('notice: still on screen at 6 s (it lasts about 8 s)', (await snack(page).filter({ hasText: /Build restored/ }).count()) === 1);
-                        await sleepUntil(tUndo + 10_000);
-                        rec.check('notice: gone by 10 s', (await snack(page).filter({ hasText: /Build restored/ }).count()) === 0);
-                    }
-                    // Undo puts back the form only: the check result went with the clocks (1.1), so the Validation panel reads differently
+                    await page.waitForTimeout(800);
+                    rec.check('results: no "clocks were cleared" notice after Undo of Reset (3.3)', (await snack(page).filter({ hasText: /clocks you had generated were cleared/i }).count()) === 0);
                     await expectRestored(page, rec, 'results: reset', beforeReset, { view: false });
-                    rec.info('results: reset', 'the Configure view text is not compared: the Validation panel is unvalidated after Undo, as the 1.3 spec says');
                     await goResults(page);
-                    rec.check('results: Results says "Nothing generated yet" after Undo of Reset', (await page.getByText(/Nothing generated yet/).count()) >= 1);
-                    await rec.shot(page, 'undo-results-nothing-generated', { desc: 'Results after Reset then Undo: "Nothing generated yet"' });
+                    rec.check('results: the clocks are back after Undo of Reset (3.3: the Clocks table has rows)', (await page.getByRole('table', { name: 'Clocks', exact: true }).getByRole('radio').count()) >= 1);
+                    await rec.shot(page, 'undo-results-clocks-back', { desc: 'Results after Reset then Undo: the clocks are back' });
                     await goConfigure(page);
                 }
             }, page);
