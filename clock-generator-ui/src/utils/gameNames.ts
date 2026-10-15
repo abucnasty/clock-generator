@@ -32,6 +32,11 @@ export function iconName(names: GameNames, id: string): string {
     return own(names.item, id) ?? own(names.recipe, id) ?? id;
 }
 
+/** A name with its id after it for a hover, "Iron plate (iron-plate)"; the id alone when it has no other name */
+export function nameWithId(name: string, id: string): string {
+    return name === id ? id : `${name} (${id})`;
+}
+
 /** Lower case, with dashes, underscores and punctuation as single spaces: "Fluoroketone (Cold)" and `fluoroketone-cold` agree */
 export function normalizeForSearch(text: string): string {
     return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();

@@ -22,6 +22,8 @@ export function FactorioIcon({ name, size = 24, alt = name, fallback: _fallback 
     return (
         <Box
             component="img"
+            // a new element for a new picture: one that failed to load hid itself, and the next one must show
+            key={iconPath}
             src={iconPath}
             alt={alt}
             sx={{

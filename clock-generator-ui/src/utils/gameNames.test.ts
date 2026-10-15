@@ -3,6 +3,7 @@ import {
     iconName,
     itemName,
     matchesQuery,
+    nameWithId,
     normalizeForSearch,
     recipeName,
     resolveTyped,
@@ -68,6 +69,16 @@ describe('itemName, recipeName and iconName', () => {
 
     it('name an icon by the item first', () => {
         expect(iconName(NAMES, WATER_BARREL)).toBe('Water barrel');
+    });
+});
+
+describe('nameWithId', () => {
+    it('puts the id after a name', () => {
+        expect(nameWithId('Iron plate', 'iron-plate')).toBe('Iron plate (iron-plate)');
+    });
+
+    it('gives the id alone when it is its own name', () => {
+        expect(nameWithId('foo-bar', 'foo-bar')).toBe('foo-bar');
     });
 });
 
