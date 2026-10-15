@@ -1,6 +1,6 @@
 {
   "name": "clock-generator",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Factorio clock generator for crafting machines",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,6 +25,7 @@
     "build": "tsc",
     "verify": "tsc && node dist/verify-recording.js",
     "record": "tsc && node dist/record-in-factorio.js",
+    "calls": "tsc && node dist/rule-calls.js",
     "test": "vitest run --project unit",
     "test:generation": "vitest run --project generation",
     "test:all": "vitest run",
