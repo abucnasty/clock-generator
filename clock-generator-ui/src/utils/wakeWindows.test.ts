@@ -230,8 +230,10 @@ describe('buildWakeWindowRows', () => {
                 ],
             },
         }));
-        expect(inserter.detail).toBe('iron-plate: Belt 1 to Machine 2');
-        expect(drill.detail).toBe('iron-ore: into Machine 4');
+        expect(inserter.items).toEqual(['iron-plate']);
+        expect(inserter.route).toBe('Belt\u00a01 to Machine\u00a02');
+        expect(drill.items).toEqual(['iron-ore']);
+        expect(drill.route).toBe('into Machine\u00a04');
     });
 
     it('tells the modes apart', () => {
@@ -269,7 +271,8 @@ describe('buildWakeWindowRows', () => {
             asBuilt: asBuilt({ 'inserter:6': 3 }),
         }));
         expect(rows.map(row => row.id)).toEqual(['inserter:5', 'inserter:6', 'drill:2']);
-        expect(rows[0].detail).toBe('');
+        expect(rows[0].items).toEqual([]);
+        expect(rows[0].route).toBe('');
     });
 
     it('takes the wake-ups by id, and has none for a drill or a clock without a count', () => {

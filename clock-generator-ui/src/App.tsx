@@ -63,7 +63,7 @@ import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBe
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { a11yThemeComponents } from './utils/a11yTheme';
 import { itemName, recipeName, type GameNames } from './utils/gameNames';
-import { GameNamesContext } from './hooks/useGameNames';
+import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
@@ -127,10 +127,12 @@ const baseTheme = createTheme({
 const darkTheme = createTheme(baseTheme, { components: a11yThemeComponents(baseTheme) });
 
 /** The theme, and the in-game names every picker and label reads */
-function PageProviders({ gameNames, children }: { gameNames: GameNames; children: ReactNode }) {
+function PageProviders({ gameNames, searchOnlyRecipes, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; children: ReactNode }) {
     return (
         <ThemeProvider theme={darkTheme}>
-            <GameNamesContext value={gameNames}>{children}</GameNamesContext>
+            <GameNamesContext value={gameNames}>
+                <SearchOnlyRecipesContext value={searchOnlyRecipes}>{children}</SearchOnlyRecipesContext>
+            </GameNamesContext>
         </ThemeProvider>
     );
 }
@@ -142,6 +144,7 @@ function App() {
         isRunning,
         progressStore,
         recipeNames,
+        searchOnlyRecipes,
         resourceNames,
         itemNames,
         gameNames,
@@ -308,7 +311,8 @@ function App() {
         machines: config.machines,
         coverageIssues: checkedCoverageIssues ?? [],
         machinesMax,
-    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax]);
+        itemLabel: (id) => itemName(gameNames, id),
+    }), [config.target_output, config.machines, checkedCoverageIssues, machinesMax, gameNames]);
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
@@ -662,7 +666,7 @@ function App() {
     }), [runChecked, updateOverrides, runSimulation, debugSteps, streamLogs]);
 
     return (
-        <PageProviders gameNames={gameNames}>
+        <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>

@@ -5,7 +5,7 @@
  */
 import type { ClockAlternativeView } from '../worker/types';
 import { entityLabel, type LabelKind } from './entityLabel';
-import { rowDetailText } from './wakeWindowCopy';
+import { rowRouteText } from './wakeWindowCopy';
 
 /** Inclusive ticks of one clock period */
 export interface TickSpan {
@@ -44,8 +44,10 @@ export interface WakeWindowRow {
     number: number;
     /** "Inserter 3" */
     label: string;
-    /** What it moves and between what, "iron-plate: Belt 1 to Machine 2"; empty when the run does not say */
-    detail: string;
+    /** The ids of the items it moves, "iron-plate"; empty when the run does not say. The screen shows them as icons. */
+    items: string[];
+    /** Between what, "Belt 1 to Machine 2"; a drill's "into Machine 1"; empty when the run does not say */
+    route: string;
     windows: WakeWindow[];
     mode: WakeWindowRowMode;
     ownClock?: OwnClock;
@@ -260,16 +262,15 @@ export function buildWakeWindowRows(alternative: WakeWindowSource): WakeWindowRo
             onTicks = onShare * period;
         }
 
-        const detail = entity
-            ? rowDetailText(entity.items, kind === 'inserter' ? endLabel(entity.source) : null, endLabel(entity.sink))
-            : '';
+        const route = entity ? rowRouteText(kind === 'inserter' ? endLabel(entity.source) : null, endLabel(entity.sink)) : '';
 
         rows.push({
             id,
             kind,
             number,
             label: entityLabel(kind, number),
-            detail,
+            items: entity ? [...entity.items] : [],
+            route,
             windows,
             mode,
             ...(ownClock ? { ownClock } : {}),
