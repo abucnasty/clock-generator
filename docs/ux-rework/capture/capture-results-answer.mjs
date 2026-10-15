@@ -254,16 +254,21 @@ function readTable() {
             const cells = [...tr.children].map((c) => clean(c.textContent));
             const labelCell = tr.children[1];
             const first = labelCell && labelCell.firstElementChild && labelCell.firstElementChild.firstChild;
+            // 2.5 B: the Clock cell leads with the plain name; the engine's name is the line marked data-engine-name
+            const engine = labelCell && labelCell.querySelector('[data-engine-name]');
             return {
                 index,
-                label: clean(first ? first.textContent : labelCell ? labelCell.textContent : ''),
+                label: clean(engine ? engine.textContent : first ? first.textContent : labelCell ? labelCell.textContent : ''),
                 selected: tr.querySelector('input[type=radio]').checked,
                 chip: [...tr.querySelectorAll('.MuiChip-label')].map((c) => clean(c.textContent)).find((t) => /^(Recommended|Best so far)$/.test(t)) || null,
                 cells,
             };
         });
     const pending = [...table.querySelectorAll('tbody tr')].filter((tr) => !tr.querySelector('input[type=radio]') && tr.querySelector('.MuiCircularProgress-root')).length;
-    return { present: true, heads, cols: { belt: at(/^Belt/), rate: at(/^(Rate|Makes)/), wake: at(/^Wake-ups/), status: at(/^Status/) }, rows, pending, text: clean(table.innerText).slice(0, 400) };
+    // 2.5 B: when every shown clock makes the same rate, the compact table says it in one line above it instead of a column
+    const panel = table.closest('.MuiPaper-root');
+    const foldNode = panel ? panel.querySelector('[data-makes-fold]') : null;
+    return { present: true, heads, cols: { belt: at(/^Belt/), rate: at(/^(Rate|Makes)/), wake: at(/^Wake-ups/), status: at(/^Status/) }, rows, pending, fold: foldNode ? clean(foldNode.textContent) : null, text: clean(table.innerText).slice(0, 400) };
 }
 
 /** Pinned (fixed/sticky) boxes near the top of the viewport: the bottom of the lowest one */
@@ -388,7 +393,8 @@ async function cardChecks({ page, rec, tag = 'card', path = LOGISTIC }) {
     // the numbers equal the selected row's, at 2 decimals
     await chk(rec, `${p} Makes equals the selected row's rate at 2 decimals; sub-line "all N copies"`, async () => {
         const t = card.tiles.Makes;
-        const cell = sel && table.cols.rate >= 0 ? sel.cells[table.cols.rate] : null;
+        // the selected row's rate cell, or the line "All 5 clocks make 240/s." that stands for that column when it is folded (2.5 B)
+        const cell = sel && table.cols.rate >= 0 ? sel.cells[table.cols.rate] : sel && table.fold ? table.fold.replace(/^All \d+ clocks make /, '') : null;
         const a = Number((/(\d+(?:\.\d+)?)/.exec((t && t.value) || '') || [])[1]);
         const b = Number((/(\d+(?:\.\d+)?)/.exec(cell || '') || [])[1]);
         const copies = (/all (\d+) copies/.exec((table.heads || [])[table.cols.rate] || '') || [])[1];

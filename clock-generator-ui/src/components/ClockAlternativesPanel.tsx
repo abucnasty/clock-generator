@@ -212,7 +212,7 @@ export function ClockAlternativesPanel({
                         {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
-                        <span>{clockTechnicalName(alternative)}</span>
+                        <span data-engine-name="">{clockTechnicalName(alternative)}</span>
                         <HelpButton label={clockHelpName(alternative.label)}>
                             <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
                             {sentencesOf(alternative.description).map(sentence => (
