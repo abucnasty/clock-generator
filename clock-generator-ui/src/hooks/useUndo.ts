@@ -107,7 +107,7 @@ export function useUndo(
         const undo = (id: number) => {
             const current = entryRef.current;
             if (current?.id !== id) return;
-            const outcome = undoOutcome(current, ++counterRef.current);
+            const outcome = undoOutcome(current);
             if (!outcome) return;
             if (returnRef.current) returnRef.current.undone = true;
             const revert = revertRef.current?.id === id ? revertRef.current.revert : null;
@@ -129,7 +129,6 @@ export function useUndo(
         const offerUndo = (
             message: string | ((form: ConfigFormData) => string | null),
             options?: {
-                resultsCleared?: boolean;
                 restoredLabel?: (form: ConfigFormData) => string | null;
                 revert?: (snapshot: ConfigFormData) => void;
             },
@@ -145,7 +144,7 @@ export function useUndo(
             };
             returnRef.current = record;
             // before the saved build is loaded, the form is the default one, which is not the player's to go back to
-            const entry = createUndoEntry(++counterRef.current, text, form, isLoadedRef.current, options?.resultsCleared ?? false);
+            const entry = createUndoEntry(++counterRef.current, text, form, isLoadedRef.current);
             revertRef.current = options?.revert ? { id: entry.id, revert: options.revert } : null;
             show(entry, record);
         };

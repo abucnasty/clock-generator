@@ -12,7 +12,6 @@ const UNDO_LABEL = 'Undo';
 export const UNDO_RESET_MESSAGE = 'Build reset.';
 export const UNDO_IMPORT_MESSAGE = 'Build file opened.';
 const UNDO_DRILLS_OFF_MESSAGE = 'Mining drills turned off.';
-export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Generate to make them again.';
 /** Read out when an editing dialog opening takes the offer away */
 export const UNDO_WITHDRAWN_MESSAGE = 'Undo is no longer offered.';
 /** Read out after an Undo message: the key that undoes too, on a Mac and elsewhere */
@@ -45,11 +44,10 @@ export interface UndoEntry {
     before: ConfigFormData;
     snapshot: ConfigFormData | null;
     after?: ConfigFormData;
-    resultsCleared: boolean;
 }
 
-export function createUndoEntry(id: number, message: string, before: ConfigFormData, canUndo: boolean, resultsCleared: boolean): UndoEntry {
-    return { id, message, before, snapshot: canUndo ? before : null, resultsCleared };
+export function createUndoEntry(id: number, message: string, before: ConfigFormData, canUndo: boolean): UndoEntry {
+    return { id, message, before, snapshot: canUndo ? before : null };
 }
 
 /** Equal by value: a field that commits on blur may give a new object with the same values */
@@ -92,18 +90,14 @@ export function undoMessageInput(
 }
 
 /**
- * The form an Undo puts back, and the notice that follows it when the action had cleared generated clocks, which the
- * Undo does not bring back; null for an entry without Undo. The notice is about the form put back, so it goes with the
- * first edit after it.
+ * The form an Undo puts back, and the message that follows it (none: an Undo of Import, Paste or Reset brings the
+ * clocks back with the build, by its key); null for an entry without Undo
  */
-export function undoOutcome(entry: UndoEntry, nextId: number): { form: ConfigFormData; next: UndoEntry | null } | null {
+export function undoOutcome(entry: UndoEntry): { form: ConfigFormData; next: UndoEntry | null } | null {
     if (entry.snapshot === null) {
         return null;
     }
-    return {
-        form: entry.snapshot,
-        next: entry.resultsCleared ? { ...createUndoEntry(nextId, UNDO_RESULTS_NOTE, entry.snapshot, false, false), after: entry.snapshot } : null,
-    };
+    return { form: entry.snapshot, next: null };
 }
 
 const itemsOf = (form: ConfigFormData, kind: EntityKind): { id: number; _uuid: string }[] =>

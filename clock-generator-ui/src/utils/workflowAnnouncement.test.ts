@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { RunStop } from './resultsCache';
 import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from './workflowAnnouncement';
 
-const idle: WorkflowSnapshot = { checkStatus: 'none', checkedForGenerate: false, isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null, selectedId: null, selectionQuiet: false };
+const idle: WorkflowSnapshot = { checkStatus: 'none', checkedForGenerate: false, isLoading: false, failed: false, hasBlueprint: false, selectedLabel: null, selectedId: null, selectionQuiet: false, stop: null, restoredId: 0, pickGone: null };
 const at = (changes: Partial<WorkflowSnapshot>, from: WorkflowSnapshot = idle): WorkflowSnapshot => ({ ...from, ...changes });
 
 describe('workflowAnnouncement: a check from Check only (or the swing plan)', () => {
@@ -138,10 +139,42 @@ describe('workflowAnnouncement: order and repeats', () => {
     });
 
     it('keeps every message a non-empty sentence, in the glossary\'s words', () => {
-        const texts = [...Object.values(ANNOUNCEMENTS).filter((it) => typeof it === 'string'), ANNOUNCEMENTS.finished('X'), ANNOUNCEMENTS.showing('X')];
+        const texts = [...Object.values(ANNOUNCEMENTS).filter((it) => typeof it === 'string'), ANNOUNCEMENTS.finished('X'), ANNOUNCEMENTS.showing('X'), ANNOUNCEMENTS.clocksBack('X'), ANNOUNCEMENTS.pickGone('X'), ANNOUNCEMENTS.copiedCurrentBest('X')];
         for (const text of texts) {
             expect(text).toMatch(/^[A-Z].*\.$/);
             expect(text).not.toMatch(/configuration|valid/i);
         }
+    });
+});
+
+describe('workflowAnnouncement: Cancel, kept clocks back and a pick not made', () => {
+    const running = at({ isLoading: true, checkStatus: 'valid', hasBlueprint: true, selectedLabel: 'A', selectedId: 'a' });
+
+    it.each<[RunStop['kept'], string]>([
+        ['previous', 'Stopped. Your earlier clocks are back.'],
+        ['partial', 'Stopped. The clocks made so far are kept.'],
+        ['none', 'Stopped. No clocks were made.'],
+        ['check', 'Stopped the check.'],
+    ])('says what a Cancel that kept %s left, and nothing else of the same change', (kept, text) => {
+        // the run ends and another clock is shown in the same change: only the Stopped message
+        const stopped = at({ isLoading: false, stop: { id: 1, kept }, selectedLabel: 'B', selectedId: 'b' }, running);
+        expect(workflowAnnouncement(running, stopped)).toBe(text);
+        expect(workflowAnnouncement(running, stopped)).not.toMatch(/Finished generating/);
+    });
+
+    it('says the same Cancel once', () => {
+        const stopped = at({ stop: { id: 1, kept: 'partial' } });
+        expect(workflowAnnouncement(stopped, at({ checkStatus: 'valid' }, stopped))).toBeNull();
+    });
+
+    it('says the clocks for the build are back, with the selected one', () => {
+        const back = at({ restoredId: 1, hasBlueprint: true, selectedLabel: 'Fewest wake-ups', selectedId: 'x' });
+        expect(workflowAnnouncement(idle, back)).toBe('Your clocks for this build are back. Selected clock: Fewest wake-ups.');
+    });
+
+    it('says the pick was not made in place of "Finished generating."', () => {
+        const done = at({ isLoading: false, pickGone: 'Shortest period' }, running);
+        expect(workflowAnnouncement(running, done)).toBe(
+            "Shortest period, the clock you picked, wasn't made this time, so the recommended clock is selected.");
     });
 });
