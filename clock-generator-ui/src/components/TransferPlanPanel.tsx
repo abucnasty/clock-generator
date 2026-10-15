@@ -31,6 +31,11 @@ interface TransferPlanPanelProps {
     onExcludeChange: (items: string[]) => void;
 }
 
+/** "inserter" as "Inserter" */
+function sentenceCase(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 const ALWAYS_ON = ENABLE_MODE_LABELS[EnableControlMode.ALWAYS];
 
 function formatFraction(numerator: number, denominator: number): string {
@@ -124,7 +129,7 @@ function TransferPlanPanelComponent({
                                             {isFirstRow ? (
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                     <Chip
-                                                        label={entity.entity_type}
+                                                        label={sentenceCase(entity.entity_type)}
                                                         size="small"
                                                         variant="outlined"
                                                         sx={{ fontSize: '0.65rem', height: 18 }}

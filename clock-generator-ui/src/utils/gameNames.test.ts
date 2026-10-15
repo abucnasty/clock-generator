@@ -4,6 +4,7 @@ import {
     pickerIds,
     itemName,
     matchesQuery,
+    nameBracketedIds,
     nameWithId,
     normalizeForSearch,
     recipeName,
@@ -219,5 +220,16 @@ describe('pickerIds', () => {
         const ids = ['iron-plate', 'ee-a', 'rcalc-a', 'region-cloner_a', 'parameter-0', 'copper-plate', 'hidden-thing'];
         expect(pickerIds(ids, new Set(['hidden-thing']))).toEqual(['iron-plate', 'copper-plate']);
         expect(pickerIds(ids).length).toBe(3);
+    });
+});
+
+describe('nameBracketedIds', () => {
+    const names: GameNames = { item: { 'iron-plate': 'Iron plate' }, recipe: { 'iron-gear-wheel': 'Iron gear wheel' } };
+
+    it('says a known id in brackets as its name, and leaves other brackets alone', () => {
+        expect(nameBracketedIds(names, 'Machine 1 (iron-gear-wheel)')).toBe('Machine 1 (Iron gear wheel)');
+        expect(nameBracketedIds(names, 'Belt 1 (iron-plate) to Machine 2')).toBe('Belt 1 (Iron plate) to Machine 2');
+        expect(nameBracketedIds(names, 'Machine 1 (unknown-id) and (3 ticks)')).toBe('Machine 1 (unknown-id) and (3 ticks)');
+        expect(nameBracketedIds(names, 'no brackets')).toBe('no brackets');
     });
 });

@@ -27,6 +27,7 @@ import type {
     StatusCategory,
 } from 'clock-generator/browser';
 import { statusToCategory } from 'clock-generator/light';
+import { useGameNames } from '../hooks/useGameNames';
 import { BUTTON_NAMES, CHART_NAMES } from '../utils/a11yLabels';
 import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGeometry';
 import { FactorioIcon } from './FactorioIcon';
@@ -311,6 +312,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, clockWindows = [] }: EntityRowProps) {
+    const { nameIdsIn } = useGameNames();
     // Determine if a transition is filtered out
     const isTransitionFiltered = (transition: SerializableStateTransition): boolean => {
         if (viewMode === 'simplified') {
@@ -353,15 +355,15 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                 <Tooltip
                     title={
                         <Box>
-                            <Typography variant="body2">{entity.label}</Typography>
+                            <Typography variant="body2">{nameIdsIn(entity.label)}</Typography>
                             {entity.source && (
                                 <Typography variant="caption" display="block">
-                                    From: {entity.source.label}
+                                    From: {nameIdsIn(entity.source.label)}
                                 </Typography>
                             )}
                             {entity.sink && (
                                 <Typography variant="caption" display="block">
-                                    To: {entity.sink.label}
+                                    To: {nameIdsIn(entity.sink.label)}
                                 </Typography>
                             )}
                             <Typography variant="caption" display="block">
@@ -385,7 +387,7 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                                 color: entityTypeColor,
                             }}
                         >
-                            {entity.label}
+                            {nameIdsIn(entity.label)}
                         </Typography>
                         <Typography
                             variant="caption"
@@ -430,10 +432,10 @@ function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, 
                     entityType={entity.entity_type}
                     viewMode={viewMode}
                     isFiltered={isTransitionFiltered}
-                    label={entity.label}
+                    label={nameIdsIn(entity.label)}
                 />
                 <FactorioStateStrip
-                    label={entity.label}
+                    label={nameIdsIn(entity.label)}
                     states={entity.factorio_states ?? []}
                     totalDuration={totalDuration}
                     height={FACTORIO_STATE_STRIP_HEIGHT}

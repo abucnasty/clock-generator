@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo } from 'react';
-import { NO_NAMES, iconName, itemName, recipeName, type GameNames } from '../utils/gameNames';
+import { NO_NAMES, iconName, itemName, nameBracketedIds, recipeName, type GameNames } from '../utils/gameNames';
 
 /** The in-game names of the game data; App provides them. Without a provider every id shows as itself. */
 export const GameNamesContext = createContext<GameNames>(NO_NAMES);
@@ -12,6 +12,8 @@ interface GameNameLabels {
     recipeLabel: (id: string) => string;
     /** The name of an icon's id (an item or a recipe) */
     iconLabel: (id: string) => string;
+    /** Text from the engine with an id in brackets, "Machine 1 (logistic-science-pack)", with the id as its name */
+    nameIdsIn: (text: string) => string;
 }
 
 /** The in-game names, and a label function for each kind of id; the functions change only when the names do */
@@ -23,6 +25,7 @@ export function useGameNames(): GameNameLabels {
             itemLabel: (id: string) => itemName(names, id),
             recipeLabel: (id: string) => recipeName(names, id),
             iconLabel: (id: string) => iconName(names, id),
+            nameIdsIn: (text: string) => nameBracketedIds(names, text),
         }),
         [names],
     );

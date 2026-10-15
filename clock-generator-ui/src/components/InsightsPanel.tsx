@@ -38,11 +38,11 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
 }
 
 function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) {
-    const { names } = useGameNames();
+    const { names, nameIdsIn } = useGameNames();
     // a cell that is exactly an id of the game data shows its name; the engine's other text is left as it is
     const cellOf = (cell: string): ReactNode => {
         if (Object.hasOwn(names.recipe, cell) && !Object.hasOwn(names.item, cell)) return <GameName id={cell} kind="recipe" />;
-        return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : cell;
+        return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : nameIdsIn(cell);
     };
     return (
         <>

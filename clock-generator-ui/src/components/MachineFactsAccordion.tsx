@@ -168,6 +168,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                         key={input.item_name}
                                         sx={{
                                             display: 'flex',
+                                            flexWrap: 'wrap',
                                             alignItems: 'center',
                                             gap: 2,
                                             p: 1,

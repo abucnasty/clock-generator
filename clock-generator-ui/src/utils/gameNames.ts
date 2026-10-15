@@ -32,6 +32,17 @@ export function iconName(names: GameNames, id: string): string {
     return own(names.item, id) ?? own(names.recipe, id) ?? id;
 }
 
+/**
+ * Text the engine wrote with an id in brackets, "Machine 1 (logistic-science-pack)", with the id said as its game name:
+ * "Machine 1 (Logistic science pack)". Brackets that hold anything else are left as they are.
+ */
+export function nameBracketedIds(names: GameNames, text: string): string {
+    return text.replace(/\(([^()]+)\)/g, (whole, inner: string) => {
+        const known = Object.hasOwn(names.recipe, inner) || Object.hasOwn(names.item, inner);
+        return known ? `(${recipeName(names, inner)})` : whole;
+    });
+}
+
 /** A name with its id after it for a hover, "Iron plate (iron-plate)"; the id alone when it has no other name */
 export function nameWithId(name: string, id: string): string {
     return name === id ? id : `${name} (${id})`;
