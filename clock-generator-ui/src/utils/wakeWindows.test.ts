@@ -231,9 +231,9 @@ describe('buildWakeWindowRows', () => {
             },
         }));
         expect(inserter.items).toEqual(['iron-plate']);
-        expect(inserter.route).toBe('Belt 1 to Machine 2');
+        expect(inserter.route).toBe('Belt\u00a01 to Machine\u00a02');
         expect(drill.items).toEqual(['iron-ore']);
-        expect(drill.route).toBe('into Machine 4');
+        expect(drill.route).toBe('into Machine\u00a04');
     });
 
     it('tells the modes apart', () => {

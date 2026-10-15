@@ -128,7 +128,9 @@ export function axisMarkText(tick: number): { ticks: string; seconds: string } {
 
 /** Where a row moves items: "Belt 1 to Machine 2"; a drill's "into Machine 1"; empty when the run does not say */
 export function rowRouteText(source: string | null, sink: string | null): string {
-    return source && sink ? `${source} to ${sink}` : sink ? `into ${sink}` : source ? `from ${source}` : '';
+    // each end's word and number stay together when the row wraps
+    const [from, to] = [source, sink].map(end => end?.replace(' ', '\u00a0') ?? null);
+    return from && to ? `${from} to ${to}` : to ? `into ${to}` : from ? `from ${from}` : '';
 }
 
 /**

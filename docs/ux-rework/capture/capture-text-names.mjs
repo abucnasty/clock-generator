@@ -359,14 +359,14 @@ async function optionIds(page, input, query) {
     return ids;
 }
 
-/**
- * Label in name for a control whose visible text is more than its label (a select shows its value; an accordion's text runs
- * on without spaces in `textContent`): the accessible name, read from the browser, holds the visible label.
- */
 async function closeAnyList(page) {
     await page.keyboard.press('Escape').catch(() => {});
 }
 
+/**
+ * Label in name for a control whose visible text is more than its label (a select shows its value; an accordion's text runs
+ * on without spaces in `textContent`): the accessible name, read from the browser, holds the visible label.
+ */
 async function labelInName(rec, page, locator, visibleLabel, label) {
     const name = await accessibleName(page, locator);
     const norm = (t) => t.replace(/\s+/g, ' ').trim().toLowerCase();

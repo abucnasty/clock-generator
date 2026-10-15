@@ -17,7 +17,7 @@ export function WakeRowMoves({ row }: { row: Pick<WakeWindowRow, 'items' | 'rout
                     <FactorioIcon key={item} name={item} size={20} titled fallback={<GameName id={item} />} />
                 ))}
             </Box>
-            <Box component="span" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>{colon}{row.route}</Box>
+            <Box component="span" sx={{ minWidth: 0 }}>{colon}{row.route}</Box>
         </Box>
     );
 }

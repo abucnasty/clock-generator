@@ -35,13 +35,15 @@ export function iconName(names: GameNames, id: string): string {
 /**
  * Text the engine wrote with ids in it, with each known id said as its game name: "Machine 1 (logistic-science-pack)" is
  * "Machine 1 (Logistic science pack)", and "needs iron-plate" is "needs Iron plate". An id of one word is named only in
- * brackets, so that "inserter" in a sentence stays a word; anything unknown is left as it is.
+ * brackets, so that "inserter" in a sentence stays a word; anything unknown is left as it is. In brackets the id is a recipe's
+ * (a machine's), outside them an item's (a recipe's where there is no such item).
  */
 export function nameIdsInText(names: GameNames, text: string): string {
     const known = (id: string) => Object.hasOwn(names.recipe, id) || Object.hasOwn(names.item, id);
     return text.replace(/\(([^()]+)\)|\b[a-z0-9]+(?:[-_][a-z0-9]+)+\b/g, (whole, inner: string | undefined) => {
         if (inner !== undefined) return known(inner) ? `(${recipeName(names, inner)})` : whole;
-        return known(whole) ? recipeName(names, whole) : whole;
+        if (!known(whole)) return whole;
+        return Object.hasOwn(names.item, whole) ? itemName(names, whole) : recipeName(names, whole);
     });
 }
 

@@ -1,5 +1,5 @@
 import { Autocomplete, Box, TextField, Tooltip, type AutocompleteHighlightChangeReason } from '@mui/material';
-import { useContext, useRef, useState } from 'react';
+import { useContext, useMemo, useRef, useState } from 'react';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { SearchOnlyRecipesContext, useGameNames } from '../hooks/useGameNames';
@@ -51,11 +51,18 @@ export function ItemSelector({
     const typed = useRef<string | null>(null);
     const highlightedBy = useRef<AutocompleteHighlightChangeReason | null>(null);
     // the chosen value stays an option, even one the list would not offer (a mod's, or a hidden recipe of an imported build)
-    const offered = value && !options.includes(value) && nameOf(value) !== value ? [value, ...options] : options;
+    const offered = useMemo(
+        () => (value && !options.includes(value) && nameOf(value) !== value ? [value, ...options] : options),
+        [value, options, nameOf],
+    );
     // Recipes the open list leaves out (recycling) but a typed query finds, after the visible matches
     const searchOnlyAll = useContext(SearchOnlyRecipesContext);
-    const searchOnly = kind === 'recipe' ? searchOnlyAll.filter((id) => !offered.includes(id)) : [];
-    const everyOption = searchOnly.length > 0 ? [...offered, ...searchOnly] : offered;
+    const searchOnly = useMemo(() => {
+        if (kind !== 'recipe') return [];
+        const listed = new Set(offered);
+        return searchOnlyAll.filter((id) => !listed.has(id));
+    }, [kind, searchOnlyAll, offered]);
+    const everyOption = useMemo(() => (searchOnly.length > 0 ? [...offered, ...searchOnly] : offered), [offered, searchOnly]);
     const matchesOf = (query: string): string[] => {
         if (query.trim() === '') return offered;
         const shown = searchIds(query, offered, nameOf);

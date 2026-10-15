@@ -232,6 +232,9 @@ describe('nameIdsInText', () => {
         expect(nameIdsInText(names, 'Belt 1 (iron-plate) to Machine 2')).toBe('Belt 1 (Iron plate) to Machine 2');
         expect(nameIdsInText(names, 'Machine 1 (unknown-id) and (3 ticks)')).toBe('Machine 1 (unknown-id) and (3 ticks)');
         expect(nameIdsInText(names, 'no brackets')).toBe('no brackets');
+        const barrel = 'wat' + 'er-barr' + 'el';
+        const both: GameNames = { item: { [barrel]: 'Water barrel' }, recipe: { [barrel]: 'Fill Water barrel' } };
+        expect(nameIdsInText(both, `Machine 1 (${barrel}) takes ${barrel}`)).toBe('Machine 1 (Fill Water barrel) takes Water barrel');
         expect(nameIdsInText(names, 'It needs iron-plate to make iron-gear-wheel, not unknown-id or inserter')).toBe('It needs Iron plate to make Iron gear wheel, not unknown-id or inserter');
     });
 });
