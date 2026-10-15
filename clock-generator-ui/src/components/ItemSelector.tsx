@@ -20,6 +20,8 @@ interface ItemSelectorProps {
     required?: boolean;
     /** The input's element id */
     inputId?: string;
+    /** A problem with the value, shown under the field and linked to it; the field is marked invalid */
+    errorText?: string;
     /** The input's accessible name, when the visible label alone does not say whose field it is */
     inputAriaLabel?: string;
     sx?: object;
@@ -40,6 +42,7 @@ export function ItemSelector({
     required,
     inputId,
     inputAriaLabel,
+    errorText,
     sx,
     iconOnly = false,
 }: ItemSelectorProps) {
@@ -124,6 +127,8 @@ export function ItemSelector({
                     label={label}
                     placeholder={iconOnly ? '' : placeholder}
                     required={required}
+                    error={errorText !== undefined}
+                    helperText={errorText}
                     slotProps={{
                         htmlInput: { ...params.inputProps, 'aria-label': inputAriaLabel },
                         input: {

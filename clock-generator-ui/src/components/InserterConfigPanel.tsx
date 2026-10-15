@@ -9,7 +9,10 @@ import {
     Typography,
 } from '@mui/material';
 import { EnableControlMode, TargetType } from 'clock-generator/light';
-import { useId, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { useAnnounce } from '../hooks/useMessages';
+import { blockedSummaryOf } from '../utils/ruleProblems';
 import type {
     BeltFormData,
     ChestFormData,
@@ -269,7 +272,27 @@ export function InserterConfigPanel({
     const id = useId();
     const [activeTab, setActiveTab] = useState(0);
     const [draft, setDraft] = useState(inserter);
-    const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false });
+    const announce = useAnnounce();
+    // the sticky Save bar grows when it says why Save was refused: the dialog's scroller keeps focus clear of it
+    const barRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const bar = barRef.current;
+        const scroller = bar?.closest<HTMLElement>('.MuiDialogContent-root');
+        if (!bar || !scroller) return;
+        const observer = new ResizeObserver(() => {
+            scroller.style.scrollPaddingBottom = `${bar.getBoundingClientRect().height + 8}px`;
+        });
+        observer.observe(bar);
+        return () => {
+            observer.disconnect();
+            scroller.style.removeProperty('scroll-padding-bottom');
+        };
+    }, []);
+    // whether Save was pressed while the rule had problems: the bar says why until they are fixed
+    const [saveRefused, setSaveRefused] = useState(false);
+    // raised on each refused Save, so that the rule form shows every problem
+    const [revealProblems, setRevealProblems] = useState(0);
+    const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false, problems: [] });
 
     // the tab's chip shows the saved rule, in the words of the List row's chip
     const currentOverride = inserter.overrides?.enable_control;
@@ -301,6 +324,12 @@ export function InserterConfigPanel({
         return [...items];
     }, [draft.source, draft.sink, machines, belts, chests, getRecipeInfo]);
 
+    // the items the inserter moves: its filters, else what the game would pick; a template's item picker starts on them
+    const movedItems = useMemo<string[]>(() => {
+        const filters = draft.filters?.filter(Boolean) ?? [];
+        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo);
+    }, [draft, machines, belts, chests, getRecipeInfo]);
+
     const copyFromOptions = useMemo<CopyFromOption[]>(() => {
         return inserters
             .filter(ins =>
@@ -331,6 +360,18 @@ export function InserterConfigPanel({
     // one update with what changed; the overrides only when the rule did, so an untouched rule (a forced ALWAYS
     // included) stays as it is
     const handleSave = () => {
+        // a rule with problems is not saved: the Enable rule tab shows, its first problem takes the focus, and the bar
+        // and the polite region say why
+        if (rule.problems.length > 0) {
+            flushSync(() => {
+                setActiveTab(1);
+                setSaveRefused(true);
+                setRevealProblems((n) => n + 1);
+            });
+            document.getElementById(rule.problems[0].fieldId)?.focus();
+            announce(blockedSummaryOf(rule.problems));
+            return;
+        }
         const updates: Partial<InserterFormData> = { ...changedFields };
         if (rule.changed) {
             updates.overrides = { ...inserter.overrides, enable_control: rule.override };
@@ -381,6 +422,9 @@ export function InserterConfigPanel({
             <Box role="tabpanel" id={`${id}-tabpanel-1`} aria-labelledby={`${id}-tab-1`} hidden={activeTab !== 1} sx={{ p: 2 }}>
                 <EnableControlFormContent
                     entityType="inserter"
+                    entityId={inserter.id}
+                    stackSize={draft.stack_size}
+                    movedItems={movedItems}
                     currentOverride={currentOverride}
                     onDraftChange={setRule}
                     hideActions
@@ -388,10 +432,12 @@ export function InserterConfigPanel({
                     sinkType={draft.sink.type}
                     availableItems={availableItems}
                     copyFromOptions={copyFromOptions}
+                    revealProblems={revealProblems}
                 />
             </Box>
 
             <Box
+                ref={barRef}
                 sx={{
                     position: 'sticky',
                     bottom: 0,
@@ -399,6 +445,7 @@ export function InserterConfigPanel({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'flex-end',
+                    flexWrap: 'wrap',
                     gap: 1,
                     px: 2,
                     py: 1.5,
@@ -410,6 +457,11 @@ export function InserterConfigPanel({
                 {dirty && (
                     <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
                         Unsaved changes
+                    </Typography>
+                )}
+                {saveRefused && rule.problems.length > 0 && (
+                    <Typography variant="body2" color="error" sx={{ mr: 1 }} data-rule-blocked="">
+                        {blockedSummaryOf(rule.problems)}
                     </Typography>
                 )}
                 <Button onClick={onClose} color="inherit">Cancel</Button>

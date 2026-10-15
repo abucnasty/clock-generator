@@ -1503,6 +1503,49 @@ export const ui = {
     diagramDialog: (page) => page.getByRole('dialog'),
     /** The diagram's fullscreen dialog's close button, named "Exit fullscreen" (the timelines' dialogs use "Close fullscreen" instead) (owner: 1.x diagram) */
     diagramClose: (page) => ui.diagramDialog(page).getByRole('button', { name: 'Exit fullscreen', exact: true }),
+
+    // ---- the enable rule dialog (List rows) and the Diagram dialog's Enable rule tab
+    /** A row's enable chip, named "<chip text>, Inserter 1. Edit rule" (owner: 1.13 enable chip) */
+    enableChip: (page, entityLabel) => page.getByRole('button', { name: new RegExp(`, ${entityLabel}\\. Edit rule$`) }),
+    /** The rule dialog, named "Enable rule Inserter 1" (title h2 + entity line) (owner: 3.1 rule editor) */
+    ruleDialog: (page) => page.getByRole('dialog', { name: /^Enable rule/ }),
+    /** The rule dialog's Save / Cancel / close X (owner: 3.1 rule editor) */
+    ruleSave: (page) => ui.ruleDialog(page).getByRole('button', { name: 'Save', exact: true }),
+    ruleCancel: (page) => ui.ruleDialog(page).getByRole('button', { name: 'Cancel', exact: true }).last(),
+    ruleClose: (page) => ui.ruleDialog(page).getByRole('button', { name: 'Close', exact: true }),
+    /** A mode radio by its visible name: 'Auto' | 'Always on' | 'Never on' | 'Clocked' | 'Conditional'; scope defaults to the page, so it also finds the Diagram tab's (owner: 3.1 rule editor) */
+    ruleMode: (scope, name) => scope.getByRole('radio', { name: new RegExp(`^${name}\\b`) }),
+    /** The "In words" sentence and the "In the blueprint" note (owner: 3.1 rule editor) */
+    ruleSentence: (scope) => scope.locator('[data-rule-sentence]').first(),
+    ruleBlueprint: (scope) => scope.locator('[data-rule-blueprint]').first(),
+    /** The Clocked period line ("Crafting cycle: … ticks. …" or "Run Check only or Generate …") (owner: 3.1 rule editor) */
+    rulePeriod: (scope) => scope.locator('[data-rule-period]').first(),
+    /** Wake window n's (from 1) Start / End tick fields, named "Start tick, wake window n" (owner: 3.1 rule editor) */
+    ruleStart: (scope, n = 1) => scope.getByRole('spinbutton', { name: `Start tick, wake window ${n}`, exact: true }),
+    ruleEnd: (scope, n = 1) => scope.getByRole('spinbutton', { name: `End tick, wake window ${n}`, exact: true }),
+    /** "Repeat every (ticks)" (owner: 3.1 rule editor) */
+    ruleRepeat: (scope) => scope.getByRole('spinbutton', { name: /^Repeat every \(ticks\)/ }),
+    /** "Add wake window", "Use the clock's wake windows", "Remove wake window n" (owner: 3.1 rule editor) */
+    ruleAddWindow: (scope) => scope.getByRole('button', { name: 'Add wake window', exact: true }),
+    ruleUseClockWindows: (scope) => scope.getByRole('button', { name: "Use the clock's wake windows", exact: true }),
+    ruleRemoveWindow: (scope, n = 1) => scope.getByRole('button', { name: `Remove wake window ${n}`, exact: true }),
+    /** The strip under the windows, and its bars: kind 'rule' (solid) or 'clock' (outlined) (owner: 3.1 rule editor) */
+    ruleStrip: (scope) => scope.locator('[data-rule-strip]').first(),
+    ruleStripBars: (scope, kind) => scope.locator(`[data-rule-strip-bar="${kind}"]`),
+    /** The refused-Save summary beside Cancel (dialog) or "Unsaved changes" (Diagram) (owner: 3.1 rule editor) */
+    ruleBlocked: (scope) => scope.locator('[data-rule-blocked]').first(),
+    /** The "Repeat every" warning (owner: 3.1 rule editor) */
+    ruleWarning: (scope) => scope.locator('[data-rule-warning]').first(),
+    /** Quick templates (the select), the open template step, and its Replace conditions / Use template button (owner: 3.1 rule editor) */
+    ruleTemplates: (scope) => scope.getByRole('combobox', { name: 'Quick templates', exact: true }),
+    ruleTemplateStep: (scope) => scope.locator('[data-template-step]').first(),
+    ruleTemplateReplace: (scope) => scope.locator('[data-template-step]').getByRole('button', { name: /^(Replace conditions|Use template)$/ }),
+    /** The template step's own Cancel (not the dialog's, which comes after it) (owner: 3.1 rule editor) */
+    ruleTemplateCancel: (scope) => scope.locator('[data-template-step]').getByRole('button', { name: 'Cancel', exact: true }),
+    /** "Copy from another inserter" and its confirm step's Replace rule (owner: 3.1 rule editor) */
+    ruleCopyFrom: (scope) => scope.getByRole('combobox', { name: /^Copy from another/ }),
+    ruleReplaceRule: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Replace rule', exact: true }),
+    ruleCopyCancel: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Cancel', exact: true }),
 };
 
 let namesCache;

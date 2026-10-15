@@ -15,10 +15,10 @@ const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, e
 const conditional: EnableControlOverride = { mode: 'CONDITIONAL', rule_set: ruleSet, latch: { release } };
 
 describe('enableControlDraftOf', () => {
-    it('starts from AUTO, one range of 0 to 100, no period and the default rule set when there is no rule', () => {
+    it('starts from AUTO, one empty wake window, no period and the default rule set when there is no rule', () => {
         expect(enableControlDraftOf()).toEqual({
             mode: 'AUTO',
-            ranges: [{ start: 0, end: 100 }],
+            ranges: [{ start: '', end: '' }],
             periodDuration: '',
             ruleSet: createDefaultRuleSet(),
             latchEnabled: false,
@@ -27,8 +27,24 @@ describe('enableControlDraftOf', () => {
     });
 
     it('takes the fields of a stored rule', () => {
-        expect(enableControlDraftOf(clocked)).toMatchObject({ mode: 'CLOCKED', ranges: clocked.ranges, periodDuration: '60' });
+        expect(enableControlDraftOf(clocked)).toMatchObject({ mode: 'CLOCKED', ranges: [{ start: '0', end: '10' }, { start: '20', end: '30' }], periodDuration: '60' });
         expect(enableControlDraftOf(conditional)).toMatchObject({ mode: 'CONDITIONAL', ruleSet, latchEnabled: true, releaseCondition: release });
+    });
+
+    const planned = { ranges: [{ start: 12, end: 20 }, { start: 80, end: 95 }], periodTicks: 264 };
+
+    it('starts the Clocked fields of a rule that is not Clocked from the clock\'s windows and period', () => {
+        for (const stored of [undefined, { mode: 'ALWAYS' } as const, conditional]) {
+            expect(enableControlDraftOf(stored, planned)).toMatchObject({
+                mode: stored?.mode ?? 'AUTO',
+                ranges: [{ start: '12', end: '20' }, { start: '80', end: '95' }],
+                periodDuration: '264',
+            });
+        }
+    });
+
+    it('keeps a stored Clocked rule over the clock\'s windows', () => {
+        expect(enableControlDraftOf(clocked, planned)).toMatchObject({ ranges: [{ start: '0', end: '10' }, { start: '20', end: '30' }], periodDuration: '60' });
     });
 });
 
@@ -47,12 +63,17 @@ describe('buildEnableControlOverride', () => {
         expect(buildEnableControlOverride(enableControlDraftOf(clocked))).toEqual(clocked);
     });
 
-    it('drops CLOCKED ranges that do not end after they start', () => {
-        const draft = { ...enableControlDraftOf(clocked), ranges: [{ start: 0, end: 10 }, { start: 5, end: 5 }, { start: 9, end: 3 }] };
-        expect(buildEnableControlOverride(draft)).toEqual({ mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 });
+    it('keeps a CLOCKED window of one tick and leaves out one that ends before it starts', () => {
+        const draft = { ...enableControlDraftOf(clocked), ranges: [{ start: '0', end: '10' }, { start: '5', end: '5' }, { start: '9', end: '3' }] };
+        expect(buildEnableControlOverride(draft)).toEqual({ mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 5, end: 5 }], period_duration_ticks: 60 });
     });
 
-    it.each(['', '0', '-5'])('leaves out a CLOCKED period of %j', (periodDuration) => {
+    it('leaves out a window with an empty or unwhole field, never making a value up', () => {
+        const draft = { ...enableControlDraftOf(clocked), ranges: [{ start: '', end: '10' }, { start: '1.5', end: '3' }, { start: ' 4 ', end: '6' }] };
+        expect(buildEnableControlOverride(draft)).toEqual({ mode: 'CLOCKED', ranges: [{ start: 4, end: 6 }], period_duration_ticks: 60 });
+    });
+
+    it.each(['', '0', '-5', 'abc', '1.5'])('leaves out a CLOCKED period of %j', (periodDuration) => {
         const override = buildEnableControlOverride({ ...enableControlDraftOf(clocked), periodDuration });
         expect(override).toEqual({ mode: 'CLOCKED', ranges: clocked.ranges });
         expect('period_duration_ticks' in override!).toBe(false);
@@ -85,7 +106,7 @@ describe('enableControlDraftChanged', () => {
     it('is true after changing the mode, a range end, the rule set or the latch', () => {
         const initial = enableControlDraftOf(clocked);
         expect(enableControlDraftChanged({ ...initial, mode: 'ALWAYS' }, initial)).toBe(true);
-        expect(enableControlDraftChanged({ ...initial, ranges: [{ start: 0, end: 11 }, { start: 20, end: 30 }] }, initial)).toBe(true);
+        expect(enableControlDraftChanged({ ...initial, ranges: [{ start: '0', end: '11' }, { start: '20', end: '30' }] }, initial)).toBe(true);
         const cond = enableControlDraftOf(conditional);
         expect(enableControlDraftChanged({ ...cond, ruleSet: createDefaultRuleSet() }, cond)).toBe(true);
         expect(enableControlDraftChanged({ ...cond, latchEnabled: false }, cond)).toBe(true);
@@ -93,7 +114,7 @@ describe('enableControlDraftChanged', () => {
 
     it('is false after changing a range while ALWAYS is picked, as the save leaves ranges out', () => {
         const initial = enableControlDraftOf({ mode: 'ALWAYS' });
-        expect(enableControlDraftChanged({ ...initial, ranges: [{ start: 5, end: 50 }] }, initial)).toBe(false);
+        expect(enableControlDraftChanged({ ...initial, ranges: [{ start: '5', end: '50' }] }, initial)).toBe(false);
     });
 
     it('is false after changing a value and changing it back', () => {
@@ -101,6 +122,15 @@ describe('enableControlDraftChanged', () => {
         const changed = { ...initial, periodDuration: '61' };
         expect(enableControlDraftChanged(changed, initial)).toBe(true);
         expect(enableControlDraftChanged({ ...changed, periodDuration: '60' }, initial)).toBe(false);
+    });
+
+    it('is true for a half-typed window or "Repeat every" while Clocked is picked, which the save would leave out', () => {
+        const initial = enableControlDraftOf(clocked);
+        expect(enableControlDraftChanged({ ...initial, ranges: [...initial.ranges, { start: '5', end: '' }] }, initial)).toBe(true);
+        expect(enableControlDraftChanged({ ...initial, periodDuration: 'x' }, initial)).toBe(true);
+        const fresh = { ...enableControlDraftOf(), mode: 'CLOCKED' as const };
+        expect(enableControlDraftChanged({ ...fresh, ranges: [{ start: '12', end: '' }] }, fresh)).toBe(true);
+        expect(enableControlDraftChanged(fresh, fresh)).toBe(false);
     });
 });
 

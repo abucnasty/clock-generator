@@ -37,7 +37,6 @@ export type {
     Condition,
     DrillFormData,
     EnableControlOverride,
-    EnableControlRange,
     InserterFormData,
     MachineFormData,
     RuleSet,
