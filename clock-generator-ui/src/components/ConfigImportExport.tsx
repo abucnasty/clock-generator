@@ -72,6 +72,8 @@ interface ConfigImportExportProps {
     onUndoable: (message: string) => void;
     /** "Getting started": shows the intro card again */
     onShowIntro: () => void;
+    /** The intro card is shown, with its own filled Paste: the header's is outlined then, one filled next step per state */
+    introShown: boolean;
 }
 
 export function ConfigImportExport({
@@ -90,6 +92,7 @@ export function ConfigImportExport({
     onBuildReplaced,
     onUndoable,
     onShowIntro,
+    introShown,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
@@ -397,8 +400,8 @@ export function ConfigImportExport({
                 {/* the way in: below 600px it says only "Paste", and keeps its full name */}
                 <Button
                     onClick={handlePasteFromFactorio}
-                    variant="contained"
-                    color="secondary"
+                    variant={introShown ? 'outlined' : 'contained'}
+                    color={introShown ? 'inherit' : 'secondary'}
                     size="small"
                     startIcon={narrow ? undefined : <ContentPaste />}
                     aria-label={narrow ? INTRO_BUTTONS.paste : undefined}

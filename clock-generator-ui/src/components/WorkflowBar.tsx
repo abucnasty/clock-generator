@@ -263,8 +263,10 @@ export function WorkflowBar({
                     </Tooltip>
                     <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top">
                         <span>
+                            {/* on a blank build the next step is the recipe (or the intro card's Paste), so Generate is
+                                not filled then: one filled next-step button per state */}
                             <Button
-                                variant="contained"
+                                variant={startHere ? 'outlined' : 'contained'}
                                 size="small"
                                 onClick={onGenerate}
                                 color="secondary"
