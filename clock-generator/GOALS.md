@@ -110,6 +110,30 @@ The windows have to be that long. On the accumulator build windows of one tick a
 
 On the samples it is made for the accumulator build and the processing unit build (unstable there, 9.8 of 10 a second). On the accumulator build it is the only stable clock made without a search, and is selected, so the searches are left out there too (30 of 41 samples with belts moving and 32 of 41 with belts that do not move, on the full sweep of that day, against 29 and 31 before): 601.9 wake-ups a minute against 2,906.7 for the observed windows clock selected before, with 5 window deciders. Recorded on the scaffold: 576 in each of 46 periods, no difference between the simulator and the game, at 972 wake-ups a minute in the game, a figure the simulator counts (940.7) from another start of the clock (278.5 to 940.7 by where it starts).
 
+## The rule's count and the clock-or-unwired advice
+
+The inserter cost series of factorio-benchmarks timed builds with and without their clocks and closed with a rule: whether a group of inserters is worth clocking follows from w, the wake-ups a minute a clock removes from each wired inserter of the group (`benchmarks/2026-10-12-inserter-cost-2.1.21/closing/CLOSING-2-RESULT.md`). The generator gives that call for each group as advice (since 0.11.0). The advice changes no clock, no selection and no wake-up figure the generator reports. It is about update time only, never a reason to drop a clock a build needs for goal 1.
+
+The rule's w is not goal 2's measure ("Wake-ups, the measure for goal 2"), which the selection uses and which is left as it is. It is counted as the series counted it, so that the generator and the series count a save the same way (`clock-generator/src/crafting/rule-count.ts`, a port of the series' recount script):
+- A source wake-up is a craft finished by the machine the inserter takes from while it waited for items. "Finished" is any rise of the machine's `products_finished`, which counts productivity payouts as well as crafts.
+- A sink wake-up is a craft started by the machine the inserter puts into while it waited for space, not counting a start in the tick of the inserter's own drop. The rule does not see a start: it reads one off a finish or the machine's status turning to working, and where those differ from the finishes by more than 3% over the count it takes the finishes. Since a payout is a finish, on a machine with much productivity it counts more starts than there are: on the advanced circuit sample, whose machines run at 175% productivity, the inserters into them count 1,075 sink wake-ups a minute unclocked, where the true starts give 625. The thresholds were set with this count, so it is kept as it is. A simulated run also reports the true starts beside it.
+- A pickup from a machine that no counted wake-up and no closed window in the 3 ticks before explains is counted too: the pickups of an output that takes part hands.
+- An inserter that waits on a belt is never counted, nor are belts, chests and vehicles.
+- The state read is the one at the start of the tick, as goal 2 reads it.
+
+Groups are keyed as the series keys them: the kinds of the two ends, the items seen in the hand, and the recipes at the two ends. A group's w removed is its w a minute for each inserter with every inserter unwired, less its w on the clock; the pooled figure is all wake-ups removed over the inserters newly wired. The call:
+
+| w removed | Call |
+|---|---|
+| below 63.5 | leave unwired |
+| 63.5 to below 158.6 | leave unwired, marginal |
+| 158.6 to 207.6 | clock, marginal |
+| above 207.6 | clock |
+
+"Firm" means outside the band, not certain. Outside the band the call was right in every timed case of the series that showed a sign, and never shown wrong; 7 timed groups outside it showed no sign, all on one utility science design whose pooled 215 calls "clock". The evidence is thinner near the edges of the band, and inside it the call is the cheaper one on expected cost, placed by one held-out measurement. The rule was measured on saves of 91,000 to 606,000 entities; below that it is not known, and the generator does not know the size of the save a build goes into.
+
+`npm run calls` gives the calls from two dumps of the series' extractor or two recordings of the recorder (one unwired, one clocked), or from a sample, whose selected clock is run in the simulator against the build with every inserter always enabled. That second run costs time, so generation never makes it. Checked before 0.11.0: on the series' own dumps (15 pairs of its timed builds) the generator's count equals the series' recount on every group, and w removed agrees to 1e-12. The simulator's count was laid against the game on one build, the advanced circuit scaffold, unclocked and on its selected clock (2026-10-14): every call agreed; on the clock w agreed within 10 a minute for each group, and unclocked by -8% to +24% for a group, most where the simulator shows an output that takes part hands as waiting on its machine and the game shows it working (samples README, Advanced circuit). The calls from a simulated run are checked on that one build only.
+
 ## The rules of the game, indexed
 
 Each rule of the game below is one named function, and `clock-generator/src/rules-of-the-game.ts` names all twelve: where each lives, the GOALS.md section it comes from, and the test that holds its recorded cases. The recorded figures travel with the code, as numbers in those tests and in the comments next to the functions; none of those tests reads a recording.

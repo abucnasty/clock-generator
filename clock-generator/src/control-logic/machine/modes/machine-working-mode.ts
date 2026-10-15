@@ -298,6 +298,7 @@ export class MachineWorkingMode implements MachineMode {
     }
 
     private consumeInputsForCraft(): void {
+        this.state.craftsStarted += 1;
         this.state.machine.inputs.forEach(input => {
             MachineState.ingredientInventory(this.state, input.ingredient.name).removeQuantity(
                 input.ingredient.name,
