@@ -15,8 +15,6 @@ import {
 import { REQUIRES_FACTORIO, needsNoClock } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { buildWakeWindowRows } from '../utils/wakeWindows';
-import { rowDetailText } from '../utils/wakeWindowCopy';
-import { useGameNames } from '../hooks/useGameNames';
 import { SURFACE } from '../theme/tokens';
 import { InstallSteps } from './InstallSteps';
 import { Panel } from './Panel';
@@ -160,11 +158,10 @@ function ClockCopy(props: SelectedProps) {
     const warns = props.rateWarning !== null || props.stale;
     // what each inserter and drill carries and between which ends, as the Wake windows rows say it
     const { selected } = props;
-    const { itemLabel } = useGameNames();
-    const detailOf = useMemo(() => {
-        const details = new Map(buildWakeWindowRows(selected).map(row => [row.id, rowDetailText(row, itemLabel)]));
-        return (id: string) => details.get(id) ?? '';
-    }, [selected, itemLabel]);
+    const movesOf = useMemo(() => {
+        const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
+        return (id: string) => moves.get(id) ?? { items: [], route: '' };
+    }, [selected]);
     return (
         <>
             {props.rateWarning && (
@@ -191,7 +188,7 @@ function ClockCopy(props: SelectedProps) {
                 <Typography variant="body2" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
             </Box>}
 
-            <InstallSteps install={props.selected.install} detailOf={detailOf} stale={props.stale} />
+            <InstallSteps install={props.selected.install} movesOf={movesOf} stale={props.stale} />
         </>
     );
 }
