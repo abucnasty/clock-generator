@@ -1420,7 +1420,7 @@ export const ui = {
     menuButton: (page) => btn(page, 'More options'),
     /** The open ⋮ menu; 0 while it is closed (owner: 1.7 header) */
     menu: (page) => page.getByRole('menu', { name: 'More options' }),
-    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Try an example…, Getting started, Reset build (owner: 2.1 first visit) */
+    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Copy share link, Try an example…, Getting started, Reset build (owner: 2.1 first visit, 3.4 build library) */
     menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
     /** Paste from Factorio: the filled button in the header at every width; it reads "Paste" below 600 px, with the same name (owner: 2.1 first visit) */
     pasteFromFactorio: (page) => page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }),
@@ -1432,6 +1432,21 @@ export const ui = {
     exportConfig: (page) => ui.menuItem(page, 'Save build file'),
     /** The intro card above Target Output: shown on a blank build until closed, and from Getting started in the ⋮ menu (owner: 2.1 first visit) */
     introCard: (page) => page.getByRole('region', { name: 'Make a clock for your build' }),
+    /** Copy share link: the ⋮ item right after Save build file; resolves only while the menu is open (owner: 3.4 build library) */
+    copyShareLink: (page) => ui.menuItem(page, 'Copy share link'),
+
+    // ---- Your builds (the build switcher)
+    /** The build switcher in the app bar, after the title, named "Build: {full name}"; an icon button below 600 px with the same name. There once the page is ready (owner: 3.4 build library) */
+    buildSwitcher: (page) => page.getByRole('banner').getByRole('button', { name: /^Build: / }),
+    /** The open switcher menu, "Your builds"; 0 while it is closed (owner: 3.4 build library) */
+    buildsMenu: (page) => page.getByRole('menu', { name: 'Your builds' }),
+    /** The builds of the open switcher menu (menuitemradio, aria-checked on the open one), most recently opened first; pass an index for one (owner: 3.4 build library) */
+    buildRows: (page, index) => {
+        const rows = ui.buildsMenu(page).getByRole('menuitemradio');
+        return index === undefined ? rows : rows.nth(index);
+    },
+    /** An action of the open switcher menu: 'New build', 'Duplicate build', 'Rename build…' or 'Delete build' (owner: 3.4 build library) */
+    buildsAction: (page, name) => ui.buildsMenu(page).getByRole('menuitem', { name, exact: true }),
 
     // ---- Configure
     /** The Advanced Overrides (Optional) accordion button (owner: 1.x Advanced) */
@@ -1535,6 +1550,21 @@ export async function openTooltip(page, locator, { timeout = 5000 } = {}) {
         throw new Error(`openTooltip: no visible [role=tooltip] within ${timeout} ms after hover and focus on ${what} (tooltips in the DOM: ${seen.length ? JSON.stringify(seen) : 'none'})`);
     }
     return tip;
+}
+
+/** Opens the build switcher's menu ("Your builds") if it is not open, waits until it is visible and returns it */
+export async function openBuildSwitcher(page, { timeout = 5000 } = {}) {
+    const menu = ui.buildsMenu(page);
+    if (!(await menu.isVisible().catch(() => false))) {
+        if ((await ui.buildSwitcher(page).count()) === 0) throw new Error(`openBuildSwitcher: no button named "Build: …" in the header at ${page.viewportSize()?.width}px`);
+        await ui.buildSwitcher(page).click({ timeout });
+        try {
+            await menu.waitFor({ state: 'visible', timeout });
+        } catch {
+            throw new Error(`openBuildSwitcher: the "Your builds" menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`);
+        }
+    }
+    return menu;
 }
 
 /** Opens the ⋮ menu if it is not open, waits until it is visible and returns it. Like `openMenu`, but it waits for the menu itself and not a fixed 300 ms */

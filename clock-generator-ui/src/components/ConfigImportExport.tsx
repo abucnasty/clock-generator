@@ -1,5 +1,5 @@
-import { Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, HelpOutline } from '@mui/icons-material';
-import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, lighten, useMediaQuery, useTheme } from '@mui/material';
+import { Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, HelpOutline, Link } from '@mui/icons-material';
+import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, lighten, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
@@ -13,6 +13,18 @@ import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, typ
 import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
+import { buildFileName } from '../utils/buildLibrary';
+import { configKeyOf } from '../utils/resultsStaleness';
+import {
+    canShare,
+    encodeShareLink,
+    SHARE_COPIED_MESSAGE,
+    SHARE_FALLBACK_TEXT,
+    SHARE_TOO_BIG_MESSAGE,
+    SHARE_UNSUPPORTED_MESSAGE,
+    shareLinkNotice,
+    shareLongMessage,
+} from '../utils/shareLink';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -74,6 +86,17 @@ interface ConfigImportExportProps {
     onShowIntro: () => void;
     /** The intro card is shown, with its own filled Paste: the header's is outlined then, one filled next step per state */
     introShown: boolean;
+    /** The open build's own name, which a share link carries; null when it is named after its target recipe */
+    buildName: string | null;
+    /** The open build's title, which Save build file names the file after */
+    buildTitle: string;
+}
+
+/** A share link made when the ⋮ menu opens, so a click can copy it at once; tagged with the build it was made for */
+interface PreparedLink {
+    tag: string;
+    promise: Promise<string>;
+    link: string | null;
 }
 
 export function ConfigImportExport({
@@ -93,6 +116,8 @@ export function ConfigImportExport({
     onUndoable,
     onShowIntro,
     introShown,
+    buildName,
+    buildTitle,
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
@@ -134,19 +159,69 @@ export function ConfigImportExport({
 
     const handleExport = useCallback(() => {
         if (!config) return;
-        const target_recipe_name = config.target_output.recipe
         const jsonString = JSON.stringify(config, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `clock-config-${target_recipe_name}-${Date.now()}.json`;
+        a.download = buildFileName(buildTitle);
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         notify({ severity: 'success', text: SAVED_MESSAGE });
-    }, [config, notify]);
+    }, [config, buildTitle, notify]);
+
+    // the share link, made when the menu opens: the copy then runs inside the click, which a browser asks of it
+    const preparedLinkRef = useRef<PreparedLink | null>(null);
+    const [fallbackLink, setFallbackLink] = useState<string | null>(null);
+    const prepareShareLink = useCallback((): PreparedLink | null => {
+        if (!config || !canShare()) return null;
+        const tag = `${configKeyOf(config)}\n${buildName ?? ''}`;
+        if (preparedLinkRef.current?.tag === tag) return preparedLinkRef.current;
+        const prepared: PreparedLink = {
+            tag,
+            promise: encodeShareLink({ name: buildName, config }, window.location.origin + window.location.pathname),
+            link: null,
+        };
+        prepared.promise.then((link) => { prepared.link = link; }, () => {});
+        preparedLinkRef.current = prepared;
+        return prepared;
+    }, [config, buildName]);
+
+    const handleCopyShareLink = useCallback(() => {
+        const prepared = prepareShareLink();
+        if (!prepared) {
+            notify({ severity: 'error', text: SHARE_UNSUPPORTED_MESSAGE });
+            return;
+        }
+        const copy = (link: string) => {
+            const notice = shareLinkNotice(link.length);
+            if (notice === 'too-long') {
+                notify({ severity: 'error', text: SHARE_TOO_BIG_MESSAGE });
+                return;
+            }
+            const copied = () => notify(notice === 'long'
+                ? { severity: 'warning', text: shareLongMessage(link.length) }
+                : { severity: 'success', text: SHARE_COPIED_MESSAGE });
+            let writing: Promise<void>;
+            try {
+                writing = navigator.clipboard.writeText(link);
+            } catch (error) {
+                // no clipboard API: a page not served over https, or an old browser
+                writing = Promise.reject(error);
+            }
+            writing.then(copied, () => setFallbackLink(link));
+        };
+        if (prepared.link !== null) {
+            copy(prepared.link);
+        } else {
+            prepared.promise.then(copy, (error) => {
+                console.error('Share link error:', error);
+                notify({ severity: 'error', text: SHARE_UNSUPPORTED_MESSAGE });
+            });
+        }
+    }, [prepareShareLink, notify]);
 
     const handleImportClick = useCallback(() => {
         fileInputRef.current?.click();
@@ -368,7 +443,8 @@ export function ConfigImportExport({
 
     const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>) => {
         setMenuAnchorEl(event.currentTarget);
-    }, []);
+        prepareShareLink();
+    }, [prepareShareLink]);
 
     const handleMenuClose = useCallback(() => {
         setMenuAnchorEl(null);
@@ -388,6 +464,11 @@ export function ConfigImportExport({
         handleMenuClose();
         handleExport();
     }, [handleMenuClose, handleExport]);
+
+    const handleMenuShare = useCallback(() => {
+        handleMenuClose();
+        handleCopyShareLink();
+    }, [handleMenuClose, handleCopyShareLink]);
 
     const handleMenuExamples = useCallback(() => {
         handleMenuClose();
@@ -465,6 +546,12 @@ export function ConfigImportExport({
                             <Download fontSize="small" />
                         </ListItemIcon>
                         <ListItemText>Save build file</ListItemText>
+                    </MenuItem>
+                    <MenuItem onClick={handleMenuShare} disabled={!config}>
+                        <ListItemIcon>
+                            <Link fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Copy share link</ListItemText>
                     </MenuItem>
                     <MenuItem onClick={handleMenuExamples}>
                         <ListItemIcon>
@@ -618,6 +705,27 @@ export function ConfigImportExport({
                 />
             )}
             {examplesOpen && <ExamplesDialog onPick={handlePickExample} onClose={handleCloseExamples} />}
+
+            {/* the browser did not let the page copy: the link to copy by hand */}
+            <Dialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} maxWidth="sm" fullWidth aria-describedby="share-link-fallback-text">
+                <DialogTitle>Share link</DialogTitle>
+                <DialogContent>
+                    <Typography id="share-link-fallback-text" variant="body2" sx={{ mb: 1 }}>
+                        {SHARE_FALLBACK_TEXT}
+                    </Typography>
+                    <TextField
+                        value={fallbackLink ?? ''}
+                        label="Share link"
+                        fullWidth
+                        autoFocus
+                        onFocus={(event) => event.target.select()}
+                        slotProps={{ htmlInput: { readOnly: true } }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setFallbackLink(null)} color="inherit">Close</Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }

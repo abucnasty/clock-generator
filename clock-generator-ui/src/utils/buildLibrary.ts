@@ -12,7 +12,7 @@ import { exampleTitle } from './exampleBuilds';
 /** The index of the builds: `{ version, builds }` */
 export const LIBRARY_KEY = 'clock-generator-builds';
 /** The id of the first build, saved where the page saved its one build before */
-export const LEGACY_BUILD_ID = 'default';
+const LEGACY_BUILD_ID = 'default';
 /** Where the build with the id `default` is saved */
 export const LEGACY_BUILD_KEY = 'clock-generator-config';
 /** This tab's build id, in sessionStorage */
@@ -107,7 +107,7 @@ export function readIndex(text: string | null): IndexRead {
 }
 
 /** The target recipe of a saved build; '' when the text cannot be read */
-export function recipeOfSavedText(text: string | null): string {
+function recipeOfSavedText(text: string | null): string {
     if (text === null) return '';
     try {
         const recipe = JSON.parse(text)?.target_output?.recipe;
@@ -123,7 +123,7 @@ const newMeta = (id: string, recipe: string, now: number): BuildMeta => ({ id, n
  * An index made from the builds' keys, for an index that cannot be read: the first build, and every
  * `clock-generator-build:<id>` that is not a backup, named after their recipes. Nothing is dropped.
  */
-export function rebuildIndex(storage: StorageLike, now: number): LibraryIndex {
+function rebuildIndex(storage: StorageLike, now: number): LibraryIndex {
     const builds: BuildMeta[] = [];
     let keys: string[] = [];
     try {

@@ -63,6 +63,8 @@ export function useUndo(
     // the message showing the entry, and where focus goes from it
     const messageIdRef = useRef<number | null>(null);
     const returnRef = useRef<ReturnFocus | null>(null);
+    // what an Undo of the entry with this id does instead of putting the form back, when its action opened another build
+    const revertRef = useRef<{ id: number; revert: (snapshot: ConfigFormData) => void } | null>(null);
     useEffect(() => {
         configRef.current = config;
         isLoadedRef.current = isLoaded;
@@ -75,6 +77,7 @@ export function useUndo(
     }
     useEffect(() => {
         entryRef.current = entry;
+        if (entry === null) revertRef.current = null;
         // withdrawn: its message goes too
         if (entry === null && messageIdRef.current !== null) {
             dismiss(messageIdRef.current);
@@ -107,18 +110,29 @@ export function useUndo(
             const outcome = undoOutcome(current, ++counterRef.current);
             if (!outcome) return;
             if (returnRef.current) returnRef.current.undone = true;
-            setConfig(outcome.form);
+            const revert = revertRef.current?.id === id ? revertRef.current.revert : null;
+            if (revert) {
+                revert(outcome.form);
+            } else {
+                setConfig(outcome.form);
+            }
             show(outcome.next, null);
         };
 
         /**
          * Offers Undo for the action about to be applied: call it just before the edit. A message function gets the
          * form as it is and returns null when the action would change nothing, which offers nothing. `restoredLabel`
-         * names the delete button that an Undo brings back, for focus to go to.
+         * names the delete button that an Undo brings back, for focus to go to. `revert` is called with the form from
+         * before instead of putting it back, for an action that opened another build (Delete build, a share link): its
+         * Undo changes which build is open, not only the form.
          */
         const offerUndo = (
             message: string | ((form: ConfigFormData) => string | null),
-            options?: { resultsCleared?: boolean; restoredLabel?: (form: ConfigFormData) => string | null },
+            options?: {
+                resultsCleared?: boolean;
+                restoredLabel?: (form: ConfigFormData) => string | null;
+                revert?: (snapshot: ConfigFormData) => void;
+            },
         ) => {
             const form = configRef.current;
             const text = typeof message === 'function' ? message(form) : message;
@@ -131,12 +145,15 @@ export function useUndo(
             };
             returnRef.current = record;
             // before the saved build is loaded, the form is the default one, which is not the player's to go back to
-            show(createUndoEntry(++counterRef.current, text, form, isLoadedRef.current, options?.resultsCleared ?? false), record);
+            const entry = createUndoEntry(++counterRef.current, text, form, isLoadedRef.current, options?.resultsCleared ?? false);
+            revertRef.current = options?.revert ? { id: entry.id, revert: options.revert } : null;
+            show(entry, record);
         };
 
         /**
-         * Ends the offer without a word: for the player's own press of Generate or Check only, which accepts the build
-         * (the owner, 2026-10-14). The message goes with it, and Ctrl/Cmd+Z is the browser's again.
+         * Ends the offer without a word: for the player's own press of Generate or Check, which accepts the build (the
+         * owner, 2026-10-14), and for opening another build, which replaces the form. The message goes with it, and
+         * Ctrl/Cmd+Z is the browser's again.
          */
         const withdrawUndo = () => setEntry(null);
 

@@ -26,6 +26,8 @@ import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
 import type { ChestFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
+import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
+import { useSharedBuildLink } from './hooks/useSharedBuildLink';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
 import { useIntroCard } from './hooks/useIntroCard';
@@ -39,6 +41,9 @@ import { DrillsForm } from './components/DrillsForm';
 import { OverridesForm } from './components/OverridesForm';
 import { ConfigImportExport, type BuildEntryHandle } from './components/ConfigImportExport';
 import { IntroCard } from './components/IntroCard';
+import { BuildSwitcher } from './components/BuildSwitcher';
+import { RenameBuildDialog } from './components/RenameBuildDialog';
+import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { ChangelogDialog } from './components/ChangelogDialog';
@@ -57,12 +62,30 @@ import { withDeeperSearch } from './utils/deeperSearch';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { a11yThemeComponents } from './utils/a11yTheme';
-import { itemName, type GameNames } from './utils/gameNames';
+import { itemName, recipeName, type GameNames } from './utils/gameNames';
 import { GameNamesContext } from './hooks/useGameNames';
 import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
 import type { TargetValues } from './utils/pasteTarget';
+import { configToFormData } from './utils/configForm/configMapping';
+import {
+    buildTitles,
+    CHANGED_ELSEWHERE_MESSAGE,
+    cleanName,
+    deletedBuildMessage,
+    duplicatedAnnouncement,
+    LOAD_OTHER_TAB_LABEL,
+    LOADED_OTHER_TAB_MESSAGE,
+    NEW_BUILD_ANNOUNCEMENT,
+    openedBuildAnnouncement,
+    recipeTitle,
+    renamedAnnouncement,
+    renameBuild,
+    UNTITLED_BUILD,
+    type BuildMeta,
+} from './utils/buildLibrary';
+import { sharedBuildSummary, sharedOpenedMessage, sharedPlaceNote, type SharedBuild } from './utils/shareLink';
 
 const baseTheme = createTheme({
     palette: {
@@ -159,6 +182,7 @@ function App() {
         loadError: configLoadError,
         loadNotice,
         dismissLoadNotice,
+        library,
         setConfig,
         updateTargetOutput,
         addMachine,
@@ -502,6 +526,129 @@ function App() {
 
     // Generate with the slower searches, checked first as Generate is: for this run only, or, kept on, by turning the
     // switch on in the form (one the check does not read, so it stays current)
+    // ---- Your builds
+    const notify = useNotify();
+    const dismiss = useDismissMessage();
+    const announce = useAnnounce();
+    const recipeLabel = useCallback((id: string) => recipeName(gameNames, id), [gameNames]);
+    const titles = useMemo(() => buildTitles(library.builds, recipeLabel), [library.builds, recipeLabel]);
+    /** The title a build has, or would have with `extra` in the list (one just made or renamed) */
+    const titleOf = useCallback((id: string, extra?: BuildMeta) => {
+        if (!extra) return titles.get(id) ?? UNTITLED_BUILD;
+        const rows = [...library.builds.filter((build) => build.id !== extra.id), extra];
+        return buildTitles(rows, recipeLabel).get(id) ?? UNTITLED_BUILD;
+    }, [titles, library.builds, recipeLabel]);
+    const currentTitle = titleOf(library.currentId);
+    const switcherBuilds = useMemo(() => [...library.builds]
+        .sort((a, b) => b.openedAt - a.openedAt)
+        .map((build) => ({
+            id: build.id,
+            title: titles.get(build.id) ?? UNTITLED_BUILD,
+            secondary: build.name !== null && build.recipe !== '' ? recipeTitle(build.recipe, recipeLabel) : null,
+        })), [library.builds, titles, recipeLabel]);
+    const switcherRef = useRef<HTMLButtonElement>(null);
+    const focusSwitcher = useCallback(() => switcherRef.current?.focus(), []);
+
+    // opening another build ends any Undo offer (the form is replaced, as by an edit), and its clocks go
+    const handleOpenBuild = useCallback(async (id: string) => {
+        if (await library.openBuild(id)) {
+            withdrawUndo();
+            handleBuildReplaced();
+            announce(openedBuildAnnouncement(titleOf(id)));
+        }
+    }, [library, withdrawUndo, handleBuildReplaced, announce, titleOf]);
+    const handleNewBuild = useCallback(() => {
+        library.newBuild();
+        withdrawUndo();
+        handleBuildReplaced();
+        // blank: the intro card shows again, unless it was closed
+        afterReset();
+        announce(NEW_BUILD_ANNOUNCEMENT);
+    }, [library, withdrawUndo, handleBuildReplaced, afterReset, announce]);
+    const handleDuplicateBuild = useCallback(() => {
+        const copy = library.duplicateBuild();
+        withdrawUndo();
+        handleBuildReplaced();
+        announce(duplicatedAnnouncement(titleOf(copy.id, copy)));
+    }, [library, withdrawUndo, handleBuildReplaced, announce, titleOf]);
+    // a new dialog for each opening, so its field starts from the name
+    const [renaming, setRenaming] = useState({ key: 0, open: false });
+    const handleRenameBuild = useCallback(() => setRenaming((state) => ({ key: state.key + 1, open: true })), []);
+    const closeRename = useCallback(() => setRenaming((state) => ({ ...state, open: false })), []);
+    // the field starts from the name shown; left as the recipe's name, the build stays named after its recipe
+    const automaticName = library.currentMeta.recipe === '' ? UNTITLED_BUILD : recipeTitle(library.currentMeta.recipe, recipeLabel);
+    const handleRenameSave = useCallback((text: string) => {
+        const typed = cleanName(text);
+        const name = typed === automaticName ? null : typed;
+        const id = library.currentId;
+        library.renameBuild(name);
+        closeRename();
+        const renamed = renameBuild({ version: 1, builds: [library.currentMeta] }, id, name).builds[0];
+        announce(renamedAnnouncement(titleOf(id, renamed)));
+    }, [library, automaticName, closeRename, announce, titleOf]);
+    // Delete offers Undo, which brings the build back and opens it
+    const handleDeleteBuild = useCallback(async () => {
+        const deleted = library.currentMeta;
+        // the blank build made when the only one goes, which the Undo takes out again
+        const made: { id?: string } = {};
+        offerUndo(deletedBuildMessage(currentTitle), { revert: (form) => library.restore({ meta: deleted, form, removeId: made.id }) });
+        made.id = (await library.deleteBuild()).madeId ?? undefined;
+        handleBuildReplaced();
+    }, [library, currentTitle, offerUndo, handleBuildReplaced]);
+
+    // another tab saved this build: one warning per episode, whose action loads that tab's version (with Undo)
+    const conflictStatus = library.conflict.status;
+    const { loadOtherTabVersion, closeConflict } = library;
+    const conflictMessageRef = useRef<number | null>(null);
+    useEffect(() => {
+        if (conflictStatus === 'raised' && conflictMessageRef.current === null) {
+            conflictMessageRef.current = notify({
+                severity: 'warning',
+                durationMs: null,
+                text: CHANGED_ELSEWHERE_MESSAGE,
+                action: {
+                    label: LOAD_OTHER_TAB_LABEL,
+                    onClick: () => {
+                        loadOtherTabVersion(() => offerUndo(LOADED_OTHER_TAB_MESSAGE)).then((loaded) => {
+                            if (loaded) handleBuildReplaced();
+                        });
+                    },
+                },
+                onClose: closeConflict,
+            });
+        } else if (conflictStatus === 'none' && conflictMessageRef.current !== null) {
+            // ended here (an edit, another build): the warning goes, as its action would now throw that away
+            dismiss(conflictMessageRef.current);
+            conflictMessageRef.current = null;
+        }
+    }, [conflictStatus, notify, dismiss, loadOtherTabVersion, closeConflict, offerUndo, handleBuildReplaced]);
+
+    // a share link: asked first, then added as a new build (or in the place of an empty one), with Undo
+    const shared = useSharedBuildLink(isInitialized);
+    // kept while the dialog closes, so its text does not go blank
+    const [sharedShown, setSharedShown] = useState<SharedBuild | null>(null);
+    if (shared.pending !== null && shared.pending !== sharedShown) {
+        setSharedShown(shared.pending);
+    }
+    const sharedReplacesBlank = blankBuild && library.currentMeta.name === null;
+    const sharedTitle = (build: SharedBuild) => build.name
+        ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
+    const handleOpenShared = useCallback(() => {
+        const build = shared.accept();
+        if (!build) return;
+        const previous = library.currentMeta;
+        const replaceId = sharedReplacesBlank ? previous.id : undefined;
+        const title = build.name
+            ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
+        // the build the link added, which its Undo takes out again (none when it took the empty build's place)
+        const added: { id?: string } = {};
+        offerUndo(sharedOpenedMessage(title), {
+            revert: (form) => library.restore({ meta: previous, form, removeId: replaceId === undefined ? added.id : undefined }),
+        });
+        added.id = library.addBuild(configToFormData(build.config), build.name, { replaceId }).id;
+        handleBuildReplaced();
+    }, [shared, library, sharedReplacesBlank, recipeLabel, offerUndo, handleBuildReplaced]);
+
     const handleSearchDeeper = useCallback((keepOn: boolean) => runChecked((config) => {
         if (keepOn) {
             // the form's key once the switch is on, so the results are not taken for out of date
@@ -523,9 +670,23 @@ function App() {
                         <Icon sx={{ mr: 3 }}>
                             <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
                         </Icon>
-                        <Typography variant="h6" component="h1" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0, flexShrink: 0 }}>
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
+                        {isInitialized && (
+                            <BuildSwitcher
+                                ref={switcherRef}
+                                builds={switcherBuilds}
+                                currentId={library.currentId}
+                                currentTitle={currentTitle}
+                                onOpen={handleOpenBuild}
+                                onNew={handleNewBuild}
+                                onDuplicate={handleDuplicateBuild}
+                                onRename={handleRenameBuild}
+                                onDelete={handleDeleteBuild}
+                            />
+                        )}
+                        <Box sx={{ flexGrow: 1 }} />
                         <ConfigImportExport
                             ref={buildEntryRef}
                             config={exportableConfig}
@@ -543,6 +704,8 @@ function App() {
                             onUndoable={offerUndoOfReplace}
                             onShowIntro={showIntro}
                             introShown={introVisible}
+                            buildName={library.currentMeta.name}
+                            buildTitle={currentTitle}
                         />
                     </Toolbar>
                     {isInitialized && (
@@ -845,6 +1008,23 @@ function App() {
             </Box>
 
             <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />
+            <RenameBuildDialog
+                key={renaming.key}
+                open={renaming.open}
+                initialName={library.currentMeta.name ?? automaticName}
+                onSave={handleRenameSave}
+                onClose={closeRename}
+                onExited={focusSwitcher}
+            />
+            <OpenSharedBuildDialog
+                open={shared.pending !== null}
+                title={sharedShown ? sharedTitle(sharedShown) : ''}
+                summary={sharedShown ? sharedBuildSummary(sharedShown.config, recipeLabel) : ''}
+                placeNote={sharedPlaceNote(sharedReplacesBlank, currentTitle)}
+                onOpen={handleOpenShared}
+                onCancel={shared.cancel}
+                onExited={focusSwitcher}
+            />
 
             {/* Fullscreen diagram dialog */}
             <Dialog

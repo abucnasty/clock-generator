@@ -36,6 +36,8 @@ replace. The words of the engine's own text (clock names and descriptions, the I
 | start point | The place in the clock period where the clock starts. | "one start of the clock" |
 | copies | How many identical copies of your build you will place. "Copy" stays a verb ("Copy blueprint"). | copy as any other noun |
 | build | The machines, inserters, belts and chests you set up, which the clocks are made for. Saved as a build file (Open build file…, Save build file, Reset build). | configuration, config |
+| Your builds | The builds kept in this browser, one per name. | library, saved configs |
+| share link | A link that carries a copy of a build; opening it adds the build to Your builds. | permalink, URL |
 | clock | The set of combinators that switches your inserters on in their wake windows and repeats every clock period. The tool makes several and recommends one. | potential clock |
 | blueprint | The Factorio string you paste in the game. It holds a clock's combinators, not your build. | "blueprint" for a clock or a build |
 | check | Test that your build can be clocked, without making any clocks. The Validate button and its chips keep their names until the Check only rework (2.3). | validation, "run a simulation", "re-run the simulation" (in sentences) |
