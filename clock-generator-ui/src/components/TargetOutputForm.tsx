@@ -5,7 +5,7 @@ import { NumberField } from './NumberField';
 interface TargetOutputFormProps {
     recipe: string;
     itemsPerSecond: number;
-    /** Number of duplicate setups being modeled */
+    /** Number of duplicate setups being modeled; may be fractional, such as 5.5, for a partial block */
     copies: number;
     recipeNames: string[];
     onRecipeChange: (recipe: string) => void;
@@ -77,11 +77,13 @@ export function TargetOutputForm({
                 <NumberField
                     label="Copies"
                     value={copies}
-                    onValueChange={(val) => onCopiesChange(parseInt(val?.toString() || '') || 1)}
-                    min={1}
-                    step={1}
+                    onValueChange={(val) => onCopiesChange(parseFloat(val?.toString() || '') || 1)}
+                    min={0}
+                    step={0.5}
                     sx={{ width: 120 }}
                     required
+                    error={copies <= 0}
+                    helperText={copies <= 0 ? 'Must be more than 0' : undefined}
                 />
             </Box>
         </Paper>

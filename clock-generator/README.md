@@ -123,6 +123,11 @@ the generator plans one and multiplies its rate. The copies are assumed identica
 and the belts shared between them. A config that itself holds several identical copies (the same machines and
 inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
 (`src/config/copies-validator.ts`). Describe the smallest repeating unit of a build, not a whole block of it.
+`copies` may be fractional, such as 5.5: the build then holds a partial block, and its rate is planned as that fraction of
+one block's (5.5 copies of a block of 4 assemblers making 240 a second means one block makes 480/11 a second). The unit
+itself is still whole, with identical units, no inserter between them and shared belts. The number is read as an exact
+fraction, so it must be a whole number or a short decimal (a reduced denominator of at most 1000); 0.3333333333333333 is
+refused.
 
 ### Configuration Example (JSON)
 

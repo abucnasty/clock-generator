@@ -196,7 +196,7 @@ function targetRateDescription(cycle: CraftingCyclePlan): string {
     const target = cycle.production_rate;
     const item_icon = SignalId.toDescriptionString(SignalId.item(target.total_production_rate.item));
     const total = formatRate(target.total_production_rate.amount_per_second.toDecimal());
-    if (target.copies <= 1) {
+    if (target.copies === 1) {
         return `Target: ${total} ${item_icon} per second`;
     }
     const each = formatRate(target.machine_production_rate.amount_per_second.toDecimal());

@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { fraction } from "../data-types/fraction";
 
 /**
  * Represents a single validation error with user-friendly details.
@@ -250,7 +251,7 @@ export class CopiesError extends Error {
             .map((unit, i) => `copy ${i + 1}: machines ${unit.machine_ids.join(', ')}`)
             .join('; ');
         return `The config holds ${found} identical copies of a unit of ${size} machine${size === 1 ? '' : 's'} `
-            + `(${listed}). Describe one copy and set target_output.copies to ${configuredCopies * found} `
+            + `(${listed}). Describe one copy and set target_output.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
             + `(now ${configuredCopies}, times ${found}).`;
     }
 }
