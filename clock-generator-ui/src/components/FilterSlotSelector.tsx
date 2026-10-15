@@ -71,11 +71,13 @@ export function FilterSlotSelector({
     };
 
     return (
-        // the gap leaves room for a remove button between two slots, clear of the next one
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 1.5, alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-                Filters:
+        <Box>
+            {/* above the slots, as a field's label is, so the row's room goes to Source and Destination */}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1, mb: 0.75 }}>
+                Filters
             </Typography>
+        {/* the gap leaves room for a remove button between two slots, clear of the next one */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2.5, rowGap: 1.5, alignItems: 'center' }}>
 
             {Array.from({ length: slotCount }).map((_, slotIndex) => {
                 // Determine what to display in this slot
@@ -131,6 +133,8 @@ export function FilterSlotSelector({
                     +{inferredFilters.length - maxSlots} more
                 </Typography>
             )}
+
+        </Box>
 
             {/* Item selector popover */}
             <Popover

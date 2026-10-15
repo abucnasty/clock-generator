@@ -170,7 +170,7 @@ async function walkthrough(page, rec, base) {
     }, page);
 
     await rec.step('overrides', async () => {
-        const summary = page.getByRole('button', { name: /Advanced Overrides/ });
+        const summary = page.getByRole('button', { name: /^Advanced$/ });
         await summary.click();
         await settle(page);
         await summary.scrollIntoViewIfNeeded();

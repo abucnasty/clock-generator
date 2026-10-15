@@ -67,14 +67,11 @@ function DrillsFormComponent({
     const listed = drills.length > 0 || miningProductivityLevel > 0;
 
     return (
-        // the same element in both shapes, so that the focus finds the Add row in it once the last drill goes
-        <Box ref={cardRef}>
-            {!listed ? (
-                <AddRow label="Add mining drill" data-row-add="" onClick={() => { focusAdded(); onAdd(); }} />
-            ) : (
+        // the same section in both shapes, so that the focus finds the Add row in it once the last drill goes
         <PanelSection
+            ref={cardRef}
             level={3}
-            title={`Mining drills (${drills.length})`}
+            title={listed ? `Mining drills (${drills.length})` : 'Mining drills'}
             help={{
                 label: BUTTON_NAMES.aboutDrills,
                 content: (
@@ -86,12 +83,17 @@ function DrillsFormComponent({
                     </>
                 ),
             }}
-            actions={(
+            // with none, the Add row below is the one add
+            actions={listed && (
                 <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Drill
                 </Button>
             )}
         >
+            {!listed ? (
+                <AddRow label="Add mining drill" data-row-add="" onClick={() => { focusAdded(); onAdd(); }} />
+            ) : (
+                <>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
                         <TextField
                             label="Mining Productivity Level"
@@ -208,7 +210,7 @@ function DrillsFormComponent({
                         </SortableItem>
                     ))}
                     </SortableList>
-        </PanelSection>
+                </>
             )}
 
             {/* the enable rule modal */}
@@ -240,7 +242,7 @@ function DrillsFormComponent({
                     setEnableControlModalDrillIndex(null);
                 }}
             />
-        </Box>
+        </PanelSection>
     );
 }
 

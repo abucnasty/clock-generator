@@ -82,7 +82,7 @@ const movingRadio = (page) => radio(page, T.moving);
 const standingRadio = (page) => radio(page, T.standing);
 /** The Belts card of the List view: the Paper that holds the "Belts (n)" title */
 const beltsCard = (page) => page.locator('.MuiPaper-root').filter({ has: page.getByText(/^Belts \(\d+\)/) }).last(); // SELECTOR: confirm
-const advancedSummary = (page) => page.getByRole('button', { name: /^Advanced Overrides/ }).first();
+const advancedSummary = (page) => page.getByRole('button', { name: /^Advanced$/ }).first();
 const passedChip = (page) => page.locator('header .MuiChip-root').filter({ hasText: /^Check passed$/ }); // SELECTOR: confirm
 const lineLoc = (page, text) => page.getByText(text, { exact: true }).first();
 const actionBtn = (page, name) => page.getByRole('button', { name, exact: true });

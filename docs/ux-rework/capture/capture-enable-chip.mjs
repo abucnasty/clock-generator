@@ -94,7 +94,7 @@ function card(headingPattern) {
 }
 
 const inserterCard = () => card(/^Inserters \(\d+\)$/);
-const drillCard = () => card(/^Mining Drills \(\d+\)$/);
+const drillCard = () => card(/^Mining drills \(\d+\)$/);
 
 /** The enable controls of a card: chips after the change, gear buttons before it */
 const enableControls = (c) => c.getByRole('button', { name: AFTER ? /\. Edit rule$/ : 'Configure Enable Control' });
@@ -246,7 +246,7 @@ async function runAt(w) {
             note('no chip (before): drill chip text check');
             return;
         }
-        const count = await headingCount(/^Mining Drills \(\d+\)$/);
+        const count = await headingCount(/^Mining drills \(\d+\)$/);
         check('one enable chip per drill', (await enableControls(c).count()) === count, `${await enableControls(c).count()} chips, ${count} drills`);
         const texts = await chipTexts(c);
         check('the drill reads Clocked 1–2 of 168', texts[0] === 'Clocked 1–2 of 168', texts[0]);

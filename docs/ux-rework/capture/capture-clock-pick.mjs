@@ -35,7 +35,7 @@ const LOGISTIC_STILL = variant(LOGISTIC, { non_moving_belts: true }, 'logistic-s
 const OFFER = 'We stopped once we found a working clock. A deeper, slower search might find one with fewer wake-ups.';
 const DONE_ONCE = 'We searched deeper for this run. These clocks include the slower searches.';
 const DONE_KEPT = 'Deeper search is on for this build.';
-const STOP_KEPT = 'To stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.';
+const STOP_KEPT = 'To stop it, turn off "Search for fewer wake-ups" under Advanced.';
 const SEARCHING = 'Searching deeper… this can take several times longer.';
 /** The "searched deeper" line, which names the pick: `start` and " Recommended is now {label}." */
 const namesPick = (notes, start, label) => notes.some((note) => note.startsWith(start) && note.includes(` Recommended is now ${label}.`));
@@ -225,7 +225,7 @@ async function checkFinished(name) {
 
 async function overridesSwitch() {
     await goConfigure(page);
-    const summary = page.getByRole('button', { name: /Advanced Overrides/ });
+    const summary = page.getByRole('button', { name: /^Advanced$/ });
     if ((await summary.getAttribute('aria-expanded')) !== 'true') {
         await summary.click();
         await page.waitForTimeout(600);
@@ -422,7 +422,7 @@ await rec.step('chemical: the offer', async () => {
     rec.check('chemical: "Always search deeper for this build" is unticked', !(await keepOn().isChecked()));
     const describedBy = await keepOn().getAttribute('aria-describedby');
     const caption = describedBy ? await page.locator(`[id="${describedBy}"]`).textContent() : null;
-    rec.check('chemical: the checkbox is described by its caption', caption === 'With Search deeper, also turns on "Search for fewer wake-ups" in Advanced Overrides.', String(caption));
+    rec.check('chemical: the checkbox is described by its caption', caption === 'With Search deeper, also turns on "Search for fewer wake-ups" in Advanced.', String(caption));
     const toggle = page.getByRole('button', { name: /^Show \d+ unstable clock/ });
     if ((await toggle.count()) > 0) {
         const [toggleTop, noteTop] = [await toggle.boundingBox(), await notes().first().boundingBox()].map((box) => box?.y ?? 0);

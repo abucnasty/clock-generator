@@ -106,7 +106,7 @@ export function ChestFilterSlotSelector({
 
     return (
         // the gap keeps a remove button, which sticks out past its slot's corner, a few pixels off the next slot
-        <Box sx={{ display: 'flex', columnGap: 2, rowGap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', columnGap: 2.5, rowGap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Render existing filter slots */}
             {displayedFilters.map((filter, slotIndex) => (
                 // the slot and its remove button are siblings: a button inside a button cannot be reached or named

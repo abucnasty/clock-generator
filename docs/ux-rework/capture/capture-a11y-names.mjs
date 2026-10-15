@@ -40,7 +40,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import {
     forWidths, previewServer, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate, waitReady,
-    accessibleName, checkTabTo, checkAnnounced,
+    accessibleName, checkTabTo, checkAnnounced, ui,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -218,10 +218,13 @@ function readHeadings(page, { dialog = false } = {}) {
     }, dialog);
 }
 
+// 2.7 B: Target Output, Build and Advanced are h2; the Build card's sections h3, Belts and Chests h4 inside "Belts and chests",
+// Machine Facts h4; 2.3 removed Validation (its swing plan is in Advanced). Without a chest, "Chests (n)" (h4) is an Add row;
+// capture-build-card checks its level with a build that has chests
 const CONFIGURE_HEADINGS = [
-    [/^Target Output/, 2], [/^Machines \(/, 2], [/^Machine Facts/, 3], [/^Inserters \(/, 2], [/^Belts \(/, 2], [/^Chests \(/, 2],
-    [/^Mining Drills/, 2], [/^Advanced Overrides/, 2], [/^Validation/, 2], [/^Swing Plan/, 3],
-]; // SELECTOR: confirm (the heading table of the spec; Swing Plan shows after Validate)
+    [/^Target Output/, 2], [/^Build$/, 2], [/^Machines \(/, 3], [/^Machine Facts/, 4], [/^Belts and chests$/, 3], [/^Belts \(/, 4],
+    [/^Inserters \(/, 3], [/^Mining drills/, 3], [/^Advanced$/, 2], [/^Swing Plan/, 3],
+]; // SELECTOR: confirm (the heading table of the spec; Swing Plan shows after a check)
 const RESULTS_HEADINGS = {
     timelines: [[/^Clocks/, 2], [/^Transfer Activity Timeline/, 2], [/^State Transition Timeline/, 2]],
     insights: [[/^Clocks/, 2], [/^About this clock/, 2], [/^About this build/, 2]],
@@ -264,12 +267,15 @@ function judgeHeadings(rec, view, headings, expected, { needH1 = true, h3Min = 0
 async function ensureRows(page, state) {
     if (state.rows) return;
     await goConfigure(page);
-    const chest = page.getByRole('button', { name: 'Buffer Chest' }); // SELECTOR: confirm
-    if ((await chest.count()) > 0) await chest.click();
-    const drills = page.getByRole('switch').first(); // SELECTOR: confirm (the Mining Drills switch is the first switch on the page)
-    if ((await drills.count()) > 0 && !(await drills.isChecked())) await drills.click();
+    // 2.7 B: with none, chests and drills are "Add …" rows; the chest row opens a menu of the two kinds
+    if ((await ui.addChestRow(page).count()) > 0) {
+        await ui.addChestRow(page).click();
+        await ui.addChestMenuItem(page).click();
+    } else if ((await ui.addChest(page).count()) > 0) {
+        await ui.addChest(page).click();
+    }
     await page.waitForTimeout(200);
-    const add = page.getByRole('button', { name: 'Add Drill' }); // SELECTOR: confirm
+    const add = (await ui.addDrillRow(page).count()) > 0 ? ui.addDrillRow(page) : ui.add(page, 'drills');
     if ((await add.count()) > 0 && (await add.isEnabled())) await add.click();
     await page.waitForTimeout(400);
     state.rows = true;
@@ -278,7 +284,7 @@ async function ensureRows(page, state) {
 /** The rows of the List view: kind and number, from the drag handles in document order and the section heading above each */
 function readRows(page) {
     return page.evaluate(() => {
-        const sections = [['machine', /^Machines\b/], ['inserter', /^Inserters\b/], ['belt', /^Belts\b/], ['chest', /^Chests\b/], ['drill', /^Mining Drills\b/]];
+        const sections = [['machine', /^Machines\b/], ['inserter', /^Inserters\b/], ['belt', /^Belts \(/], ['chest', /^Chests\b/], ['drill', /^Mining drills\b/]];
         const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter((h) => h.checkVisibility({ visibilityProperty: true }));
         const counts = {};
         const rows = [];

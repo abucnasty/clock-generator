@@ -145,7 +145,7 @@ function counts(saved) {
 
 /** A form section by its heading ("Machines (4)"), the innermost Paper holding it. SELECTOR: confirm (headings may change in 1.9/1.11) */
 const section = (page, title) =>
-    page.locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: new RegExp(`^${title} \\(`) }) }).last();
+    page.getByRole('main').getByRole('region', { name: new RegExp(`^${title} \\(`) }); // a section of the Build card (2.7 B)
 /** Trash buttons of a section's rows (not a belt lane's small one): marked data-row-delete; icons have no data-testid in a production build */
 const trash = (page, title) => section(page, title).locator('button[data-row-delete]');
 
@@ -154,7 +154,7 @@ const KINDS = {
     inserter: { title: 'Inserters', key: 'inserters', re: /^Deleted Inserter \d+\./ },
     belt: { title: 'Belts', key: 'belts', re: /^Deleted Belt \d+\./ },
     chest: { title: 'Chests', key: 'chests', re: /^Deleted Chest \d+\./ },
-    drill: { title: 'Mining Drills', key: 'drills', re: /^Deleted Drill \d+\./ },
+    drill: { title: 'Mining drills', key: 'drills', re: /^Deleted Drill \d+\./ },
 };
 
 /** 2.1: Save build file, a ⋮ menu item at every width ("Build saved to a file.") */
@@ -1132,7 +1132,7 @@ try {
                 const imported = await readState(page);
                 if (!rec.check(`${what}: the import offers Undo first`, (await undoBtn(page).count()) === 1 && imported.saved !== prod.saved)) return;
                 if (swing) {
-                    const summary = page.getByRole('button', { name: /Advanced Overrides/ }).first(); // SELECTOR: confirm (the accordion's summary)
+                    const summary = page.getByRole('button', { name: /^Advanced$/ }).first(); // SELECTOR: confirm (the accordion's summary)
                     if ((await summary.count()) > 0 && (await summary.getAttribute('aria-expanded')) !== 'true') await summary.click().catch(() => {});
                     await page.waitForTimeout(600);
                 }
@@ -1154,7 +1154,7 @@ try {
             };
             await endsOffer('Check only (the workflow bar)', () => page.getByRole('button', { name: 'Check only', exact: true }).first().click({ timeout: 3000 }));
             // the swing plan's own Check only: in Advanced Overrides, shown while the build has no passed check (after an import)
-            await endsOffer('Check only (the swing plan)', () => page.locator('.MuiAccordion-root', { hasText: /Advanced Overrides/ }).getByRole('button', { name: 'Check only', exact: true }).first().click({ timeout: 3000 }), { swing: true }); // SELECTOR: confirm
+            await endsOffer('Check only (the swing plan)', () => page.locator('.MuiAccordion-root', { hasText: /^Advanced/ }).getByRole('button', { name: 'Check only', exact: true }).first().click({ timeout: 3000 }), { swing: true }); // SELECTOR: confirm
         }, page);
 
         await rec.step('U2 Generate ends the Undo offer; a press that runs nothing keeps it', async () => {
