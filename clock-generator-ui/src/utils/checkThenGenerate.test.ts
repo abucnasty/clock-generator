@@ -30,8 +30,6 @@ function form(): ConfigFormData {
 const configOf = (edit: (config: ConfigFormData) => ConfigFormData = (c) => c): Config => formDataToConfig(edit(form()));
 
 const problems = (...texts: string[]): Problem[] => texts.map((text) => ({ text, target: { kind: 'target-recipe' } }));
-/** A target more than the machines can make: a warning, which neither button stops for */
-const rateWarning: Problem = { text: 'Items per Second is more than the machines can make (at most 252.66/s)', target: { kind: 'target-rate' }, warning: true };
 
 describe('decideGenerate', () => {
     const idle = { initialized: true, generating: false, checkStatus: 'none' as CheckStatus, problems: [] as Problem[] };
@@ -57,12 +55,12 @@ describe('decideGenerate', () => {
         expect(decideGenerate({ ...idle, checkStatus: 'valid' })).toEqual({ kind: 'generate' });
     });
 
-    it('checks and generates as usual with only a warning, and goes to a problem ahead of it', () => {
-        expect(decideGenerate({ ...idle, checkStatus: 'none', problems: [rateWarning] })).toEqual({ kind: 'check-first' });
-        expect(decideGenerate({ ...idle, checkStatus: 'valid', problems: [rateWarning] })).toEqual({ kind: 'generate' });
-        expect(decideGenerate({ ...idle, checkStatus: 'invalid', problems: [rateWarning] })).toEqual({ kind: 'go-to-check-error' });
-        const [problem] = problems('a');
-        expect(decideGenerate({ ...idle, problems: [problem, rateWarning] })).toEqual({ kind: 'go-to-problem', problem });
+    it('goes to Items per Second for a target more than the machines can make, and never checks', () => {
+        const problem: Problem = { text: PROBLEM_TEXT.rateAboveMax(252.66), target: { kind: 'target-rate' } };
+        for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
+            expect(decideGenerate({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'go-to-problem', problem });
+            expect(decideCheckOnly({ ...idle, checkStatus, problems: [problem] })).toEqual({ kind: 'show-problems' });
+        }
     });
 
     it('checks first when there is no check for this build', () => {
@@ -83,12 +81,6 @@ describe('decideCheckOnly', () => {
     it('shows the problems instead of checking, whatever the check says', () => {
         for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
             expect(decideCheckOnly({ ...idle, checkStatus, problems: problems('a') })).toEqual({ kind: 'show-problems' });
-        }
-    });
-
-    it('checks with only a warning', () => {
-        for (const checkStatus of ['none', 'valid', 'invalid', 'out-of-date'] as const) {
-            expect(decideCheckOnly({ ...idle, checkStatus, problems: [rateWarning] })).toEqual({ kind: 'check' });
         }
     });
 

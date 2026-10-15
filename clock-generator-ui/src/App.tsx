@@ -276,9 +276,9 @@ function App() {
         [config.inserters, config.belts, config.overrides]
     );
 
-    // the most the machines making the target recipe can make, which a target above it is warned of
+    // the most the machines making the target recipe can make: a target above it is a problem
     const machinesMax = useMachinesMax(config.target_output.recipe, config.machines);
-    // what keeps the build from being clocked, and so where Generate goes instead; then what is only a warning
+    // what keeps the build from being clocked, and so where Generate goes instead
     const problems = useMemo(() => problemsOf({
         targetOutput: config.target_output,
         machines: config.machines,
@@ -293,8 +293,6 @@ function App() {
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
     const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
     const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild });
-    // where the buttons go instead of checking: not a warning, with which they check and generate as usual
-    const blockedBy = note?.warning ? null : note;
     // who started the running or last check, for the announcements: Generate leads on by itself
     const [checkedForGenerate, setCheckedForGenerate] = useState(false);
 
@@ -738,7 +736,7 @@ function App() {
                                             checkStatus={checkStatus}
                                             busy={busy}
                                             onCheckOnly={handleCheckOnly}
-                                            note={blockedBy}
+                                            note={note}
                                             excludedIngredients={config.overrides?.ignored_lcm_ingredients ?? []}
                                             onExcludeChange={handleExcludeChange}
                                         />
@@ -763,7 +761,7 @@ function App() {
                                 searchedDeeper={searchedDeeper}
                                 keptOn={config.overrides?.search_for_fewer_wake_ups === true}
                                 canSearchDeeper={!busy}
-                                searchDeeperBlockedBy={blockedBy}
+                                searchDeeperBlockedBy={note}
                                 onSearchDeeper={handleSearchDeeper}
                                 blueprintString={blueprintString}
                                 simulationDurationTicks={simulationDurationTicks}

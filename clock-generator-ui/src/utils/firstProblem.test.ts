@@ -6,7 +6,6 @@ import {
     ELEMENT_IDS,
     PROBLEM_TEXT,
     barNoteOf,
-    blockingProblemsOf,
     coverageIssueElementId,
     firstProblemOf,
     focusIdOf,
@@ -132,37 +131,34 @@ describe('problemsOf', () => {
 describe('a target more than the machines can make', () => {
     // Machine 1 of the logistic science sample makes at most 22.97/s; 11 copies 252.66/s
     const machinesMax = { machineIds: [1], perCopy: 22.968749205271 };
-    const tooHigh = filledIn({ targetOutput: { recipe: 'logistic-science-pack', items_per_second: 240200, copies: 11 }, machinesMax });
+    const target = (items_per_second: number) => ({ recipe: 'logistic-science-pack', items_per_second, copies: 11 });
+    const tooHigh = filledIn({ targetOutput: target(240200), machinesMax });
+    const rateProblem: Problem = { text: 'Items per Second is more than the machines can make (at most 252.66/s)', target: { kind: 'target-rate' } };
 
-    it('is a warning, not a problem, and goes to Items per Second', () => {
-        expect(problemsOf(tooHigh)).toEqual([{
-            text: 'Items per Second is more than the machines can make (at most 252.66/s)',
-            target: { kind: 'target-rate' },
-            warning: true,
-        }]);
-        expect(blockingProblemsOf(problemsOf(tooHigh))).toEqual([]);
+    it('is a problem that goes to Items per Second', () => {
+        expect(problemsOf(tooHigh)).toEqual([rateProblem]);
+        expect(firstProblemOf(tooHigh)).toEqual(rateProblem);
     });
 
-    it('comes after the problems', () => {
-        const problems = problemsOf({ ...tooHigh, machines: [{ id: 1, recipe: 'logistic-science-pack' }, { id: 2, recipe: '' }] });
-        expect(problems.map((p) => p.warning ?? false)).toEqual([false, true]);
-        expect(blockingProblemsOf(problems).map((p) => p.text)).toEqual(['Set the recipe of Machine 2']);
+    it('comes after the machines and before the missing inserters', () => {
+        const problems = problemsOf({
+            ...tooHigh,
+            machines: [{ id: 1, recipe: 'logistic-science-pack' }, { id: 2, recipe: '' }],
+            coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')],
+        });
+        expect(problems.map((p) => p.target?.kind)).toEqual(['machine-recipe', 'target-rate', 'coverage-issue']);
     });
 
-    it('is not there for a target the copies can make, or while the machines\' max is not known', () => {
-        expect(problemsOf(filledIn({ targetOutput: { recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, machinesMax }))).toEqual([]);
+    it('is not there for a target the copies make, at the max as printed, or while the max is not known', () => {
+        expect(problemsOf(filledIn({ targetOutput: target(240), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.66), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.67), machinesMax }))).toEqual([rateProblem]);
         expect(problemsOf({ ...tooHigh, machinesMax: null })).toEqual([]);
         expect(problemsOf({ ...tooHigh, machinesMax: undefined })).toEqual([]);
     });
 
-    it('is in the bar\'s note only when nothing keeps the build from being clocked and the last check did not fail', () => {
-        const [rateWarning] = problemsOf(tooHigh);
-        const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
-        expect(barNoteOf({ problems: [rateWarning], busy: false, checkStatus: 'none' })).toEqual(rateWarning);
-        expect(barNoteOf({ problems: [rateWarning], busy: false, checkStatus: 'valid' })).toEqual(rateWarning);
-        expect(barNoteOf({ problems: [recipeProblem, rateWarning], busy: false, checkStatus: 'none' })).toEqual(recipeProblem);
-        expect(barNoteOf({ problems: [rateWarning], busy: false, checkStatus: 'invalid' })?.text).toBe(PROBLEM_TEXT.validationFailed);
-        expect(barNoteOf({ problems: [rateWarning], busy: true, checkStatus: 'none' })).toBeNull();
+    it('is the bar\'s note, ahead of a failed check', () => {
+        expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
     });
 });
 

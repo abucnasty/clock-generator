@@ -2,7 +2,7 @@ import type { InserterCoverageIssue } from 'clock-generator/browser';
 import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
 import { formatNumberText } from './numberText';
-import { isTargetAboveMax, type MachinesMax } from './targetRateWarning';
+import { isTargetAboveMax, type MachinesMax } from './targetRateLimit';
 
 /**
  * Every sentence that says what stops the build being clocked, and so where Generate goes. The tooltips, the note in the
@@ -13,12 +13,11 @@ export const PROBLEM_TEXT = {
     noRate: 'Set Items per Second in Target Output to more than 0',
     noCopies: 'Set Copies in Target Output to 1 or more',
     noMachines: 'Add a machine',
+    rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${formatNumberText(total)}/s)`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter bringing in ${item}`,
     missingOutput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter taking ${item} out`,
     validationFailed: 'The last check failed. Show why',
-    /** A warning, not a problem: the clocks can still be made, for what the machines can make */
-    rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${formatNumberText(total)}/s)`,
     /** On a build with nothing entered yet: its next step, said neutrally rather than as problems */
     start: 'Start: pick the recipe you want to make',
 } as const;
@@ -62,8 +61,6 @@ export interface Problem {
     text: string;
     /** Null for a next step that has nowhere to go */
     target: FocusTarget | null;
-    /** Worth knowing, but it does not keep the build from being checked or clocked */
-    warning?: true;
 }
 
 interface ProblemsInput {
@@ -75,9 +72,9 @@ interface ProblemsInput {
 }
 
 /**
- * What keeps the build from being generated, in the order it is best fixed: the target, the machines, then the
- * inserters the engine found missing, in its order. Empty when the build can be generated. After them, the warnings,
- * which do not keep it from being generated: a target more than the machines can make.
+ * What keeps the build from being generated, in the order it is best fixed: the target, the machines, a target more
+ * than the machines can make (which their recipes change), then the inserters the engine found missing, in its order.
+ * Empty when the build can be generated.
  */
 export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax = null }: ProblemsInput): Problem[] {
     const problems: Problem[] = [];
@@ -101,6 +98,13 @@ export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax
             });
         }
     }
+    // the engine's check refuses such a target too; said here, the player is sent to the field instead of a failed check
+    if (machinesMax && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
+        problems.push({
+            text: PROBLEM_TEXT.rateAboveMax(machinesMax.perCopy * targetOutput.copies),
+            target: { kind: 'target-rate' },
+        });
+    }
     for (const { kind, machine_id, item_name } of coverageIssues) {
         problems.push({
             text: kind === 'missing_input_inserter'
@@ -109,19 +113,7 @@ export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax
             target: { kind: 'coverage-issue', issue: { kind, machine_id, item_name } },
         });
     }
-    if (machinesMax && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
-        problems.push({
-            text: PROBLEM_TEXT.rateAboveMax(machinesMax.perCopy * targetOutput.copies),
-            target: { kind: 'target-rate' },
-            warning: true,
-        });
-    }
     return problems;
-}
-
-/** The problems that keep the build from being checked or clocked, without the warnings */
-export function blockingProblemsOf(problems: Problem[]): Problem[] {
-    return problems.filter((problem) => !problem.warning);
 }
 
 /** The problem to fix first, or null when there is none */
@@ -131,9 +123,8 @@ export function firstProblemOf(input: ProblemsInput): Problem | null {
 
 /**
  * The one note in the workflow bar, which says where Generate and Check only go: the first problem, else the reason the
- * last check failed, else a warning (the buttons then check and generate as usual). Null while something runs (the
- * buttons then say what it is) or when there is nothing to say. On a `blank` build (nothing entered yet) the problems
- * are only the next step: the note says where to start.
+ * last check failed. Null while something runs (the buttons then say what it is) or when there is nothing to say. On a
+ * `blank` build (nothing entered yet) the problems are only the next step: the note says where to start.
  */
 export function barNoteOf({ problems, busy, checkStatus, blank = false }: {
     problems: Problem[];
@@ -144,17 +135,16 @@ export function barNoteOf({ problems, busy, checkStatus, blank = false }: {
     if (busy) {
         return null;
     }
-    const blocking = blockingProblemsOf(problems);
-    if (blank && blocking.length > 0) {
+    if (blank && problems.length > 0) {
         return { text: PROBLEM_TEXT.start, target: { kind: 'target-recipe' } };
     }
-    if (blocking.length > 0) {
-        return blocking[0];
+    if (problems.length > 0) {
+        return problems[0];
     }
     if (checkStatus === 'invalid') {
         return { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } };
     }
-    return problems[0] ?? null;
+    return null;
 }
 
 /** "1 problem", "3 problems" */

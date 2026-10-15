@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAnnounce, useNotify } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
-import { ELEMENT_IDS, blockingProblemsOf, problemCountLabel, type Problem } from '../utils/firstProblem';
+import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
 import { ANNOUNCEMENTS, workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
 import { GenerationProgressStatus } from './BlueprintOutput';
@@ -45,9 +45,9 @@ interface WorkflowBarProps {
     belowTarget: boolean;
     /** What the clocks were made for, while the build has changed since; copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
-    /** What keeps the build from being clocked, first to fix first, then the warnings; empty when there is nothing */
+    /** What keeps the build from being clocked, first to fix first; empty when nothing does */
     problems: Problem[];
-    /** Where Generate and Check only go instead of checking, said under them; or a warning, when they check as usual */
+    /** Where Generate and Check only go instead of checking, said under them; null when they check */
     note: Problem | null;
     /** Nothing has been entered yet: the note is the next step, not a problem, and there is no count */
     startHere: boolean;
@@ -131,10 +131,6 @@ export function WorkflowBar({
     // since a filled button invites the click, and the copy of an old clock is the one to think twice about
     const warns = rateWarning !== null || staleFor !== null;
     const filled = belowTarget && staleFor === null;
-    // a warning in the note does not keep the buttons from checking and generating, so it is not their reason, nor counted
-    const blocking = blockingProblemsOf(problems);
-    const blockedBy = note?.warning ? null : note;
-    const noteColour = note?.warning ? 'warning.main' : 'error.light';
 
     // what changed in the workflow is read out in the app's one announcements region (checking, generating)
     const hasBlueprint = blueprintString !== null;
@@ -218,13 +214,13 @@ export function WorkflowBar({
                             )}
                         </>
                     )}
-                    {blocking.length > 0 && !startHere && (
+                    {problems.length > 0 && !startHere && (
                         <Chip
                             size="small"
                             color="error"
-                            label={problemCountLabel(blocking.length)}
-                            onClick={() => onGoToProblem(blocking[0])}
-                            aria-label={`${problemCountLabel(blocking.length)}. Go to the first one.`}
+                            label={problemCountLabel(problems.length)}
+                            onClick={() => onGoToProblem(problems[0])}
+                            aria-label={`${problemCountLabel(problems.length)}. Go to the first one.`}
                             // black on the red reads at 6.8:1 (white, MUI's choice, only 3.1); lighter, not darker, when
                             // hovered or focused, so that the black stays legible and the chip stands off the bar
                             sx={{
@@ -246,7 +242,7 @@ export function WorkflowBar({
                     )}
                     {/* the note under the buttons says where they go instead of checking; it describes both, and is their
                         tooltip too. Above the buttons, so that the tooltip does not cover the note it repeats */}
-                    <Tooltip title={blockedBy?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top">
+                    <Tooltip title={note?.text ?? CHECK_TEXT.checkOnlyTooltip} arrow describeChild placement="top">
                         {/* a disabled button fires no events, so the tooltip listens on the wrapper */}
                         <span>
                             <Button
@@ -258,14 +254,14 @@ export function WorkflowBar({
                                     onCheckOnly();
                                 }}
                                 disabled={busy}
-                                aria-describedby={blockedBy ? ELEMENT_IDS.blockReason : undefined}
+                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
                                 {checking === 'check-only' ? CHECK_TEXT.checking : CHECK_TEXT.checkOnly}
                             </Button>
                         </span>
                     </Tooltip>
-                    <Tooltip title={blockedBy?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top">
+                    <Tooltip title={note?.text ?? CHECK_TEXT.generateTooltip} arrow describeChild placement="top">
                         <span>
                             <Button
                                 variant="contained"
@@ -273,7 +269,7 @@ export function WorkflowBar({
                                 onClick={onGenerate}
                                 color="secondary"
                                 disabled={busy}
-                                aria-describedby={blockedBy ? ELEMENT_IDS.blockReason : undefined}
+                                aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
                                 {isLoading ? CHECK_TEXT.generating : checking === 'generate' ? CHECK_TEXT.checking : CHECK_TEXT.generate}
@@ -290,18 +286,15 @@ export function WorkflowBar({
                             id={ELEMENT_IDS.blockReason}
                             variant="text"
                             size="small"
-                            color={startHere ? 'inherit' : note.warning ? 'warning' : 'error'}
+                            color={startHere ? 'inherit' : 'error'}
                             onClick={() => onGoToProblem(note)}
                             // the ripple would tint the text's background on focus; an outline marks the focus instead
                             disableRipple
-                            // a warning says so with its icon too, not by the colour alone
-                            startIcon={note.warning ? <Warning /> : undefined}
                             // the lighter red: the error red is 3.9:1 on the bar, under the 4.5 text needs. A link's
                             // underline on hover, not a tinted background, which would take the contrast under 4.5 again.
-                            // The first step on a blank build is not a problem: in the bar's own text colour. A warning
-                            // is in the warning yellow, which reads at 9:1 on the bar
+                            // The first step on a blank build is not a problem: in the bar's own text colour
                             sx={{
-                                color: startHere ? 'text.primary' : noteColour,
+                                color: startHere ? 'text.primary' : 'error.light',
                                 textTransform: 'none',
                                 textAlign: 'inherit',
                                 py: 0,
@@ -311,7 +304,7 @@ export function WorkflowBar({
                                 '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
                                 // on any focus, not only the keyboard's: Check only moves the focus here when the build has
                                 // a problem, and a mouse click must show where it went
-                                '&:focus, &.Mui-focusVisible': { outline: '2px solid', outlineColor: startHere ? 'primary.main' : noteColour, outlineOffset: 2 },
+                                '&:focus, &.Mui-focusVisible': { outline: '2px solid', outlineColor: startHere ? 'primary.main' : 'error.light', outlineOffset: 2 },
                             }}
                         >
                             {note.text}

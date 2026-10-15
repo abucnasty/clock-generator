@@ -11,7 +11,7 @@ export interface MachinesMax {
 /**
  * The most the machines making the target recipe can make together, from each one's max rate. Null when no machine
  * makes it, or while a machine's max rate is not known (its facts are still being worked out, or could not be): a sum
- * without it would be too low, and warn when nothing is wrong.
+ * without it would be too low, and find a problem where there is none.
  */
 export function machinesMaxOf(machines: { id: number; maxRate: number | null | undefined }[]): MachinesMax | null {
     if (machines.length === 0) {
@@ -27,12 +27,12 @@ export function machinesMaxOf(machines: { id: number; maxRate: number | null | u
     return { machineIds: machines.map((machine) => machine.id), perCopy };
 }
 
-/** A rate as the warning prints it, so that two rates are compared as the player reads them */
+/** A rate as the line prints it, so that two rates are compared as the player reads them */
 const shown = (rate: number) => Number(formatNumberText(rate, { locale: 'en-US' }));
 
 /**
  * Whether Items per Second (the total for every copy) is more than all the copies' machines can make, by more than
- * the rounding the warning prints the rates with: a target typed in from the rounded max does not warn.
+ * the rounding the line prints the rates with: a target typed in from the rounded max is not a problem.
  */
 export function isTargetAboveMax(itemsPerSecond: number, copies: number, max: MachinesMax | null): boolean {
     if (!max || !(itemsPerSecond > 0) || !(copies >= 1) || !Number.isFinite(itemsPerSecond)) {
@@ -51,10 +51,10 @@ function machinesText(ids: number[]): string {
 }
 
 /**
- * The line under Items per Second when the target is more than the machines can make: "Machine 1 makes at most
+ * The line under Items per Second when the target is more than the machines can make, a problem: "Machine 1 makes at most
  * 22.97/s; 11 copies make 252.66/s." Null when it is not.
  */
-export function targetRateWarningOf(
+export function targetRateLineOf(
     { itemsPerSecond, copies, max, locale }: {
         itemsPerSecond: number;
         copies: number;

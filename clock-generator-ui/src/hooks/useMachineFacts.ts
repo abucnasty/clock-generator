@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
 import { askEngine } from '../worker/engineClient';
-import { machinesMaxOf, type MachinesMax } from '../utils/targetRateWarning';
+import { machinesMaxOf, type MachinesMax } from '../utils/targetRateLimit';
 
 interface UseMachineFactsParams {
     recipe: string;
@@ -104,7 +104,7 @@ export function useMachinesMax(recipe: string, machines: MachineSettings[]): Mac
                 () => {
                     if (current) setArrived((count) => count + 1);
                 },
-                // facts that fail leave the sum unknown: no warning, rather than one from a sum that is too low
+                // facts that fail leave the sum unknown: no problem found, rather than one from a sum that is too low
                 () => {},
             );
         }
