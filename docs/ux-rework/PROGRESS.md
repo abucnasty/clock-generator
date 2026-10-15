@@ -222,6 +222,17 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
 - 2026-10-14: 3.1: a Clocked range ending at tick 0 is refused ("The end must be tick 1 or later."), since the engine's
   schema needs a positive end.
 
+- 2026-10-15: Process coach run 6 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated). 32.6 min per item since run 5 (20
+  min per PR); half the slots idle behind one owner check. Applied: (1) **owner approved**: 2.5 A merges when its
+  reviews pass and the in-game check of the install steps holds the Phase 2 PR instead ([PLAN.md](PLAN.md) updated);
+  (2) unit counting: an item counts while its implementer works and during its first review; re-reviews, owner checks,
+  CI and predecessors count zero; a returning round over the cap pauses the newest item (replaces "reserved until
+  re-review"); (3) stacked items take the phase branch only through their predecessor and are reviewed against its
+  head; (4) premise check and one batched message for owner asks; `ISSUES.md` drafted at the Phase 2 end; (5) type-check
+  merged trees after every merge; worktrees removed only after the agent's final report. Not paying off: the chain
+  table went stale again — it now lives in the handoff and is re-derived at every merge.
+- 2026-10-15: Owner: install step 6's Never on wording stays ("keep it off in the game yourself").
+
 ## Open questions
 
 None.
