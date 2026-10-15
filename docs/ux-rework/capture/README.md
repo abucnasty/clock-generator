@@ -164,3 +164,30 @@ The helpers:
 - The default widths are 1440 and 720. Add 390 (at 844 high) when the item affects reachability, and 960 at phase end.
 
 - Never commit the screenshots. Attach a summary of the review to the phase PR instead.
+
+## The `ui` map, `itemLabel`, `openTooltip` and the menu helpers
+
+Capture scripts kept breaking when an item renamed a control or when a tooltip or menu opened slowly. The shared helpers in `lib.mjs`
+now own those two things. **Scripts find controls only through `ui` and `itemLabel`, and open tooltips and menus only with
+`openTooltip`/`openMenu`; an item that renames a control updates `ui` in the same commit.** (`openMenu` below means `openMoreMenu` and
+`chooseMenuItem`; the older `openMenu(page)` still exists, clicks "More options" and waits a fixed 300 ms, and stays for the scripts that use it.)
+
+- `ui.<name>(page, ...args)` returns a Playwright `Locator` (never awaited, so `.click()`, `.count()` and `.first()` chain on it). Each
+  entry is role plus accessible name, with a comment naming the item that owns the control. Entries: `generate`, `checkOnly` (the workflow
+  bar's, the first of two), `copyBlueprint` (header, Results only), `viewToggle(page, 'Configure'|'Results')`, `resultsTab(page, name)`,
+  `menuButton`, `menu`, `menuItem(page, name)`, `pasteFromFactorio`, `reset`, `importConfig`, `exportConfig`, `advancedOverrides`,
+  `card(page, key)` and `add(page, key)` (keys `target`, `machines`, `inserters`, `belts`, `chests`, `drills`; Target Output has no Add),
+  `addChest(page, 'buffer'|'infinity')`, `clockTable`, `clockRows(page, index?)`, `resultsCard`, `message`, `messageUndo`, `messageClose`,
+  `listView`, `diagramView`, `diagram`, `diagramFullscreen`, `diagramDialog`, `diagramClose`.
+- A name that varies is handled inside the entry: `importConfig` and `exportConfig` are header buttons at 900 px and up and ⋮ menu items below
+  it (there they resolve only while the menu is open, so click them with `chooseMenuItem`). An entry for a control that is absent in a state
+  resolves to 0 (`copyBlueprint` before a generation, `diagram` in List view, `message` when none shows, `resultsCard` before 2.6).
+- `itemLabel(id)` is what the UI shows for a game id. Today that is the id; once `clock-generator/resources/data-filtered.json` has a `names` key
+  (branch `feat/ux-rework-p2-item-names`, items 2.8 a/b) it returns the in-game name, so scripts do not change. It reads the file beside `UI_DIR`.
+- `openTooltip(page, locator, { timeout = 5000 })` hovers and focuses the locator, waits for a visible `[role=tooltip]` and returns it, or throws
+  an error naming the control and the tooltips found. It leaves the mouse there; `page.mouse.move(0, 0)` before a shot.
+- `openMoreMenu(page)` opens ⋮ (unless it is open), waits for the menu and returns it. `chooseMenuItem(page, name)` picks an item at any width:
+  Import Config and Export Config are clicked in the header at 900 px and up, everything else goes through the menu; it waits for the menu to close.
+- `selftest.mjs` resolves every `ui` entry at 1440, 720 and 390 against a running build and exercises the tooltip and menu helpers
+  (`BASE_URL=http://localhost:5239 UI_DIR=<checkout>/clock-generator-ui node selftest.mjs`). Run it after editing `ui`; it expects the
+  documented 0 counts, so update its expectations in the same commit when an item adds a control (for example `resultsCard` after 2.6).

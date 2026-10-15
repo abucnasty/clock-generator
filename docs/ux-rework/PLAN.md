@@ -136,6 +136,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
     - deleting from the diagram
   - Then show "{What happened}. Undo" until the next edit to the build, the next undoable action, Close or Escape (no
     timer: the owner, 2026-10-14, for WCAG 2.2.1; this replaces "for 10 seconds"). Ctrl/Cmd+Z undoes while it is offered.
+    The offer also ends when a check or a generation starts: running the build accepts it (the owner, 2026-10-14,
+    after the Phase 1 end review; built in 1.5 F).
     Undo restores the snapshot, and the existing persistence saves it.
   - In the ⋮ menu, put Reset below a divider, in the error colour.
 - **Done when:** there are vitest tests for snapshot and restore.
