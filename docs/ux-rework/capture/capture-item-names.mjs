@@ -17,6 +17,7 @@
 //        stores    choosing a row, and typing a name then Enter, store the ID (localStorage holds no name); survives a reload and shows the name again
 //        export    Export Config downloads ids only, and an untouched import exports the sample's ids unchanged
 //        a11y      label in name for every picker, axe on the pickers (closed and open), Tab reaches the pickers, focus not obscured
+//        dialog    the Diagram's machine dialog: its recipe picker reads the name, searches by name, axe, focus not obscured at 500px high
 //        layout    nothing scrolls sideways; the open recipe list is not wider than the window
 //
 // Copy this file and lib.mjs into one folder with a node_modules that has playwright-core to run it.
@@ -26,7 +27,7 @@
 import { readFileSync } from 'node:fs';
 import {
     forWidths, previewServer, sample, LOGISTIC, importFile, goConfigure, waitReady, openMenu, noSideScroll, accessibleName,
-    checkLabelInName, checkTabTo, checkFocusNotObscured, checkAxe,
+    checkLabelInName, checkTabTo, checkFocusNotObscured, checkFocusNotObscuredAtHeight, checkAxe,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -35,7 +36,7 @@ if (!OUT) {
     process.exit(2);
 }
 
-const ALL_STEPS = ['names', 'list', 'search', 'collide', 'fallback', 'stores', 'export', 'a11y', 'layout'];
+const ALL_STEPS = ['names', 'list', 'search', 'collide', 'fallback', 'stores', 'export', 'a11y', 'dialog', 'layout'];
 const STEPS = new Set((process.env.STEPS ?? ALL_STEPS.join(',')).split(',').map((s) => s.trim()).filter(Boolean));
 const on = (name) => STEPS.has(name);
 const WIDTHS = process.env.WIDTHS ? process.env.WIDTHS.split(',').map(Number) : [1440, 720];
@@ -440,6 +441,40 @@ async function a11yStep({ page, rec }) {
     await reload(page);
 }
 
+/** The Diagram's edit dialog of a machine: its recipe picker is the same picker (spec step 11, EntityEditDialog) */
+async function dialogStep({ page, rec }) {
+    await goConfigure(page);
+    await importFile(page, LOGISTIC);
+    await page.getByRole('button', { name: 'Diagram view' }).click(); // SELECTOR: confirm (2.11's toggle)
+    const node = page.locator('.react-flow__node').filter({ hasText: /Machine 1/ }).first(); // SELECTOR: confirm
+    if ((await node.waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) === false) {
+        rec.check('dialog: the Diagram shows Machine 1', false, 'no node reads "Machine 1"');
+        return;
+    }
+    await node.click();
+    const dialog = page.getByRole('dialog').first();
+    const opened = await dialog.waitFor({ timeout: 3000 }).then(() => true).catch(() => false);
+    if (!opened) {
+        rec.check('dialog: clicking Machine 1 opens its edit dialog', false, 'no dialog opened');
+        return;
+    }
+    const picker = dialog.getByRole('combobox', { name: 'Recipe', exact: true }).first(); // SELECTOR: confirm
+    await checkShows(rec, 'dialog: the machine dialog\'s Recipe reads "Logistic science pack", hover shows the id', picker, 'Logistic science pack', 'logistic-science-pack');
+    await checkPickerLabel(rec, page, 'machine dialog Recipe', picker);
+    checkRow(rec, 'dialog: the machine dialog\'s recipe picker, "stone wall" lists "Wall" first', await search(page, picker, 'stone wall'), 'Wall', 'stone-wall', { first: true });
+    await rec.shot(page, 'names-dialog-picker', { desc: 'The Diagram\'s machine dialog: "stone wall" typed in its Recipe picker' });
+    await checkAxe(rec, page, 'machine dialog, recipe list open', { rules: ['aria-valid-attr-value', 'aria-allowed-role', 'aria-input-field-name', 'label', 'nested-interactive', 'duplicate-id-aria'] });
+    await closeList(page);
+    // the picker inside the dialog stays visible with the keyboard in a short window
+    await checkFocusNotObscuredAtHeight(rec, page, { height: 500, walk: [picker] });
+    for (let i = 0; i < 3 && (await page.getByRole('dialog').count()) > 0; i++) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+    }
+    await page.getByRole('button', { name: 'List view' }).click().catch(() => {});
+    await reload(page);
+}
+
 async function layoutStep({ page, rec }) {
     await goConfigure(page);
     await importFile(page, LOGISTIC);
@@ -472,6 +507,7 @@ try {
             if (on('stores')) await rec.step('the id is stored', () => storesStep(ctx), page);
             if (on('export')) await rec.step('export holds ids', () => exportStep(ctx), page);
             if (on('a11y')) await rec.step('a11y of the pickers', () => a11yStep(ctx), page);
+            if (on('dialog')) await rec.step('the machine dialog\'s picker', () => dialogStep(ctx), page);
             if (on('layout')) await rec.step('layout', () => layoutStep(ctx), page);
         },
         { out: OUT, base },
