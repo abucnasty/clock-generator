@@ -139,4 +139,18 @@ describe("the rule count of a recording of the game", () => {
         expect(run.inserters[0]).toMatchObject({ source_wake_ups: 1, sink_wake_ups: 0, pickups: 0, true_wake_ups: 1 });
         expect(run.groups[0]).toMatchObject({ key: "machine to belt | gear | gear > ", wired: 0 });
     });
+
+    it("reads a machine's true starts from its crafting progress, with the crafting speed of the recorded config", () => {
+        // iron gear wheels take 0.5 s: at crafting speed 9 a craft moves 0.3 a tick; it starts from rest at 1 and wraps at 4
+        const with_progress = parseRecording({
+            ...JSON.parse(JSON.stringify(recording)),
+            config: { inserters: [], belts: [], machines: [{ id: 7, recipe: "iron-gear-wheel", crafting_speed: 9 }] },
+            machines: [{ ...JSON.parse(JSON.stringify(recording.machines[0])), recipe: "iron-gear-wheel",
+                samples: { ...recording.machines[0].samples, crafting_progress: [0, 0.3, 0.6, 0.9, 0.2, 0.5] } }],
+        });
+        const input = ruleCountInputOfRecording(with_progress, () => false);
+        expect(input.machines[0].true_starts).toEqual([false, true, false, false, true, false]);
+        // without the crafting speed the true starts are not known
+        expect(ruleCountInputOfRecording(recording, () => false).machines[0].true_starts).toBeUndefined();
+    });
 });

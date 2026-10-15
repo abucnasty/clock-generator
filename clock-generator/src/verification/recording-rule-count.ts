@@ -2,6 +2,8 @@ import { RuleCountInput } from "../crafting/rule-count-stock";
 import { EndKind } from "../crafting/rule-count";
 import { EntityId } from "../entities";
 import { FactorioMachineState } from "../state/factorio-entity-state";
+import { FactorioDataService } from "../data/factorio-data-service";
+import { trueStartsOfProgress } from "../crafting/true-starts";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording } from "./recording";
 
@@ -11,7 +13,9 @@ import { expandChangeList, Recording } from "./recording";
  * every recorded one under its recorded id.
  *
  * The items an inserter moves are the ones in its hand over the recording (the change list of `held_item`); a machine
- * is working at a sample where its recorded status is "working". A recording has no `crafts_started`.
+ * is working at a sample where its recorded status is "working". A recording has no `crafts_started`; a machine's
+ * true starts are read from its `crafting_progress` (`trueStartsOfProgress`), with the crafting progress a tick from the
+ * crafting speed of the recorded config and the recipe's energy. A machine without either has no true starts.
  *
  * @param wired whether the inserter is wired in the build recorded (a circuit wire and an enable condition), by the
  *   id the input gives it
@@ -31,11 +35,13 @@ export function ruleCountInputOfRecording(
             return [];
         }
         const status = expandChangeList(machine.samples.status, recording.sample_count, "");
+        const delta = craftingProgressPerTick(recording, machine.id, machine.recipe);
         return [{
             machine_id,
             recipe: machine.recipe,
             products_finished: machine.samples.products_finished,
             working: status.map(it => it === FactorioMachineState.WORKING),
+            true_starts: delta === null ? undefined : trueStartsOfProgress(machine.samples.crafting_progress, delta, recording.sample_count),
         }];
     });
     const inserters = recording.inserters.flatMap(inserter => {
@@ -60,4 +66,18 @@ export function ruleCountInputOfRecording(
         }];
     });
     return { inserters, machines };
+}
+
+/** Crafting progress a tick of a recorded machine: its crafting speed in the recorded config over 60 times the recipe's energy */
+function craftingProgressPerTick(recording: Recording, machine_id: number, recipe: string): number | null {
+    const machines = (recording.config as { machines?: { id: number; crafting_speed?: number }[] }).machines ?? [];
+    const crafting_speed = machines.find(it => it.id === machine_id)?.crafting_speed;
+    if (crafting_speed === undefined) {
+        return null;
+    }
+    try {
+        return crafting_speed / (60 * FactorioDataService.findRecipeOrThrow(recipe).energy_required);
+    } catch {
+        return null;
+    }
 }
