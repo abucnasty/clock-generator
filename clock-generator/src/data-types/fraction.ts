@@ -74,26 +74,34 @@ function parseInput(input: unknown): { numerator: number; denominator: number } 
         return { numerator: isNegative ? -numerator : numerator, denominator: den };
     }
     if (/^\d+\.\d+$/.test(value)) {
-        let decimal = parseFloat(value);
+        const decimal = parseFloat(value);
         if (isNaN(decimal)) throw new FractionError(`Invalid decimal: ${value}`);
-        let denominator = 1;
-        while (decimal % 1 !== 0) {
-            decimal *= 10;
-            denominator *= 10;
-        }
-        return { numerator: isNegative ? -decimal : decimal, denominator };
+        const parsed = decimalToFraction(decimal);
+        return { numerator: isNegative ? -parsed.numerator : parsed.numerator, denominator: parsed.denominator };
     }
-    if (typeof input === "number" && !isNaN(input)) {
+    if (typeof input === "number" && Number.isFinite(input)) {
         if (Number.isInteger(input)) return { numerator: input, denominator: 1 };
-        let decimal = input;
-        let denominator = 1;
-        while (decimal % 1 !== 0) {
-            decimal *= 10;
-            denominator *= 10;
-        }
-        return { numerator: decimal, denominator };
+        return decimalToFraction(input);
     }
     throw new FractionError(`Invalid input format: ${input}`);
+}
+
+/**
+ * A non-integer number as the library read it: multiplied by 10 until it is whole, the denominator the same power of
+ * 10. A double has at most 17 significant digits, so a value still not whole at a denominator of 1e22 is one the loop
+ * would never finish on (the library spun forever on 1e-300): refused, as is anything not finite.
+ */
+function decimalToFraction(input: number): { numerator: number; denominator: number } {
+    let decimal = input;
+    let denominator = 1;
+    while (decimal % 1 !== 0) {
+        if (denominator >= 1e22) {
+            throw new FractionError(`Cannot read ${input} as a fraction: too many decimal places`);
+        }
+        decimal *= 10;
+        denominator *= 10;
+    }
+    return { numerator: decimal, denominator };
 }
 
 function gcdNumber(a: number, b: number): number {
@@ -135,7 +143,9 @@ function boundedApproximation(n: bigint, d: bigint): { numerator: number; denomi
                 const whole = Number(absN / d);
                 return { numerator: negative ? -whole : whole, denominator: 1 };
             }
-            const t = [a, (MAX_DENOMINATOR - k2) / k1, (MAX_SAFE - h2) / h1].reduce((m, v) => (v < m ? v : m));
+            // h1 is 0n when the value is under 1 (the first convergent is 0/1): the numerator then bounds nothing
+            const bounds = [a, (MAX_DENOMINATOR - k2) / k1, ...(h1 === 0n ? [] : [(MAX_SAFE - h2) / h1])];
+            const t = bounds.reduce((m, v) => (v < m ? v : m));
             let [bestH, bestK] = [h1, k1];
             if (t >= 1n) {
                 const semiH = t * h1 + h2;

@@ -183,3 +183,30 @@ describe("Fraction formats", () => {
         expect(fraction(1, 60).toDecimal()).toBe(1 / 60);
     });
 });
+
+describe("the review's cases (0.14.0)", () => {
+    it("bounds a value under 1 whose exact result needs BigInt, instead of dividing by zero", () => {
+        // 2^-60 has no fraction with a denominator of 2^40 or less nearer than 0 itself (1/2^40 is 2^-40 off), so the
+        // bound gives 0: the resolution of the bound, documented in the class comment, not a failure
+        const small = new Fraction(1, 2 ** 30).multiply(new Fraction(1, 2 ** 30));
+        expect(Math.abs(small.toDecimal() - 2 ** -60)).toBeLessThanOrEqual(2 ** -40);
+        expect(small.getDenominator).toBeLessThanOrEqual(2 ** 40);
+        const negative = new Fraction(-1, 2 ** 30).multiply(new Fraction(1, 2 ** 30));
+        expect(Math.abs(negative.toDecimal() + 2 ** -60)).toBeLessThanOrEqual(2 ** -40);
+        // a value under 1 whose exact result fits safe integers is exact, with no bound on its denominator
+        const held = new Fraction(1, 3).divide(new Fraction(2 ** 30 + 1, 1)).multiply(new Fraction(1, 2 ** 20 + 1));
+        expect(held.getNumerator).toBe(1);
+        expect(held.getDenominator).toBe(3 * (2 ** 30 + 1) * (2 ** 20 + 1));
+        // one that does not fit is bounded and kept to the bound's precision
+        const bounded = new Fraction(1, 2 ** 30 + 1).multiply(new Fraction(1, 2 ** 30 - 1));
+        expect(Math.abs(bounded.toDecimal() - 1 / ((2 ** 30 + 1) * (2 ** 30 - 1)))).toBeLessThanOrEqual(2 ** -40);
+        expect(bounded.getDenominator).toBeLessThanOrEqual(2 ** 40);
+    });
+
+    it("refuses a number it cannot read as a fraction instead of hanging", () => {
+        expect(() => new Fraction(Infinity)).toThrow("Invalid input format");
+        expect(() => new Fraction(NaN)).toThrow();
+        expect(() => new Fraction(1e-300)).toThrow("too many decimal places");
+        expect(() => fraction(1e-300)).toThrow("too many decimal places");
+    });
+});

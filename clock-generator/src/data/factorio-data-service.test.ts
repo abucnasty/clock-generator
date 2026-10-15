@@ -38,3 +38,22 @@ describe("the game data of Factorio 2.1.21", () => {
         expect(casting.results.map(it => it.name)).toEqual(["iron-plate"]);
     });
 });
+
+describe("a result's chance in the 2.1 data", () => {
+    it("reads a shared probability as the width of the result's slice, so uranium processing keeps its expected amounts", async () => {
+        // 2.0 said probability 0.007 and 0.993; 2.1 says shared_probability {0, 0.007} and {0.007, 1}
+        const { RecipeMetadata } = await import("../entities/machine/recipe/recipe-metadata");
+        const uranium = RecipeMetadata.fromRecipeName("uranium-processing");
+        expect(uranium.output.name).toBe("uranium-238");
+        const { expectedAmount } = await import("../entities/machine/recipe/recipe-metadata");
+        const expected = Object.fromEntries(uranium.outputs.map(it => [it.name, expectedAmount(it)]));
+        expect(expected["uranium-235"]).toBeCloseTo(0.007, 9);
+        expect(expected["uranium-238"]).toBeCloseTo(0.993, 9);
+    });
+
+    it("reads an independent probability as the 2.0 probability", async () => {
+        const { RecipeMetadata, expectedAmount } = await import("../entities/machine/recipe/recipe-metadata");
+        const seed = RecipeMetadata.fromRecipeName("jellynut-processing").outputs.find(it => it.name === "jellynut-seed")!;
+        expect(expectedAmount(seed)).toBeCloseTo(0.02, 9);
+    });
+});

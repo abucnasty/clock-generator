@@ -63,6 +63,11 @@ export class FactorioDataService {
         return this.factorio_data;
     }
 
+    /** Whether the game has an item of that name (a module, tool, ammo or capsule counts as an item) */
+    public static hasItem(itemName: string): boolean {
+        return Object.prototype.hasOwnProperty.call(this.getData().item, itemName);
+    }
+
     // ============ Recipe Listing Methods ============
 
     /**

@@ -73,7 +73,7 @@ export class ConfigValidationError extends Error {
         return zodIssues.map((issue) => {
             const pathArray = issue.path ?? [];
             const received = input === undefined ? undefined : valueAt(input, pathArray);
-            const unsupported = pathArray[pathArray.length - 1] === "type" && typeof received === "string" ? NOT_SUPPORTED_YET[received] : undefined;
+            const unsupported = pathArray[pathArray.length - 1] === "type" && typeof received === "string" && Object.prototype.hasOwnProperty.call(NOT_SUPPORTED_YET, received) ? NOT_SUPPORTED_YET[received] : undefined;
             if (unsupported !== undefined) {
                 // an entity the generator knows of and does not support yet: say so, instead of listing what it takes
                 return { path: formatPath(pathArray), message: `${JSON.stringify(received)} is not supported yet: ${unsupported}`, received };
