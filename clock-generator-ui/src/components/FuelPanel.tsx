@@ -17,8 +17,10 @@ const WINDOW_COLOR = COLOR_BLIND_PALETTE.lightGrey;
 // the colours the Detailed state chart gives the same things: an inserter's swing, and a machine with no fuel
 const SWING_COLOR = INSERTER_STATUS_COLORS[InserterStatus.SWING];
 const EMPTY_COLOR = MACHINE_STATUS_COLORS[MachineStatus.NO_FUEL];
-/** One line to a cell: the tables scroll sideways in their box instead of breaking a name over five lines */
-const NOWRAP_CELLS = { '& td': { whiteSpace: 'nowrap' } } as const;
+/** One line to a cell, the first (the entity's name) apart: the tables scroll sideways in their box instead of breaking a value over five lines */
+/** The same for the fuel clocks, whose last cell ("17 in 3 wake windows (5.1/min)") is the one that wraps */
+const NOWRAP_CLOCK_CELLS = { '& td:not(:first-of-type):not(:last-of-type)': { whiteSpace: 'nowrap' } } as const;
+const NOWRAP_CELLS = { '& td:not(:first-of-type)': { whiteSpace: 'nowrap' } } as const;
 const LABEL_WIDTH = 200;
 const LEVEL_HEIGHT = 56;
 const ROW_HEIGHT = 20;
@@ -91,11 +93,13 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                         const levels = levelsOf(machine.machine_id);
                         return (
                             <TableRow key={machine.machine_id}>
-                                <TableCell>
+                                <TableCell sx={{ minWidth: 160 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                         <FactorioIcon name={machine.output_item} size={18} alt="" />
-                                        {entityLabel('machine', machine.machine_number)}
-                                        <Typography variant="caption" color="text.secondary"><GameName id={machine.recipe} kind="recipe" /></Typography>
+                                        <Box>
+                                            {entityLabel('machine', machine.machine_number)}
+                                            <Typography variant="caption" color="text.secondary" component="div"><GameName id={machine.recipe} kind="recipe" /></Typography>
+                                        </Box>
                                     </Box>
                                 </TableCell>
                                 <TableCell>
@@ -138,7 +142,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
 function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run: FuelRunView | null }) {
     return (
         <ScrollX label={SCROLL_REGION_NAMES.fuelClocks} minWidth={640}>
-            <Table size="small" sx={NOWRAP_CELLS}>
+            <Table size="small" sx={NOWRAP_CLOCK_CELLS}>
                 <TableHead>
                     <TableRow>
                         <TableCell>Inserter</TableCell>

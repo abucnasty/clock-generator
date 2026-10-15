@@ -5,7 +5,7 @@ export interface ScrollEdges {
 }
 
 /** How wide the fade at an edge is, in pixels */
-const FADE_WIDTH = 24;
+const FADE_WIDTH = 48;
 
 /** Is there more content before (`start`) and after (`end`) what the box shows? A pixel of slack absorbs subpixel rounding. */
 export function scrollEdges(scrollLeft: number, clientWidth: number, scrollWidth: number): ScrollEdges {

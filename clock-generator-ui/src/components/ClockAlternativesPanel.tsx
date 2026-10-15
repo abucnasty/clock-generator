@@ -148,20 +148,20 @@ interface ClockAlternativesPanelProps {
 }
 
 /**
- * The other clocks of the generation, to compare with the one at the top: by default a compact table (the plain name,
- * what it makes, its wake-ups and whether it works), with every column one press away. A row selects its clock.
- */
-/**
- * Half-width, the full table (Show all columns; the compact one fits 720 on its own): the Clock column keeps 200px, the name wrapping to a few lines, and every other cell stays on one line, so
- * that the table scrolls sideways in its box (ScrollX) instead of breaking each word of the name onto its own line. A
- * header may wrap but is never narrower than 72px.
+ * Half-width, the full table (Show all columns; the compact one fits 720 on its own): the Clock column keeps 200px, so
+ * that its name wraps to a few lines and not one word to a line, and every other cell stays on one line. The table then
+ * scrolls sideways in its box (ScrollX). A header may wrap but is never narrower than 96px.
  */
 const FULL_CLOCK_TABLE_SX = {
-    '& th': { minWidth: 72 },
-    '& tbody td:nth-of-type(2)': { minWidth: 200, maxWidth: 280 },
+    '& th': { minWidth: 96 },
+    '& tbody td:nth-of-type(2)': { minWidth: 200 },
     '& tbody td:not(:nth-of-type(2))': { whiteSpace: 'nowrap' },
 } as const;
 
+/**
+ * The other clocks of the generation, to compare with the one at the top: by default a compact table (the plain name,
+ * what it makes, its wake-ups and whether it works), with every column one press away. A row selects its clock.
+ */
 export function ClockAlternativesPanel({
     alternatives,
     selectedIndex,

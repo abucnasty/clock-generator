@@ -100,7 +100,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                 {' '}Each place was checked with the clock-only simulation from 12 start points; the one in use was confirmed from 112.
             </Typography>
 
-            <ScrollX label={SCROLL_REGION_NAMES.shiftRange} minWidth={SHIFT_CHART_MIN_WIDTH} tickRoom>
+            <ScrollX label={SCROLL_REGION_NAMES.shiftRange} minWidth={SHIFT_CHART_MIN_WIDTH} tickRoom sx={{ py: '3px' /* room for the planned-start line, which sticks out 3px above and below a row */ }}>
             {options.rows.map(row => (
                 <Box key={row.index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                     <Typography variant="caption" sx={{ width: 150, flexShrink: 0 }}>

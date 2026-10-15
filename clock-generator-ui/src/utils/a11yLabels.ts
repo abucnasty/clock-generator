@@ -52,15 +52,14 @@ export const CLOCK_TABLE_REGION = 'Clock comparison';
 
 /** The boxes that hold the charts and tables that scroll sideways below their floor, by what they hold */
 export const SCROLL_REGION_NAMES = {
-    detailsTable: 'Details table',
-    fuelConsumption: 'Fuel consumption',
-    fuelClocks: 'Fuel clocks',
-    fuelTimeline: 'Fuel timeline',
+    fuelConsumption: 'Fuel consumption table',
+    fuelClocks: 'Fuel clocks table',
+    fuelTimeline: 'Fuel timeline chart',
     stateTimeline: 'State transition timeline',
     transferTimeline: 'Transfer activity timeline',
     shiftRange: 'Shift range chart',
     swingComparison: 'Swing comparison chart',
-    swingPlan: 'Swing plan',
+    swingPlan: 'Swing plan table',
 } as const;
 
 /** The box the install steps' wiring list scrolls in, past 8 rows */

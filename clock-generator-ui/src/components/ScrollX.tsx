@@ -5,7 +5,7 @@ import { edgeMask, scrollEdges, type ScrollEdges } from '../utils/scrollEdges';
 /** The narrowest a chart gets before it scrolls: a 200px label column and a 360px plot */
 export const CHART_MIN_WIDTH = 560;
 /** Room at the right of a chart for the half of its last time label that sticks out past the plot */
-const TICK_ROOM = 12;
+const TICK_ROOM = 20;
 
 interface ScrollXProps {
     /** The box's accessible name: it is a region, so a screen reader can find it and say what scrolls */
@@ -47,16 +47,22 @@ export function ScrollX({ label, minWidth, tickRoom = false, sx, children }: Scr
         const observer = new ResizeObserver(measure);
         observer.observe(box);
         observer.observe(inner);
+        // a table is as wide as its columns need, which can differ from the box that holds it
+        if (inner.firstElementChild) {
+            observer.observe(inner.firstElementChild);
+        }
         return () => observer.disconnect();
     }, [measure]);
 
     const mask = edgeMask(edges);
+    // a region with a tab stop only while it scrolls: one that fits is a plain box, not a landmark to find and name
+    const scrolls = edges.start || edges.end;
     return (
         <Box
             ref={boxRef}
-            role="region"
-            aria-label={label}
-            tabIndex={0}
+            role={scrolls ? 'region' : undefined}
+            aria-label={scrolls ? label : undefined}
+            tabIndex={scrolls ? 0 : undefined}
             onScroll={measure}
             sx={[
                 {
@@ -66,6 +72,10 @@ export function ScrollX({ label, minWidth, tickRoom = false, sx, children }: Scr
                     WebkitMaskImage: mask,
                     // inside the box, so that the mask does not cut the ring
                     '&:focus-visible': { outlineOffset: -2 },
+                    // a thin bar that is always drawn, so that the box shows it scrolls where the system hides scrollbars
+                    scrollbarWidth: 'thin',
+                    '&::-webkit-scrollbar': { height: 8 },
+                    '&::-webkit-scrollbar-thumb': { bgcolor: 'action.disabled', borderRadius: '4px' },
                 },
                 ...(Array.isArray(sx) ? sx : [sx]),
             ]}

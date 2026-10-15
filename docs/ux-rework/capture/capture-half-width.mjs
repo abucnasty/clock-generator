@@ -42,8 +42,8 @@ if (!OUT) {
     process.exit(2);
 }
 const BASE = process.env.BASE_URL ?? 'http://localhost:5199';
-const WIDTHS = (process.env.WIDTHS ?? '960,800,720,390').split(',').map(Number);
-const ALL_STEPS = ['header', 'configure', 'results', 'devtools', 'diagram', 'dialogs', 'fuel', 'forms', 'rows'];
+const WIDTHS = (process.env.WIDTHS ?? '1440,960,800,720,390').split(',').map(Number);
+const ALL_STEPS = ['header', 'configure', 'results', 'devtools', 'diagram', 'dialogs', 'fuel', 'forms', 'rows', 'floor'];
 const STEPS = new Set((process.env.STEPS ?? ALL_STEPS.join(',')).split(',').map((s) => s.trim()).filter(Boolean));
 const on = (n) => STEPS.has(n);
 
@@ -874,6 +874,55 @@ async function rowSteps({ page, rec, width }) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
 }
 
+/** One-off at 540 (the chart floor) and 1440 (no regression): the charts scroll in their own box below their floor, and only then */
+async function floorSteps({ page, rec, width }) {
+    await goResults(page);
+    const regions = () => page.evaluate(() => [...document.querySelectorAll('[role=region][aria-label]')].filter((e) => e.getClientRects().length).map((e) => ({
+        name: e.getAttribute('aria-label'), tab: e.tabIndex, cw: e.clientWidth, sw: e.scrollWidth, mask: getComputedStyle(e).maskImage !== 'none',
+    })));
+    const boxes = () => page.evaluate(() => [...document.querySelectorAll('div')].filter((e) => e.getClientRects().length && getComputedStyle(e).overflowX === 'auto' && e.scrollWidth > e.clientWidth + 1 && !e.getAttribute('role')).map((e) => `${e.className.toString().slice(0, 40)} ${e.scrollWidth}/${e.clientWidth}`));
+    await setDevTools(page, true);
+    try {
+        const dev = page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: 'Developer tools', level: 2, exact: true }) }).last(); // SELECTOR: confirm
+        await dev.scrollIntoViewIfNeeded();
+        const tl = dev.getByRole('tab', { name: 'Timelines' });
+        if (await count(tl)) await tl.click();
+        await settle(page, 700);
+        for (const w of [540, 1440]) {
+            rec.width = w;
+            await page.setViewportSize({ width: w, height: 900 });
+            await settle(page, 600);
+            const rs = await regions();
+            if (w === 540) {
+                const charts = rs.filter((r) => /timeline|chart/i.test(r.name));
+                await chk(rec, 'floor at 540: each timeline scrolls in its own box (a region a keyboard reaches, with the fade), 560px of chart so a 360px plot', async () => ({
+                    pass: charts.length >= 2 && charts.every((r) => r.sw > r.cw && r.tab === 0 && r.mask && r.sw >= 560),
+                    detail: charts.map((r) => `${r.name}: box ${r.cw}, content ${r.sw}, tab ${r.tab}, fade ${r.mask}`).join('; ') || 'no chart regions',
+                }));
+                await chk(rec, 'floor at 540: the page does not scroll sideways', async () => ({ pass: (await noSideScroll(page)).pass, detail: '' }));
+                await rec.shot(page, 'floor-540', { fullPage: true, desc: 'Developer tools: Timelines at 540px' });
+            } else {
+                await chk(rec, 'no regression at 1440: no box scrolls, no fade, and a box that fits is not a region', async () => ({
+                    pass: rs.length === 0 || rs.every((r) => r.sw <= r.cw + 1 && !r.mask),
+                    detail: rs.map((r) => `${r.name} ${r.cw}/${r.sw}`).join('; ') || 'no regions',
+                }));
+                const clockHead = await page.evaluate(() => { const th = [...document.querySelectorAll('table[aria-label="Clocks"] th')].find((t) => /^Clock$/.test((t.textContent ?? '').trim())); return th ? th.getBoundingClientRect().width : 0; });
+                rec.info('1440: the Clock column of the clock table', px(clockHead));
+                await chk(rec, 'no regression at 1440: the page and every box fit', async () => {
+                    const open = await boxes();
+                    return { pass: (await noSideScroll(page)).pass && open.length === 0, detail: open.join('; ') };
+                });
+                await rec.shot(page, 'floor-1440', { fullPage: true, desc: 'Developer tools: Timelines at 1440px' });
+            }
+        }
+    } finally {
+        rec.width = width;
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+        await setDevTools(page, false).catch(() => {});
+        await page.evaluate(() => { try { localStorage.removeItem('clock-generator-developer-tools'); } catch { /* ignore */ } }).catch(() => {});
+    }
+}
+
 // ---------------------------------------------------------------------------------------------------------------- run
 
 let code = 1;
@@ -896,6 +945,7 @@ const result = await forWidths(WIDTHS, async ({ page, rec, width }) => {
     if (on('configure')) await rec.step('configure', () => configureSteps({ page, rec, width }), page);
     if (on('results')) await rec.step('results', () => resultsSteps({ page, rec, width }), page);
     if (on('devtools')) await rec.step('developer tools', () => devtoolsSteps({ page, rec, width }), page);
+    if (on('floor') && width === WIDTHS[0]) await rec.step('chart floor at 540 and 1440', () => floorSteps({ page, rec, width }), page);
     if (on('diagram')) await rec.step('diagram', () => diagramSteps({ page, rec, width }), page);
     if (on('dialogs')) await rec.step('dialogs', () => dialogSteps({ page, rec, width }), page);
     if (on('fuel')) await rec.step('fuel build', () => fuelSteps({ page, rec, width }), page);
