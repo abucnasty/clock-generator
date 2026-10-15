@@ -51,7 +51,7 @@ Conventions:
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
 | intermediates/advanced-circuit | yes | selected clock exact: 1056 in each of 45 periods of 792 ticks, and 704 in each of 68 of 528 with "Belts do not move" on | in `test:game` with the switch off; see below |
 | intermediates/advanced-circuit, 230 a second | the same scaffold | selected clock exact: 16,192 in each of 2 repeats of 12,672 ticks (23 periods of 550.957), the first clock of this sample that holds, found by the one search of 2026-10-11 | in `test:game`; see below |
-| intermediates/accumulator, 640 a second | yes | the clock 0.9.0 selected made 512 to 544 of 576 a period; the clock selected since 2026-10-14 made 576 in each of 58 periods after 3 at 544 while it settled (60,264 ticks), and in every period of the game test, which lets it settle 7,200 ticks | in `test:game`; see below |
+| intermediates/accumulator, 640 a second | yes | the clock 0.9.0 selected made 512 to 544 of 576 a period; the observed windows clock 0.9.1 selected made 576 in each of 58 periods after 3 at 544 while it settled (60,264 ticks). Since even hands (2026-10-14) the selected clock is that: 576 in each of 46 periods after the game test's settling of 7,200 ticks, no difference from the simulator | in `test:game`; see below |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
 | everything else | no | | |
 
@@ -268,6 +268,18 @@ now in GOALS.md, "When a waiting inserter acts": an inserter whose window opens 
 products of the machine it puts into takes its first items a tick later, unless that other inserter's window opened in
 that tick too; and a hand from a machine does not fill while the machine it puts into is at its output block. With
 them the simulator has that clock at 512 and selects another observed windows clock, which the game held at 576.
+
+Since 2026-10-14 the generator selects even hands for it (GOALS.md, "Wake-up Lists"): every inserter one window a
+hand, spread evenly over the period of 972, so the two halves open and close together on 5 window deciders
+(accumulators, iron into the accumulator plants, iron and copper into the battery plants, batteries), at 601.9
+wake-ups a minute in the simulator against 2,906.7 for the observed windows clock. Recorded on the scaffold: 576 in
+each of 46 periods, no difference from the simulator, 972 wake-ups a minute in the game (the simulator counts 278.5 to
+940.7 by where the clock starts). The generator shows 601.9: the count of the steady
+state its own start settles into, as for every clock (GOALS.md, "Wake-up Lists"). The scaffold starts the clock on a
+build that ran free for its warm-up, and settles into another state, which the simulator counts at 940.7 when it
+starts the clock elsewhere in the period; the game test accepts that figure. Under the same clock with all its windows starting at 0 and a period of 486, the
+iron and battery inserters whose windows opened with the output inserter's took their first items a tick later at 4
+places in the period (300 cases), where the simulator takes them in the tick: a fourth item for the list below.
 
 What is left between the simulator and the game on this build, a tick at a time, and changes no verdict found:
 - at one place of the seven-period cycle that the old clock settled into, the iron and copper inserters of a battery

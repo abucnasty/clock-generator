@@ -64,12 +64,19 @@ describe("generateClockForConfig", () => {
             expect(five_swings.ranking.meets_target_rate).toBe(true);
         });
 
-        it("selects the 5-swing clock, the one with the fewest wake-ups of the three that get back from every loss", () => {
+        // Fractional swings can be planned here since a hand is counted in while the stock before it is under the
+        // insertion limit (2026-10-14): it gets back from every loss too, at the same wake-ups as batched swings, which
+        // comes first
+        it("selects the 5-swing clock, the one with the fewest wake-ups of those that get back from every loss", () => {
             const stable = alternatives.filter(a => a.verdict === "stable");
-            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle", "Batched swings: 5 output swings per cycle"]);
+            expect(stable.map(a => a.label).sort()).toEqual(["1 output swing per cycle", "2 output swings per cycle", "Batched swings: 5 output swings per cycle", "Fractional swings: 5 output swings per cycle"]);
             expect(alternatives[selected_index].label).toBe("Batched swings: 5 output swings per cycle");
             for (const other of stable.filter(a => a !== five_swings)) {
-                expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
+                if (other.id === "fractional") {
+                    expect(five_swings.assessment.wake_ups_per_minute).toBeCloseTo(other.assessment.wake_ups_per_minute!, 6);
+                } else {
+                    expect(five_swings.assessment.wake_ups_per_minute).toBeLessThan(other.assessment.wake_ups_per_minute!);
+                }
             }
         });
 
