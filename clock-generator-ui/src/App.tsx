@@ -310,11 +310,17 @@ function App() {
     // an empty Results shows the clocks kept for the build it now has: after an Undo of Import, Paste or Reset, a
     // build switched back to, or an edit back to a build that has them
     const resultsEmpty = alternatives.length === 0 && !isRunning && error === null;
+    // set by a switch to another build (Open, New, Duplicate), which says "Opened build: …" itself: the clocks that come
+    // back with it are not announced over that. Good for the render right after the switch only
+    const quietRestoreRef = useRef(false);
     useEffect(() => {
         if (isInitialized && resultsEmpty) {
-            void restoreResultsFor(configKey, 'replace');
+            void restoreResultsFor(configKey, 'replace', { announce: !quietRestoreRef.current });
         }
     }, [configKey, isInitialized, resultsEmpty, restoreResultsFor]);
+    useEffect(() => {
+        quietRestoreRef.current = false;
+    });
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(exportConfig()), [exportConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
@@ -637,6 +643,11 @@ function App() {
         clearResults({ formKey });
         setView('configure');
     }, [clearResults]);
+    // the same for a switch to another build, which announces itself
+    const handleBuildSwitched = useCallback(() => {
+        quietRestoreRef.current = true;
+        handleBuildReplaced();
+    }, [handleBuildReplaced]);
 
     // ---- Your builds
     const dismiss = useDismissMessage();
@@ -662,24 +673,24 @@ function App() {
     const handleOpenBuild = useCallback(async (id: string) => {
         if (await library.openBuild(id)) {
             withdrawUndo();
-            handleBuildReplaced();
+            handleBuildSwitched();
             announce(openedBuildAnnouncement(titleOf(id)));
         }
-    }, [library, withdrawUndo, handleBuildReplaced, announce, titleOf]);
+    }, [library, withdrawUndo, handleBuildSwitched, announce, titleOf]);
     const handleNewBuild = useCallback(() => {
         library.newBuild();
         withdrawUndo();
-        handleBuildReplaced();
+        handleBuildSwitched();
         // blank: the intro card shows again, unless it was closed
         afterReset();
         announce(NEW_BUILD_ANNOUNCEMENT);
-    }, [library, withdrawUndo, handleBuildReplaced, afterReset, announce]);
+    }, [library, withdrawUndo, handleBuildSwitched, afterReset, announce]);
     const handleDuplicateBuild = useCallback(() => {
         const copy = library.duplicateBuild();
         withdrawUndo();
-        handleBuildReplaced();
+        handleBuildSwitched();
         announce(duplicatedAnnouncement(titleOf(copy.id, copy)));
-    }, [library, withdrawUndo, handleBuildReplaced, announce, titleOf]);
+    }, [library, withdrawUndo, handleBuildSwitched, announce, titleOf]);
     // a new dialog for each opening, so its field starts from the name
     const [renaming, setRenaming] = useState({ key: 0, open: false });
     const handleRenameBuild = useCallback(() => setRenaming((state) => ({ key: state.key + 1, open: true })), []);

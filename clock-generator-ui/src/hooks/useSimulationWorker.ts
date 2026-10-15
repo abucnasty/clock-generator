@@ -105,8 +105,9 @@ interface UseSimulationWorkerResult {
     /**
      * Shows the results kept for the build with `key` (`keyToShow`): on load, or, `replace`, when Results is empty.
      * Resolves whether something was shown; a restore overtaken by a run, a clear or another restore shows nothing.
+     * `announce: false` keeps a `replace` from bumping `restoredId`, for a switch of build that announces itself.
      */
-    restoreResultsFor: (key: string, mode: 'load' | 'replace') => Promise<boolean>;
+    restoreResultsFor: (key: string, mode: 'load' | 'replace', options?: { announce?: boolean }) => Promise<boolean>;
     /** The kept results can be looked up (IndexedDB is open, or memory is used instead) */
     resultsStoreReady: boolean;
     clearLogs: () => void;
@@ -709,7 +710,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setSelectedAlternativeIndex(recommendedIndexOf(alternativesRef.current) ?? 0);
     }, [keepPick]);
 
-    const restoreResultsFor = useCallback(async (key: string, mode: 'load' | 'replace'): Promise<boolean> => {
+    const restoreResultsFor = useCallback(async (key: string, mode: 'load' | 'replace', options?: { announce?: boolean }): Promise<boolean> => {
         const token = ++restoreTokenRef.current;
         const store = storeRef.current;
         const entries = store?.entries() ?? [];
@@ -733,7 +734,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         if (choice.from === 'kept') {
             void store?.touch(choice.key, Date.now());
         }
-        if (mode === 'replace') {
+        if (mode === 'replace' && options?.announce !== false) {
             setRestoredId(id => id + 1);
         }
         return true;

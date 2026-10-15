@@ -32,7 +32,7 @@ import { mkdirSync, writeFileSync, readFileSync, readdirSync, statSync } from 'n
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import {
-    forWidths, previewServer, sample, LOGISTIC, UI_DIR,
+    forWidths, previewServer, sample, LOGISTIC, UI_DIR, ui,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll,
     contrastPairs, checkLabelInName,
 } from './lib.mjs';
@@ -1257,7 +1257,7 @@ try {
                 await trash(page, 'Inserters').first().click();
                 await waitMessage(page, /^Deleted /);
                 await goResults(page);
-                const banner = page.getByText(/Your build has changed since/); // SELECTOR: confirm (1.1's stale banner text)
+                const banner = ui.staleBanner(page); // 3.3: the banner lists the changes, so it is found by its place, not by "Your build has changed since"
                 rec.check('results: after a row delete the stale banner shows', (await banner.count()) >= 1);
                 await rec.shot(page, 'undo-results-stale', { desc: 'Results after a row delete: 1.1\'s stale banner and the Undo message' });
                 if (await clickUndo(page, rec, 'results: row delete')) {
