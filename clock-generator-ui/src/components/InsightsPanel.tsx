@@ -70,23 +70,25 @@ export function InsightsPanel({ insights, clockLabel, children }: InsightsPanelP
 
     return (
         <Box>
-            <Typography variant="h6" component="h2">About this clock{clockLabel ? `: ${clockLabel}` : ''}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                What is particular to the clock selected above.
-            </Typography>
-            {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
-            {children}
-            {clock.length === 0 && !children && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Nothing stands out: this clock swings as planned and holds the target rate.
+            <Panel title={`About this clock${clockLabel ? `: ${clockLabel}` : ''}`}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    What is particular to the clock selected above.
                 </Typography>
-            )}
+                {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
+                {children}
+                {clock.length === 0 && !children && (
+                    <Typography variant="body2" color="text.secondary">
+                        Nothing stands out: this clock swings as planned and holds the target rate.
+                    </Typography>
+                )}
+            </Panel>
 
-            <Typography variant="h6" component="h2" sx={{ mt: 3 }}>About this build</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                The limits every clock for this build has to work within.
-            </Typography>
-            {build.map(insight => <InsightCard key={insight.id} insight={insight} />)}
+            <Panel title="About this build" sx={{ mb: 0 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    The limits every clock for this build has to work within.
+                </Typography>
+                {build.map(insight => <InsightCard key={insight.id} insight={insight} />)}
+            </Panel>
         </Box>
     );
 }

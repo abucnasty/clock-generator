@@ -59,7 +59,8 @@ export function MissingInserterAlert({ issues, onApplyFix, focusTargets = true }
                                     key={j}
                                     size="small"
                                     variant="outlined"
-                                    color="error"
+                                    // in the alert's own text colour: red text is for a card or the bar, not the alert's red tint
+                                    color="inherit"
                                     onClick={() => onApplyFix(issue, fix)}
                                     sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
                                 >

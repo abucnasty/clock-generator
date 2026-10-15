@@ -1,4 +1,4 @@
-import { Cancel, Check, CheckCircle, ContentCopy, HelpOutline, Warning } from '@mui/icons-material';
+import { Cancel, Check, CheckCircle, ContentCopy, RemoveCircleOutline, Warning } from '@mui/icons-material';
 import { Alert, Box, Button, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
@@ -15,6 +15,7 @@ import {
 import { REQUIRES_FACTORIO, needsNoClock } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
 import { buildWakeWindowRows } from '../utils/wakeWindows';
+import { SURFACE } from '../theme/tokens';
 import { InstallSteps } from './InstallSteps';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
@@ -65,7 +66,8 @@ interface ResultSummaryCardProps {
 /** One fact of the clock in an inset tile: its name, the value, and a line under it */
 function Tile({ label, value, sub, icon }: { label: string; value: string; sub: string; icon?: ReactNode }) {
     return (
-        <Box sx={{ bgcolor: 'background.default', p: 1.5, minWidth: 0 }} data-summary-tile={label}>
+        // a row of the card, as an entity row is on Configure
+        <Box sx={{ bgcolor: SURFACE.row, p: 1.5, minWidth: 0 }} data-summary-tile={label}>
             <Typography variant="body2" color="text.secondary" component="p">{label}</Typography>
             <Typography variant="h6" component="p" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }} data-tile-value>
                 {icon}
@@ -79,7 +81,8 @@ function Tile({ label, value, sub, icon }: { label: string; value: string; sub: 
 const RECOVERS_ICON = {
     'yes': <CheckCircle fontSize="small" aria-hidden sx={{ color: 'secondary.light' }} />,
     'no': <Cancel fontSize="small" aria-hidden sx={{ color: 'warning.main' }} />,
-    'not-tested': <HelpOutline fontSize="small" aria-hidden sx={{ color: 'text.secondary' }} />,
+    // not a "?": that is the help control's icon
+    'not-tested': <RemoveCircleOutline fontSize="small" aria-hidden sx={{ color: 'text.secondary' }} />,
 } as const;
 
 type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView };

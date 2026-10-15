@@ -5,12 +5,13 @@ import {
     Button,
     IconButton,
     LinearProgress,
-    Paper,
     TextField,
     Typography,
 } from '@mui/material';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
+import { SURFACE } from '../theme/tokens';
+import { Panel } from './Panel';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
 
 interface BlueprintOutputProps {
@@ -39,7 +40,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
     }
 
     return (
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Panel title="Blueprint string" sx={{ mb: 0 }}>
             {simulationDurationTicks !== undefined && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Simulation duration: {simulationDurationTicks} ticks (
@@ -73,7 +74,8 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         value={blueprintString}
                         slotProps={{
                             htmlInput: { 'aria-label': FIELD_NAMES.blueprintString },
-                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem' } },
+                            // an inset box, as the game draws a text field
+                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem', bgcolor: SURFACE.inset } },
                         }}
                     />
                     <IconButton
@@ -96,7 +98,7 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                     {STRING_CAPTION}
                 </Typography>
             )}
-        </Paper>
+        </Panel>
     );
 }
 

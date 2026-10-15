@@ -143,7 +143,8 @@ export function WorkflowBar({
     // clock warns, green when not; the copy of an old clock is the one to think twice about, never filled
     const warns = rateWarning !== null || staleFor !== null;
     const copyFilled = primaryAction === 'copy-bar' && staleFor === null;
-    const generateFilled = primaryAction === 'generate';
+    // with problems Generate stays on but goes to the first one instead (2.3): nothing is ready to commit, so nothing is filled
+    const generateFilled = primaryAction === 'generate' && problems.length === 0;
 
     // what changed in the workflow is read out in the app's one announcements region (checking, generating)
     const hasBlueprint = blueprintString !== null;

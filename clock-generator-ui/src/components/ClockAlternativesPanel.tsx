@@ -229,18 +229,17 @@ export function ClockAlternativesPanel({
                 disableGutters
                 elevation={0}
                 slotProps={{ heading: { component: 'h3' } }}
-                // a line of text that opens, inside the card: not a card of its own, so without the title bar and edge
-                sx={{ mb: 1, maxWidth: '72ch', border: 0, bgcolor: 'transparent' }}
+                sx={{ mb: 1, maxWidth: '72ch' }}
             >
                 <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     id="how-clocks-are-chosen-summary"
                     aria-controls="how-clocks-are-chosen-details"
-                    sx={{ px: 0, bgcolor: 'transparent' }}
+                    sx={{ px: 1.5 }}
                 >
                     <Typography variant="body2" component="span">{RECOMMENDED_COPY.disclosureTitle}</Typography>
                 </AccordionSummary>
-                <AccordionDetails sx={{ px: 0, pt: 0 }}>
+                <AccordionDetails sx={{ px: 1.5, pt: 0 }}>
                     {RECOMMENDED_COPY.disclosure.map(paragraph => (
                         <Typography key={paragraph} variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                             {paragraph}

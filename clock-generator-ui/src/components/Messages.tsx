@@ -6,6 +6,7 @@ import { ANNOUNCER_ATTRIBUTE, announceText } from '../utils/announcer';
 import { isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput } from '../utils/messages';
 import { isEscapeForSomethingElse } from '../utils/undoKeys';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { CONTROL, SURFACE } from '../theme/tokens';
 
 /** Holds the one message shown, for any component to raise with `useNotify()`; goes above `App`, which raises some */
 export function MessageProvider({ children }: { children: ReactNode }) {
@@ -109,12 +110,18 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                     // the live region reads out the rest; a status mounted with its text is often not read out
                     role={urgent ? 'alert' : 'none'}
                     elevation={6}
-                    sx={{ width: '100%', alignItems: 'center' }}
+                    // an urgent one is filled in its colour; the others are a card with an edge, the severity in the icon,
+                    // and the action (Undo) in the accent orange, as a text action on a card is
+                    sx={{
+                        width: '100%',
+                        alignItems: 'center',
+                        ...(!urgent && { bgcolor: SURFACE.panel, color: 'text.primary', border: `1px solid ${CONTROL.edge}` }),
+                    }}
                     onClose={message.action ? undefined : () => leave()}
                     action={message.action && (
                         <>
                             <Button
-                                color="inherit"
+                                color={urgent ? 'inherit' : 'primary'}
                                 size="small"
                                 aria-keyshortcuts={message.action.keyShortcuts}
                                 onClick={() => leave(message.action?.onClick)}
