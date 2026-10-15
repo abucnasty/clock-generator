@@ -30,43 +30,57 @@ type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
 /** An inserter's filter slots in the game */
 const MAX_FILTERS = 5;
-/** The enable rule's column on one line: "Enable: Clocked" and the like; a longer rule ends in "…" (its full words in the tooltip and name) */
+/** The enable rule's column when the row wraps: "Enable: Clocked" and the like; a longer rule ends in "…" (its full words in the tooltip and name) */
 const RULE_COLUMN = '8.5rem';
+/** Stack Size's field, and its column when the row wraps */
+const STACK_COLUMN = '100px';
 
 /**
- * An inserter row is a grid: the handle and number, Source, Destination, then Stack Size, the filters, the enable rule
- * and delete. Source and Destination take the room the others leave, so their names show in full where they fit. At lg
- * the row is one line, the rule and delete in columns of a fixed width so they line up from row to row; from md, two
- * lines, Source and Destination on the first; from sm, Source and Destination each have a line beside the handle, so a
- * name is not cut off; below sm everything has a line of its own.
+ * The inserter rows are one grid, and each row a subgrid of it, so every column starts at the same x on every row,
+ * whatever the row holds (a belt source's lane select, set or auto filters, a long rule): the handle and number,
+ * Source, Destination, then Stack Size, the filters, the enable rule and delete. Source and Destination take the room
+ * the others leave, so their names show in full where they fit. At lg a row is one line; from md, two lines, Source and
+ * Destination on the first; from sm, Source and Destination each have a line beside the handle, so a name is not cut
+ * off; below sm everything has a line of its own.
  */
-const ROW_GRID_SX = {
+const LIST_GRID_SX = {
     display: 'grid',
-    alignItems: 'center',
     columnGap: 2,
-    rowGap: 1.5,
-    mb: 2,
-    p: 2,
-    bgcolor: SURFACE.row,
+    rowGap: 2,
     gridTemplateColumns: {
         xs: 'minmax(0, 1fr)',
         sm: 'auto minmax(0, 1fr)',
         md: 'auto minmax(0, 1fr) minmax(0, 1fr)',
-        lg: `auto minmax(0, 1fr) minmax(0, 1fr) auto auto ${RULE_COLUMN} 40px`,
+        lg: 'auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto auto',
     },
+    // the sortable wrapper of each row passes the columns on
+    '& > *': { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'subgrid' },
+};
+const ROW_GRID_SX = {
+    gridColumn: '1 / -1',
+    display: 'grid',
+    gridTemplateColumns: 'subgrid',
+    alignItems: 'center',
+    rowGap: 1.5,
+    p: 2,
+    bgcolor: SURFACE.row,
 };
 /** Under Source, in its column, until md puts the two side by side */
 const DESTINATION_CELL_SX = { gridColumn: { sm: 2, md: 'auto' } };
-/** Stack Size, the filters, the rule and delete: cells of the row's grid on one line, a line of their own below lg */
+/**
+ * Stack Size, the filters, the rule and delete: cells of the rows' grid on one line; below lg a line of their own, in
+ * columns of a fixed width (the filters take the rest), so they line up from row to row too
+ */
 const ROW_REST_SX = {
-    display: { xs: 'flex', lg: 'contents' },
+    display: { xs: 'flex', sm: 'grid', lg: 'contents' },
     gridColumn: { xs: '1 / -1', lg: 'auto' },
+    gridTemplateColumns: { sm: `${STACK_COLUMN} minmax(0, 1fr) ${RULE_COLUMN} 40px` },
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 2,
 };
-/** At the end of the second line when the row wraps; in its own column on one line */
-const DELETE_SX = { ml: { xs: 'auto', lg: 0 } };
+/** At the end of its line */
+const DELETE_SX = { ml: { xs: 'auto', sm: 0 } };
 /** At the top of the line when the row wraps, so Source and Destination stay level when the lane select goes under Source */
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: { xs: 'start', lg: 'center' } };
 /** The source's lane select goes under it when the cell is narrow */
@@ -262,6 +276,7 @@ function InsertersFormComponent({
             )}
         >
 
+            <Box sx={LIST_GRID_SX}>
             <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
                 <SortableItem key={inserter._uuid} stableKey={inserter._uuid} label={entityLabel('inserter', inserter.id)}>
@@ -464,7 +479,7 @@ function InsertersFormComponent({
                             onUpdate(index, { stack_size: parseInt(val?.toString() || '') || 16 })
                         }
                         min={1}
-                        sx={{ width: 100 }}
+                        sx={{ width: STACK_COLUMN }}
                         size="small"
                     />
 
@@ -498,6 +513,7 @@ function InsertersFormComponent({
                 </SortableItem>
             ))}
             </SortableList>
+            </Box>
 
             {inserters.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>

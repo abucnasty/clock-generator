@@ -10,6 +10,7 @@
 //   STEPS        comma list, default all:
 //                  empty    1   first visit, List: order Target / Build / Advanced, title bands, toggle in the Build bar, Advanced collapsed,
 //                               "Add chest" / "Add mining drill" AddRows (under 56px, dashed 1px, menu), no switch, no empty-state text
+//                  align    -   fix round 1 (owner): every part of an inserter row starts at the same x on every row (logistic, rocket fuel)
 //                  list     2   logistic science, List: section order, Source/Destination grow, no sideways scroll, help buttons (grey "?",
 //                               aria-haspopup=dialog, Enter/Space/Esc, focus back), chips, no red at rest, slots, contrast, outline
 //                  shared   3/4 production-science-shared: chests and drills as lists, no Enabled switch, drills survive a reload,
@@ -44,12 +45,13 @@ if (!OUT) {
     process.exit(2);
 }
 const WIDTHS = process.env.WIDTHS ? process.env.WIDTHS.split(',').map(Number) : [1440, 720, 390];
-const ALL_STEPS = ['empty', 'list', 'shared', 'diagram', 'addchest', 'delchest', 'drill', 'advanced', 'narrow'];
+const ALL_STEPS = ['empty', 'list', 'align', 'shared', 'diagram', 'addchest', 'delchest', 'drill', 'advanced', 'narrow'];
 const STEPS = new Set((process.env.STEPS ?? ALL_STEPS.join(',')).split(',').map((s) => s.trim()).filter(Boolean));
 const on = (name) => STEPS.has(name);
 
 const SHARED = sample('science/production-science/production-science-shared.json'); // chests, drills, many enable rules
 const CHESTS = sample('intermediates/low-density-structure/low-density-structure.json'); // two chests (production-science-shared has none in this repo)
+const ROCKET_FUEL = sample('gleba/rocket-fuel/rocket-fuel-jelly-stack-16.json'); // belt and machine sources, set and auto filters
 
 const stopPreview = process.env.BASE_URL ? null : await previewServer({ port: Number(process.env.PREVIEW_PORT ?? 5256) });
 const base = process.env.BASE_URL ?? stopPreview.url;
@@ -991,6 +993,64 @@ async function stepList({ page, rec, width }) {
     await finalChecks(page, rec, width, 'list (logistic)');
 }
 
+/** Where each inserter row's parts start: the left x (and the top y) of Source, Destination, Stack Size, the filters, the rule chip and delete */
+function readColumnStarts() {
+    const R = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: Math.round(r.left * 10) / 10, y: Math.round(r.top) }; };
+    const rows = [...document.querySelectorAll('main [role=group]')].filter((g) => /^Inserter \d+$/.test(g.getAttribute('aria-label') ?? ''));
+    return rows.map((row) => {
+        const field = (re) => {
+            const input = [...row.querySelectorAll('[role=combobox], input')].find((i) => re.test(i.getAttribute('aria-label') ?? '') || re.test(i.labels?.[0]?.textContent ?? ''));
+            return input && (input.closest('.MuiAutocomplete-root') ?? input.closest('.MuiFormControl-root') ?? input);
+        };
+        const caption = [...row.querySelectorAll('span, p')].find((e) => (e.textContent ?? '').trim() === 'Filters');
+        return {
+            row: row.getAttribute('aria-label'),
+            source: R(field(/^Source/)),
+            destination: R(field(/^Destination/)),
+            stack: R(field(/^Stack Size/)),
+            filters: R(caption?.parentElement),
+            rule: R(row.querySelector('.MuiChip-root[aria-label$="Edit rule"]')),
+            delete: R(row.querySelector('button[data-row-delete]')),
+        };
+    });
+}
+
+/**
+ * The owner (fix round 1): the inserter list is a table to the eye. On every row each part starts at the same x, whatever
+ * the row holds (a belt source's lane select, auto or set filters, the rule's words), on one line and on each line of a
+ * wrapped row. Logistic science (belt and machine sources) and Gleba rocket fuel.
+ */
+async function stepAlign({ page, rec, width }) {
+    for (const [name, path] of [['logistic', LOGISTIC], ['rocket fuel', ROCKET_FUEL]]) {
+        await importChecked(page, path);
+        const label = `align (${name})`;
+        const list = ui.card(page, 'inserters');
+        if (await count(list)) {
+            await list.scrollIntoViewIfNeeded();
+            // for this shot only: the sticky header would be stitched over a list taller than the window
+            await page.evaluate(() => { const h = document.querySelector('header.MuiAppBar-root'); if (h) h.style.position = 'static'; });
+            await rec.shot(page, `inserter-list-${name.replace(/ /g, '-')}`, { locator: list, desc: `The full Inserters list, ${name} (fix round 1: columns line up)` });
+            await page.evaluate(() => { const h = document.querySelector('header.MuiAppBar-root'); if (h) h.style.position = ''; });
+        }
+        if (width < 600) {
+            rec.info(`${label}: column starts`, 'below 600px a row stacks freely; not checked');
+            continue;
+        }
+        const rows = await page.evaluate(readColumnStarts);
+        await chk(rec, `${label}: every part of an inserter row starts at the same x on every row (±1px), ${rows.length} rows`, async () => {
+            if (rows.length < 2) return { pass: false, detail: `${rows.length} rows` };
+            const bad = [];
+            for (const key of ['source', 'destination', 'stack', 'filters', 'rule', 'delete']) {
+                const xs = rows.map((r) => r[key]?.x);
+                if (xs.some((x) => x === undefined)) { bad.push(`${key} missing on ${rows.filter((r) => !r[key]).map((r) => r.row).join(', ')}`); continue; }
+                const spread = Math.max(...xs) - Math.min(...xs);
+                if (spread > 1) bad.push(`${key} x ${Math.min(...xs)}..${Math.max(...xs)}`);
+            }
+            return { pass: bad.length === 0, detail: bad.length ? bad.join('; ') : `source ${rows[0].source.x}, destination ${rows[0].destination.x}, stack ${rows[0].stack.x}, filters ${rows[0].filters.x}, rule ${rows[0].rule.x}, delete ${rows[0].delete.x}` };
+        });
+    }
+}
+
 async function stepShared({ page, rec, width }) {
     await importChecked(page, SHARED);
     await rec.shot(page, 'build-list-chests-drills', { fullPage: true, aria: true, desc: 'production-science-shared, List: chests and drills as lists (row 3)' });
@@ -1271,7 +1331,7 @@ try {
             await page.reload({ waitUntil: 'commit' });
             await waitReady(page);
         };
-        const steps = { empty: stepEmpty, list: stepList, shared: stepShared, diagram: stepDiagram, addchest: stepAddchest, delchest: stepDelchest, drill: stepDrill, advanced: stepAdvanced, narrow: stepNarrow };
+        const steps = { empty: stepEmpty, list: stepList, align: stepAlign, shared: stepShared, diagram: stepDiagram, addchest: stepAddchest, delchest: stepDelchest, drill: stepDrill, advanced: stepAdvanced, narrow: stepNarrow };
         for (const name of ALL_STEPS) {
             if (!on(name)) continue;
             await rec.step(`step ${name}`, async () => { await fresh(); await steps[name]({ page, rec, width }); }, page);
