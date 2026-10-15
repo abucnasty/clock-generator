@@ -14,6 +14,8 @@ export interface MachineStockSeries {
     status: string[];
     /** Crafts finished and productivity bars paid out so far, per tick, as the game counts `products_finished` */
     products_finished: number[];
+    /** Crafts started so far, per tick: the times the machine took the ingredients of a craft (the simulator's true starts) */
+    crafts_started: number[];
 }
 
 /** What one inserter held in its hand after each tick of a run */
@@ -52,6 +54,7 @@ export class StockRecorder {
                 fuel: state.machine.fuel_slot ? [] : undefined,
                 status: [],
                 products_finished: [],
+                crafts_started: [],
             },
         }));
         this.inserters = inserters.map(({ state, sink }) => ({ state, sink, series: { inserter_id: state.entity_id.id, held: [], held_item: [], status: [], factorio_state: [] } }));
@@ -69,6 +72,7 @@ export class StockRecorder {
             series.fuel?.push(state.fuelInventory.getQuantity(state.machine.fuel_slot!.fuel.item_name));
             series.status.push(state.status);
             series.products_finished.push(state.productsFinished);
+            series.crafts_started.push(state.craftsStarted);
         }
         for (const { state, sink, series } of this.inserters) {
             series.held.push(state.held_item?.quantity ?? 0);

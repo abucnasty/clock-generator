@@ -109,7 +109,7 @@ export function runClockOnBuild(
 }
 
 /** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
-const FREE_RUNNING_CHECK_TICKS = 36000;
+export const FREE_RUNNING_CHECK_TICKS = 36000;
 
 /**
  * Ticks the long run lasts when it verifies a clock WITH output feeder windows: twice the standard check, the length
@@ -126,6 +126,14 @@ export const OUTPUT_FEEDER_CHECK_TICKS = 2 * FREE_RUNNING_CHECK_TICKS;
  * the period, up to LONG_RUN_MAX_TICKS (see longRunPeriods).
  */
 const LONG_RUN_MAX_PERIODS = 120;
+
+/** Periods the long run of a clock of this period lasts when it is asked to cover `check_ticks` ticks (see longRunPeriods) */
+export function longRunPeriodsOf(period: number, check_ticks: number = FREE_RUNNING_CHECK_TICKS): number {
+    const max_periods = Math.floor((MAX_SIMULATION_TICKS - 1) / period);
+    // a longer check than the standard one is not cut short by the cap on periods, which short periods would hit first
+    const wanted_periods = Math.ceil(check_ticks / period);
+    return longRunPeriods(period, subtickClockForPeriod(period), Math.min(check_ticks > FREE_RUNNING_CHECK_TICKS ? wanted_periods : Math.min(LONG_RUN_MAX_PERIODS, wanted_periods), max_periods), max_periods);
+}
 
 /**
  * A build does not always repeat with its clock, so one period says little about it: in game builds with inserters
@@ -145,12 +153,9 @@ function longRunOfFreeRunningBuild(
 ): { keeps_up: boolean; output_items_per_period: number; stock: StockRecording } | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
-    const max_periods = Math.floor((MAX_SIMULATION_TICKS - 1) / period);
     // a fractional period repeats in whole ticks only every few periods, as its subtick clock counts them
     const repeat = subtickClockForPeriod(period);
-    // a longer check than the standard one is not cut short by the cap on periods, which short periods would hit first
-    const wanted_periods = Math.ceil(check_ticks / period);
-    const periods = longRunPeriods(period, repeat, Math.min(check_ticks > FREE_RUNNING_CHECK_TICKS ? wanted_periods : Math.min(LONG_RUN_MAX_PERIODS, wanted_periods), max_periods), max_periods);
+    const periods = longRunPeriodsOf(period, check_ticks);
     if (periods <= 1) {
         return null;
     }

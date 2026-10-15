@@ -51,6 +51,13 @@ export class MachineState implements EntityState {
     public productsFinished: number = 0;
 
     /**
+     * Crafts started so far: the times the machine took the ingredients of a craft out of its inventory. Only counted,
+     * never read by the simulation; the rule count of the inserter cost series reads it to check the starts it infers
+     * from `productsFinished` and the working status (see crafting/rule-count.ts).
+     */
+    public craftsStarted: number = 0;
+
+    /**
      * Whether the main product was at the output block when the machine's last tick was done. Inserters are updated
      * before machines, so an inserter that finds this set and the block gone knows that another inserter took the
      * products down in the tick it is in.
@@ -130,6 +137,7 @@ function clone(machineState: MachineState): MachineState {
     );
     cloned.pendingOutput = machineState.pendingOutput;
     cloned.productsFinished = machineState.productsFinished;
+    cloned.craftsStarted = machineState.craftsStarted;
     cloned.outputBlockedAfterLastTick = machineState.outputBlockedAfterLastTick;
     cloned.finishedCraftInLastTick = machineState.finishedCraftInLastTick;
     cloned.selfIngredients = machineState.selfIngredients.clone();
