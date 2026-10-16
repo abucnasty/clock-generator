@@ -1,0 +1,37 @@
+# D9 implemented decisions
+
+Fresh implementer, assessed source `6899860`; no assessed test was authored by this worker. All 24 initial candidates were independently rechecked against current source and survivors before implementing. No quota, framework, fixture replacement, exclusion, dependency or product change is used.
+
+| ID | UI src path | Reason and exact remaining protection | Static workload change |
+|---|---|---|---|
+| C01 | hooks/useCopyBlueprint.test.ts | Three unused labels exercise identical identity replacement. Keep one complete late-resolution scenario; keep rejection, newer request, unmount, stale confirmation and timer cases. | 3 → 1 cases |
+| C02 | hooks/usePersistedConfigForm.test.ts | Keep supported 0.0625 and editable unsupported 0.0001/1⁄3 serialize/read/export paths, byte equality and nonmutation. Full six-inserter property-presence/value and regenerated-UUID matrix runs at 0.0625. | 7 → 3 cases |
+| C03 | theme/contrast.test.ts | Remove historic palette-number examples; retain black/white/self/symmetry, threshold neighbors, alpha blending, parser and actual AA pair tests. | 1 → 0 cases |
+| C04 | theme/theme.test.ts | Drop corner radius literals; retain the Paper overlay assertion that protects measured surface colours, actual fill/alert AA and focus rings. | 2 style assertions removed |
+| C05 | theme/tokens.test.ts | Remove hex spelling convention; retain every AA pair and completeness/placement check. Contrast parser intentionally accepts more formats. | 1 → 0 cases |
+| C06 | utils/a11yLabels.test.ts | Replace kind/digit cross-product with literal row/owner/slot/item outputs; entityLabel owns kinds. Remove constant dictionary smoke; rendered SSR controls and browser aria evidence remain. | 1 constant smoke removed; 32 → 3 row invocations |
+| C07 | utils/checkErrorText.test.ts | Exact translated sentence already excludes historic engine terms. Keep exact translation and unknown/empty fallback. | 1 → 0 cases |
+| C08 | utils/checkThenGenerate.test.ts | Keep one startsRun classification for every seven decision kinds; source-state precedence remains in decision suites. Exact chip visibility/labels case supersedes duplicate constants; retain PendingChecks races and CHECK_TEXT policy. | 10 → 7 rows; 1 constant case removed |
+| C09 | utils/clockSummary.test.ts | Keep exact fractional 0.0625 and both sides of one (0.9999,1.0001), exact-one/integer scope, total-rate and per-copy wake-up assertions. New 0.16 startup/recovery cases remain intact. | 5 → 3 cases |
+| C10 | utils/configForm/edits.test.ts | Remove only two separately UX-added machine/chest subset cases. All-kind remove/reorder invariant retains UUID/contiguous-ID/reference/lane coverage; transfer exact Infinity chest payload/type equality into chest-first removal. Baseline cases untouched. | 2 → 0 cases; payload transferred |
+| C11 | utils/enableControlDraft.test.ts | Untouched table keeps undefined, ALWAYS, inverted CLOCKED and CONDITIONAL/latch. Dedicated save/changeback/half-typed tests retain explicit AUTO, NEVER, normal CLOCKED and draft fidelity. | 7 → 4 rows |
+| C12 | utils/firstProblem.test.ts | Remove copied obsolete canGenerate oracle and private Machine type. Direct field/recipe/coverage/priority/capacity/focus and decision precedence assertions remain. | 1 → 0 cases |
+| C13 | utils/headerOverlap.test.ts | Remove second identical straddle example. Retain positive/negative, exact header edge and offscreen bottom boundaries. | 1 → 0 cases |
+| C14 | utils/inserterFilters.test.ts | Merge migrated filter-slot cases into automatic/explicit groups. Transfer empty explicit fallback, append-at-length, explicit inferred-ignore, clear-second, final inferred removal and second explicit removal; strengthen each with becameExplicit result and retain nonmutation/compaction. | 4 → 2 cases; all six outcomes transferred |
+| C15 | utils/introCard.test.ts | Replace formula-copying 16 combinations with five literal policy scenarios: fresh/dismissed/manual/populated/forced. Keep blank-build and denied-storage behavior. Route-first follow-up remains open. | 16 → 5 invocations; cases unchanged |
+| C16 | utils/nextStep.test.ts | Remove weak 64-combination union-membership loop. Five focused tests retain Generate priority, Configure copy, Results card fallback, stale and running/problems precedence. | 1 → 0 cases; 64 invocations removed |
+| C17 | utils/ruleTemplates.test.ts | Keep automatic bulk12/fast4 and explicit8 composition; direct defaultAmount16/12/undefined and inserterMetadata retain defaults/metadata arithmetic. All rule shapes/schema/endpoints remain. | 7 → 3 rows |
+| C18 | utils/shareLink.test.ts | Keep three real share→file→worker→export Copies classes and strict-schema result. Six-inserter metadata presence/value matrix runs once; all rows retain input nonmutation, and malformed structure/version/stream/compression cases remain. | 7 → 3 cases |
+| C19 | utils/timelineGeometry.test.ts | Remove native Array.sort demonstration and duplicate snapped width. Keep production paint priorities, exact DPR1/2 spans and every min/natural/edge/empty-track boundary. | 2 → 0 cases |
+| C20 | utils/wakeWindowCopy.test.ts | Remove raw component filename/literal-scanner convention block. Keep dynamic row/window/watch narration, definition policy and glossary factual source linkage. | 2 → 0 cases |
+| C21 | utils/wakeWindows.test.ts | Keep distinct axis pairs (60,4),(168,4),(2240,6),(550.957,6),(1,4), all per-pair assertions and four exact finest-step outputs. Normalization/slack/geometry/modes/pointer/key cases untouched. | 18 → 5 rows |
+| C22 | worker/formConfig.test.ts | Keep 0.0625/0.0001/1⁄3 complete saved/file/worker Copies preservation and strict-schema acceptance; metadata omission checked once. Preserve new 0.16 geometry/fuel/overrides and all baseline cases. | 7 → 3 cases |
+| C23 | worker/formConfig.test.ts | Remove standalone broken-machines/0.0001 duplicate; stronger malformed-entity matrix retains that input for 1/0.0001/1⁄3 plus absent machines, fractional id, endpoint, quality and exact custom-path/message guards. | 1 → 0 cases |
+| C24 | worker/installFacts.test.ts | Grouped ascending [[10],[5,2],[3]] already proves merged membership. Keep empty rows/schedule, nonmutation, drills/fallback and structuredClone contract. | 1 → 0 cases |
+
+These changes reduce expanded cases by a source-derived 57; root must obtain the executed before/after count. C15 reduces invocations within one case and C04 removes only two style assertions. These are workload proxies, not runtime evidence.
+
+Race/cancellation/freshness, Undo/whole-build snapshots, persistence/share/cache, exact arithmetic, actual AA pairs, focus/keyboard/announcements, malformed structure rejection, and all protected baseline declarations remain. No new scenario is invented: rewritten C06/C15/C21 and merged C10/C14 replace only the mapped cases. The new literal or transferred assertions preserve independent expected outcomes rather than reimplementing production decisions.
+
+The [inventory](INVENTORY.md) records later source attribution and all KEEP groups. Theme/D7/D10/subsequent integrations remain a final reconciliation item. Independent code and UX reviews must assess this actual diff and surviving protection, including conditional once-only metadata matrices; final release completion requires those verdicts and the existing full gates.
+

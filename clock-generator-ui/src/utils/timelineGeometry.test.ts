@@ -37,21 +37,11 @@ describe('paintLayer', () => {
         expect(paintLayer(narrow, false)).toBe(1);
         expect(paintLayer(narrow, true)).toBe(2);
     });
-    it('paints a narrow Blocked mark after a narrow Idle mark that started later', () => {
-        const marks = [
-            { name: 'blocked', layer: paintLayer(narrow, true) },
-            { name: 'idle', layer: paintLayer(narrow, false) },
-        ];
-        expect(marks.sort((a, b) => a.layer - b.layer).map(m => m.name)).toEqual(['idle', 'blocked']);
-    });
 });
 
 describe('snapSpan', () => {
     it('puts the edges on whole device pixels', () => {
         expect(snapSpan({ x: 10.3, width: 3, narrow: true }, 1)).toEqual({ x: 10, width: 3 });
         expect(snapSpan({ x: 10.3, width: 3, narrow: true }, 2)).toEqual({ x: 10.5, width: 3 });
-    });
-    it('keeps a mark at least 3px wide', () => {
-        expect(snapSpan({ x: 0, width: 3, narrow: true }, 1).width).toBe(3);
     });
 });

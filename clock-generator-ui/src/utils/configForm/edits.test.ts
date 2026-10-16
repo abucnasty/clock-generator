@@ -87,17 +87,6 @@ describe('machines', () => {
         expect(config.drills!.configs.map((d) => d.target)).toEqual([{ type: 'machine', id: 0 }, { type: 'machine', id: 2 }]);
     });
 
-    it('moves the ends at the machines after a removed one down, and unsets none', () => {
-        const config = edits.removeMachine(form(), 1);
-        expect(ids(config.machines)).toEqual([1, 2]);
-        expect(config.inserters.map((ins) => [ins.source, ins.sink])).toEqual([
-            [{ type: 'belt', id: 2, near_lane: 1 }, { type: 'machine', id: 2 }],
-            [{ type: 'machine', id: 2 }, { type: 'chest', id: 2 }],
-            [{ type: 'machine', id: 1 }, { type: 'belt', id: 1 }],
-        ]);
-        expect(config.drills!.configs.map((d) => d.target.id)).toEqual([1, 2]);
-    });
-
     it('leaves the form as it is when there is no machine at the index', () => {
         const before = form();
         expect(edits.removeMachine(before, 3)).toBe(before);
@@ -245,14 +234,6 @@ describe('chests', () => {
         expect(ids(edits.removeChest(form(), 1).chests)).toEqual([1]);
     });
 
-    it('renumbers the chests after a removed one, keeping their type, and follows them in inserters', () => {
-        const before = form();
-        const config = edits.removeChest(before, 0);
-        expect(config.chests).toEqual([{ ...before.chests[1], id: 1 }]);
-        expect(config.chests[0].type).toBe(ChestType.INFINITY_CHEST);
-        expect(config.inserters[1].sink).toEqual({ type: 'chest', id: 1 });
-    });
-
     it('unsets the inserter ends at a removed chest', () => {
         const config = edits.removeChest(form(), 1);
         expect(config.inserters[1].sink).toEqual({ type: 'chest', id: 0 });
@@ -390,7 +371,7 @@ describe('renumbering', () => {
         { name: 'drills', remove: edits.removeDrill, reorder: edits.reorderDrills, list: (c: ConfigFormData) => c.drills!.configs },
     ];
 
-    it.each(kinds)('numbers the $name 1 to n and keeps every reference on its entity after any remove or reorder', ({ remove, reorder, list }) => {
+    it.each(kinds)('numbers the $name 1 to n and keeps every reference on its entity after any remove or reorder', ({ name, remove, reorder, list }) => {
         const before = form();
         const count = list(before).length;
         for (let i = 0; i < count; i++) {
@@ -398,6 +379,10 @@ describe('renumbering', () => {
             expectNumbered(removed);
             expect(list(removed).map((e) => e._uuid)).toEqual(list(before).filter((_, k) => k !== i).map((e) => e._uuid));
             expectFollowed(before, removed, list(before)[i]._uuid);
+            if (name === 'chests' && i === 0) {
+                expect(removed.chests).toEqual([{ ...before.chests[1], id: 1 }]);
+                expect(removed.chests[0].type).toBe(ChestType.INFINITY_CHEST);
+            }
             for (let j = 0; j < count; j++) {
                 const reordered = reorder(before, i, j);
                 expectNumbered(reordered);

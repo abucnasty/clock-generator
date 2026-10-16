@@ -222,7 +222,7 @@ describe('sharedBuildSummary', () => {
 
 
 describe('shared builds through the real file and worker boundary', () => {
-    it.each([5.5, 2.25, 0.5, 0.001, 0.0625, 0.0001, 1 / 3])('preserves Copies %s and inserter metadata', async copies => {
+    it.each([0.0625, 0.0001, 1 / 3])('preserves Copies %s and inserter metadata', async copies => {
         const config = smallBuild();
         config.target_output.copies = copies;
         config.inserters = [
@@ -243,11 +243,14 @@ describe('shared builds through the real file and worker boundary', () => {
         expect(ConfigSchema.safeParse(file).success).toBe(copiesProblem(copies) === null);
         const exported = JSON.parse(JSON.stringify(formDataToConfig(configToFormData(parsed.data!))));
         expect(exported.target_output.copies).toBe(copies);
-        const before = JSON.parse(original);
-        for (let i = 0; i < before.inserters.length; i++) {
-            for (const field of ['prototype', 'quality', 'stack_size']) {
-                expect(Object.hasOwn(exported.inserters[i], field)).toBe(Object.hasOwn(before.inserters[i], field));
-                expect(exported.inserters[i][field]).toEqual(before.inserters[i][field]);
+        // Metadata is independent of the Copies refinement; keep its full presence/value matrix once.
+        if (copies === 0.0625) {
+            const before = JSON.parse(original);
+            for (let i = 0; i < before.inserters.length; i++) {
+                for (const field of ['prototype', 'quality', 'stack_size']) {
+                    expect(Object.hasOwn(exported.inserters[i], field)).toBe(Object.hasOwn(before.inserters[i], field));
+                    expect(exported.inserters[i][field]).toEqual(before.inserters[i][field]);
+                }
             }
         }
         expect(JSON.stringify(config)).toBe(original);

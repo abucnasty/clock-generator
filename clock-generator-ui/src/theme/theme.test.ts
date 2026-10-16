@@ -41,9 +41,7 @@ describe('appTheme', () => {
         expect(contrastRatio(palette.getContrastText(color.main), color.dark)).toBeGreaterThanOrEqual(AA.text);
     });
 
-    it('keeps the square corners, squares the chips and turns the elevation overlay off', () => {
-        expect(appTheme.shape.borderRadius).toBe(0);
-        expect((appTheme.components?.MuiChip?.styleOverrides?.root as { borderRadius: number }).borderRadius).toBe(2);
+    it('turns the elevation overlay off so measured surface colours stay unchanged', () => {
         expect((appTheme.components?.MuiPaper?.styleOverrides?.root as { backgroundImage: string }).backgroundImage).toBe('none');
     });
 

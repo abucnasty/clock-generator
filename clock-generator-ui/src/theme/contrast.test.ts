@@ -21,10 +21,6 @@ describe('contrastRatio', () => {
         expect(contrastRatio('rgba(255,255,255,0.7)', '#232323')).toBeCloseTo(8.37, 2);
     });
 
-    it('gives the values this item quotes', () => {
-        expect(contrastRatio('#000', '#ffe14d')).toBeCloseTo(16.13, 2);
-        expect(contrastRatio('#fca300', '#232323')).toBeCloseTo(7.77, 2);
-    });
 });
 
 describe('relativeLuminance', () => {

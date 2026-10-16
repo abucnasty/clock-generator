@@ -10,10 +10,6 @@ describe('checkErrorText', () => {
             + 'Lower the target, raise Copies, or add machines or crafting speed (modules, beacons or a faster machine).');
     });
 
-    it('keeps no engine wording', () => {
-        expect(checkErrorText(ENGINE)).not.toMatch(/configuration|production rate|items\/second/);
-    });
-
     it('leaves any other message as the engine wrote it', () => {
         expect(checkErrorText('No machine with output item foo found')).toBe('No machine with output item foo found');
         expect(checkErrorText('')).toBe('');
