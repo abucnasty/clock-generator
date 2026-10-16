@@ -31,6 +31,7 @@ interface TransferPlanPanelProps {
     usedLcm: number;
     excludedIngredients: string[];
     onExcludeChange: (items: string[]) => void;
+    interaction?: 'editable' | 'checking' | 'read-only';
 }
 
 /** "inserter" as "Inserter" */
@@ -50,11 +51,13 @@ function TransferPlanPanelComponent({
     usedLcm,
     excludedIngredients,
     onExcludeChange,
+    interaction = 'editable',
 }: TransferPlanPanelProps) {
     const { entities, computed_lcm } = transferPlan;
     const { itemLabel } = useGameNames();
 
     const toggleExclude = (itemName: string) => {
+        if (interaction !== 'editable') return;
         if (excludedIngredients.includes(itemName)) {
             onExcludeChange(excludedIngredients.filter((i) => i !== itemName));
         } else {
@@ -173,7 +176,7 @@ function TransferPlanPanelComponent({
                                         <TableCell align="center">
                                             <Tooltip
                                                 title={
-                                                    isExcluded
+                                                    interaction !== 'editable' ? (interaction === 'checking' ? 'Checking the build. Changes are unavailable.' : 'This plan is out of date. Check the build before changing it.') : isExcluded
                                                         ? 'Click to include in LCM'
                                                         : `Click to exclude from LCM. An inserter whose items are all excluded is set to ${ALWAYS_ON} unless it already has an enable rule of your own.`
                                                 }
@@ -186,8 +189,12 @@ function TransferPlanPanelComponent({
                                                     label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"
                                                     variant={isExcluded ? 'filled' : 'outlined'}
-                                                    onClick={() => toggleExclude(transfer.item_name)}
-                                                    sx={{ cursor: 'pointer' }}
+                                                    onClick={interaction === 'read-only' ? undefined : () => toggleExclude(transfer.item_name)}
+                                                    aria-disabled={interaction === 'checking' || undefined}
+                                                    onKeyDown={interaction === 'checking' ? event => {
+                                                        if (event.key === 'Enter' || event.key === ' ') event.preventDefault();
+                                                    } : undefined}
+                                                    sx={{ cursor: interaction === 'editable' ? 'pointer' : 'default' }}
                                                 />
                                             </Tooltip>
                                         </TableCell>

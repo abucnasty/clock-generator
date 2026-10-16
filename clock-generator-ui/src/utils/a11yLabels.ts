@@ -76,6 +76,7 @@ export const SCROLL_REGION_NAMES = {
     fuelConsumption: 'Fuel consumption table',
     fuelClocks: 'Fuel clocks table',
     fuelTimeline: 'Fuel timeline chart',
+    fuelEvents: 'Fuel inserter events table',
     stateTimeline: 'State transition timeline',
     transferTimeline: 'Transfer activity timeline',
     shiftRange: 'Shift range chart',
