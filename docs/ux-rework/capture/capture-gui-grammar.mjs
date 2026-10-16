@@ -860,7 +860,7 @@ async function stepFresh({ page, rec, width }) {
             const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Recovers|Does not recover|Unstable)$/ }).first();
             const works = row.locator('td').last().locator('span').first();
             const target = expanded ? chip : works;
-            rec.check(`${label}: ${expanded ? 'Status chip' : 'Works? words and icon'} are present`,
+            rec.check(`${label}: ${expanded ? 'Status chip is' : 'Works? words and icon are'} present`,
                 await count(target) > 0 && (expanded || await count(works.locator('svg')) > 0));
             if (!(await count(target))) continue;
             const pairs = (state) => expanded

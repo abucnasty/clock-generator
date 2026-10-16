@@ -920,7 +920,7 @@ try {
             rec.check(`the menu reads, in order: ${MENU_ORDER.join(', ')}`, JSON.stringify(items) === JSON.stringify(MENU_ORDER), JSON.stringify(items));
             // the divider sits before Reset build
             const kids = await menu.locator('[role=menuitem], [role=separator], hr').evaluateAll((els) => els.map((e) => (e.getAttribute('role') === 'separator' || e.tagName === 'HR' ? '|' : (e.textContent ?? '').trim())));
-            rec.check('a divider between Getting started and Reset build', kids.join('>').includes('Getting started>|>Reset build'), kids.join(' > '));
+            rec.check('a divider between Terms and Reset build', kids.join('>').includes('Terms>|>Reset build'), kids.join(' > '));
             rec.check('no Paste, Import Config, Export Config, Reset Configuration in the menu', !items.some((t) => /Paste from Factorio|Import Config|Export Config|Reset Configuration/.test(t)), items.join(' | '));
             for (const name of MENU_ORDER) if (await exists(menuItem(page, name))) await checkLabelInName(rec, page, menuItem(page, name), `menu item ${name}`);
             await axe(rec, page, 'the ⋮ menu');
