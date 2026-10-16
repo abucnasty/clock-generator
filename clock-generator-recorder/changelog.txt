@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.9.0
+Date: 2026-10-16
+  Features:
+    - A job can ask for a staged start: the belts fill first, then the inserters of the cell are built in a chosen order and the clock is wired in one tick, and the recording starts there with empty machines
+---------------------------------------------------------------------------------------------------
 Version: 0.8.0
 Date: 2026-10-16
   Features:
