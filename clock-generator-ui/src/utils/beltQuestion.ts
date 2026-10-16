@@ -23,9 +23,9 @@ export const BELT_COPY = {
     help: 'Not sure? Leave it on Moving.',
     /** The heading of the question's card under the diagram */
     diagramHeading: 'Belts',
-    resultsMoving: 'These clocks assume your input belts are moving.',
+    resultsMoving: 'This run used your Moving belt setting.',
     actionMoving: 'My belts stand still. Generate again',
-    resultsStanding: 'These clocks assume your input belts are backed up and standing still.',
+    resultsStanding: 'This run used your Backed up and standing still belt setting.',
     actionStanding: 'My belts move. Generate again',
     hint: (standing: number, moving: number) =>
         `On belts that stand still, this build may do with ${standing} wake-ups a minute instead of ${moving}; fewer is better, as each one costs a little UPS.`,
@@ -79,7 +79,7 @@ export function otherAnswer(answer: BeltAnswer): BeltAnswer {
     return answer === 'moving' ? 'standing' : 'moving';
 }
 
-/** What Results says the clocks assume, and the action that generates them for the other answer */
+/** The saved run's belt setting, and the action that generates clocks for the other answer */
 export function beltResultsLine(answer: BeltAnswer): { text: string; actionLabel: string; switchTo: BeltAnswer } {
     return answer === 'moving'
         ? { text: BELT_COPY.resultsMoving, actionLabel: BELT_COPY.actionMoving, switchTo: otherAnswer(answer) }

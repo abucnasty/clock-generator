@@ -121,14 +121,14 @@ describe('otherAnswer and beltResultsLine', () => {
         expect(otherAnswer('standing')).toBe('moving');
     });
 
-    it('says what the clocks assume, with the action for the other answer', () => {
+    it('says which belt setting the run used, with the action for the other answer', () => {
         expect(beltResultsLine('moving')).toEqual({
-            text: 'These clocks assume your input belts are moving.',
+            text: 'This run used your Moving belt setting.',
             actionLabel: 'My belts stand still. Generate again',
             switchTo: 'standing',
         });
         expect(beltResultsLine('standing')).toEqual({
-            text: 'These clocks assume your input belts are backed up and standing still.',
+            text: 'This run used your Backed up and standing still belt setting.',
             actionLabel: 'My belts move. Generate again',
             switchTo: 'moving',
         });

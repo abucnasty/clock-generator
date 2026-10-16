@@ -1,5 +1,6 @@
 import type { FuelLevelSeries } from 'clock-generator/browser';
 import type { FuelViewData } from '../worker/types';
+import { formatNumberText } from './numberText';
 
 export interface FuelEventRow {
     inserterNumber: number;
@@ -39,8 +40,9 @@ export function fuelSampledEmptyIntervals(levels: FuelLevelSeries, durationTicks
 
 export function fuelTraceSummary(levels: FuelLevelSeries, durationTicks: number): string {
     const intervals = fuelSampledEmptyIntervals(levels, durationTicks);
-    return `Machine ${levels.machine_number}, over ${durationTicks} ticks: fuel started at ${levels.start_level} items and ended at ${levels.end_level} items. `
-        + `Minimum ${levels.min_level} items; maximum ${levels.max_level} items. ${levels.inserted} items inserted; ${levels.burned} items burned. `
+    const quantity = (value: number) => formatNumberText(value, { maxDecimals: 3 });
+    return `Machine ${levels.machine_number}, over ${durationTicks} ticks: fuel started at ${quantity(levels.start_level)} items and ended at ${quantity(levels.end_level)} items. `
+        + `Minimum ${quantity(levels.min_level)} items; maximum ${quantity(levels.max_level)} items. ${quantity(levels.inserted)} items inserted; ${quantity(levels.burned)} items burned (fuel amounts rounded for display). `
         + `${levels.empty_ticks} ticks with no fuel.`
         + (levels.first_empty_tick !== null ? ` First empty tick: ${levels.first_empty_tick}.` : '')
         + (intervals.length ? ` Sampled intervals containing an empty level: ${intervals.map(range => `${range.startTick} to ${range.endTick}`).join(', ')} ticks. Exact empty-interval boundaries are unavailable.` : '');
