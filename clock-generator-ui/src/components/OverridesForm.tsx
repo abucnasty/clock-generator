@@ -12,8 +12,10 @@ import {
 import { useId, type ReactNode } from 'react';
 import { HelpButton } from './HelpButton';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import type { ConfigFormData } from '../utils/configForm/formData';
 
 interface OverridesFormProps {
+    importedChecks?: ConfigFormData['overrides'];
     lcm?: number;
     terminalSwingCount?: number;
     useFractionalSwings?: boolean;
@@ -29,6 +31,7 @@ interface OverridesFormProps {
 }
 
 export function OverridesForm({
+    importedChecks,
     lcm,
     terminalSwingCount,
     useFractionalSwings,
@@ -64,6 +67,11 @@ export function OverridesForm({
                 </Typography>
             </AccordionSummary>
             <AccordionDetails>
+                {(importedChecks?.check_start_dependence !== undefined || importedChecks?.loop_seed_items !== undefined) && <Typography variant="body2" sx={{ mb: 2 }}>
+                    Imported model settings (read-only):
+                    {importedChecks.check_start_dependence !== undefined && ` other-start checks ${importedChecks.check_start_dependence ? 'requested' : 'not requested'}.`}
+                    {importedChecks.loop_seed_items !== undefined && ` Loop seed ${importedChecks.loop_seed_items} items per self-feeding machine.`}
+                </Typography>}
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     These options allow you to manually override calculated values.
                     Leave empty to use automatic calculation.

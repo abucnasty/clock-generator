@@ -9,7 +9,8 @@ import type {
     SwingBackoffReport,
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
-import type { FuelViewData, ShiftOptionsView } from '../worker/types';
+import type { FuelViewData, GenerationAssumptions, ShiftOptionsView } from '../worker/types';
+import { startCheckSummary } from '../utils/modelAssumptions';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
@@ -25,6 +26,7 @@ import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
 
 interface ResultsWorkspaceProps {
+    generationAssumptions: GenerationAssumptions | null;
     isRunning: boolean;
     error: string | null;
     alternatives: ClockAlternativeView[];
@@ -124,16 +126,18 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             )}
 
             {!props.isRunning && hasResults && <RunNotes stoppedEarly={props.stoppedEarly} pickGone={props.pickGone} />}
+            {!hasResults && props.generationAssumptions && <Typography variant="body2" data-start-assumption>{startCheckSummary([], props.generationAssumptions)}</Typography>}
 
             {!hasResults && !props.isRunning && !props.error && (
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
                     <Typography variant="body1" color="text.secondary">
-                        Nothing generated yet. Press Generate to make clocks for your build.
+                        {props.generationAssumptions ? 'This run made no clocks. Check the build or generate again.' : 'Nothing generated yet. Press Generate to make clocks for your build.'}
                     </Typography>
                 </Paper>
             )}
 
             <ResultSummaryCard
+                generationAssumptions={props.generationAssumptions}
                 alternatives={props.alternatives}
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}

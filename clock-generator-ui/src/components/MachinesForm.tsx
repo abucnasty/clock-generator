@@ -253,6 +253,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
             {machine.recipe && (
                 <MachineFactsAccordion facts={facts} error={error} />
             )}
+            {machine.fuel !== undefined && <Typography variant="body2">Imported fuel (read-only): {machine.fuel}.</Typography>}
         </Box>
     );
 }

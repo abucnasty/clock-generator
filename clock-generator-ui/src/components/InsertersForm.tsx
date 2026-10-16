@@ -172,9 +172,13 @@ function InsertersFormComponent({
     const add = () => { afterAdd(onAdd); announce(`Added ${addedLabel()}.`); };
     const addedId = Math.max(0, ...inserters.map(row => row.id)) + 1;
     const duplicate = useCallback((index: number, label: string) => {
+        if (inserters[index]?.sink.drop !== undefined) {
+            announce(`${label} cannot be duplicated: its imported drop position belongs to one inserter. Edit and reopen the build file to supply another position.`);
+            return;
+        }
         afterAdd(() => onDuplicate(index));
         announce(`Added ${entityLabel('inserter', addedId)}, a copy of ${label}.`);
-    }, [afterAdd, onDuplicate, announce, addedId]);
+    }, [afterAdd, onDuplicate, announce, addedId, inserters]);
 
     return (
         <PanelSection

@@ -12,6 +12,7 @@ describe('advancedSetCount', () => {
     it('counts each setting in use, and the LCM exclusions as one', () => {
         expect(advancedSetCount({ lcm: 60 })).toBe(1);
         expect(advancedSetCount({ terminal_swing_count: 2, search_for_fewer_wake_ups: true })).toBe(2);
+        expect(advancedSetCount({ check_start_dependence: false, loop_seed_items: 0 })).toBe(2);
         expect(advancedSetCount({
             lcm: 60,
             terminal_swing_count: 2,

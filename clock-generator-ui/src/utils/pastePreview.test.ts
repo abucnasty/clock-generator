@@ -13,6 +13,16 @@ const drill = (id: number, target = 1) => ({ id, type: 'electric-mining-drill' a
 const formInserter = (id: number, type: 'machine' | 'belt' | 'chest', source = 1, sink = 1): InserterFormData => ({ ...inserter(id, type, source, sink), _uuid: `inserter-${id}` });
 
 describe('selective Paste preview', () => {
+    it('refuses to reuse imported drop geometry across a category replacement while allowing a complete related import', () => {
+        const form = current(), incoming = empty();
+        form.inserters = [{ ...formInserter(3, 'machine'), sink: { type: 'belt', id: 1, drop: { lane: 1, position: 0.5 } } }];
+        incoming.belts = [{ id: 1, type: 'fast-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }];
+        expect(pastePreview(form, incoming, { ...none, belts: true }).geometryProblem).toContain('Inserter 3');
+        expect(pastePreview(form, incoming, none).geometryProblem).toBeNull();
+        incoming.inserters = [{ id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, drop: { lane: 1, position: 0.75 } } }];
+        incoming.machines = [machine(1)];
+        expect(pastePreview(form, incoming, { ...none, machines: true, inserters: true, belts: true }).geometryProblem).toBeNull();
+    });
     it('counts the incomplete raw destination and actual result independently of exportability', () => {
         const form = current(), incoming = empty();
         form.machines = [1, 2, 3, 4].map(id => ({ ...machine(id), _uuid: `${id}` })); incoming.machines = [machine(1), machine(2)];

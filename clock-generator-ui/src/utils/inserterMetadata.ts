@@ -30,3 +30,14 @@ export function inserterStackSizeHelp(inserter: Pick<InserterFormData, 'prototyp
 
 export const INSERTER_TIMING_ASSUMPTION = 'When missing, type defaults to Stack inserter and quality to Legendary. '
     + 'Sidecar exports omit these details and use this timing assumption.';
+
+export const DROP_ROUTE_READ_ONLY = 'Imported geometry: route read-only. Edit and reopen the build file to change it.';
+export const DROP_BELT_READ_ONLY = 'Imported drop positions: belt type and lane layout are read-only. Edit and reopen the build file to change them.';
+
+/** No-op endpoint selection preserves lane/drop fields and explicit-vs-omitted values. */
+export function endpointUpdate(inserter: InserterFormData, side: 'source' | 'sink', endpoint: { type: InserterFormData['source']['type']; id: number }): Partial<InserterFormData> {
+    const old = inserter[side];
+    if (old.type === endpoint.type && old.id === endpoint.id) return {};
+    if (inserter.sink.drop !== undefined) return {};
+    return { [side]: endpoint };
+}

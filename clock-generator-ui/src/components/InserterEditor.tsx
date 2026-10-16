@@ -7,7 +7,7 @@ import { useAnnounce } from '../hooks/useMessages';
 import { entityOptionsOf, findOption, stackSizeFrom, type EntityOption } from '../utils/inserterOptions';
 import { inferInserterItems, sourceItemsOf } from '../utils/inferInserterItems';
 import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from '../utils/inserterFilters';
-import { INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
+import { DROP_ROUTE_READ_ONLY, endpointUpdate, INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
@@ -69,7 +69,8 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
         if (result.becameExplicit) announce(`${label}'s filters are now set by hand.`);
     };
     const input = (params: AutocompleteRenderInputParams, name: string, selected: EntityOption | undefined) => (
-        <TextField {...params} label={name} error={!selected} slotProps={{ input: {
+        <TextField {...params} label={name} error={!selected} helperText={value.sink.drop && name === 'Destination'
+            ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined} slotProps={{ input: {
             ...params.InputProps,
             startAdornment: selected ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
                 <FactorioIcon name={selected.icon} size={20} alt="" />
@@ -82,8 +83,9 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     );
     const picker = (side: 'source' | 'sink', name: string) => (
         <Autocomplete size="small" sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }} options={ownOptions}
+            readOnly={value.sink.drop !== undefined}
             value={findOption(ownOptions, value[side].type, value[side].id)}
-            onChange={(_, option) => { if (option) onChange({ [side]: { type: option.type, id: option.id } }); }}
+            onChange={(_, option) => { if (option) onChange(endpointUpdate(value, side, { type: option.type, id: option.id })); }}
             getOptionLabel={option => option.sublabel ? `${option.label} - ${option.sublabel}` : option.label}
             isOptionEqualToValue={(a, b) => a.type === b.type && a.id === b.id}
             renderInput={params => input(params, name, findOption(ownOptions, value[side].type, value[side].id))}

@@ -12,7 +12,7 @@ export interface PickRule {
 
 /** The fields of a clock the recommendation is worked out from, so the tests need not build a whole view */
 type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'inserterWindowCount'> & {
-    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'>;
+    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'backpressure_loss'>>;
 };
 
 /** A row of the clock table: the clock and its index in the list, which selecting it goes by */
@@ -32,10 +32,9 @@ export const RECOMMENDED_COPY = {
     unstableDivider: 'Unstable clocks',
     disclosureTitle: 'How clocks are chosen',
     disclosure: [
-        'Each clock is tested in the simulator, driven only by its wake windows and started at several points. A '
-            + 'clock that holds the target rate is then starved (each input stops arriving for a while) and jammed '
-            + '(each output stops being taken away for a while), and the build has to get back to its rate by itself. '
-            + 'A clock that does all of that holds the rate and recovers.',
+        'The simulator checks exported wake windows from a modeled cold start, including clock-phase checks where available. '
+            + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
+            + 'Clocks that hold are also assessed for recovery after inputs stop or outputs back up; an unavailable result is not a pass.',
         'The clock picked for you is the one that holds the rate and recovers with the fewest wake-ups; on a build '
             + 'with a deadlock risk, the one '
             + 'with the fewest wake-ups of the clocks that hold the rate. If clocks tie, the one with fewer wake '
@@ -81,11 +80,11 @@ export const RECOMMENDED_COPY = {
     mayFailOnMovingBelt: ' It may fail on a moving belt.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and recovers.`,
     atRateHolds: (rate: string, fewest: boolean) =>
-        ` This one holds ${rate}/s from a clean start${fewest ? ' with the fewest wake-ups' : ''}.`,
+        ` This one holds ${rate}/s from the modeled cold start${fewest ? ' with the fewest wake-ups' : ''}.`,
     atRateRuns: (rate: string, fewest: boolean) => ` This one runs at ${rate}/s${fewest ? ' with the fewest wake-ups' : ''}.`,
     nearest: ' This one runs nearest to it.',
     nearestAt: (itsRate: string) => ` This one runs nearest to it, at ${itsRate}/s.`,
-    nearestHolds: ' Of the equally near clocks, it is the one that holds its output from a clean start.',
+    nearestHolds: ' Of the equally near clocks, it is the one that holds its output from the modeled cold start.',
 };
 
 /** "1 other clock for a moving belt ties" / "2 other clocks tie" */
@@ -146,6 +145,9 @@ export function recommendationReason(
 function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
+    if (pick.assessment.backpressure_loss === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
+        return `Selected by the engine's rule at ${figure(pick.assessment.items_per_second)}/s. No usable recovery result is available.`;
+    }
     // on a build with a deadlock risk a clock that holds the rate meets it, recovering or not; elsewhere it is Stable
     const deadlock = pick.deadlockRisk !== null;
     if (!ranking.meets_target_rate) {
@@ -197,9 +199,12 @@ function tieOf(pick: PickableClock, others: PickableClock[], kind: string): stri
         : RECOMMENDED_COPY.tieOnWakeUpsUncounted(tiedOnWakeUps.length, kind);
 }
 
-/** Why the pick when no clock meets the target rate: it runs at the rate from a clean start, or the nearest to it */
+/** Why the pick when no clock qualifies: actual modeled-start rate and sampled starts remain distinct. */
 function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate: string, deadlock: boolean): string {
     const { ranking } = pick;
+    if (pick.assessment.start_dependence?.verdict === 'start-dependent') {
+        return `No clock qualifies under the engine's selection rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the target from only some sampled starts. See Model and tested starts.`;
+    }
     const lead = RECOMMENDED_COPY.noneHolds(rate, deadlock);
     const counted = ranking.wake_ups_per_minute !== null;
     const near = offTargetKey(ranking.rate_off_target);

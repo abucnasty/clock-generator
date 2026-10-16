@@ -154,6 +154,7 @@ function App() {
         initialize,
         runSimulation,
         generatedFor,
+        generationAssumptions,
         clearResults,
         cancel,
         lastStop,
@@ -1007,6 +1008,7 @@ function App() {
 
                                         <PanelSection level={3} title="Belts and chests">
                                             <BeltsForm
+                                                geometryBeltIds={config.inserters.filter(ins => ins.sink.type === 'belt' && ins.sink.drop !== undefined).map(ins => ins.sink.id)}
                                                 belts={config.belts}
                                                 itemNames={itemNamesComposite}
                                                 onAdd={addBelt}
@@ -1085,6 +1087,7 @@ function App() {
 
                             <Box sx={{ mb: 2 }}>
                                 <OverridesForm
+                                    importedChecks={config.overrides}
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
@@ -1111,6 +1114,7 @@ function App() {
 
                         <Box sx={{ display: view === 'results' ? 'block' : 'none' }}>
                             <ResultsWorkspace
+                                generationAssumptions={generationAssumptions}
                                 isRunning={isRunning}
                                 error={error}
                                 alternatives={alternatives}

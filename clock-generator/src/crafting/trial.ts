@@ -32,7 +32,8 @@ export const FULL_CHECK_START_PHASES = 112;
 export interface ClockAssessment {
     /**
      * The clock-only check (the build driven only by the exported clock windows) reaches the expected output, from
-     * the start the generator gives a clock: the machines full of ingredients and emptied of products
+     * the modeled cold start: full input supplies, empty machines, buffers and hands, clock phase 0, and the configured
+     * one-time self-ingredient seed (default 200). Rates are assessed after model warm-up and checks.
      */
     holds: boolean;
     /**
@@ -53,7 +54,7 @@ export interface ClockAssessment {
     /**
      * Where the clock gets to from the starts of CLOCK_STARTS (see start-dependence.ts); null when the config did not ask
      * for start dependence to be checked (`overrides.check_start_dependence`), and the clock was judged from the cold
-     * start alone
+     * start alone, or when the requested start checks could not run. Actual samples are in `starts`.
      */
     start_dependence: StartDependence | null;
 }
@@ -62,7 +63,7 @@ export interface ClockAssessment {
  * The one word for a clock (GOALS.md, "Backpressure Loss"): stable when it holds its expected output and gets back to
  * it by itself after every backpressure loss of its build (and, when the start dependence was checked, reaches it from every
  * start); no recovery when it holds and does not get back from some
- * loss; unstable when it does not hold. A clock the losses could not be tried on is taken by what it holds.
+ * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on is taken by what it holds.
  */
 export type ClockVerdict = "stable" | "no recovery" | "unstable";
 

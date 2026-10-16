@@ -26,6 +26,8 @@ export function duplicateEntity(prev: ConfigFormData, kind: EntityKind, index: n
     const list = kind === 'drills' ? prev.drills?.configs ?? [] : prev[kind];
     const item = list[index];
     if (!item) return prev;
+    // A second inserter needs its own physical drop position; copying that position would invent geometry.
+    if (kind === 'inserters' && (item as InserterFormData).sink.drop !== undefined) return prev;
     const copy = { ...structuredClone(item), id: nextId(prev, kind), _uuid: crypto.randomUUID() };
     if (kind === 'drills') {
         return { ...prev, drills: { ...prev.drills!, configs: [...prev.drills!.configs, copy as DrillFormData] } };
@@ -180,16 +182,26 @@ export function addInserter(prev: ConfigFormData): ConfigFormData {
     };
 }
 
-/** An update with `overrides` replaces the rule, so the inserter's rule is no longer one forced by Exclude from LCM */
+/** Keep no-op endpoint metadata and refuse moving a physical drop position onto another route. */
+function withPreservedEndpoints(ins: InserterFormData, updates: Partial<InserterFormData>): InserterFormData {
+    const endpoint = <E extends { type: string; id: number }>(before: E, after: E | undefined): E => {
+        if (after === undefined) return before;
+        // A no-op picker sends only type/id. Merge it so it cannot strip imported geometry or near_lane.
+        if (before.type === after.type && before.id === after.id) return { ...before, ...after };
+        return ins.sink.drop === undefined ? after : before;
+    };
+    return { ...ins, ...updates, source: endpoint(ins.source, updates.source), sink: endpoint(ins.sink, updates.sink) };
+}
+
+/** An update with `overrides` replaces the rule, so it is no longer one forced by Exclude from LCM. */
 export function updateInserter(prev: ConfigFormData, index: number, updates: Partial<InserterFormData>): ConfigFormData {
     return {
         ...prev,
         inserters: prev.inserters.map((ins, i) => {
             if (i !== index) return ins;
-            if (!('overrides' in updates)) return { ...ins, ...updates };
-            const { _forced_always: _f, ...rest } = ins;
-            void _f;
-            return { ...rest, ...updates };
+            const next = withPreservedEndpoints(ins, updates);
+            if ('overrides' in updates) delete next._forced_always;
+            return next;
         }),
     };
 }
@@ -202,7 +214,7 @@ export function updateInserters(prev: ConfigFormData, uuids: readonly string[], 
         ...prev,
         inserters: prev.inserters.map(ins => {
             if (!selected.has(ins._uuid)) return ins;
-            const next = { ...ins, ...updates };
+            const next = withPreservedEndpoints(ins, updates);
             if ('overrides' in updates) {
                 delete next._forced_always;
                 next.overrides = { ...ins.overrides, ...updates.overrides };
@@ -244,6 +256,11 @@ export function addBelt(prev: ConfigFormData): ConfigFormData {
 }
 
 export function updateBelt(prev: ConfigFormData, index: number, updates: Partial<BeltFormData>): ConfigFormData {
+    const belt = prev.belts[index];
+    const hasDrops = belt && prev.inserters.some(ins => ins.sink.type === 'belt' && ins.sink.id === belt.id && ins.sink.drop !== undefined);
+    if (hasDrops && ((updates.type !== undefined && updates.type !== belt.type)
+        || (updates.lanes !== undefined && (updates.lanes.length !== belt.lanes.length
+            || updates.lanes.some((lane, i) => lane.ingredient !== belt.lanes[i]?.ingredient || lane.stack_size !== belt.lanes[i]?.stack_size))))) return prev;
     return {
         ...prev,
         belts: prev.belts.map((b, i) =>

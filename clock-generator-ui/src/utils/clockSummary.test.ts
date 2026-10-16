@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
+import { rateWarningOf } from './rateWarning';
+import { startCheckSummary } from './modelAssumptions';
 import {
     SUMMARY_COPY,
     beltCellText,
@@ -48,12 +50,39 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
             holds: verdict !== 'unstable',
             items_per_second: TARGET + full.rate_off_target,
             wake_ups_per_minute: full.wake_ups_per_minute,
-            backpressure_loss: brokenBy ? { recovers: false, broken_by: brokenBy } as never : null,
+            backpressure_loss: verdict === 'unstable' ? null : {
+                survives: verdict === 'stable', broken_by: brokenBy ?? (verdict === 'no recovery' ? ['an input stops arriving'] : []), recovered_after_periods: verdict === 'stable' ? 1 : null,
+            },
+            start_dependence: null,
         },
     };
 }
 
 const nameOf = (clocks: SummaryClock[], id: string) => plainClockName(clocks, clocks.findIndex(it => it.id === id));
+
+describe('sampled starts remain separate from rate and recovery', () => {
+    it('names a target-rate dependent clock and retains its evaluated recovery and actual sample counts', () => {
+        const dependent = clock('dependent', { verdict: 'unstable', meets_target_rate: false });
+        dependent.assessment = { ...dependent.assessment, holds: true,
+            backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 2 },
+            start_dependence: { verdict: 'start-dependent', expected_output_items: 240,
+                starts: ['cold', 'ascending'].map((id, i) => ({ id, label: id, reaches_target: i === 0,
+                    output_items_per_period: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
+        expect(plainClockName([dependent], 0)).toBe('Depends on how it is started');
+        expect(worksOf(dependent)).toEqual({ kind: 'caution', text: 'Start-dependent' });
+        expect(recoversOf(dependent)).toMatchObject({ kind: 'yes', value: 'Yes' });
+        expect(rateWarningOf(dependent)).toContain('some sampled starts');
+        expect(rateWarningOf(dependent)).not.toContain('240 of 240');
+        expect(startCheckSummary([dependent], { startDependenceRequested: true, complete: true })).toBe('2 sampled starts evaluated across 1 of 1 clocks.');
+        const unavailable = clock('unavailable');
+        expect(startCheckSummary([unavailable], { startDependenceRequested: false, complete: true })).toBe('Other startup conditions were not checked.');
+        expect(startCheckSummary([unavailable], { startDependenceRequested: true, complete: true })).toBe('Other-start check results are unavailable.');
+        expect(startCheckSummary([dependent, unavailable], { startDependenceRequested: true, complete: false })).toBe('This generation is incomplete. 2 sampled starts evaluated across 1 of 2 clocks. Other-start results are unavailable for 1.');
+        expect(startCheckSummary([], { startDependenceRequested: true, complete: true })).toBe('No clocks were available to check.');
+        unavailable.assessment.backpressure_loss = null;
+        expect(recoversOf(unavailable)).toMatchObject({ kind: 'not-tested', value: 'Unavailable' });
+    });
+});
 
 describe('plainClockName', () => {
     it('names the clock with the fewest wake-ups among the contenders', () => {
@@ -137,7 +166,7 @@ describe('recoversOf', () => {
         const result = recoversOf(clock('a', { verdict: 'no recovery', brokenBy: ['coal stops arriving', 'iron-plate is not taken away'] }));
         expect(result.kind).toBe('no');
         expect(result.detail).toContain('coal stops arriving, or after iron-plate is not taken away');
-        expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toContain('starved or jammed');
+        expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toContain('an input stops arriving');
     });
 
     it('says "in the simulator" for yes and for no alike', () => {

@@ -25,7 +25,7 @@ import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } fr
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
 import { BELT_COPY } from '../utils/beltQuestion';
-import { beltCellText, clockTechnicalName, foldedMakes, plainClockName, worksOf } from '../utils/clockSummary';
+import { beltCellText, clockTechnicalName, foldedMakes, isStartDependent, plainClockName, recoversOf, worksOf } from '../utils/clockSummary';
 import { PROVISIONAL_WAKE_UP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
@@ -60,9 +60,7 @@ const COMPARE_COPY = {
     wakeUpsHelp: PROVISIONAL_WAKE_UP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
         + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
         + 'one start point; a clock can settle into another steady state from another start point, with another count.',
-    noneRecover: 'None of the clocks tried recovers when the build is starved or jammed, which can be a limit of the build '
-        + 'and not of its clocks. They are listed for what they are: a clock that holds the target rate has to be '
-        + 'restarted after the build is starved or jammed.',
+    noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
     noneHold: 'None of the clocks tried holds the target rate, so they are all listed.',
     deadlock: 'The tests that starve and jam the build do not see this, so on this build they do not decide which clock '
         + 'is selected for you: the clocks that hold the target rate are ranked by their wake-ups.',
@@ -83,16 +81,19 @@ const WORKS_ICON = {
 } as const;
 
 function statusDetail(alternative: ClockAlternativeView): string {
+    const starts = alternative.assessment.start_dependence;
+    const startup = starts ? `${starts.starts.filter(start => start.reaches_target).length} of ${starts.starts.length} sampled starts reached the target. ` : '';
+    const recovery = recoversOf(alternative).detail;
     const check = alternative.asBuilt;
     if (!check) {
-        return 'Not checked';
+        return `${startup}Clock-phase check unavailable. ${recovery}`;
     }
     if (alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
-        return 'Holds the target rate for as long as nothing runs out and nothing backs up. '
+        return startup + 'Holds the target rate from the modeled start for as long as nothing runs out and nothing backs up. '
             + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run that starves and jams the build.');
     }
-    const phases = `Checked from ${check.start_phases_checked} start point${check.start_phases_checked === 1 ? '' : 's'}`;
+    const phases = `${startup}${recovery} Checked from ${check.start_phases_checked} clock phase${check.start_phases_checked === 1 ? '' : 's'}`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
         return phases;
     }
@@ -187,7 +188,7 @@ export function ClockAlternativesPanel({
         // under the pointer
         { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
-    const anyHolds = alternatives.some(alternative => alternative.verdict !== 'unstable');
+    const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
@@ -265,8 +266,8 @@ export function ClockAlternativesPanel({
                                 <Chip
                                     tabIndex={0}
                                     size="small"
-                                    label={VERDICT_LABEL[alternative.verdict]}
-                                    color={VERDICT_COLOR[alternative.verdict]}
+                                    label={isStartDependent(alternative) ? 'Start-dependent' : alternative.verdict === 'stable' ? `Recovery: ${recoversOf(alternative).value}` : VERDICT_LABEL[alternative.verdict]}
+                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recoversOf(alternative).kind === 'not-tested') ? 'warning' : VERDICT_COLOR[alternative.verdict]}
                                     variant="outlined"
                                     // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
                                     // words under 4.5:1

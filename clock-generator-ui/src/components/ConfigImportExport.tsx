@@ -181,7 +181,7 @@ export function ConfigImportExport({
         && acknowledged?.selections === importSelections;
     if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
     const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
-    const canImport = hasImportWork && (!preview?.crossings.length || acknowledgedCurrent);
+    const canImport = hasImportWork && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
 
     // the Paste from Factorio dialog, open when the clipboard could not be used, with why
     const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number } | null>(null);
@@ -403,7 +403,7 @@ export function ConfigImportExport({
         if (!pendingImport) return;
         const currentPreview = pastePreview(currentForm, pendingImport, importSelections);
         const hasWork = (importSelections.target && pendingImport.fill !== null) || currentPreview.counts.some(row => row.replacing);
-        if (!hasWork || (currentPreview.crossings.length > 0 && !acknowledgedCurrent)) return;
+        if (!hasWork || currentPreview.geometryProblem || (currentPreview.crossings.length > 0 && !acknowledgedCurrent)) return;
 
         const fill = importSelections.target ? pendingImport.fill : null;
         const machines = importSelections.machines && pendingImport.machines.length > 0;
@@ -651,6 +651,10 @@ export function ConfigImportExport({
 
                     {pendingImport && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
+                                ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
+                            {pendingImport.machines.filter(machine => machine.fuel !== undefined).map(machine => <Typography key={`fuel-${machine.id}`} variant="body2">Machine {machine.id}: imported fuel {machine.fuel} (read-only).</Typography>)}
+                            {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                             {pendingImport.fill ? (
                                 <Box>
                                     <FormControlLabel

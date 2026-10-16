@@ -1,7 +1,7 @@
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../control-logic/inserter/competing-takers";
 
 /**
- * Whether a clock reaches its target from every start the build can be in when the clock is wired, or only from some
+ * Whether a clock reaches its target from every sampled cold phase/order start, or only from some
  * (docs/stability.md, "How a clock is started"). The generator tries every clock from the cold start of the staged
  * scaffold alone; with `overrides.check_start_dependence` it tries each from the starts below too.
  */
@@ -93,7 +93,7 @@ export function startVerdictOf(starts: readonly Pick<StartOutcome, "reaches_targ
 /** What the trial of a clock from several starts found */
 export interface StartDependence {
     verdict: StartVerdict;
-    /** One outcome for each start of CLOCK_STARTS, in its order */
+    /** One outcome for each actually evaluated start of CLOCK_STARTS, in its order (fractional periods omit shifts) */
     starts: StartOutcome[];
     /** What the clock has to move in a period to reach its target */
     expected_output_items: number;

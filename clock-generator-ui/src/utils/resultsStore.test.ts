@@ -16,12 +16,17 @@ function clock(id: string, entries = 0): ClockAlternativeView {
         clockOnlyStateTransitionHistory: null,
         clockWindows: {},
         fuelView: null,
+        assumptions: { loopSeeds: [{ machineId: 'machine:1', item: 'pentapod-egg', items: 37 }], outputDrops: [],
+            overrides: { loop_seed_items: 37, check_start_dependence: false }, machineFuel: [] },
+        assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: 1,
+            backpressure_loss: null, start_dependence: null },
     } as unknown as ClockAlternativeView;
 }
 
 function results(key: string, { stopped = false, clocks = [clock('a')] } = {}): KeptResults {
     return {
         generatedFor: { key, recipe: 'r', itemsPerSecond: 1, beltQuestion: { ask: false, answer: 'moving' }, generatedAt: 0 },
+        generationAssumptions: { startDependenceRequested: false, complete: !stopped },
         alternatives: clocks,
         pickRule: null,
         skippedSearches: [],

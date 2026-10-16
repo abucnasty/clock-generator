@@ -4,7 +4,7 @@
  * storage itself is `resultsStore.ts`.
  */
 
-import type { ClockAlternativeView } from '../worker/types';
+import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { PickRule } from './recommendedClock';
 import type { GeneratedFor } from './resultsStaleness';
 
@@ -12,7 +12,7 @@ import type { GeneratedFor } from './resultsStaleness';
  * The shape of what is kept. Bump it whenever `KeptResults` or `ClockAlternativeView` changes shape (a field added,
  * removed or changed): kept results of another version are thrown away when the page opens, never shown.
  */
-export const RESULTS_SCHEMA_VERSION = 1;
+export const RESULTS_SCHEMA_VERSION = 2;
 
 /** The most generations kept, one per build */
 export const MAX_KEPT = 10;
@@ -36,6 +36,7 @@ export type KeptPick = { id: string; label: string } | null;
 /** One generation as it was shown: everything a run sets on the page except the log and the check */
 export interface KeptResults {
     generatedFor: GeneratedFor;
+    generationAssumptions: GenerationAssumptions | null;
     alternatives: ClockAlternativeView[];
     pickRule: PickRule | null;
     skippedSearches: string[];

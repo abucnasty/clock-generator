@@ -157,8 +157,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'holds-the-rate',
         term: 'holds the rate',
-        definition: 'The clock makes the target rate for as long as nothing runs out and nothing backs up. A clock that '
-            + 'does not is unstable.',
+        definition: 'The clock holds its expected output in the modeled cold-start checks while supplies remain available. '
+            + 'A start-dependent clock can hold here yet settle differently from other sampled starts and be ranked unstable.',
         insteadOf: '"meets the target rate"',
     },
     {
@@ -176,7 +176,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'recovers',
         term: 'recovers',
-        definition: 'After the build is starved or jammed, it gets back to its rate by itself.',
+        definition: 'In the simulator\'s evaluated loss trials, after the build is starved or jammed it gets back to its rate by itself. '
+            + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
         insteadOf: 'survives backpressure loss, no recovery',
     },
     {

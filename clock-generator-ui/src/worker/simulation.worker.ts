@@ -107,7 +107,7 @@ function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result'
     };
 }
 
-function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | null {
+function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAlternativeRunView | null {
     if (!run) {
         return null;
     }
@@ -118,6 +118,20 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         inserterWindowCount: alternative.inserter_window_count,
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
+        assumptions: {
+            loopSeeds: result.machine_facts.flatMap(machine => machine.facts.inputs
+                .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
+                .map(input => ({ machineId: machine.entity_id, item: input.item_name,
+                    items: config.overrides?.loop_seed_items ?? clockGenerator.DEFAULT_LOOP_SEED_ITEMS }))),
+            outputDrops: [...new Set(config.inserters.filter(ins => ins.sink.type === 'belt').map(ins => ins.sink.id))]
+                .map(beltId => {
+                    const inserters = config.inserters.filter(ins => ins.sink.type === 'belt' && ins.sink.id === beltId);
+                    return { beltId, inserterIds: inserters.map(ins => ins.id ?? config.inserters.indexOf(ins) + 1),
+                        mode: inserters.every(ins => ins.sink.type === 'belt' && ins.sink.drop !== undefined) ? 'shared-lanes' as const : 'free-lane' as const };
+                }),
+            overrides: config.overrides,
+            machineFuel: config.machines.flatMap(machine => machine.fuel === undefined ? [] : [{ machineId: machine.id, fuel: machine.fuel }]),
+        },
         copies: result.crafting_cycle_plan.production_rate.copies,
         verdict: alternative.verdict,
         ranking: alternative.ranking,
@@ -194,6 +208,7 @@ function runStreaming(
 
 function handleValidate(requestId: number, config: Config): void {
     try {
+        requireValidConfig(config);
         postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
     } catch (error) {
         postResponse({
@@ -203,6 +218,12 @@ function handleValidate(requestId: number, config: Config): void {
                 : error instanceof Error ? error.message : 'Validation failed',
         });
     }
+}
+
+/** Planning and Check share the strict schema; editable persisted drafts do not bypass spatial constraints. */
+function requireValidConfig(config: Config): void {
+    const parsed = clockGenerator.ConfigSchema.safeParse(config);
+    if (!parsed.success) throw new clockGenerator.ConfigValidationError(parsed.error, config);
 }
 
 function lookups(): FactorioLookups {
@@ -299,8 +320,10 @@ function handleQuery(requestId: number, query: EngineQuery): void {
 
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
+        requireValidConfig(config);
         const plan = clockGenerator.planClockAlternatives(config, options);
-        return { type: 'planned', runId, primary: toRunView(plan.primary), context: plan.context, tasks: plan.tasks };
+        return { type: 'planned', runId, primary: toRunView(plan.primary, config), context: plan.context, tasks: plan.tasks,
+            assumptions: { startDependenceRequested: config.overrides?.check_start_dependence === true } };
     });
 }
 
@@ -313,8 +336,9 @@ function handleTask(
     taskId: string,
 ): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
+        requireValidConfig(config);
         const run = clockGenerator.runClockAlternativeTask(config, context, taskId, options);
-        return { type: 'task-completed', runId, taskId, run: toRunView(run) };
+        return { type: 'task-completed', runId, taskId, run: toRunView(run, config) };
     });
 }
 
