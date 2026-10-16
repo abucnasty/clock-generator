@@ -28,9 +28,10 @@ import type {
 } from 'clock-generator/browser';
 import { statusToCategory } from 'clock-generator/light';
 import { useGameNames } from '../hooks/useGameNames';
-import { BUTTON_NAMES, CHART_NAMES } from '../utils/a11yLabels';
+import { BUTTON_NAMES, CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGeometry';
 import { FactorioIcon } from './FactorioIcon';
+import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import {
     getStatusColor,
     getCategoryColor,
@@ -947,6 +948,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
             {/* Legend */}
             <Legend viewMode={viewMode} filters={filters} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} factorioStates={factorioStates} />
 
+            <ScrollX label={SCROLL_REGION_NAMES.stateTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
             {/* Tick markers */}
             <Box sx={{ display: 'flex', mb: 0.5 }}>
                 <Box sx={{ width: 200, flexShrink: 0 }} />
@@ -1027,6 +1029,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                     ))}
                 </Box>
             )}
+            </ScrollX>
         </>
     );
 

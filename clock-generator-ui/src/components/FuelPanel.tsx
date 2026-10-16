@@ -1,14 +1,15 @@
-import { Alert, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { memo } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
-import { CHART_NAMES } from '../utils/a11yLabels';
+import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { InserterStatus, MachineStatus } from 'clock-generator/light';
 import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS, TIMELINE_TRACK_COLOR } from './colors';
 import { Panel } from './Panel';
+import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import { durationText } from '../utils/numberText';
 
 const LEVEL_COLOR = COLOR_BLIND_PALETTE.skyBlue;
@@ -16,6 +17,10 @@ const WINDOW_COLOR = COLOR_BLIND_PALETTE.lightGrey;
 // the colours the Detailed state chart gives the same things: an inserter's swing, and a machine with no fuel
 const SWING_COLOR = INSERTER_STATUS_COLORS[InserterStatus.SWING];
 const EMPTY_COLOR = MACHINE_STATUS_COLORS[MachineStatus.NO_FUEL];
+/** One line to a cell, the first (the entity's name) apart: the tables scroll sideways in their box instead of breaking a value over five lines */
+/** The same for the fuel clocks, whose last cell ("17 in 3 wake windows (5.1/min)") is the one that wraps */
+const NOWRAP_CLOCK_CELLS = { '& td:not(:first-of-type):not(:last-of-type)': { whiteSpace: 'nowrap' } } as const;
+const NOWRAP_CELLS = { '& td:not(:first-of-type)': { whiteSpace: 'nowrap' } } as const;
 const LABEL_WIDTH = 200;
 const LEVEL_HEIGHT = 56;
 const ROW_HEIGHT = 20;
@@ -67,8 +72,8 @@ function RanOutAlert({ run }: { run: FuelRunView }) {
 function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: FuelRunView | null }) {
     const levelsOf = (machineId: string) => run?.levels.find(levels => levels.machine_id === machineId);
     return (
-        <TableContainer>
-            <Table size="small">
+        <ScrollX label={SCROLL_REGION_NAMES.fuelConsumption} minWidth={720}>
+            <Table size="small" sx={NOWRAP_CELLS}>
                 <TableHead>
                     <TableRow>
                         <TableCell>Machine</TableCell>
@@ -88,11 +93,13 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                         const levels = levelsOf(machine.machine_id);
                         return (
                             <TableRow key={machine.machine_id}>
-                                <TableCell>
+                                <TableCell sx={{ minWidth: 160 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                         <FactorioIcon name={machine.output_item} size={18} alt="" />
-                                        {entityLabel('machine', machine.machine_number)}
-                                        <Typography variant="caption" color="text.secondary"><GameName id={machine.recipe} kind="recipe" /></Typography>
+                                        <Box>
+                                            {entityLabel('machine', machine.machine_number)}
+                                            <Typography variant="caption" color="text.secondary" component="div"><GameName id={machine.recipe} kind="recipe" /></Typography>
+                                        </Box>
                                     </Box>
                                 </TableCell>
                                 <TableCell>
@@ -128,14 +135,14 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                     })}
                 </TableBody>
             </Table>
-        </TableContainer>
+        </ScrollX>
     );
 }
 
 function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run: FuelRunView | null }) {
     return (
-        <TableContainer>
-            <Table size="small">
+        <ScrollX label={SCROLL_REGION_NAMES.fuelClocks} minWidth={640}>
+            <Table size="small" sx={NOWRAP_CLOCK_CELLS}>
                 <TableHead>
                     <TableRow>
                         <TableCell>Inserter</TableCell>
@@ -175,7 +182,7 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
                     })}
                 </TableBody>
             </Table>
-        </TableContainer>
+        </ScrollX>
     );
 }
 
@@ -304,6 +311,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                 <LegendItem color={EMPTY_COLOR} label="No fuel" opacity={0.5} />
             </Box>
 
+            <ScrollX label={SCROLL_REGION_NAMES.fuelTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
             <Box sx={{ display: 'flex', mb: 0.5 }}>
                 <Box sx={{ width: LABEL_WIDTH, flexShrink: 0 }} />
                 <Box sx={{ flex: 1, position: 'relative', height: 20 }}>
@@ -334,7 +342,8 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                                 <Box sx={{ width: LABEL_WIDTH, flexShrink: 0, pr: 1 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                         <FactorioIcon name={machine.output_item} size={18} alt="" />
-                                        <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem' }}>
+                                        {/* wraps: a long recipe name is not cut at the label column's edge */}
+                                        <Typography variant="body2" sx={{ fontSize: '0.75rem', minWidth: 0 }}>
                                             {entityLabel('machine', machine.machine_number)} (<GameName id={machine.recipe} kind="recipe" />)
                                         </Typography>
                                     </Box>
@@ -358,6 +367,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                     </Box>
                 );
             })}
+            </ScrollX>
         </>
     );
 }

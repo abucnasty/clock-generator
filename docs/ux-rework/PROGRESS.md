@@ -36,7 +36,10 @@ come from here.
 - **Branch:** [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2); the ledger lives here now (`feat/ux-rework-p1` is kept for the links in its PRs)
 - **Open checkpoints:** 2.5 A's install steps in game (owner)
 - **Phase 1:** merged into `feat/ux-rework` (#170) after the end review, its fixes (#168) and the owner's approval
+- **Phase 2 remaining:** only 2.7 B, then the phase-end captures, reviews and owner checkpoints. 3.3 is in fix round 1 on p3.
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
+
+- **Upstream compatibility:** spec finalized after owner answers; integration/gates next, before final 2.7 B and 3.3 evidence.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -66,11 +69,11 @@ come from here.
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | merged (p2) | [#154](https://github.com/abucnasty/clock-generator/pull/154) | 0 | Into `feat/ux-rework-p2`. CI green. **In-game check: passed** (owner, 2026-10-14: "looks good"). Code review opus PASS (Lua read line by line; checks re-run); UX audit sonnet FIX on the owner steps only (fixed by the orchestrator). A17, Q3 fixed; A2, A3 partly (site side is 2.1); B19 to 2.1. Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | merged (p2) | [#161](https://github.com/abucnasty/clock-generator/pull/161) | 1 | Round 0: code review opus PASS (races fine); UX audit opus FIX (a mouse click on Check only looked silent). Round 1: a visible landing and the reason in the tooltip, plan stays mounted, alert named, announcements in 1.11 A's rule set; merged 2.11 and 1.11 A. Re-review both PASS: A12, B10 fixed. CI green |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | merged (p2) | [#163](https://github.com/abucnasty/clock-generator/pull/163) | 0 | Code review opus PASS (storage, 2.3 interplay, double press, hint all checked; deviations accepted); UX audit opus PASS: A10 fixed, C7 (2.4's part) fixed. 498 tests; capture 274 PASS, 1 FAIL = 1.5's message over the action at 720 (ledgered). CI green |
-| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A merged (p2) | A [#176](https://github.com/abucnasty/clock-generator/pull/176) | A 2 | A: the "Your clock" card, plain clock names and tiles, install steps from the clock, wiring list with **item icons** (owner), drills from the clock. Round 0 both FIX; round 1 both PASS; minors round PASS; Never on wording corrected (owner kept "keep it off yourself"); merges with 2.1, 2.1 W, 1.5 F, 2.8 b; final re-checks PASS. A21 fixed; A8 in app. **Owner approved merging before the in-game check; the check now holds the Phase 2 PR.** CI green. B next (gains: "Stable" in the reason, Works? column, compact table, Developer tools, the installSteps Never-on comment, a separator between several items' names) |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | merged (p2) | A [#176](https://github.com/abucnasty/clock-generator/pull/176), B [#182](https://github.com/abucnasty/clock-generator/pull/182) | A 2, B 1 | A: the "Your clock" card, plain clock names and tiles, install steps from the clock, wiring list with **item icons** (owner), drills from the clock. Round 0 both FIX; round 1 both PASS; minors round PASS; Never on wording corrected (owner kept "keep it off yourself"); merges with 2.1, 2.1 W, 1.5 F, 2.8 b; final re-checks PASS. A21 fixed; A8 in app. **Owner approved merging before the in-game check; the check now holds the Phase 2 PR.** CI green. B merged at c95d964. Round 0: code PASS, UX FIX on five cheap minors; round 1 both PASS. Captures: results-b 654/0, results-answer 264/264/262 PASS at 1440/720/390 (0 FAIL), text-names 1113/0; 878 tests. |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | merged (p2) | [#156](https://github.com/abucnasty/clock-generator/pull/156) | 1 | Code review opus PASS (window maths correct; checks re-run), UX audit opus PASS (C2 fixed for the new chart; old charts → 2.5/2.10); one minors round, re-checked. CI green. Follow-up PR: switch to `announce()`, drop `scrollMarginBottom` |
-| [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | A merged (p2), B implementing | A [#177](https://github.com/abucnasty/clock-generator/pull/177) | A 2 | A: tokens and contrast helper, Panel, HelpButton, colour roles, one filled next step per state, grey Recommended chip with a star, lighter danger red (`TEXT.error`), messages as cards, bar tooltips above (interactive). Round 0 code PASS / UX FIX (status chip contrast); round 1 UX PASS / code FIX (tooltips made non-interactive, WCAG 1.4.13); round 2 code PASS. C3, C12, C26, 2.3's red chips, 1.11 A's toggle ring fixed. Capture 53 FAIL/width all Part B or exempt. CI green. B (Configure layout) stacked on A, now on p2; Drills switch removed (spec risk 3, owner told) |
+| [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | A merged (p2), B minors round | A [#177](https://github.com/abucnasty/clock-generator/pull/177) | A 2 | A: tokens and contrast helper, Panel, HelpButton, colour roles, one filled next step per state, grey Recommended chip with a star, lighter danger red (`TEXT.error`), messages as cards, bar tooltips above (interactive). Round 0 code PASS / UX FIX (status chip contrast); round 1 UX PASS / code FIX (tooltips made non-interactive, WCAG 1.4.13); round 2 code PASS. C3, C12, C26, 2.3's red chips, 1.11 A's toggle ring fixed. Capture 53 FAIL/width all Part B or exempt. CI green. B (Configure layout) stacked on A, now on p2; Drills switch removed (spec risk 3, owner told); B round 0 code PASS / UX FIX (names cut off at 720–900); round 1 both PASS at 53ed36b. Owner’s inserter alignment confirmed. Minors 1–4 done; capture script drift remains at f8f20d4. |
 | [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | merged (p2) | a [#171](https://github.com/abucnasty/clock-generator/pull/171), b [#175](https://github.com/abucnasty/clock-generator/pull/175) | a 1, b 2 | a (opus): pickers show game names; ids stored. b (sonnet): names in every text site; **owner: item icons in the Wake windows rows** (game name as hover and screen-reader name); internal and hidden entries out of the pickers, recycling recipes found by typing (orchestrator); sentence-case type labels. b round 0 code PASS / UX FIX (rows broke at 390, no icon shots); round 1 both PASS; minors round PASS. A27 fixed (Insights engine prose partly). Capture b 1005/0. CI green. 2.5 A's wiring list gets the icons when it merges (`row.detail` removed) |
-| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. Runs after 2.5 B, in parallel with 2.7 (coach run 5: its order after 2.7 was only so the layout is final; 2.7 runs the geometry sweep). Gains: header height and the reason line (Phase 1 end) |
+| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | merged (p2) | [#184](https://github.com/abucnasty/clock-generator/pull/184) | 1 | Merged at 96a69c7. Round 0 code PASS / UX FIX; round 1 both PASS. C#1 fixed at 720–960; C#10 fixed. Capture 775 PASS / 9 FAIL, all at out-of-scope 390; 884 tests. Shared AXE_RULES now includes landmark-unique. |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | merged (p2) | [#165](https://github.com/abucnasty/clock-generator/pull/165) | 1 | Sonnet. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name); one minors round (Blocked painted last, device-pixel rounding), re-check PASS. CI green |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
 | [1.5 F](specs/1.5F-messages-clear.md) | Messages that don't cover the page | opus | merged (p2) | [#174](https://github.com/abucnasty/clock-generator/pull/174) | 0 | Messages in the sticky header (and the fullscreen title bar); Undo ends when a check or generation starts (owner); stale errors close on a dialog or a retry; one polite announcement each. Code review opus PASS, UX audit opus PASS (the raised-priority follow-up, A6, A7, B1, B11, C5 fixed); merged 2.1 and 2.1 W (stale errors on 2.1's flows), re-check PASS. Capture clear 1045/5, undo 1372/3 (all pre-existing; Copy tooltip → 2.7 A). CI green |
@@ -79,14 +82,10 @@ come from here.
 
 | Chain | Length | Next unblocked |
 |---|---|---|
-| 2.5 A → 2.7 A → 2.7 B | 3 | 2.7 A, stacked on 2.5 A (running) |
-| 2.1 → 2.7 B | 2 | 2.1 (running) |
-| 2.5 A → 2.5 B → 2.9 | 3 | 2.5 B once 2.5 A merges |
-| 2.8 a → 2.8 b | 2 | 2.8 a in review |
-| 1.5 F | 1 | next free slot |
-| 2.7 A → 3.1, 3.3 (3.3 also after 1.5 F) | | after 2.7 A |
-| 2.1 → 3.4 (also after 1.5 F) | | after 2.1 |
-| 2.7 B, 2.8 b → 3.2 A → 3.2 B (also after 1.5 F) | | after 2.7 B and 2.8 b |
+| 2.7 B → 3.2 A → 3.2 B | 3 | 2.7 B minors; 3.2 A after its integration into p3; 3.2 B is two units |
+| 3.3 | 1 | Fix round 1 remainder |
+| master → feat/ux-rework → p2 → p3 | 1 | After p2 → p3 bookkeeping merge and checks |
+| Phase 2 end | | After 2.7 B; install check holds the phase PR, owner approval holds phase merge |
 
 ## Phase 3: expert depth
 
@@ -94,7 +93,7 @@ come from here.
 |---|---|---|---|---|---|---|
 | [3.1](specs/3.1-rule-editor.md) | Rule editor upgrades | opus | merged (p3) | [#179](https://github.com/abucnasty/clock-generator/pull/179) | 1 | Stacked on 2.7 A, reviewed against its head (coach run 6). Live "In words" sentence, "In the blueprint" note (rules shape the planning run only; engine-verified), Clocked strip against the clock's windows, inline problems block Save (shown after leaving a field or a refused Save), templates ask item and amount; latched template releases on the source's level (owner; engine-verified to match the sample). Round 0 code PASS / UX FIX (errors on untouched fields); round 1 both PASS. B8, B9 fixed. Capture 902/0. CI green. First Phase 3 merge |
 | [3.2](specs/3.2-editing-at-scale.md) | Editing at scale | opus | spec | | | Spec final. Two PRs: A (one inserter editor, draft dialogs, B26; one unit) after 2.7 B and 2.8 b; B (duplicate, reorder with Undo, bulk edit; two units) after A and 1.5 F |
-| [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus | spec | | | Spec final. One unit (20 existing, 12 new files). After 2.7 A and 1.5 F. `offerUndo` loses `resultsCleared` (also in 3.4) |
+| [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus | fix-1 | | 1 | Resumed from e6870af after the owner’s pause. Majors 1 and 3, minors and nits done except accepted install-step wording. Remaining: B11 non-recommended pick capture, build-library capture, full gate, p3 merge and re-checks. One unit (20 existing, 12 new files). After 2.7 A and 1.5 F. `offerUndo` loses `resultsCleared` (also in 3.4) |
 | [3.4](specs/3.4-build-library.md) | Build library and share links | opus | merged (p3) | [#180](https://github.com/abucnasty/clock-generator/pull/180) | 1 | "Your builds" switcher, migration of the single save, other-tab warning, share links (`CompressionStream`, no dependency; owner-approved terms). Round 0 code PASS / UX FIX (a new build showed the previous recipe — `ItemSelector` now controls its input, closing the 1.3 stale-text follow-up); round 1 both PASS; a flaky first-visit check was a script race (menu exit time), fixed in the script. Post-merge type-check caught duplicate hooks with 2.5 A. B20 fixed. Capture 1077/0. CI green |
 
 ## Decisions log
@@ -242,6 +241,16 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   built for it; the drafted spec is not committed. `master` 0.11.0 is merged into `feat/ux-rework` (829befc,
   generation tests run 38731611174 passed), p2 (4e8619c) and p3 (e842f9a) as an ordinary upstream merge; the final
   PR's version bump starts from 0.11.0.
+
+- 2026-10-15: The owner paused work. All in-flight branches were committed and pushed.
+- 2026-10-16: The owner resumed from the local handover. Model mapping: gpt-6-astra with high reasoning for orchestration, cross-cutting implementation and every review; gpt-6.1-sol for scouts/capture writers; gpt-6-luna for mechanical runners. Fast mode prohibited. This chat cannot change its own model through available controls; delegated roles explicitly set their models.
+- 2026-10-16: master advanced from 0.11.0 to 0.15.1 (a67d5a2). Authorized down-merge: master → feat/ux-rework → p2 → p3, with semantic checks for fractional Copies, target-rate limits, library/share validation and optional stack_size, generation tests and full gates. No new version bump in the phases; the final PR starts from master’s then-current version.
+
+- 2026-10-16: Upstream plan resolution complete (owner): preserve/display imported inserter type/quality, no selectors;
+  clearing Stack size restores Automatic; **no sidecar metadata export extension** (focus on UX); repeated units get
+  explanation/manual correction, no converter. PLAN and specs 2.1, 2.2, 2.7, 3.1–3.4 reconciled, with a bounded upstream
+  compatibility spec. The old 2.1 warn-only addendum is superseded, and release baseline follows current master.
+  Scope excludes new engine behavior/mod features. Audits are source-only; no merged-tree check claimed yet.
 
 ## Open questions
 
@@ -457,6 +466,12 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
   Swing Plan headings, LCM chip) failing on p2 since 2.3 — update the script.
 - 3.4 × 2.5 A: the merged tree did not type-check (both added the same message hooks to App.tsx); caught by the new
   post-merge type-check (coach run 6) before any PR.
+
+- 2.5 B (#182): engine text still uses old terms (Even hands, Observed windows, Full-hand output swings and Insights prose); Works? is off the right edge at 390; glossary definitions for hand and assembling machine read as notes to copywriters (owner).
+- 2.9 (#184): below 720, the compact table overflows by 174px and Check passed wraps; Fuel clocks is 5px over at 960; front-load the key fact in the two longest problem notes; macOS Chrome uses overlay scrollbars; a focused scroll box loses focus when it stops overflowing.
+- 3.3: a stopped run keeps a pick even when that clock was not made yet. Check the spec’s PLAN-note against current PLAN (Undo restores clocks and stale changes are already present) before adding duplicate bullets.
+
+- Deferred by owner (2026-10-16): sidecar type/quality export; current exports omit metadata and retain the legendary stack timing assumption. No mod change in this UX rework.
 
 ## Retros
 
