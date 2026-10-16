@@ -1,4 +1,5 @@
 import type {
+    Config,
     Condition,
     EnableControlOverrideConfig,
     EnableControlRange,
@@ -39,7 +40,10 @@ export interface InserterFormData {
     /** `near_lane`: of a belt, the lane nearest to the inserter (1 or 2, by its place in the belt's lanes), which it takes from first */
     source: { type: 'machine' | 'belt' | 'chest'; id: number; near_lane?: 1 | 2 };
     sink: { type: 'machine' | 'belt' | 'chest'; id: number };
-    stack_size: number;
+    prototype?: string;
+    quality?: Config['inserters'][number]['quality'];
+    /** Omitted means the prototype's fully researched capacity (Automatic). */
+    stack_size?: number;
     filters?: string[];
     overrides?: InserterOverrides;
     /** UI-only, never part of the exported config: set when Exclude from LCM forced this inserter's rule to ALWAYS
