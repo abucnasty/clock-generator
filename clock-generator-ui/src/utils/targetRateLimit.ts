@@ -30,29 +30,50 @@ export function machinesMaxOf(targetRecipe: string, machines: { id: number; fact
     if (making.length === 0 || making.some((machine) => !Number.isFinite(machine.facts?.output_rate_per_second))) {
         return null;
     }
-    const exact = making.every(machine => machine.facts?.output_rate_ratio)
-        ? making.reduce((sum, machine) => {
-            const ratio = machine.facts!.output_rate_ratio!;
-            return sum.add(fraction(ratio.numerator, ratio.denominator));
-        }, fraction(0)) : null;
-    return {
-        ...(exact && { perCopyRatio: { numerator: exact.getNumerator, denominator: exact.getDenominator } }),
-        machineIds: making.map((machine) => machine.id),
-        perCopy: making.reduce((sum, machine) => sum + (machine.facts?.output_rate_per_second ?? 0), 0),
-    };
+    const perCopy = making.reduce((sum, machine) => sum + (machine.facts?.output_rate_per_second ?? 0), 0);
+    if (!Number.isFinite(perCopy)) return null;
+    try {
+        const exact = making.every(machine => machine.facts?.output_rate_ratio)
+            ? making.reduce((sum, machine) => {
+                const ratio = machine.facts!.output_rate_ratio!;
+                return sum.add(fraction(ratio.numerator, ratio.denominator));
+            }, fraction(0)) : null;
+        if (exact && !Number.isFinite(exact.toDecimal())) return null;
+        return {
+            ...(exact && { perCopyRatio: { numerator: exact.getNumerator, denominator: exact.getDenominator } }),
+            machineIds: making.map((machine) => machine.id),
+            perCopy,
+        };
+    } catch {
+        // Unsupported precision/overflow leaves capacity unknown. The worker still validates the retained build.
+        return null;
+    }
 }
 
-/** Exact current-worker capacity; legacy numeric-only facts use their floating-point sum and product, which can differ at the boundary. */
-export function totalMachineCapacity(max: MachinesMax, copies: number): number {
-    return max.perCopyRatio
-        ? fraction(max.perCopyRatio.numerator, max.perCopyRatio.denominator).multiply(copies).toDecimal()
-        : max.perCopy * copies;
+/** Exact current-worker capacity; legacy numeric-only facts use their approximate sum/product. Null defers unsupported arithmetic to worker validation. */
+export function totalMachineCapacity(max: MachinesMax, copies: number): number | null {
+    try {
+        const capacity = max.perCopyRatio
+            ? fraction(max.perCopyRatio.numerator, max.perCopyRatio.denominator).multiply(copies).toDecimal()
+            : max.perCopy * copies;
+        return Number.isFinite(capacity) ? capacity : null;
+    } catch {
+        return null;
+    }
 }
 
-/** Same comparison as planCraftingCycle: sum exact machine rates, multiply Copies, compare decimal capacities. */
+/** Same comparison as planCraftingCycle for supported values; unsupported arithmetic must not crash the editable form. */
 export function isTargetAboveMax(itemsPerSecond: number, copies: number, max: MachinesMax | null): boolean {
     if (!max || !(itemsPerSecond > 0) || copiesProblem(copies) || !Number.isFinite(itemsPerSecond)) return false;
-    return fraction(itemsPerSecond).divide(60).multiply(60).toDecimal() > totalMachineCapacity(max, copies);
+    const capacity = totalMachineCapacity(max, copies);
+    if (capacity === null) return false;
+    try {
+        const target = fraction(itemsPerSecond).divide(60).multiply(60).toDecimal();
+        return Number.isFinite(target) && target > capacity;
+    } catch {
+        // The existing Check/Generate worker reports its validation error without losing the imported or saved form.
+        return false;
+    }
 }
 
 /** Display-only nudge prevents a binary representation of 0.29 rounding down to 0.28. */
@@ -98,9 +119,11 @@ export function targetRateLineOf(
     if (!max || !isTargetAboveMax(itemsPerSecond, copies, max)) {
         return null;
     }
+    const capacity = totalMachineCapacity(max, copies);
+    if (capacity === null) return null;
     const one = max.machineIds.length === 1;
     const machines = `${machinesText(max.machineIds)} ${one ? 'makes' : 'make'} ${maxRateText(max.perCopy, locale)}${one ? '' : ' together'}`;
-    const total = maxRateText(totalMachineCapacity(max, copies), locale);
+    const total = maxRateText(capacity, locale);
     return copies !== 1
         ? `At most ${total}: ${machines}, times ${copies} copies. Lower the rate or raise Copies. Describe one unit in the build.`
         : `At most ${total}: ${machines}. Lower the rate or raise Copies. Describe one unit in the build.`;

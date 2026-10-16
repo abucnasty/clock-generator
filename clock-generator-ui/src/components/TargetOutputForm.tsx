@@ -79,6 +79,7 @@ export function TargetOutputForm({
                     error={Boolean(copiesProblem(copies))}
                     helperText={COPIES_HELPER}
                     problem={copiesProblem(copies)}
+                    preserveInputOnBlur={Boolean(copiesProblem(copies))}
                 />
             </Box>
         </Paper>

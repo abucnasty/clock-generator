@@ -34,6 +34,8 @@ interface NumberFieldProps extends BaseNumberField.Root.Props {
     sx?: SxProps<Theme>;
     /** Decimals shown while the field is not focused; the full value shows on focus and is the one stored */
     displayDecimals?: number;
+    /** Keep an invalid value legible while blurred, without changing the stored number. */
+    preserveInputOnBlur?: boolean;
 }
 
 export function NumberField({
@@ -50,6 +52,7 @@ export function NumberField({
     onValueChange,
     format,
     displayDecimals = FIELD_DECIMALS,
+    preserveInputOnBlur = false,
     ...other
 }: NumberFieldProps) {
     let id = React.useId();
@@ -132,6 +135,7 @@ export function NumberField({
                 render={(props, state) => {
                     const shown = shownNumberText({
                         focused,
+                        preserveInputOnBlur,
                         value: state.value,
                         inputValue: state.inputValue,
                         maxDecimals: displayDecimals,

@@ -77,6 +77,14 @@ describe('shownNumberText', () => {
         expect(shownNumberText({ ...field, focused: false })).toBe('68.906');
     });
 
+    it('keeps invalid input full when requested, retaining valid blurred rounding by default', () => {
+        const third = { ...field, value: 0.3333333333333333, inputValue: '0.3333333333333333', focused: false };
+        expect(shownNumberText({ ...third, preserveInputOnBlur: true })).toBe('0.3333333333333333');
+        expect(shownNumberText({ ...third, preserveInputOnBlur: false })).toBe('0.333');
+        expect(shownNumberText(third)).toBe('0.333');
+        expect(third.value).toBe(0.3333333333333333);
+    });
+
     it('shows what is typed when the field holds no number', () => {
         expect(shownNumberText({ ...field, focused: false, value: null, inputValue: '' })).toBe('');
         expect(shownNumberText({ ...field, focused: false, value: NaN, inputValue: 'abc' })).toBe('abc');
