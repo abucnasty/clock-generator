@@ -43,12 +43,14 @@ come from here.
   p2 (`9e2646c`) and p3 (`df21248`). Root checked the recorded test result lines; these historical integration gates
   do not replace the reviewed compatibility child's independent evidence. #194 at master `1d27cde` is frozen for
   the current integration cycle; fresh full gates passed and feature `cdf2425`, p2 `cf7a8c7` and p3 `66dc5c9` are pushed.
-  The compatibility child at `fe18341` incorporates the preserved WIP and #194 p2. Full local checks passed;
-  independent UI 926 tests/build passed. Browser evidence exposed layout/name issues now being repaired,
-  so no completed evidence gate or code/UX review is claimed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md) and final
+  Compatibility round 0 reviewed `bcc6db7`: code FIX (exact-rate transport and unsafe rational arithmetic), UX PASS
+  with an invalid-Copies display minor. Fix round 1 product `4c8a6b9` preserves exact facts, handles unsupported
+  arithmetic, and retains untouched tiny values through focus/blur. Full and independent UI 948 tests/build pass;
+  expanded browser evidence is underway, so no final re-review or merge approval is claimed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md) and final
   2.7 B / 3.3 evidence follow the reviewed child.
-- **Worker checkpoints:** 2.7 B pushed `ce131ae` with three repaired capture scripts; 3.3 pushed `38a7b25` with the
-  corrected non-recommended-pick capture. Both wait for compatibility before final gates and re-reviews.
+- **Worker checkpoints:** 2.7 B `79e7abc` inherits the current compatibility product; its prior review counters remain.
+  P3 adjunct `06289e7` has provisional evidence and awaits latest-provider inheritance/final validation.
+  3.3 remains `38a7b25` with corrected non-recommended-pick capture. Final gates and re-reviews remain open.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -108,6 +110,14 @@ come from here.
 ## Decisions log
 
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
+
+- 2026-10-16: Owner requested cleanup of obsolete origin branches. Deleted `feat/goal-2-true-starts` (#185),
+  `feat/rule-count-advice` (#178), `feat/true-start-count` (#181), `fix/recorder-near-lane` (#193), and
+  `feat/ux-rework-p1` (#170). Root verified each current remote tip exactly matched its merged PR head,
+  each merge commit remained reachable from its target branch, no open PR or attached worktree used the branch,
+  and the five remote refs were absent after deletion/prune. Phase 1 ledger links now use a permanent commit.
+  Retained active feature/phase/child branches and `trial/s5-slack-first`, which has no matching merged PR.
+  Inventory and pre-deletion SHAs: `/tmp/ux-origin-cleanup/INVENTORY.md` and `source.json`.
 
 - 2026-10-16: Owner paused and explicitly resumed the session. Runtime now reports unrestricted filesystem/network
   and no command approvals. Previous agents were unavailable; replacements retain Astra/high implementation,
