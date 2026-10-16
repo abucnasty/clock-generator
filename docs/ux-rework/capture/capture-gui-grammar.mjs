@@ -1035,9 +1035,16 @@ async function stepDialogs({ page, rec, width }) {
     await rec.step('rule modal and discard prompt', async () => {
         const chips = enableChips(page);
         if (!(await count(chips))) return rec.check('rule modal: an inserter chip opens it', false, 'no chip named "..., Inserter N. Edit rule"');
-        // a chip that holds a rule (so the dialog has Clear rule), else the first
+        // Prefer an existing rule, then explicitly save one: the current SHARED sample has only Auto inserters.
         const ruled = chips.filter({ hasNotText: /^Enable: Auto/ });
         const chip = (await count(ruled)) ? ruled.first() : chips.first();
+        await chip.scrollIntoViewIfNeeded();
+        await chip.click();
+        await page.getByRole('dialog').first().waitFor({ timeout: 4000 });
+        const ruleDialog = page.getByRole('dialog').first();
+        await ruleDialog.getByRole('radio', { name: /^Always on\b/ }).check();
+        await ruleDialog.getByRole('button', { name: 'Save', exact: true }).click();
+        await ruleDialog.waitFor({ state: 'hidden' });
         await chip.scrollIntoViewIfNeeded();
         await chip.click();
         await page.getByRole('dialog').first().waitFor({ timeout: 4000 });
@@ -1067,12 +1074,12 @@ async function stepDialogs({ page, rec, width }) {
     await rec.step('diagram inserter dialog', async () => {
         await closeAll(page);
         await goConfigure(page);
-        await page.getByRole('button', { name: 'Diagram view' }).click();
+        await ui.diagramView(page).click();
         await page.waitForTimeout(1200);
-        const node = page.locator('.react-flow__node').filter({ hasText: /Inserter \d/ }).first(); // SELECTOR: confirm (a diagram inserter node)
+        const node = ui.compatInserterNode(page, 1);
         if (!(await count(node))) return rec.check('diagram inserter dialog: an inserter node exists', false, 'no .react-flow__node with "Inserter N"');
-        await node.click({ force: true });
-        await page.keyboard.press('Enter');
+        await node.scrollIntoViewIfNeeded();
+        await node.click();
         await page.getByRole('dialog').first().waitFor({ timeout: 4000 });
         await page.waitForTimeout(600);
         await rec.shot(page, 'dialog-diagram-inserter', { aria: true, desc: 'The diagram inserter dialog' });
