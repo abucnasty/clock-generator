@@ -520,9 +520,13 @@ Owner approval, 2026-10-16, A / A / A: summarize common defaults once per sectio
 
 Owner approval, 2026-10-16, A / A / A: one labeled Display button in the slim header, without another header row. Use a small popover for immediately applied, remembered Compact and System / Light / Dark choices. One browser-wide preference set is shared across builds and excluded from build data/exports/share links. Preserve D1/D2 defaults, editing state, results and selection; responsive layout remains automatic. See [D6 scope](specs/D6-display-preferences.md).
 
-### Further deferred design proposals (D7–D8)
+### Approved Phase 4 scope: Working context (D7)
 
-Owner requested a draft for preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
+Owner approval, 2026-10-16, A / A / A: remember selected entity, Configure/Results view, detail tab, expanded sections, existing sort/filter choices and approximate page position locally per build across reloads/switches, outside exports/share links. Extend actual remaining gaps after Phase 3, preserving its chosen-clock/result persistence. Retain Save/Cancel without unsaved-draft recovery; removed entities/layout changes get sensible fallbacks and validation navigation takes precedence. See [D7 scope](specs/D7-working-context.md).
+
+### Further deferred design proposal (D8)
+
+Owner requested per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 remains unapproved for implementation unless separately promoted into Phase 4.
 
 ### Independent audit of new UI tests (D9)
 

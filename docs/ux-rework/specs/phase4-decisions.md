@@ -2,7 +2,7 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1–D6 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1–D7 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
@@ -14,7 +14,7 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D4 Clock recommendation and tradeoffs | Approved — A / A / A | Group by belt compatibility; concise selected-clock reason/tradeoff with deeper details on demand; both explanatory and Compact views; existing ranking/selection rules unchanged |
 | D5 Exceptions and assumptions | Approved — A / A / A | Compact summarizes common defaults per section, differences visible on rows; explanatory view keeps fuller labels; distinguish Automatic/Explicit even when values match; import and result-snapshot assumption summaries |
 | D6 Display preferences | Approved — A / A / A | Labeled Display button in slim header, no extra row; Compact and System/Light/Dark in immediate-apply popover; one browser-wide preference set shared across builds |
-| D7 Working context | Pending | Specific remaining gaps after Phase 3; reset and persistence rules |
+| D7 Working context | Approved — A / A / A | Selected entity/view/detail/sections, existing sort/filter and approximate page position; locally per build across reloads/switches; retain Save/Cancel, no unsaved-draft recovery |
 | D8 Per-machine production rates | Pending | Semantics/feasibility only versus implementation; authoritative source; target/max/achieved and units |
 | D9 Independent audit of new UI tests | Pending | Audit/proposal versus approved cleanup; only UX-rework additions in clock-generator-ui; remaining coverage |
 | First-visit route refinement | Pending | Choices before instructions; guide default; preserve Paste/Example/Manual routes |
@@ -82,4 +82,14 @@ Owner: “Approve D6 with A / A / A.”
 - Responsive composition adapts to available width automatically. This bounded entry does not add a manual layout mode or broader settings project.
 - Preserve editing state, results and selection when display changes. Finalize accessible keyboard/focus/dismissal and narrow-width behavior in the item spec; existing verification/reviews remain required.
 
-Next discussion: D7 working context. D7–D9 and first-visit refinement remain pending.
+### D7 approved, 2026-10-16
+
+Owner: “Approve D7 with A / A / A.”
+
+- Context A: remember selected entity, Configure/Results view, detail tab, expanded sections, existing sorting/filter choices and approximate place on the page. Use sensible fallbacks for removed entities/changed layouts; validation still takes the user to a problem.
+- Lifetime A: remember context locally per build across reloads and switching builds, excluded from exports/share links. This is separate from D6's browser-wide display preferences.
+- Draft boundary A: retain existing Save/Cancel behavior. Restore navigation context without adding recovery of unfinished dialog edits after reload.
+- First identify actual context losses after Phase 3 and extend existing behavior; preserve the completed chosen-clock/result persistence rather than replacing it. Do not add new sorting/filter features merely to persist them.
+- Finalize reset/invalidation/cross-tab details in the item spec. Existing checks, independent reviews, accessibility and all three phase-end reviewers remain required.
+
+Next discussion: D8 per-machine production rates. D8–D9 and first-visit refinement remain pending.
