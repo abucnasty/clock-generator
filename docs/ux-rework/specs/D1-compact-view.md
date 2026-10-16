@@ -1,7 +1,7 @@
-# D1 Compact view — deferred scope
+# D1 Compact view — approved Phase 4 scope
 
 Owner feedback: 2026-10-16, after preview approval of tighter Stack size fields.
-Status: scoped for the roadmap; implementation deliberately deferred beyond the current queue. No branch, model run or release allocation yet. Revisit after the owner's broader audit.
+Status: approved for Phase 4 against `feat/ux-rework`, 2026-10-16. Owner selected B / A / A: Results/header first and Configure second; explanatory default with remembered opt-in Compact; comparison visible with one contextual Why/Wake/Install area and routine helpers collapsed. See [decision record](phase4-decisions.md). Final item specs and all normal review/verification gates remain required; no product implementation has started.
 
 ## Problem and change
 
@@ -9,12 +9,13 @@ The owner reports scroll fatigue, especially on Results: accumulated padding, la
 
 - Provide an opt-in Compact view, with the current newcomer presentation as the default. Make switching reversible and remember the display preference locally, separate from build/share data.
 - Prioritize Results: reduce card/section padding, repeated summary/label blocks, table row height and spacing so more clocks and useful metrics fit in one viewport. Preserve meaningful grouping, units, current selection and stale/warning states.
+- Keep comparison visible with one contextual area for Why, Wake and Install; open only the selected detail and preserve full guidance on demand. Keep essential units, assumptions, errors and stale/below-target/belt warnings visible wherever needed to interpret results.
 - Suppress routine explanatory helpers and redundant visible labels where context remains clear. Keep accessible field names/descriptions, visible validation/errors, required assumptions, and help available on demand. Identify the exact removable labels during the later scout; this is not a blanket hide-all rule.
 - Reduce the title/workflow header footprint, exploring one compact bar at desktop widths. Keep build identity, Configure/Results, generation status and primary actions accessible. At narrow widths reflow rather than obscure controls or force page scrolling.
 - Show the application version without scrolling and retain changelog access, without adding another header row solely for version information.
 - Extend density consistently to Configure, forms and dialogs where safe, with Results and header as the first priorities. Preserve keyboard focus visibility, readable text, contrast and usable pointer targets.
 
-## Wider-screen composition — design direction, not an approved final layout
+## Wider-screen composition — approved direction; responsive details to finalize
 
 The owner asked whether wide screens warrant a different layout. Explore composition separately from density: Compact changes spacing and routine copy; available width determines whether related views can sit together. Either density should work in the appropriate responsive layout.
 
@@ -24,7 +25,7 @@ The owner asked whether wide screens warrant a different layout. Explore composi
 - Choose breakpoints by content fit and useful minimum pane widths; initially compare1440/1600/1920/2560px, not a fixed “desktop” label. Fall back to the established stacked flow as width decreases.
 - Avoid scroll fatigue becoming nested-scroll fatigue: make pane ownership clear, preserve keyboard navigation/focus and selected-row visibility, and provide meaningful region names where independent scrolling is necessary.
 
-Validate these options with a later wireframe/audit before implementation; this note does not select a final layout or schedule product work.
+The latest compact mock is the approved design direction. Finalize responsive behavior and Configure composition in the item specs, preserving the approved two-stage delivery and shared editor. Its illustrative default desktop height is not a fixed height requirement for other builds.
 
 ## Files to assess later
 
@@ -38,6 +39,6 @@ Provisional, not an implementation prescription: `clock-generator-ui/src/App.tsx
 - Audit keyboard reach, focus not obscured under the shorter sticky header, accessible names/descriptions, contrast, touch/pointer targets and no page sideways scroll. No smaller type solely to conceal a layout issue.
 - Independently review code and UX, with normal check/evidence gates. Select models under the then-current owner instructions.
 
-## Decisions intentionally left for later
+## Remaining implementation decisions
 
-Exact toggle placement, which redundant labels/helpers to suppress, density metrics, mobile behavior and whether to deliver Results/header first. No prototype or product implementation requested in this session; no change to current phase completion/release scope.
+Exact toggle placement (coordinate with D6 if approved), which redundant labels/helpers to suppress, density metrics, responsive breakpoints and narrow-width behavior remain to be finalized. Results/header first and Configure second are approved. Current Phase 3 completion criteria remain unchanged; Phase 4 has the existing independent reviews, verification and three phase-end reviewers.

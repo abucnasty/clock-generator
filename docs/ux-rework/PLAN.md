@@ -490,11 +490,15 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - the tests pass
 - the fresh UX review is attached to the phase PR.
 
-## Deferred roadmap: Compact view (D1)
+## Phase 4: owner proposal decisions in progress
 
-Owner feedback, 2026-10-16: scope an optional denser view for experienced users, especially Results. Reduce excessive padding, repeated labels/helpers and the double-header footprint; make the version visible without scrolling. Preserve newcomer defaults, essential feedback and accessibility. See [D1 scope](specs/D1-compact-view.md).
+Owner direction, 2026-10-16: discuss D1–D9 and the independent proposal's first-visit refinement individually. Explicitly approved scope becomes Phase 4 against `feat/ux-rework`; rejected or unapproved scope stays outside implementation. Track exact approvals and pending decisions in [Phase 4 decisions](specs/phase4-decisions.md). Phase 3 closeout, current verification and the three phase-end reviewers remain required.
 
-This is planning only, deferred beyond the current implementation queue until the owner's broader audit. It does not extend the current phase completion criteria or release scope; no product implementation now.
+### Approved Phase 4 scope: Compact view (D1)
+
+Owner approval, 2026-10-16, B / A / A: include Results/header first, then compact Configure machine/belt/inserter rows using the shared editor. New users retain the explanatory default; Compact is opt-in and remembered locally. Keep comparison visible while Why, Wake and Install share one contextual area, with routine helpers collapsed and help available on demand. Use one slim header with version visible and responsive side-by-side/reflow layouts. Preserve essential units, assumptions, warnings, errors, actions and accessibility. See [D1 scope](specs/D1-compact-view.md).
+
+This approval moves D1 from the deferred backlog into Phase 4. Detailed specs, independent reviews and normal evidence gates precede implementation/merge; Phase 3 completion criteria are unchanged. The proposals below remain deferred unless separately approved.
 
 ### Further deferred design proposals (D2–D8)
 
