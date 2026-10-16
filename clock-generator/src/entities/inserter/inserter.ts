@@ -9,6 +9,8 @@ import { assertIsBelt, assertIsChest, assertIsMachine, Entity } from "../entity"
 import { EntityId } from "../entity-id";
 import { EntityRegistry } from "../entity-registry";
 import { BeltDropMetadata } from "./metadata/animation";
+import { assertSupportedInserterKind, configuredHandSize } from "./metadata/inserter-spec";
+import { InserterType } from "./metadata/inserter-type";
 
 export interface InserterTarget {
     item_names: Set<ItemName>;
@@ -76,6 +78,13 @@ export class InserterFactory {
         const source = config.source
         const sink = config.sink
 
+        // the inserter is the legendary stack inserter unless the config names another; its hand is the one that all the
+        // research gives its prototype unless the config sets the stack size
+        const prototype = config.prototype ?? InserterType.STACK_INSERTER
+        const quality = config.quality ?? "legendary"
+        assertSupportedInserterKind(prototype, quality)
+        const stack_size = configuredHandSize(config)
+
         if (sink.type === EntityType.BELT && source.type === EntityType.BELT) {
             throw new Error("Source and sink cannot both be a belt ya silly goose")
         }
@@ -128,8 +137,15 @@ export class InserterFactory {
         let filtered_items = new Set(Array.from(sink_consumed_items).filter(it => source_provided_items.has(it)))
 
         if(config.filters && config.filters.length > 0) {
+            // a machine takes only its ingredients and fuel; a belt or a chest takes any item the filter names, such as
+            // the spoilage an inserter clears off a machine, which no recipe lists
             config.filters.forEach(it => {
-                assert(sink_consumed_items.has(it), `Inserter filter ${it} is not a valid item for sink entity ${sink.id} of type ${sink.type}`);
+                if (sink.type === EntityType.MACHINE) {
+                    assert(sink_consumed_items.has(it), `Inserter filter ${it} is not a valid item for sink entity ${sink.id} of type ${sink.type}`);
+                } else {
+                    // it has to be an item of the game, or the inserter would never fire
+                    assert(FactorioDataService.hasItem(it), `Inserter filter ${it} is not an item of the game (sink entity ${sink.id} of type ${sink.type})`);
+                }
             })
             filtered_items = new Set(config.filters);
         }
@@ -149,25 +165,26 @@ export class InserterFactory {
             const selectedLane = this.selectLaneForDrop(belt.lanes, filtered_items);
             filtered_items.forEach(item_name => {
                 const lane = belt.lanes.find(it => it.ingredient_name === item_name) ?? selectedLane;
-                hand_sizes.set(item_name, effectiveHandSize(config.stack_size, item_name, lane.stack_size));
+                hand_sizes.set(item_name, effectiveHandSize(stack_size, item_name, lane.stack_size));
             });
             beltDropMetadata = {
                 belt_speed: belt.belt_speed,
                 belt_stack_size: selectedLane.stack_size as BeltStackSize,
                 inserter_stack_size: hand_sizes.get(selectedLane.ingredient_name)
-                    ?? Math.min(config.stack_size, ...Array.from(hand_sizes.values()))
+                    ?? Math.min(stack_size, ...Array.from(hand_sizes.values()))
             };
         } else {
-            filtered_items.forEach(item_name => hand_sizes.set(item_name, effectiveHandSize(config.stack_size, item_name)));
+            filtered_items.forEach(item_name => hand_sizes.set(item_name, effectiveHandSize(stack_size, item_name)));
         }
 
         const metadata = InserterMetadata.create(
             config.source.type,
             config.sink.type,
-            config.stack_size,
+            stack_size,
             config.filters ?? [],
             config.overrides?.animation ?? {},
-            beltDropMetadata
+            beltDropMetadata,
+            { prototype, quality }
         )
 
         return {

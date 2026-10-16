@@ -46,6 +46,8 @@ export function ruleCountInputOfStock(
             products_finished: machine.products_finished,
             working: machine.status.map(status => FACTORIO_MACHINE_STATE[status as MachineStatus] === FactorioMachineState.WORKING),
             crafts_started: machine.crafts_started,
+            // a craft started in the tick: the simulator consumed its ingredients (it may start more than one)
+            true_starts: machine.crafts_started.map((started, t) => t > 0 && started > machine.crafts_started[t - 1]),
         })),
         inserters: registry.getAll().filter(Entity.isInserter).filter(it => recorded.has(it.entity_id.id)).map(inserter => {
             const series = inserters.get(inserter.entity_id.id)!;

@@ -1,0 +1,117 @@
+{
+ "target_output": {
+  "recipe": "iron-gear-wheel",
+  "items_per_second": 9.97,
+  "copies": 1
+ },
+ "machines": [
+  {
+   "id": 1,
+   "recipe": "iron-gear-wheel",
+   "productivity": 100,
+   "crafting_speed": 28.87125,
+   "type": "machine"
+  },
+  {
+   "id": 2,
+   "recipe": "iron-plate",
+   "productivity": 50,
+   "crafting_speed": 80.0375,
+   "type": "machine"
+  }
+ ],
+ "inserters": [
+  {
+   "id": 1,
+   "source": {
+    "type": "machine",
+    "id": 1
+   },
+   "sink": {
+    "type": "belt",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "iron-gear-wheel"
+   ]
+  },
+  {
+   "id": 2,
+   "source": {
+    "type": "machine",
+    "id": 1
+   },
+   "sink": {
+    "type": "belt",
+    "id": 2
+   },
+   "stack_size": 16,
+   "filters": [
+    "iron-gear-wheel"
+   ]
+  },
+  {
+   "id": 3,
+   "source": {
+    "type": "machine",
+    "id": 2
+   },
+   "sink": {
+    "type": "machine",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "iron-plate"
+   ]
+  },
+  {
+   "id": 4,
+   "source": {
+    "type": "belt",
+    "id": 3
+   },
+   "sink": {
+    "type": "machine",
+    "id": 2
+   },
+   "stack_size": 16,
+   "filters": [
+    "iron-ore"
+   ]
+  }
+ ],
+ "belts": [
+  {
+   "id": 1,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "iron-gear-wheel",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "iron-gear-wheel",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "iron-ore",
+     "stack_size": 4
+    }
+   ]
+  }
+ ]
+}

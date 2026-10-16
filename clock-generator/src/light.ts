@@ -27,3 +27,5 @@ export { StatusCategory, statusToCategory } from "./state/status-category";
 export { combineClockAlternativeRuns, searchesAreNeeded } from "./crafting/rank";
 
 export { Option } from "./data-types/option";
+
+export { isShortDecimalCopies } from "./config/copies-value";

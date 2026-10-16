@@ -3,6 +3,7 @@ import * as readline from "readline";
 import * as zlib from "zlib";
 import { FactorioInserterState } from "../state/factorio-entity-state";
 import { EndKind, RuleCountInserter, RuleCountMachine } from "../crafting/rule-count";
+import { trueStartsOfDump, TrueStartsDiagnostics } from "../crafting/true-starts";
 
 /**
  * Reader of the inserter cost series' extractor dumps (factorio-benchmarks, benchmarks/2026-10-12-inserter-cost-2.1.21,
@@ -11,6 +12,10 @@ import { EndKind, RuleCountInserter, RuleCountMachine } from "../crafting/rule-c
  * of the rule count (rule-count.ts), reading exactly as the series' recount script does (closing/recount-2a/fuller.py,
  * the part before its per-inserter loop), so that the count made here and the series' numbers describe the same saves
  * the same way.
+ *
+ * Besides the rule count's input, a machine that has a crafting speed and a recipe record gets its true craft starts,
+ * inferred from its status, its products_finished, its crafting speed and its recipe's energy (true-starts.ts, the
+ * series' productivity-recount-1 method); a machine without them is named, with the reason.
  *
  * The files are read as text, line by line: the static file is the whole map (60 MB for a megabase), and only a few
  * fields of it are kept. Either file may also be given gzipped, as `<base>.static.ndjson.gz`.
@@ -31,6 +36,8 @@ const STATUS_WAITING_FOR_SOURCE = 34;
 const STATUS_WAITING_FOR_MORE = 35;
 const STATUS_WAITING_FOR_SPACE = 36;
 const STATUS_DISABLED = 59;
+/** The cap on a machine's productivity bonus when its recipe record names none, as common.py's machine_params */
+const DEFAULT_MAX_PRODUCTIVITY = 3;
 /** The status a change list of an inserter starts at when it has no change at index 0, as in fuller.py */
 const STATUS_UNKNOWN = -1;
 
@@ -44,6 +51,33 @@ export interface ExtractorDumpInserter extends RuleCountInserter {
     sink_recipe: string;
 }
 
+/** What the true starts of a machine were inferred from, and what the inference found */
+export interface MachineCraftingParams {
+    /** The machine's crafting speed (`cs` of the static entity) */
+    crafting_speed: number;
+    /** The crafting progress a working tick adds: crafting speed / (60 * recipe energy) */
+    delta: number;
+    /** The productivity bonus: the entity's effects plus the recipe's, capped at the recipe's maximum (3 when it has none) */
+    productivity_bonus: number;
+    /** What the phase fit and the simulation of the progress found */
+    diag: TrueStartsDiagnostics;
+    /** Crafts that finished over samples 1 to n-1 (rises of products_finished that hold a craft, not a payout alone) */
+    craft_out_count: number;
+}
+
+/**
+ * A machine of a dump: the rule count's machine, whose `true_starts` are set when the machine has `crafting` and absent
+ * otherwise, and what the true starts were read with.
+ */
+export interface ExtractorDumpMachine extends RuleCountMachine {
+    /** The prototype name of the machine, such as "assembling-machine-3" */
+    name: string;
+    /** The parameters the true starts were inferred with, or null when the machine has none (see `no_params_reason`) */
+    crafting: MachineCraftingParams | null;
+    /** Why the machine has no `crafting`: it has no recipe, its recipe has no record in the static file, or no crafting speed */
+    no_params_reason: string | null;
+}
+
 export interface ExtractorDump {
     /** The base name of the files (the last part of `base`), as the series names a dump */
     source: string;
@@ -54,7 +88,7 @@ export interface ExtractorDump {
     /** The inserters that have samples, in the order of the samples file */
     inserters: ExtractorDumpInserter[];
     /** The machines that have samples with products_finished (`pf`), in the order of the samples file */
-    machines: RuleCountMachine[];
+    machines: ExtractorDumpMachine[];
 }
 
 /** What is kept of an entity of the static file */
@@ -66,6 +100,20 @@ interface StaticEntity {
     recipe: string;
     /** `pf` at the start of the dump, 0 when the entity has none */
     products_finished: number;
+    /** `cs`, the crafting speed; 0 when the entity has none */
+    crafting_speed: number;
+    /** `pb`, the productivity bonus of the entity's effects; 0 when the entity has none */
+    productivity_bonus: number;
+}
+
+/** What is kept of a recipe record (`k` "r") of the static file */
+interface StaticRecipe {
+    /** The recipe's energy, in seconds of crafting at speed 1 */
+    energy: number;
+    /** The productivity bonus the recipe gives itself, 0 when it has none */
+    productivity_bonus: number;
+    /** The cap on the productivity bonus; 3 when the record has none */
+    max_productivity_bonus: number;
 }
 
 /** What is kept of an inserter of the static file, for those that have samples */
@@ -91,6 +139,30 @@ function truthy(value: unknown): boolean {
         return Object.keys(value).length > 0;
     }
     return Boolean(value);
+}
+
+/**
+ * The parameters a machine's true starts are inferred with (common.py's machine_params), or why it has none. The
+ * productivity bonus is the entity's plus the recipe's, capped at the recipe's maximum.
+ */
+function craftingParamsOf(
+    entity: StaticEntity, recipes: ReadonlyMap<string, StaticRecipe>,
+): { params: { crafting_speed: number; delta: number; productivity_bonus: number } | null; reason: string | null } {
+    const recipe = recipes.get(entity.recipe);
+    if (recipe === undefined) {
+        return { params: null, reason: entity.recipe === "" ? "no recipe" : "no recipe record" };
+    }
+    if (!entity.crafting_speed) {
+        return { params: null, reason: "no crafting speed" };
+    }
+    return {
+        params: {
+            crafting_speed: entity.crafting_speed,
+            delta: entity.crafting_speed / (60 * recipe.energy),
+            productivity_bonus: Math.min(entity.productivity_bonus + recipe.productivity_bonus, recipe.max_productivity_bonus),
+        },
+        reason: null,
+    };
 }
 
 /** Opens a dump file as text lines, from the file itself or its gzipped copy */
@@ -189,6 +261,9 @@ function statusName(code: number, header: Record<string, string>): string {
  *   items, waiting for more items, waiting for space in the destination, disabled by control behavior. Any other code
  *   is named as the sample header names it (e.g. "no_power"), and a sample before the first status "unknown".
  * - `working` of a machine is its status code being 1, `products_finished` its `pf` as whole numbers.
+ * - `true_starts` of a machine are inferred (trueStartsOfDump) from its status codes and `products_finished`, its crafting
+ *   speed (`cs`) and its recipe record (`k` "r": energy, productivity, its cap), when it has both; `crafting` says with
+ *   what, and what the inference found. A machine without them has neither, and `no_params_reason`.
  *
  * @param base the path of the files without `.static.ndjson` / `.samples.ndjson`
  * @param samples_base the path of the samples file without `.samples.ndjson`, when it is not beside the static file
@@ -222,11 +297,13 @@ export async function readExtractorDump(base: string, samples_base: string = bas
     const entities = new Map<number, StaticEntity>();
     const inserters = new Map<number, StaticInserter>();
     const sizes = new Map<string, number>();
+    const recipes = new Map<string, StaticRecipe>();
     for await (const line of openLines(`${base}.static.ndjson`)) {
         if (line.startsWith('{"k":"e"')) {
             const e = JSON.parse(line);
             entities.set(e.u, {
                 type: e.t, name: e.n, x: e.x, y: e.y, recipe: e.r ?? "", products_finished: e.pf ?? 0,
+                crafting_speed: Number(e.cs ?? 0), productivity_bonus: Number(e.pb ?? 0),
             });
             if (inserter_samples.has(e.u)) {
                 inserters.set(e.u, {
@@ -243,6 +320,13 @@ export async function readExtractorDump(base: string, samples_base: string = bas
             if (p.tw !== undefined) {
                 sizes.set(p.n, Math.trunc(Number(p.tw)));
             }
+        } else if (line.startsWith('{"k":"r"')) {
+            const r = JSON.parse(line);
+            recipes.set(r.n, {
+                energy: Number(r.energy),
+                productivity_bonus: Number(r.pb ?? 0),
+                max_productivity_bonus: r.max_pb === undefined ? DEFAULT_MAX_PRODUCTIVITY : Number(r.max_pb),
+            });
         }
     }
 
@@ -271,7 +355,7 @@ export async function readExtractorDump(base: string, samples_base: string = bas
         return null;
     };
 
-    const machines: RuleCountMachine[] = [];
+    const machines: ExtractorDumpMachine[] = [];
     const with_data = new Set<number>();
     for (const [unit, record] of machine_samples) {
         if (record.pf === undefined) {
@@ -282,12 +366,29 @@ export async function readExtractorDump(base: string, samples_base: string = bas
             throw new Error(`${source}: machine ${unit} has samples but is not in the static file`);
         }
         with_data.add(unit);
-        machines.push({
+        const status_codes = expandChanges(record.s, length, 0);
+        const products_finished = expandChanges(record.pf, length, entity.products_finished);
+        const { params, reason } = craftingParamsOf(entity, recipes);
+        const machine: ExtractorDumpMachine = {
             machine_id: String(unit),
             recipe: entity.recipe,
-            products_finished: expandChanges(record.pf, length, entity.products_finished),
-            working: expandChanges(record.s, length, 0).map(code => code === STATUS_WORKING),
-        });
+            products_finished,
+            working: status_codes.map(code => code === STATUS_WORKING),
+            name: entity.name,
+            crafting: null,
+            no_params_reason: reason,
+        };
+        if (params !== null) {
+            const starts = trueStartsOfDump(status_codes, products_finished, params.delta, params.productivity_bonus, length);
+            machine.true_starts = starts.start;
+            machine.true_start_method = {
+                machine_name: entity.name, recipe: entity.recipe, delta: params.delta, productivity_bonus: params.productivity_bonus,
+            };
+            machine.crafting = {
+                ...params, diag: starts.diag, craft_out_count: starts.craft_out.filter(out => out).length,
+            };
+        }
+        machines.push(machine);
     }
 
     const result: ExtractorDumpInserter[] = [];

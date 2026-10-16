@@ -1,5 +1,5 @@
 import { QualityIdType } from "../../../blueprints/components";
-import { INSERTER_SPECS } from "./inserter-spec";
+import { inserterSpecFor } from "./inserter-spec";
 import { InserterType } from "./inserter-type";
 import { InserterStackSize } from "./stack-size";
 import { ItemName } from "../../../data";
@@ -7,6 +7,12 @@ import { BeltDropMetadata, InserterAnimationMetadata } from "./animation";
 import { InserterAnimationOverrideConfig } from "../../../config";
 import { EntityType } from "../../entity-type";
 
+
+/** The prototype and quality of an inserter, as the config names them; each defaults to the legendary stack inserter's */
+export interface InserterKind {
+    prototype?: InserterType;
+    quality?: QualityIdType;
+}
 
 export interface InserterMetadata {
     animation: InserterAnimationMetadata;
@@ -22,17 +28,17 @@ function create(
     stackSize: number, 
     filters: ItemName[],
     overrides: InserterAnimationOverrideConfig,
-    beltDropMetadata?: BeltDropMetadata
+    beltDropMetadata?: BeltDropMetadata,
+    kind: InserterKind = {}
 ): InserterMetadata {
     
     // assert(Object.values<number>(InserterStackSize).includes(stackSize), `Inserter has an invalid stack size of ${stackSize}`)
 
-    // only support legendary for now
-    const qualityIdType: QualityIdType = "legendary";
-    // only support stack inserter for now
-    const inserterType: InserterType = InserterType.STACK_INSERTER;
+    // a config that names no prototype or quality runs the legendary stack inserter, as before
+    const qualityIdType: QualityIdType = kind.quality ?? "legendary";
+    const inserterType: InserterType = kind.prototype ?? InserterType.STACK_INSERTER;
 
-    const definition = INSERTER_SPECS[inserterType][qualityIdType];
+    const definition = inserterSpecFor(inserterType, qualityIdType);
 
     const animationMetadata = InserterAnimationMetadata.create(
         definition,

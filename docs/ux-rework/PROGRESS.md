@@ -252,6 +252,13 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   compatibility spec. The old 2.1 warn-only addendum is superseded, and release baseline follows current master.
   Scope excludes new engine behavior/mod features. Audits are source-only; no merged-tree check claimed yet.
 
+- 2026-10-16: Integration partition: pure master downmerges, reviewed p2 compatibility child, then p3 adjunct.
+  Shared `inserterMetadata.ts` effective-size/read-only-text API recorded in provider and 3.2 A specs before coding.
+
+- 2026-10-16: Owner requested Codex model names in ORCHESTRATOR. Replaced legacy role suggestions throughout with
+  gpt-6-astra (high reasoning), gpt-6.1-sol and gpt-6-luna; every review uses Astra/high. Removed the obsolete fast-mode
+  recommendation and review-downgrade exception. Actual parent-model limitations must be disclosed.
+
 ## Open questions
 
 None.

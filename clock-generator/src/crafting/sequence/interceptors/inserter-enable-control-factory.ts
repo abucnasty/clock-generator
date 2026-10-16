@@ -429,7 +429,7 @@ export class EnableControlFactory {
         }
 
         if (mode === SimulationMode.LOW_INSERTION_LIMITS) {
-            if (sink_state.machine.output.outputBlock.quantity < handSizeFor(inserter, source_item_name)) {
+            if (sink_state.machine.output.outputBlock.ingredients_blocked_at < handSizeFor(inserter, source_item_name)) {
                 return EnableControl.always
             }
             return this.latchedUntilLessThanMinimum(
@@ -439,7 +439,7 @@ export class EnableControlFactory {
             )
         }
 
-        if (source_state.machine.output.outputBlock.quantity < handSizeFor(inserter, source_item_name)) {
+        if (source_state.machine.output.outputBlock.ingredients_blocked_at < handSizeFor(inserter, source_item_name)) {
             return EnableControl.all([
                 this.latchedUntilLessThanMinimum(
                     sink_state,

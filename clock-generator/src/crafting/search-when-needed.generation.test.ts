@@ -15,14 +15,14 @@ const selectedOf = (generated: ClockAlternativesResult) => generated.alternative
 // selected as stable, unless the config asks for them (`overrides.search_for_fewer_wake_ups`).
 describe("the searches only run when they are needed", () => {
 
-    // batched swings is stable at 20.4 wake-ups a minute; shifted swings, which a search finds, at 10.1
-    describe("chemical science, where a clock made without a search is stable", () => {
+    // planned with belt slack is stable at 10.7 wake-ups a minute; the clocks the searches find have 21.4 to 42.9
+    describe("utility science, where a clock made without a search is stable", () => {
         let config: Config;
         let by_default: ClockAlternativesResult;
         let searched: ClockAlternativesResult;
 
         beforeAll(async () => {
-            config = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE);
+            config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
             by_default = generateClockAlternatives(config, { logger: quiet });
             searched = generateClockAlternatives(withSearches(config), { logger: quiet });
         });
@@ -32,21 +32,19 @@ describe("the searches only run when they are needed", () => {
             expect(idsOf(by_default).filter(id => SEARCH_IDS.includes(id))).toEqual([]);
         });
 
-        // fractional swings, since a hand is counted in while the stock before it is under the insertion limit
-        // (2026-10-14), at 10.1 wake-ups a minute where batched swings has 20.4
         it("selects a stable clock made without a search", () => {
             const selected = selectedOf(by_default);
-            expect(selected.id).toBe("fractional");
+            expect(selected.id).toBe("planned-belt-slack");
             expect(selected.verdict).toBe("stable");
             expect(selectableAsStable(selected.ranking)).toBe(true);
         });
 
-        // the searches find no fewer wake-ups than fractional swings since 2026-10-14: shifted swings has the same 10.1
+        // the clocks the searches find have more wake-ups a minute, so the clock selected is the same
         it("runs the searches when the config asks for them, and selects a clock with no more wake-ups", () => {
             expect(searched.skipped_searches).toEqual([]);
             expect(idsOf(searched)).toEqual(expect.arrayContaining(["derived", "uneven-output", "shifted-swings"]));
             const selected = selectedOf(searched);
-            expect(selected.id).toBe("shifted-swings");
+            expect(selected.id).toBe("planned-belt-slack");
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(selectedOf(by_default).assessment.wake_ups_per_minute!, 6);
         });

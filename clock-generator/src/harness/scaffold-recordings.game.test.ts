@@ -145,6 +145,26 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         settle_ticks: 4800,
     },
+    // One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes of all four
+    // engines, all legendary with legendary modules and 40 legendary beacons: 5.5 copies of it make 240 a second. The
+    // owner's build of 2026-10-15. Without a clock it makes 44.0 a second, a hair over the 43.636 the target asks of one
+    // block; with the selected clock, 256 in each of 102 periods of 352 ticks, recorded 2026-10-15.
+    "chemical science with a shared foundry": {
+        scaffold: path.join(SAMPLES, "science", "chemical-science", "chemical-science-shared-foundry-scaffold.txt"),
+        config: ConfigPaths.CHEMICAL_SCIENCE_SHARED_FOUNDRY,
+        seed: [],
+        warmup_ticks: 3600,
+        settle_ticks: 4800,
+        wake_ups_open: "the simulator starts a science machine's craft on the first tick its belt inserter waits for space, and the game one tick later: "
+            + "the four belt inserters of the science machines are woken once a period in the game and never in the simulator, "
+            + "122.7 wake-ups a minute against 82.2 on 2026-10-15 (samples README, Chemical science with a shared foundry)",
+        moved_open: {
+            inserter_ids: [6, 8, 14, 16],
+            why: "the recording merges the block's north and south supply belts into one belt each, so the four south-side inserters "
+                + "are matched to the other lane and read as nearest to sulfur or gears; the config matches the scaffold, and every "
+                + "inserter moves the same items in the game and the simulator",
+        },
+    },
     // Two inserters each take two items off a belt of their own, and both take low density structures: which item
     // each takes first decides how the structures are split between them (near_lane in the config)
     "utility science": {
@@ -323,7 +343,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 { expected_output_per_period: expected },
             );
             const known = (build.moved_open?.inserter_ids ?? []).map(id => `Inserter ${id} (`);
-            const issues = compared.issues.filter(issue => !known.some(start => issue.startsWith(start)));
+            // an issue names its inserter at its start or, for one about how the config describes the build, after a sentence
+            const issues = compared.issues.filter(issue => !known.some(name => issue.startsWith(name) || issue.includes(`. ${name}`)));
             expect(issues, "the simulator moves what the game moved, through every inserter and machine").toEqual([]);
         }, TEST_TIMEOUT_MS);
     }

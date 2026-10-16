@@ -8,10 +8,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.15.1] - 2026-10-16
+
+### Fixed
+- Machine facts show the output block where a machine stops taking ingredients (146 for a cryogenic plastic plant, was 100).
+- Output feeders and `OUTPUT_BLOCK` conditions use that block when it is above a stack.
+
+## [0.15.0] - 2026-10-15
+
+### Changed
+- `copies` may be a fraction such as 5.5, for a build that holds part of a block.
+- The chemical science samples are replaced by one shared-foundry block at 5.5 copies.
+
+## [0.14.0] - 2026-10-15
+
+### Changed
+- Game data from Factorio 2.1.21; the calls header shows the game version.
+- Unsupported builds are refused with the reason and the roadmap item that adds them (docs/ROADMAP.md).
+- Inserters onto a belt or into a chest may filter any item.
+- Inserters can name their kind and quality (`prototype`, `quality`); `stack_size` is now optional. Belt timing for kinds other than the legendary stack inserter is not checked yet.
+- A config that repeats one unit several times is refused; describe one unit and set `copies`.
+
+### Fixed
+- Long chains no longer fail with "Invalid input format".
+
+## [0.13.0] - 2026-10-15
+
+### Changed
+- The wake-ups a clock is ranked and selected by now count an inserter waiting to put items into a machine as woken when the machine starts a craft, not when it finishes one or pays out a productivity bonus, which wakes no input. The inserters that take from a machine are still woken by its finished crafts and payouts. On builds with productivity the figures shown for every clock fall: on the advanced circuit build with its belts standing still, from 509.6 to 400.6 wake-ups a minute; on the low density structure build from 703.1 to 590.6; on agricultural science from 3,651 to 2,703. A few rise, where a machine stands idle between crafts and its start falls on another tick than its last finish: metallurgic science from 954 to 1,089. No build selects another clock. A recording of the game shows the same count, read from each machine's status and finished products, and says for each machine how far that reading has been checked: on biochambers it is known to miss, on machines never recorded it is not checked.
+
+## [0.12.1] - 2026-10-15
+
+### Changed
+- The mechanism the clocking advice rests on, that a productivity payout does not wake an inserter waiting to put items into a machine, is now confirmed on a second design with the same kind of machine (the advanced circuit electromagnetic plant). Other kinds of machine are not tested. Text only: no clock, selection or call changes.
+
+## [0.12.0] - 2026-10-15
+
+### Changed
+- The advice on which inserters are worth clocking counts wake-ups in true craft starts: an inserter waiting to put items into a machine counts as woken when the machine starts a craft, not when it pays out a productivity bonus, which wakes no input. The thresholds follow: below 53 wake-ups a minute leave unwired, from 158.6 clock, marginal between 53 and 175.7. The count 0.11.0 used, and its call, are still shown beside each group. On machines with productivity that count ran high: on the advanced circuit build at +175%, 1,164 wake-ups a minute where the game makes 625. Each group also says how far its count has been checked against the game. The thresholds are a prediction still to be judged on fresh saves, and the mechanism they rest on is measured on one build. No clock and no selection changes.
+
 ## [0.11.0] - 2026-10-14
 
 ### Added
-- Advice on which inserters are worth clocking, from the inserter cost series of factorio-benchmarks: `npm run calls` in `clock-generator` gives a call for each group of inserters of a build, "clock" or "leave unwired", firm or marginal, from the wake-ups a minute a clock removes from each of its inserters (below 63.5 leave unwired, from 158.6 clock, marginal between 63.5 and 207.6). It reads a sample or a config (its selected clock against the same build with every inserter always enabled, in the simulator), two recordings of the game, or two dumps of the series' extractor, one unwired and one clocked. It is advice about update time only: it changes no clock and no selection, and is never a reason to drop a clock a build needs for its rate. The rule was measured on saves of 91,000 to 606,000 entities, and a call from the simulator was checked against the game on one build. See "The rule's count and the clock-or-unwired advice" in `clock-generator/GOALS.md`.
+- Advice on which inserters are worth clocking, from the inserter cost benchmarks: each group of inserters of a build gets a call, "clock" or "leave unwired", firm or marginal, from the wake-ups a minute a clock removes from each of its inserters (below 63.5 leave unwired, from 158.6 clock, marginal between 63.5 and 207.6). It is worked out for a build's selected clock against the same build with every inserter always enabled, or from two recordings of the game, one unwired and one clocked. It is advice about update time only: it changes no clock and no selection, and is never a reason to drop a clock a build needs for its rate. The rule was measured on saves of 91,000 to 606,000 entities, and a call from the simulator was checked against the game on one build.
 
 ## [0.10.0] - 2026-10-14
 

@@ -147,7 +147,7 @@ export class ConditionalEnableControlFactory {
 
     private getOutputBlockQuantity(entity: EntityReference, context: EvaluationContext): number {
         const machine = this.getMachineState(entity, context);
-        return machine.machine.output.outputBlock.quantity;
+        return machine.machine.output.outputBlock.ingredients_blocked_at;
     }
 
     private getCraftingProgress(entity: EntityReference, context: EvaluationContext): number {

@@ -85,3 +85,21 @@ Code and UX review are independent Astra/high roles; root or a runner independen
 
 Preserve existing item review/fix rounds. Finish compatibility before the resumed items' final evidence and reviews.
 Owner install-step and phase-merge checkpoints remain unchanged; no additional sidecar metadata check is opened.
+
+## Shared metadata API (integration contract, 2026-10-16)
+
+The upstream compatibility provider commits `clock-generator-ui/src/utils/inserterMetadata.ts` before 3.2 A uses it:
+
+```ts
+export function effectiveInserterStackSize(
+    inserter: Pick<InserterFormData, 'prototype' | 'stack_size'>,
+): number;
+export function inserterMetadataText(
+    inserter: Pick<InserterFormData, 'prototype' | 'quality'>,
+): string;
+```
+
+`InserterFormData` gains optional `prototype`, the engine's optional quality union and optional `stack_size`.
+The effective-size helper agrees with engine game data (4/12/16), honors explicit values and defaults an absent
+prototype to stack-inserter. Metadata text shows the effective type/quality, including defaults, read-only.
+Clearing writes `undefined`; template callers pass the effective size. 3.2 A reuses these exports, not another fallback.

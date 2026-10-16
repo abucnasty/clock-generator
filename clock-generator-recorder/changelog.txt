@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.7.0
+Date: 2026-10-16
+  Bugfixes:
+    - An inserter the clock is wired to is enabled by the clock alone: a circuit condition left on it from the base it was cut from, on a signal the clock never sends, used to keep it disabled for the whole recording
+---------------------------------------------------------------------------------------------------
 Version: 0.6.0
 Date: 2026-10-08
   Features:
