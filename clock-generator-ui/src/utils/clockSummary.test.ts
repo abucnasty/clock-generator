@@ -152,9 +152,15 @@ describe('recoversOf', () => {
 });
 
 describe('makesText and wakeUpsText', () => {
-    it('names the copies only when there are several', () => {
+    it('names the total scope unless there is exactly one copy', () => {
         expect(makesText(clock('a'), 11)).toEqual({ value: '240/s', sub: 'all 11 copies' });
         expect(makesText(clock('a'), 1)).toEqual({ value: '240/s', sub: '' });
+    });
+
+    it.each([0.0625, 0.5, 0.9999, 1.0001, 2.25])('keeps Copies %s exact while leaving the total rate and one-copy wake-ups unchanged', copies => {
+        const result = clock('a', { rate_off_target: -0.125, wake_ups_per_minute: 17.6 });
+        expect(makesText(result, copies)).toEqual({ value: '239.88/s', sub: `all ${copies} copies` });
+        expect(wakeUpsText(result)).toEqual({ value: '18 a minute', sub: 'one copy' });
     });
 
     it('rounds the rate to two decimals', () => {

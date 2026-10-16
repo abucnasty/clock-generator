@@ -26,7 +26,7 @@ import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
 import { BELT_COPY } from '../utils/beltQuestion';
 import { beltCellText, clockTechnicalName, foldedMakes, plainClockName, worksOf } from '../utils/clockSummary';
-import { TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
+import { PROVISIONAL_WAKE_UP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
@@ -57,11 +57,9 @@ const COMPARE_COPY = {
     swingsHelp: 'Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of crafting '
         + 'cycles (the clock period).',
     windowsHelp: 'How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on.',
-    wakeUpsHelp: 'How many times a minute a machine that finishes a craft wakes an inserter that is switched on and waiting '
-        + 'for it, summed over the inserters of one copy of the build in a long run of this clock. Fewer are better: each '
-        + 'wake-up is a small check that moves little or nothing, so fewer wake-ups cost less UPS. Shown for clocks that '
-        + 'were run long enough to count them. It is the count from one start point; a clock can settle into another '
-        + 'steady state from another start point, with another count.',
+    wakeUpsHelp: PROVISIONAL_WAKE_UP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
+        + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
+        + 'one start point; a clock can settle into another steady state from another start point, with another count.',
     noneRecover: 'None of the clocks tried recovers when the build is starved or jammed, which can be a limit of the build '
         + 'and not of its clocks. They are listed for what they are: a clock that holds the target rate has to be '
         + 'restarted after the build is starved or jammed.',
