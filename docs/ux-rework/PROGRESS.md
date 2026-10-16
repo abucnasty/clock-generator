@@ -35,7 +35,7 @@ come from here.
 
 - **Phase:** 2 (Phase 1 merged into `feat/ux-rework`, #170, 877989d)
 - **Branch:** [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2); the ledger lives here now. Phase 1 history is linked by its permanent commit and merged PR.
-- **Open checkpoints:** 2.5 A's install steps in game (owner)
+- **Open checkpoints:** 2.5 A's generated-clock install steps in game (owner). Current Sidecar → app export/import PASS confirmed2026-10-16; app → game/wiring/operation results still pending.
 - **Phase 1:** merged into `feat/ux-rework` (#170) after the end review, its fixes (#168) and the owner's approval
 - **Phase 2 remaining:** original items and targeted2.F correction merged; fresh four-width review and all three affected rechecks complete. Explicit3.F carries and owner install/phase checkpoints remain.3.2 A+B merged into P3;3.F implementation and capture are active.
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
@@ -119,6 +119,8 @@ come from here.
 | [D2–D8](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings, working-context preservation and per-machine target/max/achieved rates. Reconcile overlaps with D1/3.3; no current implementation scope added. |
 
 ## Decisions log
+
+- 2026-10-16: Owner reports “Mod to app looks good and passes.” Recorded the current Sidecar → app export/import path as PASS. This does not yet confirm app → game blueprint import, wiring/Anything >0, fresh startup, lock, book variants, pole relays, drills or older-clock replacement. The2.5 installation checkpoint and phase approval remain pending those applicable results; no additional Sidecar → app retest requested.
 
 - 2026-10-16: Owner confirmed that all game instances use the shared `~/Library/Application Support/factorio/mods` and deleted the extra Beta folder. Installed the same verified UX development ZIP there (still version0.7.1); all12 source files/archive hashes pass, older matching archives backed up, existing enabled setting preserved. Restarted an actual Vite dev server at `http://127.0.0.1:5280/` on reviewed combined88eab3a source with its own engine and11 exact JSON resources; root HTML/main/App modules return200. Server proof `/tmp/ux-owner-preview-fab7ef4/DEV-SERVER.json`; pending3.F remains excluded. Actual in-game check remains pending.
 
