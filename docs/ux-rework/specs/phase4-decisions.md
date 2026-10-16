@@ -2,7 +2,7 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1–D9 are approved for Phase 4 with the exact choices below; D8 approves investigation only, not engine/UI implementation. D9 includes actual cleanup and is mandatory before the feature branch merges to master, regardless of phase label. First-visit refinement remains pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1–D9 and first-visit refinement are approved for Phase 4 with the exact choices below; D8 approves investigation only, not engine/UI implementation. D9 includes actual cleanup and is mandatory before the feature branch merges to master, regardless of phase label. The proposal decision round is complete. Approval of D1 does not approve every illustrative behavior shown in the mock; finalize exact item specs against the completed Phase 3 product.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
@@ -17,7 +17,7 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D7 Working context | Approved — A / A / A | Selected entity/view/detail/sections, existing sort/filter and approximate page position; locally per build across reloads/switches; retain Save/Cancel, no unsaved-draft recovery |
 | D8 Per-machine production rates | Approved — A / A / A, investigation only | Define rate semantics and engine-data feasibility; return for implementation approval. Read-only engine-derived planned demand; each machine in one modeled unit, all-Copies totals separate |
 | D9 Independent audit and cleanup of new UI tests | Approved — B; mandatory before feature→master | Independently audit and implement justified removals/consolidations of UX-rework-added UI tests. Prevent coverage-driven additions now; show actual diff/CI-workload reduction before release, regardless of phase label |
-| First-visit route refinement | Pending | Choices before instructions; guide default; preserve Paste/Example/Manual routes |
+| First-visit route refinement | Approved — A / A | Purpose + immediate Paste/Example/Manual routes, Paste primary, full Sidecar guide on demand; recipe guidance follows Build by hand; preserve mod link/manual recovery/intro dismissal |
 
 ## Decisions
 
@@ -112,4 +112,23 @@ Owner chose B for audit plus cleanup. For timing: “it just has to go out to re
 - Deliver the independent keep/consolidate/remove decisions and implemented cleanup diff, with remaining behavioral coverage, before/after test counts, net added test files/lines versus the UX baseline, and comparable runtime/CI evidence where available. Do not promise CI speedup from a lower count alone or impose an arbitrary removal percentage.
 - No new framework/dependencies or CI configuration changes. Preserve meaningful regression coverage and all existing checks, independent reviews and three phase-end reviewers. If actual reduction cannot be justified, bring the specific evidence to the owner rather than declare this hard requirement complete.
 
-Next discussion: first-visit route refinement, the last pending proposal.
+### First-visit refinement approved, 2026-10-16
+
+Owner: “Approve the first-visit refinement with A / A. Add it to Phase 4, summarize the approved plan, and continue the roadmap.”
+
+- Presentation A: show a short purpose statement followed immediately by Paste from Factorio, Try an example and Build by hand. Keep Paste primary; offer the complete Sidecar guide on demand.
+- Guidance A: recipe guidance follows choosing Build by hand. The initial hint describes the available routes instead of telling all users to pick a recipe.
+- Preserve the mod link, full instructions, manual-paste recovery and existing intro dismissal. Reuse existing routes and persistence; do not add a compulsory wizard or duplicate import machinery.
+- Finalize exact surface/focus/copy against the finished Phase 3 UI and use normal independent reviews/checks. See phase4-first-visit.md.
+
+## Approved execution outline
+
+1. Finish Phase 3 fresh evidence, three independent reviewers, retro and owner phase-merge checkpoint into feat/ux-rework.
+2. Capture D3's two-build/three-task baseline before any D1 product changes. Finalize Phase 4 item specs/source dependencies against that completed feature state.
+3. Deliver D1 Results/header with D6 preference placement and the coordinated D4 comparison/D5 assumption presentation where shared files justify a bundle. Then deliver D1 Configure using the existing shared editor. Each item retains traceable scope/evidence and independent review.
+4. Deliver D2 after density work; D7 extends only actual context gaps. Deliver first-visit routing as its own bounded item or justified shared-file bundle.
+5. D8 investigation may proceed independently once final source contracts are pinned, but feature implementation still returns for owner approval.
+6. Implement D9's independent, justified UI-test cleanup after product changes settle; reconcile later additions and include its reduction evidence before feature→master. No arbitrary coverage-driven additions meanwhile.
+7. Repeat D3 tasks on the finished Phase 4 state, complete normal full checks and all three fresh phase-end reviewers, reconcile findings/retro, and present the Phase 4 PR into feat/ux-rework for the owner checkpoint. Final master merge remains owner-only after D9 and release closeout.
+
+Order within this outline may follow actual source dependencies and available slots; it does not waive checkpoints or expand approved scope. Phase 4 implementation has not started.

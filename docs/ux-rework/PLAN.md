@@ -490,15 +490,15 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - the tests pass
 - the fresh UX review is attached to the phase PR.
 
-## Phase 4: owner proposal decisions in progress
+## Phase 4: approved follow-up work
 
-Owner direction, 2026-10-16: discuss D1–D9 and the independent proposal's first-visit refinement individually. Explicitly approved scope becomes Phase 4 against `feat/ux-rework`; rejected or unapproved scope stays outside implementation. Track exact approvals and pending decisions in [Phase 4 decisions](specs/phase4-decisions.md). Phase 3 closeout, current verification and the three phase-end reviewers remain required.
+Owner approvals, 2026-10-16: D1–D9 and first-visit refinement form Phase 4 against `feat/ux-rework`. The proposal approval round is complete; track exact choices and execution order in [Phase 4 decisions](specs/phase4-decisions.md). D8 is investigation only, returning for implementation approval. D9 includes actual cleanup and is mandatory before feature→master regardless of phase label. First finish Phase 3 closeout/owner checkpoint; capture D3's baseline before D1 changes, finalize item specs, then follow actual dependencies. All current verification and the three fresh phase-end reviewers remain required for Phase 4.
 
 ### Approved Phase 4 scope: Compact view (D1)
 
 Owner approval, 2026-10-16, B / A / A: include Results/header first, then compact Configure machine/belt/inserter rows using the shared editor. New users retain the explanatory default; Compact is opt-in and remembered locally. Keep comparison visible while Why, Wake and Install share one contextual area, with routine helpers collapsed and help available on demand. Use one slim header with version visible and responsive side-by-side/reflow layouts. Preserve essential units, assumptions, warnings, errors, actions and accessibility. See [D1 scope](specs/D1-compact-view.md).
 
-This approval moves D1 from the deferred backlog into Phase 4. Detailed specs, independent reviews and normal evidence gates precede implementation/merge; Phase 3 completion criteria are unchanged. The proposals below remain deferred unless separately approved.
+This approval moves D1 from the deferred backlog into Phase 4. Detailed specs, independent reviews and normal evidence gates precede implementation/merge; Phase 3 completion criteria are unchanged.
 
 ### Approved Phase 4 scope: Light/dark mode (D2)
 
@@ -531,6 +531,10 @@ Owner approval, 2026-10-16, A / A / A: define rate semantics and investigate aut
 ### Approved Phase 4 scope and hard final-merge requirement: UI test audit/cleanup (D9)
 
 Owner approval, 2026-10-16: choice B authorizes independent audit AND implemented cleanup of tests added by this UX rework inside `clock-generator-ui`, including new cases in existing files and later UX additions. Exclude engine tests, capture scripts, pre-existing UI tests and unrelated upstream additions. Effective immediately, add only tests protecting meaningful behavior/regressions; do not add/commit arbitrary tests or permutations to maximize coverage. D9 must deliver justified removals/consolidations, remaining-coverage evidence and before/after diff/test/runtime evidence before `feat/ux-rework` merges to `master`. Phase numbering/timing is flexible; do not carry cleanup beyond release or close on a report alone. Current checks/reviews and all three phase-end reviewers remain required. See [D9 scope](specs/D9-ui-test-audit.md).
+
+### Approved Phase 4 scope: First-visit route refinement
+
+Owner approval, 2026-10-16, A / A: short purpose statement and immediate Paste/Example/Build-by-hand choices, Paste primary, full Sidecar guide on demand. Initial hints describe routes; recipe guidance follows choosing Build by hand. Preserve mod link/full instructions/manual-paste recovery/existing intro dismissal. See [first-visit scope](specs/phase4-first-visit.md). No proposal remains pending from this approval round; final specs/reviews and owner phase checkpoints still apply.
 
 ## Verification (every phase)
 
