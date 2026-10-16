@@ -88,6 +88,12 @@ export class MachineState implements EntityState {
     public readonly outputWaiters: Map<string, Map<string, number>> = new Map();
     /** The inserter that last took each product, by item */
     public readonly lastOutputTaker: Map<string, string> = new Map();
+    /**
+     * The tick that inserter was last granted its turn, with something to take, for each product in. Only read within
+     * that tick, where the idle mode and the pickup of one inserter both ask for the one pickup: so left out of the
+     * state key.
+     */
+    public readonly lastOutputTurnTick: Map<string, number> = new Map();
 
     public toString(): string {
         return `MachineState(${this.entity_id},recipe=${this.machine.metadata.recipe.name},status=${this.status})`;
@@ -143,6 +149,7 @@ function clone(machineState: MachineState): MachineState {
     cloned.selfIngredients = machineState.selfIngredients.clone();
     machineState.outputWaiters.forEach((waiters, item_name) => cloned.outputWaiters.set(item_name, new Map(waiters)));
     machineState.lastOutputTaker.forEach((inserter_id, item_name) => cloned.lastOutputTaker.set(item_name, inserter_id));
+    machineState.lastOutputTurnTick.forEach((tick, item_name) => cloned.lastOutputTurnTick.set(item_name, tick));
     return cloned;
 }
 
@@ -177,17 +184,26 @@ function ingredientQuantity(machineState: MachineState, itemName: string): numbe
  * An inserter with room for `room_in_hand` more asks to take a product from the machine this tick. When the machine
  * has less than that, inserters waiting for the same product take turns at what it makes: the one that took last is
  * passed over while another one asked this tick or the tick before. Returns whether it is this inserter's turn, and
- * counts it as the taker when it is.
+ * counts it as the taker when it is, if there is anything to take: with nothing in the machine the ask leaves the
+ * taker as it was. A turn granted in a tick holds for the rest of it, as the idle mode and the pickup of an inserter
+ * both ask for the one pickup.
  */
 function takesTurnForOutput(machineState: MachineState, itemName: string, inserter_id: string, tick: number, room_in_hand: number): boolean {
     waitsForOutput(machineState, itemName, inserter_id, tick);
+    const quantity = machineState.inventoryState.getQuantity(itemName);
+    if (machineState.lastOutputTaker.get(itemName) === inserter_id && machineState.lastOutputTurnTick.get(itemName) === tick) {
+        return true;
+    }
     // with enough for this hand, what is left over is there for the next inserter in the same tick
-    const takes_it_all = machineState.inventoryState.getQuantity(itemName) < room_in_hand;
+    const takes_it_all = quantity < room_in_hand;
     const another_waits = Array.from(machineState.outputWaiters.get(itemName)!).some(([id, asked]) => id !== inserter_id && asked >= tick - 1);
     if (takes_it_all && another_waits && machineState.lastOutputTaker.get(itemName) === inserter_id) {
         return false;
     }
-    machineState.lastOutputTaker.set(itemName, inserter_id);
+    if (quantity > 0) {
+        machineState.lastOutputTaker.set(itemName, inserter_id);
+        machineState.lastOutputTurnTick.set(itemName, tick);
+    }
     return true;
 }
 

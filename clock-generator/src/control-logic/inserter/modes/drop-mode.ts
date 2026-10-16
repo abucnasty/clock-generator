@@ -1,7 +1,9 @@
 import assert from "../../../common/assert";
 import { ItemName } from "../../../data";
 import { Belt, BeltStackSize, Lane } from "../../../entities/belt";
+import { BeltDropSpot } from "../../../entities/inserter";
 import { BeltState, ChestState, EntityState, InserterState, InserterStatus, MachineState } from "../../../state";
+import { TickProvider } from "../../current-tick-provider";
 import { InserterMode } from "./inserter-mode";
 
 export class InserterDropMode implements InserterMode {
@@ -11,8 +13,14 @@ export class InserterDropMode implements InserterMode {
 
     constructor(
         private readonly inserter_state: InserterState,
-        private readonly sink_entity_state: EntityState
-    ) { }
+        private readonly sink_entity_state: EntityState,
+        private readonly tick_provider: TickProvider
+    ) {
+        const drop = inserter_state.inserter.drop;
+        if (drop !== undefined && EntityState.isBelt(sink_entity_state)) {
+            sink_entity_state.lane_traffic[drop.lane - 1].registerSpot(this.spotTicks(sink_entity_state, drop));
+        }
+    }
 
     public onEnter(fromMode: InserterMode): void {
         this.current_tick = 0;
@@ -72,19 +80,47 @@ export class InserterDropMode implements InserterMode {
         );
 
         const belt = belt_state.belt;
+        const drop = inserter_state.inserter.drop;
+        if (drop !== undefined) {
+            this.dropOffToLane(belt_state, drop, inserter_state);
+            return;
+        }
         const lane = this.selectLaneForDrop(belt.lanes, held_item.item_name);
         const amount_to_drop = Belt.amountToDropAtTick(belt.belt_speed, lane.stack_size as BeltStackSize, this.current_tick);
 
         if (amount_to_drop > 0) {
-            const actual_drop = Math.min(amount_to_drop, held_item.quantity);
-            inserter_state.inventoryState.removeQuantity(held_item.item_name, actual_drop);
-            held_item.quantity -= actual_drop;
-            inserter_state.items_dropped += actual_drop;
+            this.removeFromHand(inserter_state, amount_to_drop);
+        }
+    }
 
-            assert(held_item.quantity >= 0, "Held item quantity went below 0");
-            if (held_item.quantity === 0) {
-                inserter_state.held_item = null;
-            }
+    /**
+     * Drop on a lane that carries the stacks of the inserters that drop on it: one stack, in this tick, if the lane has
+     * room for it where the stack would pass the spot (LaneTraffic); otherwise the hand tries again in the next tick.
+     */
+    private dropOffToLane(belt_state: BeltState, drop: BeltDropSpot, inserter_state: InserterState): void {
+        const stack_size = belt_state.belt.lanes[drop.lane - 1].stack_size;
+        const traffic = belt_state.lane_traffic[drop.lane - 1];
+        if (traffic.tryPlace(this.tick_provider.getCurrentTick(), this.spotTicks(belt_state, drop))) {
+            this.removeFromHand(inserter_state, stack_size);
+        }
+    }
+
+    /** Ticks a stack takes to travel from the origin of the belt's positions to the spot */
+    private spotTicks(belt_state: BeltState, drop: BeltDropSpot): number {
+        return Math.round(Belt.ticksPerTile(belt_state.belt.belt_speed).toDecimal() * drop.position);
+    }
+
+    private removeFromHand(inserter_state: InserterState, amount: number): void {
+        const held_item = inserter_state.held_item;
+        assert(held_item !== null, `${inserter_state.entity_id} Held item should not be null when dropping off`);
+        const actual_drop = Math.min(amount, held_item.quantity);
+        inserter_state.inventoryState.removeQuantity(held_item.item_name, actual_drop);
+        held_item.quantity -= actual_drop;
+        inserter_state.items_dropped += actual_drop;
+
+        assert(held_item.quantity >= 0, "Held item quantity went below 0");
+        if (held_item.quantity === 0) {
+            inserter_state.held_item = null;
         }
     }
 

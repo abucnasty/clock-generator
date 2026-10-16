@@ -6,7 +6,7 @@ import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight } from "./insights";
+import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
@@ -15,7 +15,9 @@ import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
-import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf } from "./trial";
+import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, startDependenceVerdictOf } from "./trial";
+import { CLOCK_STARTS, START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
+import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
 
 
 export interface ClockAlternative {
@@ -57,6 +59,13 @@ export interface ClockAlternativesResult {
      * `searchesAreNeeded`); empty when they ran. `overrides.search_for_fewer_wake_ups` runs them for every build.
      */
     skipped_searches: string[];
+    /**
+     * Whether the clocks were tried from other starts than the cold start (`overrides.check_start_dependence`).
+     * When not, `start_dependence_note` says so plainly.
+     */
+    start_dependence_checked: boolean;
+    /** What the generator says of start dependence for the build: that it was not checked, or how many clocks depend on the start */
+    start_dependence_note: string;
 }
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
@@ -80,6 +89,8 @@ export interface ClockAlternativeContext {
     primary_stable: boolean;
     /** Clock period of the primary alternative */
     period_ticks: number;
+    /** The items whose hands set the period of the plan: a clock is also made with each of them left out of it (see `leanPeriodItems`) */
+    lean_period_items?: LeanPeriodItem[];
 }
 
 
@@ -259,6 +270,56 @@ function alternativeDefinitions(
     });
 }
 
+/** An item's name as a person says it: "low-density-structure" as "low density structure" */
+function plainItemName(item: string): string {
+    return item.replace(/-/g, " ");
+}
+
+/**
+ * The clocks for a shorter period: for each item whose hands set the period of the plan, the plan is made with that item
+ * left out of the period (`overrides.ignored_lcm_ingredients`), the period it would have if its hands did not have to
+ * come out whole. The item's inserters stay clocked; their windows are the plan's, or what they were seen to do. The
+ * observed windows of such a plan are a search, so they wait for the same reason as the other searches.
+ */
+function shorterPeriodDefinitions(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+): AlternativeDefinition[] {
+    if (config.overrides?.lcm !== undefined) {
+        return [];
+    }
+    const lean_items = context.lean_period_items ?? [];
+    const planned = lean_items.map(({ item, lcm, lcm_without }) => {
+        const ignored = [...(config.overrides?.ignored_lcm_ingredients ?? []), item];
+        const planned_on: Config = { ...config, overrides: { ...config.overrides, ignored_lcm_ingredients: ignored } };
+        const lean_config: Config = { ...planned_on, overrides: { ...planned_on.overrides, derive_clock_windows: false } };
+        const label = `${BATCHED_SWINGS_LABEL}, shorter period (${plainItemName(item)} not in the period)`;
+        const how = `The clock period is ${lcm_without} crafting ${lcm_without === 1 ? "cycle" : "cycles"} instead of ${lcm}: the period of the other `
+            + `alternatives is set by how often the hands of ${plainItemName(item)} come out whole, and here it is not. The inserters that move `
+            + `${plainItemName(item)} stay clocked, so they take their hands when their windows open, but the period is not stretched to fit them.`;
+        return { item, planned_on, lean_config, label, how, shorter_than_limit: context.period_ticks * lcm_without / lcm <= MAX_OBSERVED_WINDOWS_PERIOD_TICKS };
+    });
+    return [
+        ...planned.map(({ item, planned_on, lean_config, label, how }): AlternativeDefinition => ({
+            id: `planned-lean-${item}`,
+            label,
+            description: `${BATCHED_SWINGS_DESCRIPTION} ${how}`,
+            run: () => generateClockWithSwingBackoff(lean_config, { ...quiet, belt_pickup_slack: "always" }),
+            planned_on,
+        })),
+        ...planned.filter(it => it.shorter_than_limit).map(({ item, planned_on, lean_config, how }): AlternativeDefinition => ({
+            id: `derived-lean-${item}`,
+            label: `Observed windows, shorter period (${plainItemName(item)} not in the period)`,
+            description: "Built from what the inserters actually do rather than from the planned schedule, as the observed windows "
+                + `alternative is. ${how}`,
+            run: () => generateClockWithSwingBackoff(lean_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
+            planned_on,
+            search: true,
+        })),
+    ];
+}
+
 /** The alternatives as the config asks for them, each made once */
 function alternativeDefinitionsFor(
     config: Config,
@@ -395,6 +456,7 @@ function alternativeDefinitionsFor(
             },
             search: true,
         },
+        ...shorterPeriodDefinitions(config, context, quiet),
     ];
 }
 
@@ -454,6 +516,11 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
     const held = holds(result);
     const backpressure_loss = held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
+    const start_dependence = config.overrides?.check_start_dependence === true
+        ? startDependenceVerdictOf(definition.planned_on ?? config, result, held, logger, report)
+        : null;
+    const start_dependence_note = start_dependence === null ? null
+        : startDependenceNote(start_dependence, items => itemsPerSecondOverCopies(items, result.simulation_duration.ticks, copies));
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
@@ -468,12 +535,13 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
     const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
-        + backpressureLossNote(backpressure_loss);
+        + backpressureLossNote(backpressure_loss) + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`);
     // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
     const insights = [
         ...clockInsights(result, held),
         ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
         ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
+        ...(start_dependence_note !== null ? [startDependenceInsight(start_dependence_note)] : []),
     ];
     const period = result.simulation_duration.ticks;
     // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
@@ -481,7 +549,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
     /** The alternative for the clock run at `clock_period` ticks a period: the exact period, or the rounded one */
     const alternativeAt = (clock_period: number, row: { id: string; label: string; description: string; result: BlueprintGenerationResult }): ClockAlternative => {
-        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute };
+        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute, start_dependence };
         const clock = { ...row, inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         return { ...clock, ranking: rankingOf(clock, config) };
     };
@@ -528,6 +596,8 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
         planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
+        lean_period_items: config.overrides?.lcm === undefined
+            ? leanPeriodItems(result.serializable_transfer_plan, config.overrides?.ignored_lcm_ingredients) : [],
     };
     const tasks = alternativeDefinitions(config, context, {})
         .map(definition => ({ id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config) }));
@@ -558,6 +628,19 @@ export function runClockAlternativeTask(
         .find(it => it.id === task_id);
     assert(definition !== undefined, `Unknown clock alternative task "${task_id}"`);
     return runAlternative(definition, config, logger, options.on_progress_detail);
+}
+
+/** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */
+export function startDependenceSummary(config: Config, alternatives: readonly ClockAlternative[]): Pick<ClockAlternativesResult, "start_dependence_checked" | "start_dependence_note"> {
+    if (config.overrides?.check_start_dependence !== true) {
+        return { start_dependence_checked: false, start_dependence_note: START_DEPENDENCE_NOT_CHECKED };
+    }
+    const dependent = alternatives.filter(it => it.assessment.start_dependence?.verdict === "start-dependent").map(it => it.id);
+    return {
+        start_dependence_checked: true,
+        start_dependence_note: `Start dependence was checked from ${CLOCK_STARTS.length} starts: `
+            + (dependent.length === 0 ? "no clock is start-dependent." : `start-dependent: ${dependent.join(", ")}.`),
+    };
 }
 
 /**
@@ -619,5 +702,6 @@ export function generateClockAlternatives(
 
     current_step = "Done";
     report();
-    return { ...combineClockAlternativeRuns(runs, it => it.ranking), skipped_searches: searches_run ? [] : searches.map(it => it.label) };
+    const combined = combineClockAlternativeRuns(runs, it => it.ranking);
+    return { ...combined, skipped_searches: searches_run ? [] : searches.map(it => it.label), ...startDependenceSummary(config, combined.alternatives) };
 }

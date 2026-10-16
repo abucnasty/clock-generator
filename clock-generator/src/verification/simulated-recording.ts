@@ -82,9 +82,8 @@ export function recordingOfStock(stock: StockRecording, config: Config, clock_ti
                 recipe: series.recipe,
                 samples: {
                     status: changeList(series.status.map(status => FACTORIO_MACHINE_STATE[status as MachineStatus] as string)),
-                    // the simulator keeps no bars to lay against the game's
-                    crafting_progress: [],
-                    bonus_progress: [],
+                    crafting_progress: series.crafting_progress,
+                    bonus_progress: series.bonus_progress,
                     products_finished: series.products_finished,
                     crafts_started: series.crafts_started,
                     inputs: series.inputs,

@@ -59,6 +59,8 @@ const cutFrom = (recording: Recording, from: number): Recording => {
                 ...machine.samples,
                 status: changes(machine.samples.status),
                 products_finished: cut(machine.samples.products_finished),
+                crafting_progress: cut(machine.samples.crafting_progress),
+                bonus_progress: cut(machine.samples.bonus_progress),
                 inputs: cutAll(machine.samples.inputs),
                 outputs: cutAll(machine.samples.outputs),
             },
@@ -87,6 +89,21 @@ describe("a simulated run in the format of the recorder", () => {
             .toEqual(new Set(["working", "item_ingredient_shortage"]));
         expect(Math.max(...output.samples.held_count)).toBe(16);
         expect(new Set(output.samples.held_item.map(([, item_name]) => item_name))).toEqual(new Set(["automation-science-pack"]));
+    });
+
+    it("holds the crafting and the bonus bar of each machine every tick, in 0 to 1 to four decimals, a finished craft starting the bar over", () => {
+        const { crafting_progress, bonus_progress, products_finished } = simulated.machines[0].samples;
+        for (const bar of [crafting_progress, bonus_progress]) {
+            expect(bar).toHaveLength(simulated.sample_count);
+            expect(bar.every(value => value >= 0 && value <= 1 && Math.round(value * 10000) / 10000 === value)).toBe(true);
+        }
+        expect(Math.max(...crafting_progress)).toBeGreaterThan(0.5);
+        const finished = products_finished.flatMap((count, tick) => tick > 0 && count > products_finished[tick - 1] ? [tick] : []);
+        expect(finished.length).toBeGreaterThan(10);
+        // the bar falls where a craft finishes, and falls nowhere else
+        const falls = crafting_progress.flatMap((value, tick) => tick > 0 && value < crafting_progress[tick - 1] ? [tick] : []);
+        expect(falls.every(tick => finished.includes(tick))).toBe(true);
+        expect(falls.length).toBeGreaterThan(10);
     });
 
     it("counts the wake-ups the run counted, by the function that counts those of a recording of the game", () => {
@@ -129,6 +146,24 @@ describe("laying a recording against a simulated run", () => {
         // counted over other periods of a run that takes several to repeat
         expect(Math.abs(report.game_wake_ups_per_minute - report.sim_wake_ups_per_minute)).toBeLessThan(2);
         expect(formatRecordingComparison(report).at(-1)).toBe("RESULT: the simulator moves what the game moved.");
+    });
+
+    it("notes, without an issue, how many ticks the crafting bars of the game and the simulator run out of step", () => {
+        const game = {
+            ...simulated,
+            machines: simulated.machines.map(machine => ({
+                ...machine,
+                // the game's bar starts over three ticks after the simulator's
+                samples: { ...machine.samples, crafting_progress: [0, 0, 0, ...machine.samples.crafting_progress.slice(0, -3)] },
+            })),
+        };
+        const report = compareRecordings(compared(game), compared(simulated), config, { expected_output_per_period });
+        expect(report.notes).toEqual([expect.stringMatching(/^Machine 1's crafting bar runs 3 ticks out of step with the game's.*3 ticks before the game's/)]);
+        expect(report.issues).toEqual([]);
+        expect(compareRecordings(compared(simulated), compared(simulated), config, { expected_output_per_period }).notes).toEqual([]);
+        // a game recorded without bars has nothing to compare
+        const bare = { ...simulated, machines: simulated.machines.map(machine => ({ ...machine, samples: { ...machine.samples, crafting_progress: [], bonus_progress: [] } })) };
+        expect(compareRecordings(compared(bare), compared(simulated), config, { expected_output_per_period }).notes).toEqual([]);
     });
 
     it("names the positions of the clock where an inserter shows another state than in the simulator", () => {

@@ -113,12 +113,45 @@ export interface HarnessOptions {
     /** Speed the game is set to as the build is built; absent, it stays what it is, as someone watching may have set it */
     game_speed?: number;
     /**
+     * Build the cell in two stages and record from the tick its inserters and clock are placed in (see StagedStartOptions). The
+     * belts, feeders, machines and chests are built first and run until the belts are saturated; then, in one tick, every inserter
+     * of the cell is built in an order that is asked for and the clock is wired. `warmup_ticks` is not used and `settle_ticks`
+     * must be absent: the recording starts the tick after, which the new inserters need to know their ends, with the machines and
+     * their buffers empty. Needs `config`, unless the build
+     * order is a list and there is no clock.
+     */
+    staged_start?: StagedStartOptions;
+    /**
      * Also open the game with graphics, joined to the run as a spectator looking at the build, so it can be watched.
      * The run waits for it to join and, once recorded, for its window to be closed.
      */
     watch?: boolean;
     timeout_seconds: number;
     log: (message: string) => void;
+}
+
+/**
+ * A staged start: the build is made without the inserters of the cell (those with an end on a crafting machine) and run until every
+ * belt lane under a pickup of the cell is saturated; then the game is paused and, in that one tick, the inserters of the cell are
+ * built one after the other and the clock is wired, and the recording starts. The game serves inserters that ask for the same
+ * thing in the same tick in the order of their unit numbers, the last built first (docs/mechanics, inserters), so the order they
+ * are built in decides who is served first.
+ */
+export interface StagedStartOptions {
+    /**
+     * The order the inserters of the cell are BUILT in, by config id: "ascending" (the default: the highest config id is built last,
+     * so it is served first, which is what a blueprint of the cell in config order does), "descending" (the lowest is served first),
+     * or a list of config ids, built in that order, followed by any not named in the order of the blueprint.
+     */
+    build_order?: "ascending" | "descending" | number[];
+    /** Ticks in a row every lane that carries items has to be full at the pickup of an inserter of the cell. Default 30 */
+    saturation_ticks?: number;
+    /** Ticks the first stage may take before the run fails. Default 10,000 */
+    saturation_cap_ticks?: number;
+    /** Amount of the item put into every machine that makes and takes the same item (the egg loop), once, at the placement tick. Default 200 */
+    loop_seed?: number;
+    /** Ticks a trial build of the whole blueprint runs, to tell which built inserter is which config inserter. Default 900 */
+    trial_build_ticks?: number;
 }
 
 export interface HarnessResult {
@@ -563,6 +596,18 @@ function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
+    if (options.staged_start) {
+        const order = options.staged_start.build_order;
+        if (options.settle_ticks) {
+            throw new Error("A staged start records from the tick its inserters are placed in: settle_ticks has to be absent or 0");
+        }
+        if (!options.config && (options.clock || !Array.isArray(order))) {
+            throw new Error("A staged start needs the config, to tell which built inserter is which config id (unless the build order is a list and there is no clock)");
+        }
+        // the recording runs for exactly the ticks asked for, from the placement tick
+        assertRecordableTicks(options.ticks, null);
+        return;
+    }
     // the clock the recording is cut by: the one swapped in, or the one the build came with when it is kept
     const period = options.unclocked ? null : options.clock ? clockPeriodOf(options.clock.schedule) : clockPeriodTicks(options.blueprint);
     assertRecordableTicks(options.ticks, period);
@@ -672,6 +717,9 @@ export class HarnessSession {
     async record(options: BuildOptions): Promise<HarnessResult> {
         assertBuildOptions(options);
         const deadline = Date.now() + options.timeout_seconds * 1000;
+        if (options.staged_start) {
+            return this.recordStaged(options, deadline);
+        }
         if (this.has_build) {
             const cleared = await this.call("harness_clear");
             options.log(`Removed the ${cleared.removed} entities of the build before`);
@@ -748,6 +796,133 @@ export class HarnessSession {
         await fs.copyFile(written, recording_path);
         options.log(`Recorded ${recording.sample_count} ticks (${recording.stop_reason})`);
         return { recording_path, recording, build, start };
+    }
+
+    /**
+     * The staged start (StagedStartOptions). A trial build of the whole blueprint tells which built inserter is which config
+     * inserter (by structure, as the clock is wired) and where it stands; it is removed, and the build is made again without the
+     * inserters of the cell and run until its belts are saturated; then the inserters are built in the order asked for, the clock
+     * is wired and the recording starts, all in the tick the game is paused in.
+     */
+    private async recordStaged(options: BuildOptions, deadline: number): Promise<HarnessResult> {
+        const staged = options.staged_start!;
+        if (this.has_build) {
+            const cleared = await this.call("harness_clear");
+            options.log(`Removed the ${cleared.removed} entities of the build before`);
+        }
+        this.has_build = true;
+        const replaces_clock = options.clock !== undefined || options.unclocked;
+
+        // trial build: which inserter is which
+        let order: { x: number; y: number; config_id: number }[] = [];
+        let position = options.position;
+        if (options.config) {
+            const trial = await this.call("harness_build", {
+                blueprint: options.blueprint,
+                surface: options.surface,
+                position: options.position,
+                clock: "remove",
+                warmup_ticks: staged.trial_build_ticks ?? 900,
+                speed: options.game_speed,
+            });
+            await this.waitFor("the trial build", deadline, status => status.ready);
+            const described = await this.call("harness_describe");
+            const unit_numbers = matchBuiltInserters(described, options.config);
+            const stands_at = new Map<number, { x: number; y: number }>(described.movers.inserters.map((it: any) => [it.unit_number, it.position]));
+            const known: { config_id: number; x: number; y: number }[] = Array.from(unit_numbers).flatMap(([config_id, unit_number]) => {
+                const at = stands_at.get(unit_number);
+                return at === undefined ? [] : [{ config_id, x: at.x - trial.origin.x, y: at.y - trial.origin.y }];
+            });
+            const config_ids = known.map(it => it.config_id);
+            const ascending = [...known].sort((a, b) => a.config_id - b.config_id);
+            const listed = Array.isArray(staged.build_order) ? staged.build_order : null;
+            if (listed !== null) {
+                const named = listed.map(id => {
+                    const found = known.find(it => it.config_id === id);
+                    if (!found) {
+                        throw new Error(`The build order names config inserter ${id}, which matches no inserter of the build (matched: ${config_ids.sort((a, b) => a - b).join(", ")})`);
+                    }
+                    return found;
+                });
+                order = [...named, ...ascending.filter(it => !listed.includes(it.config_id))];
+            } else {
+                order = staged.build_order === "descending" ? [...ascending].reverse() : ascending;
+            }
+            if (options.clock) {
+                const missing = scheduledInserterIds(options.clock.schedule).filter(id => !unit_numbers.has(id));
+                if (missing.length > 0) {
+                    throw new Error(`The clock names inserters ${missing.join(", ")} of the config, which match no inserter of the build`);
+                }
+                const not_in_config = buildPartsMissingFromConfig(described, options.config);
+                if (not_in_config.length > 0) {
+                    throw new Error(missingFromConfigMessage(not_in_config));
+                }
+            }
+            position = trial.origin;
+            const cleared = await this.call("harness_clear");
+            options.log(`Trial build matched ${unit_numbers.size} config inserters and was removed again (${cleared.removed} entities)`);
+        }
+
+        // first stage: everything but the inserters of the cell, until the belts are saturated
+        const build = await this.call("harness_build", {
+            blueprint: options.blueprint,
+            surface: options.surface,
+            position,
+            clock: replaces_clock ? "remove" : "keep",
+            speed: options.game_speed,
+            staged: { saturation_ticks: staged.saturation_ticks, cap_ticks: staged.saturation_cap_ticks },
+        });
+        const not_built = Object.values<string>(build.failed);
+        if (not_built.length > 0) {
+            throw new Error(`Could not build ${not_built.length} of the blueprint's entities: ${Array.from(new Set(not_built)).join(", ")}`);
+        }
+        options.log(`Built ${build.built} entities on ${build.surface} and left ${build.staged.cell_inserters} inserters of the cell for later; ${build.staged.lanes} belt lanes under their pickups to saturate`);
+        const saturated = await this.waitFor("the belts to saturate", deadline, status => {
+            if (status.staged?.failed) {
+                throw new Error(`The belts did not saturate: ${status.staged.failed}. Lanes: ${JSON.stringify(status.staged.lanes)}`);
+            }
+            return status.ready;
+        });
+        for (const lane of Object.values<any>(saturated.staged.lanes ?? {})) {
+            options.log(`Lane ${lane.lane} of the belt at (${lane.x}, ${lane.y}) (unit ${lane.belt}): ${lane.in_use ? `full from tick ${lane.full_since}` : "carries nothing"}`);
+        }
+        options.log(`The belts are saturated at tick ${saturated.staged.saturated_tick} (${saturated.staged.saturated_tick - saturated.staged.started_tick} ticks after the build)`);
+
+        // second stage: the inserters of the cell and the clock, in one tick
+        let clock: { blueprint: string; inserters: Record<string, number> } | undefined;
+        if (options.clock) {
+            clock = { blueprint: withInserterTags(options.clock), inserters: {} };
+        }
+        const start = await this.call("harness_start", {
+            clock,
+            unclocked: options.unclocked,
+            seed: options.seed,
+            lua: options.lua,
+            staged: { order, loop_seed: staged.loop_seed },
+            record: { ticks: options.ticks },
+        });
+        for (const placed of Object.values<{ unit_number: number; config_id?: number; x: number; y: number; tick: number }>(start.staged.placed ?? {})) {
+            options.log(`Built inserter ${placed.config_id !== undefined ? `of config id ${placed.config_id}` : "not in the config"} at (${placed.x}, ${placed.y}) of the blueprint: unit_number ${placed.unit_number}, tick ${placed.tick}`);
+        }
+        if (start.clock) {
+            options.log(`Wired the clock to ${Object.values(start.clock.wired).length} inserters in tick ${start.staged.tick}`);
+        }
+        for (const seeded of Object.values<{ unit_number: number; item: string; inserted: number }>(start.loop_seeds ?? {})) {
+            options.log(`Seeded ${seeded.inserted} ${seeded.item} into the machine with unit number ${seeded.unit_number} (a loop)`);
+        }
+        options.log(`Recording from tick ${start.tick}`);
+
+        const finished = await this.waitFor("the recording", deadline, status => !status.settling && !status.active);
+        if (!finished.last_recording) {
+            throw new Error(`The recorder stopped without writing a recording. End of the game's log:\n${this.server.logTail()}`);
+        }
+        const written = path.join(this.work_dir, "script-output", finished.last_recording.filename);
+        const recording = parseRecording(JSON.parse(await fs.readFile(written, "utf-8")));
+        const recording_path = path.resolve(options.out);
+        await fs.mkdir(path.dirname(recording_path), { recursive: true });
+        await fs.copyFile(written, recording_path);
+        options.log(`Recorded ${recording.sample_count} ticks (${recording.stop_reason})`);
+        return { recording_path, recording, build: { ...build, saturation: saturated.staged }, start };
     }
 
     /** Lets the build run on, at this speed when one is given, until the window of the game opened to watch is closed; returns at once when none is open */

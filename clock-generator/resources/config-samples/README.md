@@ -54,6 +54,8 @@ Conventions:
 | intermediates/advanced-circuit, 230 a second | the same scaffold | selected clock exact: 16,192 in each of 2 repeats of 12,672 ticks (23 periods of 550.957), the first clock of this sample that holds, found by the one search of 2026-10-11 | in `test:game`; see below |
 | intermediates/accumulator, 640 a second | yes | the clock 0.9.0 selected made 512 to 544 of 576 a period; the observed windows clock 0.9.1 selected made 576 in each of 58 periods after 3 at 544 while it settled (60,264 ticks). Since even hands (2026-10-14) the selected clock is that: 576 in each of 46 periods after the game test's settling of 7,200 ticks, no difference from the simulator | in `test:game`; see below |
 | gleba/iron-bacteria-cultivation | yes | selected clock exact over 42 repeats of its 1728 ticks (20 minutes) | in `test:game`; see below |
+| science/electromagnetic-science | yes (2026-10-16, 12 legendary beacons) | selected clock exact: 352 in every period of 704 ticks (batched swings, 2 output swings per cycle; 30.0 a second a copy, 330 over 11 copies). Unclocked the scaffold makes 30.1 a second a copy. The config's crafting speed is 109.475, what 12 beacons give in the game | in `test:game`; fluids from infinity pipes, the belt's accumulators and supercapacitors from infinity chests |
+| science/electromagnetic-science-auto | the same scaffold | the same build with the enable control of both output inserters on `AUTO` (`electromagnetic-science-auto.json`); `terminal_swing_count` and `lcm` have no `AUTO` value and are kept. Selected clock exact: 352 in every period after the first; from a staged start (empty machines) the first period makes 288 | in `test:game` |
 | everything else | no | | |
 
 ## TODO: scaffold backfill
@@ -80,7 +82,7 @@ In the order they would settle the most:
    full-hand subtick clock is selected again, from the same day.
 4. **intermediates/processing-units** (belt export): rates moved slightly.
 5. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
-6. **science/electromagnetic-science**, **science/military-science**, **intermediates/flying-robot-frame**,
+6. **science/military-science**, **intermediates/flying-robot-frame**,
    **intermediates/lithium-plates**, **intermediates/electric-engine-unit**, **intermediates/productivity-module**,
    **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 

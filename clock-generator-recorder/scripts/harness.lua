@@ -90,13 +90,65 @@ local function fulfil_item_requests(entity, proxy)
     proxy.destroy()
 end
 
+local CRAFTING_MACHINE_TYPES = { ["assembling-machine"] = true, ["furnace"] = true }
+local DIRECTION_VECTORS = {
+    [defines.direction.north] = { x = 0, y = -1 },
+    [defines.direction.east] = { x = 1, y = 0 },
+    [defines.direction.south] = { x = 0, y = 1 },
+    [defines.direction.west] = { x = -1, y = 0 },
+}
+
+---The ends of an inserter ghost: where it picks up from and drops at (a long-handed inserter reaches two tiles)
+---@param ghost LuaEntity
+---@return MapPosition pickup, MapPosition drop
+local function inserter_ends(ghost)
+    local vector = DIRECTION_VECTORS[ghost.direction] or { x = 0, y = -1 }
+    local reach = ghost.ghost_name == "long-handed-inserter" and 2 or 1
+    local x, y = ghost.position.x, ghost.position.y
+    return { x = x + vector.x * reach, y = y + vector.y * reach }, { x = x - vector.x * reach, y = y - vector.y * reach }
+end
+
+---@param box BoundingBox
+---@param position MapPosition
+---@return boolean
+local function box_holds(box, position)
+    return position.x > box.left_top.x and position.x < box.right_bottom.x and position.y > box.left_top.y and position.y < box.right_bottom.y
+end
+
+---The inserters of the cell among the ghosts of a blueprint: those with an end on a crafting machine of the blueprint. An inserter
+---that only moves items between belts and chests (a scaffold's feeder) is the supply's, not the cell's.
+---@param ghosts LuaEntity[]
+---@return table<integer, boolean> by index in ghosts
+local function cell_inserter_flags(ghosts)
+    local boxes = {}
+    for _, ghost in pairs(ghosts) do
+        if ghost.valid and ghost.type == "entity-ghost" and CRAFTING_MACHINE_TYPES[ghost.ghost_type] then
+            table.insert(boxes, ghost.bounding_box)
+        end
+    end
+    local flags = {}
+    for index, ghost in ipairs(ghosts) do
+        if ghost.valid and ghost.type == "entity-ghost" and ghost.ghost_type == "inserter" then
+            local pickup, drop = inserter_ends(ghost)
+            for _, box in ipairs(boxes) do
+                if box_holds(box, pickup) or box_holds(box, drop) then
+                    flags[index] = true
+                    break
+                end
+            end
+        end
+    end
+    return flags
+end
+
 ---Build a blueprint string as real entities
 ---@param surface LuaSurface
 ---@param force LuaForce
 ---@param blueprint string
 ---@param position_for fun(half_width: number, half_height: number): MapPosition where the middle of the blueprint goes
----@return LuaEntity[] entities, string[] failed names of the entities that could not be built, table<uint, Tags> tags of the blueprint's entities by unit number
-local function build_blueprint(surface, force, blueprint, position_for)
+---@param stage_cell_inserters boolean|nil leave the inserters of the cell (those with an end on a crafting machine) as ghosts, to be built later
+---@return LuaEntity[] entities, string[] failed names of the entities that could not be built, table<uint, Tags> tags of the blueprint's entities by unit number, LuaEntity[] staged the ghosts left unbuilt, MapPosition position where the middle of the blueprint went
+local function build_blueprint(surface, force, blueprint, position_for, stage_cell_inserters)
     local inventory = game.create_inventory(1)
     local stack = inventory[1]
     if stack.import_stack(blueprint) < 0 or not stack.is_blueprint or not stack.is_blueprint_setup() then
@@ -123,9 +175,12 @@ local function build_blueprint(surface, force, blueprint, position_for)
     })
     inventory.destroy()
 
-    local entities, failed, tags = {}, {}, {}
-    for _, ghost in pairs(ghosts) do
-        if ghost.valid and ghost.type == "entity-ghost" then
+    local staged_flags = stage_cell_inserters and cell_inserter_flags(ghosts) or {}
+    local entities, failed, tags, staged = {}, {}, {}, {}
+    for index, ghost in ipairs(ghosts) do
+        if staged_flags[index] then
+            table.insert(staged, ghost)
+        elseif ghost.valid and ghost.type == "entity-ghost" then
             local name = ghost.ghost_name
             -- a ghost has the tags of its blueprint entity, which the entity it is revived as does not keep
             local ghost_tags = ghost.tags
@@ -145,7 +200,7 @@ local function build_blueprint(surface, force, blueprint, position_for)
             ghost.revive()
         end
     end
-    return entities, failed, tags
+    return entities, failed, tags, staged, position
 end
 
 ---@param entities LuaEntity[]
@@ -334,6 +389,115 @@ local function apply_seed(entities, seed)
     return { item = seed.item, entities = matched, inserted = inserted }
 end
 
+local BELT_PICKUP_TYPES = { "transport-belt", "underground-belt", "splitter", "loader", "loader-1x1", "linked-belt" }
+-- a lane is full when no item fits at a quarter, a half and three quarters of its belt piece
+local FULL_AT = { 0.25, 0.5, 0.75 }
+local DEFAULT_SATURATION_TICKS = 30
+local DEFAULT_SATURATION_CAP_TICKS = 10000
+
+---Whether a lane carries items, or one of the lanes that feed it does: a lane no feeder ever puts anything on (the other side of a
+---belt that carries one item) is not waited for, a lane the items have not reached yet is
+---@param line LuaTransportLine
+---@return boolean
+local function lane_in_use(line)
+    local pending, looked = { line }, 0
+    while #pending > 0 and looked < 400 do
+        local current = table.remove(pending)
+        looked = looked + 1
+        if current.get_item_count() > 0 then
+            return true
+        end
+        for _, upstream in pairs(current.input_lines) do
+            table.insert(pending, upstream)
+        end
+    end
+    return false
+end
+
+---@param line LuaTransportLine
+---@return boolean
+local function lane_is_full(line)
+    for _, at in ipairs(FULL_AT) do
+        if line.can_insert_at(line.line_length * at) then
+            return false
+        end
+    end
+    return true
+end
+
+---The staged start's first stage: the lanes under the pickup of every belt-fed inserter of the cell, which have to be saturated
+---before the inserters are built
+---@param options {saturation_ticks: number?, cap_ticks: number?}
+---@param ghosts LuaEntity[] the inserters of the cell, still ghosts
+---@param origin MapPosition
+---@return table
+local function start_staged_fill(options, ghosts, origin, surface)
+    local lanes, seen = {}, {}
+    for _, ghost in ipairs(ghosts) do
+        local pickup = inserter_ends(ghost)
+        for _, belt in pairs(surface.find_entities_filtered({ position = pickup, type = BELT_PICKUP_TYPES })) do
+            for index = 1, belt.get_max_transport_line_index() do
+                local key = belt.unit_number .. ":" .. index
+                if not seen[key] then
+                    seen[key] = true
+                    table.insert(lanes, { belt = belt, index = index, key = key, full_since = nil, in_use = false })
+                end
+            end
+        end
+    end
+    return {
+        phase = "filling",
+        started_tick = game.tick,
+        need_ticks = options.saturation_ticks or DEFAULT_SATURATION_TICKS,
+        cap_ticks = options.cap_ticks or DEFAULT_SATURATION_CAP_TICKS,
+        ghosts = ghosts,
+        origin = origin,
+        lanes = lanes,
+        run = 0,
+    }
+end
+
+---One tick of the first stage: every lane that carries items has to be full for need_ticks ticks in a row
+---@param state table storage.harness
+local function staged_tick(state)
+    local staged = state.staged
+    local all_full, any_in_use = true, false
+    for _, lane in ipairs(staged.lanes) do
+        local line = lane.belt.valid and lane.belt.get_transport_line(lane.index) or nil
+        lane.in_use = line ~= nil and lane_in_use(line)
+        if lane.in_use then
+            any_in_use = true
+            if lane_is_full(line) then
+                lane.full_since = lane.full_since or game.tick
+            else
+                lane.full_since = nil
+                all_full = false
+            end
+        else
+            lane.full_since = nil
+        end
+    end
+    staged.run = (all_full and (any_in_use or #staged.lanes == 0)) and staged.run + 1 or 0
+    if staged.run >= staged.need_ticks then
+        staged.phase = "saturated"
+        staged.saturated_tick = game.tick
+        staged.lane_log = {}
+        for _, lane in ipairs(staged.lanes) do
+            table.insert(staged.lane_log, { belt = lane.belt.unit_number, x = lane.belt.position.x, y = lane.belt.position.y, lane = lane.index, in_use = lane.in_use, full_since = lane.full_since })
+        end
+        state.ready = true
+        game.tick_paused = true
+    elseif game.tick - staged.started_tick >= staged.cap_ticks then
+        staged.phase = "failed"
+        staged.lane_log = {}
+        for _, lane in ipairs(staged.lanes) do
+            table.insert(staged.lane_log, { belt = lane.belt.valid and lane.belt.unit_number or nil, lane = lane.index, in_use = lane.in_use, full_since = lane.full_since })
+        end
+        staged.failed = "the lanes under the pickups were not full for " .. staged.need_ticks .. " ticks in a row within " .. staged.cap_ticks .. " ticks"
+        game.tick_paused = true
+    end
+end
+
 ---Build the blueprint and pause the game, after the warm-up when one is asked for
 ---@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, warmup_ticks: number?, speed: number?} speed: the game's speed from here on; it stays what it is when absent
 ---@return table report
@@ -344,7 +508,7 @@ function harness.build(job)
         error("no surface \"" .. tostring(job.surface) .. "\" or force \"" .. tostring(job.force) .. "\"")
     end
 
-    local entities, failed = build_blueprint(surface, force, job.blueprint, function(half_width)
+    local entities, failed, _, staged_ghosts, origin = build_blueprint(surface, force, job.blueprint, function(half_width)
         if job.position then
             return job.position
         end
@@ -354,7 +518,7 @@ function harness.build(job)
             right = math.max(right or -math.huge, entity.bounding_box.right_bottom.x)
         end
         return { x = right and (math.ceil(right) + 16 + half_width) or 0, y = 0 }
-    end)
+    end, job.staged ~= nil)
     if #entities == 0 then
         error("nothing of the blueprint could be built")
     end
@@ -364,7 +528,11 @@ function harness.build(job)
         force_name = force.name,
         entities = entities,
         ready = false,
+        origin = origin,
     }
+    if job.staged then
+        state.staged = start_staged_fill(job.staged, staged_ghosts, origin, surface)
+    end
 
     local removed = 0
     if job.clock == "remove" then
@@ -391,7 +559,9 @@ function harness.build(job)
         game.speed = job.speed
     end
     -- an inserter only knows what it picks from and drops into after its first tick, so the build runs at least one
-    state.pause_tick = game.tick + math.max(job.warmup_ticks or 0, 1)
+    if not state.staged then
+        state.pause_tick = game.tick + math.max(job.warmup_ticks or 0, 1)
+    end
     game.tick_paused = false
 
     local clocked = 0
@@ -406,6 +576,8 @@ function harness.build(job)
         removed_clock_combinators = removed,
         clocked_inserters = clocked,
         tick = game.tick,
+        origin = origin,
+        staged = state.staged and { cell_inserters = #staged_ghosts, lanes = #state.staged.lanes } or nil,
     }
 end
 
@@ -418,6 +590,13 @@ function harness.clear()
     end
     recorder.finish("build removed")
 
+    if state.staged then
+        for _, ghost in ipairs(state.staged.ghosts) do
+            if ghost.valid then
+                ghost.destroy()
+            end
+        end
+    end
     local built = {}
     for _, entity in pairs(state.entities) do
         if entity.valid then
@@ -467,6 +646,7 @@ local function movers(entities)
             table.insert(found.inserters, {
                 unit_number = entity.unit_number,
                 name = entity.name,
+                position = { x = entity.position.x, y = entity.position.y },
                 pickup = end_of(entity.pickup_target),
                 drop = end_of(entity.drop_target),
             })
@@ -506,6 +686,92 @@ local function start_recording(state)
     end
 end
 
+---The staged start's second stage, in the one tick the game is paused in: builds the inserters of the cell one after the other in the
+---order asked for, so the unit numbers (the order the game serves inserters that ask at the same time in) come out in that order
+---@param state table storage.harness
+---@param options {order: {x: number, y: number, config_id: number?}[]?}
+---@return table report placed: every inserter built with its unit number; by_config: unit number by config id
+local function place_staged(state, options)
+    local staged = state.staged
+    if staged.phase ~= "saturated" then
+        error("the lanes under the pickups are not saturated: the cell's inserters are not built yet")
+    end
+    local function key(x, y)
+        return string.format("%.2f,%.2f", x, y)
+    end
+    local ghost_at = {}
+    for _, ghost in ipairs(staged.ghosts) do
+        if ghost.valid then
+            ghost_at[key(ghost.position.x - staged.origin.x, ghost.position.y - staged.origin.y)] = ghost
+        end
+    end
+    local placed, by_config = {}, {}
+    local function place(ghost, config_id)
+        local x, y = ghost.position.x - staged.origin.x, ghost.position.y - staged.origin.y
+        local _, entity, proxy = ghost.revive({ raise_revive = true })
+        if not entity then
+            error("could not build the inserter staged at " .. key(x, y))
+        end
+        if proxy and proxy.valid then
+            fulfil_item_requests(entity, proxy)
+        end
+        table.insert(state.entities, entity)
+        table.insert(placed, { unit_number = entity.unit_number, name = entity.name, config_id = config_id, x = x, y = y, tick = game.tick })
+        if config_id then
+            by_config[tostring(config_id)] = entity.unit_number
+        end
+    end
+    for _, item in ipairs(options.order or {}) do
+        local at = key(item.x, item.y)
+        local ghost = ghost_at[at]
+        if ghost and ghost.valid then
+            ghost_at[at] = nil
+            place(ghost, item.config_id)
+        end
+    end
+    -- an inserter of the cell the order does not name follows, in the order of the blueprint
+    for _, ghost in ipairs(staged.ghosts) do
+        if ghost.valid then
+            local at = key(ghost.position.x - staged.origin.x, ghost.position.y - staged.origin.y)
+            if ghost_at[at] then
+                ghost_at[at] = nil
+                place(ghost, nil)
+            end
+        end
+    end
+    staged.phase = "placed"
+    return { placed = placed, by_config = by_config, tick = game.tick }
+end
+
+---Put the same amount of an item a recipe makes and takes into every machine that makes and takes it: a loop of a machine on its own
+---product (the pentapod egg) cannot start itself
+---@param entities LuaEntity[]
+---@param amount number
+---@return table[] report
+local function seed_self_ingredient_loops(entities, amount)
+    local report = {}
+    for _, entity in pairs(entities) do
+        if entity.valid and (entity.type == "assembling-machine" or entity.type == "furnace") then
+            local ok, recipe = pcall(function() return entity.get_recipe() end)
+            if ok and recipe then
+                local products = {}
+                for _, product in pairs(recipe.products) do
+                    if product.type == "item" then
+                        products[product.name] = true
+                    end
+                end
+                for _, ingredient in pairs(recipe.ingredients) do
+                    if ingredient.type == "item" and products[ingredient.name] then
+                        local inserted = entity.insert({ name = ingredient.name, count = amount })
+                        table.insert(report, { unit_number = entity.unit_number, recipe = recipe.name, item = ingredient.name, inserted = inserted })
+                    end
+                end
+            end
+        end
+    end
+    return report
+end
+
 ---Wire a clock, seed the build, start recording and let the game run
 ---@param job {clock: table?, unclocked: boolean?, seed: table[]?, lua: string?, settle_ticks: number?, record: {ticks: number?, periods: number?}?}
 ---@return table report
@@ -516,6 +782,14 @@ function harness.start(job)
     end
     local report = { seeds = {} }
 
+    if state.staged then
+        local staged_options = job.staged or {}
+        report.staged = place_staged(state, staged_options)
+        if job.clock then
+            job.clock.inserters = report.staged.by_config
+        end
+    end
+
     if job.clock then
         report.clock = wire_clock(state, job.clock)
     elseif job.unclocked then
@@ -524,6 +798,10 @@ function harness.start(job)
                 run_without_circuit(inserter)
             end
         end
+    end
+
+    if state.staged then
+        report.loop_seeds = seed_self_ingredient_loops(state.entities, (job.staged or {}).loop_seed or 200)
     end
 
     for _, seed in ipairs(job.seed or {}) do
@@ -544,12 +822,14 @@ function harness.start(job)
         periods = record.periods or 1,
         minimum_ticks = record.ticks or 0,
         ticks_without_clock = record.ticks or 600,
-        ignore_clock = job.unclocked,
+        -- a staged start records from the tick its inserters and clock are placed in, not from the clock's next wrap
+        ignore_clock = job.unclocked or state.staged ~= nil,
     }
     state.ready = false
-    if (job.settle_ticks or 0) > 0 then
-        -- the build runs on its new clock and seeds for a while first, so its start-up is not in the recording
-        state.record_tick = game.tick + job.settle_ticks
+    if (job.settle_ticks or 0) > 0 or state.staged then
+        -- the build runs on its new clock and seeds for a while first, so its start-up is not in the recording. The inserters built
+        -- in a staged start know what they pick up from and drop into after their first tick, which the recording needs
+        state.record_tick = game.tick + math.max(job.settle_ticks or 0, 1)
     else
         start_recording(state)
     end
@@ -567,17 +847,25 @@ function harness.status()
     status.paused = game.tick_paused
     status.ready = state ~= nil and state.ready
     status.settling = state ~= nil and state.record_tick ~= nil
+    if state ~= nil and state.staged ~= nil then
+        local staged = state.staged
+        status.staged = { phase = staged.phase, started_tick = staged.started_tick, saturated_tick = staged.saturated_tick, failed = staged.failed, lanes = staged.lane_log, run = staged.run }
+    end
     return status
 end
 
 ---@return boolean
 function harness.is_waiting()
-    return storage.harness ~= nil and (storage.harness.pause_tick ~= nil or storage.harness.record_tick ~= nil)
+    local state = storage.harness
+    return state ~= nil and (state.pause_tick ~= nil or state.record_tick ~= nil or (state.staged ~= nil and state.staged.phase == "filling"))
 end
 
 ---Per-tick handler during the warm-up, which pauses the game once it is over, and while a build settles before it is recorded
 function harness.on_tick()
     local state = storage.harness
+    if state and state.staged and state.staged.phase == "filling" then
+        staged_tick(state)
+    end
     if state and state.pause_tick and game.tick >= state.pause_tick then
         state.pause_tick = nil
         state.ready = true

@@ -126,7 +126,7 @@ describe("generateClockForConfig", () => {
     // paddings in a row to pass, so it found nothing. The search since 2026-10-11 confirms a padding without a passing
     // neighbour when there is none with one: the windows with no padding pass from every start and over the long run,
     // where a tick of padding does not. Whether the game has that state is not recorded; there is no scaffold of this
-    // build.
+    // build. From the staged start of the simulator (empty machines) that state is gone: every padding passes.
     describe("PRODUCTION_SCIENCE_JSON derived clock windows", async () => {
         const config = await loadConfigFromFile(ConfigPaths.PRODUCTION_SCIENCE_JSON);
 
@@ -135,16 +135,19 @@ describe("generateClockForConfig", () => {
             expect(result.stability_check.as_built?.holds).toBe(false);
         });
 
-        it("derives windows with no padding, the one setting that passes with none of its neighbours", () => {
+        // From the staged start (empty machines, the clock at its tick 0) every padding tried passes, so the search
+        // picks the first one that has a passing neighbour: 1 tick. The state that needed 0 ticks existed only from the
+        // prepared build.
+        it("derives windows with 1 tick of padding: from the staged start every padding tried passes", () => {
             const result = generateClockForConfig({
                 ...config,
                 overrides: { ...config.overrides, derive_clock_windows: true },
             }, { logger: quiet });
-            expect(result.derived_clock_windows).toMatchObject({ succeeded: true, kept_planned_windows: false, end_padding_ticks: 0 });
+            expect(result.derived_clock_windows).toMatchObject({ succeeded: true, kept_planned_windows: false, end_padding_ticks: 1 });
             expect(result.stability_check.holds).toBe(true);
-            expect(result.search).toMatchObject({ kind: "padding", picked: { row: 1, setting: 0 } });
-            expect(result.search!.candidates.find(candidate => candidate.setting === 1)!.holds).toBe(false);
-            expect(result.search!.candidates.find(candidate => candidate.setting === 2)!.holds).toBe(false);
+            expect(result.search).toMatchObject({ kind: "padding", picked: { row: 1, setting: 1 } });
+            expect(result.search!.candidates.find(candidate => candidate.setting === 0)!.holds).toBe(true);
+            expect(result.search!.candidates.find(candidate => candidate.setting === 2)!.holds).toBe(true);
         });
     });
 });

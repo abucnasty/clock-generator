@@ -74,7 +74,9 @@ describe("a clock tried for backpressure loss", () => {
     });
 });
 
-// Military science: every clock but one holds 120 a second and does not get back to it once the coal has run out
+// Military science: from the staged start no clock of the build is stable. Two hold 120 a second and are broken by a loss
+// (the selected one among them); the others fail the long run and are unstable. The test of a surviving clock selected
+// over a broken one is on another sample below.
 describe("what the generator calls stable", () => {
     let config: Config;
     let alternatives: ClockAlternative[];
@@ -109,24 +111,6 @@ describe("what the generator calls stable", () => {
         expect(selected.assessment.backpressure_loss).toEqual(verdictOf(report));
     });
 
-    it("selects a clock that survives over one with a better rank that does not", () => {
-        const full_hand = alternatives.find(alternative => alternative.id === "full-hand")!;
-        expect(full_hand.verdict).not.toBe("unstable");
-        expect(full_hand.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null });
-        expect(full_hand.verdict).not.toBe("stable");
-        expect(selected.verdict).toBe("stable");
-        expect(selected.assessment.backpressure_loss!.survives).toBe(true);
-    });
-
-    it("says of a clock that does not survive which losses break it, in its description and in an insight", () => {
-        const full_hand = alternatives.find(alternative => alternative.id === "full-hand")!;
-        expect(full_hand.description).toContain("It does not survive backpressure loss: the build does not get back to its expected output under this clock after coal stops arriving.");
-        expect(full_hand.insights.find(insight => insight.id === "backpressure-loss")?.what).toContain("coal stops arriving");
-        expect(full_hand.insights.some(insight => insight.id === "unstable")).toBe(false);
-        expect(selected.description).not.toContain("backpressure loss");
-        expect(selected.insights.some(insight => insight.id === "backpressure-loss")).toBe(false);
-    });
-
     // the build has no deadlock risk (see deadlock-risk.ts): on one that has, the verdict is shown and does not decide
     it("names no deadlock risk on any clock, and has a clock get back from every loss to meet the target rate", () => {
         for (const alternative of alternatives) {
@@ -134,5 +118,39 @@ describe("what the generator calls stable", () => {
             expect(alternative.insights.some(it => it.id === "deadlock-risk")).toBe(false);
             expect(alternative.ranking.meets_target_rate && alternative.verdict !== "stable", alternative.id).toBe(false);
         }
+    });
+});
+
+// Utility science with the low density structure chain direct-inserted and always on: batched swings and the observed
+// windows hold 240 a second and do not get back to it once the coal has run out. Three other clocks hold and get back
+// from every loss, and the one selected is stable. This sample stands where military science stood before the staged
+// start: there full-hand swings held and was broken by the loss of coal alone, and a surviving clock was selected.
+describe("what the generator calls stable, on a build where some clocks are broken by one loss", () => {
+    let alternatives: ClockAlternative[];
+    let selected: ClockAlternative;
+
+    beforeAll(async () => {
+        const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON);
+        const generated = generateClockAlternatives(config, { logger: quiet });
+        alternatives = generated.alternatives;
+        selected = alternatives[generated.selected_index];
+    });
+
+    it("selects a clock that survives over one with a better rank that does not", () => {
+        const batched = alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
+        expect(batched.verdict).not.toBe("unstable");
+        expect(batched.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null });
+        expect(batched.verdict).not.toBe("stable");
+        expect(selected.verdict).toBe("stable");
+        expect(selected.assessment.backpressure_loss!.survives).toBe(true);
+    });
+
+    it("says of a clock that does not survive which losses break it, in its description and in an insight", () => {
+        const batched = alternatives.find(alternative => alternative.id === "planned-belt-slack")!;
+        expect(batched.description).toContain("It does not survive backpressure loss: the build does not get back to its expected output under this clock after coal stops arriving.");
+        expect(batched.insights.find(insight => insight.id === "backpressure-loss")?.what).toContain("coal stops arriving");
+        expect(batched.insights.some(insight => insight.id === "unstable")).toBe(false);
+        expect(selected.description).not.toContain("backpressure loss");
+        expect(selected.insights.some(insight => insight.id === "backpressure-loss")).toBe(false);
     });
 });

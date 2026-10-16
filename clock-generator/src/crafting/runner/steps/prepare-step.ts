@@ -145,7 +145,7 @@ export class PrepareStep implements RunnerStep {
             [
                 tick_control_logic,
                 ...cloned_context.drills,
-                ...cloned_context.inserters,
+                cloned_context.inserterUpdates(),
                 ...cloned_context.machines,
             ]
         )

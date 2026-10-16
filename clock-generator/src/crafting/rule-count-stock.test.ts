@@ -36,16 +36,17 @@ describe("the rule count of a simulated run", () => {
         clock.result.clock_windows, clock.result.simulation_duration.ticks, periods, quiet);
 
     // The simulator counts the crafts a machine starts; it reads them nowhere, so a run is what it was before. The
-    // figures are those of the run before the counter existed (every series of the stock hashed alike, 40 periods).
+    // figures are those of the run before the counter existed (every series of the stock hashed alike, 40 periods),
+    // taken again when the runs began from the staged start (empty machines): the prepared build gave 4082 and 2042.
     it("records the crafts a machine starts without changing the run", () => {
         expect(clock.id).toBe("swings-3");
         const stock = stockOf(40);
         expect(stock.ticks).toBe(10560);
         const machine = stock.machines[0];
         expect(machine.crafts_started).toHaveLength(stock.ticks);
-        // a craft pays a product, and the productivity bar pays another for about each: 4082 finished for 2042 started
-        expect(machine.products_finished.at(-1)).toBe(4082);
-        expect(machine.crafts_started.at(-1)).toBe(2042);
+        // a craft pays a product, and the productivity bar pays another for about each: 4018 finished for 2010 started
+        expect(machine.products_finished.at(-1)).toBe(4018);
+        expect(machine.crafts_started.at(-1)).toBe(2010);
         expect(machine.crafts_started.every((count, tick) => tick === 0 || count >= machine.crafts_started[tick - 1])).toBe(true);
         expect(clock.result.stability_check.as_built!.wake_ups!.wake_ups_per_minute).toBeCloseTo(177.27, 2);
     });

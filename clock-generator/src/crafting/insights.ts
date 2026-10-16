@@ -331,6 +331,22 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     };
 }
 
+/** Why a clock that reaches its target from some starts only is listed as unstable, with where it settles elsewhere */
+export function startDependenceInsight(note: string): ClockInsight {
+    return {
+        id: "start-dependence",
+        scope: "clock",
+        title: "This clock depends on how it is started",
+        what: note,
+        why: "A build that has run on its own before its clock is wired holds what that run left in its machines, hands and "
+            + "swings. Some clocks bring every such start to the same steady state, and some settle in another one from another start. "
+            + "The starts tried are the cold start of the scaffold, the same with the clock wired later, the start the generator had "
+            + "before the scaffold's and a free run from the filled build.",
+        explanation: "The clock reaches its target when it is started as the first start says, and not from the others. Use a "
+            + "clock that is Stable, or start this one as the first start does (a scaffold that has run free before the clock is wired).",
+    };
+}
+
 /** The insights for one potential clock, the ones about the whole build first */
 /** Why a clock that holds its expected output is still not listed as stable (GOALS.md, "Backpressure Loss") */
 export function backpressureLossInsight(verdict: BackpressureLossVerdict, expected_output_items: number): ClockInsight {
