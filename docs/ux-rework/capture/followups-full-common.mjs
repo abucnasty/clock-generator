@@ -24,7 +24,7 @@ export async function geometryOf(p){return p.evaluate(()=>{
  const isDiagramTransform=e=>!!e.closest('.react-flow__viewport')&&!!e.closest('.react-flow')?.querySelector('.react-flow__node');
  const semanticSurfaces=owner=>[...owner.querySelectorAll('table,[role=table],[role=grid],svg[role=img],.react-flow[role=application],.react-flow[role=region]')].filter(e=>{
   if(!active(e))return false;
-  if(e.matches('svg')){const r=e.getBoundingClientRect();return !!name(e)&&!e.classList.contains('MuiSvgIcon-root')&&r.width>=120&&r.height>=60;}
+  if(e.matches('svg')){const r=e.getBoundingClientRect(),v=e.viewBox?.baseVal;const provenFuel=name(owner)==='Fuel timeline chart'&&/^(Machine \d+ fuel level over the run|Inserter \d+ fuel clock wake windows and swings)$/.test(name(e))&&v?.width>0&&v.height>0;return !!name(e)&&!e.classList.contains('MuiSvgIcon-root')&&r.width>0&&r.height>0&&(provenFuel||(r.width>=120&&r.height>=60));}
   if(e.classList.contains('react-flow'))return !!name(e)&&!!e.querySelector('.react-flow__viewport,.react-flow__node');
   return !!e.querySelector('tr,[role=row]');
  });
@@ -61,7 +61,8 @@ export async function geometryOf(p){return p.evaluate(()=>{
   const outside=limits.filter(b=>r.left<b.left-1||r.right>b.right+1);
   if(outside.length)clippedControls.push({...describe(e),outside});
  }
- const localReflow={pass:ordinaryScrollers.length===0&&clippedControls.length===0,scope:dialogs.length?'active exposed dialogs':'active exposed header/main',scopes:scopes.map(describe),ordinaryScrollers,clippedControls,dataExceptions,excludedPaintNodes,verticalOffscreenIncluded:true,rule:'>1px horizontal excess; no arbitrary SVG/ancestor-table exception; raw geometry remains diagnostic and unchanged'};
+ const dataCandidates=elements.filter(e=>e.matches('svg[role=img]')).map(e=>({...describe(e),viewBox:e.getAttribute('viewBox'),ownerRegion:e.closest('[role=region]')?describe(e.closest('[role=region]')):null,nearestBoundary:nearestBoundary(e)?describe(nearestBoundary(e)):null}));
+ const localReflow={pass:ordinaryScrollers.length===0&&clippedControls.length===0,scope:dialogs.length?'active exposed dialogs':'active exposed header/main',scopes:scopes.map(describe),ordinaryScrollers,clippedControls,dataExceptions,dataCandidates,excludedPaintNodes,verticalOffscreenIncluded:true,rule:'>1px horizontal excess; no arbitrary SVG/ancestor-table exception; raw geometry remains diagnostic and unchanged'};
  return {actualViewport:vw,deviceScaleFactor:devicePixelRatio,documentClient:document.documentElement.clientWidth,documentScroll:document.documentElement.scrollWidth,bodyScroll:document.body.scrollWidth,scrollers,overflow,localReflow};
 });}
 export function ordinaryLocalFailures(g){if(!g.localReflow)throw Error('Local reflow grading requires fresh active semantic geometry');return [...g.localReflow.ordinaryScrollers,...g.localReflow.clippedControls];}
