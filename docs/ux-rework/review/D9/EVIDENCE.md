@@ -31,3 +31,11 @@ Root explicitly adopted the D9 spec's two-line internal visibility allowance (ca
 
 Author status: HOLD for root commit and all required gates/reruns. This follow-up changes no test counts or physical test-line proxies. Separate source-bound later-provider KEEP decisions are retained in [LATER-PROVIDERS.md](/tmp/ux-p4-d9-attribution/LATER-PROVIDERS.md); final merged-head reconciliation remains open.
 
+
+## Root verified first cleanup acceptance
+
+Frozen product `e143cca2071b007005f2d231901721203de83f7a`, before `68998602a74b7c8bad7801d5401ec7236da71aae`. Full UI test/lint/default knip/check:icons/build PASS; independent own-engine test/build repeat PASS. Executed workload: 1305 → 1248 tests, 81 → 81 files. Root verified all 412 emitted production files byte-identical across before/after, including both visibility-only changes. Full receipts: `/tmp/ux-p4-d9-checks-r1/{SOURCE,RESULTS,BENCHMARK}.json`; independent repeat `/tmp/ux-p4-d9-repeat-r1/RESULTS.json`. Initial knip-negative source4704b61 retained separately in `/tmp/ux-p4-d9-checks-r0`.
+
+Comparable sequential local `npm test` pair after both own-source installs/builds/gates, no cache flush: before4.612s command wall (Vitest4.15s), after2.672s (Vitest2.25s). One local pair only, without a runtime or CI speed guarantee; CI timing comparison unavailable. Exact runner/cache qualifications and actual logs are in BENCHMARK.json. This directly measures fewer executed cases; product assets match exactly.
+
+Independent CODE/UX reviews and exact-head CI remain pending. Final later-provider integration refresh remains OPEN. No source-only native boundary is promoted to browser PASS.
