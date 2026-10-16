@@ -112,7 +112,7 @@ come from here.
 
 - 2026-10-16: Temporary owner model override: every worker, including every reviewer and all three phase-end personas, uses GPT-6.1 Sol / high reasoning / fast off until revoked. Owner handles parent model. Replace Astra workers on next use; preserve role independence, review rounds and all verification/checkpoints.
 
-- 2026-10-16: Owner preview correction: remove “Items per swing. Clear for Automatic.” under explicit Stack size fields and reclaim its helper space, in both List and Diagram. Include in the pending P3 compatibility adjunct and carry to2.7B; preserve Automatic explanations, values and clearing semantics. Focused visual/accessibility recheck required; existing review counters retained.
+- 2026-10-16: Owner preview correction: remove “Items per swing. Clear for Automatic.” under explicit Stack size fields and reclaim its helper space, in both List and Diagram. Include in the pending P3 compatibility adjunct and carry to2.7B; preserve Automatic explanations, values and clearing semantics. Focused five-width visual/accessibility checks passed (1483/0/0); owner approved the preview improvement, reserving a broader audit for later. Existing review counters and phase/install checkpoints retained.
 
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
 
