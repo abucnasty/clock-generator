@@ -9,8 +9,63 @@ export async function geometryOf(p){return p.evaluate(()=>{
  const all=[...document.body.querySelectorAll('*')].filter(e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width&&r.height&&s.visibility!=='hidden'&&s.display!=='none';});
  const scrollers=all.filter(e=>e.scrollWidth>e.clientWidth+1&&['auto','scroll'].includes(getComputedStyle(e).overflowX)).map(e=>({path:path(e),name:name(e),role:e.getAttribute('role'),tabIndex:e.tabIndex,client:e.clientWidth,scroll:e.scrollWidth,contains2DFacts:{table:!!e.querySelector('table'),svg:!!e.querySelector('svg'),diagram:!!e.querySelector('.react-flow')},rect:e.getBoundingClientRect().toJSON()}));
  const overflow=all.filter(e=>{const r=e.getBoundingClientRect();return r.left< -1||r.right>vw+1||e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).overflowX==='visible';}).map(e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e),a=local(e);return {path:path(e),tag:e.tagName,role:e.getAttribute('role'),name:name(e),text:e.textContent?.trim().slice(0,160),rect:r.toJSON(),client:e.clientWidth,scroll:e.scrollWidth,overflowX:s.overflowX,localScroller:a?{path:path(a),name:name(a),contains2DFacts:{table:!!a.querySelector('table'),svg:!!a.querySelector('svg'),diagram:!!a.querySelector('.react-flow')}}:null};});
- return {actualViewport:vw,deviceScaleFactor:devicePixelRatio,documentClient:document.documentElement.clientWidth,documentScroll:document.documentElement.scrollWidth,bodyScroll:document.body.scrollWidth,scrollers,overflow};
+ // Keep all raw geometry above. Grade only the rendered active dialog/view, including content vertically offscreen.
+ const hiddenByTree=e=>{for(let a=e;a;a=a.parentElement){const s=getComputedStyle(a);if(a.hidden||a.inert||a.getAttribute('aria-hidden')==='true'||s.display==='none'||s.visibility==='hidden'||s.visibility==='collapse')return true;}return false;};
+ const rendered=e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&!hiddenByTree(e);};
+ const dialogs=[...document.querySelectorAll('[role=dialog],[role=alertdialog]')].filter(rendered);
+ const scopes=dialogs.length?dialogs:[...document.querySelectorAll('header,main,[role=main]')].filter(rendered);
+ if(!scopes.length)scopes.push(document.body);
+ const active=e=>rendered(e)&&scopes.some(s=>s===e||s.contains(e));
+ const elements=[...new Set(scopes.flatMap(s=>[s,...s.querySelectorAll('*')]))].filter(active);
+ const boundary=e=>{const r=e.getBoundingClientRect();return {left:r.left+e.clientLeft,right:r.left+e.clientLeft+e.clientWidth};};
+ const scopeBounds=e=>{const scope=scopes.find(s=>s===e||s.contains(e));const b=scope===document.body?{left:0,right:vw}:boundary(scope);return {left:Math.max(0,b.left),right:Math.min(vw,b.right)};};
+ const horizontalContainer=e=>{const s=getComputedStyle(e);return e.clientWidth>0&&['auto','scroll','hidden','clip'].includes(s.overflowX);};
+ const nearestBoundary=e=>{for(let a=e.parentElement;a;a=a.parentElement)if(horizontalContainer(a))return a;return null;};
+ const isDiagramTransform=e=>!!e.closest('.react-flow__viewport')&&!!e.closest('.react-flow')?.querySelector('.react-flow__node');
+ const semanticSurfaces=owner=>[...owner.querySelectorAll('table,[role=table],[role=grid],svg[role=img],.react-flow[role=application],.react-flow[role=region]')].filter(e=>{
+  if(!active(e))return false;
+  if(e.matches('svg')){const r=e.getBoundingClientRect();return !!name(e)&&!e.classList.contains('MuiSvgIcon-root')&&r.width>=120&&r.height>=60;}
+  if(e.classList.contains('react-flow'))return !!name(e)&&!!e.querySelector('.react-flow__viewport,.react-flow__node');
+  return !!e.querySelector('tr,[role=row]');
+ });
+ const exceptions=new Map();
+ for(const e of elements){
+  // A page/dialog/panel containing some data is never a data exception. The data must own this exact local boundary.
+  if(!horizontalContainer(e)||e.getAttribute('role')!=='region'||!name(e)||e.tabIndex<0||e.matches('main,header,[role=main],[role=dialog],[role=alertdialog]'))continue;
+  const b=boundary(e),scope=scopeBounds(e),surfaces=semanticSurfaces(e).filter(d=>nearestBoundary(d)===e);
+  const ordinaryControls=[...e.querySelectorAll('button,input,select,textarea,[role=button],[role=combobox],[role=tab]')].filter(active).filter(c=>!surfaces.some(d=>d.contains(c)));
+  if(surfaces.length&&!ordinaryControls.length&&b.right>b.left&&b.left>=scope.left-1&&b.right<=scope.right+1)exceptions.set(e,surfaces);
+ }
+ const inDataSurface=e=>{for(let a=e.parentElement;a;a=a.parentElement){const surfaces=exceptions.get(a);if(surfaces?.some(d=>d===e||d.contains(e)))return a;}return null;};
+ const describe=e=>({path:path(e),tag:e.tagName,name:name(e),role:e.getAttribute('role'),client:e.clientWidth,scroll:e.scrollWidth,overflowX:getComputedStyle(e).overflowX,rect:e.getBoundingClientRect().toJSON()});
+ const ordinaryScrollers=[],dataExceptions=[],clippedControls=[],excludedPaintNodes=[];
+ for(const e of elements){
+  // Text input value scrolling is intrinsic editing behavior; it never excuses its painted outer control's bounds.
+  if(e.matches('input,textarea,svg,svg *')||isDiagramTransform(e))continue;
+  const s=getComputedStyle(e),relevant=['auto','scroll'].includes(s.overflowX)||e.matches('.MuiDialogContent-root,.MuiTabs-scroller,[role=tablist],.MuiSelect-select,[role=combobox]:not(input)');
+  if(relevant&&e.clientWidth>0&&e.scrollWidth>e.clientWidth+1){
+   const surfaces=exceptions.get(e);
+   if(surfaces)dataExceptions.push({...describe(e),surfaces:surfaces.map(describe)});
+   else if(!inDataSurface(e))ordinaryScrollers.push(describe(e));
+  }
+ }
+ const controls=elements.filter(e=>e.matches('button,input,select,textarea,[role=button],[role=combobox],[role=tab],.MuiInputBase-root,.MuiSwitch-root,.MuiCheckbox-root'));
+ for(const e of controls){
+  const css=getComputedStyle(e);
+  // Transparent native Switch/Checkbox inputs retain their semantic/keyboard gates; only painted-boundary grading skips them.
+  if(e.matches('input')&&Number(css.opacity)===0){excludedPaintNodes.push({...describe(e),reason:'transparent native input: painted wrapper/label and semantic gates remain'});continue;}
+  if(isDiagramTransform(e)){excludedPaintNodes.push({...describe(e),reason:'ReactFlow transformed node: bounded diagram/keyboard gates remain'});continue;}
+  if(inDataSurface(e))continue;
+  const r=e.getBoundingClientRect(),limits=[{kind:'active scope',...scopeBounds(e)}];
+  for(let a=e.parentElement;a&&active(a);a=a.parentElement)if(horizontalContainer(a))limits.push({kind:path(a),...boundary(a)});
+  const outside=limits.filter(b=>r.left<b.left-1||r.right>b.right+1);
+  if(outside.length)clippedControls.push({...describe(e),outside});
+ }
+ const localReflow={pass:ordinaryScrollers.length===0&&clippedControls.length===0,scope:dialogs.length?'active exposed dialogs':'active exposed header/main',scopes:scopes.map(describe),ordinaryScrollers,clippedControls,dataExceptions,excludedPaintNodes,verticalOffscreenIncluded:true,rule:'>1px horizontal excess; no arbitrary SVG/ancestor-table exception; raw geometry remains diagnostic and unchanged'};
+ return {actualViewport:vw,deviceScaleFactor:devicePixelRatio,documentClient:document.documentElement.clientWidth,documentScroll:document.documentElement.scrollWidth,bodyScroll:document.body.scrollWidth,scrollers,overflow,localReflow};
 });}
+export function ordinaryLocalFailures(g){if(!g.localReflow)throw Error('Local reflow grading requires fresh active semantic geometry');return [...g.localReflow.ordinaryScrollers,...g.localReflow.clippedControls];}
+export function assertOrdinaryLocal(rec,g,name){const failures=ordinaryLocalFailures(g);rec.check(`${name}: active ordinary local containers and painted controls reflow`,g.localReflow.pass,JSON.stringify(failures));}
 export async function restDialog(page, dialog = page.getByRole('dialog')) {
     await dialog.waitFor({ state: 'visible' });
     await page.mouse.move(0, 0);
@@ -87,7 +142,7 @@ async function controlPairs(locator) {
 }
 
 export function createHarness(L,OUT){const {ui,waitReady,checkAxe,noSideScroll,contrast,checkLabelInName,checkTabTo,checkFocusNotObscured,checkMouseActivationVisible,checkFocusNotObscuredAtHeight,checkAnnounced}=L;const geometry=[],paints=[];
- async function shot(p,rec,name,{short=false,scope}={}){await rest(p);for(const d of await ui.followDialogs(p).all())await restDialog(p,d);const g=await geometryOf(p);geometry.push({width:p.viewportSize().width,name,...g});writeFileSync(join(OUT,'geometry.json'),JSON.stringify(geometry,null,2));rec.info(`${name} actual geometry`,JSON.stringify(g));const a=await noSideScroll(p);rec.check(`${name}: ordinary page reflows`,a.pass,a.detail);await rec.shot(p,name,{aria:true});const axe=await checkAxe(rec,p,name);if(axe?.length){const details=await p.evaluate(()=>[...document.querySelectorAll('button,input,[role=button],summary,[tabindex],[role=tooltip]')].map(e=>({id:e.id,tag:e.tagName,name:e.getAttribute('aria-label')??e.textContent?.trim(),html:e.outerHTML,rect:e.getBoundingClientRect().toJSON(),focused:e===document.activeElement,centerHit:(()=>{const r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,700)})(),ancestors:(()=>{const a=[];for(let n=e.parentElement;n&&a.length<5;n=n.parentElement)a.push({tag:n.tagName,role:n.getAttribute('role'),rect:n.getBoundingClientRect().toJSON(),overflow:getComputedStyle(n).overflow});return a;})(),scrollY,header:document.querySelector('header')?.getBoundingClientRect().toJSON(),scrollPaddingTop:getComputedStyle(document.documentElement).scrollPaddingTop})));writeFileSync(join(OUT,`INTERACTIVE-${name}-${p.viewportSize().width}.json`),JSON.stringify(details,null,2));}rec.check(`${name}: axe executes (zero skips)`,Array.isArray(axe));if(short)await checkFocusNotObscuredAtHeight(rec,p,{height:560,walk:scope,max:150});}
+ async function shot(p,rec,name,{short=false,scope}={}){await rest(p);for(const d of await ui.followDialogs(p).all())await restDialog(p,d);const g=await geometryOf(p);geometry.push({width:p.viewportSize().width,name,...g});writeFileSync(join(OUT,'geometry.json'),JSON.stringify(geometry,null,2));rec.info(`${name} actual geometry`,JSON.stringify(g));assertOrdinaryLocal(rec,g,name);const a=await noSideScroll(p);rec.check(`${name}: ordinary page reflows`,a.pass,a.detail);await rec.shot(p,name,{aria:true});const axe=await checkAxe(rec,p,name);if(axe?.length){const details=await p.evaluate(()=>[...document.querySelectorAll('button,input,[role=button],summary,[tabindex],[role=tooltip]')].map(e=>({id:e.id,tag:e.tagName,name:e.getAttribute('aria-label')??e.textContent?.trim(),html:e.outerHTML,rect:e.getBoundingClientRect().toJSON(),focused:e===document.activeElement,centerHit:(()=>{const r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,700)})(),ancestors:(()=>{const a=[];for(let n=e.parentElement;n&&a.length<5;n=n.parentElement)a.push({tag:n.tagName,role:n.getAttribute('role'),rect:n.getBoundingClientRect().toJSON(),overflow:getComputedStyle(n).overflow});return a;})(),scrollY,header:document.querySelector('header')?.getBoundingClientRect().toJSON(),scrollPaddingTop:getComputedStyle(document.documentElement).scrollPaddingTop})));writeFileSync(join(OUT,`INTERACTIVE-${name}-${p.viewportSize().width}.json`),JSON.stringify(details,null,2));}rec.check(`${name}: axe executes (zero skips)`,Array.isArray(axe));if(short)await checkFocusNotObscuredAtHeight(rec,p,{height:560,walk:scope,max:150});}
  async function load(p,file){const c=typeof file==='string'?JSON.parse(readFileSync(file,'utf8')):file;await ui.compatFile(p).setInputFiles({name:'3F-UI-test-config.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(c))});await ui.compatFileOpenedMessage(p).waitFor();const projection=c=>({target:{...c.target_output,copies:c.target_output.copies??1},machines:c.machines.map(x=>[x.recipe,x.crafting_speed,x.productivity]),inserters:c.inserters.map(x=>[x.source,x.sink,x.stack_size??null,x.filters??null,x.prototype??null,x.quality??null]),belts:c.belts.map(x=>[x.type,x.lanes]),chests:(c.chests??[]).length,drills:(c.drills?.configs??[]).length});const expected=JSON.stringify(projection(c));await storedUntil(p,new Function('c',`return JSON.stringify((${projection.toString()})(c))===${JSON.stringify(expected)}`),'exact imported fixture projection');await ui.viewToggle(p,'Configure').click();await ui.listView(p).click();await rest(p);}
  async function paint(p,rec,loc,name){const pairs=await controlPairs(loc);paints.push({width:p.viewportSize().width,name,pairs});writeFileSync(join(OUT,'PAINT.json'),JSON.stringify(paints,null,2));for(const pair of pairs)rec.check(`${name}: actual ${pair.kind} contrast`,pair.ratio>=pair.required,JSON.stringify(pair));}
  async function reach(p,rec,loc,name){await checkTabTo(rec,p,loc,name,{max:1000});await checkFocusNotObscured(rec,p,name,{strict:true});await paint(p,rec,loc,name);}

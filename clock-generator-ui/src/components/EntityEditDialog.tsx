@@ -212,6 +212,7 @@ function BeltEditSection({
                     inputProps={{ 'aria-label': SELECT_NAMES.beltStrategy }}
                     value={belt.strategy ?? 'normal'}
                     label="Strategy"
+                    sx={{ '& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' }, '& .MuiTypography-caption': { display: 'block' } }}
                     onChange={(e) => onUpdate(entityIndex, beltStrategyUpdate(belt, e.target.value as BeltStrategyFormValue))}
                 >
                     {BELT_STRATEGIES.map((strategy) => (
@@ -226,7 +227,7 @@ function BeltEditSection({
             </FormControl>
 
             {belt.lanes.map((lane, laneIndex) => (
-                <Box key={laneIndex} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Box key={laneIndex} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
                     <Typography variant="body2" sx={{ width: 56, flexShrink: 0 }}>
                         Lane {laneIndex + 1}:
                     </Typography>
@@ -236,14 +237,14 @@ function BeltEditSection({
                         onChange={(newValue) => updateLane(laneIndex, 'ingredient', newValue || '')}
                         label="Ingredient"
                         freeSolo
-                        sx={{ flex: 1 }}
+                        sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }}
                     />
                     <NumberField
                         label="Stack size"
                         value={lane.stack_size}
                         onValueChange={(val) => updateLane(laneIndex, 'stack_size', parseInt(val?.toString() || '') || BELT_FORM_DEFAULT_STACK_SIZE)}
                         min={1}
-                        sx={{ width: 110 }}
+                        sx={{ width: 110, maxWidth: '100%', flexShrink: 0 }}
                         size="small"
                     />
                     {belt.strategy === 'export' && (
@@ -348,14 +349,14 @@ function ChestEditSection({
             </FormControl>
 
             {isBufferChest(chest) && (
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                     <ItemSelector
                         value={(chest as BufferChestFormData).item_filter || null}
                         options={itemNames}
                         onChange={(newValue) => onUpdate(entityIndex, { item_filter: newValue || '' } as Partial<ChestFormData>)}
                         label="Item Filter"
                         size="small"
-                        sx={{ flex: 1 }}
+                        sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }}
                     />
                     <TextField
                         label="Storage Size"
@@ -363,7 +364,7 @@ function ChestEditSection({
                         value={(chest as BufferChestFormData).storage_size}
                         onChange={(e) => onUpdate(entityIndex, { storage_size: parseInt(e.target.value) || 1 } as Partial<ChestFormData>)}
                         inputProps={{ min: 1 }}
-                        sx={{ width: 130 }}
+                        sx={{ width: 130, maxWidth: '100%', flexShrink: 0 }}
                         size="small"
                     />
                 </Box>
