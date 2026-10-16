@@ -115,7 +115,11 @@ come from here.
 |---|---|---|---|
 | [D1](specs/D1-compact-view.md) | Compact view | deferred | Owner requested roadmap scope only: denser Results/forms, fewer redundant labels/helpers, shorter title/workflow header, version visible without scrolling. Preserve essential feedback/accessibility; revisit after broader audit. No implementation or current release-scope expansion. |
 
+| [D2–D7](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings and working-context preservation. Reconcile overlaps with D1/3.3; no current implementation scope added. |
+
 ## Decisions log
+
+- 2026-10-16: Owner requested recording the additional design recommendations for later discussion. Added deferred D2–D7 draft backlog; existing implementation queue, phase gates and release scope remain in place.
 
 - 2026-10-16: Owner requested compact-view planning and explicitly deferred implementation. Added PLAN's deferred D1 section and scoped spec; current roadmap execution and phase criteria remain in place.
 

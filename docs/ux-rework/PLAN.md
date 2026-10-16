@@ -478,6 +478,10 @@ Owner feedback, 2026-10-16: scope an optional denser view for experienced users,
 
 This is planning only, deferred beyond the current implementation queue until the owner's broader audit. It does not extend the current phase completion criteria or release scope; no product implementation now.
 
+### Further deferred design proposals (D2–D7)
+
+Owner requested drafts for later discussion: light/dark mode; a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). These proposals are not finalized specs, implementation authorizations or additions to current phase/release completion criteria.
+
 ## Verification (every phase)
 
 1. **Tests.** Vitest tests for every piece of logic touched:
