@@ -43,8 +43,9 @@ come from here.
   p2 (`9e2646c`) and p3 (`df21248`). Root checked the recorded test result lines; these historical integration gates
   do not replace the reviewed compatibility child's independent evidence. #194 at master `1d27cde` is frozen for
   the current integration cycle; fresh full gates passed and feature `cdf2425`, p2 `cf7a8c7` and p3 `66dc5c9` are pushed.
-  The compatibility child at `fe18341` incorporates the preserved WIP and #194 p2, with final evidence underway
-  and no completed code/UX review. Its p3 adjunct and final
+  The compatibility child at `fe18341` incorporates the preserved WIP and #194 p2. Full local checks passed;
+  independent UI 926 tests/build passed. Browser evidence exposed layout/name issues now being repaired,
+  so no completed evidence gate or code/UX review is claimed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md) and final
   2.7 B / 3.3 evidence follow the reviewed child.
 - **Worker checkpoints:** 2.7 B pushed `ce131ae` with three repaired capture scripts; 3.3 pushed `38a7b25` with the
   corrected non-recommended-pick capture. Both wait for compatibility before final gates and re-reviews.
@@ -107,6 +108,21 @@ come from here.
 ## Decisions log
 
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
+
+- 2026-10-16: Owner paused and explicitly resumed the session. Runtime now reports unrestricted filesystem/network
+  and no command approvals. Previous agents were unavailable; replacements retain Astra/high implementation,
+  Luna/high checks and Sol/high capture roles. No owner checkpoint was waived.
+- 2026-10-16: Corrected the post-merge check setup: linking main UI dependencies resolved stale main engine dist,
+  so those TypeScript failures were invalid evidence. Fresh isolated local-engine builds passed merged-tree tsc for
+  build-card `90ce76c`, cancel-keep `49f6cc6` and compatibility `d33b6e1`. Independent compatibility product
+  `fe18341` passed UI 926 tests, tsc and build; root inspected command exits and counts. Logs:
+  `/tmp/ux-upstream-194-evidence/independent-postmerge/`. New product repairs will need fresh checks.
+- 2026-10-16: Compatibility browser evidence identified genuine Destination truncation and a Diagram beta
+  accessible-name mismatch alongside capture setup defects. Orchestrator authorized minimal reuse of the existing
+  ce131ae inserter grid for changed metadata rows, retaining the old outer card and deferring full Build card,
+  Panel and filter-slot work to 2.7B. Both specs record the shared-hunk reconciliation; final geometry remains required.
+  Finalized the Phase 3 adjunct spec around the two effective-capacity rule callers and genuine persistence/share
+  boundary tests; pending 3.3 retains its cache feature and current review rounds.
 
 - 2026-10-16: Fresh session resumed from the owner's handover after the previous session stopped. The owner confirmed
   parent Astra / High / fast off in the client; tools could not independently verify or change the parent setting.
