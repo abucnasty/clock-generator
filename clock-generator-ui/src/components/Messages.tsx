@@ -1,9 +1,9 @@
 import { Close } from '@mui/icons-material';
 import { Alert, Box, Button, IconButton, Snackbar } from '@mui/material';
-import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
 import { MessageActionsContext, MessageStateContext, useDismissMessage, useMessageState } from '../hooks/useMessages';
 import { ANNOUNCER_ATTRIBUTE, announceText } from '../utils/announcer';
-import { isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput } from '../utils/messages';
+import { canDeliverAnnouncement, isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput, type MessageState } from '../utils/messages';
 import { entersOtherDialog, isEscapeForSomethingElse } from '../utils/undoKeys';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { CONTROL, SURFACE } from '../theme/tokens';
@@ -19,7 +19,9 @@ export function MessageProvider({ children }: { children: ReactNode }) {
     }, []);
     const dismiss = useCallback((id: number) => dispatch({ type: 'dismiss', id }), []);
     const announce = useCallback((text: string) => dispatch({ type: 'announce', id: ++nextId.current, text }), []);
-    const actions = useMemo(() => ({ notify, dismiss, announce }), [notify, dismiss, announce]);
+    const announceMessage = useCallback((messageId: number, suffix?: string) =>
+        dispatch({ type: 'announce-message', id: ++nextId.current, messageId, suffix }), []);
+    const actions = useMemo(() => ({ notify, dismiss, announce, announceMessage }), [notify, dismiss, announce, announceMessage]);
 
     // a message that goes, however it goes (closed, timed out, replaced), is told so once
     const shown = useRef<Message | null>(null);
@@ -48,13 +50,22 @@ export function MessageProvider({ children }: { children: ReactNode }) {
  * Undo stays, behind the dialog, until the dialog closes.
  */
 export function MessageHost() {
-    const { current, announcement } = useMessageState();
+    const state = useMessageState();
+    const { current, announcement } = state;
     const dismiss = useDismissMessage();
     const regionRef = useRef<HTMLDivElement>(null);
+    // Delayed owned speech reads the latest committed offer, including dismissal without any newer announcement.
+    const committedStateRef = useRef<MessageState | null>(null);
+    useLayoutEffect(() => {
+        committedStateRef.current = state;
+        return () => { committedStateRef.current = null; };
+    }, [state]);
     // written outside React: where it goes depends on the page at the moment it is written
     useEffect(() => {
         if (announcement) {
-            announceText(regionRef.current, announcement.text);
+            announceText(regionRef.current, announcement.text, announcement.ownerMessageId === undefined
+                ? undefined
+                : () => canDeliverAnnouncement(committedStateRef.current, announcement));
         }
     }, [announcement]);
 

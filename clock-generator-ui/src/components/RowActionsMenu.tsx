@@ -1,5 +1,5 @@
 import { MoreVert } from '@mui/icons-material';
-import { IconButton, Menu, MenuItem, Tooltip } from '@mui/material';
+import { IconButton, Menu, MenuItem } from '@mui/material';
 import { useId, useState } from 'react';
 import { rowActionsName } from '../utils/a11yLabels';
 
@@ -20,13 +20,11 @@ export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown }: Row
     };
     const choose = (action: () => void) => { close(); action(); };
     return <>
-        <Tooltip title="More actions" describeChild>
-            <IconButton size="small" onClick={event => setAnchor(event.currentTarget)} aria-label={rowActionsName(label)}
-                aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
-                sx={{ width: 30, height: 30, color: 'text.secondary', alignSelf: 'start', mt: '4px' }}>
-                <MoreVert fontSize="small" />
-            </IconButton>
-        </Tooltip>
+        <IconButton size="small" onClick={event => setAnchor(event.currentTarget)} aria-label={rowActionsName(label)}
+            aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
+            sx={{ width: 30, height: 30, color: 'text.secondary', alignSelf: 'start', mt: '4px' }}>
+            <MoreVert fontSize="small" />
+        </IconButton>
         <Menu id={menuId} anchorEl={anchor} open={open} onClose={close}
             slotProps={{ paper: { role: 'region', 'aria-label': rowActionsName(label) }, list: { 'aria-label': rowActionsName(label) } }}>
             <MenuItem onClick={() => choose(onDuplicate)}>Duplicate</MenuItem>

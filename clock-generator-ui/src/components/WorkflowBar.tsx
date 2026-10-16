@@ -323,11 +323,10 @@ export function WorkflowBar({
                                     {SELECTED_CLOCK_PREFIX}{selectedLabel}
                                 </Typography>
                             )}
-                            {/* describeChild: the tooltip describes the button, which keeps its label as its name. Above
-                                it, as the others, since under the bar are the messages; it stays open while the pointer
-                                is on it (WCAG 1.4.13). Kept in the header (disablePortal), so its text is inside the
-                                banner landmark */}
-                            <Tooltip title={copyTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
+                            {/* describeChild keeps the button's label as its name. Below it when the actions wrap, so
+                                the help leaves Configure/Results reachable; above it when wide, clear of the messages.
+                                It stays open under the pointer (WCAG 1.4.13), inside the banner (disablePortal). */}
+                            <Tooltip title={copyTooltip} arrow describeChild placement={wide ? 'top' : 'bottom'} slotProps={{ popper: { disablePortal: true } }}>
                                 <Button
                                     ref={copyRef}
                                     variant={copyFilled ? 'contained' : 'outlined'}

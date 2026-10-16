@@ -1,4 +1,6 @@
-# Phase 3 closeout: round 0 evidence and required fix
+# Phase 3 closeout: historical round 0 evidence and required fix
+
+Superseded for acceptance by [final round1 evidence](phase3-closeout-ROUND1-EVIDENCE.md). All round0 outcomes below remain historical.
 
 Status: CODE FIX / UX FIX on one shared deferred-delivery major. Product1ff5c6d is not accepted or merged. Round1 implementation is in progress; all existing verification, three fresh phase-end reviewers and owner phase checkpoint remain.
 

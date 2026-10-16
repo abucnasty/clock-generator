@@ -10,7 +10,7 @@ import {
     UNDO_WITHDRAWN_MESSAGE,
     type UndoEntry,
 } from '../utils/undoSnapshot';
-import { useAnnounce, useDismissMessage, useNotify } from './useMessages';
+import { useAnnounce, useAnnounceMessage, useDismissMessage, useNotify } from './useMessages';
 
 const UNDO_HINT = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? UNDO_KEY_HINT.mac : UNDO_KEY_HINT.other;
 
@@ -53,6 +53,7 @@ export function useUndo(
     const notify = useNotify();
     const dismiss = useDismissMessage();
     const announce = useAnnounce();
+    const announceMessage = useAnnounceMessage();
     const [entry, setEntry] = useState<UndoEntry | null>(null);
 
     // read by the handlers, which may run after an await, so they see the form as it is then
@@ -86,7 +87,7 @@ export function useUndo(
     }, [entry, dismiss]);
 
     const { offerUndo, withdrawUndo, undo } = useMemo(() => {
-        const show = (next: UndoEntry | null, record: ReturnFocus | null) => {
+        const show = (next: UndoEntry | null, record: ReturnFocus | null, deferAnnouncement = false) => {
             setEntry(next);
             if (next === null) {
                 if (messageIdRef.current !== null) dismiss(messageIdRef.current);
@@ -94,13 +95,18 @@ export function useUndo(
                 return;
             }
             const forThis = record ?? returnRef.current;
-            messageIdRef.current = notify(undoMessageInput(next, {
-                hint: UNDO_HINT,
-                onUndo: () => undo(next.id),
-                // closed, or replaced by another message: the offer goes with it
-                onClose: () => setEntry((current) => (current?.id === next.id ? null : current)),
-                returnFocus: () => (forThis ? returnTarget(forThis) : null),
-            }));
+            const messageId = notify({
+                ...undoMessageInput(next, {
+                    hint: UNDO_HINT,
+                    onUndo: () => undo(next.id),
+                    // closed, or replaced by another message: the offer goes with it
+                    onClose: () => setEntry((current) => (current?.id === next.id ? null : current)),
+                    returnFocus: () => (forThis ? returnTarget(forThis) : null),
+                }),
+                ...(deferAnnouncement ? { deferAnnouncement: true } : {}),
+            });
+            messageIdRef.current = messageId;
+            return (suffix?: string) => announceMessage(messageId, suffix);
         };
 
         /** Puts back the form from before the entry's action, if that entry is still the one offered */
@@ -131,6 +137,8 @@ export function useUndo(
             options?: {
                 restoredLabel?: (form: ConfigFormData) => string | null;
                 revert?: (snapshot: ConfigFormData) => void;
+                /** Keep Undo immediate, but announce it together with the replacement's asynchronous outcome */
+                deferAnnouncement?: boolean;
             },
         ) => {
             const form = configRef.current;
@@ -146,7 +154,7 @@ export function useUndo(
             // before the saved build is loaded, the form is the default one, which is not the player's to go back to
             const entry = createUndoEntry(++counterRef.current, text, form, isLoadedRef.current);
             revertRef.current = options?.revert ? { id: entry.id, revert: options.revert } : null;
-            show(entry, record);
+            return show(entry, record, options?.deferAnnouncement);
         };
 
         /**
@@ -157,7 +165,7 @@ export function useUndo(
         const withdrawUndo = () => setEntry(null);
 
         return { offerUndo, withdrawUndo, undo };
-    }, [notify, dismiss, setConfig]);
+    }, [notify, dismiss, announceMessage, setConfig]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {

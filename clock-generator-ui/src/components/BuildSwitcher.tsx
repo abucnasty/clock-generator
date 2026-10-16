@@ -47,10 +47,12 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
     const wide = useMediaQuery(useTheme().breakpoints.up('sm'));
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const open = anchor !== null;
+    const [tooltipOpen, setTooltipOpen] = useState(false);
+    const effectiveTooltipOpen = tooltipOpen && !open;
     // ArrowUp opens the menu on its last item, as a menu button does
     const [fromEnd, setFromEnd] = useState(false);
     const close = useCallback(() => setAnchor(null), []);
-    // the menu is mounted in the header, as the ⋮ menu is, so it stays inside the banner landmark
+    // The full-name tooltip stays inside the banner, anchored below all its controls.
     const buttonRef = useRef<HTMLButtonElement | null>(null);
     const container = useCallback(() => buttonRef.current?.closest('header') ?? document.body, []);
     const setButton = useCallback((element: HTMLButtonElement | null) => {
@@ -58,6 +60,19 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
         if (typeof ref === 'function') ref(element);
         else if (ref) ref.current = element;
     }, [ref]);
+
+    // Keep hover help readable while the pointer crosses the header to its tooltip below. Resolve the header on
+    // every render so a replaced header/trigger loses its listener too; no listener remains while the menu is open.
+    useEffect(() => {
+        if (!effectiveTooltipOpen) return;
+        const header = buttonRef.current?.closest('header');
+        if (!header) return;
+        const leaveHeader = () => {
+            if (!buttonRef.current?.matches(':focus-visible')) setTooltipOpen(false);
+        };
+        header.addEventListener('mouseleave', leaveHeader);
+        return () => header.removeEventListener('mouseleave', leaveHeader);
+    });
 
     // after MUI has focused the first item
     useEffect(() => {
@@ -101,8 +116,28 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
 
     return (
         <>
-            {/* the full name, as the button's may be cut; in the header, so its text stays in the banner landmark */}
-            <Tooltip title={`${BUILDS_HEADING}: ${currentTitle}`} describeChild slotProps={{ popper: { disablePortal: true } }}>
+            {/* Keep the full name inside the banner, below all its controls, even when this button is icon-only. */}
+            <Tooltip
+                title={`${BUILDS_HEADING}: ${currentTitle}`}
+                describeChild
+                open={effectiveTooltipOpen}
+                onOpen={() => setTooltipOpen(true)}
+                onClose={(event) => {
+                    // Escape, blur and touch end still close normally. Only mouseleave waits for the pointer to
+                    // leave the owning header (including its interactive tooltip), or the trigger to lose focus.
+                    if (event.type === 'mouseleave' && (container().matches(':hover') || buttonRef.current?.matches(':focus-visible'))) return;
+                    setTooltipOpen(false);
+                }}
+                placement="bottom"
+                slotProps={{ popper: {
+                    disablePortal: true,
+                    anchorEl: container,
+                    modifiers: [
+                        { name: 'flip', enabled: false },
+                        { name: 'preventOverflow', options: { mainAxis: true, altAxis: false } },
+                    ],
+                } }}
+            >
                 {wide ? (
                     <Button
                         {...buttonProps}
@@ -136,11 +171,10 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
                 onClose={close}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                container={container}
                 disableScrollLock
                 slotProps={{
                     list: { 'aria-label': BUILDS_HEADING },
-                    paper: { sx: { maxWidth: 'min(28rem, calc(100vw - 32px))' } },
+                    paper: { role: 'region', 'aria-label': BUILDS_HEADING, sx: { maxWidth: 'min(28rem, calc(100vw - 32px))' } },
                 }}
             >
                 <ListSubheader sx={{ lineHeight: 2.5, bgcolor: 'background.paper' }}>{BUILDS_HEADING}</ListSubheader>

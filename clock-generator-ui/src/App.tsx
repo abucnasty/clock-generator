@@ -317,20 +317,29 @@ function App() {
     // is known, with "Its clocks are back." when they are, so one message says both. Good for the render right after the
     // switch only
     const announce = useAnnounce();
-    const switchMessageRef = useRef<string | null>(null);
+    const switchMessageRef = useRef<string | ((restored: boolean) => void) | null>(null);
+    const replacementRevisionRef = useRef(0);
+    const mountedRef = useRef(false);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
     // bumped by every replace of the build, which drops a restore still on its way: the one for the build that is now
     // in the form starts again, even when the form already had it (a switch that set the form before it was handled)
     const [replacedCount, setReplacedCount] = useState(0);
     useEffect(() => {
         const switched = switchMessageRef.current;
+        const revision = replacementRevisionRef.current;
+        const complete = (back: boolean) => {
+            // The cache's own render does not cancel its completion. A newer replacement, edit or unmount does.
+            if (!mountedRef.current || revision !== replacementRevisionRef.current || configKey !== configKeyRef.current) return;
+            if (typeof switched === 'function') switched(back);
+            else if (switched !== null) announce(back ? `${switched} ${ANNOUNCEMENTS.itsClocksBack}` : switched);
+        };
         if (isInitialized && resultsEmpty) {
-            void restoreResultsFor(configKey, 'replace', { announce: switched === null }).then((back) => {
-                if (switched !== null) {
-                    announce(back ? `${switched} ${ANNOUNCEMENTS.itsClocksBack}` : switched);
-                }
-            });
+            void restoreResultsFor(configKey, 'replace', { announce: switched === null }).then(complete);
         } else if (switched !== null) {
-            announce(switched);
+            complete(false);
         }
     }, [configKey, isInitialized, resultsEmpty, replacedCount, restoreResultsFor, announce]);
     useEffect(() => {
@@ -636,7 +645,7 @@ function App() {
     const replacedKeyRef = useRef<string | null>(null);
     const offerUndoOfBuild = useCallback((message: string, options?: Parameters<typeof offerUndo>[1]) => {
         replacedKeyRef.current = configKeyRef.current;
-        offerUndo(message, options);
+        return offerUndo(message, options);
     }, [offerUndo]);
     const offerUndoOfReplace = useCallback((message: string) => offerUndoOfBuild(message), [offerUndoOfBuild]);
 
@@ -690,6 +699,7 @@ function App() {
     // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown. The
     // clocks are set aside for the Undo offered just before, if any
     const handleBuildReplaced = useCallback(() => {
+        replacementRevisionRef.current++;
         const formKey = replacedKeyRef.current ?? undefined;
         replacedKeyRef.current = null;
         clearResults({ formKey });
@@ -698,7 +708,7 @@ function App() {
         setAdvancedOpen(false);
     }, [clearResults, setReplacedCount]);
     // the same for a switch to another build, which says `message` once it is known whether its clocks come back
-    const handleBuildSwitched = useCallback((message: string) => {
+    const handleBuildSwitched = useCallback((message: string | ((restored: boolean) => void)) => {
         switchMessageRef.current = message;
         handleBuildReplaced();
     }, [handleBuildReplaced]);
@@ -820,12 +830,13 @@ function App() {
             ?? (build.config.target_output.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.target_output.recipe, recipeLabel));
         // the build the link added, which its Undo takes out again (none when it took the empty build's place)
         const added: { id?: string } = {};
-        offerUndoOfBuild(sharedOpenedMessage(title), {
+        const complete = offerUndoOfBuild(sharedOpenedMessage(title), {
+            deferAnnouncement: true,
             revert: (form) => library.restore({ meta: previous, form, removeId: replaceId === undefined ? added.id : undefined }),
         });
         added.id = library.addBuild(configToFormData(build.config), build.name, { replaceId }).id;
-        handleBuildReplaced();
-    }, [shared, library, sharedReplacesBlank, recipeLabel, offerUndoOfBuild, handleBuildReplaced]);
+        handleBuildSwitched((back) => complete?.(back ? ANNOUNCEMENTS.itsClocksBack : undefined));
+    }, [shared, library, sharedReplacesBlank, recipeLabel, offerUndoOfBuild, handleBuildSwitched]);
 
     // Generate with the slower searches, checked first as Generate is: for this run only, or, kept on, by turning the
     // switch on in the form (one the check does not read, so it stays current)
