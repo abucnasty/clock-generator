@@ -52,7 +52,7 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
     // ArrowUp opens the menu on its last item, as a menu button does
     const [fromEnd, setFromEnd] = useState(false);
     const close = useCallback(() => setAnchor(null), []);
-    // the menu is mounted in the header, as the ⋮ menu is, so it stays inside the banner landmark
+    // The full-name tooltip stays inside the banner, anchored below all its controls.
     const buttonRef = useRef<HTMLButtonElement | null>(null);
     const container = useCallback(() => buttonRef.current?.closest('header') ?? document.body, []);
     const setButton = useCallback((element: HTMLButtonElement | null) => {
@@ -171,11 +171,10 @@ export function BuildSwitcher({ ref, builds, currentId, currentTitle, onOpen, on
                 onClose={close}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                container={container}
                 disableScrollLock
                 slotProps={{
                     list: { 'aria-label': BUILDS_HEADING },
-                    paper: { sx: { maxWidth: 'min(28rem, calc(100vw - 32px))' } },
+                    paper: { role: 'region', 'aria-label': BUILDS_HEADING, sx: { maxWidth: 'min(28rem, calc(100vw - 32px))' } },
                 }}
             >
                 <ListSubheader sx={{ lineHeight: 2.5, bgcolor: 'background.paper' }}>{BUILDS_HEADING}</ListSubheader>
