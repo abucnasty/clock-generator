@@ -129,6 +129,16 @@ async function rateShot(p,rec,name) {
     await p.mouse.move(0,0); await ui.compatTooltips(p).waitFor({state:'detached'});
     await rec.shot(p,name,{aria:true,desc:'Items per Second explicitly positioned after the completed keyboard/focus checks'});
 }
+async function explicitStackWithoutHelp(p,rec,field,scope,label,value) {
+    const state=await field.evaluate(e=>{
+        const helperId=`${e.id}-helper`, describedBy=(e.getAttribute('aria-describedby')??'').split(/\s+/).filter(Boolean);
+        return {value:e.value,helper:!!document.getElementById(helperId),helperReference:describedBy.includes(helperId),dangling:describedBy.filter(id=>!document.getElementById(id))};
+    });
+    rec.check(`${label}: explicit Stack size remains ${value}`,state.value===String(value));
+    rec.check(`${label}: no helper element or dangling description`,!state.helper && !state.helperReference && state.dangling.length===0,JSON.stringify(state));
+    rec.check(`${label}: no repeated Stack size instructions`,!(await txt(scope)).includes('Items per swing. Clear for Automatic.'));
+    await checkLabelInName(rec,p,field,'Stack size');
+}
 async function audit(p, rec, name, targets = []) {
     // Start the scan from a stable viewport; preceding Tab walks may leave a row partly under the sticky header.
     // Focus-not-obscured checks still run at each actual keyboard stop below.
@@ -459,6 +469,7 @@ try {
                 rec.check(`M1 Inserter ${id}: Automatic ${size}, fully researched`, /research/i.test(await txt(ui.compatInserterRow(p,id))), await txt(ui.compatInserterRow(p,id)));
                 await textContrast(p,rec,ui.compatAutomatic(p,id,size),`M1 Automatic ${size}`);
             }
+            for(const [id,value] of [[3,8],[5,16]]) await explicitStackWithoutHelp(p,rec,ui.compatStack(p,id),ui.compatInserterRow(p,id),`M1 Inserter ${id}`,value);
             for (const [id, prototype, quality] of [[1,'bulk-inserter','normal'],[2,'fast-inserter','normal'],[3,'stack-inserter','legendary']]) {
                 const meta = ui.compatMetadata(p,id);
                 const name = itemLabel(prototype);
@@ -476,8 +487,10 @@ try {
         await rec.step('M2 clearing List is live; Diagram clear is a draft until Save', async () => {
             const c = metadataFixture(); c.inserters[0].stack_size = 7;
             await load(p,c,'explicit-bulk'); await list(p);
+            await explicitStackWithoutHelp(p,rec,ui.compatStack(p,1),ui.compatInserterRow(p,1),'M2 explicit List',7);
             await edit(p,ui.compatStack(p,1),'');
             await ui.compatAutomatic(p,1,12).waitFor({state:'visible'});
+            rec.check('M2 List clear shows the Automatic effective-capacity explanation',/Automatic.*12.*research/i.test(await txt(ui.compatAutomatic(p,1,12))));
             await storedUntil(p,c => !Object.hasOwn(c.inserters[0],'stack_size'),'live List clear');
             rec.check('M2 List clear is immediately omitted in exported config', !Object.hasOwn((await saveFile(p)).inserters[0],'stack_size'));
             await audit(p,rec,'m2-list-cleared',[['Stack Size',ui.compatStack(p,1)]]);
@@ -487,8 +500,10 @@ try {
             await ui.compatInserterNode(p,1).scrollIntoViewIfNeeded();
             await checkMouseActivationVisible(rec,p,ui.compatInserterNode(p,1),'open Inserter 1 editor');
             await ui.compatEditor(p).waitFor({state:'visible'});
+            await explicitStackWithoutHelp(p,rec,ui.compatEditorStack(p),ui.compatEditor(p),'M2 explicit Diagram',7);
             await edit(p,ui.compatEditorStack(p),'');
             await ui.compatEditorAuto(p,12).waitFor({state:'visible'});
+            rec.check('M2 Diagram clear shows the Automatic effective-capacity explanation',/Automatic.*12.*research/i.test(await txt(ui.compatEditorAuto(p,12))));
             rec.check('M2 Diagram clear leaves committed stack 7 before Save', (await stored(p)).inserters[0].stack_size === 7);
             await textContrast(p,rec,ui.compatEditorAuto(p,12),'M2 Diagram Automatic 12');
             await textContrast(p,rec,ui.compatEditorMetadata(p),'M2 Diagram metadata');
