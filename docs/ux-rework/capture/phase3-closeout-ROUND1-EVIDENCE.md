@@ -1,6 +1,6 @@
 # 3.G / 3.H / 3.I final round 1 evidence
 
-Independent CODE and UX round 1: **PASS**. The single round-zero major and related exposure gap are fixed. This is child-bundle acceptance; the child PR/CI, three NEW phase-end personas and owner phase checkpoint remain.
+Independent CODE and UX round 1: **PASS**. The single round-zero major and related exposure gap are fixed. Merged in [PR207](https://github.com/abucnasty/clock-generator/pull/207), squash8767709750f818d8a274768b0d84f1d485c79b38, after exact-head Unit/UI CI on c2ff41aea20215d221cc7ee63b409c09ffd82dc6. The merged tree equals that PR head exactly and preserves tested product21261c5. This is child-bundle acceptance; three NEW phase-end personas and the owner phase checkpoint remain.
 
 ## Exact product
 
