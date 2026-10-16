@@ -2,6 +2,7 @@ import assert from "../../common/assert";
 import { Config } from "../../config";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
+import { validateCopies } from "../../config/copies-validator";
 import { DebugPluginFactory } from "../sequence/debug/debug-plugin-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { InserterClock, byProductOnlyInserters, clockWindowsOverPeriod, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
@@ -10,7 +11,7 @@ import { Duration, OpenRange } from "../../data-types";
 import { assertIsMachine, Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { TargetProductionRate } from "../target-production-rate";
 import { EntityState, InserterState, MachineState } from "../../state";
-import Fraction, { fraction } from "fractionability";
+import Fraction, { fraction } from "../../data-types/fraction";
 import { ClockSchedule, createSignalPerInserterBlueprint, mergedClockTicks, SignalPerInserterBlueprint, SubtickClock } from "../blueprint";
 import { FactorioBlueprint } from "../../blueprints/blueprint";
 import { ResettableRegistry, TickProvider } from "../../control-logic";
@@ -450,6 +451,8 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     // Validate inserter coverage before building the entity graph.
     // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
     assertInserterCoverage(config);
+    // Throws CopiesError if the config holds several identical units where it should describe one and set copies.
+    validateCopies(config);
 
     // Initialize simulation context
     const simulation_context = SimulationContext.fromConfig(config);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fraction } from "fractionability";
+import { fraction } from "../../../data-types/fraction";
 import { parseConfigFromObject } from "../../../config/config-browser";
 import { Belt, Entity, EntityId, EntityRegistry, InserterFactory, Machine } from "../../../entities";
 import { EntityTransferCountMap, outputInsertersOf } from "./swing-counts";

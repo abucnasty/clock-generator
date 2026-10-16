@@ -46,6 +46,7 @@ Conventions:
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | intermediates/low-density-structure | yes | selected clock exact. Since 2026-10-11 the selected clock is batched swings with 6 output swings per cycle, 703 wake-ups a minute, where full-hand output swings (1,528) was selected while the ranking put it first on a machine with spare speed; recorded exact the same day, 36,000 ticks | in `test:game` |
+| science/chemical-science, shared foundry | yes | selected clock exact: 256 in each of 102 periods of 352 ticks (1 output swing per cycle, 5.5 copies of 240 a second); the runner-up (2 output swings, 122.1 wake-ups) recorded too, 122.7 in the game; the selected clock's wake-ups are not held (see below) | in `test:game`, wake-ups open |
 | science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; a build with a deadlock risk, see "Backpressure loss" and below |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods. Since 2026-10-12 the selected clock is the one with 2 output swings per cycle, which is stable without a search, so the searches are left out; uneven output swings was selected while they ran for every build, at the same 10.7 wake-ups a minute with 5 windows against 7. Recorded that day both ways: 96 in each of 107 periods, 10.7 wake-ups a minute in the game as in the simulator | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
@@ -66,8 +67,7 @@ In the order they would settle the most:
 1. **science/logistic-science** (shared-inserter, sample, direct-insert): the 1-swing label of the shared-inserter
    and sample configs flipped from unstable to stable; direct-insert's selection changed.
 2. **science/production-science** (shared): its rate changed in the sweep.
-3. **science/chemical-science** (advanced circuit, engines): selections changed.
-4. **science/metallurgic-science**: the selected clock changed and rates moved, and changed again on 2026-10-09 from the
+3. **science/metallurgic-science**: the selected clock changed and rates moved, and changed again on 2026-10-09 from the
    planned 1-swing clock to the full-hand one (both 45 a second). The planned clock only passed the long run because
    that run under-counted a fractional period; counted right, the simulator moves 32 too many in periods 40 to 120,
    the tail of a start-up surplus of 48 that is gone by period 160. Simulator only, and in the simulator both clocks
@@ -78,9 +78,9 @@ In the order they would settle the most:
    (1,716). That selected a clock the long run calls unstable over one that holds its output and has no recovery, so
    the ranking now parts two clocks equally near the target by whether they hold (GOALS.md, "Wake-ups"), and the
    full-hand subtick clock is selected again, from the same day.
-5. **intermediates/processing-units** (belt export): rates moved slightly.
-6. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
-7. **science/electromagnetic-science**, **science/military-science**, **intermediates/flying-robot-frame**,
+4. **intermediates/processing-units** (belt export): rates moved slightly.
+5. **gleba/rocket-fuel** and **gleba/jellynut-processing**: 3-swing rates swapped between the two jelly stack configs.
+6. **science/electromagnetic-science**, **science/military-science**, **intermediates/flying-robot-frame**,
    **intermediates/lithium-plates**, **intermediates/electric-engine-unit**, **intermediates/productivity-module**,
    **gleba/biochamber-fuel**, **smelting/stone-bricks**, **smelting/electric-furnace**: never recorded.
 
@@ -291,6 +291,10 @@ What is left between the simulator and the game on this build, a tick at a time,
 - a battery plant whose craft ends on a whole tick starts the next one in that tick in the game, with no progress, and
   in the next tick in the simulator: its ingredients go a tick earlier in the game.
 
+## Chemical science with a shared foundry
+
+The owner's block of 2026-10-15: four chemical science assemblers and four engine assemblers sharing one foundry that casts the pipes, 5.5 copies of it making 240 a second. The selected clock counts 82.2 wake-ups a minute in the simulator and 122.7 in the game; the runner-up counts 122.1 and 122.7. The whole difference is 40.9 in four inserters, the belt inserters of the science machines (10.2 each, one wake-up a period in the game, none in the simulator): in the game the machine starts its next craft one tick after the inserter began to wait for space, in the simulator on the same tick, and a wake-up needs the inserter to have waited the tick before. Moving every machine start one tick earlier gives the simulator's figure in the game's recording; one tick later gives 204.8 in the simulator. What the build moves, and what every inserter and machine does, is held; the clock's wake-ups are not, and in the game the two stable clocks tie at 122.7, so no selection is shown to be wrong. Open: which side of the tick is off (the restart of a machine after its short wait for ingredients, or the order of the start and the inserter's state change inside a tick). The recording merges the block's north and south supply belts into one belt each, so a comparison reports the near lane of four inserters (config 6, 8, 14, 16) as wrong although the config matches the scaffold.
+
 ## Advanced circuit
 
 The build of [issue 98](https://github.com/abucnasty/clock-generator/issues/98), 240 a second over three copies. The
@@ -347,6 +351,44 @@ advanced circuit plant). The output's difference is the one in the table above: 
 waiting on its plant where the game shows it working, so the simulator counts a craft (742 a minute) where the game
 counts a pickup (760). The inputs into the plants count about 8% more sink wake-ups in the game, unclocked; why was
 not looked into. No call changes, so both are left (working rule 2).
+
+In true starts (the call since 0.12.0), the same recordings and those of the accumulator, low density structure and
+agricultural science scaffolds (2026-10-15, the same way: warmup, settle and seed as in the game tests, the first period
+left out), the game read by the series' method as every recording is, w removed a minute for each inserter, game
+against simulator, with the original count after it:
+
+| Build | Group | True starts | Original count |
+|---|---|---|---|
+| Advanced circuit | electronic circuit from the belt | 589 / 584 | 1,096 / 998 |
+| | copper cable from the foundries | 653 / 653 | 1,178 / 1,089 |
+| | plastic from the cryogenic plant | 641 / 641 | 1,180 / 1,091 |
+| | coal from the belt | 232 / 325 | 441 / 410 |
+| | advanced circuit output | 743 / 951 | 743 / 951 |
+| | pooled | 609 / 665 | 982 / 963 |
+| Accumulator | accumulator output | 567 / 563 | 567 / 563 |
+| | battery into the accumulators | 462 / 499 | 462 / 499 |
+| | iron into the accumulators | 774 / 804 | 774 / 804 |
+| | copper into the batteries | 1,111 / 1,141 | 1,520 / 1,559 |
+| | iron into the batteries | 1,101 / 1,141 | 1,511 / 1,559 |
+| | pooled | 803 / 830 | 967 / 997 |
+| Low density structure | plastic from the chest | 695 / 859 | 1,450 / 1,800 |
+| | plastic from the cryogenic plant | 702 / 893 | 1,457 / 1,834 |
+| | low density structure output | 251 / 579 | 251 / 579 |
+| | pooled | 568 / 809 | 1,088 / 1,439 |
+| Agricultural science | bioflux and nutrients into the nutrient biochambers | 127 / 70 | 159 / 117 |
+| | nutrients into the egg biochambers | 116 / 129 | 202 / 266 |
+| | bioflux and nutrients into the science biochamber | **-184 / 218** | **-240 / 257** |
+| | science output | 721 / 945 | 721 / 945 |
+| | pooled | **106 / 213** | **98 / 283** |
+
+On the first three builds every call is "clock", firm, in both counts and in both the game and the simulator. The
+output of a part-hand machine differs most (the simulator counts craft wake-ups where the game counts pickups), and the
+low density structure inputs, on sinks where the method is exact, count about 25% more in the simulator. On
+agricultural science, whose input sinks are all biochambers, where the method is a known miss, two calls differ in both
+counts (in bold): in the game the input into the science biochamber wakes more on the clock than without it, and it
+waits for space with part of a hand on 431 samples on the clock against none without. Why is not known. No selection
+depends on these calls, so they are left (working rule 2). The comparisons are in `.scratch/geppetto/recordings-0.12/`
+on the machine they were made on.
 
 The last row is the clock that rule was read from (`src/crafting/wake-after-output-block.test.ts`). One plant made its
 352 a period and the other 264, from the first period the clock ran on the build. That plant held 14 advanced circuits

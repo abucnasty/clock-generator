@@ -1,11 +1,14 @@
 // node scripts/check-rule-count.js <pairs.json> <series-removed.json> [out.json]
+// COUNT=true checks the count in true starts (the call since 0.12.0) against the series' productivity recount
+// (productivity-recount-1: e_src_g, e_dst_T, e_pick_A in its counts/t-<label>.json, named as fuller_json in the pairs
+// file), and lists every machine whose true starts are not known. Without it, the series' original count, as in 0.11.0.
 //
 // The check of the rule count against the inserter cost series' own recount, before a release is tagged. For each pair
 // of dumps (unwired and clocked) in pairs.json, the generator reads both dumps (src/verification/extractor-dump.ts),
 // counts them (ruleCount) and lays each group's source, sink and pickup wake-ups against the series' fuller.py output
 // for the same dump: they must be equal. It then lays w removed per group and pooled (removedBetween) against the
 // series' removed(), computed by the series' own code from its fuller.py outputs (series-removed.json): they must agree
-// within 0.5 a minute, in the same region of the rule. The start-rule fallback machines must be the same.
+// to float rounding (1e-9), in the same region of the rule. The start-rule fallback machines must be the same.
 //
 // pairs.json: { pairs: [{ name, unwired: { base, samples_base?, fuller_json }, clocked: { ... } }] }
 // series-removed.json: [{ name, pooled, groups: [{ key, w_removed }] }]
@@ -13,7 +16,10 @@
 const fs = require("fs");
 const { dist } = require("./lib");
 
-const TOLERANCE = 0.5;
+// the counts are integers and must be equal; w removed then agrees to float rounding, and anything more is a port difference
+const TOLERANCE = 1e-9;
+const TRUE = process.env.COUNT === "true";
+const COUNT = TRUE ? "true starts" : "original";
 
 (async () => {
     const [pairs_path, series_path, out_path] = process.argv.slice(2);
@@ -44,15 +50,17 @@ const TOLERANCE = 0.5;
             for (const g of fuller.groups) {
                 const key = `${g.role} | ${g.items} | ${g.recipes}`;
                 const e = expected.get(key) ?? { n: 0, src: 0, dst: 0, pick: 0 };
-                e.n += g.inserters; e.src += g.e_src_g ?? 0; e.dst += g.e_dst_g ?? 0; e.pick += g.e_pick_g ?? 0;
+                e.n += g.inserters; e.src += g.e_src_g ?? 0;
+                e.dst += (TRUE ? g.e_dst_T : g.e_dst_g) ?? 0; e.pick += (TRUE ? g.e_pick_A : g.e_pick_g) ?? 0;
                 expected.set(key, e);
             }
             const ours = new Map(run.groups.map(g => [g.key, g]));
             for (const key of new Set([...expected.keys(), ...ours.keys()])) {
                 const e = expected.get(key), o = ours.get(key);
                 if (!e || !o) { fail(`${side}: group ${key} only in ${e ? "fuller.py" : "the generator"}`); continue; }
-                if (e.n !== o.inserters || e.src !== o.source_wake_ups || e.dst !== o.sink_wake_ups || e.pick !== o.pickups) {
-                    fail(`${side}: ${key}: generator n ${o.inserters} ${o.source_wake_ups}/${o.sink_wake_ups}/${o.pickups}, fuller.py n ${e.n} ${e.src}/${e.dst}/${e.pick}`);
+                const dst = TRUE ? o.true_sink_wake_ups : o.sink_wake_ups, pick = TRUE ? o.true_pickups : o.pickups;
+                if (e.n !== o.inserters || e.src !== o.source_wake_ups || e.dst !== dst || e.pick !== pick) {
+                    fail(`${side}: ${key}: generator n ${o.inserters} ${o.source_wake_ups}/${dst}/${pick}, series n ${e.n} ${e.src}/${e.dst}/${e.pick}`);
                 }
             }
             if (Math.abs(run.minutes - fuller.minutes) > 1e-9) fail(`${side}: minutes ${run.minutes} against ${fuller.minutes}`);
@@ -68,22 +76,27 @@ const TOLERANCE = 0.5;
             if (JSON.stringify(Object.entries(fb_ours).sort()) !== JSON.stringify(Object.entries(fb_theirs).sort())) {
                 fail(`${side}: start-rule fallback ${JSON.stringify(fb_ours)} against ${JSON.stringify(fb_theirs)}`);
             }
+            if (TRUE) {
+                const unknown = {};
+                for (const m of run.true_start_unknown) unknown[m.recipe || "(no recipe)"] = (unknown[m.recipe || "(no recipe)"] ?? 0) + 1;
+                for (const [recipe, machines] of Object.entries(unknown)) console.log(`  ${side}: true starts not known: ${machines} ${recipe}`);
+            }
         }
-        const removal = removedBetween(runs.unwired, runs.clocked);
+        const removal = removedBetween(runs.unwired, runs.clocked, COUNT);
         const theirs = series.get(pair.name);
         const rows = [];
         const theirs_by = new Map(theirs.groups.map(g => [g.key, g.w_removed]));
         for (const g of removal.groups.filter(g => g.newly_wired)) {
             const t = theirs_by.get(g.key);
-            const region_ours = g.call.region, region_theirs = t === undefined ? "-" : ruleCallOf(t).region;
+            const region_ours = g.call.region, region_theirs = t === undefined ? "-" : ruleCallOf(t, COUNT).region;
             const diff = t === undefined ? null : g.w_removed - t;
             rows.push({ group: g.key, inserters: g.inserters_clocked, generator: g.w_removed, series: t ?? null, difference: diff, region: region_ours, region_series: region_theirs });
             if (t === undefined || Math.abs(diff) > TOLERANCE || region_ours !== region_theirs) fail(`removed ${g.key}: ${g.w_removed} against ${t}`);
         }
         if (removal.groups.filter(g => g.newly_wired).length !== theirs.groups.length) fail(`newly wired groups ${removal.groups.filter(g => g.newly_wired).length} against ${theirs.groups.length}`);
         const pooled_diff = removal.w_removed_pooled - theirs.pooled;
-        rows.push({ group: "design, a wired inserter (pooled)", inserters: removal.newly_wired_inserters, generator: removal.w_removed_pooled, series: theirs.pooled, difference: pooled_diff, region: removal.call.region, region_series: ruleCallOf(theirs.pooled).region });
-        if (Math.abs(pooled_diff) > TOLERANCE || removal.call.region !== ruleCallOf(theirs.pooled).region) fail(`pooled ${removal.w_removed_pooled} against ${theirs.pooled}`);
+        rows.push({ group: "design, a wired inserter (pooled)", inserters: removal.newly_wired_inserters, generator: removal.w_removed_pooled, series: theirs.pooled, difference: pooled_diff, region: removal.call.region, region_series: ruleCallOf(theirs.pooled, COUNT).region });
+        if (Math.abs(pooled_diff) > TOLERANCE || removal.call.region !== ruleCallOf(theirs.pooled, COUNT).region) fail(`pooled ${removal.w_removed_pooled} against ${theirs.pooled}`);
         for (const r of rows) console.log(`  ${r.group} | n ${r.inserters} | ${r.generator.toFixed(2)} | ${r.series === null ? "-" : r.series.toFixed(2)} | ${r.difference === null ? "-" : r.difference.toExponential(1)} | ${r.region}`);
         report.push({ name: pair.name, rows, fallback: { unwired: runs.unwired.start_rule_fallback.length, clocked: runs.clocked.start_rule_fallback.length } });
     }

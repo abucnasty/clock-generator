@@ -37,6 +37,11 @@ describe("parseSuggestedTarget", () => {
         expect(parseSuggestedTarget(valid)).toEqual(Option.some(valid));
     });
 
+    it.each([5.5, 2.25, 0.5, 0.001, 0.0625])("keeps supported fractional Copies %s", copies => {
+        const target = { ...valid, copies };
+        expect(parseSuggestedTarget(target)).toEqual(Option.some(target));
+    });
+
     it("ignores an extra key inside it", () => {
         expect(parseSuggestedTarget({ ...valid, note: "from a newer mod" })).toEqual(Option.some(valid));
     });
@@ -52,7 +57,7 @@ describe("parseSuggestedTarget", () => {
         ["a rate as a string", { ...valid, items_per_second: "3" }],
         ["a rate that is NaN", { ...valid, items_per_second: Number.NaN }],
         ["0 copies", { ...valid, copies: 0 }],
-        ["a fraction of a copy", { ...valid, copies: 1.5 }],
+        ["an unsupported fraction of a copy", { ...valid, copies: 0.0001 }],
     ])("gives None for %s and does not throw", (_, raw) => {
         expect(() => parseSuggestedTarget(raw)).not.toThrow();
         expect(parseSuggestedTarget(raw)).toEqual(Option.none());

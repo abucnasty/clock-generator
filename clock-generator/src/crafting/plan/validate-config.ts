@@ -1,5 +1,6 @@
 import { Config } from "../../config";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
+import { validateCopies } from "../../config/copies-validator";
 import { SimulationContext } from "../sequence/simulation-context";
 import { SerializableTransferPlan } from "../sequence/cycle/swing-counts";
 import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
@@ -31,6 +32,7 @@ export interface ConfigValidation {
 export function validateConfig(config: Config, options: { logger?: Logger } = {}): ConfigValidation {
     const logger = options.logger ?? { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
     assertInserterCoverage(config);
+    validateCopies(config);
 
     const simulation_context = SimulationContext.fromConfig(config);
     new PrepareStep(simulation_context).execute();

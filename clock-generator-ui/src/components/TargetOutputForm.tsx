@@ -10,7 +10,7 @@ import { targetRateLineOf, type MachinesMax } from '../utils/targetRateLimit';
 interface TargetOutputFormProps {
     recipe: string;
     itemsPerSecond: number;
-    /** Number of duplicate setups being modeled */
+    /** Number of duplicate setups being modeled; may be fractional, such as 5.5, for a partial block */
     copies: number;
     /** The most the machines making the recipe can make, for the problem line under Items per Second; null while unknown */
     machinesMax: MachinesMax | null;
@@ -70,12 +70,14 @@ export function TargetOutputForm({
                     id={ELEMENT_IDS.targetCopies}
                     label="Copies"
                     value={copies}
-                    onValueChange={(val) => onCopiesChange(parseInt(val?.toString() || '') || 1)}
-                    min={1}
-                    step={1}
+                    onValueChange={(val) => onCopiesChange(val ?? 0)}
+                    min={0}
+                    step={0.5}
                     sx={{ width: 200 }}
                     required
+                    error={copies <= 0}
                     helperText={COPIES_HELPER}
+                    problem={copies <= 0 ? 'Must be more than 0' : null}
                 />
             </Box>
         </Paper>

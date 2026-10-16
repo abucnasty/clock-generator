@@ -1,6 +1,6 @@
 import { Config } from "../config";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
-import { Entity, EntityId } from "../entities";
+import { configuredHandSize, Entity, EntityId } from "../entities";
 import { clockPeriods, outputPerPeriod, PeriodRange, recipesMaking } from "../harness/recording-output";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording, recordedClockPeriod } from "./recording";
@@ -262,8 +262,9 @@ export function buildDifferences(recording: Recording, match: EntityMatch, confi
             continue;
         }
         const label = `Inserter ${config_id} (${inserter.source.type} ${inserter.source.id} -> ${inserter.sink.type} ${inserter.sink.id})`;
-        if (recorded.stack_size !== inserter.stack_size) {
-            differences.push(`${label} has a stack size of ${recorded.stack_size} in the recorded build and ${inserter.stack_size} in the config.`);
+        const hand = configuredHandSize(inserter);
+        if (recorded.stack_size !== hand) {
+            differences.push(`${label} has a stack size of ${recorded.stack_size} in the recorded build and ${hand} in the config.`);
         }
         const near_lane = recorded.source.near_lane;
         if (near_lane === undefined) {

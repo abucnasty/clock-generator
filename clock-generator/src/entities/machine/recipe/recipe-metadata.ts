@@ -1,4 +1,4 @@
-import Fraction, { fraction } from "fractionability";
+import Fraction, { fraction } from "../../../data-types/fraction";
 import assert from "../../../common/assert"
 import { Ingredient, ItemName, EnrichedIngredient, EnrichedRecipe, FactorioDataService } from "../../../data";
 import { MapExtended } from "../../../data-types";
@@ -22,11 +22,26 @@ export interface RecipeMetadata {
     readonly raw: EnrichedRecipe;
 }
 
-type ResultExtras = { probability?: number, ignored_by_productivity?: number };
+/**
+ * A result's chance: `probability` before Factorio 2.1; since 2.1 `independent_probability` (the jellynut seed, rolled on
+ * its own) or `shared_probability`, a slice {min, max} of one roll shared by the recipe's results (uranium processing:
+ * uranium-235 takes 0 to 0.007 of it, uranium-238 the rest; the recycler's and the asteroid reprocessing recipes'
+ * results the same way), whose chance is max less min.
+ */
+type ResultExtras = {
+    probability?: number,
+    independent_probability?: number,
+    shared_probability?: { min: number, max: number },
+    ignored_by_productivity?: number,
+};
 
 /** The amount a result yields per craft on average, before productivity */
 export function expectedAmount(result: Ingredient): number {
-    return result.amount * ((result as Ingredient & ResultExtras).probability ?? 1);
+    const extras = result as Ingredient & ResultExtras;
+    const chance = extras.shared_probability !== undefined
+        ? extras.shared_probability.max - extras.shared_probability.min
+        : extras.independent_probability ?? extras.probability ?? 1;
+    return result.amount * chance;
 }
 
 /** How much of the amount productivity does not multiply */
@@ -47,7 +62,10 @@ function fromRecipe(recipe: EnrichedRecipe): RecipeMetadata {
     } = recipe;
 
 
-    assert(results.length >= 1, `Recipe ${name} has no item outputs.`);
+    // the fluids are not simulated (GOALS.md, "Game Data and What Is Not Modelled Yet")
+    assert(results.length >= 1, recipe.fluid_results.length > 0
+        ? `Recipe ${name} makes only fluids (${recipe.fluid_results.map(it => it.name).join(", ")}): fluid products are not supported (roadmap follow-up F1).`
+        : `Recipe ${name} has no products.`);
 
     const main_product_index = results.reduce(
         (best, result, index) => expectedAmount(result) > expectedAmount(results[best]) ? index : best,

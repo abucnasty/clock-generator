@@ -1,4 +1,4 @@
-import Fraction from "fractionability";
+import Fraction from "../../../data-types/fraction";
 
 export interface ConsumptionRate {
     readonly item: string;

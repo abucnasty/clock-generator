@@ -2,6 +2,7 @@ import { RuleCountInput } from "../crafting/rule-count-stock";
 import { EndKind } from "../crafting/rule-count";
 import { EntityId } from "../entities";
 import { FactorioMachineState } from "../state/factorio-entity-state";
+import { trueStartsOfRecordedMachine } from "./recording-true-starts";
 import { EntityMatch } from "./entity-matching";
 import { expandChangeList, Recording } from "./recording";
 
@@ -11,7 +12,12 @@ import { expandChangeList, Recording } from "./recording";
  * every recorded one under its recorded id.
  *
  * The items an inserter moves are the ones in its hand over the recording (the change list of `held_item`); a machine
- * is working at a sample where its recorded status is "working". A recording has no `crafts_started`.
+ * is working at a sample where its recorded status is "working". A recording has no `crafts_started`; a machine's
+ * true starts are worked out as for a dump of the series' extractor (`trueStartsOfDump`), from the recording cut to
+ * what a dump holds, its status and products_finished, so that all the game's data is read one way. The crafting
+ * progress the recording also logs is not used: it is rounded to 4 places, and read alone it over-reads the starts of
+ * a machine that crafts in a tick or less. The crafting speed and productivity come from the recorded config, the
+ * energy from the recipe; a machine without them has no true starts.
  *
  * @param wired whether the inserter is wired in the build recorded (a circuit wire and an enable condition), by the
  *   id the input gives it
@@ -31,11 +37,14 @@ export function ruleCountInputOfRecording(
             return [];
         }
         const status = expandChangeList(machine.samples.status, recording.sample_count, "");
+        const read = trueStartsOfRecordedMachine(recording, machine);
         return [{
             machine_id,
             recipe: machine.recipe,
             products_finished: machine.samples.products_finished,
             working: status.map(it => it === FactorioMachineState.WORKING),
+            true_starts: read?.true_starts,
+            true_start_method: read === null || read.method === "simulator" ? undefined : read.method,
         }];
     });
     const inserters = recording.inserters.flatMap(inserter => {

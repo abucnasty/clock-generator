@@ -1,0 +1,1046 @@
+{
+  "schema": 1,
+  "save": "stupidfathobbit-cell02.manifest.json",
+  "steps": [
+    {
+      "step": "extract-cell",
+      "ok": true,
+      "tool": {
+        "tag": null,
+        "commit": "ac6ab2c",
+        "dirty": false
+      },
+      "args": {
+        "cell": "1041496",
+        "box": null,
+        "name": "stupidfathobbit-cell02",
+        "version": "2.1.21",
+        "sample_ticks": 36000,
+        "warmup": 1800,
+        "check_ticks": 36000,
+        "tolerance": 0.01,
+        "strict": false
+      },
+      "game_version": "2.1.21",
+      "input": {
+        "file": "../../../real/real.zip",
+        "sha256": "dfd676f4809e75979ccd5534650a88f4a8e5673634e08d10622d99a065e4254e"
+      },
+      "output": {
+        "file": "stupidfathobbit-cell02-scaffold.txt",
+        "sha256": "6b43c5c39a720147beadcc3636ada18a36927b5e82edb847f6f7611fc1e6f6ed"
+      },
+      "tick_before": 2814471,
+      "tick_after": null,
+      "entities_player": 83,
+      "files": [
+        {
+          "file": "stupidfathobbit-cell02.json",
+          "sha256": "4d1b2f14d411f1e202bf3269067ae9dd2923fe94714137248d21407f44494c02"
+        },
+        {
+          "file": "stupidfathobbit-cell02.expected.json",
+          "sha256": "24fa1f1ac928d1db2f2df312c474c6bab52d56bd738ffb9f3939bca98cc5252d"
+        }
+      ],
+      "checks": [
+        {
+          "name": "scaffold rate against the target",
+          "pass": true,
+          "figures": {
+            "rule": "the scaffold's rate must be at least 99% of the target and at most 101% of the machines' capacity (a free scaffold runs at capacity whatever limited the source)",
+            "target_items_per_second": 80,
+            "target_crafts_per_second": 80,
+            "machine_capacity_per_second": 90.23,
+            "scaffold_crafts_per_second": 86.77574377066028,
+            "ratio_to_target": 1.0846967971332535,
+            "source_crafts_per_second": 80.02055612655906,
+            "ratio_to_source": 1.084418154173002,
+            "source_items_per_second": 80.020556,
+            "scaffold_items_per_second": 86.77574377066028,
+            "source_limit": {
+              "limit": "downstream: output waiting for space",
+              "output_waiting_share": 0.3594,
+              "ingredient_shortage_share": 0.049049999999999996
+            },
+            "head_stacks": [
+              {
+                "head": [
+                  -138.5,
+                  301.5
+                ],
+                "belt": [
+                  -139.5,
+                  298.5
+                ],
+                "lane": "right",
+                "item": "plastic-bar",
+                "stack_wanted": 4,
+                "stack_found": 4
+              },
+              {
+                "head": [
+                  -126.5,
+                  301.5
+                ],
+                "belt": [
+                  -125.5,
+                  298.5
+                ],
+                "lane": "left",
+                "item": "plastic-bar",
+                "stack_wanted": 4,
+                "stack_found": 4
+              },
+              {
+                "head": [
+                  -126.5,
+                  301.5
+                ],
+                "belt": [
+                  -125.5,
+                  298.5
+                ],
+                "lane": "right",
+                "item": "plastic-bar",
+                "stack_wanted": 4,
+                "stack_found": 4
+              }
+            ],
+            "warmup_ticks": 1800,
+            "ticks": 36000,
+            "machines": [
+              {
+                "recipe": "advanced-circuit",
+                "source_at": [
+                  -140,
+                  291
+                ],
+                "scaffold_at": [
+                  -8,
+                  0
+                ],
+                "source_crafts_per_second": 20.00388899691658,
+                "scaffold_crafts_per_second": 20.83057862718409,
+                "ratio": 1.0413264455924014,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 45.444,
+                "scaffold_crafting_speed": 45.444,
+                "source_effects": {
+                  "consumption": 8.9497,
+                  "speed": 8.0888,
+                  "productivity": 1.75,
+                  "pollution": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 8.9497,
+                  "speed": 8.0888,
+                  "productivity": 1.75,
+                  "pollution": 0.5
+                },
+                "source_beacons": 2,
+                "scaffold_beacons": 2
+              },
+              {
+                "recipe": "processing-unit",
+                "source_at": [
+                  -137,
+                  286
+                ],
+                "scaffold_at": [
+                  -5,
+                  -5
+                ],
+                "source_crafts_per_second": 40.012778132725906,
+                "scaffold_crafts_per_second": 41.659490541403926,
+                "ratio": 1.0411546632232267,
+                "scaffold_status": {
+                  "working": 0.9113,
+                  "item_ingredient_shortage": 0.0888
+                },
+                "source_crafting_speed": 112.78750000000001,
+                "scaffold_crafting_speed": 112.78750000000001,
+                "source_effects": {
+                  "consumption": 12.0722,
+                  "speed": 21.5575,
+                  "productivity": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 12.0722,
+                  "speed": 21.5575,
+                  "productivity": 0.5
+                },
+                "source_beacons": 6,
+                "scaffold_beacons": 6
+              },
+              {
+                "recipe": "casting-copper-cable",
+                "source_at": [
+                  -136.5,
+                  296.5
+                ],
+                "scaffold_at": [
+                  -4.5,
+                  5.5
+                ],
+                "source_crafts_per_second": 167.05130698074947,
+                "scaffold_crafts_per_second": 149.23081196699908,
+                "ratio": 0.8933232230514426,
+                "scaffold_status": {
+                  "full_output": 0.5902,
+                  "working": 0.4098
+                },
+                "source_crafting_speed": 129,
+                "scaffold_crafting_speed": 129,
+                "source_effects": {
+                  "consumption": 10.2,
+                  "speed": 11.9,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 10.2,
+                  "speed": 11.9,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "source_beacons": 4,
+                "scaffold_beacons": 4
+              },
+              {
+                "recipe": "electronic-circuit",
+                "source_at": [
+                  -135,
+                  291
+                ],
+                "scaffold_at": [
+                  -3,
+                  0
+                ],
+                "source_crafts_per_second": 254.47373538153838,
+                "scaffold_crafts_per_second": 223.4312064224006,
+                "ratio": 0.8780128373067854,
+                "scaffold_status": {
+                  "working": 0.843,
+                  "full_output": 0.0897,
+                  "item_ingredient_shortage": 0.0673
+                },
+                "source_crafting_speed": 52.443999999999996,
+                "scaffold_crafting_speed": 52.443999999999996,
+                "source_effects": {
+                  "consumption": 8.8497,
+                  "speed": 9.4888,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 8.8497,
+                  "speed": 9.4888,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "source_beacons": 2,
+                "scaffold_beacons": 2
+              },
+              {
+                "recipe": "casting-iron",
+                "source_at": [
+                  -132.5,
+                  285.5
+                ],
+                "scaffold_at": [
+                  -0.5,
+                  -5.5
+                ],
+                "source_crafts_per_second": 101.74449290258063,
+                "scaffold_crafts_per_second": 93.10091946998527,
+                "ratio": 0.9150462773363911,
+                "scaffold_status": {
+                  "working": 0.8034,
+                  "full_output": 0.1966
+                },
+                "source_crafting_speed": 143.75,
+                "scaffold_crafting_speed": 143.75,
+                "source_effects": {
+                  "consumption": 11.026,
+                  "speed": 13.375,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 11.026,
+                  "speed": 13.375,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "source_beacons": 5,
+                "scaffold_beacons": 5
+              },
+              {
+                "recipe": "electronic-circuit",
+                "source_at": [
+                  -130,
+                  291
+                ],
+                "scaffold_at": [
+                  2,
+                  0
+                ],
+                "source_crafts_per_second": 254.55707102975083,
+                "scaffold_crafts_per_second": 242.02672296452678,
+                "ratio": 0.9507758790021607,
+                "scaffold_status": {
+                  "item_ingredient_shortage": 0.0351,
+                  "working": 0.9191,
+                  "full_output": 0.0458
+                },
+                "source_crafting_speed": 52.443999999999996,
+                "scaffold_crafting_speed": 52.443999999999996,
+                "source_effects": {
+                  "consumption": 8.8497,
+                  "speed": 9.4888,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 8.8497,
+                  "speed": 9.4888,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "source_beacons": 2,
+                "scaffold_beacons": 2
+              },
+              {
+                "recipe": "casting-copper-cable",
+                "source_at": [
+                  -128.5,
+                  296.5
+                ],
+                "scaffold_at": [
+                  3.5,
+                  5.5
+                ],
+                "source_crafts_per_second": 167.0829745270702,
+                "scaffold_crafts_per_second": 161.61782271729768,
+                "ratio": 0.9672907917443911,
+                "scaffold_status": {
+                  "working": 0.4488,
+                  "full_output": 0.5512
+                },
+                "source_crafting_speed": 129,
+                "scaffold_crafting_speed": 129,
+                "source_effects": {
+                  "consumption": 10.2,
+                  "speed": 11.9,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 10.2,
+                  "speed": 11.9,
+                  "productivity": 1.5,
+                  "pollution": 0.4
+                },
+                "source_beacons": 4,
+                "scaffold_beacons": 4
+              },
+              {
+                "recipe": "processing-unit",
+                "source_at": [
+                  -128,
+                  286
+                ],
+                "scaffold_at": [
+                  4,
+                  -5
+                ],
+                "source_crafts_per_second": 40.00777799383316,
+                "scaffold_crafts_per_second": 45.116253229256365,
+                "ratio": 1.1276870521579736,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 112.78750000000001,
+                "scaffold_crafting_speed": 112.78750000000001,
+                "source_effects": {
+                  "consumption": 12.0722,
+                  "speed": 21.5575,
+                  "productivity": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 12.0722,
+                  "speed": 21.5575,
+                  "productivity": 0.5
+                },
+                "source_beacons": 6,
+                "scaffold_beacons": 6
+              },
+              {
+                "recipe": "advanced-circuit",
+                "source_at": [
+                  -125,
+                  291
+                ],
+                "scaffold_at": [
+                  7,
+                  0
+                ],
+                "source_crafts_per_second": 20.010555848773578,
+                "scaffold_crafts_per_second": 22.550626406289062,
+                "ratio": 1.1269365317341329,
+                "scaffold_status": {
+                  "full_output": 0.0906,
+                  "item_ingredient_shortage": 0.0211,
+                  "working": 0.8883
+                },
+                "source_crafting_speed": 55.372,
+                "scaffold_crafting_speed": 55.372,
+                "source_effects": {
+                  "consumption": 10.0617,
+                  "speed": 10.0744,
+                  "productivity": 1.75,
+                  "pollution": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 10.0617,
+                  "speed": 10.0744,
+                  "productivity": 1.75,
+                  "pollution": 0.5
+                },
+                "source_beacons": 3,
+                "scaffold_beacons": 3
+              }
+            ],
+            "harness_problems": []
+          }
+        },
+        {
+          "name": "config validates against the clock generator's loader",
+          "pass": true,
+          "figures": {
+            "pass": true,
+            "generator": "/home/abucnasty/dev/factorio-scripts/clock-generator",
+            "version": "0.14.0",
+            "commit": "b29e79e",
+            "tag": "v0.14.0",
+            "dirty": false
+          }
+        }
+      ],
+      "started": "2026-10-15T23:55:10.685Z",
+      "seconds": 94,
+      "cell": {
+        "id": 1041496,
+        "anchor": [
+          -140,
+          291
+        ],
+        "recipes": [
+          "advanced-circuit",
+          "processing-unit",
+          "casting-copper-cable",
+          "electronic-circuit",
+          "casting-iron"
+        ],
+        "machines": 9,
+        "inserters": 24,
+        "copies": 1,
+        "identical_in_save": 240
+      },
+      "box": null,
+      "cut": {
+        "entities": 83,
+        "source_entities": 68
+      },
+      "removed": [],
+      "inserters_unwired": [],
+      "wires_cut": 0,
+      "replaced": [],
+      "skipped": [],
+      "environment": [
+        {
+          "kind": "loader and void chest after the belt",
+          "belt": [
+            -138.5,
+            282.5
+          ],
+          "loader": [
+            -140,
+            282.5
+          ],
+          "underground": null,
+          "lane": null,
+          "chest": [
+            -141.5,
+            282.5
+          ],
+          "items": null
+        },
+        {
+          "kind": "loader and void chest after the belt",
+          "belt": [
+            -126.5,
+            282.5
+          ],
+          "loader": [
+            -125,
+            282.5
+          ],
+          "underground": null,
+          "lane": null,
+          "chest": [
+            -123.5,
+            282.5
+          ],
+          "items": null
+        },
+        {
+          "kind": "infinity chests and stack inserters before the belt",
+          "belt": [
+            -138.5,
+            301.5
+          ],
+          "from": [
+            -139.5,
+            287.5
+          ],
+          "lane": "right",
+          "items": [
+            "plastic-bar"
+          ],
+          "columns": 1,
+          "inserter": "stack-inserter/legendary",
+          "uses_per_second": 16.405454545454546,
+          "lane_limit_per_second": 120,
+          "per_inserter_per_second": 60,
+          "chests": [
+            [
+              -138.5,
+              303.5
+            ]
+          ]
+        },
+        {
+          "kind": "infinity chests and stack inserters before the belt",
+          "belt": [
+            -126.5,
+            301.5
+          ],
+          "from": [
+            -125.5,
+            287.5
+          ],
+          "lane": "left",
+          "items": [
+            "plastic-bar"
+          ],
+          "columns": 1,
+          "inserter": "stack-inserter/legendary",
+          "uses_per_second": 16.405454545454546,
+          "lane_limit_per_second": 120,
+          "per_inserter_per_second": 60,
+          "chests": [
+            [
+              -126.5,
+              303.5
+            ]
+          ]
+        },
+        {
+          "kind": "infinity chests and stack inserters before the belt",
+          "belt": [
+            -126.5,
+            301.5
+          ],
+          "from": [
+            -125.5,
+            287.5
+          ],
+          "lane": "right",
+          "items": [
+            "plastic-bar"
+          ],
+          "columns": 1,
+          "inserter": "stack-inserter/legendary",
+          "uses_per_second": 16.405454545454546,
+          "lane_limit_per_second": 120,
+          "per_inserter_per_second": 60,
+          "chests": [
+            [
+              -126.5,
+              299.5
+            ]
+          ]
+        },
+        {
+          "kind": "infinity pipe (supply)",
+          "at": [
+            -136.5,
+            283.5
+          ],
+          "fluid": "sulfuric-acid"
+        },
+        {
+          "kind": "infinity pipe (supply)",
+          "at": [
+            -135.5,
+            299.5
+          ],
+          "fluid": "molten-copper"
+        },
+        {
+          "kind": "infinity pipe (supply)",
+          "at": [
+            -131.5,
+            288.5
+          ],
+          "fluid": "molten-iron"
+        },
+        {
+          "kind": "infinity pipe (supply)",
+          "at": [
+            -129.5,
+            299.5
+          ],
+          "fluid": "molten-copper"
+        },
+        {
+          "kind": "infinity pipe (supply)",
+          "at": [
+            -125.5,
+            285.5
+          ],
+          "fluid": "sulfuric-acid"
+        }
+      ],
+      "dead_ends": [
+        {
+          "belt": [
+            -133.5,
+            294.5
+          ],
+          "why": "was backed up in the source (63.9% of the sample)",
+          "share": 0.6391
+        },
+        {
+          "belt": [
+            -131.5,
+            294.5
+          ],
+          "why": "was backed up in the source (63.9% of the sample)",
+          "share": 0.6391
+        }
+      ],
+      "scaffold_supplied": null,
+      "extended": [
+        {
+          "kind": "head",
+          "from": [
+            -139.5,
+            287.5
+          ],
+          "to": [
+            -138.5,
+            301.5
+          ],
+          "belts": 5
+        },
+        {
+          "kind": "head",
+          "from": [
+            -125.5,
+            287.5
+          ],
+          "to": [
+            -126.5,
+            301.5
+          ],
+          "belts": 5
+        }
+      ],
+      "bridged": [],
+      "power": {
+        "substations": 0,
+        "eei": null,
+        "note": "no power entities: the harness powers its whole surface with one electric energy interface (the benchmark template's way)"
+      },
+      "scaffold_notes": [],
+      "config_notes": [],
+      "expected": {
+        "name": "stupidfathobbit-cell02",
+        "product": "processing-unit",
+        "recipe": "processing-unit",
+        "copies": 1,
+        "items_per_second": 80,
+        "target": {
+          "items_per_second": {
+            "fraction": "80",
+            "decimal": 80
+          },
+          "source": "measured",
+          "capacity": {
+            "fraction": "9023/100",
+            "decimal": 90.23
+          },
+          "measured": 80.020556,
+          "demand": {
+            "items_per_second": {
+              "fraction": "8065/96",
+              "decimal": 84.0104166667
+            },
+            "source": "demand (consumers)",
+            "producers_sharing": 1,
+            "consumers": 14,
+            "consumers_demand": {
+              "fraction": "8065/96",
+              "decimal": 84.0104166667
+            },
+            "consumers_demand_per_producer": {
+              "fraction": "8065/96",
+              "decimal": 84.0104166667
+            },
+            "lane_limit": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "lanes": [
+              {
+                "lane": "right",
+                "belts": 3,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              },
+              {
+                "lane": "left",
+                "belts": 3,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              }
+            ]
+          },
+          "fallback_reason": "flag: output blocked and measurement off the target",
+          "flagged": {
+            "items_per_second": {
+              "fraction": "8065/96",
+              "decimal": 84.0104166667
+            },
+            "source": "demand (consumers)",
+            "demand": {
+              "items_per_second": {
+                "fraction": "8065/96",
+                "decimal": 84.0104166667
+              },
+              "source": "demand (consumers)",
+              "producers_sharing": 1,
+              "consumers": 14,
+              "consumers_demand": {
+                "fraction": "8065/96",
+                "decimal": 84.0104166667
+              },
+              "consumers_demand_per_producer": {
+                "fraction": "8065/96",
+                "decimal": 84.0104166667
+              },
+              "lane_limit": {
+                "fraction": "240",
+                "decimal": 240
+              },
+              "lanes": [
+                {
+                  "lane": "right",
+                  "belts": 3,
+                  "speed": 0.125,
+                  "stack": 4,
+                  "lane_limit": {
+                    "fraction": "120",
+                    "decimal": 120
+                  },
+                  "cells_on_lane": 1
+                },
+                {
+                  "lane": "left",
+                  "belts": 3,
+                  "speed": 0.125,
+                  "stack": 4,
+                  "lane_limit": {
+                    "fraction": "120",
+                    "decimal": 120
+                  },
+                  "cells_on_lane": 1
+                }
+              ]
+            },
+            "flags": [
+              "output blocked and measurement off the target"
+            ]
+          }
+        },
+        "measured_items_per_second": 80.020556,
+        "rate_source": "products finished by the processing-unit machines over 36000 sampled ticks",
+        "source": {
+          "crafts_per_second": 80.02055612655906,
+          "items_per_second": 80.02055612655906,
+          "sampled_ticks": 36000,
+          "start_tick": 2814471,
+          "per_machine": [
+            {
+              "u": 1041496,
+              "recipe": "advanced-circuit",
+              "x": -140,
+              "y": 291,
+              "crafts_per_second": 20.00388899691658,
+              "status": {
+                "working": 0.9596,
+                "full_output": 0.0328,
+                "item_ingredient_shortage": 0.0076
+              }
+            },
+            {
+              "u": 1072625,
+              "recipe": "processing-unit",
+              "x": -137,
+              "y": 286,
+              "crafts_per_second": 40.012778132725906,
+              "status": {
+                "working": 0.8743,
+                "item_ingredient_shortage": 0.0483,
+                "full_output": 0.0774
+              }
+            },
+            {
+              "u": 1011478,
+              "recipe": "casting-copper-cable",
+              "x": -136.5,
+              "y": 296.5,
+              "crafts_per_second": 167.05130698074947,
+              "status": {
+                "full_output": 0.5372,
+                "working": 0.4628
+              }
+            },
+            {
+              "u": 1041491,
+              "recipe": "electronic-circuit",
+              "x": -135,
+              "y": 291,
+              "crafts_per_second": 254.47373538153838,
+              "status": {
+                "working": 0.9688,
+                "full_output": 0.0227,
+                "item_ingredient_shortage": 0.0085
+              }
+            },
+            {
+              "u": 1079822,
+              "recipe": "casting-iron",
+              "x": -132.5,
+              "y": 285.5,
+              "crafts_per_second": 101.74449290258063,
+              "status": {
+                "working": 0.9011,
+                "full_output": 0.0989
+              }
+            },
+            {
+              "u": 1041484,
+              "recipe": "electronic-circuit",
+              "x": -130,
+              "y": 291,
+              "crafts_per_second": 254.55707102975083,
+              "status": {
+                "working": 0.9691,
+                "full_output": 0.0222,
+                "item_ingredient_shortage": 0.0087
+              }
+            },
+            {
+              "u": 1011472,
+              "recipe": "casting-copper-cable",
+              "x": -128.5,
+              "y": 296.5,
+              "crafts_per_second": 167.0829745270702,
+              "status": {
+                "working": 0.4632,
+                "full_output": 0.5368
+              }
+            },
+            {
+              "u": 1072622,
+              "recipe": "processing-unit",
+              "x": -128,
+              "y": 286,
+              "crafts_per_second": 40.00777799383316,
+              "status": {
+                "working": 0.8738,
+                "item_ingredient_shortage": 0.0498,
+                "full_output": 0.0763
+              }
+            },
+            {
+              "u": 1041479,
+              "recipe": "advanced-circuit",
+              "x": -125,
+              "y": 291,
+              "crafts_per_second": 20.010555848773578,
+              "status": {
+                "working": 0.7882,
+                "full_output": 0.1877,
+                "item_ingredient_shortage": 0.0241
+              }
+            }
+          ],
+          "output_inserter_waiting": {
+            "unit": 1094768,
+            "share": 0.3594
+          }
+        }
+      },
+      "target": {
+        "items_per_second": {
+          "fraction": "80",
+          "decimal": 80
+        },
+        "source": "measured",
+        "capacity": {
+          "fraction": "9023/100",
+          "decimal": 90.23
+        },
+        "measured": 80.020556,
+        "demand": {
+          "items_per_second": {
+            "fraction": "8065/96",
+            "decimal": 84.0104166667
+          },
+          "source": "demand (consumers)",
+          "producers_sharing": 1,
+          "consumers": 14,
+          "consumers_demand": {
+            "fraction": "8065/96",
+            "decimal": 84.0104166667
+          },
+          "consumers_demand_per_producer": {
+            "fraction": "8065/96",
+            "decimal": 84.0104166667
+          },
+          "lane_limit": {
+            "fraction": "240",
+            "decimal": 240
+          },
+          "lanes": [
+            {
+              "lane": "right",
+              "belts": 3,
+              "speed": 0.125,
+              "stack": 4,
+              "lane_limit": {
+                "fraction": "120",
+                "decimal": 120
+              },
+              "cells_on_lane": 1
+            },
+            {
+              "lane": "left",
+              "belts": 3,
+              "speed": 0.125,
+              "stack": 4,
+              "lane_limit": {
+                "fraction": "120",
+                "decimal": 120
+              },
+              "cells_on_lane": 1
+            }
+          ]
+        },
+        "fallback_reason": "flag: output blocked and measurement off the target",
+        "flagged": {
+          "items_per_second": {
+            "fraction": "8065/96",
+            "decimal": 84.0104166667
+          },
+          "source": "demand (consumers)",
+          "demand": {
+            "items_per_second": {
+              "fraction": "8065/96",
+              "decimal": 84.0104166667
+            },
+            "source": "demand (consumers)",
+            "producers_sharing": 1,
+            "consumers": 14,
+            "consumers_demand": {
+              "fraction": "8065/96",
+              "decimal": 84.0104166667
+            },
+            "consumers_demand_per_producer": {
+              "fraction": "8065/96",
+              "decimal": 84.0104166667
+            },
+            "lane_limit": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "lanes": [
+              {
+                "lane": "right",
+                "belts": 3,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              },
+              {
+                "lane": "left",
+                "belts": 3,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              }
+            ]
+          },
+          "flags": [
+            "output blocked and measurement off the target"
+          ]
+        }
+      },
+      "source_limit": {
+        "limit": "downstream: output waiting for space",
+        "output_waiting_share": 0.3594,
+        "ingredient_shortage_share": 0.049049999999999996
+      },
+      "flags": [
+        "output blocked and measurement off the target"
+      ],
+      "source_dump": {
+        "mods": {
+          "base": "2.1.21",
+          "design-extractor": "0.1.0",
+          "elevated-rails": "2.1.21",
+          "recycler": "2.1.21",
+          "quality": "2.1.21",
+          "space-age": "2.1.21"
+        },
+        "tick": 2814471
+      },
+      "n": 1
+    }
+  ]
+}

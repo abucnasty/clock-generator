@@ -1,4 +1,4 @@
-import {fraction} from "fractionability";
+import {fraction} from "../data-types/fraction";
 import { ProductionRate } from "../entities";
 import { TICKS_PER_SECOND } from "../data-types";
 import { TargetProductionRateConfig } from "../config";

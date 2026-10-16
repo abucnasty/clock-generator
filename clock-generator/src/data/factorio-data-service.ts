@@ -1,4 +1,4 @@
-import { FactorioData, Ingredient, Item, ItemName, MiningDrillSpec, Recipe, Resource, ResourceName } from "./factorio-data-types";
+import { FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, MiningDrillSpec, QualitySpec, Recipe, Resource, ResourceName } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
 
@@ -7,8 +7,14 @@ export type EnrichedIngredient = Ingredient & {
 }
 
 export interface EnrichedRecipe extends Recipe {
+    /** The item ingredients; the fluids are in `fluid_ingredients` */
     ingredients: EnrichedIngredient[];
+    /** The item results; the fluids are in `fluid_results` */
     results: EnrichedIngredient[];
+    /** The fluid ingredients, as the game data lists them: not simulated, kept to say so */
+    fluid_ingredients: Ingredient[];
+    /** The fluid results, as the game data lists them: not simulated, kept to refuse a fluid-only recipe by name */
+    fluid_results: Ingredient[];
 }
 
 export class FactorioDataService {
@@ -55,6 +61,11 @@ export class FactorioDataService {
             this.initialized = true;
         }
         return this.factorio_data;
+    }
+
+    /** Whether the game has an item of that name (a module, tool, ammo or capsule counts as an item) */
+    public static hasItem(itemName: string): boolean {
+        return Object.prototype.hasOwnProperty.call(this.getData().item, itemName);
     }
 
     // ============ Recipe Listing Methods ============
@@ -110,6 +121,8 @@ export class FactorioDataService {
         }
 
         const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : []
+        // a recipe without results is an empty Lua table in the dump, which is {} in JSON
+        const results = Array.isArray(recipe.results) ? recipe.results : []
 
         const enriched_ingredients: EnrichedIngredient[] = ingredients
             .filter(it => it.type != "fluid")
@@ -121,7 +134,7 @@ export class FactorioDataService {
                 }
             })
 
-        const enriched_results: EnrichedIngredient[] = recipe.results
+        const enriched_results: EnrichedIngredient[] = results
             .filter(it => it.type != "fluid")
             .map(result => {
                 const item = this.findItemOrThrow(result.name);
@@ -135,6 +148,8 @@ export class FactorioDataService {
             ...recipe,
             ingredients: enriched_ingredients,
             results: enriched_results,
+            fluid_ingredients: ingredients.filter(it => it.type == "fluid"),
+            fluid_results: results.filter(it => it.type == "fluid"),
             energy_required: recipe.energy_required ?? this.DEFAULT_ENERGY_REQUIRED,
         }
     }
@@ -157,6 +172,29 @@ export class FactorioDataService {
         const spec = this.getData()["mining-drill"][type];
         assert(spec, `Mining drill spec for type ${type} was not found`);
         return spec;
+    }
+
+    /** The inserter prototype of that name; an unknown name is refused (own keys only: "constructor" is no inserter) */
+    public static findInserterOrThrow(name: string): InserterPrototype {
+        const inserters = this.getData().inserter;
+        if (!Object.prototype.hasOwnProperty.call(inserters, name)) {
+            throw new Error(`${name} is not an inserter of the game data`);
+        }
+        return inserters[name];
+    }
+
+    /** The quality of that name; an unknown name is refused */
+    public static findQualityOrThrow(name: string): QualitySpec {
+        const qualities = this.getData().quality;
+        if (!Object.prototype.hasOwnProperty.call(qualities, name)) {
+            throw new Error(`${name} is not a quality of the game data`);
+        }
+        return qualities[name];
+    }
+
+    /** What all the technologies together add to the hand of an inserter */
+    public static inserterResearch(): InserterResearch {
+        return this.getData().inserter_research;
     }
 
     public static getResourceOrThrow(itemName: ResourceName): Resource {

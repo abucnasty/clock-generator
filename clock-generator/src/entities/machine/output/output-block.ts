@@ -5,8 +5,11 @@ import { OverloadMultiplier } from "../traits/overload-multiplier";
 
 export interface OutputBlock {
     readonly item_name: ItemName;
-    /** The most of the product the machine holds before it takes no more ingredients or has no room for it: never more than a stack */
-    readonly quantity: number;
+    /**
+     * The lesser of the block and a stack: the most of the product the machine gathers before it either takes no more
+     * ingredients or has no room for another craft. Not the point where inputs stop: that is `ingredients_blocked_at`.
+     */
+    readonly held_limit: number;
     readonly max_stack_size: number;
     /**
      * The amount of the product from which the machine takes no more ingredients. For a machine with a recipe this is
@@ -44,7 +47,7 @@ function forMachine(recipe: RecipeMetadata, overloadMultiplier: OverloadMultipli
     }
     return {
         item_name: recipe.output.name,
-        quantity: Math.min(stack_size, overload_quantity),
+        held_limit: Math.min(stack_size, overload_quantity),
         max_stack_size: stack_size,
         ingredients_blocked_at: overload_quantity,
     };
@@ -54,7 +57,7 @@ function itemStackSize(recipe: RecipeMetadata): OutputBlock {
     const stack_size = recipe.output.item.stack_size
     return {
         item_name: recipe.output.name,
-        quantity: stack_size,
+        held_limit: stack_size,
         max_stack_size: stack_size,
         ingredients_blocked_at: stack_size,
     };
@@ -65,7 +68,7 @@ function forByProduct(output: EnrichedIngredient): OutputBlock {
     const stack_size = output.item.stack_size;
     return {
         item_name: output.name,
-        quantity: stack_size,
+        held_limit: stack_size,
         max_stack_size: stack_size,
         ingredients_blocked_at: stack_size,
     };
