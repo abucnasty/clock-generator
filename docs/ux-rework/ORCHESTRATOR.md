@@ -91,10 +91,16 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      runs it. Scripts find controls only through `lib.mjs`'s `ui` map and `itemLabel`, and open tooltips and menus only with
      `openTooltip`, `openMoreMenu` and `chooseMenuItem`; an item that renames a control updates `ui` in the same commit
      (coach run 5). The checks come from the spec, not from the code.
+   - Reconcile every capture consumer affected by changed labels, navigation or state contracts before reporting.
+     Validate imports and ui bindings, then probe the affected real states against the immutable build. These probes
+     supplement the full evidence gate and fresh phase captures; they never replace them (phase 2 end coach).
    - The implementer builds to the spec, writes the tests the spec lists, and commits in the repo's style.
    - It changes only what the spec covers. Anything else it notices goes in its report as a follow-up, not into the
      code.
 3. **Evidence gate** (implementer, or an evidence runner).
+   - Use an immutable verifier outside ignored worktree directories, pinned to the product head. Verify the engine
+     file dependency resolves inside that verifier; record source identity and preserve failed diagnostics. Use that
+     same source for gates, independent reruns and preview evidence (phase 2 end coach).
    - Nothing goes to review without all of:
      - the full local check set passing. In `clock-generator-ui`: `npm test`, `npm run lint`, `npm run knip`,
        `npm run check:icons`, `npm run build`. The same in `clock-generator` if the engine changed.

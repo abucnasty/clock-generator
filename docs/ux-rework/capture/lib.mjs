@@ -1548,6 +1548,24 @@ export const ui = {
     /** The Terms popover (role dialog, named "Terms") from ⋮ > Terms; the (i) by a clock table header opens one named "Terms for <column>" (owner: 2.5 B results) */
     termsPopover: (page) => page.getByRole('dialog', { name: 'Terms', exact: true }),
 
+    // ---- phase-end walkthrough controls (additive selector ownership; no action/helper changes)
+    /** Footer version button (owner: App changelog). */
+    changelog: (page) => page.getByRole('button', { name: /^v\d/ }).and(page.getByTitle('View changelog')),
+    /** Recipe combobox by owning entity; same key/signature as the Phase 3 ui map (owner: 2.8 names). */
+    recipeField: (page, owner) => page.getByRole('combobox', { name: `Recipe, ${owner}`, exact: true }),
+    /** Row enable chip; same key/signature as the Phase 3 ui map (owner: 1.13). */
+    enableChip: (page, entityLabel) => page.getByRole('button', { name: new RegExp(`, ${entityLabel}\\. Edit rule$`) }),
+    /** An accessible diagram node, by its current name (owner: 2.11 diagram). */
+    diagramNode: (page, name) => ui.diagram(page).getByRole('group', typeof name === 'string' ? { name, exact: true } : { name }),
+    /** Developer timeline run toggle, only while the Timelines tab is selected (owner: 2.5 B). */
+    timelineRun: (page, name) => page.getByRole('group', { name: 'Simulation shown in the timelines', exact: true }).getByRole('button', { name, exact: true }),
+    /** Click help for a displayed clock; it opens a named dialog, not a hover tooltip (owner: 2.7 A). */
+    clockHelp: (page) => ui.clockTable(page).getByRole('button', { name: /^About / }),
+    /** Show hidden unstable clocks (owner: 1.6 clock pick). */
+    showUnstable: (page) => page.getByRole('button', { name: /^Show \d+ unstable clock/ }),
+    /** Header stale-copy action; separate from copyBlueprint's fresh-results contract (owner: 1.1). */
+    copyOldClock: (page) => page.getByRole('banner').getByRole('button', { name: /^Copy old clock/ }),
+
     // ---- messages
     /** The message on screen (the Snackbar carries data-message); 0 when none shows (owner: 1.5 messages) */
     message: (page) => page.locator('[data-message]'),
