@@ -9,7 +9,7 @@ come from here.
 - **Review:** [SYNTHESIS.md](review/SYNTHESIS.md) · [A-newcomer.md](review/A-newcomer.md) ·
   [B-power-user.md](review/B-power-user.md) · [C-visual-a11y.md](review/C-visual-a11y.md) · [BRIEF.md](review/BRIEF.md)
 - **GitHub:** [feat/ux-rework](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework) ·
-  [feat/ux-rework-p1](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) ·
+  [Phase 1 snapshot](https://github.com/abucnasty/clock-generator/tree/17a889d55e334e2dfbec2640a0f28444613c7693) ·
   [child PRs into feat/ux-rework-p1](https://github.com/abucnasty/clock-generator/pulls?q=is%3Apr+base%3Afeat%2Fux-rework-p1) ·
   [phase PRs into feat/ux-rework](https://github.com/abucnasty/clock-generator/pulls?q=is%3Apr+base%3Afeat%2Fux-rework)
 - In the item tables, the item number opens its spec, and the PR column links the child PR once it is open.
@@ -33,7 +33,7 @@ come from here.
 ## Current state
 
 - **Phase:** 2 (Phase 1 merged into `feat/ux-rework`, #170, 877989d)
-- **Branch:** [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2); the ledger lives here now (`feat/ux-rework-p1` is kept for the links in its PRs)
+- **Branch:** [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2); the ledger lives here now. Phase 1 history is linked by its permanent commit and merged PR.
 - **Open checkpoints:** 2.5 A's install steps in game (owner)
 - **Phase 1:** merged into `feat/ux-rework` (#170) after the end review, its fixes (#168) and the owner's approval
 - **Phase 2 remaining:** only 2.7 B, then the phase-end captures, reviews and owner checkpoints. 3.3 is in fix round 1 on p3.
