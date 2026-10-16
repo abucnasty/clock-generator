@@ -343,7 +343,7 @@ try {
                 await fresh(page);
                 await goConfigure(page);
                 await importBuild(page, LOGISTIC);
-                await page.getByRole('button', { name: 'Diagram view' }).click();
+                await ui.diagramView(page).click();
                 await page.waitForTimeout(800);
                 const g = group(page);
                 rec.check('Diagram view: a radiogroup "Your input belts are:" is on the page', await exists(g));
@@ -362,7 +362,7 @@ try {
                     await page.waitForTimeout(500);
                     rec.check('choosing Standing in the Diagram checks Standing in the List', (await exists(standingRadio(page))) && (await standingRadio(page).isChecked()));
                     await movingRadio(page).click();
-                    await page.getByRole('button', { name: 'Diagram view' }).click();
+                    await ui.diagramView(page).click();
                     await page.waitForTimeout(500);
                     rec.check('choosing Moving in the List checks Moving in the Diagram', (await exists(movingRadio(page))) && (await movingRadio(page).isChecked()));
                     await page.getByRole('button', { name: 'List view' }).click();
