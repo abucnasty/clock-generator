@@ -17,6 +17,7 @@ import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
 import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, startDependenceVerdictOf } from "./trial";
 import { CLOCK_STARTS, START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
+import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
 
 
 export interface ClockAlternative {
@@ -88,6 +89,8 @@ export interface ClockAlternativeContext {
     primary_stable: boolean;
     /** Clock period of the primary alternative */
     period_ticks: number;
+    /** The items whose hands set the period of the plan: a clock is also made with each of them left out of it (see `leanPeriodItems`) */
+    lean_period_items?: LeanPeriodItem[];
 }
 
 
@@ -267,6 +270,56 @@ function alternativeDefinitions(
     });
 }
 
+/** An item's name as a person says it: "low-density-structure" as "low density structure" */
+function plainItemName(item: string): string {
+    return item.replace(/-/g, " ");
+}
+
+/**
+ * The clocks for a shorter period: for each item whose hands set the period of the plan, the plan is made with that item
+ * left out of the period (`overrides.ignored_lcm_ingredients`), the period it would have if its hands did not have to
+ * come out whole. The item's inserters stay clocked; their windows are the plan's, or what they were seen to do. The
+ * observed windows of such a plan are a search, so they wait for the same reason as the other searches.
+ */
+function shorterPeriodDefinitions(
+    config: Config,
+    context: ClockAlternativeContext,
+    quiet: GenerateClockOptions,
+): AlternativeDefinition[] {
+    if (config.overrides?.lcm !== undefined) {
+        return [];
+    }
+    const lean_items = context.lean_period_items ?? [];
+    const planned = lean_items.map(({ item, lcm, lcm_without }) => {
+        const ignored = [...(config.overrides?.ignored_lcm_ingredients ?? []), item];
+        const planned_on: Config = { ...config, overrides: { ...config.overrides, ignored_lcm_ingredients: ignored } };
+        const lean_config: Config = { ...planned_on, overrides: { ...planned_on.overrides, derive_clock_windows: false } };
+        const label = `${BATCHED_SWINGS_LABEL}, shorter period (${plainItemName(item)} not in the period)`;
+        const how = `The clock period is ${lcm_without} crafting ${lcm_without === 1 ? "cycle" : "cycles"} instead of ${lcm}: the period of the other `
+            + `alternatives is set by how often the hands of ${plainItemName(item)} come out whole, and here it is not. The inserters that move `
+            + `${plainItemName(item)} stay clocked, so they take their hands when their windows open, but the period is not stretched to fit them.`;
+        return { item, planned_on, lean_config, label, how, shorter_than_limit: context.period_ticks * lcm_without / lcm <= MAX_OBSERVED_WINDOWS_PERIOD_TICKS };
+    });
+    return [
+        ...planned.map(({ item, planned_on, lean_config, label, how }): AlternativeDefinition => ({
+            id: `planned-lean-${item}`,
+            label,
+            description: `${BATCHED_SWINGS_DESCRIPTION} ${how}`,
+            run: () => generateClockWithSwingBackoff(lean_config, { ...quiet, belt_pickup_slack: "always" }),
+            planned_on,
+        })),
+        ...planned.filter(it => it.shorter_than_limit).map(({ item, planned_on, lean_config, how }): AlternativeDefinition => ({
+            id: `derived-lean-${item}`,
+            label: `Observed windows, shorter period (${plainItemName(item)} not in the period)`,
+            description: "Built from what the inserters actually do rather than from the planned schedule, as the observed windows "
+                + `alternative is. ${how}`,
+            run: () => generateClockWithSwingBackoff(lean_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
+            planned_on,
+            search: true,
+        })),
+    ];
+}
+
 /** The alternatives as the config asks for them, each made once */
 function alternativeDefinitionsFor(
     config: Config,
@@ -403,6 +456,7 @@ function alternativeDefinitionsFor(
             },
             search: true,
         },
+        ...shorterPeriodDefinitions(config, context, quiet),
     ];
 }
 
@@ -542,6 +596,8 @@ export function planClockAlternatives(config: Config, options: GenerateClockOpti
         planned_swings: result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
+        lean_period_items: config.overrides?.lcm === undefined
+            ? leanPeriodItems(result.serializable_transfer_plan, config.overrides?.ignored_lcm_ingredients) : [],
     };
     const tasks = alternativeDefinitions(config, context, {})
         .map(definition => ({ id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config) }));
