@@ -1,18 +1,37 @@
-# D2 Light/dark mode — approved Phase 4 scope
+# D2 Complete System, Light and Dark themes
+Findings: owner D2 A/A/B and D6 scheme completion · Implementer model: gpt-6.1-sol/high, fast off · Branch: feat/ux-rework-p4-themes (bundle with D6 completion; likely two units by existing-file count)
 
-Owner approval, 2026-10-16: A / A / B. Phase 4 targets `feat/ux-rework`; implement D2 after the density work. This is approved scope for a later detailed item spec, not a claim of implementation or evidence completion.
+## Change
+- Offer functional System/Light/Dark choices in existing Display popover after both density stages; use System for missing preferences.
+- Theme the whole interface, charts/diagrams/native fields included, preserving orange selection, green commit, title bars/inset controls and readable status.
+- Follow device changes only in System; preserve explicit saved Light/Dark independently of Compact/builds.
 
-## Approved behavior
+## Files
+- Core provider/contract: `src/App.tsx:108–121` hardcoded appTheme provider; D6 `useDisplayPreferences.tsx` + DisplayPreferences; `theme/tokens.ts:10–97` existing single dark surfaces/roles/text/control; `theme/theme.ts:8–31` mode/palette and component overrides; `theme/contrast.ts`, `utils/a11yTheme.ts`, `index.css`. New `theme/types.d.ts` only if needed for MUI token extension.
+- Current direct token consumers requiring actual-mode reconciliation: `components/{Panel,AddRow,MachinesForm,BeltsForm,InsertersForm,ChestsForm,DrillsForm,BulkEditBar,SlotRemoveButton,BlueprintOutput,HelpButton,Messages,ResultSummaryCard,TermsPopover,ConfigFlowDiagram}.tsx`, `components/insetSlot.ts`, `utils/a11yTheme.ts`. Token import alone is not permission for unrelated edits; re-inventory after D1/D5 changes. `DebugPanel.tsx` and `ShiftRangePanel.tsx` inspect literals/alpha backgrounds and change only if required.
+- Visualization consumers: `components/colors.ts`, `StateTransitionTimeline.tsx:59,152` white clock strokes, `WakeWindowsChart.tsx`, `WakeWindowsView.tsx` legend, `FuelPanel.tsx:207,240,268` track/series colors; `ConfigFlowDiagram.tsx:39–40,368,388–391` literals/ReactFlow controls; `EntityFlowNode.tsx:11–13,66–74`, `InserterFlowNode.tsx:18–36,68–69`, `DrillFlowNode.tsx:19–37`, `flowNodeStyle.ts`. Also inspect TransferHistoryVisualization if it consumes unchanged static series/track colors; no developer-timeline interaction redesign.
 
-- Offer System / Light / Dark and remember the selected color preference locally. Keep it independent of Compact and outside build data, exports and share links.
-- Default new installations to System, following the device's current color-scheme preference. Explicit Light/Dark choices override the device preference. Preserve saved user choices; finalize treatment of legacy installations without a saved theme in the implementation spec.
-- Cover the complete interface: application surfaces, forms, dialogs, item slots, warnings/status, charts, diagrams and focus indicators. A partially themed interface is outside the approved direction.
-- Retain the Factorio visual grammar: orange selection/accent, green confirmation/commit, title-bar panel headers and inset controls. Choose theme-appropriate semantic colors with readable contrast.
-- Coordinate one display-preferences entry with D6 if separately approved. Exact placement remains to be finalized without adding avoidable header height.
+### Exact provider API proposed for all theme consumers
+D6 owns saved `DisplayScheme`; D2 exports `type ResolvedColorScheme = 'light' | 'dark'`, `resolveColorScheme(scheme: DisplayScheme, systemDark: boolean): ResolvedColorScheme` and `useResolvedColorScheme(): ResolvedColorScheme` with one matchMedia listener/cleanup.
+`theme/tokens.ts` exports `tokensFor(mode: ResolvedColorScheme): ThemeTokens`; `ThemeTokens` contains current surface/hover/role/text/control/shadow roles with mode-appropriate values. `theme/theme.ts` exports `createAppTheme(mode: ResolvedColorScheme): Theme`, memoized per mode; custom `theme.factorio: ThemeTokens` supplies runtime tokens via MUI augmentation. Ordinary components use theme callback/useTheme, not stale module-level SURFACE imported as an active palette. Non-MUI canvas palette helpers accept mode/tokens explicitly and redraw on that dependency. Preserve current dark exports temporarily only for staged migration; final active consumers cannot silently retain dark constants. Root records these exports in both split provider/consumer specs if splitting the broad item.
 
-## Verification and boundaries
+## Acceptance criteria
+- [ ] Scheme UI appears only when all choices function. No saved/invalid scheme => System (including legacy builds: inspected source has no explicit old scheme setting). A valid explicit Light/Dark wins across reload/device changes; new valid saved choices never overwritten by default. System tracks live device setting including change after page load. Storage/matchMedia unavailable falls back safely without blocking UI.
+- [ ] Density and scheme independent, one browser-wide preference set. Changing theme retains current input/edit/draft, selected clock, caches/results, tab/view, local build and worker identity; no remount keyed by theme, no generation/staleness effect, no exported preference.
+- [ ] Complete actual surfaces in both themes: header/menus/popovers/dialogs/messages; all List and Diagram entity fields/item slots; selected/hover/disabled/focus; warning/stale/below-target/errors; import recovery/preview; fuel/wake/developer charts and legends; full-screen diagrams and native input/select/canvas colors. No unreadable dark-only island caused by literal fill/white text. Native `color-scheme` matches resolved mode.
+- [ ] Preserve semantic series identity and labels; do not reuse orange simultaneously for contradictory chart meanings. Chart foreground/track/grid/hover/focus distinguish at measured rendered opacity; canvas redraws when theme changes with same data. Noncolor alternatives remain available. Theme does not add new chart interactions.
+- [ ] Both densities work in both themes; System follows light and dark. Measure actual foreground/background/alpha/selection/hover combinations under common gate; light palette must not simply invert dark values or rely on MUI's intended colors. Full AA and forced-colors control/focus reachability preserved.
+- [ ] After source/literal inventory, no active UI token consumer is accidentally fixed to one mode. Keep existing semantic token-pair tests meaningful in both modes without multiplying arbitrary assertions or introducing a coverage target.
 
-- Both Compact and explanatory views work in both themes. Theme changes preserve builds, results, selection and current editing state.
-- Verify System follows the device preference and that an explicit choice remains stable across reloads. Define fallback behavior when local storage is unavailable without blocking application use.
-- Inspect player-facing states and the charts/diagrams in each theme, including selected, disabled, warning, stale and focused states. Preserve existing accessibility requirements and normal evidence/checks, independent code/UX reviews and three phase-end reviewers.
-- Finalize exact files, token changes, migration behavior and bounded evidence in the item spec before implementation. No new dependencies, ranking changes or generation arithmetic are implied.
+## Tests
+Extend existing theme/tokens/contrast meaningful tests over the two actual token sets and test System-vs-explicit mode resolution/listener lifecycle. Reuse current contrast math rather than add a new framework. One preservation regression if changing provider otherwise risks remount/data loss and existing integration tests do not cover it. No unrelated style snapshots or theme×density×every-control test permutations.
+
+## Screens to capture
+Common gate, both themes/densities on representative Configure/Results; all theme-unique surfaces on real states: open Display/menu; dirty/short-height entity/rule dialog; import preview/manual clipboard recovery, warning/error/stale/selected/disabled/focus; Wake chart/table, Fuel with actual row/tooltip, diagram all entity kinds + fullscreen; Developer tools canvases/legends. Reuse fresh normal captures but include native theme change with same data and recorded canvas repaint. System light→dark plus explicit-mode stability across device/reload.
+
+## Risks and checkpoints
+This likely exceeds ~20 existing files and counts two implementation units under ORCHESTRATOR. Root may split core API/provider plus ordinary consumers and visualization consumers; provider lands first, incomplete theme choices remain unexposed until whole interface passes. Do not serialize D7/first-visit solely for aesthetics, but reconcile shared App/diagram files. Legacy System fallback is a spec recommendation within approval, not evidence of a preexisting explicit preference. Full checks, independent reviews, three phase-end personas and owner merges unchanged.
+
+## Root adoption against completed density source
+
+D1A Results and D1B Configure products are committed and preflight checks pass; their item evidence/reviews are still in progress. Stack this child on the latest Configure predecessor, and take phase changes only through it while open. Adopt the exact proposed mode/token/theme APIs above with one existing Display preference owner. The context interface is module-private; consume the public hook structure, not a competing provider. Theme controls are accepted only with the complete interface migrated and verified. App ownership is limited to PageProviders/theme adapter; D7 owns navigation state and first-visit owns route hints. Preserve the same mounted tree. Existing renderer tests may use MUI default theme; provide a safe token resolution fallback from actual theme mode if needed, without fixing active consumers to dark or adding dummy tests/config. No dependencies or CI changes. All gates, native paint/geometry/focus and independent reviews remain.
