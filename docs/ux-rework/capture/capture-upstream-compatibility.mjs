@@ -88,15 +88,18 @@ async function load(p, config, label) {
     await p.waitForFunction(copies => document.querySelector('#target-copies')?.value === String(copies), config.target_output.copies);
     await ui.checkOnly(p).waitFor({ state: 'visible' });
 }
-async function edit(p, field, value) {
+async function edit(p, field, value, { blur = true } = {}) {
+    await field.focus();
+    await p.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
     await field.fill(String(value));
-    await field.press('Tab');
+    await p.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+    if (blur) await field.press('Tab');
     // NumberField deliberately rounds its unfocused presentation. Refocus to inspect the stored full decimal.
     await field.focus();
     await p.waitForFunction(({id, value}) => {
         const e = document.getElementById(id);
         return e && e.value === value;
-    }, { id: await field.getAttribute('id'), value: String(value) });
+    }, { id: await field.getAttribute('id'), value: String(value) }).catch(async e => { throw new Error(`Editing ${await field.getAttribute('id')}: expected ${JSON.stringify(String(value))}, got ${JSON.stringify(await field.inputValue())}; ${e.message}`); });
 }
 async function saveFile(p) {
     const pending = p.waitForEvent('download');
@@ -109,6 +112,11 @@ async function dismiss(p) {
 }
 async function reload(p) { await p.reload({ waitUntil: 'commit' }); await ready(p); await configure(p); await ui.targetCopies(p).focus(); }
 async function audit(p, rec, name, targets = []) {
+    // Start the scan from a stable viewport; preceding Tab walks may leave a row partly under the sticky header.
+    // Focus-not-obscured checks still run at each actual keyboard stop below.
+    await p.evaluate(() => window.scrollTo(0, 0));
+    await p.mouse.move(0, 0);
+    await p.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
     await checkAxe(rec, p, name);
     const side = await noSideScroll(p);
     rec.check(`${name}: no page sideways scroll`, side.pass, side.detail);
@@ -188,6 +196,11 @@ let code = 1;
 try {
     const run = await forWidths(WIDTHS, async ({ page: p, rec, width }) => {
         p.setDefaultTimeout(8000);
+        if (process.env.STEPS) {
+            const selected = new RegExp(process.env.STEPS);
+            const step = rec.step.bind(rec);
+            rec.step = (name, fn, page) => selected.test(name) ? step(name, fn, page) : rec.info(name, 'NOT RUN: outside STEPS selection');
+        }
         await p.addInitScript(observeWorkers);
         await reload(p); // install the observer before the app constructs its workers
         rec.info('scope', `Compatibility core; ${PHASE3 ? 'PHASE3 explicitly enabled' : 'Phase 3 NOT RUN; run separately with PHASE3=1'}`);
@@ -215,7 +228,7 @@ try {
         await rec.step('F2 invalid Copies inline problem, firstProblem, no generation', async () => {
             await load(p, fractional(0.5), 'valid-before-invalid');
             for (const n of ['0','-1','0.0001','0.3333333333333333']) {
-                await edit(p, ui.targetCopies(p), n);
+                await edit(p, ui.targetCopies(p), n, { blur: n !== '-1' });
                 const problem = ui.compatCopiesProblem(p);
                 await problem.waitFor({ state: 'visible' });
                 rec.check(`F2 ${n} remains visible`, await ui.targetCopies(p).inputValue() === n);
@@ -224,6 +237,7 @@ try {
                 rec.check(`F2 ${n} described by inline error`, desc.includes(await problem.getAttribute('id')));
                 rec.check(`F2 ${n} actionable explanation`, /more than 0|positive|denominator|1000|fraction|decimal|exact/i.test(await txt(problem)), await txt(problem));
                 rec.check(`F2 ${n} firstProblem names Copies`, /Copies/i.test(await txt(ui.barNote(p))));
+                await ui.targetRate(p).focus();
                 await checkMouseActivationVisible(rec,p,ui.problemCount(p),`F2 ${n} first problem`);
                 rec.check(`F2 ${n} firstProblem focuses Copies`, await ui.targetCopies(p).evaluate(e => e === document.activeElement));
                 await checkFocusNotObscured(rec, p, `F2 ${n} firstProblem`, { strict: true });
@@ -320,6 +334,8 @@ try {
             await audit(p,rec,'m2-list-cleared',[['Stack Size',ui.compatStack(p,1)]]);
             await load(p,c,'bulk-before-diagram');
             await ui.diagramView(p).click();
+            await ui.compatInserterNode(p,1).waitFor({state:'visible'});
+            await ui.compatInserterNode(p,1).scrollIntoViewIfNeeded();
             await checkMouseActivationVisible(rec,p,ui.compatInserterNode(p,1),'open Inserter 1 editor');
             await ui.compatEditor(p).waitFor({state:'visible'});
             await edit(p,ui.compatEditorStack(p),'');
@@ -374,6 +390,8 @@ try {
             await announcedIfLive(p,rec,error,'U1 repeated-unit failure');
             await textContrast(p,rec,error,'U1 manual correction guide');
             await audit(p,rec,'u1-repeated-unit-guide',[['Copies',ui.targetCopies(p)]]);
+            // A failed Check intentionally makes Generate focus the known error. Reimport to test a fresh Generate refusal.
+            await load(p,c,'repeated-units-before-generate');
             const requestsBeforeGenerate=await p.evaluate(()=>window.__compatRequests.length);
             await ui.generate(p).click();
             await p.waitForFunction(n=>window.__compatRequests.length>n,requestsBeforeGenerate,{timeout:60000});
@@ -433,7 +451,11 @@ try {
                 const problems=[];
                 for(const row of rows){
                     const r=row.getBoundingClientRect();
-                    const controls=[...row.querySelectorAll('input,button,[role=combobox]')].filter(e=>e.getBoundingClientRect().width>0);
+                    const controls=[...row.querySelectorAll('input,button,[role=combobox]')].filter(e=>{
+                        const b=e.getBoundingClientRect(),cs=getComputedStyle(e);
+                        // Base UI's clipped 1px number input and MUI's transparent select input are native form backing elements.
+                        return !e.closest('[aria-hidden="true"]')&&b.width>0&&b.height>0&&cs.visibility!=='hidden'&&cs.display!=='none'&&Number(cs.opacity)!==0;
+                    });
                     for(const e of controls){const b=e.getBoundingClientRect();if(b.left<r.left-1||b.right>r.right+1)problems.push(`${row.getAttribute('aria-label')}: ${e.getAttribute('aria-label')||e.tagName} outside row`);}
                     for(let i=0;i<controls.length;i++)for(let j=i+1;j<controls.length;j++){
                         const a=controls[i],b=controls[j];if(a.contains(b)||b.contains(a))continue;

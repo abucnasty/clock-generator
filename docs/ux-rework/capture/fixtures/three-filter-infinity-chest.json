@@ -75,7 +75,8 @@
           "item_name": "processing-unit",
           "request_count": 3
         }
-      ]
+      ],
+      "type": "infinity-chest"
     }
   ]
 }

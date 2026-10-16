@@ -62,7 +62,7 @@ const logistic = JSON.parse(readFileSync(LOGISTIC, 'utf8'));
 function exportOf(extra = {}) {
     const { target_output: _t, overrides: _o, ...rest } = logistic;
     return {
-        sidecar_version: '0.7.0',
+        sidecar_version: '0.7.1',
         ...rest,
         machines: rest.machines.map((m) => ({ type: 'machine', ...m })),
         inserters: rest.inserters.map((i) => (i.source?.type === 'belt' ? { ...i, source: { near_lane: 1, ...i.source } } : i)),
@@ -117,7 +117,7 @@ const EXAMPLES = [
     ['Chemical science', 'chemical-science'], ['Electromagnetic science', 'electromagnetic-science'], ['Military science', 'military-science'],
     ['Production science', 'production-science'], ['Metallurgic science', 'metallurgic-science'], ['Agricultural science', 'agriculture-science'],
 ];
-const MENU_ORDER = ['Open build file…', 'Save build file', 'Try an example…', 'Getting started', 'Reset build'];
+const MENU_ORDER = ['Open build file…', 'Save build file', 'Try an example…', 'Getting started', 'Terms', 'Reset build'];
 
 // ---------------------------------------------------------------------------------------------------------- helpers
 
@@ -405,7 +405,9 @@ try {
             await openMenu(page);
             rec.check('Paste from Factorio is gone from the ⋮ menu', (await menuItem(page, /Paste from Factorio/).count()) === 0);
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(250);
+            // Escape can first dismiss the focused button's tooltip; close the actual menu before the next action.
+            if (await lib.ui.menu(page).isVisible()) await page.keyboard.press('Escape');
+            await lib.ui.menu(page).waitFor({state: 'hidden'});
 
             // the mod link
             const link = modLinks(c);
@@ -447,6 +449,7 @@ try {
                 rec.check('blank build: the step is not in the error red', !(r > 200 && g < 160 && b < 160), color);
                 await cpair(rec, page, 'the start note', startNote);
                 await checkLabelInName(rec, page, startNote, 'the start note');
+                await startNote.scrollIntoViewIfNeeded();
                 await lib.checkMouseActivationVisible(rec, page, startNote, 'the start note');
                 const active = await page.evaluate(() => document.activeElement?.id ?? '');
                 rec.check('the start note takes focus to the Target Output recipe (#target-recipe)', active === 'target-recipe', `active id "${active}"`);
@@ -660,7 +663,7 @@ try {
                 // an export from the latest mod has no notice (no Alert); the notice's text is measured on the 0.6.0 export below
                 rec.check('latest mod: no old-mod notice in the confirm dialog', (await r.dlg.locator('.MuiAlert-message').count()) === 0);
                 await axe(rec, page, 'confirm dialog');
-                // the old-mod warning for 0.7.0 is none; import it
+                // the old-mod warning for 0.7.1 is none; import it
                 await r.dlg.getByRole('button', { name: 'Import Selected', exact: true }).click();
                 await page.waitForTimeout(900);
                 const t = await targetNow(page);
@@ -763,7 +766,7 @@ try {
             if (await appears(confirmDlg(page), 12_000)) {
                 const r = await readConfirm(page);
                 await rec.shot(page, 'confirm-060', { desc: 'Confirm dialog, export from Sidecar 0.6.0 with nothing missing' });
-                rec.check('0.6.0: "Nothing is missing from this import. You can update the mod to 0.7.0 when you like."', /Nothing is missing from this import\. You can update the mod to 0\.7\.0 when you like\./.test(r.t), r.t.match(/This was exported by[^]*?(?=Select|Machines|$)/)?.[0]?.slice(0, 220) ?? '');
+                rec.check('0.6.0: "Nothing is missing from this import. You can update the mod to 0.7.1 when you like."', /Nothing is missing from this import\. You can update the mod to 0\.7\.1 when you like\./.test(r.t), r.t.match(/This was exported by[^]*?(?=Select|Machines|$)/)?.[0]?.slice(0, 220) ?? '');
                 rec.check('0.6.0: the self-contradicting strings are gone ("affected", "import everything automatically")', !/affected by that|import everything automatically/.test(r.t), r.t.match(/Nothing in this import[^.]*\./)?.[0] ?? '');
                 await cpair(rec, page, '0.6.0 notice Alert text', r.dlg.locator('.MuiAlert-message'));
             } else rec.check('0.6.0: the confirm dialog opens', false);
@@ -773,7 +776,7 @@ try {
                 const r = await readConfirm(page);
                 await rec.shot(page, 'confirm-biochamber', { desc: 'Confirm dialog, an older export with a biochamber' });
                 rec.check('biochamber: still lists the missing energy consumption', /energy consumption of biochambers is not exported/i.test(r.t));
-                rec.check('biochamber: keeps "Update the mod to 0.7.0 to import everything automatically."', /Update the mod to 0\.7\.0 to import everything automatically\./.test(r.t));
+                rec.check('biochamber: keeps "Update the mod to 0.7.1 to import everything automatically."', /Update the mod to 0\.7\.1 to import everything automatically\./.test(r.t));
             } else rec.check('biochamber: the confirm dialog opens', false);
             await closeDialogs(page);
         });
@@ -920,7 +923,7 @@ try {
             rec.check(`the menu reads, in order: ${MENU_ORDER.join(', ')}`, JSON.stringify(items) === JSON.stringify(MENU_ORDER), JSON.stringify(items));
             // the divider sits before Reset build
             const kids = await menu.locator('[role=menuitem], [role=separator], hr').evaluateAll((els) => els.map((e) => (e.getAttribute('role') === 'separator' || e.tagName === 'HR' ? '|' : (e.textContent ?? '').trim())));
-            rec.check('a divider between Getting started and Reset build', kids.join('>').includes('Getting started>|>Reset build'), kids.join(' > '));
+            rec.check('a divider between Terms and Reset build', kids.join('>').includes('Terms>|>Reset build'), kids.join(' > '));
             rec.check('no Paste, Import Config, Export Config, Reset Configuration in the menu', !items.some((t) => /Paste from Factorio|Import Config|Export Config|Reset Configuration/.test(t)), items.join(' | '));
             for (const name of MENU_ORDER) if (await exists(menuItem(page, name))) await checkLabelInName(rec, page, menuItem(page, name), `menu item ${name}`);
             await axe(rec, page, 'the ⋮ menu');

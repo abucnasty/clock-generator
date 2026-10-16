@@ -1,3 +1,5 @@
+import { selftestCompatibilityEmpty, selftestCompatibilityPopulated } from './selftest-compatibility-ui.mjs';
+import { setDeveloperTools } from './lib.mjs';
 // Self-test of the `ui` map and the tooltip/menu helpers against a running build (BASE_URL, default http://localhost:5239).
 //   BASE_URL=http://localhost:5239 UI_DIR=<worktree>/clock-generator-ui node selftest.mjs
 // Resolves every ui entry at 1440, 720 and 390 in four states and checks the count (1, or a documented 0).
@@ -42,6 +44,8 @@ for (const w of [1440, 720, 390]) {
     await E(s, 'resultsTab(Log)', ui.resultsTab(page, 'Log'), 0);
     await E(s, 'diagramDialog', ui.diagramDialog(page), 0);
     log(itemLabel('transport-belt') === 'transport-belt' || itemLabel('transport-belt') !== '', `${w} itemLabel('transport-belt') = ${itemLabel('transport-belt')}`);
+
+    await selftestCompatibilityEmpty(page,E);
 
     // ---- menu at this width
     s = 'menu';
@@ -113,11 +117,14 @@ for (const w of [1440, 720, 390]) {
     await E(s, 'clockRows', ui.clockRows(page), '>=1');
     await E(s, 'clockRows(0)', ui.clockRows(page, 0));
     await E(s, 'copyBlueprint', ui.copyBlueprint(page));
-    for (const t of ['Wake windows', 'Timelines', 'Insights', 'Blueprint', 'Log']) await E(s, `resultsTab(${t})`, ui.resultsTab(page, t));
-    await E(s, 'resultsCard', ui.resultsCard(page), 0); // 2.6 results answer is not on feat/ux-rework-p2 yet
+    await setDeveloperTools(page,true);
+    for (const t of ['Timelines', 'Insights', 'Blueprint string', 'Log']) await E(s, `resultsTab(${t})`, ui.resultsTab(page, t));
+    await E(s, 'resultsCard', ui.resultsCard(page)); // existing p2 Your clock card
     await E(s, 'viewToggle(Configure)', ui.viewToggle(page, 'Configure'));
     await ui.resultsTab(page, 'Log').click();
     log(true, `${w} resultsTab click`);
+    try { await selftestCompatibilityPopulated(page,E,log); }
+    catch(e) { log(false,`${w} compatibility ui selftest: ${e.message}`); }
     await browser.close();
 }
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
