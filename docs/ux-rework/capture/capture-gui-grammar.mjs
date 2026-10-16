@@ -851,26 +851,33 @@ async function stepFresh({ page, rec, width }) {
     const recChip = page.locator('.MuiChip-root').filter({ hasText: /^Recommended$/ }).first().locator('.MuiChip-label');
     if (await count(recChip)) await contrastPairs(page, [{ name: `${label}: Recommended chip`, locator: recChip }], rec);
     else rec.info(`contrast ${label}: Recommended chip`, 'not on the page');
-    await rec.step(`${label}: Status chip on the selected row, hovered`, async () => {
-        // the selected row is tinted orange, and more so hovered: the chip's words must stay at 4.5:1 (2.7 A review, 1.4.3)
-        const row = page.locator('table tbody tr.Mui-selected').first(); // SELECTOR: confirm (MUI's selected row)
-        // 2.5 B: the default columns say it in "Works?" (an icon and words in the last cell); "Show all columns" keeps a
-        // chip, now Recovers / Does not recover / Unstable. Whichever is shown is measured, words and icon, rest and hovered
-        const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Recovers|Does not recover|Unstable)$/ }).first();
-        const works = row.locator('td').last().locator('span').first();
-        const isChip = (await count(chip)) > 0;
-        if (!isChip && !(await count(works))) return rec.check(`contrast ${label}: Status words on the selected row`, false, 'no status chip and no Works? cell in the selected row');
-        const pairs = (state) => isChip
-            ? [{ name: `${label}: Status chip on the selected row (${state})`, locator: chip.locator('.MuiChip-label') }]
-            : [
-                { name: `${label}: Works? words on the selected row (${state})`, locator: works },
-                { name: `${label}: Works? icon on the selected row (${state}, non-text 3:1)`, locator: works.locator('svg').first(), required: 3 },
-            ];
-        await row.scrollIntoViewIfNeeded();
-        await contrastPairs(page, pairs('rest'), rec);
-        await row.locator('td').nth(3).hover();
-        await page.waitForTimeout(300);
-        await contrastPairs(page, pairs('row hovered'), rec);
+    await rec.step(`${label}: Works? and Status on the selected row, rest and hovered`, async () => {
+        // Compact Works? words and icon, and expanded Status chips, must remain legible on the selected/hovered row.
+        const row = page.locator('table tbody tr.Mui-selected').first();
+        const toggle = page.getByRole('button', { name: 'Show all columns', exact: true });
+        for (const expanded of [false, true]) {
+            if (expanded) await toggle.click();
+            const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Recovers|Does not recover|Unstable)$/ }).first();
+            const works = row.locator('td').last().locator('span').first();
+            const target = expanded ? chip : works;
+            rec.check(`${label}: ${expanded ? 'Status chip' : 'Works? words and icon'} are present`,
+                await count(target) > 0 && (expanded || await count(works.locator('svg')) > 0));
+            if (!(await count(target))) continue;
+            const pairs = (state) => expanded
+                ? [{ name: `${label}: Status chip on the selected row (${state})`, locator: chip.locator('.MuiChip-label') }]
+                : [
+                    { name: `${label}: Works? words on the selected row (${state})`, locator: works },
+                    { name: `${label}: Works? icon on the selected row (${state}, non-text 3:1)`, locator: works.locator('svg').first(), required: 3 },
+                ];
+            await row.scrollIntoViewIfNeeded();
+            await page.mouse.move(1, 899);
+            await page.waitForTimeout(300);
+            await contrastPairs(page, pairs('rest'), rec);
+            await row.locator('td').nth(3).hover();
+            await page.waitForTimeout(300);
+            await contrastPairs(page, pairs('row hovered'), rec);
+        }
+        await toggle.click();
         await page.mouse.move(1, 899);
     }, page);
     await commonChecks(page, rec, label);
@@ -982,7 +989,7 @@ async function stepFailed({ page, rec, width }) {
 
 async function stepDetails({ page, rec, width }) {
     await build(page, FUEL);
-    for (const [tabName, shotName] of [['Insights', 'details-insights'], ['Fuel', 'details-fuel'], ['Blueprint', 'details-blueprint']]) {
+    for (const [tabName, shotName] of [['Insights', 'details-insights'], ['Fuel', 'details-fuel'], ['Blueprint string', 'details-blueprint']]) {
         await rec.step(`details tab ${tabName}`, async () => {
             const tab = page.getByRole('tab', { name: new RegExp(`^${tabName}`) }).first();
             if (!(await count(tab))) return rec.check(`details: the ${tabName} tab exists`, false, 'no such tab');
@@ -990,7 +997,19 @@ async function stepDetails({ page, rec, width }) {
             await page.waitForTimeout(500);
             await rec.shot(page, shotName, { fullPage: true, aria: true, desc: `Details: ${tabName}` });
             const label = `details, ${tabName}`;
-            await titleBarChecks(page, rec, label, '[role=tabpanel]:not([hidden]) h2, [role=tabpanel]:not([hidden]) h3'); // SELECTOR: confirm (the open tab panel)
+            // BlueprintOutput has no nested card: its tab names the content inside the titled Details panel (2.5 B).
+            // Measure that containing card's band and body, and assert the tab's actual content instead of skipping it.
+            if (tabName === 'Blueprint string') {
+                await titleBarChecks(page, rec, label, '[data-details] > header h2');
+                const panel = page.getByRole('tabpanel', { name: 'Blueprint string', exact: true });
+                const field = panel.getByRole('textbox', { name: 'Blueprint string', exact: true });
+                rec.check(`${label}: the tab names the panel without a duplicate heading`,
+                    await panel.count() === 1 && await panel.getByRole('heading').count() === 0);
+                rec.check(`${label}: the read-only blueprint string is present`, await field.count() === 1
+                    && await field.evaluate((el) => el.readOnly && el.value.startsWith('0') && el.value.length > 20));
+            } else {
+                await titleBarChecks(page, rec, label, '[role=tabpanel]:not([hidden]) h2, [role=tabpanel]:not([hidden]) h3');
+            }
             await commonChecks(page, rec, label);
             await finalChecks(page, rec, width, label);
         }, page);

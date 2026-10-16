@@ -88,7 +88,7 @@ const lineLoc = (page, text) => page.getByText(text, { exact: true }).first();
 const actionBtn = (page, name) => page.getByRole('button', { name, exact: true });
 const hintLoc = (page) => page.getByText(HINT_RE).first();
 const staleBanner = (page) => page.locator('.MuiAlert-root').filter({ hasText: /out of date|changed since|no longer|stale/i }).filter({ hasNotText: /These clocks assume/ }).first(); // SELECTOR: confirm (1.1 banner wording)
-const clocksPanel = (page) => page.getByText(/Potential Clocks/i).first(); // SELECTOR: confirm
+const clocksPanel = (page) => page.getByRole('heading', { name: 'Compare other clocks', exact: true });
 const viewOf = (page) =>
     page.evaluate(() => {
         const on = [...document.querySelectorAll('button[aria-pressed="true"]')].map((b) => (b.textContent ?? '').trim().toLowerCase());
@@ -397,12 +397,12 @@ try {
                     await checkTabTo(rec, page, btn, 'the action');
                     await checkFocusNotObscured(rec, page, 'the action');
                 }
-                // order: above the Potential Clocks panel
+                // order: above the Compare other clocks panel
                 if ((await exists(line)) && (await exists(clocksPanel(page)))) {
                     const a = await line.boundingBox();
                     const b = await clocksPanel(page).boundingBox();
-                    rec.check('the line sits above the Potential Clocks panel', a.y < b.y, `line y ${Math.round(a.y)}, panel y ${Math.round(b.y)}`);
-                } else rec.check('the line sits above the Potential Clocks panel', false, 'line or panel missing');
+                    rec.check('the line sits above the Compare other clocks panel', a.y < b.y, `line y ${Math.round(a.y)}, panel y ${Math.round(b.y)}`);
+                } else rec.check('the line sits above the Compare other clocks panel', false, 'line or panel missing');
                 // the hint
                 const hint = hintLoc(page);
                 const hasHint = await exists(hint);
@@ -422,9 +422,20 @@ try {
                 else rec.check('contrast of the Results line, hint and action was measured', false, 'the line is not on the page');
                 const stale = await exists(staleBanner(page));
                 rec.check('no stale banner right after Generate', !stale);
-                // C7 (implementer's addition): a clock made without belt slack says when it is for you; measured on a
-                // plain row and on that row selected
+                // 2.5 B names the condition in the compact table; expanded columns retain the explicit belt caption.
+                // Require both presentations, then measure the caption on a plain row and that same row selected.
+                const compactOnly = page.getByRole('row').filter({ has: page.getByRole('radio', { name: /^For belts that stand still:/ }) });
+                const compactCount = await compactOnly.count();
+                const compactIds = await compactOnly.getByRole('radio').evaluateAll((radios) => radios.map((radio) => radio.value));
+                rec.check('compact rows made without belt slack say "For belts that stand still"', compactCount > 0, `${compactCount} rows`);
+                const showAll = page.getByRole('button', { name: 'Show all columns', exact: true });
+                await showAll.click();
                 const only = page.getByText(T.onlyIfStanding, { exact: true });
+                const expandedIds = await page.getByRole('row').filter({ has: only }).getByRole('radio')
+                    .evaluateAll((radios) => radios.map((radio) => radio.value));
+                rec.check('expanded columns preserve every named standing-belt condition', compactCount > 0
+                    && compactIds.every((id) => expandedIds.includes(id)),
+                    `${expandedIds.length} captions, compact row ids ${compactIds.join(', ')}`);
                 rec.check(`rows made without belt slack say "${T.onlyIfStanding}"`, (await only.count()) > 0, `${await only.count()} rows`);
                 if (await exists(only)) {
                     await contrastPairs(page, [{ name: 'C7 caption, row not selected', locator: only.first() }], rec);
