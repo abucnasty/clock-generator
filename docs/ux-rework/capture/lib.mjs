@@ -933,12 +933,14 @@ export async function focusNotObscured(page) {
  *  4. `inert` is true when nothing was tabbable, neither Tab landed inside, and nothing reacted.
  * WARNING: step 3 presses Enter and Space on live controls: if the element is wrongly operable, its action runs (a Generate
  * click generates). That is the finding; use it on a state you can afford to lose. Focus is put back where it was.
+ * Optional `afterTabProbe` reopens a dismiss-on-Tab widget after each native Tab/Shift+Tab probe. Its target is then
+ * strictly reacquired as one visible connected element; every original finding and activation observer is preserved.
  * A locator that matches nothing gives `found: false, inert: false` (a script that lost its target must not pass).
  * @param {import('playwright-core').Page} page
  * @param {import('playwright-core').Locator} locator
  * @returns {Promise<{ found: boolean, inert: boolean, reason: string, candidates: { el: string, focusable: boolean, tabbable: boolean, why: string[] }[], tabbable: string[], tabLanded: string, reacted: string[] }>}
  */
-export async function inertFromKeyboardReport(page, locator) {
+export async function inertFromKeyboardReport(page, locator, { afterTabProbe } = {}) {
     const target = locator.first();
     if ((await target.count()) === 0) {
         return { found: false, inert: false, reason: 'the locator matches no element', candidates: [], tabbable: [], tabLanded: '', reacted: [] };
@@ -973,7 +975,7 @@ export async function inertFromKeyboardReport(page, locator) {
 
     // 2. Really press Tab / Shift+Tab into it
     let tabLanded = '';
-    const handle = await target.elementHandle();
+    let handle = await target.elementHandle();
     const startedAt = (await page.evaluateHandle(() => (document.activeElement && document.activeElement !== document.body ? document.activeElement : null))).asElement();
     try {
         for (const side of ['before', 'after']) {
@@ -992,10 +994,17 @@ export async function inertFromKeyboardReport(page, locator) {
                 return `${a.tagName.toLowerCase()}${a.getAttribute('aria-label') ? ` "${a.getAttribute('aria-label')}"` : ''}`;
             });
             await page.evaluate(() => document.querySelectorAll('[data-ux-tab-probe]').forEach((p) => p.remove()));
-            if (landed) {
-                tabLanded = `${side === 'before' ? 'Tab' : 'Shift+Tab'} landed on ${landed}`;
-                break;
+            if (landed) tabLanded = `${side === 'before' ? 'Tab' : 'Shift+Tab'} landed on ${landed}`;
+            if (afterTabProbe) {
+                // Menus dismiss on Tab. Reopen the same real widget, then strictly reacquire its live target.
+                await afterTabProbe();
+                await handle.dispose();
+                const count = await target.count();
+                const valid = count === 1 && await target.isVisible() && await target.evaluate(el => el.isConnected);
+                if (!valid) return { found: count > 0, inert: false, reason: `afterTabProbe target must be exactly one visible connected element (count ${count})`, candidates, tabbable, tabLanded, reacted: [] };
+                handle = await target.elementHandle();
             }
+            if (landed) break;
         }
     } finally {
         await page.evaluate(() => document.querySelectorAll('[data-ux-tab-probe]').forEach((p) => p.remove())).catch(() => {});
@@ -1064,6 +1073,7 @@ export async function inertFromKeyboardReport(page, locator) {
         }
     }
     await restoreFocus(page, startedAt);
+    if (afterTabProbe) await handle.dispose();
 
     const inert = tabbable.length === 0 && tabLanded === '' && reacted.length === 0;
     const reason = inert
@@ -1089,8 +1099,8 @@ async function restoreFocus(page, startedAt) {
  * @param {import('playwright-core').Locator} locator
  * @returns {Promise<boolean>}
  */
-export async function inertFromKeyboard(page, locator) {
-    return (await inertFromKeyboardReport(page, locator)).inert;
+export async function inertFromKeyboard(page, locator, options) {
+    return (await inertFromKeyboardReport(page, locator, options)).inert;
 }
 
 /**
@@ -1134,8 +1144,8 @@ export async function checkFocusNotObscured(rec, page, label = '', { strict = fa
  * @param {import('playwright-core').Locator} locator
  * @param {string} label  how the check is named
  */
-export async function checkInertFromKeyboard(rec, page, locator, label) {
-    const r = await inertFromKeyboardReport(page, locator);
+export async function checkInertFromKeyboard(rec, page, locator, label, options) {
+    const r = await inertFromKeyboardReport(page, locator, options);
     return rec.check(`inert from the keyboard ${label}`, r.inert, r.reason);
 }
 
@@ -1378,20 +1388,50 @@ const viewportSnapshot = (page) =>
  * snackbars), clicks with the mouse at the element's centre, waits about 400 ms and passes when any of these changed: the page scrolled
  * (4 px or more), the visible text changed, an overlay opened or closed, or focus moved to an element that shows a focus ring. The
  * detail says what changed (or that nothing did). Meant to catch a control that looks live but whose click lands off screen or nowhere.
+ * Optional `controlPaint` also compares the same connected control’s rendered text/background/borders after hover and
+ * finite animations settle, ignoring transparent fills and zero-width borders. Geometry alone never passes the check.
  * Returns whether it passed.
  * @param {ReturnType<typeof createRecorder>} rec
  * @param {import('playwright-core').Page} page
  * @param {import('playwright-core').Locator} locator
  * @param {string} label  how the check is named
  */
-export async function checkMouseActivationVisible(rec, page, locator, label) {
+export async function checkMouseActivationVisible(rec, page, locator, label, { controlPaint = false } = {}) {
+    const settle = async () => {
+        await page.waitForFunction(() => document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).every(a => a.playState !== 'running'), null, { timeout: 5000 });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    };
+    const paint = async handle => handle.evaluate(el => {
+        if (!el.isConnected) return null;
+        const cs = getComputedStyle(el);
+        const transparent = color => color === 'transparent' || /rgba\([^)]*,\s*0(?:\.0+)?\s*\)$/.test(color);
+        const borders = ['Top', 'Right', 'Bottom', 'Left'].map(side => {
+            const width = parseFloat(cs[`border${side}Width`]), style = cs[`border${side}Style`], color = cs[`border${side}Color`];
+            return width > 0 && !['none', 'hidden'].includes(style) && !transparent(color) ? { width, style, color } : null;
+        });
+        return { textColor: el.textContent.trim() && !transparent(cs.color) ? cs.color : null, background: transparent(cs.backgroundColor) ? null : cs.backgroundColor, borders };
+    });
+    let paintTarget = null, beforePaint = null;
+    try {
+    if (controlPaint) {
+        if (await locator.count() !== 1) return rec.check(`mouse click visibly does something: ${label}`, false, 'controlPaint requires exactly one actual control');
+        paintTarget = await locator.elementHandle();
+        const hoverBox = await paintTarget.boundingBox();
+        if (!hoverBox) { return rec.check(`mouse click visibly does something: ${label}`, false, 'controlPaint target is not visible'); }
+        await page.mouse.move(hoverBox.x + hoverBox.width / 2, hoverBox.y + hoverBox.height / 2);
+        await settle();
+        beforePaint = await paint(paintTarget);
+    }
     const before = await viewportSnapshot(page);
     const box = await locator.first().boundingBox().catch(() => null);
-    if (!box) return rec.check(`mouse click visibly does something: ${label}`, false, 'the element has no box on screen');
+    if (!box) { return rec.check(`mouse click visibly does something: ${label}`, false, 'the element has no box on screen'); }
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await page.waitForTimeout(400);
+    if (controlPaint) await settle();
     const after = await viewportSnapshot(page);
+    const afterPaint = paintTarget ? await paint(paintTarget) : null;
     const changes = [];
+    if (beforePaint && afterPaint && JSON.stringify(beforePaint) !== JSON.stringify(afterPaint)) changes.push(`same control's rendered paint changed: ${JSON.stringify(beforePaint)} -> ${JSON.stringify(afterPaint)}`);
     if (Math.abs(after.scrollY - before.scrollY) >= 4) changes.push(`scrolled ${before.scrollY} -> ${after.scrollY}`);
     if (after.hash !== before.hash) changes.push(`visible text changed (${before.textCount} -> ${after.textCount} text runs)`);
     if (after.overlays.join() !== before.overlays.join()) changes.push(`overlays ${JSON.stringify(before.overlays)} -> ${JSON.stringify(after.overlays)}`);
@@ -1401,6 +1441,9 @@ export async function checkMouseActivationVisible(rec, page, locator, label) {
         changes.length > 0,
         changes.length ? changes.join('; ') : `nothing changed in the viewport (scrollY ${after.scrollY}, focus ${after.focus ? `${after.focus.desc}, ring ${after.focus.ring}` : 'none'})`,
     );
+    } finally {
+        await paintTarget?.dispose();
+    }
 }
 
 // ======================================================================================== ui map and shared UI helpers
@@ -1422,6 +1465,7 @@ export const ui = {
     editingDrag: scope => scope.locator('[data-row-drag]'),
     editingActions: (p, label) => p.getByRole('button', { name: `More actions for ${label}`, exact: true, includeHidden: true }),
     editingMenu: p => p.getByRole('menu').filter({ has: p.getByRole('menuitem', { name: 'Duplicate', exact: true }) }),
+    editingMenuLayer: p => ui.editingMenu(p).locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," MuiModal-root ")][1]'),
     editingMenuItems: p => ui.editingMenu(p).getByRole('menuitem'),
     editingMenuItem: (p, name) => ui.editingMenu(p).getByRole('menuitem', { name, exact: true }),
     editingSelect: p => ui.card(p, 'inserters').getByRole('button', { name: 'Select', exact: true }),

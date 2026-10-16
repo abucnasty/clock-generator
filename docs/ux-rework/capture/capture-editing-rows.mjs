@@ -139,9 +139,9 @@ async function fresh(ctx,rec,file=SMALL_SAMPLE) {
 async function reach(rec,p,loc,name,{shift=false}={}) {
     await checkTabTo(rec,p,loc,name,{max:900,shift});await checkFocusNotObscured(rec,p,name,{strict:true});
 }
-async function mouse(rec,p,loc,name) {
+async function mouse(rec,p,loc,name,options) {
     if(await loc.count()!==1)throw Error(`${name}: expected one control, found ${await loc.count()}`);
-    await loc.scrollIntoViewIfNeeded();await rest(p);await checkMouseActivationVisible(rec,p,loc,name);await rest(p);
+    await loc.scrollIntoViewIfNeeded();await rest(p);await checkMouseActivationVisible(rec,p,loc,name,options);await rest(p);
 }
 async function namesAndContrast(rec,p,pairs) {
     await rest(p);
@@ -153,6 +153,24 @@ async function namesAndContrast(rec,p,pairs) {
 }
 async function openRows(p,kind,id,activation='click') {
     return openMoreMenu(p,{anchor:ui.editingActions(p,label(kind,id)),menu:ui.editingMenu(p),activation});
+}
+async function closeRows(p) {
+    const layer=await ui.editingMenuLayer(p).elementHandle();
+    if(!layer)throw Error('Open row menu has no actual modal layer');
+    try{await p.keyboard.press('Escape');await layer.waitForElementState('hidden');}finally{await layer.dispose();}
+    await rest(p);
+}
+async function inertMenuItem(rec,p,kind,id,name) {
+    let layer=await ui.editingMenuLayer(p).elementHandle();
+    if(!layer)throw Error('Disabled row item has no actual menu layer');
+    try {
+        await checkInertFromKeyboard(rec,p,ui.editingMenuItem(p,name),`${label(kind,id)} ${name}`,{afterTabProbe:async()=>{
+            try{await layer.waitForElementState('hidden');}finally{await layer.dispose();}
+            await openRows(p,kind,id,'Enter');await rest(p);
+            layer=await ui.editingMenuLayer(p).elementHandle();
+            if(!layer)throw Error('Reopened row menu has no actual layer');
+        }});
+    } finally {await layer?.dispose();}
 }
 async function action(p,kind,id,name,keyboard=false) {
     return chooseMenuItem(p,name,{anchor:ui.editingActions(p,label(kind,id)),menu:ui.editingMenu(p),activation:keyboard?'Enter':'click',itemActivation:keyboard?'Enter':'click'});
@@ -223,16 +241,16 @@ const steps = {
                 rec.check(`${label(kind,id)} menu: three exact actions`,eq(await ui.editingMenuItems(p).allTextContents(),['Duplicate','Move up','Move down']));
                 for(const [name,disabled] of [['Move up',id===1],['Move down',id===list.length]]){
                     const item=ui.editingMenuItem(p,name);rec.check(`${label(kind,id)} ${name}: boundary enabled/disabled`,await item.isDisabled()===disabled);
-                    if(disabled){const unchanged=await stored(p);await checkInertFromKeyboard(rec,p,item,`${label(kind,id)} ${name}`);rec.check(`${label(kind,id)} disabled ${name}: raw form unchanged`,await stored(p)===unchanged);await openRows(p,kind,id,'Enter');}
+                    if(disabled){const unchanged=await stored(p);await inertMenuItem(rec,p,kind,id,name);rec.check(`${label(kind,id)} disabled ${name}: raw form unchanged`,await stored(p)===unchanged);await openRows(p,kind,id,'Enter');}
                 }
                 await namesAndContrast(rec,p,[['Duplicate',ui.editingMenuItem(p,'Duplicate')],['Move up',ui.editingMenuItem(p,'Move up')],['Move down',ui.editingMenuItem(p,'Move down')]]);
                 await shot(rec,p,`${kind}-${id}-menu`);await p.keyboard.press('Home');await p.keyboard.press('ArrowDown');await checkFocusNotObscured(rec,p,'row menu ArrowDown',{strict:true});
                 const next=await ui.editingActive(p).textContent();rec.check(`${kind} ArrowDown reaches enabled action`,list.length===1?norm(next)==='Duplicate':norm(next)===(id===1?'Move down':'Move up'),norm(next));
-                await p.keyboard.press('ArrowUp');await checkFocusNotObscured(rec,p,'row menu ArrowUp',{strict:true});await p.keyboard.press('Escape');await rest(p);
+                await p.keyboard.press('ArrowUp');await checkFocusNotObscured(rec,p,'row menu ArrowUp',{strict:true});await closeRows(p);
                 rec.check(`${label(kind,id)} Esc restores menu button`,await ui.editingActions(p,label(kind,id)).evaluate(e=>e===document.activeElement));
-                await openRows(p,kind,id,'Space');rec.check(`${label(kind,id)} Space opens menu`,await ui.editingMenu(p).isVisible());await p.keyboard.press('Escape');
+                await openRows(p,kind,id,'Space');rec.check(`${label(kind,id)} Space opens menu`,await ui.editingMenu(p).isVisible());await closeRows(p);
             }
-            const a=ui.editingActions(p,label(kind,1));await mouse(rec,p,a,`${kind} More actions`);await p.keyboard.press('Escape');const tip=await openTooltip(p,a);rec.check(`${kind} menu tooltip`,norm(await tip.innerText())==='More actions');
+            const a=ui.editingActions(p,label(kind,1));await mouse(rec,p,a,`${kind} More actions`);await closeRows(p);const tip=await openTooltip(p,a);rec.check(`${kind} menu tooltip`,norm(await tip.innerText())==='More actions');
             await namesAndContrast(rec,p,[[`More actions for ${label(kind,1)}`,a,3]]);
         }finally{await p.context().close();}}
     },
@@ -333,7 +351,7 @@ const steps = {
     async selection(ctx,rec){
         const p=await fresh(ctx,rec,LDS);try{
             rec.check('Select off initially',await ui.editingSelect(p).getAttribute('aria-pressed')==='false');rec.check('off has no selection checkboxes',await ui.editingCheckbox(p,1).count()===0);await shot(rec,p,'select-off');
-            await mouse(rec,p,ui.editingSelect(p),'Select');rec.check('Select on aria-pressed',await ui.editingSelect(p).getAttribute('aria-pressed')==='true');await shot(rec,p,'select-on-empty');
+            await mouse(rec,p,ui.editingSelect(p),'Select',{controlPaint:true});rec.check('Select on aria-pressed',await ui.editingSelect(p).getAttribute('aria-pressed')==='true');await shot(rec,p,'select-on-empty');
             await ui.editingCheckbox(p,1).click();rec.check('singular selected count copy',norm(await ui.editingSelectedText(p).innerText())==='1 inserter selected');await shot(rec,p,'one-selected');await ui.editingCheckbox(p,3).click({modifiers:['Shift']});rec.check('plural selected count copy',norm(await ui.editingSelectedText(p).innerText())==='3 inserters selected');let c=await form(p);const beforeKeys=await keys(p,'inserters'),selected=beforeKeys.slice(0,3).sort();
             rec.check('Shift click forward selects range 1–3',eq(await checkedUuids(p),selected));await shot(rec,p,'three-selected');
             await reach(rec,p,ui.editingCheckbox(p,2),'checkbox Space');await p.keyboard.press('Space');await checkFocusNotObscured(rec,p,'Space toggle selection',{strict:true});rec.check('Space toggles only focused row',eq(await checkedUuids(p),selected.filter(x=>x!==beforeKeys[1])));await p.keyboard.press('Space');
