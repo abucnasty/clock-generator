@@ -4,8 +4,10 @@ import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { SearchOnlyRecipesContext, useGameNames } from '../hooks/useGameNames';
 import { nameWithId, resolveTyped, searchIds } from '../utils/gameNames';
+import { prioritizedIds } from '../utils/pickerOrder';
 
 interface ItemSelectorProps {
+    priority?: { label: string; ids: string[] };
     /** The chosen id; the options are ids too, shown by their in-game names */
     value: string | null;
     options: string[];
@@ -32,6 +34,7 @@ interface ItemSelectorProps {
 export function ItemSelector({
     value,
     options,
+    priority,
     onChange,
     kind = 'item',
     label = 'Item',
@@ -66,7 +69,9 @@ export function ItemSelector({
         return searchOnlyAll.filter((id) => !listed.has(id));
     }, [kind, searchOnlyAll, offered]);
     const everyOption = useMemo(() => (searchOnly.length > 0 ? [...offered, ...searchOnly] : offered), [offered, searchOnly]);
+    const grouped = priority && priority.ids.length > 0 ? priority : undefined;
     const matchesOf = (query: string): string[] => {
+        if (grouped) return prioritizedIds(query, grouped.ids, offered, nameOf, grouped.label).ids;
         if (query.trim() === '') return offered;
         const shown = searchIds(query, offered, nameOf);
         return searchOnly.length > 0 ? [...shown, ...searchIds(query, searchOnly, nameOf)] : shown;
@@ -89,7 +94,8 @@ export function ItemSelector({
             id={inputId}
             size={size}
             sx={{ minWidth: effectiveMinWidth, ...sx }}
-            options={everyOption}
+            options={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).ids : everyOption}
+            groupBy={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).groupOf : undefined}
             value={value}
             open={open}
             onOpen={() => setOpen(true)}
