@@ -48,11 +48,10 @@ come from here.
   code and UX PASS after one fix round; CI unit/UI jobs pass (generation job skipped by existing workflow;
   local 142 generation tests pass). Full evidence: [provider evidence](capture/upstream-compatibility-EVIDENCE.md).
   Completed provider remote/local branch and worktree removed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md)
-  and final 2.7 B / 3.3 evidence remain next.
-- **Worker checkpoints:** 2.7 B `a794421` has resolved provider-squash conflicts, preserving prior product source and
-  review counters. P3 phase integration `8c974cf` is prepared, full gate running before push. Adjunct `fa73634`
-  passes full UI 1099 tests, engine 1008 unit/142 generation and independent UI test/build; final browser gate underway.
-  3.3 remains `38a7b25` with corrected non-recommended-pick capture. Live details are in the excluded handoff.
+  merged as [#196](https://github.com/abucnasty/clock-generator/pull/196), `1d955b2`: independent GPT-6.1 Sol/high code and UX PASS after one evidence fix round; CI unit/UI pass, local142 generation tests pass. Source evidence is committed on p3. Completed adjunct remote/local branch/worktree removed; owner preview remains live. Phase3 current `129995b` also incorporates current roadmap/model docs without product changes.
+- **Worker checkpoints:** 2.7 B `3115caf` inherits current p2 and approved helper correction; full isolated gate and independent test/build PASS (961 UI tests/57 files, engine1008 unit/142 generation). Browser evidence underway before final code/minors recheck and helper-focused UX supplement; prior review counters retained.
+  3.3 `38a4f77` inherits reviewed adjunct/current p3; isolated full gate and independent test/build PASS (1177 UI tests/65 files, engine1008 unit/142 generation). Final fix1 browser evidence/rechecks remain open.
+  The nested `.claude/worktrees` path makes Knip ignore its own npm script entries; standard Knip passes on identical detached trees outside that path. No source/configuration suppression was used. Detailed failed/valid logs stay in the local evidence directories.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -95,8 +94,8 @@ come from here.
 
 | Chain | Length | Next unblocked |
 |---|---|---|
-| Reviewed compatibility → 2.7 B → 3.2 A → 3.2 B | 3 | 2.7 B inherits provider #195; final evidence follows adjunct completion. Prior review/minors history retained; 3.2 A after 2.7 B reaches p3; 3.2 B is two units |
-| P3 adjunct → 3.3 | 2 | Adjunct final evidence; 3.3 retains fix round 1 |
+| Reviewed compatibility → 2.7 B → 3.2 A → 3.2 B | 3 | Provider #195 and adjunct #196 merged; 2.7 B final evidence is running. Prior review/minors history retained; 3.2 A after 2.7 B reaches p3; 3.2 B is two units |
+| 3.3 | 1 | Adjunct #196 merged; final evidence/rechecks retain fix round 1 |
 | Frozen master #194 → feat/ux-rework → p2 → p3 | complete | All three full gates and pushes done; in-flight merged-tree type-check sweep underway |
 | Phase 2 end | | After 2.7 B; install check holds the phase PR, owner approval holds phase merge |
 
