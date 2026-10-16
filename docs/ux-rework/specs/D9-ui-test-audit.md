@@ -28,3 +28,7 @@ No product change expected; root independently checks cleanup diff contains only
 
 ## Risks and checkpoints
 D9 independence applies to assessed authorship; a worker may need to exclude its own previous tests or use another fresh reviewer for those groups. History attribution is essential; line-count reduction cannot justify deleting upstream coverage. Effective-immediate discipline applies throughout Phase 4, so no knowingly arbitrary tests now with promise of later cleanup. Hard owner release requirement cannot be waived by this spec or phase scheduling.
+
+## Root adoption after first cleanup default-knip probe
+
+Removing test-only consumers exposed exactly two internal exports with no remaining production caller: SURFACE_HOVER in UI theme/tokens.ts and WakeWindowsChartProps in components/WakeWindowsChart.tsx. D9 may make only these declarations module-private by removing export; values, types and runtime output stay identical. This narrow dead-export cleanup is included in CODE/UX review and full gates, with no exclusion or dummy test consumer. No other product change is authorized by this addendum. Production-equivalence evidence must separately account for these visibility-only lines and compare emitted assets.
