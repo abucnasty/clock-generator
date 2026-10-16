@@ -677,6 +677,8 @@ try {
             const backups=await p.evaluate(()=>Object.fromEntries(Object.keys(localStorage).filter(k=>k.includes('backup')).map(k=>[k,localStorage.getItem(k)])));
             await L.openBuildSwitcher(p); await ui.buildsAction(p,'New build').click(); await ui.buildsMenu(p).waitFor({state:'hidden'});
             await L.openBuildSwitcher(p); await ui.buildRows(p,1).click(); await ui.buildsMenu(p).waitFor({state:'hidden'});
+            // Closing the menu precedes the saved build's asynchronous worker validation and open.
+            await p.waitForFunction(id=>sessionStorage.getItem('clock-generator-tab-build')===id,originalId);
             rec.check('P3 library switch returns to original build',await p.evaluate(()=>sessionStorage.getItem('clock-generator-tab-build'))===originalId);
             await reload(p);
             rec.check('P3 invalid decimal draft reopens intact',await ui.targetCopies(p).inputValue()==='0.0001');
