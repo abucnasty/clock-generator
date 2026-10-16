@@ -49,7 +49,8 @@ function simulationModeForOutput(
     const expected_transfer_amount = expected_transfer_count.multiply(handSizeFor(inserter, source_machine.output.item_name)).toDecimal();
 
 
-    if (expected_transfer_amount > output_block.quantity) {
+    // more than the machine gathers before it stops taking ingredients or crafting
+    if (expected_transfer_amount > output_block.held_limit) {
         // FIXME: more nuanced logic here to determine if we need to prevent desyncs
         // for example, in the electric furnace sample config, this could be just the normal mode and does not need desync prevention
         // as the inserter being clocked to be enabled for just 1 tick is enough for it to work
@@ -68,7 +69,7 @@ function simulationModeForOutput(
 
     // if the output block condition is less than the max stack size for the ingredient, need to prevent
     // desyncs and add a buffer of a pickup to use the inserter as the inventory holder
-    if (output_block.quantity < output_block.max_stack_size) {
+    if (output_block.ingredients_blocked_at < output_block.max_stack_size) {
         return SimulationMode.PREVENT_DESYNCS;
     }
     return SimulationMode.NORMAL;

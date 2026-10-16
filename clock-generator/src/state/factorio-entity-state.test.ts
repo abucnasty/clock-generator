@@ -61,7 +61,7 @@ describe("MachineState.takesNothing", () => {
     test("with its output at the block it takes nothing, whatever its ingredients hold", () => {
         const state = machineState("iron-gear-wheel");
         const block = state.machine.output.outputBlock;
-        state.inventoryState.addQuantity(block.item_name, block.quantity);
+        state.inventoryState.addQuantity(block.item_name, block.ingredients_blocked_at);
         expect(MachineState.takesNothing(state)).toBe(true);
     });
 });

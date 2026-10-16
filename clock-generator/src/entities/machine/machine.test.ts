@@ -172,7 +172,7 @@ describe("Biochamber", () => {
         // 4s recipe at speed 2 = 2s per craft
         expect(biochamber.fuel_consumption?.amount_per_craft).toBeCloseTo(0.75)
         expect(Machine.getMachineFacts(biochamber).fuel).toMatchObject({ item_name: "nutrients", energy_consumption_bonus: 50 })
-        expect(biochamber.output.outputBlock.quantity).toBeGreaterThan(0)
+        expect(biochamber.output.outputBlock.held_limit).toBeGreaterThan(0)
     })
 
     test("machines without a burner have no fuel consumption", () => {
