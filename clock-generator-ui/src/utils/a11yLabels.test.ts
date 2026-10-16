@@ -10,8 +10,8 @@ import {
     deleteLaneName,
     recipeName,
     removeFilterName,
-    reorderAnnouncements,
-    reorderName,
+    rowActionsName,
+    selectRowName,
     termsHelpName,
 } from './a11yLabels';
 import { entityLabel, type LabelKind } from './entityLabel';
@@ -23,11 +23,12 @@ describe('names built from a row', () => {
         for (const kind of KINDS) {
             for (const n of [1, 12]) {
                 const row = entityLabel(kind, n);
-                expect(reorderName(row)).toBe(`Reorder ${row}`);
+                expect(rowActionsName(row)).toBe(`More actions for ${row}`);
+                expect(selectRowName(row)).toBe(`Select ${row}`);
                 expect(recipeName(row)).toBe(`Recipe, ${row}`);
             }
         }
-        expect(reorderName(entityLabel('inserter', 2))).toBe('Reorder Inserter 2');
+        expect(rowActionsName(entityLabel('inserter', 2))).toBe('More actions for Inserter 2');
         expect(recipeName(entityLabel('machine', 12))).toBe('Recipe, Machine 12');
     });
 
@@ -58,47 +59,6 @@ describe('the constant names', () => {
         for (const name of all) {
             expect(typeof name).toBe('string');
             expect(name.trim()).not.toBe('');
-        }
-    });
-});
-
-describe('reorderAnnouncements', () => {
-    const keys = ['uuid-a', 'uuid-b', 'uuid-c'];
-    // the chips' own names, which need not run 1, 2, 3: an imported build can have other ids
-    const labels = new Map([['uuid-a', 'Inserter 1'], ['uuid-b', 'Inserter 5'], ['uuid-c', 'Inserter 6']]);
-    const announcements = reorderAnnouncements(labels, keys);
-    const rect = { id: '' } as never;
-    const event = (active: string, over?: string) =>
-        ({ active: { id: active, data: rect, rect: rect }, over: over ? { id: over, data: rect, rect, disabled: false } : null }) as never;
-
-    it('names the row and its position at the start, over and end of a drag', () => {
-        expect(announcements.onDragStart?.(event('uuid-b'))).toBe('Picked up Inserter 5.');
-        expect(announcements.onDragOver?.(event('uuid-b', 'uuid-c'))).toBe('Inserter 5 is over position 3.');
-        expect(announcements.onDragEnd?.(event('uuid-b', 'uuid-a'))).toBe('Inserter 5 was dropped at position 1.');
-    });
-
-    it('says something sensible when the row is dropped, or hovered, over nothing', () => {
-        expect(announcements.onDragOver?.(event('uuid-a'))).toBe('Inserter 1 is not over a position.');
-        expect(announcements.onDragEnd?.(event('uuid-a'))).toBe('Inserter 1 was dropped where it was, at position 1.');
-    });
-
-    it('says where the row is back when the drag is cancelled', () => {
-        expect(announcements.onDragCancel?.(event('uuid-c'))).toBe('Reordering cancelled; Inserter 6 is back at position 3.');
-    });
-
-    it('never reads out a key', () => {
-        const texts = [
-            announcements.onDragStart?.(event('uuid-a')),
-            announcements.onDragOver?.(event('uuid-a', 'uuid-b')),
-            announcements.onDragEnd?.(event('uuid-a', 'uuid-b')),
-            announcements.onDragEnd?.(event('uuid-a')),
-            announcements.onDragCancel?.(event('uuid-b')),
-            announcements.onDragStart?.(event('not-a-key')),
-        ];
-        for (const text of texts) {
-            expect(text).toBeTruthy();
-            expect(text).not.toContain('uuid-');
-            expect(text).not.toContain('not-a-key');
         }
     });
 });

@@ -9,7 +9,7 @@
 // military-science 2-inserter sample after a delete; slow) at the first width only.
 //
 // Against the phase-branch head ("before") the renumbering checks FAIL by design; the script must still run to the end.
-import { openSession, createRecorder, sample, importFile, goConfigure, goResults, validate, generate, contrast, noSideScroll, DEFAULT_WIDTHS } from './lib.mjs';
+import { openSession, createRecorder, sample, importFile, goConfigure, goResults, validate, generate, contrast, noSideScroll, DEFAULT_WIDTHS, ui, chooseMenuItem } from './lib.mjs';
 
 const OUT = process.argv[2];
 if (!OUT) {
@@ -492,16 +492,9 @@ async function runSteps(page, width) {
         await goConfigure(page);
         await scrollToCard(page, 'inserters');
         const pre = await readList(page);
-        const handle = rowsOf(page, 'inserter').nth(0).locator('[aria-roledescription="sortable"]');
-        await handle.focus();
-        await page.keyboard.press('Space');
-        await page.waitForTimeout(250);
-        await page.keyboard.press('ArrowDown');
-        await page.waitForTimeout(350);
-        await page.keyboard.press('Space');
-        await page.waitForTimeout(700);
+        await chooseMenuItem(page, 'Move down', { anchor: ui.editingActions(page, 'Inserter 1'), menu: ui.editingMenu(page), activation: 'Enter', itemActivation: 'Enter' });
         await scrollToCard(page, 'inserters');
-        await rec.shot(page, 'inserters-after-reorder', { desc: 'After moving the first inserter down with Space, ArrowDown, Space (spec state 10)' });
+        await rec.shot(page, 'inserters-after-reorder', { desc: 'After moving the first inserter down through its row menu with the keyboard (spec state 10)' });
         const post = await readList(page);
         table('after-reorder', { 'Inserter chips': post.chips.inserters, Pickers: post.pickers.map((p) => p.join('>')) });
         rec.check('chips still read Inserter 1 to 4 in the new order', same(post.chips.inserters, labelsOf('inserter', range(4))), show(post.chips.inserters));

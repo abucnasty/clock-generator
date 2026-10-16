@@ -21,6 +21,18 @@ export function nextId(prev: ConfigFormData, kind: EntityKind): number {
     return Math.max(1, ...items.map((item) => item.id + 1));
 }
 
+/** Append a deep copy without changing references to the original entity. */
+export function duplicateEntity(prev: ConfigFormData, kind: EntityKind, index: number): ConfigFormData {
+    const list = kind === 'drills' ? prev.drills?.configs ?? [] : prev[kind];
+    const item = list[index];
+    if (!item) return prev;
+    const copy = { ...structuredClone(item), id: nextId(prev, kind), _uuid: crypto.randomUUID() };
+    if (kind === 'drills') {
+        return { ...prev, drills: { ...prev.drills!, configs: [...prev.drills!.configs, copy as DrillFormData] } };
+    }
+    return { ...prev, [kind]: [...prev[kind], copy] };
+}
+
 /**
  * Numbers the entities 1, 2, 3 … by their place, keeping every other field. The map takes the old id of every entity
  * to its new one (the first entity wins where two had the same id).
@@ -178,6 +190,26 @@ export function updateInserter(prev: ConfigFormData, index: number, updates: Par
             const { _forced_always: _f, ...rest } = ins;
             void _f;
             return { ...rest, ...updates };
+        }),
+    };
+}
+
+/** One bulk edit; each row keeps its own fields and non-rule overrides. */
+export function updateInserters(prev: ConfigFormData, uuids: readonly string[], updates: Partial<InserterFormData>): ConfigFormData {
+    if (uuids.length === 0) return prev;
+    const selected = new Set(uuids);
+    return {
+        ...prev,
+        inserters: prev.inserters.map(ins => {
+            if (!selected.has(ins._uuid)) return ins;
+            const next = { ...ins, ...updates };
+            if ('overrides' in updates) {
+                delete next._forced_always;
+                next.overrides = { ...ins.overrides, ...updates.overrides };
+            }
+            if ('filters' in updates && updates.filters === undefined) delete next.filters;
+            if ('stack_size' in updates && updates.stack_size === undefined) delete next.stack_size;
+            return next;
         }),
     };
 }

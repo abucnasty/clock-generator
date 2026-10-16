@@ -17,7 +17,7 @@
 //   - names: every focusable or disabled control in the accessibility tree has a name (one rolled-up check per view: Configure,
 //     each Results tab, the enable-rule modal, the info popover); a visible text is contained in the name (WCAG 2.5.3); no element
 //     has aria-label together with aria-hidden="true"; no name reads a raw 4+ decimal number
-//   - rows: each row is a group named "Inserter 2", holds "Reorder Inserter 2" and "Delete Inserter 2"; "Delete lane 2 of Belt 1";
+//   - rows: each row is a group named "Inserter 2", holds "More actions for Inserter 2" and "Delete Inserter 2"; "Delete lane 2 of Belt 1";
 //     Recipe inputs of a machine row are named by the row ("Recipe, Machine 2")
 //   - selects: "Machine type", "Belt type", "Belt strategy", "Chest type", "Drill type", "Target machine"; every select's name
 //     contains its visible label and no icon file name (not "assembling-machine-3")
@@ -29,7 +29,7 @@
 //     Esc returns focus, click does not select the row)
 //   - header: logo alt, ⋮ menu (aria-haspopup, aria-expanded, menu named), loading spinner and generation progress bar named
 //   - dialogs: the enable-rule modal's selects, its Close button, its heading
-//   - dnd-kit's live announcement says "Inserter N" and "position M" and never prints a UUID (lib.mjs `checkAnnounced`)
+//   - row menus reorder with the keyboard; the message names the row and offers Undo; dnd-kit stays silent
 // Not checked: the diagram's edit dialog, the Fuel tab (needs the fuel build), the below-target Copy name (needs a below-target
 // clock), PR A's focus ring, targets and status region.
 //
@@ -40,7 +40,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import {
     forWidths, previewServer, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate, waitReady,
-    accessibleName, checkTabTo, checkAnnounced, ui,
+    accessibleName, checkTabTo, checkAnnounced, ui, chooseMenuItem,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -685,7 +685,7 @@ const STEP_LIST = [
             const missing = { group: [], reorder: [], delete: [], inside: [] };
             for (const { kind, n } of rows) {
                 const group = page.getByRole('group', { name: exactly(`${cap(kind)} ${n}`) });
-                const reorder = `Reorder ${kind} ${n}`;
+                const reorder = `More actions for ${cap(kind)} ${n}`;
                 const del = `Delete ${kind} ${n}`;
                 if ((await group.count()) !== 1) missing.group.push(`${cap(kind)} ${n}`);
                 else {
@@ -696,9 +696,9 @@ const STEP_LIST = [
             }
             const total = rows.length;
             rec.check('every row is a group named "Inserter 2", "Machine 1"...', total > 0 && missing.group.length === 0, missing.group.length ? `${missing.group.length} of ${total} not found as one group: ${brief(missing.group, 8)}` : `${total} groups`);
-            rec.check('every drag handle is named "Reorder inserter 2"...', total > 0 && missing.reorder.length === 0, missing.reorder.length ? `${missing.reorder.length} of ${total} missing: ${brief(missing.reorder, 8)}` : `${total} handles`);
+            rec.check('every row menu is named "More actions for Inserter 2"...', total > 0 && missing.reorder.length === 0, missing.reorder.length ? `${missing.reorder.length} of ${total} missing: ${brief(missing.reorder, 8)}` : `${total} row menus`);
             rec.check('every delete button is named "Delete inserter 2"...', total > 0 && missing.delete.length === 0, missing.delete.length ? `${missing.delete.length} of ${total} missing: ${brief(missing.delete, 8)}` : `${total} buttons`);
-            rec.check('each row group holds its Reorder and Delete buttons', total > 0 && missing.group.length === 0 && missing.inside.length === 0, missing.inside.length ? `${missing.inside.length}: ${brief(missing.inside, 6)}` : missing.group.length ? 'no groups to look in' : 'all');
+            rec.check('each row group holds its row menu and Delete buttons', total > 0 && missing.group.length === 0 && missing.inside.length === 0, missing.inside.length ? `${missing.inside.length}: ${brief(missing.inside, 6)}` : missing.group.length ? 'no groups to look in' : 'all');
             // the lane delete
             const lane2 = await page.evaluate(() => [...document.querySelectorAll('p,span,div')].filter((e) => e.children.length === 0 && /^Lane 2:?$/.test((e.textContent ?? '').trim())).length); // SELECTOR: confirm
             const laneDeletes = await page.getByRole('button', { name: /^Delete lane 2 of belt \d+$/i }).count();
@@ -854,39 +854,16 @@ const STEP_LIST = [
         name: 'dnd',
         async run({ page, rec }) {
             await goConfigure(page);
-            const handle = page.getByRole('button', { name: /^Reorder inserter 1$/i }).first();
-            const fallback = page.locator('#entity-inserter-1 [aria-roledescription="sortable"]').first(); // SELECTOR: confirm
-            const target = (await handle.count()) > 0 ? handle : fallback;
-            if ((await target.count()) === 0) {
-                rec.check('a drag handle of the first inserter is there to drag', false, 'no "Reorder inserter 1" button and no #entity-inserter-1 handle');
-                return;
-            }
-            await target.scrollIntoViewIfNeeded();
-            await target.focus();
-            const said = [];
-            const press = async (key) => {
-                await page.keyboard.press(key);
-                await page.waitForTimeout(250);
-                const t = await dndText(page);
-                said.push(t);
-                return t;
-            };
-            await press('Space'); // pick up
-            await checkAnnounced(rec, page, /Inserter \d/, 'dnd-kit pick-up text names the row ("Picked up Inserter 1")');
-            await press('ArrowDown');
-            await checkAnnounced(rec, page, /position \d/, 'dnd-kit move text says the position ("... is over position 2")');
-            await press('Space'); // drop
-            await checkAnnounced(rec, page, /Inserter \d.*position \d/, 'dnd-kit drop text names the row and its position');
-            rec.check('none of dnd-kit\'s announcements prints a UUID', said.length > 0 && said.every((t) => !UUID.test(t)), said.some((t) => UUID.test(t)) ? `"${said.find((t) => UUID.test(t)).slice(0, 90)}"` : said.map((t) => `"${t.slice(0, 40)}"`).join(' / '));
-            // put the row back
-            const stillHandle = await page.evaluate(() => document.activeElement?.getAttribute('aria-roledescription') === 'sortable');
-            if (stillHandle) {
-                await press('Space');
-                await press('ArrowUp');
-                await press('Space');
-            } else {
-                rec.info('dnd: restoring the order', 'focus left the handle after the drop; the rows stay swapped (this is the last edit of the run)');
-            }
+            const row = ui.editingRow(page, 'inserters', 1);
+            const handle = ui.editingDrag(row);
+            rec.check('the pointer handle is hidden and outside the Tab order', await handle.getAttribute('aria-hidden') === 'true' && await handle.evaluate(el => el.tabIndex) === -1);
+            await chooseMenuItem(page, 'Move down', { anchor: ui.editingActions(page, 'Inserter 1'), menu: ui.editingMenu(page), activation: 'Enter', itemActivation: 'Enter' });
+            await checkAnnounced(rec, page, /^Moved Inserter 1 to 2\./, 'keyboard move names the row through the one polite region');
+            const dnd = await dndText(page);
+            rec.check('dnd-kit stays silent', dnd === '', dnd);
+            rec.check('reorder feedback contains no UUID', !UUID.test(await ui.message(page).innerText()));
+            rec.check('the keyboard move offers Undo', await ui.messageUndo(page).isVisible());
+            await ui.messageUndo(page).click();
         },
     },
     {

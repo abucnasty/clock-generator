@@ -23,6 +23,8 @@ import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { SidecarModLink } from './IntroCard';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { RowActionsMenu } from './RowActionsMenu';
+import { useAnnounce } from '../hooks/useMessages';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
 import { BUTTON_NAMES, SELECT_NAMES, recipeName } from '../utils/a11yLabels';
@@ -34,6 +36,7 @@ interface MachinesFormProps {
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
+    onDuplicate: (index: number) => void;
 }
 
 const CRAFTING_SPEED_COMMAND = '/c game.print(game.player.selected.crafting_speed)';
@@ -45,9 +48,21 @@ function MachinesFormComponent({
     onUpdate,
     onRemove,
     onReorder,
+    onDuplicate,
 }: MachinesFormProps) {
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, remove } = useFocusAfterRemove(machines.length, onRemove);
+    const { cardRef, remove, afterAdd } = useFocusAfterRemove(machines.length, onRemove);
+    const announce = useAnnounce();
+    const addedLabel = () => entityLabel('machine', Math.max(0, ...machines.map(row => row.id)) + 1);
+    const duplicate = (index: number) => {
+        afterAdd(() => onDuplicate(index));
+        announce(`Added ${addedLabel()}, a copy of ${entityLabel('machine', machines[index].id)}.`);
+    };
+
+    const add = () => {
+        afterAdd(onAdd);
+        announce(`Added ${addedLabel()}.`);
+    };
 
     return (
         <PanelSection
@@ -71,12 +86,12 @@ function MachinesFormComponent({
                 ),
             }}
             actions={(
-                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
+                <Button id={ELEMENT_IDS.addMachine} startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
                     Add Machine
                 </Button>
             )}
         >
-            <SortableList itemKeys={machines.map((m) => m._uuid)} itemLabels={machines.map((m) => entityLabel('machine', m.id))} onReorder={onReorder}>
+            <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}>
                         {(dragHandle) => (
@@ -88,6 +103,9 @@ function MachinesFormComponent({
                                 dragHandle={dragHandle}
                                 onUpdate={onUpdate}
                                 onRemove={remove}
+                                onDuplicate={() => duplicate(index)}
+                                onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
+                                onMoveDown={index < machines.length - 1 ? () => onReorder(index, index + 1) : undefined}
                             />
                         )}
                     </SortableItem>
@@ -102,12 +120,15 @@ interface MachineRowProps {
     index: number;
     recipeNames: string[];
     canDelete: boolean;
+    onDuplicate: () => void;
+    onMoveUp?: () => void;
+    onMoveDown?: () => void;
     dragHandle: React.ReactNode;
     onUpdate: (index: number, field: keyof MachineFormData, value: string | number) => void;
     onRemove: (index: number) => void;
 }
 
-function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpdate, onRemove }: MachineRowProps) {
+function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
     const { facts, error } = useMachineFacts({
         recipe: machine.recipe,
         productivity: machine.productivity,
@@ -136,6 +157,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                 }}
             >
                 {dragHandle}
+                <Box data-row-first="" sx={{ display: 'contents' }}>
                 <ItemSelector
                     kind="recipe"
                     inputId={machineRecipeElementId(machine.id)}
@@ -150,6 +172,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     inputAriaLabel={recipeName(entityLabel('machine', machine.id))}
                     freeSolo
                 />
+                </Box>
                 <NumberField
                     label="Productivity (%)"
                     value={machine.productivity}
@@ -216,6 +239,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                         </MenuItem>
                     </Select>
                 </FormControl>
+                <RowActionsMenu label={entityLabel('machine', machine.id)} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
                 <IconButton
                     onClick={() => onRemove(index)}
                     color="error"

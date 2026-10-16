@@ -11,6 +11,9 @@ import {
     describeChestSwitch,
     describePaste,
     describeRemoval,
+    describeReorder,
+    describeBulkEdit,
+    reorderMessage,
     countOf,
     exampleUndoMessage,
     removalMessage,
@@ -346,5 +349,34 @@ describe('undoMessageInput', () => {
         expect(input.durationMs).toBe(8000);
         expect(input.action).toBeUndefined();
         expect(input.hint).toBeUndefined();
+    });
+});
+
+describe('reorder and bulk messages', () => {
+    it('describes both move directions and no move', () => {
+        let before = form();
+        before = edits.addInserter(edits.addInserter(before));
+        expect(reorderMessage(before, 'inserters', 4, 1)).toBe('Moved Inserter 5 to 2. Inserters 2–4 are now 3–5.');
+        expect(reorderMessage(before, 'inserters', 2, 1)).toBe('Moved Inserter 3 to 2. Inserter 2 is now 3.');
+        expect(reorderMessage(before, 'inserters', 0, 2)).toBe('Moved Inserter 1 to 3. Inserters 2–3 are now 1–2.');
+        expect(reorderMessage(before, 'machines', 1, 0)).toBe('Moved Machine 2 to 1. Machine 1 is now 2.');
+        expect(describeReorder(before, before, 'inserters', 0, 0)).toBeNull();
+    });
+    it.each([{ ids: [4] }, { ids: [2, 5, 6, 7] }])('names the selected rows in each bulk action ($ids)', ({ ids }) => {
+        const rows = ids.length === 1 ? 'Inserter 4' : 'Inserters 2, 5–7';
+        expect(describeBulkEdit('stack', ids, 12)).toBe(`Set Stack size to 12 on ${rows}.`);
+        expect(describeBulkEdit('stack', ids)).toBe(`Set Stack size to Automatic on ${rows}.`);
+        expect(describeBulkEdit('filters', ids)).toBe(`Set the filters of ${rows}.`);
+        expect(describeBulkEdit('auto-filters', ids)).toBe(`${rows} now use automatic filters.`);
+        expect(describeBulkEdit('rule', ids, 'Clocked 0–7')).toBe(`Set the enable rule of ${rows} to Clocked 0–7.`);
+    });
+    it('restores the exact serialized bulk snapshot, including omitted stack and forced rules', () => {
+        const before = form();
+        delete before.inserters[0].stack_size;
+        before.inserters[0].prototype = 'fast-inserter';
+        before.inserters[0].quality = 'epic';
+        const serialized = JSON.stringify(before);
+        const { entry } = act(before, config => edits.updateInserters(config, before.inserters.map(row => row._uuid), { stack_size: 12, filters: ['iron-plate'], overrides: { enable_control: { mode: 'NEVER' } } }));
+        expect(JSON.stringify(undoOutcome(entry)!.form)).toBe(serialized);
     });
 });

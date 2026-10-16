@@ -72,6 +72,8 @@ interface EnableControlModalProps {
     entityId: number;
     entityLabel: string;
     currentOverride?: EnableControlOverride;
+    /** A mixed bulk selection can apply its initial Auto draft to every selected row. */
+    applyUnchanged?: boolean;
     onSave: (override: EnableControlOverride | undefined) => void;
     sourceType?: SourceSinkType;
     sinkType?: SourceSinkType;
@@ -684,6 +686,7 @@ function EnableControlModalContent({
     entityId,
     entityLabel,
     currentOverride,
+    applyUnchanged = false,
     onSave,
     sourceType,
     sinkType,
@@ -697,7 +700,8 @@ function EnableControlModalContent({
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     // Esc and the X ask first when the rule was changed; Cancel is an explicit discard. A Save that changes nothing
-    // closes like Cancel, so it does not take ownership of a rule Exclude from LCM forced (`_forced_always`).
+    // closes like Cancel, so it does not take ownership of a rule Exclude from LCM forced (`_forced_always`). A mixed
+    // bulk selection explicitly applies its initial Auto draft through applyUnchanged.
     const requestClose = () => {
         if (formState?.changed) {
             setConfirmOpen(true);
@@ -748,7 +752,7 @@ function EnableControlModalContent({
                         entityId={entityId}
                         currentOverride={currentOverride}
                         onSave={(override) => {
-                            if (enableControlOverrideChanged(override, currentOverride)) onSave(override);
+                            if (applyUnchanged || enableControlOverrideChanged(override, currentOverride)) onSave(override);
                             onClose();
                         }}
                         onCancel={onClose}

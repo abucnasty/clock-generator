@@ -20,7 +20,7 @@ import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
-import type { ChestFormData } from './hooks/useConfigForm';
+import type { ChestFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
 import { useSharedBuildLink } from './hooks/useSharedBuildLink';
@@ -75,7 +75,7 @@ import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames
 import { RuleTimingContext } from './components/RuleTimingContext';
 import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
 import type { EntityKind } from './utils/configForm/formData';
-import { describeChestSwitch, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
+import { describeChestSwitch, removalMessage, removedDeleteLabel, reorderMessage } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
 import type { TargetValues } from './utils/pasteTarget';
 import { configToFormData } from './utils/configForm/configMapping';
@@ -174,6 +174,8 @@ function App() {
         library,
         setConfig,
         updateTargetOutput,
+        duplicateEntity,
+        updateInserters,
         addMachine,
         updateMachine,
         removeMachine,
@@ -580,7 +582,17 @@ function App() {
             offerUndo((form) => removalMessage(form, kind, index), { restoredLabel: (form) => removedDeleteLabel(form, kind, index) });
             remove(index);
         };
+        const reorder = (kind: EntityKind, run: (from: number, to: number) => void) => (from: number, to: number) => {
+            if (from === to) return;
+            offerUndo(form => reorderMessage(form, kind, from, to));
+            run(from, to);
+        };
         return {
+            reorderMachines: reorder('machines', reorderMachines),
+            reorderInserters: reorder('inserters', reorderInserters),
+            reorderBelts: reorder('belts', reorderBelts),
+            reorderChests: reorder('chests', reorderChests),
+            reorderDrills: reorder('drills', reorderDrills),
             removeMachine: removal('machines', removeMachine),
             removeInserter: removal('inserters', removeInserter),
             removeBelt: removal('belts', removeBelt),
@@ -588,7 +600,18 @@ function App() {
             removeDrill: removal('drills', removeDrill),
             switchChestType: (index: number, type: ChestType) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type); },
         };
-    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType]);
+    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, reorderMachines, reorderInserters, reorderBelts, reorderChests, reorderDrills]);
+    const duplicate = useMemo(() => ({
+        machines: (index: number) => duplicateEntity('machines', index),
+        inserters: (index: number) => duplicateEntity('inserters', index),
+        belts: (index: number) => duplicateEntity('belts', index),
+        chests: (index: number) => duplicateEntity('chests', index),
+        drills: (index: number) => duplicateEntity('drills', index),
+    }), [duplicateEntity]);
+    const updateInsertersUndoable = useCallback((uuids: string[], updates: Partial<InserterFormData>, message: string) => {
+        offerUndo(message);
+        updateInserters(uuids, updates);
+    }, [offerUndo, updateInserters]);
     // the key of the build an action with Undo is about to replace as a whole (Import, Paste, Reset, an example, Delete
     // build, a share link, another tab's version): its clocks are set aside under it, and its Undo brings them back
     const replacedKeyRef = useRef<string | null>(null);
@@ -948,7 +971,8 @@ function App() {
                                             onAdd={addMachine}
                                             onUpdate={updateMachine}
                                             onRemove={undoable.removeMachine}
-                                            onReorder={reorderMachines}
+                                            onReorder={undoable.reorderMachines}
+                                            onDuplicate={duplicate.machines}
                                         />
 
                                         <PanelSection level={3} title="Belts and chests">
@@ -958,7 +982,8 @@ function App() {
                                                 onAdd={addBelt}
                                                 onUpdate={updateBelt}
                                                 onRemove={undoable.removeBelt}
-                                                onReorder={reorderBelts}
+                                                onReorder={undoable.reorderBelts}
+                                                onDuplicate={duplicate.belts}
                                                 beltQuestion={beltQuestion}
                                                 onBeltAnswer={handleBeltAnswer}
                                             />
@@ -969,7 +994,8 @@ function App() {
                                                 onUpdate={updateChest}
                                                 onSwitchType={undoable.switchChestType}
                                                 onRemove={undoable.removeChest}
-                                                onReorder={reorderChests}
+                                                onReorder={undoable.reorderChests}
+                                                onDuplicate={duplicate.chests}
                                             />
                                         </PanelSection>
 
@@ -983,7 +1009,9 @@ function App() {
                                             onAdd={addInserter}
                                             onUpdate={updateInserter}
                                             onRemove={undoable.removeInserter}
-                                            onReorder={reorderInserters}
+                                            onReorder={undoable.reorderInserters}
+                                            onDuplicate={duplicate.inserters}
+                                            onBulkUpdate={updateInsertersUndoable}
                                         />
                                         <MissingInserterAlert
                                             issues={coverageIssues}
@@ -1019,7 +1047,8 @@ function App() {
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={undoable.removeDrill}
-                                    onReorder={reorderDrills}
+                                    onReorder={undoable.reorderDrills}
+                                    onDuplicate={duplicate.drills}
                                 />
                             </BuildPanel>
 

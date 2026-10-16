@@ -1,3 +1,4 @@
+import { idList, selectionLabel } from './bulkEdit';
 import { ChestType } from 'clock-generator/light';
 import * as edits from './configForm/edits';
 import { isInfinityChest, type ConfigFormData, type EntityKind } from './configForm/formData';
@@ -102,12 +103,6 @@ export function undoOutcome(entry: UndoEntry): { form: ConfigFormData; next: Und
 const itemsOf = (form: ConfigFormData, kind: EntityKind): { id: number; _uuid: string }[] =>
     kind === 'drills' ? form.drills?.configs ?? [] : form[kind];
 
-/** "3–5", or "3, 5" when the numbers do not follow on */
-function idList(ids: number[]): string {
-    const consecutive = ids.every((id, i) => i === 0 || id === ids[i - 1] + 1);
-    return consecutive && ids.length > 1 ? `${ids[0]}–${ids[ids.length - 1]}` : ids.join(', ');
-}
-
 /** The Undo message after an example replaced the build: "Example loaded: Logistic science pack." */
 export function exampleUndoMessage(example: Pick<ExampleBuild, 'recipe'>, name: (id: string) => string): string {
     return `Example loaded: ${exampleTitle(example, name)}.`;
@@ -199,4 +194,39 @@ export function describeChestSwitch(form: ConfigFormData, index: number, newType
 /** "Imported 3 machines, 1 inserter from Factorio." */
 export function describePaste(parts: string[]): string {
     return `Imported ${parts.join(', ')} from Factorio.`;
+}
+
+/** What a move renumbered, excluding the moved row from the following sentence. */
+export function describeReorder(before: ConfigFormData, after: ConfigFormData, kind: EntityKind, fromIndex: number, toIndex: number): string | null {
+    const moved = itemsOf(before, kind)[fromIndex];
+    if (fromIndex === toIndex || !moved) return null;
+    const newIds = new Map(itemsOf(after, kind).map(item => [item._uuid, item.id]));
+    const destination = newIds.get(moved._uuid);
+    if (destination === undefined || destination === moved.id) return null;
+    const sentences = [`Moved ${entityLabel(KINDS[kind].one, moved.id)} to ${destination}.`];
+    const others = itemsOf(before, kind).filter(item => item._uuid !== moved._uuid && newIds.has(item._uuid) && newIds.get(item._uuid) !== item.id);
+    if (others.length > 0) sentences.push(`${named(kind, others.map(item => item.id))} ${others.length === 1 ? 'is' : 'are'} now ${idList(others.map(item => newIds.get(item._uuid)!))}.`);
+    return sentences.join(' ');
+}
+
+const REORDER = {
+    machines: edits.reorderMachines, inserters: edits.reorderInserters, belts: edits.reorderBelts,
+    chests: edits.reorderChests, drills: edits.reorderDrills,
+};
+
+export function reorderMessage(form: ConfigFormData, kind: EntityKind, from: number, to: number): string | null {
+    if (from === to) return null;
+    return describeReorder(form, REORDER[kind](form, from, to), kind, from, to);
+}
+
+export type BulkEditKind = 'stack' | 'filters' | 'auto-filters' | 'rule';
+
+export function describeBulkEdit(kind: BulkEditKind, ids: number[], detail?: string | number): string {
+    const rows = selectionLabel(ids);
+    switch (kind) {
+        case 'stack': return `Set Stack size to ${detail ?? 'Automatic'} on ${rows}.`;
+        case 'filters': return `Set the filters of ${rows}.`;
+        case 'auto-filters': return `${rows} now use automatic filters.`;
+        case 'rule': return `Set the enable rule of ${rows} to ${detail}.`;
+    }
 }

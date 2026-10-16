@@ -215,3 +215,5 @@ now own those two things. **Scripts find controls only through `ui` and `itemLab
 
 - `selftest-one-editor-ui.mjs`: additive three-width selector matrix for the shared fields, filters, draft footer and discard prompt; no generation.
 - `capture-one-editor.mjs`: 3.2 A shared inserter fields, all five Diagram drafts, source-first filters, keyboard and geometry evidence.
+
+`capture-editing-rows.mjs` covers 3.2 PR B row menus, reorder Undo, Add/Duplicate focus and inserter bulk edits at 1440/720/390 plus the 960/800/720 sweep. First run `BASELINE_ONLY=1` on untouched PR A, then pass its `tab-baseline.json` as `BASELINE_JSON` to the full PR B run.
