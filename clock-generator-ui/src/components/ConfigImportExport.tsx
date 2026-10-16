@@ -13,6 +13,9 @@ import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, typ
 import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
+import type { ConfigFormData } from '../utils/configForm/formData';
+import { pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
+import { entityLabel } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
 import {
@@ -41,19 +44,18 @@ const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 
+/** Describe the destination of this exact preview without suggesting a silent rebind or renumber. */
+function crossingText(warning: PasteReferenceWarning): string {
+    const imported = warning.direction === 'incoming-to-retained';
+    return `${imported ? 'Imported' : 'Retained'} ${entityLabel(warning.ownerType, warning.ownerId)} ${warning.slot}`
+        + ` → ${imported ? 'retained' : 'imported'} ${entityLabel(warning.endpointType, warning.endpointId)}`
+        + (warning.destinationExists ? '.' : ' (missing from the resulting build).');
+}
+
 interface PendingImport extends PastedEntities {
     miningProductivityLevel?: number;
     /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
     fill: { values: TargetValues; source: SuggestedTarget['source'] } | null;
-}
-
-interface ImportSelections {
-    target: boolean;
-    machines: boolean;
-    drills: boolean;
-    inserters: boolean;
-    belts: boolean;
-    chests: boolean;
 }
 
 /** What the intro card starts in here */
@@ -67,6 +69,8 @@ interface ConfigImportExportProps {
     ref?: Ref<BuildEntryHandle>;
     /** Null disables Save build file */
     config: Config | null;
+    /** Raw destination counts/references remain available even while the build cannot be exported. */
+    currentForm: ConfigFormData;
     /** The form's Target Output, which a paste fills in only when its recipe is empty */
     target: TargetValues;
     onImport: (config: Config) => void;
@@ -119,6 +123,7 @@ export interface ToolsMenuItem {
 export function ConfigImportExport({
     ref,
     config,
+    currentForm,
     target: currentTarget,
     onImport,
     onReplaceTarget,
@@ -166,6 +171,17 @@ export function ConfigImportExport({
         belts: true,
         chests: true,
     });
+
+    // Consent belongs to this exact preview. Identity checks invalidate it in the same render as any change.
+    const [acknowledged, setAcknowledged] = useState<{
+        incoming: PendingImport; current: ConfigFormData; selections: ImportSelections;
+    } | null>(null);
+    const preview = pendingImport ? pastePreview(currentForm, pendingImport, importSelections) : null;
+    const acknowledgedCurrent = acknowledged?.incoming === pendingImport && acknowledged?.current === currentForm
+        && acknowledged?.selections === importSelections;
+    if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
+    const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
+    const canImport = hasImportWork && (!preview?.crossings.length || acknowledgedCurrent);
 
     // the Paste from Factorio dialog, open when the clipboard could not be used, with why
     const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number } | null>(null);
@@ -385,6 +401,9 @@ export function ConfigImportExport({
 
     const handleConfirmImport = useCallback(() => {
         if (!pendingImport) return;
+        const currentPreview = pastePreview(currentForm, pendingImport, importSelections);
+        const hasWork = (importSelections.target && pendingImport.fill !== null) || currentPreview.counts.some(row => row.replacing);
+        if (!hasWork || (currentPreview.crossings.length > 0 && !acknowledgedCurrent)) return;
 
         const fill = importSelections.target ? pendingImport.fill : null;
         const machines = importSelections.machines && pendingImport.machines.length > 0;
@@ -402,12 +421,6 @@ export function ConfigImportExport({
         ].filter((part) => part !== false);
 
         setPendingImport(null);
-
-        if (parts.length === 0) {
-            // not a failure: nothing was ticked
-            notify({ severity: 'warning', text: 'Nothing was imported: no box was ticked.' });
-            return;
-        }
 
         // one Undo for the whole paste, taken before any of it is applied; its message says what was imported
         onUndoable(describePaste(parts));
@@ -434,7 +447,7 @@ export function ConfigImportExport({
             onReplaceChests(pendingImport.chests);
         }
         onBuildReplaced();
-    }, [pendingImport, importSelections, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, notify]);
+    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable]);
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);
@@ -662,56 +675,46 @@ export function ConfigImportExport({
                                     </Typography>
                                 )
                             )}
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.machines}
-                                        onChange={() => handleSelectionChange('machines')}
-                                        disabled={pendingImport.machines.length === 0}
+                            {preview?.counts.map(row => {
+                                const title = row.category[0].toUpperCase() + row.category.slice(1);
+                                const consequence = row.replacing
+                                    ? `Replace ${row.current} ${row.category} with ${row.incoming}`
+                                    : row.incoming === 0 ? `Keep ${row.current}; none in this export`
+                                        : `Keep ${row.current} current ${row.category} (${row.incoming} available to import)`;
+                                return (
+                                    <Box key={row.category} data-paste-category={row.category}>
+                                        <FormControlLabel
+                                            control={<Checkbox checked={importSelections[row.category]}
+                                                onChange={() => handleSelectionChange(row.category)} disabled={row.incoming === 0}
+                                                slotProps={{ input: { 'aria-describedby': `paste-${row.category}-counts` } }} />}
+                                            label={`${title} (${row.incoming})${row.category === 'drills' && pendingImport.miningProductivityLevel !== undefined ? ` - Mining Productivity ${pendingImport.miningProductivityLevel}` : ''}`}
+                                        />
+                                        <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                            {row.current} current → {row.incoming} imported. {consequence}.
+                                        </Typography>
+                                    </Box>
+                                );
+                            })}
+                            {!!preview?.crossings.length && (
+                                <>
+                                    <Alert severity="warning" role="region" aria-label="Cross-category references">
+                                        <Typography variant="body2">These parts will be combined using their entity numbers. A matching number can refer to a different entity.</Typography>
+                                        <Box component="ul" sx={{ pl: 2.5, mb: 0 }}>
+                                            {preview.crossings.map(warning => (
+                                                <li key={`${warning.ownerType}-${warning.ownerId}-${warning.slot}`}>
+                                                    {crossingText(warning)}
+                                                </li>
+                                            ))}
+                                        </Box>
+                                    </Alert>
+                                    <FormControlLabel
+                                        control={<Checkbox checked={acknowledgedCurrent} onChange={(_, checked) => setAcknowledged(checked ? {
+                                            incoming: pendingImport, current: currentForm, selections: importSelections,
+                                        } : null)} />}
+                                        label="I understand these parts will be combined using their entity numbers."
                                     />
-                                }
-                                label={`Machines (${pendingImport.machines.length})`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.drills}
-                                        onChange={() => handleSelectionChange('drills')}
-                                        disabled={pendingImport.drills.length === 0}
-                                    />
-                                }
-                                label={`Drills (${pendingImport.drills.length})${pendingImport.miningProductivityLevel !== undefined ? ` - Mining Productivity ${pendingImport.miningProductivityLevel}` : ''}`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.inserters}
-                                        onChange={() => handleSelectionChange('inserters')}
-                                        disabled={pendingImport.inserters.length === 0}
-                                    />
-                                }
-                                label={`Inserters (${pendingImport.inserters.length})`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.belts}
-                                        onChange={() => handleSelectionChange('belts')}
-                                        disabled={pendingImport.belts.length === 0}
-                                    />
-                                }
-                                label={`Belts (${pendingImport.belts.length})`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.chests}
-                                        onChange={() => handleSelectionChange('chests')}
-                                        disabled={pendingImport.chests.length === 0}
-                                    />
-                                }
-                                label={`Chests (${pendingImport.chests.length})`}
-                            />
+                                </>
+                            )}
                         </Box>
                     )}
                 </DialogContent>
@@ -721,7 +724,7 @@ export function ConfigImportExport({
                         onClick={handleConfirmImport} 
                         variant="contained" 
                         color="secondary"
-                        disabled={!Object.values(importSelections).some(v => v)}
+                        disabled={!canImport}
                     >
                         Import Selected
                     </Button>

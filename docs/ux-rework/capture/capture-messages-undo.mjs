@@ -33,7 +33,7 @@ import { mkdirSync, writeFileSync, readFileSync, readdirSync, statSync } from 'n
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import {
-    forWidths, previewServer, sample, LOGISTIC, UI_DIR, ui,
+    forWidths, previewServer, inertFromKeyboard, sample, LOGISTIC, UI_DIR, ui,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll,
     contrastPairs, checkLabelInName, chooseMenuItem,
 } from './lib.mjs';
@@ -199,27 +199,23 @@ async function pasteOk(page, text = sidecarExportOf(LOGISTIC)) {
     await pasteFromMenu(page, text);
     await importDialog(page).waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
+    if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
     await importDialog(page).getByRole('button', { name: 'Import Selected' }).click();
 }
 
-/**
- * "Nothing was imported: no box was ticked." cannot be reached with a real click: Import Selected is disabled when nothing is ticked.
- * So the dialog is opened, everything unticked, and the button's React onClick is called directly (it works with the disabled prop).
- * If the new code makes this message reachable, replace this with a plain click.
- */
+/** No selected work is blocked by the actual disabled control; never call a hidden React handler. */
 async function pasteNoItems(page) {
+    const before = await readState(page);
     await pasteFromMenu(page, sidecarExportOf(LOGISTIC));
     const dlg = importDialog(page);
     await dlg.waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
     for (const box of await dlg.getByRole('checkbox').all()) if (await box.isChecked()) await box.uncheck();
-    await page.waitForTimeout(150);
-    return dlg.getByRole('button', { name: 'Import Selected' }).evaluate((el) => {
-        const key = Object.keys(el).find((k) => k.startsWith('__reactProps'));
-        if (!key || typeof el[key].onClick !== 'function') return false;
-        el[key].onClick({});
-        return true;
-    });
+    const button = ui.safetyPasteImport(page);
+    const disabled = await button.isDisabled();
+    const inert = await inertFromKeyboard(page, button);
+    const after = await readState(page);
+    return { disabled: disabled && inert, unchanged: typeof before.saved === 'string' && before.saved === after.saved, open: await dlg.isVisible() };
 }
 
 async function resetViaMenu(page) {
@@ -716,17 +712,14 @@ try {
             await checkMessage(page, rec, 'msg-paste-ok', { re: /Imported .* from Factorio/, label: 'paste imported', desc: 'Paste from Factorio > Import Selected: "Imported ... from Factorio"' });
         }, page);
 
-        await rec.step('B "Nothing was imported: no box was ticked."', async () => {
-            await dismissMessage(page);
-            await scrollTo(page, 0);
-            const forced = await pasteNoItems(page);
-            rec.info('no items selected', forced ? 'Import Selected is disabled when nothing is ticked, so the button\'s onClick was called directly' : 'could not reach the message (no React props on the button)');
-            await checkMessage(page, rec, 'msg-no-items', { re: /Nothing was imported: no box was ticked/, label: 'no items selected (a warning)', desc: 'Paste dialog with nothing ticked, Import Selected: "Nothing was imported: no box was ticked."', contrastOn: true });
-            rec.check('no items selected: it is a warning, not an error (a filled warning Alert)', (await snack(page).locator('.MuiAlert-filledWarning').count()) === 1, 'MuiAlert-filledWarning');
-            rec.check('no items selected: no Undo (nothing changed)', (await undoBtn(page).count()) === 0);
-            await dismissMessage(page);
-            await page.keyboard.press('Escape'); // leave the dialog closed
-            await page.waitForTimeout(300);
+        await rec.step('B no selected Paste work is blocked without a message or Undo', async () => {
+            await dismissMessage(page); await scrollTo(page, 0);
+            const result = await pasteNoItems(page);
+            rec.check('no items selected: Import Selected is disabled', result.disabled);
+            rec.check('no items selected: keyboard attempts preserve the exact raw build and open preview', result.unchanged && result.open);
+            rec.check('no items selected: no Undo is offered', (await undoBtn(page).count()) === 0);
+            await rec.shot(page, 'paste-no-items', { desc: 'No selected work: disabled Import Selected, unchanged build' });
+            await page.keyboard.press('Escape'); await page.waitForTimeout(300);
         }, page);
 
         await rec.step('B latest message wins', async () => {
@@ -1095,9 +1088,9 @@ try {
             await page.waitForTimeout(500);
             await dismissMessage(page);
             // nothing selected
-            await pasteNoItems(page);
-            await waitMessage(page, /^Nothing was imported/);
-            rec.check('paste: "Nothing was imported" offers no Undo', (await undoBtn(page).count()) === 0);
+            const noItems = await pasteNoItems(page);
+            rec.check('paste: no selected work stays disabled and unchanged', noItems.disabled && noItems.unchanged && noItems.open);
+            rec.check('paste: no selected work offers no Undo', (await undoBtn(page).count()) === 0);
             await dismissMessage(page);
             await page.keyboard.press('Escape');
             const still = await readState(page);

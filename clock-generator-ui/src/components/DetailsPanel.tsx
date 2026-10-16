@@ -55,12 +55,13 @@ export function DetailsPanel(props: DetailsPanelProps) {
             <Tabs
                 value={shownTab}
                 onChange={(_, value: DetailsTab) => setTab(value)}
-                variant="scrollable"
-                scrollButtons="auto"
                 // the arrow keys show the tab they move to
                 selectionFollowsFocus
                 aria-label={TABLIST_NAMES.details}
-                sx={{ borderBottom: 1, borderColor: 'divider' }}
+                sx={{ borderBottom: 1, borderColor: 'divider',
+                    // Ordinary navigation stays in the narrow view; Tab's existing labels can wrap.
+                    '& .MuiTab-root': { minWidth: { xs: 0, sm: 90 }, flex: { xs: '1 1 0', sm: '0 0 auto' }, px: { xs: 1, sm: 2 } },
+                }}
             >
                 <Tab value="insights" label={DETAILS_COPY.insights} {...tabProps(PREFIX, 'insights')} />
                 {fuelView !== null && <Tab value="fuel" label={DETAILS_COPY.fuel} {...tabProps(PREFIX, 'fuel')} />}

@@ -1,0 +1,72 @@
+// Pre-3.F diagnostic only. No 3.F behavior is credited as PASS. No product mutations except real UI edits/imports.
+// Root/evidence runner owns BASE_URL and clipboard lane. Writer did not execute this script.
+// BASE_URL=http://localhost:5298 CAPTURE_LIB=./lib-ui-candidate.mjs node capture-baseline-320.mjs OUT
+// CLIPBOARD_LANE=approved-by-root enables actual clipboard Paste input/confirm screenshots, never a mock read.
+import { readFileSync,writeFileSync,mkdirSync } from 'node:fs';
+import { join,resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+const L=await import(pathToFileURL(resolve(process.env.CAPTURE_LIB??new URL('./lib.mjs',import.meta.url).pathname)).href);
+const {ui,sample,SMALL_SAMPLE,forWidths,waitReady,checkAxe,checkFocusNotObscuredAtHeight,checkFocusNotObscured,noSideScroll,openMoreMenu,chooseMenuItem,withClipboard}=L;
+const OUT=process.argv[2];if(!OUT)throw Error('OUT required');mkdirSync(OUT,{recursive:true});
+const BASE=process.env.BASE_URL;if(!BASE)throw Error('Use the root-owned immutable production BASE_URL. No automatic preview/build.');
+if(new URL(BASE).port==='5280')throw Error('Owner preview 5280 is forbidden');
+const KINDS=['machines','inserters','belts','chests','drills'];
+const LDS=sample('intermediates/low-density-structure/low-density-structure.json');
+const SHARED=sample('science/production-science/production-science-shared.json');
+import {restDialog,stored} from './followups-common.mjs';
+import {geometryOf,assertOrdinaryLocal} from './followups-full-common.mjs';
+export {geometryOf};
+const after=process.env.GEOMETRY_PHASE==='AFTER';if(after){if(!process.env.SOURCE_PROOF)throw Error('AFTER geometry requires immutable SOURCE_PROOF');const proof=JSON.parse(readFileSync(process.env.SOURCE_PROOF,'utf8'));writeFileSync(join(OUT,'SOURCE-PIN.json'),JSON.stringify({phase:'AFTER320 geometry only',sourceProof:process.env.SOURCE_PROOF,head:proof.head,uiTree:proof.uiTree,engineTree:proof.engineTree},null,2));}
+const geometry=[];
+export async function rest(p){await p.mouse.move(0,0);await p.waitForFunction(()=>document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).every(a=>a.playState!=='running'),null,{timeout:8000});await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));}
+async function capture(p,rec,name,{short=false,scope}={}){await rest(p);for(const d of await ui.followDialogs(p).all())await restDialog(p,d);const g=await geometryOf(p);geometry.push({name,...g});writeFileSync(join(OUT,'geometry-320.json'),JSON.stringify(geometry,null,2));rec.info(`${name}: geometry`,JSON.stringify(g));rec.check(`${name}: actual 320 CSSpx`,g.actualViewport===320);assertOrdinaryLocal(rec,g,name);const h=await noSideScroll(p);rec.check(`${name}: ordinary page horizontal reflow`,h.pass,h.detail);await rec.shot(p,name,{aria:true});const axe=await checkAxe(rec,p,name);rec.check(`${name}: axe ran without skip`,Array.isArray(axe));if(short)await checkFocusNotObscuredAtHeight(rec,p,{height:560,width:320,walk:scope,max:120});}
+async function checked(p){await ui.checkOnly(p).click();await ui.compatCheckChip(p,'passed').waitFor({timeout:15000});}
+async function load(p,file){const c=JSON.parse(readFileSync(file,'utf8'));await ui.compatFile(p).setInputFiles({name:'3F-real-engine-config.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(c))});await ui.compatFileOpenedMessage(p).waitFor();await p.waitForFunction(t=>{const r=document.querySelector('#target-items-per-second'),n=document.querySelector('#target-copies');return r&&n&&Number(r.value)===t.rate&&Number(n.value)===(t.copies??1);},{rate:c.target_output.items_per_second,copies:c.target_output.copies},{timeout:15000});await ui.listView(p).click();await rest(p);}
+async function section(p,rec,kind){await ui.card(p,kind).scrollIntoViewIfNeeded();await capture(p,rec,`configured-${kind}`);}
+async function traced(rec,name,fn){rec.info('action checkpoint',name);try{return await fn();}catch(error){rec.info(`${name}: full action failure`,String(error?.message??error));throw error;}}
+async function auditBulkControlsFromCurrent(p,rec,L,ui){
+    // The preceding real reverse walk has left focus on Enable rule. Do not restart at the top of the List.
+    const controls=[
+        ['Enable rule…',ui.editingRule(p)],['Filters…',ui.editingFilters(p)],['Set',ui.editingSet(p)],
+        ['Stack size',ui.editingStack(p)],['Clear selection',ui.editingClear(p)],['Select all',ui.editingSelectAll(p)],
+    ];
+    const records=[],disabled=[];
+    for(const [label,loc] of controls){
+        if(await loc.isDisabled()){
+            records.push({label,disabled:true,reached:false,expectedTabStop:false});
+            rec.check(`bulk reverse control ${label}: disabled, no Tab stop expected`,true);
+            disabled.push([label,loc]);
+            continue;
+        }
+        const result=await L.tabTo(p,loc,{shift:true,max:1000});
+        const name=await L.accessibleName(p,ui.editingActive(p));
+        const focus=await L.focusNotObscured(p);
+        const record={label,...result,name,...focus};records.push(record);
+        rec.check(`bulk reverse control ${label}: keyboard reached`,result.reached,JSON.stringify(record));
+        rec.check(`bulk reverse control ${label}: actual focus not obscured`,result.reached&&focus.ok,JSON.stringify(record));
+        // Reverse adjacent controls take zero (current Enable rule) or one press, skipping only disabled controls.
+        // More presses reveal unexpected intermediate stops; retain their absence as a diagnostic failure, never claim coverage.
+        rec.check(`bulk reverse control ${label}: no unrecorded intermediate Tab stop`,result.reached&&result.presses<=1,JSON.stringify(record));
+        if(!result.reached)break;
+    }
+    rec.info('bulk all six reverse control outcomes and actual focus names',JSON.stringify(records));
+    rec.check('bulk reverse audit accounts for all six controls',records.length===6,JSON.stringify(records));
+    // Inert probes may move and restore focus; perform them after the uninterrupted real keyboard chain.
+    for(const [label,loc] of disabled)await L.checkInertFromKeyboard(rec,p,loc,`bulk ${label}: disabled action at short height`);
+}
+async function bulkShortWalk(p,rec){const before=p.viewportSize();try{await p.setViewportSize({width:320,height:560});await rest(p);await ui.editingCheckbox(p,2).uncheck();await ui.editingCheckbox(p,2).check();const origin=await ui.editingActive(p).elementHandle(),stops=[];let reached=false;rec.info('bulk short real origin',await ui.editingActive(p).evaluate(e=>({name:e.getAttribute('aria-label'),tag:e.tagName,rect:e.getBoundingClientRect().toJSON()})));try{for(let n=0;n<1000;n++){await p.keyboard.press('Shift+Tab');const focus=await L.focusNotObscured(p);const name=await L.accessibleName(p,ui.editingActive(p));stops.push({press:n+1,name,...focus});rec.check(`bulk reverse walk stop${n+1}: focus not obscured`,focus.ok,JSON.stringify({name,...focus}));if(await ui.editingBar(p).evaluate(e=>e.contains(document.activeElement))){reached=true;break;}if(await origin.evaluate(e=>e===document.activeElement))break;}}finally{await origin.dispose();}rec.info('bulk320x560 all actual reverse stops',JSON.stringify(stops));rec.check('bulk320x560: Shift+Tab reaches bar from real checkbox2',reached,`${stops.length} actual stops; limit1000`);if(reached)await auditBulkControlsFromCurrent(p,rec,L,ui);else rec.info('bulk real-origin failure accessibility snapshot',await ui.followBody(p).ariaSnapshot());}finally{await p.setViewportSize(before);await rest(p);}}
+async function run(){return forWidths([320],async({page:p,rec,context})=>{
+ rec.info('provenance',after?'AFTER320 geometry recheck on the immutable product named by SOURCE-PIN.json. Same baseline states/fixtures; new 3.F behavior is graded separately by the full script. JSON inputs are UI test inputs, not in-game Sidecar exports.':'Pre-3.F baseline on root-provided immutable B production preview. Future controls are unavailable, never credited PASS. JSON fixture inputs are UI test inputs, not in-game Sidecar exports.');
+ await capture(p,rec,'initial-blank');
+ await rec.step('LDS actual all-kind forms except drill',async()=>{await load(p,LDS);for(const kind of KINDS.filter(k=>k!=='drills'))await section(p,rec,kind);},p);
+ await rec.step('real shared drill form',async()=>{await load(p,SHARED);await section(p,rec,'drills');},p);
+ await rec.step('expanded errors and header actions',async()=>{await load(p,LDS);await ui.targetRate(p).fill('999999');await ui.targetRate(p).press('Tab');await ui.card(p,'target').scrollIntoViewIfNeeded();await capture(p,rec,'target-error-header');await checkFocusNotObscuredAtHeight(rec,p,{height:560,width:320,walk:ui.editingHeader(p),max:100});},p);
+ await rec.step(after?'Advanced and stale plan AFTER geometry':'Advanced and pre-3F stale plan',async()=>{await load(p,SMALL_SAMPLE);await checked(p);await ui.advancedOverrides(p).click();await ui.followPlan(p).waitFor();await capture(p,rec,'advanced-valid-plan');await ui.targetRate(p).fill('119');await ui.targetRate(p).press('Tab');await ui.followPlan(p).scrollIntoViewIfNeeded();await capture(p,rec,'advanced-stale-plan');rec.info('3.F Advanced help/stale controls',after?'This same-state geometry run does not grade new behavior; see full 3.F capture.':'Not yet implemented on this baseline: no failure/recovery or inertness acceptance assertion.');},p);
+ await rec.step('bulk selection bar and dialogs',async()=>{await load(p,LDS);await ui.editingSelect(p).click();await ui.editingCheckbox(p,1).check();await ui.editingCheckbox(p,2).check();await ui.editingBar(p).scrollIntoViewIfNeeded();await capture(p,rec,'bulk-sticky');await bulkShortWalk(p,rec);await ui.editingFilters(p).click();await capture(p,rec,'bulk-filter-dialog',{short:true,scope:ui.editingFilterDialog(p)});await ui.editingCancelFilters(p).click();await rest(p);await ui.editingRule(p).click();await ui.ruleDialog(p).waitFor();await capture(p,rec,'bulk-rule-dialog',{short:true,scope:ui.ruleDialog(p)});await ui.ruleCancel(p).click();await rest(p);await ui.editingClear(p).click();},p);
+ await rec.step('all-five entity draft dialogs',async()=>{for(const kind of KINDS){await load(p,kind==='drills'?SHARED:LDS);await ui.diagramView(p).click();await ui.oneEditorNodes(p).first().waitFor();const name={machines:'Machine',inserters:'Inserter',belts:'Belt',chests:'Chest',drills:'Drill'}[kind];const nodes=ui.oneEditorNodes(p);let id=null;for(let n=0;n<await nodes.count();n++)if(new RegExp(`^${name} 1$`).test((await nodes.nth(n).innerText()).split('\n')[0].trim()))id=await nodes.nth(n).getAttribute('data-id');if(!id)throw Error(`Missing real ${name} node`);await ui.oneEditorNode(p,id).focus();await p.keyboard.press('Enter');await ui.oneEditorDialog(p).waitFor();await capture(p,rec,`entity-${kind}-dialog`,{short:true,scope:ui.oneEditorDialog(p)});await ui.oneEditorCancel(p).click();await rest(p);}},p);
+ await rec.step('library rename and long name',async()=>{await openMoreMenu(p,{anchor:ui.buildSwitcher(p),menu:ui.buildsMenu(p)});await chooseMenuItem(p,'Rename build…',{anchor:ui.buildSwitcher(p),menu:ui.buildsMenu(p)});await ui.compatRenameDialog(p).waitFor();await ui.followRenameField(p).fill('A deliberately long Factorio build name for narrow reflow diagnostics');await capture(p,rec,'library-rename-dialog',{short:true,scope:ui.compatRenameDialog(p)});await ui.followRenameSave(p).click();await rest(p);await capture(p,rec,'library-long-name-header');},p);
+ await rec.step('Results ordinary controls from one real generation',async()=>{await traced(rec,'Results: load SMALL',()=>load(p,SMALL_SAMPLE));await traced(rec,'Results: real Check only passes',()=>checked(p));await traced(rec,'Results: click Generate',()=>ui.generate(p).click());await traced(rec,'Results: actual answer appears',()=>ui.resultsCard(p).waitFor({timeout:60000}));await traced(rec,'Results: generation ends',()=>ui.cancel(p).waitFor({state:'hidden',timeout:60000}));if(await ui.viewToggle(p,'Results').getAttribute('aria-pressed')!=='true')await traced(rec,'Results: select Results',()=>ui.viewToggle(p,'Results').click());await rest(p);await traced(rec,'Results: capture answer',()=>capture(p,rec,'results-answer'));await ui.detailsHeading(p).scrollIntoViewIfNeeded();await traced(rec,'Results: Blueprint string tab',()=>ui.resultsTab(p,'Blueprint string').click());await capture(p,rec,'results-string');},p);
+ if(process.env.CLIPBOARD_LANE==='approved-by-root')await rec.step(after?'Paste input and AFTER confirmation geometry':'Paste input and old confirmation geometry',async()=>withClipboard(async()=>{await p.evaluate(()=>navigator.clipboard.writeText('3F diagnostic invalid export'));await ui.pasteFromFactorio(p).click();await ui.followPasteInput(p).waitFor();await capture(p,rec,'paste-input',{short:true,scope:ui.followPasteInput(p)});const c=JSON.parse(readFileSync(LDS,'utf8'));const exp={sidecar_version:'0.7.1',machines:c.machines.map(m=>({type:'machine',...m})),inserters:c.inserters.map(i=>i.source?.type==='belt'?{...i,source:{near_lane:1,...i.source}}:i),belts:c.belts,chests:(c.chests??[]).map(x=>({type:'buffer-chest',...x})),drills:c.drills??{mining_productivity_level:0,configs:[]}};await ui.followPasteBox(p).fill(JSON.stringify(exp));await traced(rec,'Paste: Continue valid typed test input',()=>ui.followPasteContinue(p).click());await traced(rec,'Paste: actual confirmation appears',()=>ui.followPasteConfirm(p).waitFor({timeout:15000}));await capture(p,rec,after?'paste-confirm-after3F-geometry':'paste-confirm-before3F',{short:true,scope:ui.followPasteConfirm(p)});await ui.followPasteCancel(p).click();}),p);else rec.info('Paste geometry NOT RUN','Requires root-coordinated CLIPBOARD_LANE=approved-by-root; no clipboard access occurred.');
+ rec.info('3.F behavior scope',after?'AFTER geometry only: Manual snapshot, Fuel equivalents, crossing acknowledgment, Advanced help and read-only plan behavior belong to the separate full 3.F acceptance capture.':'ManualBlueprintDialog, Fuel events, crossing acknowledgement, new Advanced help and read-only plan acceptance must be captured after implementation. Baseline does not grade them.');
+ },{out:OUT,base:BASE});}
+const runResult=await run();process.exitCode=runResult.finish({title:after?'3.F actual 320px AFTER geometry recheck':'3.F actual 320px pre-change diagnostic'});

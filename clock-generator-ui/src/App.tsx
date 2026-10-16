@@ -26,7 +26,7 @@ import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
 import { useSharedBuildLink } from './hooks/useSharedBuildLink';
 import { useStickyHeaderHeight } from './hooks/useStickyHeaderHeight';
 import { useUndo } from './hooks/useUndo';
-import { useCopyBlueprint } from './hooks/useCopyBlueprint';
+import { useCopyBlueprint, type BlueprintCopyFailure } from './hooks/useCopyBlueprint';
 import { useIntroCard } from './hooks/useIntroCard';
 import { useMachinesMax } from './hooks/useMachineFacts';
 import { TargetOutputForm } from './components/TargetOutputForm';
@@ -51,6 +51,7 @@ import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
 import { StaleCopyDialog } from './components/StaleCopyDialog';
+import { ManualBlueprintDialog } from './components/ManualBlueprintDialog';
 import { CheckErrorAlert } from './components/CheckErrorAlert';
 import { CheckPlanSection } from './components/CheckPlanSection';
 import { BeltAssumption } from './components/BeltAssumption';
@@ -367,6 +368,23 @@ function App() {
 
     // one copy for every Copy button: the bar's, the card's and the string's
     const notify = useNotify();
+    const dismiss = useDismissMessage();
+    const [manualCopy, setManualCopy] = useState<BlueprintCopyFailure | null>(null);
+    const copyFailureMessage = useRef<number | null>(null);
+    const retireCopyFailure = useCallback(() => {
+        if (copyFailureMessage.current !== null) dismiss(copyFailureMessage.current);
+        copyFailureMessage.current = null;
+        setManualCopy(null);
+    }, [dismiss, setManualCopy]);
+    const handleCopyFailed = useCallback((failure: BlueprintCopyFailure) => {
+        copyFailureMessage.current = notify({
+            severity: 'error',
+            text: 'Could not copy the blueprint. Select the string to copy it yourself.',
+            action: { label: 'Select blueprint string', onClick: () => setManualCopy(failure) },
+        });
+    }, [notify, setManualCopy]);
+    const copyIdentity = useMemo(() => ({ build: library.currentId, generatedFor, clock: selectedClock?.id, blueprintString, staleFor }),
+        [library.currentId, generatedFor, selectedClock?.id, blueprintString, staleFor]);
     const handleCopied = useCallback((warning: string | null, whileRunning: boolean) => {
         // the best clock so far stays selected: said, with its name
         const copied = whileRunning && selectedName ? ANNOUNCEMENTS.copiedCurrentBest(selectedName) : null;
@@ -379,7 +397,8 @@ function App() {
     }, [notify, announce, selectedName]);
     // copying the best clock so far picks it, as a click on its row does
     const pinSelected = useCallback(() => selectAlternative(selectedAlternativeIndex), [selectAlternative, selectedAlternativeIndex]);
-    const copy = useCopyBlueprint({ blueprintString, rateWarning, staleFor, running: isRunning, onCopied: handleCopied, onPinned: pinSelected });
+    const copy = useCopyBlueprint({ blueprintString, rateWarning, staleFor, running: isRunning, copyIdentity,
+        onCopied: handleCopied, onPinned: pinSelected, onCopyFailed: handleCopyFailed, onCopyAttempt: retireCopyFailure });
 
     // another clock is announced ("Showing the clock: …"), except after the card's Back to recommended, which moves the
     // focus to the card's name and so reads it out already
@@ -685,7 +704,6 @@ function App() {
     }, [handleBuildReplaced]);
 
     // ---- Your builds
-    const dismiss = useDismissMessage();
     const titles = useMemo(() => buildTitles(library.builds, recipeLabel), [library.builds, recipeLabel]);
     /** The title a build has, or would have with `extra` in the list (one just made or renamed) */
     const titleOf = useCallback((id: string, extra?: BuildMeta) => {
@@ -829,10 +847,10 @@ function App() {
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
                     <Toolbar>
-                        <Icon sx={{ mr: 3 }}>
+                        <Icon sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0 }}>
                             <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
                         </Icon>
-                        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0, flexShrink: 0 }}>
+                        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0, flexShrink: 1 }}>
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
                         {isInitialized && (
@@ -851,6 +869,7 @@ function App() {
                         )}
                         <Box sx={{ flexGrow: 1 }} />
                         <ConfigImportExport
+                            currentForm={config}
                             ref={buildEntryRef}
                             config={exportableConfig}
                             target={config.target_output}
@@ -1257,6 +1276,8 @@ function App() {
                     onConfirm={copy.confirm}
                 />
             )}
+
+            {manualCopy && <ManualBlueprintDialog failure={manualCopy} onClose={() => setManualCopy(null)} />}
 
             <MessageHost />
         </PageProviders>

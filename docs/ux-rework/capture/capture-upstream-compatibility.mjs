@@ -552,6 +552,7 @@ try {
                 await ui.compatImportConfirm(p).waitFor({state:'visible'});
             });
             await ui.compatImportConfirm(p).waitFor({state:'visible'});
+            if(await ui.safetyPasteAcknowledgment(p).isVisible().catch(()=>false))await ui.safetyPasteAcknowledgment(p).check();
             await audit(p,rec,'m3-metadata-paste-confirm',[['Import Selected',ui.compatImportSelected(p)]]);
             await checkFocusNotObscuredAtHeight(rec,p,{height:width>=960?640:560,walk:ui.compatImportConfirm(p)});
             await checkMouseActivationVisible(rec,p,ui.compatImportSelected(p),'Import Selected metadata');

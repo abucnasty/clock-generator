@@ -22,10 +22,10 @@
 //   S3  edit after generating: Generate stays enabled, the banner, ONE next step, Generate checks and generates again (primary only)
 //   S4  Check only does not move the page: stale Results scrolled (chip, view, scrollY, focus), Generate after a passed check skips
 //       the check (primary only), Results without clocks, Configure scrolled to Chests after a reload
-//   S5  generation-only switches keep the check; every other edit drops the chip and dims the plan
+//   S5  generation-only switches keep the check; every other edit drops the chip and makes the plan read-only
 //   S6  engine failure (logistic science at 400/s): alert at the top of Configure, chip, note, Generate again, Check only, the note
 //   S7  broken build from Results: Generate goes to the coverage row (List and Diagram); Check only focuses the note
-//   S8  the swing plan lives in Advanced Overrides: empty text + Check only, after a check, exclude chip, dimmed after an edit
+//   S8  the swing plan lives in Advanced Overrides: empty text + Check only, after a check, exclude chip, read-only after an edit
 //   S9  Search deeper goes through the check (primary only; INFO when the offer does not show)
 //   S10 the bar in idle, Checking... and Generating... (read from the DOM as the label changes) and after a failed check
 //   S11 wording: the new strings against the 1.12 banned words
@@ -34,7 +34,7 @@
 // Where the new UI's exact text, role or id is unknown the selector is marked `// SELECTOR: confirm`; those are the lines to fix first.
 // Against today's UI (the "before" run) the checks that need the new code FAIL; every step still runs to the end.
 import {
-    forWidths, previewServer, sample, SMALL_SAMPLE, waitReady,
+    forWidths, previewServer, sample, SMALL_SAMPLE, waitReady, ui as captureUi,
     goConfigure, goResults, noSideScroll, isClickable,
     contrast, contrastPairs, accessibleName, checkLabelInName,
     checkTabTo, tabTo, checkFocusNotObscured, checkAnnounced,
@@ -515,35 +515,23 @@ async function checkJump(rec, page, label, want, { outline = true } = {}) {
 /** Shot of the bar only, with its accessibility tree */
 const barShot = (rec, page, name, desc) => rec.shot(page, name, { locator: bar(page), aria: true, desc });
 
-/** Plan section facts: where the "Transfer Plan" is, whether Advanced holds it, how dimmed it is */
-const planInfo = (page) =>
-    page.evaluate(() => {
-        const leaves = [...document.querySelectorAll('body *')].filter((el) => el.children.length === 0 && (el.textContent ?? '').trim() === 'Transfer Plan');
-        const outside = [];
-        let inside = null;
-        for (const leaf of leaves) {
-            const adv = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => a.contains(leaf) && /^Advanced\b/.test(a.querySelector('.MuiAccordionSummary-root')?.textContent ?? ''));
-            if (!adv) {
-                outside.push(leaf);
-                continue;
-            }
-            const plan = leaf.closest('.MuiAccordion-root');
-            let opacity = 1;
-            let inert = false;
-            let noPointer = false;
-            for (let n = plan; n && n !== adv.parentElement; n = n.parentElement) {
-                const cs = getComputedStyle(n);
-                opacity *= parseFloat(cs.opacity);
-                if (n.hasAttribute('inert')) inert = true;
-                if (cs.pointerEvents === 'none') noPointer = true;
-            }
-            const r = plan.getBoundingClientRect();
-            inside = { opacity: Math.round(opacity * 100) / 100, inert, noPointer, top: r.top, visible: r.width > 0 && r.height > 0 };
+/** Current plan remains readable; only its mutating chips become read-only after an edit. */
+const planInfo = async page => {
+    const plan = captureUi.safetySwingPlan(page);
+    if (!(await plan.count())) return { total: 0, outside: 0, inside: null };
+    return plan.evaluate(el => {
+        const adv = [...document.querySelectorAll('.MuiAccordion-root')].find(a => a.contains(el) && /^Advanced\b/.test(a.querySelector('.MuiAccordionSummary-root')?.textContent ?? ''));
+        let opacity = 1, inert = false, noPointer = false;
+        for (let n = el; n && n !== adv?.parentElement; n = n.parentElement) {
+            const css = getComputedStyle(n); opacity *= Number(css.opacity); inert ||= n.hasAttribute('inert'); noPointer ||= css.pointerEvents === 'none';
         }
-        return { total: leaves.length, outside: outside.length, inside };
+        const actions = [...el.querySelectorAll('.MuiChip-root[aria-label*=" LCM:"]')];
+        return { total: 1, outside: adv ? 0 : 1, inside: { opacity, inert, noPointer, top: el.getBoundingClientRect().top,
+            visible: el.getBoundingClientRect().height > 0, readOnly: actions.length > 0 && actions.every(a => a.getAttribute('role') !== 'button' && a.tabIndex < 0) } };
     });
-/** Dimmed = faded, or inert, or not clickable */
-const isDimmed = (p) => Boolean(p.inside) && (p.inside.opacity < 1 || p.inside.inert || p.inside.noPointer);
+};
+const isDimmed = p => Boolean(p.inside) && (p.inside.opacity < 1 || p.inside.inert || p.inside.noPointer);
+const isReadOnly = p => Boolean(p.inside) && !isDimmed(p) && p.inside.readOnly;
 
 async function openAdvanced(page) {
     const summary = advancedSummary(page);
@@ -985,7 +973,7 @@ try {
                     await page.waitForTimeout(300);
                 }
 
-                // everything else drops the chip and dims the plan
+                // everything else drops the chip and makes the plan read-only
                 const base0 = (await rateField(page).inputValue()).replace(/[^\d.]/g, '');
                 const edits = [
                     ['Items per Second', rateField(page), String(Number(base0) + 10), base0],
@@ -1006,10 +994,10 @@ try {
                     await page.waitForTimeout(400);
                     p = await planInfo(page);
                     rec.check(`edit of ${name}: the "Check passed" chip is gone`, !(await chipOn()), show((await barState(page)).chips));
-                    rec.check(`edit of ${name}: the swing plan is dimmed`, isDimmed(p), show(p.inside));
+                    rec.check(`edit of ${name}: the swing plan is readable and read-only`, isReadOnly(p), show(p.inside));
                     rec.check(`edit of ${name}: the plan says the build changed`, (await page.getByText(T.planOutOfDate, { exact: false }).count()) > 0);
                     if (name === 'LCM Override') {
-                        await rec.shot(page, 's5-lcm-edited', { desc: 'LCM Override set to 2 after a check: no chip, the plan dimmed with its note' });
+                        await rec.shot(page, 's5-lcm-edited', { desc: 'LCM Override set to 2 after a check: no chip, the readable read-only plan with its note' });
                         seen(await page.getByText(T.planOutOfDate).first().textContent().catch(() => ''));
                         await pairs(page, rec, [{ name: 'plan out-of-date note', locator: page.getByText(T.planOutOfDate).first() }]);
                     }
@@ -1222,8 +1210,8 @@ try {
                 await page.waitForTimeout(400);
                 let p = await planInfo(page);
                 rec.check('after a check: the Transfer Plan table is in Advanced and visible', Boolean(p.inside?.visible), show(p));
-                const summary = page.getByText(/Each output inserter takes .* per crafting cycle of .* ticks, and the clock repeats every/);
-                rec.check('after a check: the summary sentence shows ("Each output inserter takes ... the clock repeats every ...")', (await summary.count()) > 0);
+                const summary = captureUi.followCheckSuccess(page);
+                rec.check('after a check: the summary sentence shows each output machine’s total swings, shared equally', (await summary.count()) > 0);
                 if (await exists(summary)) {
                     seen(await summary.first().textContent());
                     rec.check('after a check: the summary no longer opens with "The configuration is valid."', !/configuration is valid/i.test((await summary.first().textContent()) ?? ''));
@@ -1262,17 +1250,17 @@ try {
                     await idle(page, 20_000);
                 } else rec.check('the plan has "Exclude from LCM" chips to click', false, 'none found');
 
-                // edit a machine: the plan is dimmed
+                // edit a machine: the plan is read-only
                 const prod = page.getByLabel(/^Productivity \(%\)/).first();
                 if (await exists(prod)) {
                     const prev = (await prod.inputValue()).replace(/[^\d.]/g, '');
                     await setNumber(page, prod, String(Number(prev || 0) + 1));
                     await page.waitForTimeout(400);
                     p = await planInfo(page);
-                    rec.check('after editing a machine: the plan is dimmed', isDimmed(p), show(p.inside));
+                    rec.check('after editing a machine: the plan is readable and read-only', isReadOnly(p), show(p.inside));
                     rec.check('after editing a machine: the plan says the build changed', (await page.getByText(T.planOutOfDate).count()) > 0);
                     await advancedSummary(page).scrollIntoViewIfNeeded();
-                    await rec.shot(page, 's8-plan-dimmed', { desc: 'After editing a machine: the plan dimmed with its one-line note' });
+                    await rec.shot(page, 's8-plan-dimmed', { desc: 'After editing a machine: the readable read-only plan with its one-line note' });
                 } else rec.info('machine edit', 'no Productivity field found');
             }, page);
 

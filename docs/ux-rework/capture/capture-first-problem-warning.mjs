@@ -45,7 +45,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-    forWidths, previewServer, sample, SMALL_SAMPLE, SLOW_SAMPLE, LOGISTIC, waitReady,
+    forWidths, previewServer, sample, SMALL_SAMPLE, SLOW_SAMPLE, LOGISTIC, waitReady, ui as captureUi,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll, isClickable,
     contrast, contrastPairs, accessibleName, checkLabelInName, checkTabTo, checkFocusNotObscured, itemLabel,
 } from './lib.mjs';
@@ -725,6 +725,7 @@ try {
             const dialog = await exists(importDialog(page));
             rec.check('paste: the "Confirm Import from Factorio" dialog opened', dialog);
             if (dialog) {
+                if (await captureUi.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await captureUi.safetyPasteAcknowledgment(page).check();
                 await importDialog(page).getByRole('button', { name: 'Import Selected' }).click();
                 await page.waitForTimeout(700);
                 rec.check('Paste from Factorio (Import Selected) from Results lands on Configure', (await viewOf(page)) === 'configure', `selected: "${await viewOf(page)}"`);

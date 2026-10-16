@@ -1,4 +1,4 @@
-import { memo, useId } from 'react';
+import { memo, useId, useRef } from 'react';
 import {
     Accordion,
     AccordionDetails,
@@ -31,6 +31,7 @@ interface TransferPlanPanelProps {
     usedLcm: number;
     excludedIngredients: string[];
     onExcludeChange: (items: string[]) => void;
+    interaction?: 'editable' | 'checking' | 'read-only';
 }
 
 /** "inserter" as "Inserter" */
@@ -50,11 +51,13 @@ function TransferPlanPanelComponent({
     usedLcm,
     excludedIngredients,
     onExcludeChange,
+    interaction = 'editable',
 }: TransferPlanPanelProps) {
     const { entities, computed_lcm } = transferPlan;
     const { itemLabel } = useGameNames();
 
     const toggleExclude = (itemName: string) => {
+        if (interaction !== 'editable') return;
         if (excludedIngredients.includes(itemName)) {
             onExcludeChange(excludedIngredients.filter((i) => i !== itemName));
         } else {
@@ -64,8 +67,10 @@ function TransferPlanPanelComponent({
     const isLcmOverridden = usedLcm !== computed_lcm;
 
     const summaryId = useId();
+    const regionRef = useRef<HTMLDivElement>(null);
+    const tooltipSlots = { popper: { container: () => regionRef.current } };
     return (
-        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId } }} sx={{ mt: 1 }}>
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId, ref: regionRef } }} sx={{ mt: 1 }}>
             <AccordionSummary id={summaryId} expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Swing Plan
@@ -74,7 +79,7 @@ function TransferPlanPanelComponent({
             <AccordionDetails sx={{ p: 0 }}>
                 {/* here, not in the title: the title is a button, and a focusable chip in a button cannot be reached or named */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1 }}>
-                    <Tooltip title="LCM: the number of crafting cycles in one clock period (the least common multiple of every inserter's swings per cycle)." describeChild>
+                    <Tooltip title="LCM: the number of crafting cycles in one clock period (the least common multiple of every inserter's swings per cycle)." describeChild slotProps={tooltipSlots}>
                         <Chip
                             tabIndex={0}
                             label={`LCM: ${computed_lcm}`}
@@ -85,7 +90,7 @@ function TransferPlanPanelComponent({
                     </Tooltip>
 
                     {isLcmOverridden && (
-                        <Tooltip title={`Manual LCM override active: ${usedLcm} (calculated: ${computed_lcm})`} describeChild>
+                        <Tooltip title={`Manual LCM override active: ${usedLcm} (calculated: ${computed_lcm})`} describeChild slotProps={tooltipSlots}>
                             <Chip
                                 tabIndex={0}
                                 label={`Used: ${usedLcm}`}
@@ -126,7 +131,6 @@ function TransferPlanPanelComponent({
                                     <TableRow
                                         key={`${entity.entity_id}-${transfer.item_name}`}
                                         sx={{
-                                            opacity: isExcluded ? 0.5 : 1,
                                             '& td': { borderBottom: isFirstRow || transferIdx > 0 ? undefined : 'none' },
                                         }}
                                     >
@@ -152,7 +156,7 @@ function TransferPlanPanelComponent({
                                                     variant="body2"
                                                     sx={{
                                                         textDecoration: isExcluded ? 'line-through' : 'none',
-                                                        color: isExcluded ? 'text.disabled' : 'text.primary',
+                                                        color: isExcluded ? 'text.secondary' : 'text.primary',
                                                     }}
                                                 >
                                                     <GameName id={transfer.item_name} />
@@ -164,7 +168,7 @@ function TransferPlanPanelComponent({
                                                 variant="body2"
                                                 sx={{
                                                     fontFamily: 'monospace',
-                                                    color: isExcluded ? 'text.disabled' : 'text.primary',
+                                                    color: isExcluded ? 'text.secondary' : 'text.primary',
                                                 }}
                                             >
                                                 {formatFraction(transfer.numerator, transfer.denominator)}
@@ -173,11 +177,12 @@ function TransferPlanPanelComponent({
                                         <TableCell align="center">
                                             <Tooltip
                                                 title={
-                                                    isExcluded
+                                                    interaction !== 'editable' ? (interaction === 'checking' ? 'Checking the build. Changes are unavailable.' : 'This plan is out of date. Check the build before changing it.') : isExcluded
                                                         ? 'Click to include in LCM'
                                                         : `Click to exclude from LCM. An inserter whose items are all excluded is set to ${ALWAYS_ON} unless it already has an enable rule of your own.`
                                                 }
                                                 describeChild
+                                                slotProps={tooltipSlots}
                                             >
                                                 <Chip
                                                     // starts with the word on the chip, and says what it is about
@@ -186,8 +191,12 @@ function TransferPlanPanelComponent({
                                                     label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"
                                                     variant={isExcluded ? 'filled' : 'outlined'}
-                                                    onClick={() => toggleExclude(transfer.item_name)}
-                                                    sx={{ cursor: 'pointer' }}
+                                                    onClick={interaction === 'read-only' ? undefined : () => toggleExclude(transfer.item_name)}
+                                                    aria-disabled={interaction === 'checking' || undefined}
+                                                    onKeyDown={interaction === 'checking' ? event => {
+                                                        if (event.key === 'Enter' || event.key === ' ') event.preventDefault();
+                                                    } : undefined}
+                                                    sx={{ minWidth: 84, cursor: interaction === 'editable' ? 'pointer' : 'default' }}
                                                 />
                                             </Tooltip>
                                         </TableCell>

@@ -54,8 +54,8 @@ const COMPARE_COPY = {
         + 'is what the simulator models; on a moving belt an inserter can be switched off holding a partial hand. A '
         + 'subtick clock is always made for a belt that stands still, and is not ranked behind other clocks for it. Blank '
         + 'when no clocked inserter picks up from a belt.',
-    swingsHelp: 'Swings each output inserter makes per crafting cycle. The clock repeats after a whole number of crafting '
-        + 'cycles (the clock period).',
+    swingsHelp: 'Total output swings per crafting cycle of each output machine, shared equally across its output inserters. '
+        + 'Per-inserter counts may be fractional. The clock repeats after a whole number of crafting cycles (the clock period).',
     windowsHelp: 'How many wake windows the clock has in all: stretches of ticks during which it switches an inserter on.',
     wakeUpsHelp: PROVISIONAL_WAKE_UP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
         + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
