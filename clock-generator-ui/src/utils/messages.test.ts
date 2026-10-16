@@ -190,6 +190,24 @@ describe('owned speech waiting for a dialog to close', () => {
         expect(main.textContent).toBe('');
     });
 
+    it('reroutes still-current speech when a newly opened menu hides the queued spare', () => {
+        const committed = completedShare();
+        queue(() => committed, committed);
+        const hiddenSpare = appended[0];
+        hiddenSpare.hidden = true;
+        vi.advanceTimersByTime(100);
+        expect(hiddenSpare.textContent).toBe('');
+        expect(appended).toHaveLength(2);
+        const replacement = appended[1];
+        expect(replacement.hidden).toBe(false);
+        expect(replacement.isConnected).toBe(true);
+        expect(replacement.textContent).toBe('');
+        vi.advanceTimersByTime(100);
+        expect(hiddenSpare.textContent).toBe('');
+        expect(replacement.textContent).toBe('Shared build opened: Science. Or press Cmd+Z to undo. Its clocks are back.');
+        expect(main.textContent).toBe('');
+    });
+
     it('writes the composed success to the exposed spare when its offer is still current at delivery', () => {
         const committed = completedShare();
         queue(() => committed, committed);

@@ -59,7 +59,13 @@ export function announceText(main: HTMLElement | null, text: string, stillCurren
     const region = spare;
     region.replaceChildren();
     pendingWrite = setTimeout(() => {
-        if (!stillCurrent || stillCurrent()) write(region, text);
+        if (stillCurrent && !stillCurrent()) return;
+        // A newly opened modal can hide the spare while its empty-region initialization is pending.
+        if (!region.isConnected || isHidden(region)) {
+            announceText(main, text, stillCurrent);
+            return;
+        }
+        write(region, text);
     }, WRITE_DELAY_MS);
     clearTimeout(idleTimer);
     idleTimer = setTimeout(removeSpare, IDLE_MS);
