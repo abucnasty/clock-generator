@@ -504,9 +504,13 @@ This approval moves D1 from the deferred backlog into Phase 4. Detailed specs, i
 
 Owner approval, 2026-10-16, A / A / B: include D2 after the density work; offer locally remembered System / Light / Dark independently of Compact, with System as the default for new installations. Cover the complete interface including charts/diagrams, preserving the Factorio styling and current contrast/accessibility requirements. Keep preferences outside build exports/share links. See [D2 scope](specs/D2-theme-modes.md) and the [decision register](specs/phase4-decisions.md). Detailed specs/reviews/gates remain required.
 
-### Further deferred design proposals (D3–D8)
+### Approved Phase 4 scope: Task-based usability audit (D3)
 
-Owner requested drafts for later discussion: a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
+Owner approval, 2026-10-16, A / A / A: integrate a bounded exercise using two representative builds and three tasks (import/edit/generate; compare/select/copy; reopen/find installation guidance). Measure a baseline before D1 and repeat the same tasks after Phase 4, comparing scroll distance, interactions and interpretation problems. Agent walkthrough measurements supply a short before/after scorecard; owner participation is optional and the measurements are not proof of human usability. Findings outside approved scope return for owner decision. Existing verification and all three phase-end reviewers remain required. See [D3 scope](specs/D3-task-audit.md).
+
+### Further deferred design proposals (D4–D8)
+
+Owner requested drafts for later discussion: clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
 
 ### Independent audit of new UI tests (D9)
 

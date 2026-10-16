@@ -2,7 +2,7 @@
 
 Owner request: 2026-10-16. Record these ideas for later discussion, not implementation now. D1 already covers Compact view and wider-screen composition. These are draft proposals, not finalized implementation specs or additions to the current release scope. Revisit after the owner's broader audit; preserve current reviews and verification.
 
-Update, 2026-10-16: the owner has promoted D1 and D2 into Phase 4. D2 is approved A / A / B: after density work, System / Light / Dark, System default for new installations, complete interface including charts/diagrams. The original D2 draft row below is superseded by [D2 approved scope](D2-theme-modes.md) and [the Phase 4 decision register](phase4-decisions.md). D3–D8 remain pending individual approval.
+Current decisions, 2026-10-16: D1, D2 and D3 are approved for Phase 4. Original D2/D3 draft rows below are superseded by [D2 approved scope](D2-theme-modes.md), [D3 approved scope](D3-task-audit.md) and [the Phase 4 decision register](phase4-decisions.md). D4–D8 remain pending individual approval; all three phase-end reviewers and current verification remain required.
 
 | ID | Proposal | Problem / intended outcome | Decisions for later |
 |---|---|---|---|
