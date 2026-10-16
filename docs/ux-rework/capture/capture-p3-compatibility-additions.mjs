@@ -47,9 +47,9 @@ export async function captureP3Compatibility(h) {
         await page.waitForFunction(n => sessionStorage.getItem('clock-generator-tab-build') === n, buildId);
         await configure(page);
     }
-    async function metadata(page, label, n) {
+    async function metadata(page, label, n, { exportFile = true } = {}) {
         await storedUntil(page,new Function('c',`return c.target_output.copies === ${n}`),label);
-        const c = await saveFile(page);
+        const c = exportFile ? await saveFile(page) : await stored(page);
         rec.check(`${label}: exact Copies ${n}`, c.target_output.copies === n);
         assertMetadata(rec,c,label);
     }
@@ -197,12 +197,20 @@ export async function captureP3Compatibility(h) {
             rec.check(`P3C share summary includes fractional ${n}`, (await text(ui.compatShareConfirm(p))).includes(String(n)));
             await audit(p,rec,`p3c-share-confirm-${n}`,[['Open build',ui.compatOpenShared(p)]]);
             await clickVisible(ui.compatOpenShared(p),`P3C ${n}: Open shared build`);
-            await ui.compatShareConfirm(p).waitFor({ state:'hidden' }); await configure(p); await metadata(p,`P3C genuine shared open ${n}`,n);
+            // Saving a file replaces the message and ends Undo. Observe stored values first, then exercise Undo.
+            await ui.compatShareConfirm(p).waitFor({ state:'hidden' }); await configure(p); await metadata(p,`P3C genuine shared open ${n}`,n,{ exportFile:false });
             rec.check(`P3C populated shared open ${n} creates separate build`,await id(p) !== beforeId);
             rec.check(`P3C shared open leaves prior ${n} document intact`,await buildText(p,beforeId) === before);
             await ui.messageUndo(p).waitFor({ state:'visible' }); await ui.messageUndo(p).click();
             await p.waitForFunction(n => sessionStorage.getItem('clock-generator-tab-build') === n,beforeId);
             await metadata(p,`P3C shared-open Undo ${n}`,n);
+            // Reopen the same genuine share separately so export coverage remains on the shared build, not its source.
+            await p.goto(link,{ waitUntil:'commit' }); await ui.compatShareConfirm(p).waitFor({ state:'visible' });
+            await audit(p,rec,`p3c-share-export-confirm-${n}`,[['Open build',ui.compatOpenShared(p)]]);
+            await clickVisible(ui.compatOpenShared(p),`P3C ${n}: Reopen shared build for export`);
+            await ui.compatShareConfirm(p).waitFor({ state:'hidden' }); await configure(p);
+            rec.check(`P3C shared export ${n} is a separate shared build`,await id(p) !== beforeId);
+            await metadata(p,`P3C genuine shared export ${n}`,n);
         }
     },p);
 
