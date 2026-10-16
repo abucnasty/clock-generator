@@ -1,4 +1,5 @@
 import type { CheckStatus } from './checkThenGenerate';
+import { pickGoneNote, type RunStop } from './resultsCache';
 
 /** What a screen reader is told as the workflow moves on; one place for the glossary pass (1.12) */
 export const ANNOUNCEMENTS = {
@@ -10,9 +11,26 @@ export const ANNOUNCEMENTS = {
     finishedNoLabel: 'Finished generating.',
     copied: 'Blueprint copied.',
     showing: (selectedLabel: string) => `Showing the clock: ${selectedLabel}.`,
+    stoppedPrevious: 'Stopped. Your earlier clocks are back.',
+    stoppedPartial: 'Stopped. The clocks made so far are kept.',
+    stoppedNone: 'Stopped. No clocks were made.',
+    stoppedCheck: 'Stopped the check.',
+    clocksBack: (selectedLabel: string) => `Your clocks for this build are back. Selected clock: ${selectedLabel}.`,
+    /** After "Opened build: …" when the build's kept clocks come back with it */
+    itsClocksBack: 'Its clocks are back.',
+    pickGone: pickGoneNote,
+    copiedCurrentBest: (selectedLabel: string) => `Copied the best clock so far: ${selectedLabel}. It stays selected.`,
     developerToolsOn: 'Developer tools on. They are at the end of Results.',
     developerToolsOff: 'Developer tools off.',
 } as const;
+
+/** What a Cancel says, by what it left on screen */
+const STOPPED: Record<RunStop['kept'], string> = {
+    previous: ANNOUNCEMENTS.stoppedPrevious,
+    partial: ANNOUNCEMENTS.stoppedPartial,
+    none: ANNOUNCEMENTS.stoppedNone,
+    check: ANNOUNCEMENTS.stoppedCheck,
+};
 
 /** The parts of the workflow bar's state that are announced when they change */
 export interface WorkflowSnapshot {
@@ -35,6 +53,12 @@ export interface WorkflowSnapshot {
      * which reads the name out itself
      */
     selectionQuiet: boolean;
+    /** The last Cancel; a new `id` is news */
+    stop: RunStop | null;
+    /** Bumped when results come back on an empty Results (an Undo of Import, Paste or Reset; a build switched back) */
+    restoredId: number;
+    /** The name of the picked clock the last run did not make; null when it made it, or there was no pick */
+    pickGone: string | null;
 }
 
 /**
@@ -44,6 +68,13 @@ export interface WorkflowSnapshot {
  * of date is not announced either: every edit would say it, and Generate checks again by itself.
  */
 export function workflowAnnouncement(prev: WorkflowSnapshot, next: WorkflowSnapshot): string | null {
+    // a Cancel says what it left on screen, and nothing else of the same change (the run ending, another clock shown)
+    if (next.stop !== null && next.stop.id !== prev.stop?.id) {
+        return STOPPED[next.stop.kept];
+    }
+    if (next.restoredId !== prev.restoredId) {
+        return next.selectedLabel ? ANNOUNCEMENTS.clocksBack(next.selectedLabel) : null;
+    }
     if (!prev.isLoading && next.isLoading) {
         return ANNOUNCEMENTS.generating;
     }
@@ -52,6 +83,9 @@ export function workflowAnnouncement(prev: WorkflowSnapshot, next: WorkflowSnaps
         // was cleared, which is not news
         if (next.failed || !next.hasBlueprint) {
             return null;
+        }
+        if (next.pickGone !== null) {
+            return ANNOUNCEMENTS.pickGone(next.pickGone);
         }
         return next.selectedLabel ? ANNOUNCEMENTS.finished(next.selectedLabel) : ANNOUNCEMENTS.finishedNoLabel;
     }

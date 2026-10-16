@@ -33,9 +33,9 @@ import { mkdirSync, writeFileSync, readFileSync, readdirSync, statSync } from 'n
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import {
-    forWidths, previewServer, sample, LOGISTIC, UI_DIR,
+    forWidths, previewServer, inertFromKeyboard, sample, LOGISTIC, UI_DIR, ui,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll,
-    contrastPairs, checkLabelInName,
+    contrastPairs, checkLabelInName, chooseMenuItem,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -199,27 +199,23 @@ async function pasteOk(page, text = sidecarExportOf(LOGISTIC)) {
     await pasteFromMenu(page, text);
     await importDialog(page).waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
+    if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
     await importDialog(page).getByRole('button', { name: 'Import Selected' }).click();
 }
 
-/**
- * "Nothing was imported: no box was ticked." cannot be reached with a real click: Import Selected is disabled when nothing is ticked.
- * So the dialog is opened, everything unticked, and the button's React onClick is called directly (it works with the disabled prop).
- * If the new code makes this message reachable, replace this with a plain click.
- */
+/** No selected work is blocked by the actual disabled control; never call a hidden React handler. */
 async function pasteNoItems(page) {
+    const before = await readState(page);
     await pasteFromMenu(page, sidecarExportOf(LOGISTIC));
     const dlg = importDialog(page);
     await dlg.waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
     for (const box of await dlg.getByRole('checkbox').all()) if (await box.isChecked()) await box.uncheck();
-    await page.waitForTimeout(150);
-    return dlg.getByRole('button', { name: 'Import Selected' }).evaluate((el) => {
-        const key = Object.keys(el).find((k) => k.startsWith('__reactProps'));
-        if (!key || typeof el[key].onClick !== 'function') return false;
-        el[key].onClick({});
-        return true;
-    });
+    const button = ui.safetyPasteImport(page);
+    const disabled = await button.isDisabled();
+    const inert = await inertFromKeyboard(page, button);
+    const after = await readState(page);
+    return { disabled: disabled && inert, unchanged: typeof before.saved === 'string' && before.saved === after.saved, open: await dlg.isVisible() };
 }
 
 async function resetViaMenu(page) {
@@ -716,17 +712,14 @@ try {
             await checkMessage(page, rec, 'msg-paste-ok', { re: /Imported .* from Factorio/, label: 'paste imported', desc: 'Paste from Factorio > Import Selected: "Imported ... from Factorio"' });
         }, page);
 
-        await rec.step('B "Nothing was imported: no box was ticked."', async () => {
-            await dismissMessage(page);
-            await scrollTo(page, 0);
-            const forced = await pasteNoItems(page);
-            rec.info('no items selected', forced ? 'Import Selected is disabled when nothing is ticked, so the button\'s onClick was called directly' : 'could not reach the message (no React props on the button)');
-            await checkMessage(page, rec, 'msg-no-items', { re: /Nothing was imported: no box was ticked/, label: 'no items selected (a warning)', desc: 'Paste dialog with nothing ticked, Import Selected: "Nothing was imported: no box was ticked."', contrastOn: true });
-            rec.check('no items selected: it is a warning, not an error (a filled warning Alert)', (await snack(page).locator('.MuiAlert-filledWarning').count()) === 1, 'MuiAlert-filledWarning');
-            rec.check('no items selected: no Undo (nothing changed)', (await undoBtn(page).count()) === 0);
-            await dismissMessage(page);
-            await page.keyboard.press('Escape'); // leave the dialog closed
-            await page.waitForTimeout(300);
+        await rec.step('B no selected Paste work is blocked without a message or Undo', async () => {
+            await dismissMessage(page); await scrollTo(page, 0);
+            const result = await pasteNoItems(page);
+            rec.check('no items selected: Import Selected is disabled', result.disabled);
+            rec.check('no items selected: keyboard attempts preserve the exact raw build and open preview', result.unchanged && result.open);
+            rec.check('no items selected: no Undo is offered', (await undoBtn(page).count()) === 0);
+            await rec.shot(page, 'paste-no-items', { desc: 'No selected work: disabled Import Selected, unchanged build' });
+            await page.keyboard.press('Escape'); await page.waitForTimeout(300);
         }, page);
 
         await rec.step('B latest message wins', async () => {
@@ -1095,9 +1088,9 @@ try {
             await page.waitForTimeout(500);
             await dismissMessage(page);
             // nothing selected
-            await pasteNoItems(page);
-            await waitMessage(page, /^Nothing was imported/);
-            rec.check('paste: "Nothing was imported" offers no Undo', (await undoBtn(page).count()) === 0);
+            const noItems = await pasteNoItems(page);
+            rec.check('paste: no selected work stays disabled and unchanged', noItems.disabled && noItems.unchanged && noItems.open);
+            rec.check('paste: no selected work offers no Undo', (await undoBtn(page).count()) === 0);
             await dismissMessage(page);
             await page.keyboard.press('Escape');
             const still = await readState(page);
@@ -1184,16 +1177,13 @@ try {
             await dismissMessage(page);
             await exportConfig(page);
             await none('Export');
-            const handle = section(page, 'Inserters').locator('[aria-roledescription="sortable"]').first();
-            if (await handle.count()) {
-                await handle.focus();
-                await page.keyboard.press('Space');
-                await page.keyboard.press('ArrowDown');
-                await page.keyboard.press('Space');
-                await none('a reorder');
-            } else {
-                rec.info('no false offer: a reorder', 'no sortable handle found');
-            }
+            const beforeReorder = await readState(page);
+            await watchAnnouncements(page);
+            await chooseMenuItem(page, 'Move down', { anchor: ui.editingActions(page, 'Inserter 1'), menu: ui.editingMenu(page), activation: 'Enter', itemActivation: 'Enter' });
+            await checkAnnounced(page, rec, 'announced: a reorder', /^Moved Inserter 1 to 2\./);
+            await undoMessage(page, rec, 'undo-reorder', /^Moved Inserter 1 to 2\./, 'a reorder', { desc: 'A reorder offers Undo in the header' });
+            if (await clickUndo(page, rec, 'a reorder')) await expectRestored(page, rec, 'a reorder', beforeReorder);
+            await dismissMessage(page);
             rec.info('no false offer: an Exclude chip and an inserter fix', 'not driven here (they need a validated build, or a build with a missing inserter); the wrappers do not call offerUndo for them');
         }, page);
 
@@ -1251,7 +1241,7 @@ try {
                 await trash(page, 'Inserters').first().click();
                 await waitMessage(page, /^Deleted /);
                 await goResults(page);
-                const banner = page.getByText(/Your build has changed since/); // SELECTOR: confirm (1.1's stale banner text)
+                const banner = ui.staleBanner(page); // 3.3: the banner lists the changes, so it is found by its place, not by "Your build has changed since"
                 rec.check('results: after a row delete the stale banner shows', (await banner.count()) >= 1);
                 await rec.shot(page, 'undo-results-stale', { desc: 'Results after a row delete: 1.1\'s stale banner and the Undo message' });
                 if (await clickUndo(page, rec, 'results: row delete')) {
@@ -1262,33 +1252,20 @@ try {
                     await goConfigure(page);
                     await expectRestored(page, rec, 'results: row delete', before);
                 }
-                // Reset, then Undo: the form is back, the clocks are not, and a notice says so
+                // Reset, then Undo: the form is back, and so are the clocks (3.3), with no notice after it
                 await dismissMessage(page);
                 await goConfigure(page);
                 const beforeReset = await readState(page);
                 await resetViaMenu(page);
                 await waitMessage(page, /^Build reset\./);
                 if (await clickUndo(page, rec, 'results: reset')) {
-                    const tUndo = Date.now();
-                    // the notice shows where Undo was clicked, and a hovered message waits (MUI pauses its timer): move off it
                     await page.mouse.move(5, page.viewportSize().height - 5);
-                    const notice = await checkMessage(page, rec, 'undo-notice', { re: /Build restored/, label: 'notice after Undo with clocks generated', desc: 'Undo of Reset after Generate: the "Build restored..." notice' });
-                    if (notice) {
-                        const text = (await notice.textContent()) ?? '';
-                        // (not a 1.5 F change: Phase 2's wording says "click Generate", Validate being Check only now)
-                        rec.check('notice: it says the clocks were cleared and to click Generate', /clocks you had generated were cleared/i.test(text) && /click Generate/i.test(text), text.slice(0, 120));
-                        rec.check('notice: no Undo button on it (message only)', (await undoBtn(page).count()) === 0);
-                        await sleepUntil(tUndo + 6000);
-                        rec.check('notice: still on screen at 6 s (it lasts about 8 s)', (await snack(page).filter({ hasText: /Build restored/ }).count()) === 1);
-                        await sleepUntil(tUndo + 10_000);
-                        rec.check('notice: gone by 10 s', (await snack(page).filter({ hasText: /Build restored/ }).count()) === 0);
-                    }
-                    // Undo puts back the form only: the check result went with the clocks (1.1), so the Validation panel reads differently
+                    await page.waitForTimeout(800);
+                    rec.check('results: no "clocks were cleared" notice after Undo of Reset (3.3)', (await snack(page).filter({ hasText: /clocks you had generated were cleared/i }).count()) === 0);
                     await expectRestored(page, rec, 'results: reset', beforeReset, { view: false });
-                    rec.info('results: reset', 'the Configure view text is not compared: the Validation panel is unvalidated after Undo, as the 1.3 spec says');
                     await goResults(page);
-                    rec.check('results: Results says "Nothing generated yet" after Undo of Reset', (await page.getByText(/Nothing generated yet/).count()) >= 1);
-                    await rec.shot(page, 'undo-results-nothing-generated', { desc: 'Results after Reset then Undo: "Nothing generated yet"' });
+                    rec.check('results: the clocks are back after Undo of Reset (3.3: the Clocks table has rows)', (await page.getByRole('table', { name: 'Clocks', exact: true }).getByRole('radio').count()) >= 1);
+                    await rec.shot(page, 'undo-results-clocks-back', { desc: 'Results after Reset then Undo: the clocks are back' });
                     await goConfigure(page);
                 }
             }, page);

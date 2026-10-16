@@ -28,6 +28,19 @@ describe('copyBlueprintLabelOf', () => {
         expect(copyBlueprintLabelOf(undefined, true)).toBe('Copy old clock…');
     });
 
+    it('says "Copy current best" while a generation is still making clocks', () => {
+        expect(copyBlueprintLabelOf(clock(240, 0, true), false, true)).toBe('Copy current best');
+        expect(copyBlueprintLabelOf(undefined, false, true)).toBe('Copy current best');
+    });
+
+    it('names the rate of a best-so-far clock short of the target', () => {
+        expect(copyBlueprintLabelOf(clock(192, -48), false, true)).toBe('Copy current best (192/s, below target)');
+    });
+
+    it('says the clock is old ahead of the running label', () => {
+        expect(copyBlueprintLabelOf(clock(192, -48), true, true)).toBe('Copy old clock…');
+    });
+
     it('is plain for no clock, and for a clock that is not short of the target', () => {
         expect(copyBlueprintLabelOf(undefined, false)).toBe('Copy blueprint');
         expect(copyBlueprintLabelOf(clock(240, 0, true), false)).toBe('Copy blueprint');

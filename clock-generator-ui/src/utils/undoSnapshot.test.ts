@@ -11,6 +11,9 @@ import {
     describeChestSwitch,
     describePaste,
     describeRemoval,
+    describeReorder,
+    describeBulkEdit,
+    reorderMessage,
     countOf,
     exampleUndoMessage,
     removalMessage,
@@ -20,8 +23,6 @@ import {
     undoOutcome,
     UNDO_IMPORT_MESSAGE,
     UNDO_RESET_MESSAGE,
-    UNDO_RESULTS_NOTE,
-    type UndoEntry,
 } from './undoSnapshot';
 
 const inserter = (id: number, source: InserterFormData['source'], sink: InserterFormData['sink']): InserterFormData =>
@@ -50,9 +51,9 @@ function form(): ConfigFormData {
 }
 
 /** What the page does: an entry made just before the action, then settled with the form the action made */
-function act(before: ConfigFormData, action: (form: ConfigFormData) => ConfigFormData, resultsCleared = false) {
+function act(before: ConfigFormData, action: (form: ConfigFormData) => ConfigFormData) {
     const after = action(before);
-    const entry = settleUndoEntry(createUndoEntry(1, 'x', before, true, resultsCleared), after);
+    const entry = settleUndoEntry(createUndoEntry(1, 'x', before, true), after);
     return { after, entry: entry! };
 }
 
@@ -78,7 +79,7 @@ describe('Undo after a delete', () => {
         const copy = structuredClone(original);
         const { after, entry } = act(original, (config) => REMOVE[kind](config, index));
         expect(after).not.toEqual(original);
-        const outcome = undoOutcome(entry, 2)!;
+        const outcome = undoOutcome(entry)!;
         expect(outcome.form).toBe(original);
         expect(outcome.form).toEqual(copy);
         expect(outcome.next).toBeNull();
@@ -88,7 +89,7 @@ describe('Undo after a delete', () => {
         const original = form();
         const { after, entry } = act(original, (config) => edits.removeMachine(config, 2));
         expect(after.inserters[0].sink.id).toBe(0);
-        const restored = undoOutcome(entry, 2)!.form;
+        const restored = undoOutcome(entry)!.form;
         expect(restored.inserters[0].sink).toEqual({ type: 'machine', id: 3 });
         expect(restored.inserters[1].source).toEqual({ type: 'machine', id: 3 });
         expect(restored.drills!.configs[1].target).toEqual({ type: 'machine', id: 3 });
@@ -109,8 +110,8 @@ describe('Undo after Reset, Import and Paste', () => {
         ['Import', () => configToFormData(otherConfig)],
     ])('puts back the form from before %s', (_, action) => {
         const original = form();
-        const { entry } = act(original, action, true);
-        expect(undoOutcome(entry, 2)!.form).toBe(original);
+        const { entry } = act(original, action);
+        expect(undoOutcome(entry)!.form).toBe(original);
     });
 
     it('puts back the form from before every part of a paste, with one snapshot taken before the first', () => {
@@ -125,7 +126,7 @@ describe('Undo after Reset, Import and Paste', () => {
             return edits.replaceChests(config, pasted.chests);
         };
         const { entry } = act(original, paste);
-        expect(undoOutcome(entry, 2)!.form).toBe(original);
+        expect(undoOutcome(entry)!.form).toBe(original);
     });
 });
 
@@ -134,7 +135,7 @@ describe('Undo after a chest switch', () => {
         const original = form();
         const { after, entry } = act(original, (config) => edits.switchChestType(config, 0, ChestType.INFINITY_CHEST));
         expect(after.chests[0].type).toBe(ChestType.INFINITY_CHEST);
-        expect(undoOutcome(entry, 2)!.form.chests[0]).toEqual({
+        expect(undoOutcome(entry)!.form.chests[0]).toEqual({
             type: ChestType.BUFFER_CHEST, id: 1, _uuid: original.chests[0]._uuid, storage_size: 4, item_filter: 'copper-plate',
         });
     });
@@ -144,7 +145,7 @@ describe('the form put back', () => {
     it('saves as the form from before did, and reloads with its rows, rules and forced flag', () => {
         const original = form();
         const { entry } = act(original, (config) => edits.removeInserter(config, 0));
-        const restored = undoOutcome(entry, 2)!.form;
+        const restored = undoOutcome(entry)!.form;
         expect(serializeConfig(restored)).toBe(serializeConfig(original));
         const reloaded = readSavedConfig(serializeConfig(restored))!;
         expect(withoutUuids(reloaded)).toEqual(withoutUuids(original));
@@ -158,7 +159,7 @@ describe('a second action', () => {
         const original = form();
         const first = edits.removeInserter(original, 0);
         const { entry } = act(first, (config) => edits.removeInserter(config, 0));
-        const restored = undoOutcome(entry, 2)!.form;
+        const restored = undoOutcome(entry)!.form;
         expect(restored).toBe(first);
         expect(restored.inserters).toHaveLength(2);
     });
@@ -203,7 +204,7 @@ describe('the snapshot', () => {
 });
 
 describe('settleUndoEntry', () => {
-    const entry = (canUndo = true) => createUndoEntry(1, 'x', form(), canUndo, false);
+    const entry = (canUndo = true) => createUndoEntry(1, 'x', form(), canUndo);
 
     it('keeps an entry whose action has not shown yet as it is', () => {
         const unsettled = entry();
@@ -243,21 +244,13 @@ describe('settleUndoEntry', () => {
 
 describe('undoOutcome', () => {
     it('is null for an entry without Undo', () => {
-        expect(undoOutcome(createUndoEntry(1, 'x', form(), false, true), 2)).toBeNull();
+        expect(undoOutcome(createUndoEntry(1, 'x', form(), false))).toBeNull();
     });
 
-    it('follows an Undo that cannot bring back the cleared clocks with a notice, without Undo, for the form put back', () => {
+    it('puts the form back with no notice after it: the clocks come back with the build', () => {
         const original = form();
-        const { entry } = act(original, () => createDefaultConfig(), true);
-        const next = undoOutcome(entry, 7)!.next as UndoEntry;
-        expect(next).toMatchObject({ id: 7, message: UNDO_RESULTS_NOTE, snapshot: null, resultsCleared: false });
-        expect(settleUndoEntry(next, original)).toBe(next);
-        expect(settleUndoEntry(next, edits.addMachine(original))).toBeNull();
-    });
-
-    it('has no notice when no clocks were cleared', () => {
-        const { entry } = act(form(), () => createDefaultConfig(), false);
-        expect(undoOutcome(entry, 2)!.next).toBeNull();
+        const { entry } = act(original, () => createDefaultConfig());
+        expect(undoOutcome(entry)).toEqual({ form: original, next: null });
     });
 });
 
@@ -343,7 +336,7 @@ describe('undoMessageInput', () => {
     const extras = { hint: 'Or press Ctrl+Z to undo.', onUndo: () => {}, onClose: () => {}, returnFocus: () => null };
 
     it('has no timer while it offers Undo: it stays until an edit, another action, Close or Escape', () => {
-        const input = undoMessageInput(createUndoEntry(1, 'Build reset.', form(), true, false), extras);
+        const input = undoMessageInput(createUndoEntry(1, 'Build reset.', form(), true), extras);
         expect(input.durationMs).toBeNull();
         expect(input).toMatchObject({ severity: 'info', text: 'Build reset.', hint: extras.hint });
         expect(input.action).toMatchObject({ label: 'Undo', onClick: extras.onUndo, keyShortcuts: 'Control+Z Meta+Z' });
@@ -352,9 +345,38 @@ describe('undoMessageInput', () => {
     });
 
     it('is a notice for 8 seconds, without Undo or its key, when it does not offer Undo', () => {
-        const input = undoMessageInput(createUndoEntry(1, UNDO_RESULTS_NOTE, form(), false, false), extras);
+        const input = undoMessageInput(createUndoEntry(1, 'Build reset.', form(), false), extras);
         expect(input.durationMs).toBe(8000);
         expect(input.action).toBeUndefined();
         expect(input.hint).toBeUndefined();
+    });
+});
+
+describe('reorder and bulk messages', () => {
+    it('describes both move directions and no move', () => {
+        let before = form();
+        before = edits.addInserter(edits.addInserter(before));
+        expect(reorderMessage(before, 'inserters', 4, 1)).toBe('Moved Inserter 5 to 2. Inserters 2–4 are now 3–5.');
+        expect(reorderMessage(before, 'inserters', 2, 1)).toBe('Moved Inserter 3 to 2. Inserter 2 is now 3.');
+        expect(reorderMessage(before, 'inserters', 0, 2)).toBe('Moved Inserter 1 to 3. Inserters 2–3 are now 1–2.');
+        expect(reorderMessage(before, 'machines', 1, 0)).toBe('Moved Machine 2 to 1. Machine 1 is now 2.');
+        expect(describeReorder(before, before, 'inserters', 0, 0)).toBeNull();
+    });
+    it.each([{ ids: [4] }, { ids: [2, 5, 6, 7] }])('names the selected rows in each bulk action ($ids)', ({ ids }) => {
+        const rows = ids.length === 1 ? 'Inserter 4' : 'Inserters 2, 5–7';
+        expect(describeBulkEdit('stack', ids, 12)).toBe(`Set Stack size to 12 on ${rows}.`);
+        expect(describeBulkEdit('stack', ids)).toBe(`Set Stack size to Automatic on ${rows}.`);
+        expect(describeBulkEdit('filters', ids)).toBe(`Set the filters of ${rows}.`);
+        expect(describeBulkEdit('auto-filters', ids)).toBe(`${rows} now use automatic filters.`);
+        expect(describeBulkEdit('rule', ids, 'Clocked 0–7')).toBe(`Set the enable rule of ${rows} to Clocked 0–7.`);
+    });
+    it('restores the exact serialized bulk snapshot, including omitted stack and forced rules', () => {
+        const before = form();
+        delete before.inserters[0].stack_size;
+        before.inserters[0].prototype = 'fast-inserter';
+        before.inserters[0].quality = 'epic';
+        const serialized = JSON.stringify(before);
+        const { entry } = act(before, config => edits.updateInserters(config, before.inserters.map(row => row._uuid), { stack_size: 12, filters: ['iron-plate'], overrides: { enable_control: { mode: 'NEVER' } } }));
+        expect(JSON.stringify(undoOutcome(entry)!.form)).toBe(serialized);
     });
 });

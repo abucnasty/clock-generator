@@ -8,6 +8,7 @@ import { AUTO_BADGE_SX, insetSlotSx } from './insetSlot';
 import { SlotRemoveButton } from './SlotRemoveButton';
 
 interface FilterSlotSelectorProps {
+    priority?: { label: string; ids: string[] };
     /** Explicit filters set by the user */
     filters?: string[];
     /** Inferred/auto-populated filters from source/sink analysis */
@@ -23,6 +24,7 @@ interface FilterSlotSelectorProps {
 }
 
 export function FilterSlotSelector({
+    priority,
     filters = [],
     inferredFilters = [],
     itemNames,
@@ -104,6 +106,7 @@ export function FilterSlotSelector({
                                     ? `Filter ${slotIndex + 1}: ${itemLabel(displayFilter)}${isAutoAssigned ? ' (auto)' : ''}`
                                     : `Add filter ${slotIndex + 1}`
                             }
+                            aria-keyshortcuts={displayFilter ? 'Delete' : undefined}
                             onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
@@ -127,7 +130,7 @@ export function FilterSlotSelector({
                             )}
                         </Box>
                         {displayFilter && (
-                            <SlotRemoveButton slotNumber={slotIndex + 1} itemName={itemLabel(displayFilter)} onClick={() => removeFilter(slotIndex)} />
+                            <SlotRemoveButton slotNumber={slotIndex + 1} itemName={itemLabel(displayFilter)} onClick={() => removeFilter(slotIndex)} tabIndex={-1} />
                         )}
                     </Box>
                 );
@@ -144,6 +147,7 @@ export function FilterSlotSelector({
 
             {/* Item selector popover */}
             <Popover
+                slotProps={{ paper: { role: 'region', 'aria-label': 'Choose a filter' } }}
                 open={Boolean(anchorEl)}
                 anchorEl={anchorEl}
                 onClose={handleClose}
@@ -158,6 +162,7 @@ export function FilterSlotSelector({
             >
                 <Box sx={{ p: 2, width: 300 }}>
                     <ItemSelector
+                        priority={priority}
                         value={getCurrentValue()}
                         options={itemNames}
                         onChange={handleItemSelect}

@@ -2,7 +2,7 @@
 // The site shows nothing new; this checks that the import still works and that the engine's answer carries the
 // suggested target (read from the worker's messages), from the mod's field or, without it, worked out from the machines.
 // Usage: node capture-sidecar.mjs <out dir>   (PREVIEW_PORT, UI_DIR, BASE_URL as in lib.mjs)
-import { forWidths, previewServer, openMenu, goConfigure, waitReady } from './lib.mjs';
+import { forWidths, previewServer, openMenu, goConfigure, waitReady, ui } from './lib.mjs';
 
 const OUT = process.argv[2];
 if (!OUT) {
@@ -76,6 +76,7 @@ try {
                 (await page.getByLabel('Machines (2)').count()) === 1 && (await page.getByLabel('Inserters (4)').count()) === 1
                 && (await page.getByLabel('Belts (1)').count()) === 1 && (await page.getByLabel('Chests (1)').count()) === 1, '');
             rec.check('no error message', !(await errorShown()), '');
+            if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
             await page.getByRole('button', { name: 'Import Selected' }).click();
             await page.waitForTimeout(800);
             rec.check('the import closes the dialog and imports the entities',

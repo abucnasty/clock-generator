@@ -44,6 +44,8 @@ interface ResultSummaryCardProps {
     pickRule: PickRule | null;
     /** More clocks may still arrive, so the recommendation is the best so far */
     isGenerating: boolean;
+    /** The player stopped the run, so not every clock was tried and the recommendation is not final */
+    stoppedEarly?: boolean;
     /** Every Copy button says "Copied" for a moment after any of them copied */
     copied: boolean;
     /** The copy every Copy button shares */
@@ -93,7 +95,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
     const isRecommended = selectedIndex === recommendedIndex;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const reason = isRecommended
-        ? recommendationReason(alternatives, recommendedIndex, props.pickRule, !isGenerating)
+        ? recommendationReason(alternatives, recommendedIndex, props.pickRule, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
         : recommended ? differenceFromRecommended(selected, recommended) : '';
     const makes = makesText(selected, selected.copies);
     const wakeUps = wakeUpsText(selected);

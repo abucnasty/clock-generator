@@ -22,7 +22,7 @@ import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Against today's UI the new-wording checks FAIL by design; the steps must still run.
 import { appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { forWidths, previewServer, SMALL_SAMPLE, sample, importFile, goConfigure, goResults, validate, generate, checkLabelInName, accessibleName, waitReady } from './lib.mjs';
+import { forWidths, previewServer, SMALL_SAMPLE, sample, importFile, goConfigure, goResults, validate, generate, checkLabelInName, accessibleName, waitReady, ui } from './lib.mjs';
 
 const OUT = process.argv[2];
 if (!OUT) {
@@ -391,11 +391,11 @@ const PART_B_BEFORE_GENERATE = [
             await openAdvanced(page);
             const plan = swingPlan(page);
             await plan.scrollIntoViewIfNeeded();
-            const section = page.locator('.MuiAlert-root', { hasText: /Each output inserter makes/ }).first();
+            const section = page.locator('.MuiAlert-root', { hasText: /Each output machine has/ }).first();
             const ok = await textOf(section);
             await snap(page, rec, 'validation-ok', { gate: true, desc: 'Swing plan section after a check: the success sentence (spec state 6, Phase 2 place)' });
             rec.info('swing plan success sentence', ok);
-            says(rec, 'success sentence: "makes N swing(s) per crafting cycle of X ticks"', ok, /makes \d+ swings? per crafting cycle of [\d,.]+ ticks/);
+            says(rec, 'success sentence: machine-total output swings per crafting cycle, shared equally', ok, /Each output machine has [\d,.]+ total output swings? per crafting cycle of [\d,.]+ ticks, shared equally across its output inserters/);
             says(rec, 'success sentence: "the clock repeats every Y ticks (Z crafting cycles)", or "the clock period is Y ticks (1 crafting cycle)"', ok, /the clock (repeats every|period is) [\d,.]+ ticks \(\d+ crafting cycles?\)/);
             says(rec, 'success sentence ends "Generating may still use fewer swings if this count does not hold the rate."', ok, /Generating may still use fewer swings if this count does not hold the rate\.$/);
             lacks(rec, 'success sentence has no hand(s), "takes", unstable or configuration', ok, /\bhands?\b|\btakes\b|unstable|configuration/i);
@@ -463,11 +463,15 @@ const PART_B_BEFORE_GENERATE = [
             for (const [key, name, locator] of controls) {
                 // 2.4 moved "Belts do not move" out of Advanced Overrides into the belt question
                 if (key === 'belts' && (await locator.count()) === 0) { tips[key] = null; continue; }
-                tips[key] = await hoverTip(page, locator);
-                await snap(page, rec, `overrides-tip-${key}`, { gate: true, desc: `Advanced Overrides, hover on ${name}` });
-                rec.check(`a tooltip opens on "${name}"`, tips[key] !== '', clip(tips[key]));
-                lacks(rec, `"${name}" tooltip does not say "potential clock"`, tips[key], /potential clock/i);
-                await unhover(page);
+                await ui.safetyHelp(page, name).click();
+                const help = ui.safetyHelpDialog(page, name);
+                await help.waitFor();
+                tips[key] = norm(await help.innerText());
+                await snap(page, rec, `overrides-help-${key}`, { gate: true, desc: `Advanced help open: ${name}` });
+                rec.check(`deliberate help opens on "${name}"`, tips[key] !== '', clip(tips[key]));
+                lacks(rec, `"${name}" help does not say "potential clock"`, tips[key], /potential clock/i);
+                await page.keyboard.press('Escape');
+                await help.waitFor({ state: 'hidden' });
             }
             says(rec, 'LCM Override helper: "Crafting cycles per clock period (overrides the calculated LCM)"', helper, /^Crafting cycles per clock period/);
             lacks(rec, 'Force Output Swings tooltip does not say "unstable" (it "does not hold the rate")', tips.force, /unstable/i); // SELECTOR: confirm (spec :63/:84 both name the Force/Fractional strings)
@@ -756,7 +760,7 @@ const PART_B_AFTER_GENERATE = [
             // discard dialog
             const dialog = await openRuleModal(page);
             await modeRadio(dialog, 2).check({ force: true }).catch(() => {});
-            await dialog.getByRole('button').nth(1).click(); // SELECTOR: confirm (the modal's close icon has no name: it is the button after Fullscreen)
+            await ui.ruleClose(page).click(); // the rule dialog's close X (ui map, 3.1)
             await page.waitForTimeout(500);
             const discard = page.getByRole('dialog').last();
             await snap(page, rec, 'discard-dialog', { gate: true, desc: 'Discard changes dialog over the rule editor' });

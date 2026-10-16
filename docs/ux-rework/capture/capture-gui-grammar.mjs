@@ -1104,7 +1104,10 @@ async function stepDialogs({ page, rec, width }) {
             && Number.isFinite(animation.effect?.getComputedTiming().endTime)), await save.elementHandle());
         await rec.shot(page, 'dialog-diagram-inserter-edited', { aria: true, desc: 'Unsaved Stack size15 draft: Save enabled for its existing contrast/grammar checks' });
         await dialogChecks(page, rec, width, 'diagram inserter dialog', { cancel: /^Cancel$/, confirm: /^Save$/ });
-        rec.check('diagram inserter dialog: Cancel discards the draft without changing the build', await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
+        await ui.oneEditorDiscardDialog(page,'Inserter 1').waitFor({state:'visible'});
+        rec.check('diagram inserter dialog: Cancel asks before discarding the draft',await ui.oneEditorDiscard(page).isVisible());
+        await ui.oneEditorDiscard(page).click();
+        rec.check('diagram inserter dialog: Discard leaves the build unchanged', await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
         await closeAll(page);
         await page.getByRole('button', { name: 'List view' }).click().catch(() => {});
         await closeAll(page);

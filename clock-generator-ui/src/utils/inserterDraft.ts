@@ -16,10 +16,19 @@ function sortedJson(value: unknown): string | undefined {
  * The Config tab's fields that differ in the draft from the saved inserter, with their draft values. A field the draft
  * removed is there with the value undefined, so that the update removes it too.
  */
-export function changedConfigFields(draft: InserterFormData, saved: InserterFormData): Partial<InserterFormData> {
+export function changedFields<T extends object>(draft: T, saved: T, fields: readonly (keyof T)[]): Partial<T> {
     return Object.fromEntries(
-        CONFIG_FIELDS
+        fields
             .filter((key) => sortedJson(draft[key]) !== sortedJson(saved[key]))
             .map((key) => [key, draft[key]]),
-    ) as Partial<InserterFormData>;
+    ) as Partial<T>;
 }
+
+export function changedConfigFields(draft: InserterFormData, saved: InserterFormData): Partial<InserterFormData> {
+    return changedFields(draft, saved, CONFIG_FIELDS);
+}
+
+export const MACHINE_FIELDS = ['recipe', 'productivity', 'crafting_speed', 'type'] as const;
+export const BELT_FIELDS = ['type', 'lanes', 'strategy'] as const;
+export const CHEST_FIELDS = ['type', 'storage_size', 'item_filter'] as const;
+export const DRILL_FIELDS = ['type', 'mined_item_name', 'speed_bonus', 'target'] as const;

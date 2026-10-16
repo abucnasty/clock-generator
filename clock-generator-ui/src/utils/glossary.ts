@@ -30,6 +30,8 @@ export type GlossaryId =
     | 'start-point'
     | 'copies'
     | 'build'
+    | 'your-builds'
+    | 'share-link'
     | 'clock'
     | 'blueprint'
     | 'check'
@@ -106,6 +108,18 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'The machines, inserters, belts and chests you set up, which the clocks are made for. Saved as a build '
             + 'file (Open build file…, Save build file, Reset build).',
         insteadOf: 'configuration, config',
+    },
+    {
+        id: 'your-builds',
+        term: 'Your builds',
+        definition: 'The builds kept in this browser, one per name.',
+        insteadOf: 'library, saved configs',
+    },
+    {
+        id: 'share-link',
+        term: 'share link',
+        definition: 'A link that carries a copy of a build; opening it adds the build to Your builds.',
+        insteadOf: 'permalink, URL',
     },
     {
         id: 'clock',

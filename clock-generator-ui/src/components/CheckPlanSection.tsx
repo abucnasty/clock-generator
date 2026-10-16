@@ -22,7 +22,7 @@ const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ti
 
 /**
  * The swing plan of the last check, in Advanced: how many swings each inserter makes per crafting cycle, and
- * which ingredients are left out of the LCM. Any check makes it, Generate's or Check only's; an edit since dims it.
+ * which ingredients are left out of the LCM. Any check makes it, Generate's or Check only's; an edit since makes it read-only.
  */
 export function CheckPlanSection({
     validation,
@@ -40,7 +40,13 @@ export function CheckPlanSection({
     if (current !== undefined && current !== lastPlan) {
         setLastPlan(current);
     }
-    const running = checkStatus === 'running';
+    // An Exclude edit reaches the worker through App's effect. Keep the same guarded chip through that gap.
+    const [pendingValidation, setPendingValidation] = useState<ValidationState | null>(null);
+    if (pendingValidation && (pendingValidation !== validation || checkStatus === 'valid')) {
+        setPendingValidation(null);
+    }
+    const running = checkStatus === 'running'
+        || (pendingValidation === validation && checkStatus === 'out-of-date');
     const checkingRow = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
             <CircularProgress size={16} color="inherit" aria-hidden />
@@ -77,7 +83,7 @@ export function CheckPlanSection({
         );
     }
     const isOutOfDate = checkStatus === 'out-of-date';
-    // while a check runs again, the last plan stays, dimmed: the same elements, so the chip that started it keeps the focus
+    // The last plan stays readable while checking; the same chip keeps focus and cannot change the plan.
     const plan = running ? lastPlan : validation.status === 'valid' ? validation.validation : null;
     if (!plan) {
         return null;
@@ -88,29 +94,29 @@ export function CheckPlanSection({
                 // not an alert: it follows every edit, and is not news to read out
                 <Alert severity="warning" role="none" sx={{ mb: 1 }}>{CHECK_TEXT.planOutOfDate}</Alert>
             ) : null}
-            {/* the plan's table is wider than a phone: it scrolls on its own, not the page. Dimmed and inert when out of
-                date; only dimmed while checked again (a press meanwhile does nothing), so the focus stays on it */}
-            <Box
-                inert={isOutOfDate}
-                aria-busy={running || undefined}
-                sx={{ opacity: isOutOfDate || running ? 0.45 : 1, pointerEvents: isOutOfDate || running ? 'none' : 'auto', overflowX: 'auto' }}
-            >
+            {/* Old values remain available to read and scroll; only planning mutations are blocked. */}
+            <Box aria-busy={running || undefined}>
                 {!isOutOfDate && (
                     // not an alert: the check's result is read out once, from the workflow bar
                     <Alert severity="success" role="none" sx={{ mb: 1 }}>
-                        Each output inserter makes {plan.output_swings_per_cycle} swing
+                        Each output machine has {plan.output_swings_per_cycle} total output swing
                         {plan.output_swings_per_cycle === 1 ? '' : 's'} per crafting cycle of{' '}
-                        {formatTicks(plan.cycle_ticks)} ticks, and the clock {plan.used_lcm === 1 ? 'period is' : 'repeats every'}{' '}
+                        {formatTicks(plan.cycle_ticks)} ticks, shared equally across its output inserters, and the clock {plan.used_lcm === 1 ? 'period is' : 'repeats every'}{' '}
                         {formatTicks(plan.period_ticks)} ticks ({plan.used_lcm} crafting
                         cycle{plan.used_lcm === 1 ? '' : 's'}). Generating may still use fewer swings
                         if this count does not hold the rate.
                     </Alert>
                 )}
                 <TransferPlanPanel
+                    interaction={running ? 'checking' : isOutOfDate ? 'read-only' : 'editable'}
                     transferPlan={plan.transfer_plan}
                     usedLcm={plan.used_lcm}
                     excludedIngredients={excludedIngredients}
-                    onExcludeChange={onExcludeChange}
+                    onExcludeChange={items => {
+                        if (checkStatus !== 'valid' || validation.status !== 'valid') return;
+                        setPendingValidation(validation);
+                        onExcludeChange(items);
+                    }}
                 />
             </Box>
         </>

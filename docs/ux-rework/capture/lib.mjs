@@ -933,12 +933,19 @@ export async function focusNotObscured(page) {
  *  4. `inert` is true when nothing was tabbable, neither Tab landed inside, and nothing reacted.
  * WARNING: step 3 presses Enter and Space on live controls: if the element is wrongly operable, its action runs (a Generate
  * click generates). That is the finding; use it on a state you can afford to lose. Focus is put back where it was.
+ * Optional `afterTabProbe` reopens a dismiss-on-Tab widget after each native Tab/Shift+Tab probe. Its target is then
+ * strictly reacquired as one visible connected element; every original finding and activation observer is preserved.
  * A locator that matches nothing gives `found: false, inert: false` (a script that lost its target must not pass).
  * @param {import('playwright-core').Page} page
  * @param {import('playwright-core').Locator} locator
  * @returns {Promise<{ found: boolean, inert: boolean, reason: string, candidates: { el: string, focusable: boolean, tabbable: boolean, why: string[] }[], tabbable: string[], tabLanded: string, reacted: string[] }>}
  */
-export async function inertFromKeyboardReport(page, locator) {
+export async function inertFromKeyboardReport(page, locator, { afterTabProbe } = {}) {
+    if (afterTabProbe) {
+        const count = await locator.count();
+        const valid = count === 1 && await locator.isVisible() && await locator.evaluate(el => el.isConnected);
+        if (!valid) return { found: count > 0, inert: false, reason: `afterTabProbe target must be exactly one visible connected element (count ${count})`, candidates: [], tabbable: [], tabLanded: '', reacted: [] };
+    }
     const target = locator.first();
     if ((await target.count()) === 0) {
         return { found: false, inert: false, reason: 'the locator matches no element', candidates: [], tabbable: [], tabLanded: '', reacted: [] };
@@ -973,7 +980,7 @@ export async function inertFromKeyboardReport(page, locator) {
 
     // 2. Really press Tab / Shift+Tab into it
     let tabLanded = '';
-    const handle = await target.elementHandle();
+    let handle = await target.elementHandle();
     const startedAt = (await page.evaluateHandle(() => (document.activeElement && document.activeElement !== document.body ? document.activeElement : null))).asElement();
     try {
         for (const side of ['before', 'after']) {
@@ -992,10 +999,17 @@ export async function inertFromKeyboardReport(page, locator) {
                 return `${a.tagName.toLowerCase()}${a.getAttribute('aria-label') ? ` "${a.getAttribute('aria-label')}"` : ''}`;
             });
             await page.evaluate(() => document.querySelectorAll('[data-ux-tab-probe]').forEach((p) => p.remove()));
-            if (landed) {
-                tabLanded = `${side === 'before' ? 'Tab' : 'Shift+Tab'} landed on ${landed}`;
-                break;
+            if (landed) tabLanded = `${side === 'before' ? 'Tab' : 'Shift+Tab'} landed on ${landed}`;
+            if (afterTabProbe) {
+                // Menus dismiss on Tab. Reopen the same real widget, then strictly reacquire its live target.
+                await afterTabProbe();
+                await handle.dispose();
+                const count = await locator.count();
+                const valid = count === 1 && await locator.isVisible() && await locator.evaluate(el => el.isConnected);
+                if (!valid) return { found: count > 0, inert: false, reason: `afterTabProbe target must be exactly one visible connected element (count ${count})`, candidates, tabbable, tabLanded, reacted: [] };
+                handle = await target.elementHandle();
             }
+            if (landed) break;
         }
     } finally {
         await page.evaluate(() => document.querySelectorAll('[data-ux-tab-probe]').forEach((p) => p.remove())).catch(() => {});
@@ -1064,6 +1078,7 @@ export async function inertFromKeyboardReport(page, locator) {
         }
     }
     await restoreFocus(page, startedAt);
+    if (afterTabProbe) await handle.dispose();
 
     const inert = tabbable.length === 0 && tabLanded === '' && reacted.length === 0;
     const reason = inert
@@ -1089,8 +1104,8 @@ async function restoreFocus(page, startedAt) {
  * @param {import('playwright-core').Locator} locator
  * @returns {Promise<boolean>}
  */
-export async function inertFromKeyboard(page, locator) {
-    return (await inertFromKeyboardReport(page, locator)).inert;
+export async function inertFromKeyboard(page, locator, options) {
+    return (await inertFromKeyboardReport(page, locator, options)).inert;
 }
 
 /**
@@ -1134,8 +1149,8 @@ export async function checkFocusNotObscured(rec, page, label = '', { strict = fa
  * @param {import('playwright-core').Locator} locator
  * @param {string} label  how the check is named
  */
-export async function checkInertFromKeyboard(rec, page, locator, label) {
-    const r = await inertFromKeyboardReport(page, locator);
+export async function checkInertFromKeyboard(rec, page, locator, label, options) {
+    const r = await inertFromKeyboardReport(page, locator, options);
     return rec.check(`inert from the keyboard ${label}`, r.inert, r.reason);
 }
 
@@ -1378,20 +1393,50 @@ const viewportSnapshot = (page) =>
  * snackbars), clicks with the mouse at the element's centre, waits about 400 ms and passes when any of these changed: the page scrolled
  * (4 px or more), the visible text changed, an overlay opened or closed, or focus moved to an element that shows a focus ring. The
  * detail says what changed (or that nothing did). Meant to catch a control that looks live but whose click lands off screen or nowhere.
+ * Optional `controlPaint` also compares the same connected control’s rendered text/background/borders after hover and
+ * finite animations settle, ignoring transparent fills and zero-width borders. Geometry alone never passes the check.
  * Returns whether it passed.
  * @param {ReturnType<typeof createRecorder>} rec
  * @param {import('playwright-core').Page} page
  * @param {import('playwright-core').Locator} locator
  * @param {string} label  how the check is named
  */
-export async function checkMouseActivationVisible(rec, page, locator, label) {
+export async function checkMouseActivationVisible(rec, page, locator, label, { controlPaint = false } = {}) {
+    const settle = async () => {
+        await page.waitForFunction(() => document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).every(a => a.playState !== 'running'), null, { timeout: 5000 });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    };
+    const paint = async handle => handle.evaluate(el => {
+        if (!el.isConnected) return null;
+        const cs = getComputedStyle(el);
+        const transparent = color => color === 'transparent' || /rgba\([^)]*,\s*0(?:\.0+)?\s*\)$/.test(color);
+        const borders = ['Top', 'Right', 'Bottom', 'Left'].map(side => {
+            const width = parseFloat(cs[`border${side}Width`]), style = cs[`border${side}Style`], color = cs[`border${side}Color`];
+            return width > 0 && !['none', 'hidden'].includes(style) && !transparent(color) ? { width, style, color } : null;
+        });
+        return { textColor: el.textContent.trim() && !transparent(cs.color) ? cs.color : null, background: transparent(cs.backgroundColor) ? null : cs.backgroundColor, borders };
+    });
+    let paintTarget = null, beforePaint = null;
+    try {
+    if (controlPaint) {
+        if (await locator.count() !== 1) return rec.check(`mouse click visibly does something: ${label}`, false, 'controlPaint requires exactly one actual control');
+        paintTarget = await locator.elementHandle();
+        const hoverBox = await paintTarget.boundingBox();
+        if (!hoverBox) { return rec.check(`mouse click visibly does something: ${label}`, false, 'controlPaint target is not visible'); }
+        await page.mouse.move(hoverBox.x + hoverBox.width / 2, hoverBox.y + hoverBox.height / 2);
+        await settle();
+        beforePaint = await paint(paintTarget);
+    }
     const before = await viewportSnapshot(page);
     const box = await locator.first().boundingBox().catch(() => null);
-    if (!box) return rec.check(`mouse click visibly does something: ${label}`, false, 'the element has no box on screen');
+    if (!box) { return rec.check(`mouse click visibly does something: ${label}`, false, 'the element has no box on screen'); }
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await page.waitForTimeout(400);
+    if (controlPaint) await settle();
     const after = await viewportSnapshot(page);
+    const afterPaint = paintTarget ? await paint(paintTarget) : null;
     const changes = [];
+    if (beforePaint && afterPaint && JSON.stringify(beforePaint) !== JSON.stringify(afterPaint)) changes.push(`same control's rendered paint changed: ${JSON.stringify(beforePaint)} -> ${JSON.stringify(afterPaint)}`);
     if (Math.abs(after.scrollY - before.scrollY) >= 4) changes.push(`scrolled ${before.scrollY} -> ${after.scrollY}`);
     if (after.hash !== before.hash) changes.push(`visible text changed (${before.textCount} -> ${after.textCount} text runs)`);
     if (after.overlays.join() !== before.overlays.join()) changes.push(`overlays ${JSON.stringify(before.overlays)} -> ${JSON.stringify(after.overlays)}`);
@@ -1401,6 +1446,9 @@ export async function checkMouseActivationVisible(rec, page, locator, label) {
         changes.length > 0,
         changes.length ? changes.join('; ') : `nothing changed in the viewport (scrollY ${after.scrollY}, focus ${after.focus ? `${after.focus.desc}, ring ${after.focus.ring}` : 'none'})`,
     );
+    } finally {
+        await paintTarget?.dispose();
+    }
 }
 
 // ======================================================================================== ui map and shared UI helpers
@@ -1414,6 +1462,167 @@ const btn = (page, name, exact = true) => page.getByRole('button', { name, exact
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
 
 export const ui = {
+    // 3.F additive bindings. Existing aliases and all helper defaults are preserved.
+    followBeltExportOption: p => p.getByRole('option', { name: /^Export\b/ }),
+    followBeltConsumed: scope => scope.getByLabel('Consumed /s', { exact: true }),
+    followBeltRemoveLane: scope => scope.getByRole('button', { name: 'Remove lane', exact: true }),
+    followBeltAddLane: scope => scope.getByRole('button', { name: 'Add Second Lane', exact: true }),
+    followDetailsPanel: (p, name) => p.getByRole('tabpanel', { name, exact: true }),
+    followBody: p => p.locator('body'),
+    followMain: p => p.getByRole('main'),
+    followDialogs: p => p.getByRole('dialog'),
+    followButtons: scope => scope.getByRole('button'),
+    followFields: scope => scope.locator('input:not([aria-hidden=true]):not([type=hidden]),textarea:not([aria-hidden=true]),[role=combobox]'),
+    followText: (scope, text) => scope.getByText(text, { exact: typeof text === 'string' }),
+    followScrollers: p => p.getByRole('region').filter({ has: p.locator('table,svg,.react-flow') }),
+    followScroll: (p, name) => p.getByRole('region', { name, exact: true }),
+    followManual: p => p.getByRole('dialog', { name: 'Blueprint string to copy', exact: true }),
+    followManualString: p => ui.followManual(p).getByRole('textbox', { name: 'Blueprint string', exact: true }),
+    followRecover: p => p.getByRole('button', { name: 'Select blueprint string', exact: true }),
+    followSelectString: p => ui.followManual(p).getByRole('button', { name: 'Select string', exact: true }),
+    followManualClose: p => ui.followManual(p).getByRole('button', { name: 'Close', exact: true }),
+    followBlueprintString: p => p.getByRole('textbox', { name: 'Blueprint string', exact: true }),
+    followAllCopies: p => p.getByRole('button', { name: /^(Copy blueprint|Copy old clock|Copy current best)/ }),
+    followStaleConfirm: p => p.getByRole('dialog', { name: /Copy.*old clock|old clock.*copy/i }),
+    followStaleAccept: p => ui.followStaleConfirm(p).getByRole('button', { name: /Copy old clock/ }),
+    followStaleCancel: p => ui.followStaleConfirm(p).getByRole('button', { name: 'Cancel', exact: true }),
+    followFuelEvents: p => p.locator('summary').filter({ hasText: /^Fuel events$/ }),
+    followFuelTable: p => p.getByRole('table', { name: 'Fuel inserter events', exact: true }),
+    followFuelClockTable: p => p.getByRole('region', { name: 'Fuel clocks', exact: true }).getByRole('table'),
+    followFuelRows: p => ui.followFuelTable(p).locator('tbody tr'),
+    followFuelCharts: p => p.getByRole('img', { name: /fuel level over the run$/ }),
+    followFuelBars: p => p.locator('[data-fuel-event]'),
+    followPasteInput: p => p.getByRole('dialog', { name: 'Paste from Factorio', exact: true }),
+    followPasteBox: p => ui.followPasteInput(p).getByRole('textbox', { name: 'Paste the export here', exact: true }),
+    followPasteContinue: p => ui.followPasteInput(p).getByRole('button', { name: 'Continue', exact: true }),
+    followPasteInputCancel: p => ui.followPasteInput(p).getByRole('button', { name: 'Cancel', exact: true }),
+    followPasteConfirm: p => ui.compatImportConfirm(p),
+    followPasteCategory: (p, category) => ui.followPasteConfirm(p).getByRole('checkbox', { name: new RegExp(`^${({machines:'Machines',drills:'Drills',inserters:'Inserters',belts:'Belts',chests:'Chests',target:'Target Output'})[category]}\\b`) }),
+    followPasteAck: p => ui.followPasteConfirm(p).getByRole('checkbox', { name: 'I understand these parts will be combined using their entity numbers.', exact: true }),
+    followPasteApply: p => ui.followPasteConfirm(p).getByRole('button', { name: 'Import Selected', exact: true }),
+    followPasteCancel: p => ui.followPasteConfirm(p).getByRole('button', { name: 'Cancel', exact: true }),
+    followPasteCounts: (p, category) => ui.followPasteConfirm(p).locator(`[data-paste-category="${category}"]`),
+    followPasteCrossings: p => ui.followPasteConfirm(p).getByRole('region', { name: 'Cross-category references', exact: true }),
+    followHelp: (p, name) => p.getByRole('button', { name: `About ${name}`, exact: true }),
+    followHelpDialog: (p, name) => p.getByRole('dialog', { name: `About ${name}`, exact: true }),
+    followOverride: (p, label) => p.getByRole('spinbutton', { name: label, exact: true }),
+    followSwitch: (p, label) => p.getByRole('switch', { name: label, exact: true }),
+    followPlanToggle: p => p.getByRole('button', { name: 'Swing Plan', exact: true }),
+    followPlan: p => p.getByRole('region', { name: 'Swing Plan', exact: true }),
+    followPlanRows: p => ui.followPlan(p).locator('tbody tr'),
+    followExclude: p => ui.followPlan(p).getByRole('button', { name: /^(Included in|Excluded from) LCM:/ }),
+    followPlanScroll: p => ui.followPlan(p).getByRole('region', { name: 'Swing plan table', exact: true }),
+    followRenameCancel: p => ui.compatRenameDialog(p).getByRole('button', { name: 'Cancel', exact: true }),
+    followRenameSave: p => ui.compatRenameDialog(p).getByRole('button', { name: 'Save', exact: true }),
+    followRenameField: p => ui.compatRenameDialog(p).getByRole('textbox', { name: 'Name', exact: true }),
+    followActive: p => p.locator(':focus'),
+    followLive: p => p.locator('[aria-live],[role=status],[role=alert],[role=log]'),
+    followCheckSuccess: p => p.getByRole('main').getByText(/^Each output machine has /),
+    followChecking: p => p.getByRole('button', { name: 'Checking...', exact: true }).first(),
+    followIdle: p => p.getByRole('banner').getByRole('button', { name: /^(Generate|Checking\.\.\.|Generating\.\.\.)$/ }),
+    followError: p => p.locator('#validation-error'),
+    followClose: scope => scope.getByRole('button', { name: 'Close', exact: true }),
+    followSelectedClock: p => ui.clockTable(p).locator('tbody tr[aria-selected=true]'),
+    followFuelBarTitles: p => p.locator('svg title'),
+    followReadOnlyPlanValues: p => ui.followPlan(p).locator('tbody td'),
+    followPasteCategoryText: (p, category) => ui.followPasteCategory(p,category).locator('xpath=ancestor::label[1]'),
+    // Extra bindings used by complete3.F capture, additive to ui-map-additions.txt.
+    followHeaderCopy: p => ui.editingHeader(p).getByRole('button', { name: /^(Copy blueprint|Copy old clock|Copy current best|Copied)/ }),
+    followReadOnlyState: p => ui.followText(ui.followPlan(p), /^(Included|Excluded)$/),
+    followStatusCells: scope => scope.locator('tbody td'),
+    followControlPaint: scope => scope.locator('svg'),
+    // Existing-consumer reconciliation aliases; label omits the 'About ' prefix.
+    safetyHelp: (p, label) => ui.followHelp(p, label),
+    safetyHelpDialog: (p, label) => ui.followHelpDialog(p, label),
+    safetyPasteAcknowledgment: p => ui.followPasteAck(p),
+    safetyPasteImport: p => ui.followPasteApply(p),
+    safetySwingPlan: p => ui.followPlan(p),
+    editingRow: (p, kind, id) => p.getByRole('group', { name: `${({machines:'Machine',inserters:'Inserter',belts:'Belt',chests:'Chest',drills:'Drill'})[kind]} ${id}`, exact: true }),
+    editingKeys: (p, kind) => ui.card(p, kind).locator('[data-row-key]'),
+    editingLane: scope => scope.getByRole('combobox', { name: /^Nearest lane of the belt(?:,|$)/ }),
+    editingFirst: scope => scope.locator('[data-row-first]'),
+    editingDelete: scope => scope.locator('[data-row-delete]'),
+    editingDrag: scope => scope.locator('[data-row-drag]'),
+    editingActions: (p, label) => p.getByRole('button', { name: `More actions for ${label}`, exact: true, includeHidden: true }),
+    editingMenu: p => p.getByRole('menu').filter({ has: p.getByRole('menuitem', { name: 'Duplicate', exact: true }) }),
+    editingMenuLayer: p => ui.editingMenu(p).locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," MuiModal-root ")][1]'),
+    editingMenuItems: p => ui.editingMenu(p).getByRole('menuitem'),
+    editingMenuItem: (p, name) => ui.editingMenu(p).getByRole('menuitem', { name, exact: true }),
+    editingSelect: p => ui.card(p, 'inserters').getByRole('button', { name: 'Select', exact: true }),
+    editingCheckbox: (p, id) => p.getByRole('checkbox', { name: `Select Inserter ${id}`, exact: true }),
+    editingCheckboxBorder: (p, id) => ui.editingCheckbox(p,id).locator('..').locator('svg'),
+    editingBar: p => p.getByRole('region', { name: 'Edit selected inserters', exact: true }),
+    editingSelectedText: p => ui.editingBar(p).getByText(/^\d+ inserters? selected$/),
+    editingSelectAll: p => ui.editingBar(p).getByRole('button', { name: 'Select all', exact: true }),
+    editingClear: p => ui.editingBar(p).getByRole('button', { name: 'Clear selection', exact: true }),
+    editingStack: p => ui.editingBar(p).getByRole('textbox', { name: 'Stack size', exact: true }),
+    editingSet: p => ui.editingBar(p).getByRole('button', { name: 'Set', exact: true }),
+    editingFilters: p => ui.editingBar(p).getByRole('button', { name: 'Filters…', exact: true }),
+    editingRule: p => ui.editingBar(p).getByRole('button', { name: 'Enable rule…', exact: true }),
+    editingFilterDialog: p => p.getByRole('dialog', { name: 'Edit selected inserter filters', exact: true }),
+    editingApplyFilters: p => ui.editingFilterDialog(p).getByRole('button', { name: 'Apply', exact: true }),
+    editingAutoFilters: p => ui.editingFilterDialog(p).getByRole('button', { name: 'Use automatic filters', exact: true }),
+    editingCancelFilters: p => ui.editingFilterDialog(p).getByRole('button', { name: 'Cancel', exact: true }),
+    editingHeader: p => p.getByRole('banner'),
+    editingActive: p => p.locator(':focus'),
+    editingBody: p => p.locator('body'),
+    editingLive: p => p.locator('[aria-live], [role=status], [role=log], [role=alert]'),
+    editingDndLive: p => p.locator('[id^=DndLiveRegion]'),
+    editingExcluded: (p, id) => p.getByRole('button', { name: `Included in LCM: ${itemLabel(id)}`, exact: true }).first(),
+    oneEditorDialog: p => p.getByRole('dialog', { name: /^(Machine|Belt|Chest|Drill|Inserter) \d+$/, exact: true }),
+    oneEditorDialogs: p => p.getByRole('dialog'),
+    oneEditorSave: p => ui.oneEditorDialog(p).getByRole('button', { name: 'Save', exact: true }),
+    oneEditorCancel: p => ui.oneEditorDialog(p).getByRole('button', { name: 'Cancel', exact: true }),
+    oneEditorDelete: p => ui.oneEditorDialog(p).getByRole('button', { name: 'Delete entity', exact: true }),
+    oneEditorClose: p => ui.oneEditorDialog(p).getByRole('button', { name: 'Close dialog', exact: true }),
+    oneEditorUnsaved: p => ui.oneEditorDialog(p).getByText('Unsaved changes', { exact: true }),
+    oneEditorDiscardDialog: (p, label) => p.getByRole('dialog', { name: `Discard changes to ${label}?`, exact: true }),
+    oneEditorKeepEditing: p => p.getByRole('button', { name: 'Keep editing', exact: true }),
+    oneEditorDiscard: p => p.getByRole('button', { name: 'Discard', exact: true }),
+    // Config's panel (not the tab button) and both controlled layouts; labels must match.
+    oneEditorConfig: p => ui.compatRuleEditor(p, 1).getByRole('tabpanel', { name: /^Config(?:, unsaved changes)?$/i }),
+    oneEditorSource: scope => scope.getByRole('combobox', { name: /^Source$/ }),
+    oneEditorDestination: scope => scope.getByRole('combobox', { name: /^Destination$/ }),
+    oneEditorStack: scope => scope.getByRole('textbox', { name: /^Stack size$/i }),
+    oneEditorField: (scope, label) => scope.getByLabel(label, { exact: true }).first(),
+    oneEditorFields: scope => scope.locator('input:not([aria-hidden=true]), [role=combobox], [role=button][aria-label^="Filter "], [role=button][aria-label^="Add filter "]'),
+    oneEditorStackBox: scope => ui.oneEditorStack(scope).locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," MuiInputBase-root ")][1]'),
+    oneEditorStackHelpers: scope => ui.oneEditorStack(scope).locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," MuiFormControl-root ")][1]').locator('.MuiFormHelperText-root'),
+    oneEditorMetadata: scope => scope.getByText(/(?:bulk|fast|stack) inserter.*(?:normal|legendary)|(?:normal|legendary).*(?:bulk|fast|stack) inserter/i).last(),
+    oneEditorTypeQualityControls: scope => scope.getByRole('combobox', { name: /type|quality/i }),
+    oneEditorSlots: scope => scope.getByRole('button', { name: /^(?:Filter \d+:|Add filter \d+)/ }),
+    oneEditorFilledSlots: scope => scope.getByRole('button', { name: /^Filter \d+:/ }),
+    oneEditorFilterSlot: (scope, n) => scope.getByRole('button', { name: new RegExp(`^(Filter|Add filter) ${n}\\b`) }),
+    oneEditorEmptySlot: scope => scope.getByRole('button', { name: /^Add filter\b/ }).first(),
+    oneEditorRemoveFilter: (scope, n) => scope.getByRole('button', { name: new RegExp(`^Remove filter ${n}\\b`) }),
+    oneEditorFiltersLabel: scope => scope.getByText(/^Filters:?$/),
+    oneEditorHandNote: scope => scope.getByText('Set by hand', { exact: true }),
+    oneEditorAutomaticFilters: scope => scope.getByRole('button', { name: 'Use automatic filters', exact: true }),
+    oneEditorPicker: p => p.locator('.MuiPopover-root').filter({ has: p.getByRole('combobox') }).last(),
+    oneEditorPickerSearch: p => ui.oneEditorPicker(p).getByRole('combobox'),
+    oneEditorPickerConfirm: p => ui.oneEditorPicker(p).getByRole('button', { name: 'Confirm', exact: true }),
+    oneEditorListbox: p => p.getByRole('listbox'),
+    oneEditorOptions: p => p.getByRole('option'),
+    oneEditorOption: (p, name) => p.getByRole('option', { name, exact: typeof name === 'string' }),
+    oneEditorGroupLabels: p => ui.oneEditorListbox(p).locator('.MuiAutocomplete-groupLabel'),
+    oneEditorGroupOptions: (p, index) => ui.oneEditorGroupLabels(p).nth(index).locator('..').getByRole('option'),
+    oneEditorChestType: scope => scope.getByRole('combobox', { name: 'Chest type', exact: true }),
+    oneEditorChestAddFilter: scope => scope.getByRole('button', { name: /^(?:Add new filter|Configure filter \d+)$/ }).first(),
+    oneEditorNodes: p => ui.diagram(p).locator('.react-flow__node'),
+    oneEditorNode: (p, id) => ui.diagram(p).locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`),
+    oneEditorFocusable: scope => scope.locator('a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'),
+    compatRuleEditor: (p, id = 1) => p.getByRole('dialog', { name: `Inserter ${id}`, exact: true }),
+    compatRuleEditorStack: (p, id = 1) => ui.compatRuleEditor(p, id).locator(`#diagram-inserter-stack-size-${id}`),
+    compatRuleEditorTab: (p, id, tab) => ui.compatRuleEditor(p, id).getByRole('tab', { name: new RegExp(`^${tab}\\b`) }),
+    compatRuleEditorSave: (p, id = 1) => ui.compatRuleEditor(p, id).getByRole('button', { name: 'Save', exact: true }),
+    compatRuleEditorCancel: (p, id = 1) => ui.compatRuleEditor(p, id).getByRole('button', { name: 'Cancel', exact: true }).last(),
+    compatRuleEditorMetadata: (p, id = 1) => ui.compatRuleEditor(p, id).getByText(/(?:bulk|fast|stack) inserter.*(?:normal|legendary)|(?:normal|legendary).*(?:bulk|fast|stack) inserter/i).last(),
+    compatRuleTemplateOption: p => p.getByRole('option', { name: /^Latched output drain/ }),
+    compatRuleTemplateAmount: scope => ui.ruleTemplateStep(scope).getByRole('spinbutton', { name: 'Switch on at (items)', exact: true }),
+    compatRenameDialog: p => p.getByRole('dialog', { name: 'Rename build', exact: true }),
+    compatRenameName: p => ui.compatRenameDialog(p).getByRole('textbox', { name: 'Name', exact: true }),
+    compatRenameSave: p => ui.compatRenameDialog(p).getByRole('button', { name: 'Save', exact: true }),
+    compatFileOpenedMessage: p => ui.message(p).filter({ hasText: 'Build file opened.' }),
     // ---- 2.F factual copy capture (additive; existing aliases remain)
     copyIntroSentence: p => ui.introCard(p).locator('p').first(),
     copyIntroAction: (p, name) => ui.introCard(p).getByRole('button', { name, exact: true }),
@@ -1489,7 +1698,7 @@ export const ui = {
     menu: (page) => page.getByRole('menu', { name: 'More options' }),
     /** Includes the exiting menu's modal layer after its contents leave the accessibility tree (owner: capture tooling). */
     menuLayer: (page) => page.locator('.MuiPopover-root').filter({ has: page.getByRole('menu', { name: 'More options', includeHidden: true }) }),
-    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Try an example…, Getting started, Terms, Developer tools (a menuitemcheckbox: use developerToolsItem), Reset build (owner: 2.1 first visit, 2.5 B) */
+    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Copy share link, Try an example…, Getting started, Terms, Developer tools (a menuitemcheckbox: use developerToolsItem), Reset build (owner: 2.1 first visit, 2.5 B, 3.4 build library) */
     menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
     /** Paste from Factorio: the filled button in the header at every width; it reads "Paste" below 600 px, with the same name (owner: 2.1 first visit) */
     pasteFromFactorio: (page) => page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }),
@@ -1501,6 +1710,21 @@ export const ui = {
     exportConfig: (page) => ui.menuItem(page, 'Save build file'),
     /** The intro card above Target Output: shown on a blank build until closed, and from Getting started in the ⋮ menu (owner: 2.1 first visit) */
     introCard: (page) => page.getByRole('region', { name: 'Make a clock for your build' }),
+    /** Copy share link: the ⋮ item right after Save build file; resolves only while the menu is open (owner: 3.4 build library) */
+    copyShareLink: (page) => ui.menuItem(page, 'Copy share link'),
+
+    // ---- Your builds (the build switcher)
+    /** The build switcher in the app bar, after the title, named "Build: {full name}"; an icon button below 600 px with the same name. There once the page is ready (owner: 3.4 build library) */
+    buildSwitcher: (page) => page.getByRole('banner').getByRole('button', { name: /^Build: / }),
+    /** The open switcher menu, "Your builds"; 0 while it is closed (owner: 3.4 build library) */
+    buildsMenu: (page) => page.getByRole('menu', { name: 'Your builds' }),
+    /** The builds of the open switcher menu (menuitemradio, aria-checked on the open one), most recently opened first; pass an index for one (owner: 3.4 build library) */
+    buildRows: (page, index) => {
+        const rows = ui.buildsMenu(page).getByRole('menuitemradio');
+        return index === undefined ? rows : rows.nth(index);
+    },
+    /** An action of the open switcher menu: 'New build', 'Duplicate build', 'Rename build…' or 'Delete build' (owner: 3.4 build library) */
+    buildsAction: (page, name) => ui.buildsMenu(page).getByRole('menuitem', { name, exact: true }),
 
     // ---- Configure
     /** The Advanced accordion button (was "Advanced Overrides (Optional)"); collapsed on a first visit and after Import, Paste, Reset (owner: 2.7 B) */
@@ -1528,6 +1752,8 @@ export const ui = {
     addChestMenuItem: (page, kind = 'buffer') => page.getByRole('menuitem', { name: kind === 'infinity' ? 'Infinity chest' : 'Buffer chest', exact: true }),
     /** With no drills (and productivity level 0): the dashed "Add mining drill" row; 0 once there is a drill (owner: 2.7 B) */
     addDrillRow: (page) => btn(page, 'Add mining drill'),
+    /** A Recipe field (an ItemSelector combobox) by its owner: 'Target Output', 'Machine 1', … (recipeName in a11yLabels) (owner: 3.4 build library) */
+    recipeField: (page, owner) => page.getByRole('combobox', { name: `Recipe, ${owner}`, exact: true }),
     /** Target Output's Items per Second input (ELEMENT_IDS.targetRate) (owner: 1.10 numbers) */
     targetRate: (page) => page.locator('#target-items-per-second'),
     /** Target Output's Copies input (ELEMENT_IDS.targetCopies) (owner: 1.10 numbers) */
@@ -1569,10 +1795,6 @@ export const ui = {
     // ---- phase-end walkthrough controls (additive selector ownership; no action/helper changes)
     /** Footer version button (owner: App changelog). */
     changelog: (page) => page.getByRole('button', { name: /^v\d/ }).and(page.getByTitle('View changelog')),
-    /** Recipe combobox by owning entity; same key/signature as the Phase 3 ui map (owner: 2.8 names). */
-    recipeField: (page, owner) => page.getByRole('combobox', { name: `Recipe, ${owner}`, exact: true }),
-    /** Row enable chip; same key/signature as the Phase 3 ui map (owner: 1.13). */
-    enableChip: (page, entityLabel) => page.getByRole('button', { name: new RegExp(`, ${entityLabel}\\. Edit rule$`) }),
     /** An accessible diagram node, by its current name (owner: 2.11 diagram). */
     diagramNode: (page, name) => ui.diagram(page).getByRole('group', typeof name === 'string' ? { name, exact: true } : { name }),
     /** Developer timeline run toggle, only while the Timelines tab is selected (owner: 2.5 B). */
@@ -1604,6 +1826,59 @@ export const ui = {
     diagramDialog: (page) => page.getByRole('dialog'),
     /** The diagram's fullscreen dialog's close button, named "Exit fullscreen" (the timelines' dialogs use "Close fullscreen" instead) (owner: 1.x diagram) */
     diagramClose: (page) => ui.diagramDialog(page).getByRole('button', { name: 'Exit fullscreen', exact: true }),
+
+    // ---- the enable rule dialog (List rows) and the Diagram dialog's Enable rule tab
+    /** A row's enable chip, named "<chip text>, Inserter 1. Edit rule" (owner: 1.13 enable chip) */
+    enableChip: (page, entityLabel) => page.getByRole('button', { name: new RegExp(`, ${entityLabel}\\. Edit rule$`) }),
+    /** The rule dialog, named "Enable rule Inserter 1" (title h2 + entity line) (owner: 3.1 rule editor) */
+    ruleDialog: (page) => page.getByRole('dialog', { name: /^Enable rule/ }),
+    /** The rule dialog's Save / Cancel / close X (owner: 3.1 rule editor) */
+    ruleSave: (page) => ui.ruleDialog(page).getByRole('button', { name: 'Save', exact: true }),
+    ruleCancel: (page) => ui.ruleDialog(page).getByRole('button', { name: 'Cancel', exact: true }).last(),
+    ruleClose: (page) => ui.ruleDialog(page).getByRole('button', { name: 'Close', exact: true }),
+    /** A mode radio by its visible name: 'Auto' | 'Always on' | 'Never on' | 'Clocked' | 'Conditional'; scope defaults to the page, so it also finds the Diagram tab's (owner: 3.1 rule editor) */
+    ruleMode: (scope, name) => scope.getByRole('radio', { name: new RegExp(`^${name}\\b`) }),
+    /** The "In words" sentence and the "In the blueprint" note (owner: 3.1 rule editor) */
+    ruleSentence: (scope) => scope.locator('[data-rule-sentence]').first(),
+    ruleBlueprint: (scope) => scope.locator('[data-rule-blueprint]').first(),
+    /** The Clocked period line ("Crafting cycle: … ticks. …" or "Run Check only or Generate …") (owner: 3.1 rule editor) */
+    rulePeriod: (scope) => scope.locator('[data-rule-period]').first(),
+    /** Wake window n's (from 1) Start / End tick fields, named "Start tick, wake window n" (owner: 3.1 rule editor) */
+    ruleStart: (scope, n = 1) => scope.getByRole('spinbutton', { name: `Start tick, wake window ${n}`, exact: true }),
+    ruleEnd: (scope, n = 1) => scope.getByRole('spinbutton', { name: `End tick, wake window ${n}`, exact: true }),
+    /** "Repeat every (ticks)" (owner: 3.1 rule editor) */
+    ruleRepeat: (scope) => scope.getByRole('spinbutton', { name: /^Repeat every \(ticks\)/ }),
+    /** "Add wake window", "Use the clock's wake windows", "Remove wake window n" (owner: 3.1 rule editor) */
+    ruleAddWindow: (scope) => scope.getByRole('button', { name: 'Add wake window', exact: true }),
+    ruleUseClockWindows: (scope) => scope.getByRole('button', { name: "Use the clock's wake windows", exact: true }),
+    ruleRemoveWindow: (scope, n = 1) => scope.getByRole('button', { name: `Remove wake window ${n}`, exact: true }),
+    /** The strip under the windows, and its bars: kind 'rule' (solid) or 'clock' (outlined) (owner: 3.1 rule editor) */
+    ruleStrip: (scope) => scope.locator('[data-rule-strip]').first(),
+    ruleStripBars: (scope, kind) => scope.locator(`[data-rule-strip-bar="${kind}"]`),
+    /** The refused-Save summary beside Cancel (dialog) or "Unsaved changes" (Diagram) (owner: 3.1 rule editor) */
+    ruleBlocked: (scope) => scope.locator('[data-rule-blocked]').first(),
+    /** The "Repeat every" warning (owner: 3.1 rule editor) */
+    ruleWarning: (scope) => scope.locator('[data-rule-warning]').first(),
+    /** Quick templates (the select), the open template step, and its Replace conditions / Use template button (owner: 3.1 rule editor) */
+    ruleTemplates: (scope) => scope.getByRole('combobox', { name: 'Quick templates', exact: true }),
+    ruleTemplateStep: (scope) => scope.locator('[data-template-step]').first(),
+    ruleTemplateReplace: (scope) => scope.locator('[data-template-step]').getByRole('button', { name: /^(Replace conditions|Use template)$/ }),
+    /** The template step's own Cancel (not the dialog's, which comes after it) (owner: 3.1 rule editor) */
+    ruleTemplateCancel: (scope) => scope.locator('[data-template-step]').getByRole('button', { name: 'Cancel', exact: true }),
+    /** "Copy from another inserter" and its confirm step's Replace rule (owner: 3.1 rule editor) */
+    ruleCopyFrom: (scope) => scope.getByRole('combobox', { name: /^Copy from another/ }),
+    ruleReplaceRule: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Replace rule', exact: true }),
+    ruleCopyCancel: (scope) => scope.locator('[data-copy-step]').getByRole('button', { name: 'Cancel', exact: true }),
+    /** The header's Cancel, at the end of the progress row while a generation or Generate's check runs (owner: 3.3 cancel) */
+    cancel: (page) => page.getByRole('banner').getByRole('button', { name: /^Cancel\b/ }),
+    /** The header's progress bar: the generation's, or the indeterminate one of Generate's check (owner: 3.3 cancel) */
+    progressRow: (page) => page.getByRole('banner').locator('.MuiLinearProgress-root'),
+    /** The stale banner over Results ("These clocks are for …, made at …") (owner: 3.3 cancel) */
+    staleBanner: (page) => page.getByRole('main').locator('[data-stale-banner]'),
+    /** The stale banner's Generate again (owner: 3.3 cancel) */
+    generateAgain: (page) => page.getByRole('main').locator('[data-stale-banner]').getByRole('button', { name: 'Generate again', exact: true }),
+    /** The notes under the stale banner: a stopped run, a pick the run did not make (owner: 3.3 cancel) */
+    runNote: (page) => page.getByRole('main').locator('[data-run-notes]'),
 };
 
 let namesCache;
@@ -1655,18 +1930,34 @@ export async function openTooltip(page, locator, { timeout = 5000 } = {}) {
     return tip;
 }
 
-/** Opens the ⋮ menu if it is not open, waits until it is visible and returns it. Like `openMenu`, but it waits for the menu itself and not a fixed 300 ms */
-export async function openMoreMenu(page, { timeout = 5000 } = {}) {
-    const menu = ui.menu(page);
-    if (!(await menu.isVisible())) {
-        await ui.menuButton(page).click({ timeout });
+/** Opens the build switcher's menu ("Your builds") if it is not open, waits until it is visible and returns it */
+export async function openBuildSwitcher(page, { timeout = 5000 } = {}) {
+    const menu = ui.buildsMenu(page);
+    if (!(await menu.isVisible().catch(() => false))) {
+        if ((await ui.buildSwitcher(page).count()) === 0) throw new Error(`openBuildSwitcher: no button named "Build: …" in the header at ${page.viewportSize()?.width}px`);
+        await ui.buildSwitcher(page).click({ timeout });
         try {
             await menu.waitFor({ state: 'visible', timeout });
         } catch {
-            throw new Error(`openMoreMenu: the "More options" menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`);
+            throw new Error(`openBuildSwitcher: the "Your builds" menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`);
         }
     }
     return menu;
+}
+
+/** Opens the ⋮ menu if it is not open, waits until it is visible and returns it. Like `openMenu`, but it waits for the menu itself and not a fixed 300 ms */
+export async function openMoreMenu(page, { timeout = 5000, anchor, menu, activation = 'click' } = {}) {
+    if (Boolean(anchor) !== Boolean(menu)) throw new Error('openMoreMenu: supply anchor and menu together');
+    const target = menu ?? ui.menu(page);
+    const opener = anchor ?? ui.menuButton(page);
+    if (!(await target.isVisible())) {
+        if (activation === 'click') await opener.click({ timeout });
+        else if (activation === 'Enter' || activation === 'Space') await opener.press(activation === 'Space' ? ' ' : activation, { timeout });
+        else throw new Error(`openMoreMenu: unknown activation ${activation}`);
+        try { await target.waitFor({ state: 'visible', timeout }); }
+        catch { throw new Error(`openMoreMenu: requested menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`); }
+    }
+    return target;
 }
 
 /** Waits until a closed More options menu has also removed its pointer-intercepting transition layer. */
@@ -1679,17 +1970,27 @@ export async function waitForMoreMenuClosed(page, { timeout = 5000 } = {}) {
  * Picks an item of the ⋮ menu by name, at any width (every item is in the menu: Paste from Factorio is a header button,
  * `ui.pasteFromFactorio`). Waits for the menu to close after the item.
  */
-export async function chooseMenuItem(page, name, { timeout = 5000 } = {}) {
-    const menu = await openMoreMenu(page, { timeout });
-    const item = menu.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name });
+export async function chooseMenuItem(page, name, { timeout = 5000, anchor, menu, activation = 'click', itemActivation = 'click' } = {}) {
+    const target = await openMoreMenu(page, { timeout, anchor, menu, activation });
+    const item = target.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name });
+    try { await item.waitFor({ state: 'visible', timeout }); }
+    catch { throw new Error(`chooseMenuItem: no ${String(name)}; have ${JSON.stringify(await target.getByRole('menuitem').allTextContents())}`); }
+    const layer = menu ? await target.locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," MuiModal-root ")][1]').elementHandle() : null;
+    if (menu && !layer) throw new Error('chooseMenuItem: requested row menu has no MUI modal layer');
     try {
-        await item.waitFor({ state: 'visible', timeout });
-    } catch {
-        const have = await menu.getByRole('menuitem').allTextContents();
-        throw new Error(`chooseMenuItem: no menu item ${String(name)} at ${page.viewportSize()?.width}px (the menu has: ${JSON.stringify(have)})`);
+        if (itemActivation === 'click') await item.click({ timeout });
+        else if (itemActivation === 'Enter' || itemActivation === 'Space') await item.press(itemActivation === 'Space' ? ' ' : itemActivation, { timeout });
+        else throw new Error(`chooseMenuItem: unknown itemActivation ${itemActivation}`);
+        if (menu) {
+            await target.waitFor({ state: 'hidden', timeout });
+            await layer.waitForElementState('hidden', { timeout });
+        } else {
+            // Retain the historical header helper's close policy for its existing callers.
+            await target.waitFor({ state: 'hidden', timeout }).catch(() => {});
+        }
+    } finally {
+        await layer?.dispose();
     }
-    await item.click({ timeout });
-    await menu.waitFor({ state: 'hidden', timeout }).catch(() => {});
 }
 
 /**

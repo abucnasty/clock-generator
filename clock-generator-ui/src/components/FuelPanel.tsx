@@ -1,5 +1,5 @@
 import { Alert, Box, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
 import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
@@ -10,6 +10,7 @@ import { InserterStatus, MachineStatus } from 'clock-generator/light';
 import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS, TIMELINE_TRACK_COLOR } from './colors';
 import { Panel } from './Panel';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
+import { fuelEventRows, fuelTraceSummary, type FuelEventRow } from '../utils/fuelAccessibility';
 import { durationText } from '../utils/numberText';
 
 const LEVEL_COLOR = COLOR_BLIND_PALETTE.skyBlue;
@@ -187,7 +188,7 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
 }
 
 /** The fuel a machine held: the highest of each sample as an area, the lowest as a line, and the insertion limit dashed */
-function FuelLevelChart({ levels, durationTicks, insertionLimit, label }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number; label: string }) {
+function FuelLevelChart({ levels, durationTicks, insertionLimit, label, descriptionId }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number; label: string; descriptionId: string }) {
     const top = Math.max(levels.max_level, insertionLimit) * 1.08;
     const y = (level: number) => (1 - level / top) * LEVEL_HEIGHT;
     const x = (sample: number) => Math.min(sample * levels.ticks_per_sample, durationTicks);
@@ -200,6 +201,7 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit, label }: { leve
             component="svg"
             role="img"
             aria-label={CHART_NAMES.fuelLevel(label)}
+            aria-describedby={descriptionId}
             viewBox={`0 0 ${durationTicks} ${LEVEL_HEIGHT}`}
             preserveAspectRatio="none"
             sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: TIMELINE_TRACK_COLOR, borderRadius: 0.5 }}
@@ -220,7 +222,7 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit, label }: { leve
     );
 }
 
-function SwingBar({ swing, durationTicks }: { swing: FuelSwing; durationTicks: number }) {
+function SwingBar({ swing, durationTicks, inserterNumber }: { swing: FuelSwing; durationTicks: number; inserterNumber: number }) {
     return (
         <Tooltip
             title={`${swing.amount} items, tick ${swing.start} to ${swing.end}`}
@@ -228,6 +230,7 @@ function SwingBar({ swing, durationTicks }: { swing: FuelSwing; durationTicks: n
             placement="top"
         >
             <Box
+                data-fuel-event={`${inserterNumber}:${swing.start}:${swing.end}:${swing.amount}`}
                 sx={{
                     position: 'absolute',
                     left: `${(swing.start / durationTicks) * 100}%`,
@@ -244,7 +247,7 @@ function SwingBar({ swing, durationTicks }: { swing: FuelSwing; durationTicks: n
 }
 
 /** One fuel inserter over the run: every enable window of its fuel clock, and the windows it swung in */
-function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInserterPlan; swings: FuelSwing[]; durationTicks: number }) {
+function FuelClockRow({ inserter, swings, durationTicks, descriptionId }: { inserter: FuelInserterPlan; swings: FuelSwing[]; durationTicks: number; descriptionId: string }) {
     const windowStarts: number[] = [];
     for (let start = inserter.window.start; start < durationTicks; start += inserter.modulus) {
         windowStarts.push(start);
@@ -267,6 +270,7 @@ function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInser
                     component="svg"
                     role="img"
                     aria-label={CHART_NAMES.fuelClock(entityLabel('inserter', inserter.inserter_number))}
+                    aria-describedby={descriptionId}
                     viewBox={`0 0 ${durationTicks} 1`}
                     preserveAspectRatio="none"
                     sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -279,7 +283,7 @@ function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInser
                         />
                     ))}
                 </Box>
-                {swings.map(swing => <SwingBar key={swing.start} swing={swing} durationTicks={durationTicks} />)}
+                {swings.map(swing => <SwingBar key={swing.start} swing={swing} durationTicks={durationTicks} inserterNumber={inserter.inserter_number} />)}
             </Box>
         </Box>
     );
@@ -296,6 +300,8 @@ function LegendItem({ color, label, opacity = 1 }: { color: string; label: strin
 
 function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
     const { durationTicks } = run;
+    const summaryId = useId();
+    const events: FuelEventRow[] = fuelEventRows(fuel);
     const markerInterval = Math.ceil(durationTicks / 10 / 100) * 100;
     const tickMarkers: number[] = [];
     for (let tick = 0; tick <= durationTicks; tick += markerInterval) {
@@ -304,6 +310,40 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
 
     return (
         <>
+            {run.levels.map(levels => (
+                <Typography key={levels.machine_id} id={`${summaryId}-machine-${levels.machine_number}`} variant="body2" sx={{ mb: 1.5 }}>
+                    {fuelTraceSummary(levels, durationTicks)}
+                </Typography>
+            ))}
+            {fuel.plan.inserters.map(inserter => (
+                <Typography key={inserter.inserter_id} id={`${summaryId}-inserter-${inserter.inserter_number}`} variant="body2" sx={{ mb: 1.5 }}>
+                    Inserter {inserter.inserter_number} feeds Machine {inserter.machine_number}. Its fuel clock switches it on every {inserter.modulus} ticks,
+                    from tick {inserter.window.start} to {inserter.window.end} of that clock.
+                    {' '}{(run.swings[inserter.inserter_id] ?? []).length} swings recorded over {durationTicks} ticks; Fuel events lists their start, end and items.
+                </Typography>
+            ))}
+            <Box component="details" sx={{ mb: 2 }}>
+                <Typography component="summary" sx={{ cursor: 'pointer', py: 0.75 }}>Fuel events</Typography>
+                {events.length === 0 ? (
+                    <Typography variant="body2">No fuel inserter swings were recorded in this run.</Typography>
+                ) : (
+                    <ScrollX label={SCROLL_REGION_NAMES.fuelEvents}>
+                        <Table size="small">
+                            <caption style={{ captionSide: 'top', textAlign: 'left' }}>Fuel inserter events</caption>
+                            <TableHead><TableRow>
+                                {['Inserter', 'Feeds', 'Start tick', 'End tick', 'Items'].map(header => <TableCell key={header}>{header}</TableCell>)}
+                            </TableRow></TableHead>
+                            <TableBody>{events.map((event, index) => <TableRow key={index}>
+                                <TableCell>Inserter {event.inserterNumber}</TableCell>
+                                <TableCell>Machine {event.machineNumber}</TableCell>
+                                <TableCell>{event.startTick}</TableCell>
+                                <TableCell>{event.endTick}</TableCell>
+                                <TableCell>{event.amount}</TableCell>
+                            </TableRow>)}</TableBody>
+                        </Table>
+                    </ScrollX>
+                )}
+            </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 <LegendItem color={LEVEL_COLOR} label="Fuel in the machine" />
                 <LegendItem color={WINDOW_COLOR} label="Fuel clock switches the inserter on" opacity={0.6} />
@@ -352,7 +392,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                                     </Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} label={entityLabel('machine', machine.machine_number)} />
+                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} label={entityLabel('machine', machine.machine_number)} descriptionId={`${summaryId}-machine-${machine.machine_number}`} />
                                 </Box>
                             </Box>
                         )}
@@ -362,6 +402,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                                 inserter={inserter}
                                 swings={run.swings[inserter.inserter_id] ?? []}
                                 durationTicks={durationTicks}
+                                descriptionId={`${summaryId}-inserter-${inserter.inserter_number}`}
                             />
                         ))}
                     </Box>

@@ -72,6 +72,10 @@ preview unless you are debugging.
   stale, in flight), the colour roles of confirm, cancel, danger and selection, square chips, title bars on cards,
   dialogs and accordions, the help controls, focus rings (black in a filled alert), messages and menus on the card
   surface, and that each surface is its token. `BASE_URL`, `UI_DIR`, `WIDTHS` and `STEPS` as above.
+- `capture-rule-editor.mjs <out dir>` (on `lib.mjs`) checks the rule editor (item 3.1) at 1440, 720 and 390px: the
+  "In words" sentence and "In the blueprint" note per mode, Clocked windows against the period (before a check, after
+  Check only, after Generate with the strip), the inline problems and the refused Save in the dialog and the Diagram tab,
+  templates that ask and confirm, drills without Conditional, names, focus and contrast. Controls are in `ui` (`rule*`).
 - `capture-build-card.mjs <out dir>` (on `lib.mjs`) checks the Configure layout (item 2.7 PR B) at 1440, 720 and 390px:
   Target Output, the Build card (its sections in order, the List/Diagram toggle in its title bar) and Advanced
   (collapsed, and again after Import and Reset), the "Add chest" and "Add mining drill" rows and where the focus goes
@@ -208,3 +212,8 @@ now own those two things. **Scripts find controls only through `ui` and `itemLab
 - `selftest.mjs` resolves every `ui` entry at 1440, 720 and 390 against a running build and exercises the tooltip and menu helpers
   (`BASE_URL=http://localhost:5239 UI_DIR=<checkout>/clock-generator-ui node selftest.mjs`). Run it after editing `ui`; it expects the
   documented 0 counts, so update its expectations in the same commit when an item adds a control (for example `resultsCard` after 2.6).
+
+- `selftest-one-editor-ui.mjs`: additive three-width selector matrix for the shared fields, filters, draft footer and discard prompt; no generation.
+- `capture-one-editor.mjs`: 3.2 A shared inserter fields, all five Diagram drafts, source-first filters, keyboard and geometry evidence.
+
+`capture-editing-rows.mjs` covers 3.2 PR B row menus, reorder Undo, Add/Duplicate focus and inserter bulk edits at 1440/720/390 plus the 960/800/720 sweep. First run `BASELINE_ONLY=1` on untouched PR A, then pass its `tab-baseline.json` as `BASELINE_JSON` to the full PR B run.

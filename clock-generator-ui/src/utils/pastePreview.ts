@@ -1,0 +1,52 @@
+import type { ConfigFormData } from './configForm/formData';
+import type { PastedEntities } from '../worker/types';
+
+export type PasteCategory = 'machines' | 'drills' | 'inserters' | 'belts' | 'chests';
+export interface ImportSelections extends Record<PasteCategory, boolean> { target: boolean }
+export interface PasteReferenceWarning {
+    ownerType: 'inserter' | 'drill';
+    ownerId: number;
+    slot: 'source' | 'sink' | 'target';
+    endpointType: 'machine' | 'belt' | 'chest';
+    endpointId: number;
+    direction: 'incoming-to-retained' | 'retained-to-replaced';
+    destinationExists: boolean;
+}
+const categories: PasteCategory[] = ['machines', 'drills', 'inserters', 'belts', 'chests'];
+const endpointCategory = { machine: 'machines', belt: 'belts', chest: 'chests' } as const;
+
+/** Mirrors Apply's selected-and-nonempty replacement rule without changing either input. */
+export function pastePreview(current: ConfigFormData, incoming: PastedEntities, selections: ImportSelections) {
+    const existing = { ...current, drills: current.drills?.configs ?? [] };
+    const replacing = (category: PasteCategory) => selections[category] && incoming[category].length > 0;
+    const counts = categories.map(category => ({
+        category,
+        current: existing[category].length,
+        incoming: incoming[category].length,
+        result: replacing(category) ? incoming[category].length : existing[category].length,
+        replacing: replacing(category),
+    }));
+    const resultIds = Object.fromEntries(categories.map(category => [category,
+        new Set((replacing(category) ? incoming[category] : existing[category]).map(entity => entity.id)),
+    ])) as Record<PasteCategory, Set<number>>;
+    const crossings: PasteReferenceWarning[] = [];
+    const inspect = (ownerType: 'inserter' | 'drill', ownerId: number, slot: PasteReferenceWarning['slot'], endpoint: { type: PasteReferenceWarning['endpointType']; id: number }) => {
+        if (endpoint.id === 0) return;
+        const ownerReplaced = replacing(ownerType === 'inserter' ? 'inserters' : 'drills');
+        const category = endpointCategory[endpoint.type];
+        if (ownerReplaced === replacing(category)) return;
+        crossings.push({ ownerType, ownerId, slot, endpointType: endpoint.type, endpointId: endpoint.id,
+            direction: ownerReplaced ? 'incoming-to-retained' : 'retained-to-replaced',
+            destinationExists: resultIds[category].has(endpoint.id) });
+    };
+    const inserters = replacing('inserters')
+        ? incoming.inserters.map((inserter, index) => ({ ...inserter, id: inserter.id ?? index + 1 }))
+        : existing.inserters;
+    const drills = replacing('drills') ? incoming.drills : existing.drills;
+    for (const drill of [...drills].sort((a, b) => a.id - b.id)) inspect('drill', drill.id, 'target', drill.target);
+    for (const inserter of [...inserters].sort((a, b) => a.id - b.id)) {
+        inspect('inserter', inserter.id, 'source', inserter.source);
+        inspect('inserter', inserter.id, 'sink', inserter.sink);
+    }
+    return { counts, crossings };
+}

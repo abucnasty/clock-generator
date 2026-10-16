@@ -7,6 +7,7 @@
 // environment. Each width gets its own folder under <out dir>; <out dir>/INDEX.md lists every shot and every check.
 // The checks state what the fixed code must do, so on the code before the fix several of them fail on purpose.
 import { chromium } from 'playwright-core';
+import { ui } from './lib.mjs';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -656,6 +657,9 @@ async function run() {
         if (asked) await prompt().getByRole('button', { name: 'Keep editing' }).click();
         await page.waitForTimeout(400);
         await dlg.locator('button:has-text("Cancel")').last().click();
+        await ui.oneEditorDiscardDialog(page, `Inserter ${target}`).waitFor({state:'visible'});
+        check('Cancel asks before discarding the draft', await ui.oneEditorDiscard(page).isVisible());
+        await ui.oneEditorDiscard(page).click();
         await page.waitForTimeout(800);
         const after = await storedInserter();
         await shot('b6-dialog-cancelled', 'Cancel: the dialog is closed');

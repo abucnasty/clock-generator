@@ -9,7 +9,7 @@
 // military-science 2-inserter sample after a delete; slow) at the first width only.
 //
 // Against the phase-branch head ("before") the renumbering checks FAIL by design; the script must still run to the end.
-import { openSession, createRecorder, sample, importFile, goConfigure, goResults, validate, generate, contrast, noSideScroll, DEFAULT_WIDTHS } from './lib.mjs';
+import { openSession, createRecorder, sample, importFile, goConfigure, goResults, validate, generate, contrast, noSideScroll, DEFAULT_WIDTHS, ui, chooseMenuItem } from './lib.mjs';
 
 const OUT = process.argv[2];
 if (!OUT) {
@@ -374,51 +374,35 @@ async function runSteps(page, width) {
     }, page);
 
     // ------------------------------------------------------------------ 7. validation panel
-    await rec.step('7 the Swing Plan cannot be edited after the delete', async () => {
-        const warning = page.getByText(/changed since it was validated/i).first();
+    await rec.step('7 the stale Swing Plan remains readable and cannot change the build', async () => {
+        const warning = ui.followText(ui.followMain(page), /You changed the build since this plan was made/).first();
         await warning.scrollIntoViewIfNeeded();
-        await rec.shot(page, 'validation-after', { desc: 'Validation panel after the delete: the "changed since it was validated" warning and the dimmed Swing Plan (spec state 7)' });
-        rec.check('the "changed since it was validated" warning shows', await warning.isVisible());
-        const dim = await planAccordion(page).evaluate((el) => {
-            const s = getComputedStyle(el.parentElement);
-            return { pointerEvents: s.pointerEvents, opacity: Number(s.opacity) };
+        const plan = ui.safetySwingPlan(page);
+        await rec.shot(page, 'validation-after', { desc: 'After delete: readable stale Swing Plan with actions removed' });
+        rec.check('the plan says the build changed', await warning.isVisible());
+        const state = await plan.evaluate(el => {
+            let opacity = 1, inert = false;
+            for (let node = el; node && node.tagName !== 'MAIN'; node = node.parentElement) {
+                opacity *= Number(getComputedStyle(node).opacity); inert ||= node.hasAttribute('inert');
+            }
+            return { opacity, inert, cells: el.querySelectorAll('tbody td').length };
         });
-        rec.check('the Swing Plan is dimmed and ignores clicks', dim.pointerEvents === 'none' && dim.opacity < 1, show(dim));
-
-        // nor can it be used from the keyboard: Tab through the page from the top and press Enter on whatever has focus
+        rec.check('stale plan text remains readable and in the accessibility tree', state.opacity === 1 && !state.inert && state.cells > 0, show(state));
+        rec.check('stale Exclude controls have no action or Tab stop', await ui.followExclude(page).count() === 0);
         const stored = (await readStored(page)).text;
-        /** Where the focus is against the dimmed panel: 'in', 'before' or 'after' it in document order, or 'none' */
-        const focusAt = () => page.evaluate(() => {
-            const acc = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => /^Swing Plan/.test(a.textContent.trim()));
-            const panel = acc?.parentElement;
-            const focused = document.activeElement;
-            if (!panel || !focused || focused === document.body) return 'none';
-            if (panel.contains(focused)) return 'in';
-            return panel.compareDocumentPosition(focused) & Node.DOCUMENT_POSITION_FOLLOWING ? 'after' : 'before';
-        });
-        const inert = await planAccordion(page).evaluate((el) => el.parentElement.inert === true);
-        rec.check('the dimmed Swing Plan is inert', inert);
-        await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo(0, 0); });
-        let landed = 0;
-        let passedIt = false;
-        for (let i = 0; i < 400 && !passedIt; i++) {
-            await page.keyboard.press('Tab');
-            const at = await focusAt();
-            if (at === 'in') landed++;
-            if (at === 'after') passedIt = true;
+        const chip = ui.followReadOnlyState(page).first();
+        await chip.click();
+        await page.keyboard.press('Enter'); await page.keyboard.press('Space');
+        const scroller = ui.followPlanScroll(page);
+        const scrollable = await scroller.evaluate(el => el.scrollWidth > el.clientWidth + 1);
+        if (scrollable) {
+            rec.check('stale table keeps its keyboard scroll stop', await scroller.getAttribute('tabindex') === '0');
+            await scroller.focus(); await page.keyboard.press('ArrowRight');
         }
-        rec.check('Tab reaches past the dimmed Swing Plan', passedIt);
-        // try the chip itself as well: with nothing else focused, focus it directly and press Enter and Space
-        await page.evaluate(() => document.activeElement?.blur());
-        const chip = planAccordion(page).getByText(/^(Included|Excluded)$/).first();
-        await chip.evaluate((el) => el.closest('[role=button]')?.focus());
-        if ((await focusAt()) === 'in') landed++;
-        await page.keyboard.press('Enter');
-        await page.keyboard.press('Space');
+        await ui.followPlanToggle(page).click(); await ui.followPlanToggle(page).click();
+        rec.check('stale inspection disclosure still operates', await plan.isVisible());
         await page.waitForTimeout(500);
-        rec.check('Tab never lands in the dimmed Swing Plan, nor does focusing a chip directly', landed === 0, `${landed} times`);
-        const after = (await readStored(page)).text;
-        rec.check('Enter and Space on a dimmed Included/Excluded chip leave the form unchanged', after === stored, after === stored ? '' : 'the saved form changed');
+        rec.check('pointer, Enter, Space and inspection cannot mutate the old plan', (await readStored(page)).text === stored);
     }, page);
 
     // ------------------------------------------------------------------ 8. Diagram
@@ -443,13 +427,13 @@ async function runSteps(page, width) {
         await page.waitForTimeout(800);
         const dialog = page.getByRole('dialog').first();
         const title = (await dialog.getByRole('heading', { level: 2 }).first().innerText()).split('\n')[0].trim();
-        const header = await dialog.getByText(/^Inserter #?\d+ — /).first().innerText().catch(() => ''); // the "Inserter 3 — Tile 2" line
+        const header = await dialog.innerText(); // the shared editor no longer adds Tile labels
         const dialogEnds = await dialog.locator('input[role=combobox]').evaluateAll((els) => els.map((e) => e.value.split(' - ')[0].trim()));
         await rec.shot(page, 'diagram-dialog-after', { desc: 'Diagram edit dialog of the third inserter node (spec state 8)' });
         table('diagram-dialog-after', { node: nodeTitle, 'dialog title': title, 'dialog header line': header, 'dialog ends': dialogEnds });
         rec.check('the clicked node and the list chip agree: both Inserter 3', nodeTitle === 'Inserter 3' && listChip3 === 'Inserter 3', `node "${nodeTitle}", list chip "${listChip3}"`);
         rec.check('the dialog title reads Inserter 3', title === 'Inserter 3', title);
-        rec.check('the dialog header line reads "Inserter 3 — Tile 2" (no "#")', /^Inserter 3 — Tile \d$/.test(header), header);
+        rec.check('the shared dialog has no Tile strip', !/\bTile\b/.test(header), header);
         rec.check('the dialog shows the ends of the same inserter (Machine 3 to Machine 2)', same(dialogEnds.slice(0, 2), ['Machine 3', 'Machine 2']), show(dialogEnds));
         await closeDialogs(page);
         const selectedEdges = await page.locator('.react-flow__edge.selected').count();
@@ -492,16 +476,9 @@ async function runSteps(page, width) {
         await goConfigure(page);
         await scrollToCard(page, 'inserters');
         const pre = await readList(page);
-        const handle = rowsOf(page, 'inserter').nth(0).locator('[aria-roledescription="sortable"]');
-        await handle.focus();
-        await page.keyboard.press('Space');
-        await page.waitForTimeout(250);
-        await page.keyboard.press('ArrowDown');
-        await page.waitForTimeout(350);
-        await page.keyboard.press('Space');
-        await page.waitForTimeout(700);
+        await chooseMenuItem(page, 'Move down', { anchor: ui.editingActions(page, 'Inserter 1'), menu: ui.editingMenu(page), activation: 'Enter', itemActivation: 'Enter' });
         await scrollToCard(page, 'inserters');
-        await rec.shot(page, 'inserters-after-reorder', { desc: 'After moving the first inserter down with Space, ArrowDown, Space (spec state 10)' });
+        await rec.shot(page, 'inserters-after-reorder', { desc: 'After moving the first inserter down through its row menu with the keyboard (spec state 10)' });
         const post = await readList(page);
         table('after-reorder', { 'Inserter chips': post.chips.inserters, Pickers: post.pickers.map((p) => p.join('>')) });
         rec.check('chips still read Inserter 1 to 4 in the new order', same(post.chips.inserters, labelsOf('inserter', range(4))), show(post.chips.inserters));

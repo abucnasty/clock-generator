@@ -1,9 +1,9 @@
 import { Close } from '@mui/icons-material';
 import { Alert, Box, Button, IconButton, Snackbar } from '@mui/material';
-import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
 import { MessageActionsContext, MessageStateContext, useDismissMessage, useMessageState } from '../hooks/useMessages';
 import { ANNOUNCER_ATTRIBUTE, announceText } from '../utils/announcer';
-import { isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput } from '../utils/messages';
+import { canDeliverAnnouncement, isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput, type MessageState } from '../utils/messages';
 import { entersOtherDialog, isEscapeForSomethingElse } from '../utils/undoKeys';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { CONTROL, SURFACE } from '../theme/tokens';
@@ -19,7 +19,9 @@ export function MessageProvider({ children }: { children: ReactNode }) {
     }, []);
     const dismiss = useCallback((id: number) => dispatch({ type: 'dismiss', id }), []);
     const announce = useCallback((text: string) => dispatch({ type: 'announce', id: ++nextId.current, text }), []);
-    const actions = useMemo(() => ({ notify, dismiss, announce }), [notify, dismiss, announce]);
+    const announceMessage = useCallback((messageId: number, suffix?: string) =>
+        dispatch({ type: 'announce-message', id: ++nextId.current, messageId, suffix }), []);
+    const actions = useMemo(() => ({ notify, dismiss, announce, announceMessage }), [notify, dismiss, announce, announceMessage]);
 
     // a message that goes, however it goes (closed, timed out, replaced), is told so once
     const shown = useRef<Message | null>(null);
@@ -48,13 +50,22 @@ export function MessageProvider({ children }: { children: ReactNode }) {
  * Undo stays, behind the dialog, until the dialog closes.
  */
 export function MessageHost() {
-    const { current, announcement } = useMessageState();
+    const state = useMessageState();
+    const { current, announcement } = state;
     const dismiss = useDismissMessage();
     const regionRef = useRef<HTMLDivElement>(null);
+    // Delayed owned speech reads the latest committed offer, including dismissal without any newer announcement.
+    const committedStateRef = useRef<MessageState | null>(null);
+    useLayoutEffect(() => {
+        committedStateRef.current = state;
+        return () => { committedStateRef.current = null; };
+    }, [state]);
     // written outside React: where it goes depends on the page at the moment it is written
     useEffect(() => {
         if (announcement) {
-            announceText(regionRef.current, announcement.text);
+            announceText(regionRef.current, announcement.text, announcement.ownerMessageId === undefined
+                ? undefined
+                : () => canDeliverAnnouncement(committedStateRef.current, announcement));
         }
     }, [announcement]);
 
@@ -145,14 +156,23 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                 // compact: one line is 32px, lower than the fullscreen diagram's title bar row, so it adds no height there.
                 // An urgent one is filled in its colour; the others are a card with an edge (1px each side, taken off the
                 // padding, so still 32px), the severity in the icon, and the action (Undo) in the accent orange
-                sx={{
+                sx={(theme) => ({
                     alignItems: 'center',
                     maxWidth: '100%',
                     py: 0,
                     '& .MuiAlert-icon, & .MuiAlert-message': { py: urgent ? '5px' : '4px' },
                     '& .MuiAlert-action': { pt: 0 },
                     ...(!urgent && { bgcolor: SURFACE.panel, color: 'text.primary', border: `1px solid ${CONTROL.edge}` }),
-                }}
+                    // below 600px an action's button gets a row of its own under the text, which would otherwise be
+                    // squeezed into a column a word wide
+                    ...(message.action && {
+                        [theme.breakpoints.down('sm')]: {
+                            flexWrap: 'wrap',
+                            '& .MuiAlert-message': { flex: '1 1 0', minWidth: 0 },
+                            '& .MuiAlert-action': { flexBasis: '100%', justifyContent: 'flex-end', ml: 0, pl: 0, pb: '4px' },
+                        },
+                    }),
+                })}
                 onClose={message.action ? undefined : () => leave()}
                 action={message.action && (
                     <>
@@ -160,6 +180,8 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
                             color={urgent ? 'inherit' : 'primary'}
                             size="small"
                             aria-keyshortcuts={message.action.keyShortcuts}
+                            // one line: the text beside it wraps instead
+                            sx={{ whiteSpace: 'nowrap' }}
                             onClick={() => leave(message.action?.onClick)}
                         >
                             {message.action.label}

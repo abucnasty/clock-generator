@@ -84,6 +84,10 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - **You** check the spec against the plan and the owner's decisions, tighten the acceptance criteria, and look for
      checkpoint triggers. If the spec trips one, stop and ask the owner before implementing.
 2. **Implement** (implementer), with a **capture writer** alongside.
+   - Owner hard requirement, 2026-10-16: add tests only for meaningful behavior/regressions not already sufficiently
+     protected. Do not add/commit arbitrary cases, implementation-mirroring assertions or permutations to maximize
+     coverage. Existing full checks and reviews remain required. D9 independently audits and implements cleanup of
+     UX-rework-added UI tests before feat/ux-rework merges to master; see specs/D9-ui-test-audit.md.
    - Create the child branch `feat/ux-rework-p<N>-<topic>` from the phase branch.
    - As soon as the spec is final and re-checked against the phase head (coach run 4), a `gpt-6.1-sol` capture writer turns the spec's "Screens to capture" and acceptance criteria into
      `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
@@ -92,8 +96,11 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      `openTooltip`, `openMoreMenu` and `chooseMenuItem`; an item that renames a control updates `ui` in the same commit
      (coach run 5). The checks come from the spec, not from the code.
    - Reconcile every capture consumer affected by changed labels, navigation or state contracts before reporting.
-     Validate imports and ui bindings, then probe the affected real states against the immutable build. These probes
-     supplement the full evidence gate and fresh phase captures; they never replace them (phase 2 end coach).
+     Validate imports and ui bindings, then probe the affected real states against the immutable build. Retain fixture
+     hashes, native input changes, actual available clock options and relevant theme/native-element mappings before
+     finalizing selectors or source-specific classifiers. Keep specification assertions unchanged; observed rendering
+     establishes capture contracts, not acceptance criteria. These probes supplement the full evidence gate and fresh
+     phase captures; they never replace them (phase 2 end coach; phase 3 end coach).
    - The implementer builds to the spec, writes the tests the spec lists, and commits in the repo's style.
    - It changes only what the spec covers. Anything else it notices goes in its report as a follow-up, not into the
      code.
@@ -105,9 +112,11 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
      - the full local check set passing. In `clock-generator-ui`: `npm test`, `npm run lint`, `npm run knip`,
        `npm run check:icons`, `npm run build`. The same in `clock-generator` if the engine changed.
      - after screenshots of every screen the item touches, at 1440 and 720px (and 390px if the item affects
-       reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`
-       (widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
-       a `vite preview` of the build), with keyboard reach (`tabTo`), focus not obscured (`focusNotObscured`) and
+       reachability), made with the shared helpers in `docs/ux-rework/capture/lib.mjs`. Frame observation screenshots through native
+       scrolling against actual heading/header geometry before default axe; retain original negative diagnostics and
+       separate native keyboard, focus and activation proof so framing cannot hide a focus defect (phase 3 end coach).
+       Capture widths in parallel, one generation per width, the small sample where the build's size doesn't matter, against
+       a `vite preview` of the build, with keyboard reach (`tabTo`), focus not obscured (`focusNotObscured`) and
        keyboard-inert disabled or out-of-date states (`inertFromKeyboard`), every announcement reaching an unhidden live
        region (`checkAnnounced`, with and without a dialog open), an axe pass (`checkAxe`) on every captured state,
        focus not obscured at a short window height for every dialog, editor or sticky bar the item touches, and a
@@ -130,7 +139,8 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
 4. **Code review** (code reviewer, read-only). It reviews the child branch's diff against the spec for:
    - correctness bugs, including edge cases and state that goes out of date
    - whether the code reads like the surrounding code
-   - whether the tests are enough
+   - whether tests protect meaningful behavior and whether each new case/group is necessary; flag redundant,
+     brittle or coverage-number-driven additions as well as missing regression protection
    - scope creep
    - dead code and leftovers
    - lockfile and npm-version rules
@@ -184,7 +194,10 @@ the ledger says so.
 
 **Reports and the handoff note.** Keep detailed evidence once, in the item's `EVIDENCE.md`.
 Agent reports contain only the verdict, material findings, result counts and evidence paths (normally 10 lines or fewer).
-Link the evidence instead of repeating its narrative in reports, the ledger or handoff. Update only changed handoff
+Link the evidence instead of repeating its narrative in reports, the ledger or handoff. Future capture manifests
+enumerate current files and link historical bundles once by path, hash and their own manifest, with explicit
+revision-to-failure links; preserve every historical artifact without recursively embedding inventories (phase 3 end coach).
+Update only changed handoff
 fields; preserve decisions, recovery details and next actions. Batch intermediate ledger statuses at the next merge.
 These reporting reductions do not remove any required evidence or verification (owner, 2026-10-16). The orchestrator keeps a handoff note in its scratchpad
 (`HANDOFF.md`: each running agent's name, id, branch, port, what it waits on and the next action) current on every

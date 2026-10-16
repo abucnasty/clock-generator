@@ -33,7 +33,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as lib from './lib.mjs';
 import {
-    forWidths, previewServer, LOGISTIC, SMALL_SAMPLE,
+    forWidths, previewServer, LOGISTIC, SMALL_SAMPLE, ui,
     importFile, goConfigure, goResults, openMenu, noSideScroll, isClickable, contrast, waitReady,
     checkLabelInName, checkTabTo, checkFocusNotObscured, checkAnnounced,
 } from './lib.mjs';
@@ -117,7 +117,7 @@ const EXAMPLES = [
     ['Chemical science', 'chemical-science'], ['Electromagnetic science', 'electromagnetic-science'], ['Military science', 'military-science'],
     ['Production science', 'production-science'], ['Metallurgic science', 'metallurgic-science'], ['Agricultural science', 'agriculture-science'],
 ];
-const MENU_ORDER = ['Open build file…', 'Save build file', 'Try an example…', 'Getting started', 'Terms', 'Reset build'];
+const MENU_ORDER = ['Open build file…', 'Save build file', 'Copy share link', 'Try an example…', 'Getting started', 'Terms', 'Reset build'];
 
 // ---------------------------------------------------------------------------------------------------------- helpers
 
@@ -181,7 +181,10 @@ async function closeDialogs(page) {
         await page.keyboard.press('Escape');
         await page.waitForTimeout(350);
     }
-    await page.getByRole('menu').count() && (await page.keyboard.press('Escape'));
+    if (await page.getByRole('menu').count()) {
+        await page.keyboard.press('Escape');
+        await page.locator('[role=menu]').waitFor({ state: 'detached' });
+    }
 }
 async function dismissMessage(page) {
     if (!(await snack(page).count())) return;
@@ -664,6 +667,7 @@ try {
                 rec.check('latest mod: no old-mod notice in the confirm dialog', (await r.dlg.locator('.MuiAlert-message').count()) === 0);
                 await axe(rec, page, 'confirm dialog');
                 // the old-mod warning for 0.7.1 is none; import it
+                if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
                 await r.dlg.getByRole('button', { name: 'Import Selected', exact: true }).click();
                 await page.waitForTimeout(900);
                 const t = await targetNow(page);
@@ -687,6 +691,7 @@ try {
                 await dismissMessage(page);
                 await clickPaste(page, 'bar', text(FIXTURES.inferred));
                 if (await appears(confirmDlg(page), 12_000)) {
+                    if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
                     await confirmDlg(page).getByRole('button', { name: 'Import Selected', exact: true }).click();
                     await page.waitForTimeout(900);
                 }
@@ -728,6 +733,7 @@ try {
                 rec.check('already set: "Tick to replace your current target (… at 240/s)"', /Tick to replace your current target/i.test(r.t) && /240\/s/.test(r.t), r.t.match(/Tick to replace[^.]*\./)?.[0] ?? '');
                 if (r.has) {
                     await targetRow(r.dlg).check();
+                    if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
                     await r.dlg.getByRole('button', { name: 'Import Selected', exact: true }).click();
                     await page.waitForTimeout(900);
                     const t = await targetNow(page);
@@ -929,7 +935,8 @@ try {
             await axe(rec, page, 'the ⋮ menu');
             await cpair(rec, page, 'menu item "Reset build"', menuItem(page, /^Reset/));
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
+            // the closing menu takes longer the taller it is: wait until it is gone, not a fixed time (by CSS: a closing menu is aria-hidden, so getByRole no longer finds it)
+            await page.locator('[role=menu]').waitFor({ state: 'detached' });
             rec.check('Escape closes the menu and focus returns to the ⋮ button', await menuBtn(page).evaluate((el) => el === document.activeElement).catch(() => false));
 
             // Save build file downloads
@@ -945,7 +952,8 @@ try {
             } else {
                 rec.check('Save build file exists', false);
                 await page.keyboard.press('Escape');
-                await page.waitForTimeout(300);
+                // the closing menu takes longer the taller it is: wait until it is gone, not a fixed time (by CSS: a closing menu is aria-hidden, so getByRole no longer finds it)
+                await page.locator('[role=menu]').waitFor({ state: 'detached' });
             }
             await dismissMessage(page);
 
@@ -969,7 +977,8 @@ try {
             } else {
                 rec.check('Open build file… exists', false);
                 await page.keyboard.press('Escape');
-                await page.waitForTimeout(300);
+                // the closing menu takes longer the taller it is: wait until it is gone, not a fixed time (by CSS: a closing menu is aria-hidden, so getByRole no longer finds it)
+                await page.locator('[role=menu]').waitFor({ state: 'detached' });
             }
             await dismissMessage(page);
             // a file that is not JSON: a plain-words message, no raw parser text (ledger)

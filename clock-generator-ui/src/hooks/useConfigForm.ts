@@ -13,11 +13,12 @@ import type {
     ChestFormData,
     ConfigFormData,
     DrillFormData,
+    EntityKind,
     InserterFormData,
     MachineFormData,
 } from '../utils/configForm/formData';
 import { applyInserterFix } from '../utils/configForm/inserterFix';
-import { usePersistedConfigForm } from './usePersistedConfigForm';
+import { usePersistedConfigForm, type BuildLibrary } from './usePersistedConfigForm';
 
 // The form data types and helpers, for the components that use the form
 export {
@@ -37,7 +38,6 @@ export type {
     Condition,
     DrillFormData,
     EnableControlOverride,
-    EnableControlRange,
     InserterFormData,
     MachineFormData,
     RuleSet,
@@ -54,8 +54,13 @@ interface UseConfigFormResult {
     /** Tells the user the saved config could not be loaded and where it was backed up; null when there is no news */
     loadNotice: string | null;
     dismissLoadNotice: () => void;
+    /** Your builds: the builds kept in this browser, and the one open in this tab */
+    library: BuildLibrary;
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>;
     
+    duplicateEntity: (kind: EntityKind, index: number) => void;
+    updateInserters: (uuids: readonly string[], updates: Partial<InserterFormData>) => void;
+
     // Target output
     updateTargetOutput: (field: keyof ConfigFormData['target_output'], value: string | number) => void;
     
@@ -117,13 +122,15 @@ interface UseConfigFormResult {
 }
 
 export function useConfigForm(): UseConfigFormResult {
-    const { config, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice } = usePersistedConfigForm();
+    const { config, setConfig, resetConfig, isLoaded, loadError, unchecked, loadNotice, dismissLoadNotice, library } = usePersistedConfigForm();
 
     // Each edit applies its plain function of the form state
     const edits = useMemo(() => {
         const edit = <A extends unknown[]>(fn: (prev: ConfigFormData, ...args: A) => ConfigFormData) =>
             (...args: A) => setConfig((prev) => fn(prev, ...args));
         return {
+            duplicateEntity: edit(formEdits.duplicateEntity),
+            updateInserters: edit(formEdits.updateInserters),
             updateTargetOutput: edit(formEdits.updateTargetOutput),
             addMachine: edit(formEdits.addMachine),
             updateMachine: edit(formEdits.updateMachine),
@@ -184,6 +191,7 @@ export function useConfigForm(): UseConfigFormResult {
         loadError,
         loadNotice,
         dismissLoadNotice,
+        library,
         setConfig,
         ...edits,
         importConfig,

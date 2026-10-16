@@ -17,13 +17,15 @@ export interface MessageInput {
     action?: MessageAction;
     /** Read out after the text, and not shown: what a screen reader user needs besides, such as a key to press */
     hint?: string;
+    /** Show the message now, but let its owner announce it once an asynchronous outcome is known */
+    deferAnnouncement?: boolean;
     /** Called once when the message goes, however it goes: closed, timed out, or replaced by another */
     onClose?: () => void;
     /** Where focus goes when the player closes the message, or uses its action, from inside it; none leaves it be */
     returnFocus?: () => HTMLElement | null;
 }
 
-export interface Message extends Omit<MessageInput, 'severity' | 'durationMs'> {
+export interface Message extends Omit<MessageInput, 'severity' | 'durationMs' | 'deferAnnouncement'> {
     id: number;
     severity: MessageSeverity;
     durationMs: number | null;
@@ -33,6 +35,8 @@ export interface Message extends Omit<MessageInput, 'severity' | 'durationMs'> {
 export interface Announcement {
     id: number;
     text: string;
+    /** A deferred completion remains valid only while this message is still offered */
+    ownerMessageId?: number;
 }
 
 export interface MessageState {
@@ -43,7 +47,8 @@ export interface MessageState {
 type MessageEvent =
     | { type: 'notify'; id: number; message: MessageInput }
     | { type: 'dismiss'; id: number }
-    | { type: 'announce'; id: number; text: string };
+    | { type: 'announce'; id: number; text: string }
+    | { type: 'announce-message'; id: number; messageId: number; suffix?: string };
 
 export const NO_MESSAGE: MessageState = { current: null, announcement: null };
 
@@ -61,12 +66,12 @@ export const isUrgent = (severity: MessageSeverity) => severity === 'error' || s
 /**
  * One message at a time: a new one replaces the one shown, since the player should see the result of what they just
  * did. Closing a message that has already been replaced leaves the newer one open, and the state as it is. Every
- * message is also announced, with its hint, in the live region, as `announce` text is.
+ * message is also announced, with its hint, unless its owner defers that until an asynchronous outcome is known.
  */
 export function messagesReducer(state: MessageState, event: MessageEvent): MessageState {
     switch (event.type) {
         case 'notify': {
-            const { severity = 'info', durationMs, ...rest } = event.message;
+            const { severity = 'info', durationMs, deferAnnouncement, ...rest } = event.message;
             return {
                 current: {
                     ...rest,
@@ -74,12 +79,25 @@ export function messagesReducer(state: MessageState, event: MessageEvent): Messa
                     severity,
                     durationMs: durationMs !== undefined ? durationMs : DEFAULT_DURATION_MS[severity],
                 },
-                announcement: { id: event.id, text: [rest.text, rest.hint].filter(Boolean).join(' ') },
+                announcement: deferAnnouncement ? state.announcement : { id: event.id, text: [rest.text, rest.hint].filter(Boolean).join(' ') },
             };
         }
         case 'dismiss':
             return state.current?.id === event.id ? { ...state, current: null } : state;
         case 'announce':
             return { ...state, announcement: { id: event.id, text: event.text } };
+        case 'announce-message': {
+            // Closing/replacing the offer, or newer workflow news, makes this completion obsolete. A successful
+            // completion has a newer id too, so the same callback cannot read the offer out twice.
+            const message = state.current;
+            if (message?.id !== event.messageId || (state.announcement?.id ?? 0) > event.messageId) return state;
+            return { ...state, announcement: { id: event.id, text: [message.text, message.hint, event.suffix].filter(Boolean).join(' '), ownerMessageId: message.id } };
+        }
     }
+}
+
+/** Rechecked at delivery: dismissal, newer news or an unmounted host can invalidate a queued completion. */
+export function canDeliverAnnouncement(state: MessageState | null, announcement: Announcement): boolean {
+    return announcement.ownerMessageId === undefined || (state?.current?.id === announcement.ownerMessageId
+        && state?.announcement?.id === announcement.id);
 }

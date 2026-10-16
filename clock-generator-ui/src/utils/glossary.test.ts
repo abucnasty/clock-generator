@@ -5,7 +5,7 @@ import { WAKE_UP_DEFINITION, TERMS } from './wakeWindowCopy';
 import comparisonSource from '../components/ClockAlternativesPanel.tsx?raw';
 
 const IDS: GlossaryId[] = [
-    'swing', 'swing-plan', 'crafting-cycle', 'clock-period', 'wake-window', 'wake-up', 'start-point', 'copies', 'build',
+    'swing', 'swing-plan', 'crafting-cycle', 'clock-period', 'wake-window', 'wake-up', 'start-point', 'copies', 'build', 'your-builds', 'share-link',
     'clock', 'blueprint', 'check', 'enable-rule', 'assembling-machine', 'holds-the-rate', 'starved', 'jammed', 'recovers',
     'belt-slack', 'simulator', 'hand', 'lcm',
 ];

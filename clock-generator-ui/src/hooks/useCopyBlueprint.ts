@@ -1,79 +1,124 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 
 /** How long every Copy button says "Copied" */
 const COPIED_MS = 2000;
 
-interface CopyBlueprintOptions {
-    /** The selected clock's blueprint; nothing is copied without one */
-    blueprintString: string | null;
-    /** What to warn of when the selected clock is copied; null when nothing */
+export interface BlueprintCopyFailure {
+    blueprintString: string;
     rateWarning: string | null;
-    /** What the clocks were made for, while the build has changed since: copying then asks first. Null when not */
     staleFor: GeneratedFor | null;
-    /** Called once the string is on the clipboard, with the warning it was copied with */
-    onCopied: (rateWarning: string | null) => void;
+    running: boolean;
 }
 
-/** One copy of the blueprint, shared by every Copy button: the bar's, the card's and the string's */
+interface CopyBlueprintOptions {
+    blueprintString: string | null;
+    rateWarning: string | null;
+    staleFor: GeneratedFor | null;
+    running: boolean;
+    /** Opaque identity of the build, run and selected output; stable while that output is unchanged */
+    copyIdentity: object | null;
+    onCopied: (rateWarning: string | null, whileRunning: boolean) => void;
+    /** Called only after a successful write of the current best clock */
+    onPinned?: () => void;
+    onCopyFailed: (failure: BlueprintCopyFailure) => void;
+    /** Retires this owner's previous recovery feedback once per nonempty request, before confirmation or writing */
+    onCopyAttempt?: () => void;
+}
+
 interface CopyBlueprint {
-    /** Every Copy button says "Copied" for a moment after any of them copied */
     copied: boolean;
-    /** Copies, or, for the clock of an earlier build, asks first */
     request: () => void;
-    /** The question about an earlier build's clock is open */
     confirmingStale: boolean;
-    /** Copies the earlier build's clock after all */
     confirm: () => void;
     cancel: () => void;
 }
 
-/**
- * The one copy of the blueprint that every Copy button uses, so that all of them say "Copied" together, the stale
- * question is asked in one dialog, and what is said after a copy is said once.
- */
-export function useCopyBlueprint({ blueprintString, rateWarning, staleFor, onCopied }: CopyBlueprintOptions): CopyBlueprint {
-    // what was copied, and for which earlier build the question is open: another clock is not "Copied", and a question
-    // asked about clocks that have since become current (or been made again) is not open any more
-    const [copiedFor, setCopiedFor] = useState<{ blueprint: string; staleFor: GeneratedFor | null } | null>(null);
-    const [confirmingFor, setConfirmingFor] = useState<GeneratedFor | null>(null);
-    const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    useEffect(() => () => clearTimeout(timer.current), []);
+interface Attempt {
+    sequence: number;
+    identity: object | null;
+    snapshot: BlueprintCopyFailure;
+}
 
-    const copy = useCallback(async () => {
-        if (!blueprintString) {
-            return;
-        }
+/** One copy operation shared by all Copy buttons, including confirmation and failed-attempt recovery. */
+export function useCopyBlueprint(options: CopyBlueprintOptions): CopyBlueprint {
+    const latest = useRef(options);
+    useLayoutEffect(() => { latest.current = options; });
+    const sequence = useRef(0);
+    const confirmation = useRef<Attempt | null>(null);
+    const mounted = useRef(true);
+    const [copiedFor, setCopiedFor] = useState<Attempt | null>(null);
+    const [confirmingFor, setConfirmingFor] = useState<Attempt | null>(null);
+    if (confirmingFor && confirmingFor.identity !== options.copyIdentity) setConfirmingFor(null);
+    const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    useEffect(() => {
+        mounted.current = true;
+        const pendingRequests = sequence;
+        return () => {
+            mounted.current = false;
+            pendingRequests.current++;
+            clearTimeout(timer.current);
+        };
+    }, []);
+
+    const copy = useCallback(async (attempt: Attempt) => {
         try {
-            await navigator.clipboard.writeText(blueprintString);
-        } catch (err) {
-            console.error('Failed to copy:', err);
+            // A synchronous API throw or missing clipboard is the same recoverable failure as a rejected write.
+            await navigator.clipboard.writeText(attempt.snapshot.blueprintString);
+        } catch {
+            if (mounted.current && sequence.current === attempt.sequence) {
+                latest.current.onCopyFailed(attempt.snapshot);
+            }
             return;
         }
-        setCopiedFor({ blueprint: blueprintString, staleFor });
-        onCopied(rateWarning);
-        clearTimeout(timer.current);
+        if (!mounted.current || sequence.current !== attempt.sequence || latest.current.copyIdentity !== attempt.identity) return;
+        setCopiedFor(attempt);
+        if (attempt.snapshot.running) latest.current.onPinned?.();
+        latest.current.onCopied(attempt.snapshot.rateWarning, attempt.snapshot.running);
         timer.current = setTimeout(() => setCopiedFor(null), COPIED_MS);
-    }, [blueprintString, staleFor, rateWarning, onCopied]);
+    }, []);
 
     const request = useCallback(() => {
-        if (staleFor) {
-            setConfirmingFor(staleFor);
-        } else {
-            void copy();
-        }
-    }, [staleFor, copy]);
-    const confirm = useCallback(() => {
+        const current = latest.current;
+        if (!current.blueprintString) return;
+        const attempt: Attempt = {
+            sequence: ++sequence.current,
+            identity: current.copyIdentity,
+            snapshot: {
+                blueprintString: current.blueprintString,
+                rateWarning: current.rateWarning,
+                staleFor: current.staleFor,
+                running: current.running,
+            },
+        };
+        clearTimeout(timer.current);
+        setCopiedFor(null);
         setConfirmingFor(null);
-        void copy();
+        confirmation.current = null;
+        current.onCopyAttempt?.();
+        if (attempt.snapshot.staleFor) {
+            confirmation.current = attempt;
+            setConfirmingFor(attempt);
+        }
+        else void copy(attempt);
     }, [copy]);
-    const cancel = useCallback(() => setConfirmingFor(null), []);
+    const confirm = useCallback(() => {
+        const attempt = confirmation.current;
+        confirmation.current = null;
+        setConfirmingFor(null);
+        if (attempt && attempt.sequence === sequence.current && attempt.identity === latest.current.copyIdentity) {
+            void copy(attempt);
+        }
+    }, [copy]);
+    const cancel = useCallback(() => {
+        confirmation.current = null;
+        setConfirmingFor(null);
+    }, []);
 
     return {
-        // an edit that puts the clocks out of date ends "Copied" too: the string is the same, but it is an old clock now
-        copied: copiedFor !== null && copiedFor.blueprint === blueprintString && copiedFor.staleFor === staleFor,
+        copied: copiedFor !== null && copiedFor.identity === options.copyIdentity,
         request,
-        confirmingStale: confirmingFor !== null && confirmingFor === staleFor,
+        confirmingStale: confirmingFor !== null && confirmingFor.identity === options.copyIdentity,
         confirm,
         cancel,
     };

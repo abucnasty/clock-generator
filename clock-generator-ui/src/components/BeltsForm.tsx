@@ -19,6 +19,8 @@ import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
+import { RowActionsMenu } from './RowActionsMenu';
+import { useAnnounce } from '../hooks/useMessages';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
@@ -33,6 +35,7 @@ interface BeltsFormProps {
     onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
+    onDuplicate: (index: number) => void;
     /** Asked when an inserter takes from one of these belts */
     beltQuestion: BeltQuestion;
     onBeltAnswer: (answer: BeltAnswer) => void;
@@ -45,6 +48,7 @@ function BeltsFormComponent({
     onUpdate,
     onRemove,
     onReorder,
+    onDuplicate,
     beltQuestion,
     onBeltAnswer,
 }: BeltsFormProps) {
@@ -82,7 +86,18 @@ function BeltsFormComponent({
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, remove } = useFocusAfterRemove(belts.length, onRemove);
+    const { cardRef, remove, afterAdd } = useFocusAfterRemove(belts.length, onRemove);
+    const announce = useAnnounce();
+    const addedLabel = () => entityLabel('belt', Math.max(0, ...belts.map(row => row.id)) + 1);
+    const duplicate = (index: number) => {
+        afterAdd(() => onDuplicate(index));
+        announce(`Added ${addedLabel()}, a copy of ${entityLabel('belt', belts[index].id)}.`);
+    };
+
+    const add = () => {
+        afterAdd(onAdd);
+        announce(`Added ${addedLabel()}.`);
+    };
 
     return (
         <PanelSection
@@ -106,7 +121,7 @@ function BeltsFormComponent({
                 ),
             }}
             actions={(
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
+                <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
                     Add Belt
                 </Button>
             )}
@@ -118,7 +133,7 @@ function BeltsFormComponent({
                 </Box>
             )}
 
-            <SortableList itemKeys={belts.map((b) => b._uuid)} itemLabels={belts.map((b) => entityLabel('belt', b.id))} onReorder={onReorder}>
+            <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
                 <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)}>
                     {(dragHandle) => (
@@ -134,7 +149,7 @@ function BeltsFormComponent({
                 >
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
                         {dragHandle}
-                        <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <FormControl data-row-first="" size="small" sx={{ minWidth: 180 }}>
                             <InputLabel>Belt Type</InputLabel>
                             <Select
                                 inputProps={{ 'aria-label': SELECT_NAMES.beltType }}
@@ -187,6 +202,9 @@ function BeltsFormComponent({
                                 Add Lane
                             </Button>
                         )}
+                        <RowActionsMenu label={entityLabel('belt', belt.id)} onDuplicate={() => duplicate(beltIndex)}
+                            onMoveUp={beltIndex > 0 ? () => onReorder(beltIndex, beltIndex - 1) : undefined}
+                            onMoveDown={beltIndex < belts.length - 1 ? () => onReorder(beltIndex, beltIndex + 1) : undefined} />
                         <IconButton onClick={() => remove(beltIndex)} color="error" aria-label={deleteButtonLabel('belt', belt.id)} data-row-delete="">
                             <Delete />
                         </IconButton>

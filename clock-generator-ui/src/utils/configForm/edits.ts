@@ -5,12 +5,10 @@ import {
     BELT_FORM_DEFAULT_TYPE,
     type BeltFormData,
     type BeltLaneFormData,
-    type BufferChestFormData,
     type ChestFormData,
     type ConfigFormData,
     type DrillFormData,
     type EntityKind,
-    type InfinityChestFormData,
     type InserterFormData,
     type MachineFormData,
 } from './formData';
@@ -21,6 +19,18 @@ import {
 export function nextId(prev: ConfigFormData, kind: EntityKind): number {
     const items: { id: number }[] = kind === 'drills' ? prev.drills?.configs ?? [] : prev[kind];
     return Math.max(1, ...items.map((item) => item.id + 1));
+}
+
+/** Append a deep copy without changing references to the original entity. */
+export function duplicateEntity(prev: ConfigFormData, kind: EntityKind, index: number): ConfigFormData {
+    const list = kind === 'drills' ? prev.drills?.configs ?? [] : prev[kind];
+    const item = list[index];
+    if (!item) return prev;
+    const copy = { ...structuredClone(item), id: nextId(prev, kind), _uuid: crypto.randomUUID() };
+    if (kind === 'drills') {
+        return { ...prev, drills: { ...prev.drills!, configs: [...prev.drills!.configs, copy as DrillFormData] } };
+    }
+    return { ...prev, [kind]: [...prev[kind], copy] };
 }
 
 /**
@@ -184,6 +194,26 @@ export function updateInserter(prev: ConfigFormData, index: number, updates: Par
     };
 }
 
+/** One bulk edit; each row keeps its own fields and non-rule overrides. */
+export function updateInserters(prev: ConfigFormData, uuids: readonly string[], updates: Partial<InserterFormData>): ConfigFormData {
+    if (uuids.length === 0) return prev;
+    const selected = new Set(uuids);
+    return {
+        ...prev,
+        inserters: prev.inserters.map(ins => {
+            if (!selected.has(ins._uuid)) return ins;
+            const next = { ...ins, ...updates };
+            if ('overrides' in updates) {
+                delete next._forced_always;
+                next.overrides = { ...ins.overrides, ...updates.overrides };
+            }
+            if ('filters' in updates && updates.filters === undefined) delete next.filters;
+            if ('stack_size' in updates && updates.stack_size === undefined) delete next.stack_size;
+            return next;
+        }),
+    };
+}
+
 export function removeInserter(prev: ConfigFormData, index: number): ConfigFormData {
     const removed = removeAndRenumber(prev.inserters, index);
     if (!removed) return prev;
@@ -267,30 +297,15 @@ export function updateChest(prev: ConfigFormData, index: number, updates: Partia
     };
 }
 
+/** The same chest conversion for a dialog draft and the committed form. */
+export function switchedChest(chest: ChestFormData, newType: ChestType): ChestFormData {
+    return newType === ChestType.BUFFER_CHEST
+        ? { type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid, storage_size: 1, item_filter: '' }
+        : { type: ChestType.INFINITY_CHEST, id: chest.id, _uuid: chest._uuid, item_filter: [{ item_name: '', request_count: 1 }] };
+}
+
 export function switchChestType(prev: ConfigFormData, index: number, newType: ChestType): ConfigFormData {
-    return {
-        ...prev,
-        chests: prev.chests.map((c, i) => {
-            if (i !== index) return c;
-            // Preserve the ID when switching types
-            if (newType === ChestType.BUFFER_CHEST) {
-                return {
-                    type: ChestType.BUFFER_CHEST,
-                    id: c.id,
-                    _uuid: c._uuid,
-                    storage_size: 1,
-                    item_filter: '',
-                } as BufferChestFormData;
-            } else {
-                return {
-                    type: ChestType.INFINITY_CHEST,
-                    id: c.id,
-                    _uuid: c._uuid,
-                    item_filter: [{ item_name: '', request_count: 1 }],
-                } as InfinityChestFormData;
-            }
-        }),
-    };
+    return { ...prev, chests: prev.chests.map((chest, i) => i === index ? switchedChest(chest, newType) : chest) };
 }
 
 export function removeChest(prev: ConfigFormData, index: number): ConfigFormData {

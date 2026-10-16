@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { messagesReducer, NO_MESSAGE, type MessageInput, type MessageState } from './messages';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { canDeliverAnnouncement, messagesReducer, NO_MESSAGE, type MessageInput, type MessageState } from './messages';
+import { announceText } from './announcer';
 
 const notify = (state: MessageState, id: number, message: MessageInput) =>
     messagesReducer(state, { type: 'notify', id, message });
@@ -97,5 +98,121 @@ describe('the live region', () => {
         const announced = messagesReducer(shown, { type: 'announce', id: 2, text: 'Blueprint copied' });
         expect(announced.current).toBe(shown.current);
         expect(messagesReducer(announced, { type: 'dismiss', id: 1 }).announcement).toBe(announced.announcement);
+    });
+});
+
+
+describe('a shared build waiting for its kept clocks', () => {
+    const message: MessageInput = {
+        text: 'Shared build opened: Science.',
+        hint: 'Or press Cmd+Z to undo.',
+        action: { label: 'Undo', onClick: () => {} },
+        durationMs: null,
+        deferAnnouncement: true,
+    };
+    const complete = (state: MessageState, id = 2) => messagesReducer(state, {
+        type: 'announce-message', id, messageId: 1, suffix: 'Its clocks are back.',
+    });
+
+    it('offers Undo immediately, then announces the opening, shortcut and restored clocks together once', () => {
+        const waiting = notify(NO_MESSAGE, 1, message);
+        expect(waiting.current).toMatchObject({ text: message.text, action: message.action, durationMs: null });
+        expect(waiting.announcement).toBeNull();
+        const completed = complete(waiting);
+        expect(completed.current).toBe(waiting.current);
+        expect(completed.announcement?.text).toBe('Shared build opened: Science. Or press Cmd+Z to undo. Its clocks are back.');
+        expect(complete(completed, 3)).toBe(completed);
+    });
+
+    it('does not interrupt a newer workflow action with an obsolete completion', () => {
+        const waiting = notify(NO_MESSAGE, 1, message);
+        const checking = messagesReducer(waiting, { type: 'announce', id: 2, text: 'Checking the build.' });
+        // The offer may still be drawn while the Check action's withdrawal is being applied.
+        expect(checking.current).toBe(waiting.current);
+        expect(complete(checking, 3)).toBe(checking);
+    });
+
+    it('does not announce an offer that was closed or replaced while its clocks were loading', () => {
+        const waiting = notify(NO_MESSAGE, 1, message);
+        const closed = messagesReducer(waiting, { type: 'dismiss', id: 1 });
+        expect(complete(closed)).toBe(closed);
+        const newer = notify(waiting, 2, { text: 'Build reset.' });
+        expect(complete(newer, 3)).toBe(newer);
+    });
+});
+
+
+describe('owned speech waiting for a dialog to close', () => {
+    // Only the DOM operations used by the real announcer; no simulated timer or delivery implementation.
+    class Region {
+        isConnected = true;
+        hidden = false;
+        textContent = '';
+        style = { cssText: '' };
+        closest() { return this.hidden ? this : null; }
+        setAttribute() {}
+        replaceChildren(...nodes: Region[]) { this.textContent = nodes.map(node => node.textContent).join(''); }
+        remove() { this.isConnected = false; }
+    }
+    let main: Region, nodes: Region[], appended: Region[];
+    beforeEach(() => {
+        vi.useFakeTimers();
+        nodes = []; appended = []; main = new Region(); main.hidden = true;
+        vi.stubGlobal('document', {
+            createElement: () => { const node = new Region(); nodes.push(node); return node; },
+            body: { append: (node: Region) => appended.push(node) },
+        });
+    });
+    afterEach(() => {
+        nodes.forEach(node => node.remove());
+        vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals();
+    });
+    const completedShare = () => messagesReducer(notify(NO_MESSAGE, 1, {
+        text: 'Shared build opened: Science.', hint: 'Or press Cmd+Z to undo.', deferAnnouncement: true,
+    }), { type: 'announce-message', id: 2, messageId: 1, suffix: 'Its clocks are back.' });
+    const queue = (readState: () => MessageState | null, state: MessageState) => {
+        const announcement = state.announcement!;
+        announceText(main as unknown as HTMLElement, announcement.text, () => canDeliverAnnouncement(readState(), announcement));
+        expect(appended).toHaveLength(1);
+        expect(appended[0].hidden).toBe(false);
+        expect(appended[0].textContent).toBe('');
+    };
+
+    it('does not write queued shared success when Undo dismisses its offer before delivery', () => {
+        let committed = completedShare();
+        queue(() => committed, committed);
+        vi.advanceTimersByTime(99);
+        // The closing dialog releases the page; accepted Undo dismisses the offer without newer speech.
+        main.hidden = false;
+        committed = messagesReducer(committed, { type: 'dismiss', id: 1 });
+        vi.advanceTimersByTime(1);
+        expect(appended[0].textContent).toBe('');
+        expect(main.textContent).toBe('');
+    });
+
+    it('reroutes still-current speech when a newly opened menu hides the queued spare', () => {
+        const committed = completedShare();
+        queue(() => committed, committed);
+        const hiddenSpare = appended[0];
+        hiddenSpare.hidden = true;
+        vi.advanceTimersByTime(100);
+        expect(hiddenSpare.textContent).toBe('');
+        expect(appended).toHaveLength(2);
+        const replacement = appended[1];
+        expect(replacement.hidden).toBe(false);
+        expect(replacement.isConnected).toBe(true);
+        expect(replacement.textContent).toBe('');
+        vi.advanceTimersByTime(100);
+        expect(hiddenSpare.textContent).toBe('');
+        expect(replacement.textContent).toBe('Shared build opened: Science. Or press Cmd+Z to undo. Its clocks are back.');
+        expect(main.textContent).toBe('');
+    });
+
+    it('writes the composed success to the exposed spare when its offer is still current at delivery', () => {
+        const committed = completedShare();
+        queue(() => committed, committed);
+        vi.advanceTimersByTime(100);
+        expect(appended[0].textContent).toBe('Shared build opened: Science. Or press Cmd+Z to undo. Its clocks are back.');
+        expect(main.textContent).toBe('');
     });
 });

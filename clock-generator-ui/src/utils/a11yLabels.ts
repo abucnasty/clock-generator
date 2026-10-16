@@ -1,4 +1,3 @@
-import type { Announcements, UniqueIdentifier } from '@dnd-kit/core';
 
 /**
  * The accessible names that are not the text on screen, in one place so the wording can be read (and changed) together.
@@ -32,12 +31,34 @@ export const BUTTON_NAMES = {
     removeRange: 'Remove wake window',
     close: 'Close',
     moreOptions: 'More options',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit fullscreen',
+    useClockWindows: "Use the clock's wake windows",
+    replaceConditions: 'Replace conditions',
+    useTemplate: 'Use template',
+    replaceRule: 'Replace rule',
+} as const;
+
+/** The rule editor's numbered buttons: "Remove wake window 2", "Remove group 1" */
+export const removeRangeName = (n: number) => `${BUTTON_NAMES.removeRange} ${n}`;
+export const removeGroupName = (n: number) => `Remove group ${n}`;
+
+/** The rule editor's tick fields: "Start tick, wake window 1", which holds the visible label "Start tick" */
+export function windowFieldName(side: 'start' | 'end', n: number): string {
+    return `${side === 'start' ? 'Start tick' : 'End tick'}, wake window ${n}`;
+}
+
+/** The names of the rule editor's toggle groups, which have no visible label */
+export const GROUP_NAMES = {
+    joinConditions: 'Join conditions with',
+    whichEnd: 'Which end',
+    whichMachine: 'Which machine',
 } as const;
 
 /** Fields with no visible label of their own */
 export const FIELD_NAMES = {
     blueprintString: 'Blueprint string',
-    latchedMode: 'Latched mode',
+    latchedMode: 'Latched',
 } as const;
 
 export const PROGRESS_NAMES = {
@@ -55,6 +76,7 @@ export const SCROLL_REGION_NAMES = {
     fuelConsumption: 'Fuel consumption table',
     fuelClocks: 'Fuel clocks table',
     fuelTimeline: 'Fuel timeline chart',
+    fuelEvents: 'Fuel inserter events table',
     stateTimeline: 'State transition timeline',
     transferTimeline: 'Transfer activity timeline',
     shiftRange: 'Shift range chart',
@@ -95,10 +117,9 @@ export const CHART_NAMES = {
     fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock wake windows and swings`,
 } as const;
 
-/** The name of a row's drag handle, "Reorder Inserter 2" */
-export function reorderName(rowLabel: string): string {
-    return `Reorder ${rowLabel}`;
-}
+/** Names of the row menu and selection checkbox. */
+export const rowActionsName = (label: string) => `More actions for ${label}`;
+export const selectRowName = (label: string) => `Select ${label}`;
 
 /** The name of a recipe field: "Recipe, Machine 2" (the owner is the row's name, or "Target Output") */
 export function recipeName(owner: string): string {
@@ -116,26 +137,4 @@ export function deleteLaneName(beltLabel: string, lane: number): string {
 /** The name of a filter slot's remove button, "Remove filter 1: iron-plate" (the slot is counted from 1) */
 export function removeFilterName(slot: number, item: string): string {
     return `Remove filter ${slot}: ${item}`;
-}
-
-/**
- * What dnd-kit reads out while a row is dragged. Its defaults say "Picked up draggable item" and the row's key, a UUID.
- * This names the row the way its chip does (the labels, by key) and gives positions: "Inserter 2 is over position 3".
- */
-export function reorderAnnouncements(labels: ReadonlyMap<string, string>, keys: readonly string[]): Announcements {
-    const positionOf = (id: UniqueIdentifier): number => keys.indexOf(String(id)) + 1;
-    const nameOf = (id: UniqueIdentifier): string => labels.get(String(id)) ?? 'The row';
-    return {
-        onDragStart: ({ active }) => `Picked up ${nameOf(active.id)}.`,
-        onDragOver: ({ active, over }) =>
-            over
-                ? `${nameOf(active.id)} is over position ${positionOf(over.id)}.`
-                : `${nameOf(active.id)} is not over a position.`,
-        onDragEnd: ({ active, over }) =>
-            over
-                ? `${nameOf(active.id)} was dropped at position ${positionOf(over.id)}.`
-                : `${nameOf(active.id)} was dropped where it was, at position ${positionOf(active.id)}.`,
-        onDragCancel: ({ active }) =>
-            `Reordering cancelled; ${nameOf(active.id)} is back at position ${positionOf(active.id)}.`,
-    };
 }

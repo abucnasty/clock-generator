@@ -4,7 +4,7 @@ import type { RecipeInfo } from '../hooks/useSimulationWorker';
 
 type EntityRef = { type: 'machine' | 'belt' | 'chest'; id: number };
 
-function getSourceItems(
+export function sourceItemsOf(
     source: EntityRef,
     machines: MachineFormData[],
     belts: BeltFormData[],
@@ -63,9 +63,22 @@ export function inferInserterItems(
     chests: ChestFormData[],
     getRecipeInfo?: (name: string) => RecipeInfo | null,
 ): string[] {
-    const sourceItems = getSourceItems(inserter.source, machines, belts, chests, getRecipeInfo);
+    const sourceItems = sourceItemsOf(inserter.source, machines, belts, chests, getRecipeInfo);
     const sinkNeeds = getSinkNeeds(inserter.sink, sourceItems, machines, chests, getRecipeInfo);
 
     if (sinkNeeds.length === 0) return sourceItems;
     return sourceItems.filter(item => sinkNeeds.includes(item));
+}
+
+/** Items available to rule expressions at either end, including a machine's inputs and outputs. */
+export function itemsAround(inserter: InserterFormData, machines: MachineFormData[], belts: BeltFormData[], chests: ChestFormData[], getRecipeInfo?: (name: string) => RecipeInfo | null): string[] {
+    const items = new Set<string>();
+    for (const ref of [inserter.source, inserter.sink]) {
+        sourceItemsOf(ref, machines, belts, chests, getRecipeInfo).forEach(item => items.add(item));
+        if (ref.type === 'machine') {
+            const machine = machines.find(m => m.id === ref.id);
+            if (machine?.recipe) getRecipeInfo?.(machine.recipe)?.ingredients.forEach(item => items.add(item));
+        }
+    }
+    return [...items];
 }

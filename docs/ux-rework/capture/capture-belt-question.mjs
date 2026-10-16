@@ -52,8 +52,8 @@ const T = {
     movingLine: 'Items keep arriving, so a pickup can come late. Clocks leave a few extra ticks (belt slack) at the end of each wake window of a belt-fed inserter.',
     standingLine: 'The belts are full and never move. Clocks get no belt slack and can have fewer wake-ups.',
     help: 'Not sure? Leave it on Moving.',
-    resMoving: 'These clocks assume your input belts are moving.',
-    resStanding: 'These clocks assume your input belts are backed up and standing still.',
+    resMoving: 'This run used your Moving belt setting.',
+    resStanding: 'This run used your Backed up and standing still belt setting.',
     toStanding: 'My belts stand still. Generate again',
     toMoving: 'My belts move. Generate again',
     chipPassed: 'Check passed',
@@ -87,7 +87,7 @@ const passedChip = (page) => page.locator('header .MuiChip-root').filter({ hasTe
 const lineLoc = (page, text) => page.getByText(text, { exact: true }).first();
 const actionBtn = (page, name) => page.getByRole('button', { name, exact: true });
 const hintLoc = (page) => page.getByText(HINT_RE).first();
-const staleBanner = (page) => page.locator('.MuiAlert-root').filter({ hasText: /out of date|changed since|no longer|stale/i }).filter({ hasNotText: /These clocks assume/ }).first(); // SELECTOR: confirm (1.1 banner wording)
+const staleBanner = (page) => page.locator('.MuiAlert-root').filter({ hasText: /out of date|changed since|no longer|stale/i }).filter({ hasNotText: /This run used your/ }).first(); // SELECTOR: confirm (1.1 banner wording)
 const clocksPanel = (page) => page.getByRole('heading', { name: 'Compare other clocks', exact: true });
 const viewOf = (page) =>
     page.evaluate(() => {

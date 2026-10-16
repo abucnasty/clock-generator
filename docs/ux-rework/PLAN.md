@@ -490,19 +490,55 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - the tests pass
 - the fresh UX review is attached to the phase PR.
 
-## Deferred roadmap: Compact view (D1)
+## Phase 4: approved follow-up work
 
-Owner feedback, 2026-10-16: scope an optional denser view for experienced users, especially Results. Reduce excessive padding, repeated labels/helpers and the double-header footprint; make the version visible without scrolling. Preserve newcomer defaults, essential feedback and accessibility. See [D1 scope](specs/D1-compact-view.md).
+Owner approvals, 2026-10-16: D1–D9 and first-visit refinement form Phase 4 against `feat/ux-rework`. The proposal approval round is complete; track exact choices and execution order in [Phase 4 decisions](specs/phase4-decisions.md). D8 is investigation only, returning for implementation approval. D9 includes actual cleanup and is mandatory before feature→master regardless of phase label. First finish Phase 3 closeout/owner checkpoint; capture D3's baseline before D1 changes, finalize item specs, then follow actual dependencies. All current verification and the three fresh phase-end reviewers remain required for Phase 4.
 
-This is planning only, deferred beyond the current implementation queue until the owner's broader audit. It does not extend the current phase completion criteria or release scope; no product implementation now.
+### Approved Phase 4 scope: Compact view (D1)
 
-### Further deferred design proposals (D2–D8)
+Owner approval, 2026-10-16, B / A / A: include Results/header first, then compact Configure machine/belt/inserter rows using the shared editor. New users retain the explanatory default; Compact is opt-in and remembered locally. Keep comparison visible while Why, Wake and Install share one contextual area, with routine helpers collapsed and help available on demand. Use one slim header with version visible and responsive side-by-side/reflow layouts. Preserve essential units, assumptions, warnings, errors, actions and accessibility. See [D1 scope](specs/D1-compact-view.md).
 
-Owner requested drafts for later discussion: light/dark mode; a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals are not finalized specs, implementation authorizations or additions to current phase/release completion criteria.
+This approval moves D1 from the deferred backlog into Phase 4. Detailed specs, independent reviews and normal evidence gates precede implementation/merge; Phase 3 completion criteria are unchanged.
+
+### Approved Phase 4 scope: Light/dark mode (D2)
+
+Owner approval, 2026-10-16, A / A / B: include D2 after the density work; offer locally remembered System / Light / Dark independently of Compact, with System as the default for new installations. Cover the complete interface including charts/diagrams, preserving the Factorio styling and current contrast/accessibility requirements. Keep preferences outside build exports/share links. See [D2 scope](specs/D2-theme-modes.md) and the [decision register](specs/phase4-decisions.md). Detailed specs/reviews/gates remain required.
+
+### Approved Phase 4 scope: Task-based usability audit (D3)
+
+Owner approval, 2026-10-16, A / A / A: integrate a bounded exercise using two representative builds and three tasks (import/edit/generate; compare/select/copy; reopen/find installation guidance). Measure a baseline before D1 and repeat the same tasks after Phase 4, comparing scroll distance, interactions and interpretation problems. Agent walkthrough measurements supply a short before/after scorecard; owner participation is optional and the measurements are not proof of human usability. Findings outside approved scope return for owner decision. Existing verification and all three phase-end reviewers remain required. See [D3 scope](specs/D3-task-audit.md).
+
+### Approved Phase 4 scope: Clock recommendations and tradeoffs (D4)
+
+Owner approval, 2026-10-16, A / A / A: group comparison clocks by belt compatibility (matches current setting versus requires a different setting), preserving inspectable/selectable alternatives and visible conditions. Show one concise selected-clock reason/tradeoff with deeper details on demand, in both explanatory and Compact views. Reuse existing ranking, selection rules and actual result metrics; preserve relevant rate/recovery/belt warnings and unit scopes without claiming measured UPS savings. See [D4 scope](specs/D4-clock-tradeoffs.md).
+
+### Approved Phase 4 scope: Exceptions and assumptions (D5)
+
+Owner approval, 2026-10-16, A / A / A: summarize common defaults once per section in Compact and show differences on rows, retaining fuller labels in the explanatory view. Distinguish Automatic/Explicit even when numerical values match, using text. Show concise assumptions during import review and on Results, with detail available and result assumptions tied to the saved result's snapshot. Reuse existing metadata/editors; preserve essential feedback and accessibility without turning routine defaults into warnings or adding a change-history system. See [D5 scope](specs/D5-exceptions-assumptions.md).
+
+### Approved Phase 4 scope: Display preferences (D6)
+
+Owner approval, 2026-10-16, A / A / A: one labeled Display button in the slim header, without another header row. Use a small popover for immediately applied, remembered Compact and System / Light / Dark choices. One browser-wide preference set is shared across builds and excluded from build data/exports/share links. Preserve D1/D2 defaults, editing state, results and selection; responsive layout remains automatic. See [D6 scope](specs/D6-display-preferences.md).
+
+### Approved Phase 4 scope: Working context (D7)
+
+Owner approval, 2026-10-16, A / A / A: remember selected entity, Configure/Results view, detail tab, expanded sections, existing sort/filter choices and approximate page position locally per build across reloads/switches, outside exports/share links. Extend actual remaining gaps after Phase 3, preserving its chosen-clock/result persistence. Retain Save/Cancel without unsaved-draft recovery; removed entities/layout changes get sensible fallbacks and validation navigation takes precedence. See [D7 scope](specs/D7-working-context.md).
+
+### Approved Phase 4 investigation: Per-machine production rates (D8)
+
+Owner approval, 2026-10-16, A / A / A: define rate semantics and investigate authoritative engine data, then return with an implementation proposal for owner approval. The intended target is read-only engine-derived per-machine planned demand, alongside distinct maximum/achieved values, for one modeled unit with all-Copies totals labeled separately. Investigate Check/Generate availability, multiple outputs/by-products, intermediate allocation, fractional Copies and stale/unknown values. This approval does not implement the engine/UI feature or display. See [D8 investigation scope](specs/D8-machine-rate-feasibility.md).
+
+### Approved Phase 4 scope and hard final-merge requirement: UI test audit/cleanup (D9)
+
+Owner approval, 2026-10-16: choice B authorizes independent audit AND implemented cleanup of tests added by this UX rework inside `clock-generator-ui`, including new cases in existing files and later UX additions. Exclude engine tests, capture scripts, pre-existing UI tests and unrelated upstream additions. Effective immediately, add only tests protecting meaningful behavior/regressions; do not add/commit arbitrary tests or permutations to maximize coverage. D9 must deliver justified removals/consolidations, remaining-coverage evidence and before/after diff/test/runtime evidence before `feat/ux-rework` merges to `master`. Phase numbering/timing is flexible; do not carry cleanup beyond release or close on a report alone. Current checks/reviews and all three phase-end reviewers remain required. See [D9 scope](specs/D9-ui-test-audit.md).
+
+### Approved Phase 4 scope: First-visit route refinement
+
+Owner approval, 2026-10-16, A / A: short purpose statement and immediate Paste/Example/Build-by-hand choices, Paste primary, full Sidecar guide on demand. Initial hints describe routes; recipe guidance follows choosing Build by hand. Preserve mod link/full instructions/manual-paste recovery/existing intro dismissal. See [first-visit scope](specs/phase4-first-visit.md). No proposal remains pending from this approval round; final specs/reviews and owner phase checkpoints still apply.
 
 ## Verification (every phase)
 
-1. **Tests.** Vitest tests for every piece of logic touched:
+1. **Tests.** Meaningful Vitest behavioral/regression coverage for touched logic; reuse existing coverage and avoid arbitrary additions or redundant permutations intended to maximize coverage numbers (owner hard requirement, 2026-10-16):
    - the staleness check
    - undo snapshots
    - renumbering and remapping
@@ -526,6 +562,8 @@ Owner requested drafts for later discussion: light/dark mode; a task-based audit
 
 ## The final PR (`feat/ux-rework` → `master`)
 
+**Hard pre-merge requirement (owner, 2026-10-16):** D9's independently reviewed UI-test cleanup must be implemented and included in `feat/ux-rework` before merge to `master`, regardless of phase numbering. Link its actual scope reduction and remaining-coverage evidence in the final PR. A cleanup proposal or deferred issue alone is insufficient. Keep the full existing check workflow and three phase-end reviewers; no coverage-number-driven additions or pipeline changes are authorized.
+
 0. **File the issues found (owner, 2026-10-14).** Every finding that was not fixed in the rework (the ledger's
    Follow-ups, the known issues, and anything left open by the last UX review) becomes a GitHub issue, in one pass:
    - the orchestrator drafts them in `docs/ux-rework/ISSUES.md`: one entry per issue with a title, a body (what's wrong,
@@ -536,7 +574,7 @@ Owner requested drafts for later discussion: light/dark mode; a task-based audit
 1. Delete `docs/ux-rework/` in its own last commit.
 2. Bump the versions and changelogs (see Releases above).
 3. Run the full test workflow on the branch, including the generation tests.
-4. Open the PR with a summary of the three phases and the last UX review. **The owner merges it.**
+4. Open the PR with a summary of the completed phases, the last UX review and D9 cleanup evidence. **The owner merges it.**
 
 ## Out of scope (decided)
 

@@ -178,6 +178,7 @@ export function ChestFilterSlotSelector({
 
             {/* Item selector popover */}
             <Popover
+                slotProps={{ paper: { role: 'region', 'aria-label': 'Choose a chest filter' } }}
                 open={Boolean(anchorEl)}
                 anchorEl={anchorEl}
                 onClose={handleClose}

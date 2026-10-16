@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { useState, memo } from 'react';
 import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
-import { useFocusAfterAdd, useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { SURFACE } from '../theme/tokens';
 import { AddRow } from './AddRow';
 import { EnableControlModal } from './EnableControlModal';
@@ -22,6 +22,8 @@ import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
+import { RowActionsMenu } from './RowActionsMenu';
+import { useAnnounce } from '../hooks/useMessages';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
@@ -41,6 +43,7 @@ interface DrillsFormProps {
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
+    onDuplicate: (index: number) => void;
 }
 
 /**
@@ -57,14 +60,19 @@ function DrillsFormComponent({
     onUpdate,
     onRemove,
     onReorder,
+    onDuplicate,
 }: DrillsFormProps) {
     const { itemLabel } = useGameNames();
     const [enableControlModalDrillIndex, setEnableControlModalDrillIndex] = useState<number | null>(null);
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's, or to the Add row
-    const { cardRef, remove } = useFocusAfterRemove(drills.length, onRemove);
-    // the Add row goes with the first drill: the keyboard moves on to that drill's type
-    const focusAdded = useFocusAfterAdd(drills.length, cardRef);
+    const { cardRef, remove, afterAdd } = useFocusAfterRemove(drills.length, onRemove);
+    const announce = useAnnounce();
+    const addedLabel = () => entityLabel('drill', Math.max(0, ...drills.map(row => row.id)) + 1);
+    const duplicate = (index: number) => {
+        afterAdd(() => onDuplicate(index));
+        announce(`Added ${addedLabel()}, a copy of ${entityLabel('drill', drills[index].id)}.`);
+    };
     // the section does not fold while the focus is in it: not under the level field typed down to 0, nor under a click
     // on its Add button (which a fold before the click would swallow)
     const [focusInSection, setFocusInSection] = useState(false);
@@ -75,6 +83,11 @@ function DrillsFormComponent({
         if (drills.length < drillCountBefore) setFocusInSection(false);
     }
     const listed = drillsListed({ drillCount: drills.length, miningProductivityLevel, focusInSection });
+
+    const add = () => {
+        afterAdd(onAdd);
+        announce(`Added ${addedLabel()}.`);
+    };
 
     return (
         // the same section in both shapes, so that the focus finds the Add row in it once the last drill goes
@@ -98,13 +111,13 @@ function DrillsFormComponent({
             }}
             // with none, the Add row below is the one add
             actions={listed && (
-                <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
+                <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
                     Add mining drill
                 </Button>
             )}
         >
             {!listed ? (
-                <AddRow label="Add mining drill" data-row-add="" onClick={() => { focusAdded(); onAdd(); }} />
+                <AddRow label="Add mining drill" data-row-add="" onClick={add} />
             ) : (
                 <>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
@@ -121,7 +134,7 @@ function DrillsFormComponent({
                         />
                     </Box>
 
-                    <SortableList itemKeys={drills.map((d) => d._uuid)} itemLabels={drills.map((d) => entityLabel('drill', d.id))} onReorder={onReorder}>
+                    <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
                     {drills.map((drill, index) => (
                         <SortableItem key={drill._uuid} stableKey={drill._uuid} label={entityLabel('drill', drill.id)}>
                             {(dragHandle) => (
@@ -139,7 +152,7 @@ function DrillsFormComponent({
                             }}
                         >
                             {dragHandle}
-                            <FormControl size="small" sx={{ minWidth: 180 }}>
+                            <FormControl data-row-first="" size="small" sx={{ minWidth: 180 }}>
                                 <InputLabel>Drill Type</InputLabel>
                                 <Select
                                     inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
@@ -215,6 +228,9 @@ function DrillsFormComponent({
                                 entityType="drill"
                                 onClick={() => setEnableControlModalDrillIndex(index)}
                             />
+                            <RowActionsMenu label={entityLabel('drill', drill.id)} onDuplicate={() => duplicate(index)}
+                                onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
+                                onMoveDown={index < drills.length - 1 ? () => onReorder(index, index + 1) : undefined} />
                             <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete="">
                                 <Delete />
                             </IconButton>
@@ -231,6 +247,7 @@ function DrillsFormComponent({
                 open={enableControlModalDrillIndex !== null}
                 onClose={() => setEnableControlModalDrillIndex(null)}
                 entityType="drill"
+                entityId={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.id ?? 0 : 0}
                 entityLabel={enableControlModalDrillIndex !== null && drills[enableControlModalDrillIndex] ? entityLabel('drill', drills[enableControlModalDrillIndex].id) : ''}
                 currentOverride={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.overrides?.enable_control : undefined}
                 sinkType="machine"

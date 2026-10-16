@@ -4,8 +4,10 @@ import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
 import { SearchOnlyRecipesContext, useGameNames } from '../hooks/useGameNames';
 import { nameWithId, resolveTyped, searchIds } from '../utils/gameNames';
+import { prioritizedIds } from '../utils/pickerOrder';
 
 interface ItemSelectorProps {
+    priority?: { label: string; ids: string[] };
     /** The chosen id; the options are ids too, shown by their in-game names */
     value: string | null;
     options: string[];
@@ -20,6 +22,8 @@ interface ItemSelectorProps {
     required?: boolean;
     /** The input's element id */
     inputId?: string;
+    /** A problem with the value, shown under the field and linked to it; the field is marked invalid */
+    errorText?: string;
     /** The input's accessible name, when the visible label alone does not say whose field it is */
     inputAriaLabel?: string;
     sx?: object;
@@ -30,6 +34,7 @@ interface ItemSelectorProps {
 export function ItemSelector({
     value,
     options,
+    priority,
     onChange,
     kind = 'item',
     label = 'Item',
@@ -40,6 +45,7 @@ export function ItemSelector({
     required,
     inputId,
     inputAriaLabel,
+    errorText,
     sx,
     iconOnly = false,
 }: ItemSelectorProps) {
@@ -63,11 +69,23 @@ export function ItemSelector({
         return searchOnlyAll.filter((id) => !listed.has(id));
     }, [kind, searchOnlyAll, offered]);
     const everyOption = useMemo(() => (searchOnly.length > 0 ? [...offered, ...searchOnly] : offered), [offered, searchOnly]);
+    const grouped = priority && priority.ids.length > 0 ? priority : undefined;
     const matchesOf = (query: string): string[] => {
+        if (grouped) return prioritizedIds(query, grouped.ids, offered, nameOf, grouped.label).ids;
         if (query.trim() === '') return offered;
         const shown = searchIds(query, offered, nameOf);
         return searchOnly.length > 0 ? [...shown, ...searchIds(query, searchOnly, nameOf)] : shown;
     };
+    // The text in the field, kept here: with freeSolo, MUI keeps what the field showed when the value goes to none (a
+    // Reset, an Undo, a New build or another build opened), so the field would still show the old name. It follows the
+    // value whenever that changes from outside, and what is typed otherwise.
+    const shownName = value && !iconOnly ? nameOf(value) : '';
+    const [inputText, setInputText] = useState(shownName);
+    const [shownFor, setShownFor] = useState({ value, name: shownName });
+    if (shownFor.value !== value || shownFor.name !== shownName) {
+        setShownFor({ value, name: shownName });
+        setInputText(shownName);
+    }
     // For iconOnly mode, use a more compact width
     const effectiveMinWidth = iconOnly && value ? 80 : minWidth;
 
@@ -76,12 +94,16 @@ export function ItemSelector({
             id={inputId}
             size={size}
             sx={{ minWidth: effectiveMinWidth, ...sx }}
-            options={everyOption}
+            options={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).ids : everyOption}
+            slotProps={{ popper: { role: 'region', 'aria-label': `${label} options` } }}
+            groupBy={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).groupOf : undefined}
             value={value}
             open={open}
             onOpen={() => setOpen(true)}
             onClose={() => setOpen(false)}
+            inputValue={inputText}
             onInputChange={(_, text, reason) => {
+                setInputText(text);
                 typed.current = reason === 'input' ? text : null;
                 if (reason === 'input') highlightedBy.current = null;
             }}
@@ -112,6 +134,8 @@ export function ItemSelector({
                     label={label}
                     placeholder={iconOnly ? '' : placeholder}
                     required={required}
+                    error={errorText !== undefined}
+                    helperText={errorText}
                     slotProps={{
                         htmlInput: { ...params.inputProps, 'aria-label': inputAriaLabel },
                         input: {

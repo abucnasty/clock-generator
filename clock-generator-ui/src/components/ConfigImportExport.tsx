@@ -1,5 +1,5 @@
-import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook } from '@mui/icons-material';
-import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, useMediaQuery, useTheme } from '@mui/material';
+import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link } from '@mui/icons-material';
+import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
 import { Option } from 'clock-generator/light';
@@ -13,6 +13,21 @@ import { INTRO_BUTTONS, invalidExportPrompt, openFileProblem, PASTE_PROMPTS, typ
 import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill, type TargetValues } from '../utils/pasteTarget';
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
+import type { ConfigFormData } from '../utils/configForm/formData';
+import { pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
+import { entityLabel } from '../utils/entityLabel';
+import { buildFileName } from '../utils/buildLibrary';
+import { configKeyOf } from '../utils/resultsStaleness';
+import {
+    canShare,
+    encodeShareLink,
+    SHARE_COPIED_MESSAGE,
+    SHARE_FALLBACK_TEXT,
+    SHARE_TOO_BIG_MESSAGE,
+    SHARE_UNSUPPORTED_MESSAGE,
+    shareLinkNotice,
+    shareLongMessage,
+} from '../utils/shareLink';
 import { askEngine } from '../worker/engineClient';
 import type {
     BeltConfiguration,
@@ -29,19 +44,18 @@ const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
 
+/** Describe the destination of this exact preview without suggesting a silent rebind or renumber. */
+function crossingText(warning: PasteReferenceWarning): string {
+    const imported = warning.direction === 'incoming-to-retained';
+    return `${imported ? 'Imported' : 'Retained'} ${entityLabel(warning.ownerType, warning.ownerId)} ${warning.slot}`
+        + ` → ${imported ? 'retained' : 'imported'} ${entityLabel(warning.endpointType, warning.endpointId)}`
+        + (warning.destinationExists ? '.' : ' (missing from the resulting build).');
+}
+
 interface PendingImport extends PastedEntities {
     miningProductivityLevel?: number;
     /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
     fill: { values: TargetValues; source: SuggestedTarget['source'] } | null;
-}
-
-interface ImportSelections {
-    target: boolean;
-    machines: boolean;
-    drills: boolean;
-    inserters: boolean;
-    belts: boolean;
-    chests: boolean;
 }
 
 /** What the intro card starts in here */
@@ -55,6 +69,8 @@ interface ConfigImportExportProps {
     ref?: Ref<BuildEntryHandle>;
     /** Null disables Save build file */
     config: Config | null;
+    /** Raw destination counts/references remain available even while the build cannot be exported. */
+    currentForm: ConfigFormData;
     /** The form's Target Output, which a paste fills in only when its recipe is empty */
     target: TargetValues;
     onImport: (config: Config) => void;
@@ -77,11 +93,22 @@ interface ConfigImportExportProps {
      * shown its own Paste is the filled one; with a build, Generate or Copy is (one filled next step per state)
      */
     pasteIsNextStep: boolean;
+    /** The open build's own name, which a share link carries; null when it is named after its target recipe */
+    buildName: string | null;
+    /** The open build's title, which Save build file names the file after */
+    buildTitle: string;
     /**
      * Items of the page's own put in ⋮ after Getting started (Terms, Developer tools): this menu shows them and calls
      * them with the ⋮ button, which a popover they open can hang from. One with `checked` is a check item.
      */
     toolsMenuItems?: ToolsMenuItem[];
+}
+
+/** A share link made when the ⋮ menu opens, so a click can copy it at once; tagged with the build it was made for */
+interface PreparedLink {
+    tag: string;
+    promise: Promise<string>;
+    link: string | null;
 }
 
 export interface ToolsMenuItem {
@@ -96,6 +123,7 @@ export interface ToolsMenuItem {
 export function ConfigImportExport({
     ref,
     config,
+    currentForm,
     target: currentTarget,
     onImport,
     onReplaceTarget,
@@ -110,6 +138,8 @@ export function ConfigImportExport({
     onUndoable,
     onShowIntro,
     pasteIsNextStep,
+    buildName,
+    buildTitle,
     toolsMenuItems = [],
 }: ConfigImportExportProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +172,17 @@ export function ConfigImportExport({
         chests: true,
     });
 
+    // Consent belongs to this exact preview. Identity checks invalidate it in the same render as any change.
+    const [acknowledged, setAcknowledged] = useState<{
+        incoming: PendingImport; current: ConfigFormData; selections: ImportSelections;
+    } | null>(null);
+    const preview = pendingImport ? pastePreview(currentForm, pendingImport, importSelections) : null;
+    const acknowledgedCurrent = acknowledged?.incoming === pendingImport && acknowledged?.current === currentForm
+        && acknowledged?.selections === importSelections;
+    if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
+    const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
+    const canImport = hasImportWork && (!preview?.crossings.length || acknowledgedCurrent);
+
     // the Paste from Factorio dialog, open when the clipboard could not be used, with why
     const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number } | null>(null);
     const promptCountRef = useRef(0);
@@ -152,19 +193,69 @@ export function ConfigImportExport({
 
     const handleExport = useCallback(() => {
         if (!config) return;
-        const target_recipe_name = config.target_output.recipe
         const jsonString = JSON.stringify(config, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `clock-config-${target_recipe_name}-${Date.now()}.json`;
+        a.download = buildFileName(buildTitle);
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         notify({ severity: 'success', text: SAVED_MESSAGE });
-    }, [config, notify]);
+    }, [config, buildTitle, notify]);
+
+    // the share link, made when the menu opens: the copy then runs inside the click, which a browser asks of it
+    const preparedLinkRef = useRef<PreparedLink | null>(null);
+    const [fallbackLink, setFallbackLink] = useState<string | null>(null);
+    const prepareShareLink = useCallback((): PreparedLink | null => {
+        if (!config || !canShare()) return null;
+        const tag = `${configKeyOf(config)}\n${buildName ?? ''}`;
+        if (preparedLinkRef.current?.tag === tag) return preparedLinkRef.current;
+        const prepared: PreparedLink = {
+            tag,
+            promise: encodeShareLink({ name: buildName, config }, window.location.origin + window.location.pathname),
+            link: null,
+        };
+        prepared.promise.then((link) => { prepared.link = link; }, () => {});
+        preparedLinkRef.current = prepared;
+        return prepared;
+    }, [config, buildName]);
+
+    const handleCopyShareLink = useCallback(() => {
+        const prepared = prepareShareLink();
+        if (!prepared) {
+            notify({ severity: 'error', text: SHARE_UNSUPPORTED_MESSAGE });
+            return;
+        }
+        const copy = (link: string) => {
+            const notice = shareLinkNotice(link.length);
+            if (notice === 'too-long') {
+                notify({ severity: 'error', text: SHARE_TOO_BIG_MESSAGE });
+                return;
+            }
+            const copied = () => notify(notice === 'long'
+                ? { severity: 'warning', text: shareLongMessage(link.length) }
+                : { severity: 'success', text: SHARE_COPIED_MESSAGE });
+            let writing: Promise<void>;
+            try {
+                writing = navigator.clipboard.writeText(link);
+            } catch (error) {
+                // no clipboard API: a page not served over https, or an old browser
+                writing = Promise.reject(error);
+            }
+            writing.then(copied, () => setFallbackLink(link));
+        };
+        if (prepared.link !== null) {
+            copy(prepared.link);
+        } else {
+            prepared.promise.then(copy, (error) => {
+                console.error('Share link error:', error);
+                notify({ severity: 'error', text: SHARE_UNSUPPORTED_MESSAGE });
+            });
+        }
+    }, [prepareShareLink, notify]);
 
     const handleImportClick = useCallback(() => {
         fileInputRef.current?.click();
@@ -310,6 +401,9 @@ export function ConfigImportExport({
 
     const handleConfirmImport = useCallback(() => {
         if (!pendingImport) return;
+        const currentPreview = pastePreview(currentForm, pendingImport, importSelections);
+        const hasWork = (importSelections.target && pendingImport.fill !== null) || currentPreview.counts.some(row => row.replacing);
+        if (!hasWork || (currentPreview.crossings.length > 0 && !acknowledgedCurrent)) return;
 
         const fill = importSelections.target ? pendingImport.fill : null;
         const machines = importSelections.machines && pendingImport.machines.length > 0;
@@ -327,12 +421,6 @@ export function ConfigImportExport({
         ].filter((part) => part !== false);
 
         setPendingImport(null);
-
-        if (parts.length === 0) {
-            // not a failure: nothing was ticked
-            notify({ severity: 'warning', text: 'Nothing was imported: no box was ticked.' });
-            return;
-        }
 
         // one Undo for the whole paste, taken before any of it is applied; its message says what was imported
         onUndoable(describePaste(parts));
@@ -359,7 +447,7 @@ export function ConfigImportExport({
             onReplaceChests(pendingImport.chests);
         }
         onBuildReplaced();
-    }, [pendingImport, importSelections, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, notify]);
+    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable]);
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);
@@ -386,15 +474,15 @@ export function ConfigImportExport({
 
     const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>) => {
         setMenuAnchorEl(event.currentTarget);
-    }, []);
+        prepareShareLink();
+    }, [prepareShareLink]);
 
     const handleMenuClose = useCallback(() => {
         setMenuAnchorEl(null);
     }, []);
 
-    // the menu is mounted in the header, read once when it opens: it must not move while it closes
+    // Also anchors the help/tool actions opened from More options.
     const menuButtonRef = useRef<HTMLButtonElement>(null);
-    const menuContainer = useCallback(() => menuButtonRef.current?.closest('header') ?? document.body, []);
 
     // the file picker and the download are only allowed from the click itself: no await or timer before them
     const handleMenuImport = useCallback(() => {
@@ -406,6 +494,11 @@ export function ConfigImportExport({
         handleMenuClose();
         handleExport();
     }, [handleMenuClose, handleExport]);
+
+    const handleMenuShare = useCallback(() => {
+        handleMenuClose();
+        handleCopyShareLink();
+    }, [handleMenuClose, handleCopyShareLink]);
 
     const handleMenuExamples = useCallback(() => {
         handleMenuClose();
@@ -464,11 +557,12 @@ export function ConfigImportExport({
                         vertical: 'top',
                         horizontal: 'right',
                     }}
-                    // mounted in the header, so the menu is inside the banner landmark; the header is sticky, so the
-                    // menu stays by its button and the page needs no scroll lock
-                    container={menuContainer}
+                    // The sticky header keeps the opener in place without locking page scrolling.
                     disableScrollLock
-                    slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions } }}
+                    slotProps={{
+                        paper: { role: 'region', 'aria-label': BUTTON_NAMES.moreOptions },
+                        list: { 'aria-label': BUTTON_NAMES.moreOptions },
+                    }}
                 >
                     <MenuItem onClick={handleMenuImport}>
                         <ListItemIcon>
@@ -481,6 +575,12 @@ export function ConfigImportExport({
                             <Download fontSize="small" />
                         </ListItemIcon>
                         <ListItemText>Save build file</ListItemText>
+                    </MenuItem>
+                    <MenuItem onClick={handleMenuShare} disabled={!config}>
+                        <ListItemIcon>
+                            <Link fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Copy share link</ListItemText>
                     </MenuItem>
                     <MenuItem onClick={handleMenuExamples}>
                         <ListItemIcon>
@@ -575,56 +675,46 @@ export function ConfigImportExport({
                                     </Typography>
                                 )
                             )}
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.machines}
-                                        onChange={() => handleSelectionChange('machines')}
-                                        disabled={pendingImport.machines.length === 0}
+                            {preview?.counts.map(row => {
+                                const title = row.category[0].toUpperCase() + row.category.slice(1);
+                                const consequence = row.replacing
+                                    ? `Replace ${row.current} ${row.category} with ${row.incoming}`
+                                    : row.incoming === 0 ? `Keep ${row.current}; none in this export`
+                                        : `Keep ${row.current} current ${row.category} (${row.incoming} available to import)`;
+                                return (
+                                    <Box key={row.category} data-paste-category={row.category}>
+                                        <FormControlLabel
+                                            control={<Checkbox checked={importSelections[row.category]}
+                                                onChange={() => handleSelectionChange(row.category)} disabled={row.incoming === 0}
+                                                slotProps={{ input: { 'aria-describedby': `paste-${row.category}-counts` } }} />}
+                                            label={`${title} (${row.incoming})${row.category === 'drills' && pendingImport.miningProductivityLevel !== undefined ? ` - Mining Productivity ${pendingImport.miningProductivityLevel}` : ''}`}
+                                        />
+                                        <Typography id={`paste-${row.category}-counts`} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+                                            {row.current} current → {row.incoming} imported. {consequence}.
+                                        </Typography>
+                                    </Box>
+                                );
+                            })}
+                            {!!preview?.crossings.length && (
+                                <>
+                                    <Alert severity="warning" role="region" aria-label="Cross-category references">
+                                        <Typography variant="body2">These parts will be combined using their entity numbers. A matching number can refer to a different entity.</Typography>
+                                        <Box component="ul" sx={{ pl: 2.5, mb: 0 }}>
+                                            {preview.crossings.map(warning => (
+                                                <li key={`${warning.ownerType}-${warning.ownerId}-${warning.slot}`}>
+                                                    {crossingText(warning)}
+                                                </li>
+                                            ))}
+                                        </Box>
+                                    </Alert>
+                                    <FormControlLabel
+                                        control={<Checkbox checked={acknowledgedCurrent} onChange={(_, checked) => setAcknowledged(checked ? {
+                                            incoming: pendingImport, current: currentForm, selections: importSelections,
+                                        } : null)} />}
+                                        label="I understand these parts will be combined using their entity numbers."
                                     />
-                                }
-                                label={`Machines (${pendingImport.machines.length})`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.drills}
-                                        onChange={() => handleSelectionChange('drills')}
-                                        disabled={pendingImport.drills.length === 0}
-                                    />
-                                }
-                                label={`Drills (${pendingImport.drills.length})${pendingImport.miningProductivityLevel !== undefined ? ` - Mining Productivity ${pendingImport.miningProductivityLevel}` : ''}`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.inserters}
-                                        onChange={() => handleSelectionChange('inserters')}
-                                        disabled={pendingImport.inserters.length === 0}
-                                    />
-                                }
-                                label={`Inserters (${pendingImport.inserters.length})`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.belts}
-                                        onChange={() => handleSelectionChange('belts')}
-                                        disabled={pendingImport.belts.length === 0}
-                                    />
-                                }
-                                label={`Belts (${pendingImport.belts.length})`}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={importSelections.chests}
-                                        onChange={() => handleSelectionChange('chests')}
-                                        disabled={pendingImport.chests.length === 0}
-                                    />
-                                }
-                                label={`Chests (${pendingImport.chests.length})`}
-                            />
+                                </>
+                            )}
                         </Box>
                     )}
                 </DialogContent>
@@ -634,7 +724,7 @@ export function ConfigImportExport({
                         onClick={handleConfirmImport} 
                         variant="contained" 
                         color="secondary"
-                        disabled={!Object.values(importSelections).some(v => v)}
+                        disabled={!canImport}
                     >
                         Import Selected
                     </Button>
@@ -650,6 +740,27 @@ export function ConfigImportExport({
                 />
             )}
             {examplesOpen && <ExamplesDialog onPick={handlePickExample} onClose={handleCloseExamples} />}
+
+            {/* the browser did not let the page copy: the link to copy by hand */}
+            <Dialog open={fallbackLink !== null} onClose={() => setFallbackLink(null)} maxWidth="sm" fullWidth aria-describedby="share-link-fallback-text">
+                <DialogTitle>Share link</DialogTitle>
+                <DialogContent>
+                    <Typography id="share-link-fallback-text" variant="body2" sx={{ mb: 1 }}>
+                        {SHARE_FALLBACK_TEXT}
+                    </Typography>
+                    <TextField
+                        value={fallbackLink ?? ''}
+                        label="Share link"
+                        fullWidth
+                        autoFocus
+                        onFocus={(event) => event.target.select()}
+                        slotProps={{ htmlInput: { readOnly: true } }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setFallbackLink(null)} color="inherit">Close</Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
