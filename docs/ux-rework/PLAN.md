@@ -500,6 +500,10 @@ This is planning only, deferred beyond the current implementation queue until th
 
 Owner requested drafts for later discussion: light/dark mode; a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals are not finalized specs, implementation authorizations or additions to current phase/release completion criteria.
 
+### Independent audit of new UI tests (D9)
+
+Owner requested a deferred independent audit limited to tests added by this UX rework inside `clock-generator-ui`, including new cases in existing files. Identify redundant, brittle or low-value additions and propose specific removals/consolidations with evidence of remaining behavioral coverage. Exclude engine tests, capture scripts, pre-existing UI tests and unrelated upstream additions. See [D9 audit scope](specs/D9-ui-test-audit.md). No current test deletion or change to verification/review requirements is authorized by this planning item.
+
 ## Verification (every phase)
 
 1. **Tests.** Vitest tests for every piece of logic touched:
