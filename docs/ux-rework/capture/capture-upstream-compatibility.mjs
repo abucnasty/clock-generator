@@ -8,6 +8,7 @@ import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { captureP3Compatibility } from './capture-p3-compatibility-additions.mjs';
 const libURL = process.env.COMPAT_LIB ? pathToFileURL(resolve(process.env.COMPAT_LIB)).href : new URL('./lib.mjs', import.meta.url).href;
 const L = await import(libURL);
 const { ui, itemLabel, SMALL_SAMPLE, UI_DIR, forWidths, previewServer, noSideScroll, isClickable,
@@ -544,6 +545,7 @@ try {
             assertMetadata(rec,await saveFile(p),'P3 Undo');
         },p);
         else rec.info('P3 stage: NOT RUN (not PASS)','NOT RUN: library invalid decimal draft/switch/reload/duplicate/share/Undo requires a separate PHASE3=1 run.');
+        if (PHASE3) await captureP3Compatibility({ p, rec, width, L, load, list, configure, stored, storedUntil, saveFile, edit, reload, audit, textContrast, metadataFixture, fractional, assertMetadata, withClipboard, checkNow });
         rec.info('additional required evidence','Shared boundary engine tests: non-finite Copies, denominator <=1000, exact target comparison; p3 rule templates 24/8/32, cache pick != recommendation; first-visit/Paste regressions and example generation timing remain separate gate scripts/tests.');
     },{out:OUT,base});
     code=run.finish({title:`Upstream 0.15 compatibility — ${PHASE3?'core + Phase 3':'core only (Phase 3 NOT RUN)'}`});
