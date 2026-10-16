@@ -28,7 +28,7 @@ export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown }: Row
             </IconButton>
         </Tooltip>
         <Menu id={menuId} anchorEl={anchor} open={open} onClose={close}
-            slotProps={{ list: { 'aria-label': rowActionsName(label) } }}>
+            slotProps={{ paper: { role: 'region', 'aria-label': rowActionsName(label) }, list: { 'aria-label': rowActionsName(label) } }}>
             <MenuItem onClick={() => choose(onDuplicate)}>Duplicate</MenuItem>
             <MenuItem disabled={!onMoveUp} onClick={() => { if (onMoveUp) choose(onMoveUp); }}>Move up</MenuItem>
             <MenuItem disabled={!onMoveDown} onClick={() => { if (onMoveDown) choose(onMoveDown); }}>Move down</MenuItem>
