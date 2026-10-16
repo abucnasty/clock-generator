@@ -2,19 +2,21 @@
 // Counts are selector checks, not substitutes for the behavioral/AA compatibility capture.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { ui, SMALL_SAMPLE, itemLabel, chooseMenuItem, validate } from './lib.mjs';
+import { ui, SMALL_SAMPLE, itemLabel, openTooltip, chooseMenuItem, validate } from './lib.mjs';
 const fixture = name => fileURLToPath(new URL(`./fixtures/${name}.json`,import.meta.url));
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 
 export async function selftestCompatibilityEmpty(page,E) {
     for(const key of ['compatFile','compatCopiesHelper','compatBody','compatMain']) await E('empty compatibility',key,ui[key](page));
+    for(const [key,args] of Object.entries({compatMachineRow:[1],compatMachineSpeed:[1]})) await E('empty numeric field',key,ui[key](page,...args));
+    for(const name of ['Increase','Decrease']) await E('empty numeric field',`compatMachineSpeedStep(${name})`,ui.compatMachineSpeedStep(page,1,name));
     const absent = {
         compatCopiesProblem:[],compatInserterRow:[1],compatSource:[1],compatDestination:[1],compatStack:[1],
         compatMetadata:[1],compatAutomatic:[1,12],compatTypeQualityControls:[1],compatFacts:[],compatFactsRate:[],
         compatInserterNode:[1],compatEditor:[],compatEditorStack:[],compatEditorAuto:[12],compatEditorMetadata:[],
         compatSave:[],compatCancel:[],compatError:[],compatCheckChip:['passed'],compatExamples:[],compatExampleRows:[],
         compatExample:['Chemical science'],compatDialogCancel:[],compatImportConfirm:[],compatImportSelected:[],
-        compatShareConfirm:[],compatOpenShared:[],
+        compatShareConfirm:[],compatOpenShared:[],compatTooltips:[],
     };
     for(const [key,args] of Object.entries(absent)) await E('empty compatibility',key,ui[key](page,...args),0);
 }
@@ -32,6 +34,15 @@ export async function selftestCompatibilityPopulated(page,E,log) {
     await load(metadataPath);
     await ui.compatAutomatic(page,1,12).waitFor({state:'visible'});
     for(const [key,args] of Object.entries({compatInserterRow:[1],compatSource:[1],compatDestination:[1],compatStack:[1],compatMetadata:[1],compatAutomatic:[1,12],compatFacts:[],compatFactsRate:[]})) await E('metadata List',key,ui[key](page,...args));
+    for(const [key,args] of Object.entries({compatMachineRow:[1],compatMachineSpeed:[1]})) await E('populated numeric field',key,ui[key](page,...args));
+    for(const name of ['Increase','Decrease']) await E('populated numeric field',`compatMachineSpeedStep(${name})`,ui.compatMachineSpeedStep(page,1,name));
+    await page.mouse.move(0,0); await ui.targetCopies(page).focus();
+    await ui.compatTooltips(page).waitFor({state:'detached'});
+    await openTooltip(page,ui.compatFactsRate(page));
+    await E('real Machine Facts tooltip','compatTooltips',ui.compatTooltips(page));
+    await page.mouse.move(0,0); await page.keyboard.press('Escape');
+    await ui.compatTooltips(page).waitFor({state:'detached'});
+    await E('dismissed Machine Facts tooltip','compatTooltips',ui.compatTooltips(page),0);
     await E('metadata List','compatTypeQualityControls',ui.compatTypeQualityControls(page,1),0);
     for(const [id,size] of [[2,4],[4,16]]) await E('metadata List',`compatAutomatic(${id},${size})`,ui.compatAutomatic(page,id,size));
     await ui.targetCopies(page).fill('0.0001');
