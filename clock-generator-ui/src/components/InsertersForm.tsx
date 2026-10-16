@@ -1,3 +1,4 @@
+import { INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import { Add, Delete } from '@mui/icons-material';
 import {
     Autocomplete,
@@ -240,6 +241,9 @@ function InsertersFormComponent({
                 </Button>
             </Box>
 
+            {inserters.some(inserter => !inserter.prototype || !inserter.quality) && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{INSERTER_TIMING_ASSUMPTION}</Typography>
+            )}
             <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
                 <SortableItem key={inserter._uuid} stableKey={inserter._uuid} label={entityLabel('inserter', inserter.id)}>
@@ -259,6 +263,9 @@ function InsertersFormComponent({
                         flexWrap: 'wrap',
                     }}
                 >
+                    <Typography variant="body2" color="text.secondary" sx={{ flexBasis: '100%' }}>
+                        {inserterMetadataText(inserter)}
+                    </Typography>
                     {dragHandle}
                     {/* Source */}
                     <Box sx={PICKER_GROUP_SX}>
@@ -445,13 +452,16 @@ function InsertersFormComponent({
                     </Box>
 
                     <NumberField
-                        label="Stack Size"
-                        value={inserter.stack_size}
+                        id={`inserter-stack-size-${inserter.id}`}
+                        label="Stack size"
+                        value={inserter.stack_size ?? null}
+                        placeholder="Automatic"
+                        helperText={inserterStackSizeHelp(inserter)}
                         onValueChange={(val) =>
-                            onUpdate(index, { stack_size: parseInt(val?.toString() || '') || 16 })
+                            onUpdate(index, { stack_size: val === null ? undefined : Math.trunc(val) })
                         }
                         min={1}
-                        sx={{ width: 100 }}
+                        sx={{ width: 180, maxWidth: '100%' }}
                         size="small"
                     />
 

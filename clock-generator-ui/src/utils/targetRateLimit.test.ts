@@ -51,29 +51,29 @@ describe('maxRateText', () => {
 
 describe('targetRateLineOf', () => {
     it('gives the most first, then what makes it, then what to do', () => {
-        expect(line(240200, 11)).toBe('At most 252.65/s: Machine 1 makes 22.96/s, times 11 copies. Lower the rate, or raise Copies or add machines.');
+        expect(line(240200, 11)).toBe('At most 252.65/s: Machine 1 makes 22.96/s, times 11 copies. Lower the rate or raise Copies. Describe one unit in the build.');
     });
 
     it('names several machines, and what they make together', () => {
         const two: MachinesMax = { machineIds: [1, 2], perCopy: 30 };
-        expect(line(400, 11, two)).toBe('At most 330/s: Machines 1 and 2 make 30/s together, times 11 copies. Lower the rate, or raise Copies or add machines.');
+        expect(line(400, 11, two)).toBe('At most 330/s: Machines 1 and 2 make 30/s together, times 11 copies. Lower the rate or raise Copies. Describe one unit in the build.');
         const three: MachinesMax = { machineIds: [1, 2, 4], perCopy: 45.5 };
-        expect(line(50, 1, three)).toBe('At most 45.5/s: Machines 1, 2 and 4 make 45.5/s together. Lower the rate or add machines.');
+        expect(line(50, 1, three)).toBe('At most 45.5/s: Machines 1, 2 and 4 make 45.5/s together. Lower the rate or raise Copies. Describe one unit in the build.');
     });
 
     it('counts every copy: a target the copies can make has no line', () => {
-        expect(line(240, 1)).toBe('At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or add machines.');
+        expect(line(240, 1)).toBe('At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or raise Copies. Describe one unit in the build.');
         expect(line(240, 11)).toBeNull();
-        expect(line(240, 10)).toBe('At most 229.68/s: Machine 1 makes 22.96/s, times 10 copies. Lower the rate, or raise Copies or add machines.');
+        expect(line(240, 10)).toBe('At most 229.68/s: Machine 1 makes 22.96/s, times 10 copies. Lower the rate or raise Copies. Describe one unit in the build.');
     });
 
-    it('compares exactly, as the engine\'s check does: a hundredth over the most is too much, however it prints', () => {
+    it('uses the legacy numeric facts when exact ratios are unavailable', () => {
         expect(line(252.65, 11)).toBeNull();
         expect(line(252.65624125798462, 11)).toBeNull();
         expect(line(252.656, 11)).toBeNull();
         expect(line(252.66, 11)).not.toBeNull();
         expect(line(22.96, 1)).toBeNull();
-        expect(line(22.97, 1)).toBe('At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or add machines.');
+        expect(line(22.97, 1)).toBe('At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or raise Copies. Describe one unit in the build.');
     });
 
     it('says nothing without a target, or while the machines\' most is not known', () => {

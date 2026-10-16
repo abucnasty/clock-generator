@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs';
+import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { FactorioDataService } from 'clock-generator/browser';
 import { effectiveInserterStackSize, inserterMetadataText, inserterStackSizeHelp } from './inserterMetadata';
 
-FactorioDataService.initialize(JSON.parse(readFileSync(new URL('../../../clock-generator/resources/data-filtered.json', import.meta.url), 'utf8')));
+FactorioDataService.initialize(JSON.parse(factorioData));
 
 describe('inserter metadata and Automatic stack size', () => {
     it.each(['stack-inserter', 'bulk-inserter', 'fast-inserter', 'long-handed-inserter', 'inserter'])('matches the engine data capacity for %s', prototype => {
