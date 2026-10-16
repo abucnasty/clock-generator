@@ -108,9 +108,10 @@ export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax
         }
     }
     // the engine's check refuses such a target too; said here, the player is sent to the field instead of a failed check
-    if (machinesMax && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
+    const capacity = machinesMax ? totalMachineCapacity(machinesMax, targetOutput.copies) : null;
+    if (capacity !== null && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
         problems.push({
-            text: PROBLEM_TEXT.rateAboveMax(totalMachineCapacity(machinesMax, targetOutput.copies)),
+            text: PROBLEM_TEXT.rateAboveMax(capacity),
             target: { kind: 'target-rate' },
         });
     }

@@ -41,6 +41,15 @@ describe('problemsOf', () => {
         expect(firstProblemOf(filledIn())).toBeNull();
     });
 
+    it('defers unsupported target/capacity arithmetic to worker validation without formatting an unknown limit', () => {
+        const max = { machineIds: [1], perCopy: 2, perCopyRatio: { numerator: 2, denominator: 1 } };
+        for (const [copies, items_per_second] of [[1, 1e-23], [1e308, 1]]) {
+            expect(problemsOf(filledIn({ machinesMax: max,
+                targetOutput: { recipe: 'logistic-science-pack', copies, items_per_second },
+            }))).toEqual([]);
+        }
+    });
+
     it('finds two problems in the default build: the target recipe, then the machine recipe', () => {
         const config = createDefaultConfig();
         const problems = problemsOf({ targetOutput: config.target_output, machines: config.machines, coverageIssues: [] });

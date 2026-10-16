@@ -44,13 +44,14 @@ export function formatNumberText(value: number, options: NumberTextOptions = {})
  */
 export function shownNumberText(args: {
     focused: boolean;
+    preserveInputOnBlur?: boolean;
     value: number | null;
     inputValue: string;
     maxDecimals: number;
     locale?: Intl.LocalesArgument;
 }): string {
-    const { focused, value, inputValue, maxDecimals, locale } = args;
-    if (focused || value === null || !Number.isFinite(value)) {
+    const { focused, preserveInputOnBlur = false, value, inputValue, maxDecimals, locale } = args;
+    if (focused || preserveInputOnBlur || value === null || !Number.isFinite(value)) {
         return inputValue;
     }
     return formatNumberText(value, { maxDecimals, locale });
