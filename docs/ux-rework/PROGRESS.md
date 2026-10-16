@@ -727,3 +727,21 @@ close line 318 (lane field, fixed on p1).
 - 2026-10-16: D3 BASELINE COMPLETE before anyPhase4product: prepared unchanged script/exacttwooriginalinputs at1440x900/720x900; bothserialruns exit0,12taskrecords allvalid/reached, actualcopied+decodedblueprintidentity4/4 and config/result/pick/generationfactsrestored4/4. Rootadoptedactualcandidatepins before720; nofixturechanges/capturerepairs. Baseline records actual warnedA337.5959/297holdsfalse and B216.06138/216holdstrue, 4511/7273pxdesktop and5411/9073pxnarrowtask2traversal, contextreturnConfigure/top. Fullscorecardcapture/phase4-task-audit-EVIDENCE.md +/tmp/ux-phase4-d3-resume/BASELINE-ADOPTED.json. D4clarifiesobservedrate/hold/beltfactlabels withinapprovedfactualscope; D7ownscontext. DispatchResults/header+D4+D5Results/import+D6foundation andD10parallel now; noextraD3prerequisites.
 
 - 2026-10-16: ActualPhase4productauthoringbegun. Sol/high/fastOFF Results/headerbundle author delivered105cbeb: ONE DisplayPreferencesutility/context/button, controlledResultDetailtype and globallyindexedbeltgrouphelper; rootreadsource, requiredpureupdaterstorageeffect, committed/pushed and exactheadown-sourceTypeScriptPASS. FullbundleUIcomposition continues; noitemacceptanceclaimed. Independentparallel Sol/highD10author implementscanonicalengineproof/typedworkerprovider thenpersistedownerAPI beforeAppconsumer. Sol/highcapturewriter developsactualsourceconsumersinparallel. Physical4slotsincludingroot, noextraagents/toolingprerequisites. Allfullitemgates/native/rootrepeat/independentCODE+UX/exactCI/twoformalrounds andthreefreshphaseendpersonas/D9actualcleanup/ownerphasecheckpointretained.
+
+
+## Phase 4 live acceptance — 2026-10-16 continuation
+
+Compatibility PR #210 merged into feature with a merge commit, preserving upstream ancestry, after independent CODE/UX PASS and exact-head CI. Prepared D3 baseline is complete at both widths using the unchanged original two fixtures; no capture repairs or fixture research were needed. Full receipts: `/tmp/ux-phase4-d3-resume/BASELINE-ADOPTED.json`, `capture/phase4-task-audit-EVIDENCE.md`.
+
+| Bundle | Frozen source / state | Acceptance remaining |
+|---|---|---|
+| D1A + D4 + D5 Results/import + D6 foundation | `edf89b4`; UI 1305/81, all gates and independent test/build repeat PASS | Native r2 preserves earlier diagnostics; formal CODE/UX, child CI/merge |
+| D10 repeated-unit conversion | `eaf7eaf`; engine 1075 unit / 147 generation, UI 1304/82, full gates and independent UI repeat PASS | Root-derived real engine plan ready; native, formal CODE/UX, child CI/merge |
+| D1B + D5 Configure | `6899860`; UI 1305/81, all gates and independent repeat PASS | Native, formal CODE/UX, child CI/merge |
+| First visit | `f6f1dbd`; UI 1305/81, all gates and independent repeat PASS | Native, formal CODE/UX, child CI/merge |
+| D2 + D6 themes | `52455d2`; author tree compile/lint/knip/UI 1423/82 PASS; immutable full gates/repeat running | Native both modes/System, formal CODE/UX, child CI/merge |
+| D7 context | Implemented; compile/lint/knip and focused 5 regressions PASS; final default-position correction in progress | Freeze/full gates/repeat/native/reviews/CI |
+| D9 independent cleanup | Fresh author applying independently justified 24 audit groups; product untouched | Identical-product before/after measurements, later Phase4 refresh, full gates/reviews/CI |
+| D8 | Investigation/proposal only | Owner implementation approval remains separate; no rate feature implemented |
+
+All workers use Sol/high, fast off. No Phase4 formal review fix rounds have started. Full four-width phase capture, same-fixture explanatory and Compact D3 repeat, three fresh phase personas, coach/retro and owner phase-to-feature merge checkpoint remain required. No merge to master is authorized.
