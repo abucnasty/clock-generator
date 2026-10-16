@@ -491,7 +491,12 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 
 ## Phase 4: approved follow-up work
 
-Owner approvals, 2026-10-16: D1–D9, first-visit refinement and the subsequently requestedD10 repeated-unit conversion form Phase4 against `feat/ux-rework`. The proposal approval round is complete; track exact choices and execution order in [Phase 4 decisions](specs/phase4-decisions.md). D8 is investigation only, returning for implementation approval. D9 includes actual cleanup and is mandatory before feature→master regardless of phase label. First finish Phase 3 closeout/owner checkpoint; capture D3's baseline before D1 changes, finalize item specs, then follow actual dependencies. All current verification and the three fresh phase-end reviewers remain required for Phase 4.
+Owner approvals, 2026-10-16: D1–D9, first-visit refinement and the subsequently requestedD10 repeated-unit conversion form Phase4 against `feat/ux-rework`. The proposal approval round is complete; track exact choices and execution order in [Phase 4 decisions](specs/phase4-decisions.md). D8 is investigation only, returning for implementation approval. D9 includes actual cleanup and is mandatory before feature→master regardless of phase label. Phase3 is merged in209. Owner subsequently approved upstream0.16 compatibility and D4/D5 factual refinements: accept that step before D3 baseline, then continue Phase4 includingD10. Capture the baseline before D1 changes, finalize item specs, then follow actual dependencies. All current verification and the three fresh phase-end reviewers remain required for Phase 4.
+
+
+### Approved prerequisite: Upstream0.16.0 compatibility
+
+Owner2026-10-16 approves integrating master throughc396ecd (#206 over205 and relevant202;193 already incorporated), with the independent report's factual D4/D5 refinements, BEFORE D3 baseline. Preserve accepted UX and reconcile assessment/startup/recovery explanations, saved assumptions, imported modeling fields and lean-clock semantics with full matching-source checks/root repeat/independent CODE+UX. No new startup control, geometry authoring/export or engine-policy change. Then continue Phase4 includingD10; all phase-end/owner checkpoints and D9 actual UI-test cleanup before master remain. See [compatibility spec](specs/upstream-0.16-compatibility.md).
 
 ### Approved Phase 4 scope: Compact view (D1)
 

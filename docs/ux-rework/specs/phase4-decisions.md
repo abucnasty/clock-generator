@@ -125,7 +125,7 @@ Owner: “Approve the first-visit refinement with A / A. Add it to Phase 4, summ
 
 ## Approved execution outline
 
-1. Finish Phase 3 fresh evidence, three independent reviewers, retro and owner phase-merge checkpoint into feat/ux-rework.
+1. Phase3 is complete and owner-approved in209. Accept the approved upstream0.16 compatibility step with existing gates/reviews before the Phase4 baseline.
 2. Capture D3's two-build/three-task baseline before any D1 product changes. Finalize Phase 4 item specs/source dependencies against that completed feature state.
 3. Deliver D1 Results/header with D6 preference placement and the coordinated D4 comparison/D5 assumption presentation where shared files justify a bundle. Then deliver D1 Configure using the existing shared editor. Each item retains traceable scope/evidence and independent review.
 4. Deliver D2 after density work; D7 extends only actual context gaps. Deliver first-visit routing as its own bounded item or justified shared-file bundle.
@@ -138,3 +138,9 @@ Order within this outline may follow actual source dependencies and available sl
 ### D10 owner feature request,2026-10-16
 
 Owner requests automatic recovery from “This selection contains8 identical units…”: offer to convert to one modeled unit and compute Copies, leaving only final total-rate entry. This adds D10 to Phase4 and supersedes the old explicit no-conversion restriction. Preserve existing total rate and fractional configured-Copies multiplication, use canonical engine proof/normalization, preserve full units/references/consequential modeling fields, and provide atomic acceptance/Undo. Unsupported or ambiguous cases retain input/manual recovery. No simulator/ranking policy or geometry-authoring work is implied. Final implementation spec/API remains to be finalized; the pending upstream recommendation is not otherwise adopted by this request. See D10-repeated-unit-conversion.md. Current checks/independent reviews/three phase reviewers and D9 actual cleanup before master remain unchanged.
+
+### Upstream compatibility and D4/D5 refinements approved,2026-10-16
+
+Owner: “Approve the upstream compatibility step and D4/D5 refinements. Integrate0.16.0 before the D3 baseline, then continue Phase4 including D10. Keep all existing reviews and verification requirements.”
+
+Adopt the independent report's bounded compatibility precondition and factual D4/D5 refinements: distinguish modeled-start dependence, actual rate/recovery/check status, preserve saved assumptions/imported fields, correct inherited start/seed prose and explain lean alternatives accurately. Integrate pinned masterc396ecd (#202/#205/#206;193 already incorporated) BEFORE D3 baseline. Then continue approved Phase4 includingD10. New startup controls, geometry authoring/export and engine-policy changes listed separately by the audit remain unapproved. D8 investigation-only and D9 implemented UI-test cleanup before master remain unchanged. See upstream-0.16-compatibility.md. All existing checks/root repeat/CODE+UX/THREE phase reviewers and owner phase/final checkpoints remain.
