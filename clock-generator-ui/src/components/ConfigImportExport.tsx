@@ -661,7 +661,7 @@ export function ConfigImportExport({
                                 <Typography variant="body2">{preview?.counts.find(row => row.category === 'inserters')?.replacing ? 'Incoming' : 'Retained'} inserters; {preview?.counts.find(row => row.category === 'machines')?.replacing ? 'incoming' : 'retained'} machines. Target and Copies {importSelections.target && pendingImport.fill ? 'come from this export' : 'stay as entered'} ({prospectiveTarget.copies} copies). The current belt-movement setting is retained.</Typography>
                                 <InserterAssumptions inserters={prospectiveInserters} />
                                 <Box component="details" sx={{ mt: 1 }}>
-                                    <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Modeling details after import</Typography>
+                                    <Typography component="summary" tabIndex={0} variant="body2" sx={{ cursor: 'pointer' }}>Modeling details after import</Typography>
                                     <InserterAssumptions inserters={prospectiveInserters} detailed />
                                     {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
                                         ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
