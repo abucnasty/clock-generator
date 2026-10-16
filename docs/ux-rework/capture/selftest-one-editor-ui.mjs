@@ -1,6 +1,7 @@
 // Additive selector matrix for PR A, with no generation or clipboard writes.
 // Counts validate the ui map; behavior and AA evidence remain in capture-one-editor.mjs.
 import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
 import { forWidths, importFile, goConfigure, ui, LOGISTIC, sample, itemLabel } from './lib.mjs';
 
 export async function selftestOneEditorUi(page, E) {
@@ -54,7 +55,7 @@ export async function selftestOneEditorUi(page, E) {
     await page.keyboard.press('Escape');
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
     const run=await forWidths([1440,720,390],async({page,rec})=>{
         const E=async(state,key,loc,want=1)=>{const count=await loc.count();rec.check(`${state}: ui.${key}`,want==='>=1'?count>=1:count===want,`${count}, want ${want}`);};
         await selftestOneEditorUi(page,E);
