@@ -25,6 +25,22 @@ Which item comes first decides how an ingredient is split between two inserters 
 
 The config names the nearest lane with `near_lane` on the belt an inserter picks up from, and the sidecar exports it for an inserter beside a straight piece of belt. Without it the simulator takes the items in the order of the inserter's filters, or of the sink's ingredients, which is a guess. A scaffold test fails when the config and the recorded build disagree on which item comes first, or on the stack size of an inserter.
 
+### A stack inserter on a moving lane
+
+A stack inserter that drops on a belt that moves is not always done in the 4 ticks of a free lane. Its four stacks go in at the tick it starts, +1, +2 and +4; but when the stacks of another inserter pass its spot just then, or its own stacks do, a stack has to wait for room. The hand then takes 6, 14 or 22 ticks to empty.
+
+The config gives the rule what it needs with `drop` on the sink of every inserter that drops on the belt: `{ "lane": 1, "position": 12.5 }`, the lane by its place in the belt's `lanes` (the left lane in the direction of travel first, as with `near_lane`; 1 when the belt lists one lane, even if the inserter drops on the belt's right lane) and the tiles along the belt's path, increasing in the direction the belt runs, from an origin that is the same for all of them (it may be negative, for instance minus the tiles to the end of the line, and fractions are allowed: only the distances count). It is all or none per belt: a config in which some inserters that drop on a belt have it and others do not is refused, naming the others, and `drop` on a source is refused. Without it the drop takes the ticks of a free lane, as before.
+
+The rule, per lane of a belt, shared by every inserter that drops on it:
+- A lane moves 8 ticks a tile on a turbo belt (the speed comes from the belt type). A stack put down at tick t at a spot x, d ticks behind it, has the origin t + d - 8x. Two stacks keep the difference of their origins as long as they are on the lane, so the origin is all the lane remembers of a stack; it forgets the stacks that have passed the last spot.
+- An inserter with a full hand tries one stack of 4 (the stack size of the lane) in a tick, starting in the tick where a drop on a free lane starts. It takes the smallest d of 0, 1 and 2 ticks (a quarter of a tile) for which no stack on the lane, its own or another inserter's, has an origin within 1 tick of its own; if there is none, it waits for the next tick.
+- On a free lane that gives stacks at +0, +1, +2 and +4, the 4-tick drop. A gapless train of stacks passing the spot, 2 ticks apart, makes the hand wait and then go in behind it at 2 ticks apart (a 6-tick drop); a second train arriving while the hand is still at its stacks makes the later stack wait for it too (14 and 22 ticks).
+- The belt ends in a sink that takes everything: the lane never backs up.
+
+Evidence: the thaeln-cell09 scaffold (`resources/config-samples/real/thaeln/cell09`, two turbo belts of four pack inserters each), recorded in Factorio 2.1.21 with the recorder of 0.8.0, which samples the hand and the lane of every inserter each tick. With only the tick each hand became full as input, the rule reproduced every stack of every hand: 432 slow drops predicted of 432 in the game, none false, none missed, and the ticks of all four stacks equal in 3,744 of 3,744 hands under the swings-2 clock; and 5,040 of 5,040 hands of Thaeln's own clock, where none is slow. The 4-tick burst, the 2-tick displacement and spacing were fixed from the free lane alone, nothing was fitted to the slow drops.
+
+What it does not cover: it is checked only with turbo belts and the legendary stack inserter (follow-up F7: other belts, stack sizes and inserters scale the ticks and are not tested), and a sink that backs up is not modelled. A lane that carries stacks of other cells or merges is not either.
+
 ### Two inserters that bring the same item
 
 When two inserters bring the same item to a machine, one of them can be left holding it. If it starts picking the item up after the other has already put it in, the item is at its insertion limit by the time its hand is ready, and it holds the hand until the machine has used enough for it to drop.

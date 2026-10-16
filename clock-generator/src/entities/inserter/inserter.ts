@@ -26,6 +26,14 @@ export interface Inserter extends Entity {
     /** Items per hand for each item it carries; see handSizeFor */
     hand_sizes?: ReadonlyMap<ItemName, number>;
     animation: InserterAnimation;
+    /** Where it drops on a belt that moves; without it the drop takes the same ticks wherever the belt carries stacks */
+    drop?: BeltDropSpot;
+}
+
+/** Of an inserter that drops on a belt: the lane and the tiles along the belt (see InserterConfig) */
+export interface BeltDropSpot {
+    lane: 1 | 2;
+    position: number;
 }
 
 /**
@@ -159,9 +167,14 @@ export class InserterFactory {
         // Calculate belt drop metadata if sink is a belt
         let beltDropMetadata: BeltDropMetadata | undefined;
         const hand_sizes = new Map<ItemName, number>();
+        let drop_spot: BeltDropSpot | undefined;
         if (sink.type === EntityType.BELT) {
             const belt = this.entity_registry.getEntityByIdOrThrow(EntityId.forBelt(sink.id));
             assertIsBelt(belt);
+            drop_spot = sink.drop;
+            if (drop_spot !== undefined) {
+                assert(drop_spot.lane <= belt.lanes.length, `Inserter ${id} drops on lane ${drop_spot.lane} of belt ${sink.id}, which has ${belt.lanes.length}`);
+            }
             const selectedLane = this.selectLaneForDrop(belt.lanes, filtered_items);
             filtered_items.forEach(item_name => {
                 const lane = belt.lanes.find(it => it.ingredient_name === item_name) ?? selectedLane;
@@ -200,7 +213,8 @@ export class InserterFactory {
             },
             filtered_items,
             hand_sizes,
-            animation: InserterAnimation.fromMetadata(metadata.animation)
+            animation: InserterAnimation.fromMetadata(metadata.animation),
+            ...(drop_spot && { drop: drop_spot })
         }
     }
 
