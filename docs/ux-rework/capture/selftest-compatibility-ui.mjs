@@ -87,6 +87,14 @@ export async function selftestCompatibilityPopulated(page,E,log) {
     await ui.compatImportConfirm(page).waitFor({state:'hidden'});
 
     await load(SMALL_SAMPLE);
+    // The sample already has cached fresh clocks in P3, which intentionally hide the passed chip.
+    // Change its target through the real field so Check only checks a valid build not generated here.
+    const rate=ui.targetRate(page);
+    await rate.focus();
+    await rate.press('ControlOrMeta+A');
+    await rate.pressSequentially('239');
+    await rate.press('Tab');
+    await page.waitForFunction(()=>document.querySelector('#target-items-per-second')?.value==='239');
     await validate(page);
     await E('Check passed','compatCheckChip',ui.compatCheckChip(page,'passed'));
     await load(fixture('compatibility-repeated-units'));

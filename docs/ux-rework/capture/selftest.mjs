@@ -97,7 +97,7 @@ for (const w of [1440, 720, 390]) {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(400);
     let threw = '';
-    try { await openTooltip(page, page.getByRole('heading', { name: /^Belts/, level: 2 }), { timeout: 1200 }); } catch (e) { threw = e.message; }
+    try { await openTooltip(page, ui.card(page, 'belts').getByRole('heading', { name: /^Belts \(/, level: 4 }), { timeout: 1200 }); } catch (e) { threw = e.message; }
     log(/openTooltip: no visible/.test(threw), `${w} openTooltip on a control with no tooltip throws a clear error: ${threw.slice(0, 90)}`);
     threw = '';
     try { await openTooltip(page, page.getByRole('button', { name: 'No such control' }), { timeout: 800 }); } catch (e) { threw = e.message; }
