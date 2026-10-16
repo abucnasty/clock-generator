@@ -1414,6 +1414,18 @@ const btn = (page, name, exact = true) => page.getByRole('button', { name, exact
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
 
 export const ui = {
+    compatRuleEditor: (p, id = 1) => p.getByRole('dialog', { name: `Inserter ${id}`, exact: true }),
+    compatRuleEditorStack: (p, id = 1) => ui.compatRuleEditor(p, id).locator(`#diagram-inserter-stack-size-${id}`),
+    compatRuleEditorTab: (p, id, tab) => ui.compatRuleEditor(p, id).getByRole('tab', { name: new RegExp(`^${tab}\\b`) }),
+    compatRuleEditorSave: (p, id = 1) => ui.compatRuleEditor(p, id).getByRole('button', { name: 'Save', exact: true }),
+    compatRuleEditorCancel: (p, id = 1) => ui.compatRuleEditor(p, id).getByRole('button', { name: 'Cancel', exact: true }).last(),
+    compatRuleEditorMetadata: (p, id = 1) => ui.compatRuleEditor(p, id).getByText(/(?:bulk|fast|stack) inserter.*(?:normal|legendary)|(?:normal|legendary).*(?:bulk|fast|stack) inserter/i).last(),
+    compatRuleTemplateOption: p => p.getByRole('option', { name: /^Latched output drain/ }),
+    compatRuleTemplateAmount: scope => ui.ruleTemplateStep(scope).getByRole('spinbutton', { name: 'Switch on at (items)', exact: true }),
+    compatRenameDialog: p => p.getByRole('dialog', { name: 'Rename build', exact: true }),
+    compatRenameName: p => ui.compatRenameDialog(p).getByRole('textbox', { name: 'Name', exact: true }),
+    compatRenameSave: p => ui.compatRenameDialog(p).getByRole('button', { name: 'Save', exact: true }),
+    compatFileOpenedMessage: p => ui.message(p).filter({ hasText: 'Build file opened.' }),
     // ---- Upstream 0.15 compatibility (owner: upstream compatibility)
 
     compatFile: p => p.locator('input[type=file]'),

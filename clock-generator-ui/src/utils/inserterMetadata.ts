@@ -21,8 +21,8 @@ export function inserterMetadataText(inserter: Pick<InserterFormData, 'prototype
     return `${title(inserter.prototype ?? 'stack-inserter')} · ${title(inserter.quality ?? 'legendary')} quality`;
 }
 
-export function inserterStackSizeHelp(inserter: Pick<InserterFormData, 'prototype' | 'stack_size'>): string {
-    if (inserter.stack_size !== undefined) return 'Items per swing. Clear for Automatic.';
+export function inserterStackSizeHelp(inserter: Pick<InserterFormData, 'prototype' | 'stack_size'>): string | undefined {
+    if (inserter.stack_size !== undefined) return undefined;
     const size = effectiveInserterStackSize(inserter);
     return Number.isFinite(size) ? `Automatic: ${size} items, with all capacity research.`
         : 'Automatic capacity is unavailable for this inserter type. Check the build for details.';

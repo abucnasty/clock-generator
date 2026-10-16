@@ -1,4 +1,4 @@
-import { INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
+import { INSERTER_TIMING_ASSUMPTION, effectiveInserterStackSize, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import { Add, Delete } from '@mui/icons-material';
 import {
     Autocomplete,
@@ -127,6 +127,8 @@ function InsertersFormComponent({
     onReorder,
 }: InsertersFormProps) {
     const [enableControlModalInserterIndex, setEnableControlModalInserterIndex] = useState<number | null>(null);
+
+    const selectedInserter = enableControlModalInserterIndex === null ? undefined : inserters[enableControlModalInserterIndex];
 
     const { itemLabel, recipeLabel } = useGameNames();
 
@@ -564,7 +566,7 @@ function InsertersFormComponent({
                 onClose={() => setEnableControlModalInserterIndex(null)}
                 entityType="inserter"
                 entityId={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.id ?? 0 : 0}
-                stackSize={enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex]?.stack_size : undefined}
+                stackSize={selectedInserter ? effectiveInserterStackSize(selectedInserter) : undefined}
                 movedItems={(() => {
                     const inserter = enableControlModalInserterIndex !== null ? inserters[enableControlModalInserterIndex] : undefined;
                     if (!inserter) return [];

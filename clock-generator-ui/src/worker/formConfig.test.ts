@@ -100,3 +100,19 @@ describe('fractional Copies and metadata draft round trips', () => {
         }
     });
 });
+
+
+describe('editable Copies never bypasses structural validation', () => {
+    it.each([1, 0.0001, 1 / 3])('rejects malformed entities alongside Copies %s', copies => {
+        const config = formDataToConfig(edits.updateTargetOutput(createDefaultConfig(), 'copies', copies));
+        const withoutMachines: Record<string, unknown> = { ...config };
+        delete withoutMachines.machines;
+        expect(parseFormConfig(ConfigSchema, withoutMachines).success).toBe(false);
+        for (const malformed of [
+            { machines: 'broken' },
+            { machines: [{ ...config.machines[0], id: 1.5 }] },
+            { inserters: [{ source: 'machine 1', sink: { type: 'belt', id: 1 } }] },
+            { inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, quality: 'mythical' }] },
+        ]) expect(parseFormConfig(ConfigSchema, { ...config, ...malformed }).success).toBe(false);
+    });
+});
