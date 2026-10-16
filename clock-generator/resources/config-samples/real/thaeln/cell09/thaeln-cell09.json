@@ -119,7 +119,7 @@
    "source": {
     "type": "belt",
     "id": 2,
-    "near_lane": 1
+    "near_lane": 2
    },
    "sink": {
     "type": "machine",
@@ -317,7 +317,7 @@
    "source": {
     "type": "belt",
     "id": 2,
-    "near_lane": 1
+    "near_lane": 2
    },
    "sink": {
     "type": "machine",
@@ -350,7 +350,7 @@
    "source": {
     "type": "belt",
     "id": 2,
-    "near_lane": 1
+    "near_lane": 2
    },
    "sink": {
     "type": "machine",
@@ -533,7 +533,7 @@
    "source": {
     "type": "belt",
     "id": 2,
-    "near_lane": 1
+    "near_lane": 2
    },
    "sink": {
     "type": "machine",
