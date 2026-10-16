@@ -1463,6 +1463,11 @@ const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root
 
 export const ui = {
     // 3.F additive bindings. Existing aliases and all helper defaults are preserved.
+    followBeltExportOption: p => p.getByRole('option', { name: /^Export\b/ }),
+    followBeltConsumed: scope => scope.getByLabel('Consumed /s', { exact: true }),
+    followBeltRemoveLane: scope => scope.getByRole('button', { name: 'Remove lane', exact: true }),
+    followBeltAddLane: scope => scope.getByRole('button', { name: 'Add Second Lane', exact: true }),
+    followDetailsPanel: (p, name) => p.getByRole('tabpanel', { name, exact: true }),
     followBody: p => p.locator('body'),
     followMain: p => p.getByRole('main'),
     followDialogs: p => p.getByRole('dialog'),
