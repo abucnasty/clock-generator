@@ -512,9 +512,13 @@ Owner approval, 2026-10-16, A / A / A: integrate a bounded exercise using two re
 
 Owner approval, 2026-10-16, A / A / A: group comparison clocks by belt compatibility (matches current setting versus requires a different setting), preserving inspectable/selectable alternatives and visible conditions. Show one concise selected-clock reason/tradeoff with deeper details on demand, in both explanatory and Compact views. Reuse existing ranking, selection rules and actual result metrics; preserve relevant rate/recovery/belt warnings and unit scopes without claiming measured UPS savings. See [D4 scope](specs/D4-clock-tradeoffs.md).
 
-### Further deferred design proposals (D5–D8)
+### Approved Phase 4 scope: Exceptions and assumptions (D5)
 
-Owner requested drafts for later discussion: emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
+Owner approval, 2026-10-16, A / A / A: summarize common defaults once per section in Compact and show differences on rows, retaining fuller labels in the explanatory view. Distinguish Automatic/Explicit even when numerical values match, using text. Show concise assumptions during import review and on Results, with detail available and result assumptions tied to the saved result's snapshot. Reuse existing metadata/editors; preserve essential feedback and accessibility without turning routine defaults into warnings or adding a change-history system. See [D5 scope](specs/D5-exceptions-assumptions.md).
+
+### Further deferred design proposals (D6–D8)
+
+Owner requested drafts for later discussion: one display-preferences entry and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
 
 ### Independent audit of new UI tests (D9)
 

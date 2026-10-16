@@ -2,7 +2,7 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1–D4 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1–D5 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
@@ -12,7 +12,7 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D2 Light/dark mode | Approved — A / A / B | Include after density work; System / Light / Dark, remembered locally; System default for new installations; complete interface including charts and diagrams |
 | D3 Task-based usability audit | Approved — A / A / A | Integrated bounded exercise: two representative builds, three tasks; baseline before D1 and repeat after Phase 4; agent measurements, owner participation optional |
 | D4 Clock recommendation and tradeoffs | Approved — A / A / A | Group by belt compatibility; concise selected-clock reason/tradeoff with deeper details on demand; both explanatory and Compact views; existing ranking/selection rules unchanged |
-| D5 Exceptions and assumptions | Pending | Which defaults may be summarized; visible overrides and model assumptions |
+| D5 Exceptions and assumptions | Approved — A / A / A | Compact summarizes common defaults per section, differences visible on rows; explanatory view keeps fuller labels; distinguish Automatic/Explicit even when values match; import and result-snapshot assumption summaries |
 | D6 Display preferences | Pending | One entry; preference placement; persistence separate from build data |
 | D7 Working context | Pending | Specific remaining gaps after Phase 3; reset and persistence rules |
 | D8 Per-machine production rates | Pending | Semantics/feasibility only versus implementation; authoritative source; target/max/achieved and units |
@@ -62,4 +62,14 @@ Owner: “Approve D4 with A / A / A.”
 - Reuse existing recommendation logic, explanations and metrics. Preserve ranking and selection rules; this is presentation work and does not authorize engine changes or new optimization objectives.
 - Finalize group treatment and conditional/fallback cases in the item spec. Belt compatibility does not imply that target rate/recovery checks passed; preserve those separate statuses and unit scopes.
 
-Next discussion: D5 exceptions and assumptions. D5–D9 and first-visit refinement remain pending.
+### D5 approved, 2026-10-16
+
+Owner: “Approve D5 with A / A / A.”
+
+- Repetition A: in Compact, summarize common defaults once per section and display differing values on their rows. Keep fuller labels in the explanatory view.
+- Explicit settings A: retain concise Automatic/Explicit distinctions even when their current numerical values match; use text rather than color alone.
+- Assumptions A: show a concise assumptions summary during import review and on Results, with further detail available. Results describes the assumptions of the saved result, not a later edited build.
+- Preserve consequential missing-metadata timing assumptions and accessible names, essential warnings and validation. Reuse existing metadata/editors; no new type/quality selectors or change-history system are implied. Routine defaults do not become warning banners.
+- Finalize exact summarized fields and assumption placement with D1's finished editor/layout. Normal independent review, checks and all three phase-end reviewers remain required.
+
+Next discussion: D6 display preferences. D6–D9 and first-visit refinement remain pending.
