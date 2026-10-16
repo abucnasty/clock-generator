@@ -39,7 +39,12 @@ come from here.
 - **Phase 2 remaining:** only 2.7 B, then the phase-end captures, reviews and owner checkpoints. 3.3 is in fix round 1 on p3.
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
-- **Upstream compatibility:** spec finalized after owner answers; integration/gates next, before final 2.7 B and 3.3 evidence.
+- **Upstream compatibility:** 0.15.1 downmerged into feature (`e54a973`), p2 (`724b500`) and p3 (`e55bd2f`).
+  The implementer’s full gates passed; root inspected conflict resolutions and test logs. Independent reruns remain
+  part of the reviewed compatibility child’s evidence gate. New master 0.15.2 (#193) is being integrated separately.
+  Compatibility changes precede final 2.7 B and 3.3 evidence.
+- **Worker checkpoints:** 2.7 B pushed `ce131ae` with three repaired capture scripts; 3.3 pushed `38a7b25` with the
+  corrected non-recommended-pick capture. Both wait for compatibility before final gates and re-reviews.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -99,6 +104,17 @@ come from here.
 ## Decisions log
 
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
+
+- 2026-10-16: Upstream 0.15.1 integration completed through feature → p2 → p3. Reported gates, checked against logs:
+  feature 943 engine unit / 142 generation / 349 UI tests; p2 1004 / 142 / 885; p3 1004 / 142 / 1010.
+  Locale names and UX conflict resolutions retained. Post-merge checks of the two active item branches are text-clean;
+  scratch merged-tree type checks remain queued for a Luna runner. This is integration evidence, not final product review.
+- 2026-10-16: Master moved again to `da6867f` (#193, 0.15.2; sidecar 0.7.1). Root inspected the lane-signature fix.
+  Integrate this existing upstream bugfix separately through the same chain, under the owner's upstream authorization.
+  PLAN release baselines updated; final sidecar 0.8.0 unchanged. Deferred new metadata export stays out of scope.
+- 2026-10-16: Owner asked that finished Astra workers give way to the agreed role models. Completed workers receive
+  no unrelated small tasks: Sol handles capture/scouting/contained implementation, Luna mechanical gates/merges,
+  Astra high complex implementation and every review. Fast mode remains prohibited.
 
 - 2026-10-14: The orchestrator runs on Opus 5.5. Code review of the items implemented on `opus` uses Fable 5.1.
 - 2026-10-14: 1.9, the id question: the owner chose the recommendation. Delete renumbers the remaining ids of its kind
