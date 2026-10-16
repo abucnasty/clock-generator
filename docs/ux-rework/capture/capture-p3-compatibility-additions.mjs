@@ -1,19 +1,20 @@
 // Draft adjunct to the adopted upstream compatibility capture, PHASE3=1 only.
 // No product imports, storage writes, network/result mocks, local selectors, or optional missing-feature PASS.
 // The original core PHASE3 step must run unchanged before this function.
+import { readFileSync } from 'node:fs';
 export async function captureP3Compatibility(h) {
     const { p, rec, width, L, load: coreLoad, list, configure, stored, storedUntil, saveFile, edit, reload,
         audit, textContrast, metadataFixture, fractional, assertMetadata, withClipboard, checkNow } = h;
     const { ui, openBuildSwitcher, chooseMenuItem, checkMouseActivationVisible, checkAnnounced,
-        checkFocusNotObscuredAtHeight, generate } = L;
+        checkFocusNotObscured, checkFocusNotObscuredAtHeight, generate, sample } = L;
     const required = ['ruleDialog','ruleMode','ruleSave','ruleCancel','ruleTemplates','ruleTemplateStep',
         'ruleTemplateReplace','ruleTemplateCancel','rulePeriod','ruleStart','ruleEnd','ruleRepeat',
-        'ruleUseClockWindows','ruleStripBars','enableChip','buildsMenu','buildRows','buildsAction',
+        'ruleUseClockWindows','ruleStripBars','ruleBlocked','enableChip','buildsMenu','buildRows','buildsAction',
         'compatRuleEditor','compatRuleEditorStack','compatRuleEditorTab','compatRuleEditorSave',
         'compatRuleEditorCancel','compatRuleEditorMetadata','compatRuleTemplateOption',
         'compatRuleTemplateAmount','compatRenameDialog','compatRenameName','compatRenameSave','compatFileOpenedMessage','messageClose'];
     for (const key of required) if (typeof ui[key] !== 'function') throw new Error(`PHASE3 adjunct requires lib.ui.${key}; missing feature is FAIL`);
-    for (const [key, fn] of Object.entries({ openBuildSwitcher, generate })) if (typeof fn !== 'function') throw new Error(`PHASE3 adjunct requires shared ${key}`);
+    for (const [key, fn] of Object.entries({ openBuildSwitcher, generate, sample })) if (typeof fn !== 'function') throw new Error(`PHASE3 adjunct requires shared ${key}`);
     async function clickVisible(locator, label) {
         // The shared assertion clicks viewport coordinates; bring a lower List row into view first.
         await locator.scrollIntoViewIfNeeded();
@@ -300,6 +301,58 @@ export async function captureP3Compatibility(h) {
         rec.check('P3E Check cannot seed old window ranges',await ui.ruleStart(scope).inputValue() === '' && await ui.ruleEnd(scope).inputValue() === '');
         await audit(p,rec,'p3e-current-check-no-old-windows',timingTargets()); await cancelRule('List');
         rec.info('P3E required unit evidence','Actual integer-period/fractional-period branches independently of Copies remain ruleTiming.test.ts requirements. This browser run reports the real engine period, never fabricates one.');
+    },p);
+
+    await rec.step('P3F real fractional engine period refuses planned windows and preserves manual inclusive rules', async () => {
+        // Existing recorded engine sample, unchanged: integer Copies 3 at 230/s. Its selected stable subtick clock
+        // has period 12672/23 ticks; Check and Results are obtained through the actual production worker below.
+        const c=JSON.parse(readFileSync(sample('intermediates/advanced-circuit/advanced-circuit-230.json'),'utf8'));
+        rec.check('P3F genuine sample uses integer Copies independent of fractional timing',c.target_output.copies===3 && Number.isInteger(c.target_output.copies));
+        await load(p,c,'p3f-actual-fractional-period'); await checkNow(p);
+        let scope=await openRule('List'); await ui.ruleMode(scope,'Clocked').check();
+        const checkedLine=await text(ui.rulePeriod(scope));
+        rec.check('P3F real Check explains its non-whole period',/clock period is [\d.]+ ticks, not a whole number/.test(checkedLine) && /Clocked rule can't repeat with it/.test(checkedLine) && /From your last check\./.test(checkedLine),checkedLine);
+        await textContrast(p,rec,ui.rulePeriod(scope),'P3F actual Check fractional-period explanation');
+        const targets=()=>[['Start tick',ui.ruleStart(scope)],['End tick',ui.ruleEnd(scope)],['Repeat every (ticks)',ui.ruleRepeat(scope)]];
+        await audit(p,rec,'p3f-check-fractional-period',targets()); await cancelRule('List');
+
+        await generate(p); await ui.clockRows(p,0).waitFor({state:'visible',timeout:60000});
+        await configure(p); scope=await openRule('List'); await ui.ruleMode(scope,'Clocked').check();
+        const line=await text(ui.rulePeriod(scope)), match=line.match(/clock period is ([\d.]+) ticks, not a whole number/);
+        rec.check('P3F selected actual Results period is genuinely nonintegral',Boolean(match) && Number.isFinite(Number(match[1])) && !Number.isInteger(Number(match[1])) && /From the clock on Results\./.test(line),line);
+        rec.check('P3F integer Copies remains 3 while Results period is fractional',(await stored(p)).target_output.copies===3);
+        rec.check('P3F Clocked explains why the actual fractional period cannot repeat',/Clocked rule can't repeat with it/.test(line),line);
+        rec.check('P3F fractional Results offers no planned-window import action',await ui.ruleUseClockWindows(scope).count()===0);
+        rec.check('P3F fractional Results offers no clock reference bars',await ui.ruleStripBars(scope,'clock').count()===0);
+        rec.check('P3F fractional Results does not seed invalid window/repeat defaults',await ui.ruleStart(scope).inputValue()==='' && await ui.ruleEnd(scope).inputValue()==='' && await ui.ruleRepeat(scope).inputValue()==='');
+        await textContrast(p,rec,ui.rulePeriod(scope),'P3F actual Results fractional-period refusal');
+        await audit(p,rec,'p3f-results-fractional-period-refusal',targets());
+        if(!match) throw new Error('P3F requires the actual selected engine fractional period, never a supplied fallback');
+
+        const before=JSON.stringify(ruleOf(await stored(p)));
+        await ui.ruleStart(scope).fill('1'); await ui.ruleEnd(scope).fill('1');
+        // Type the period the real editor just reported, rather than supplying a fabricated timing value.
+        await ui.ruleRepeat(scope).fill(match[1]);
+        await clickVisible(ui.ruleSave(p),'P3F refuse fractional Repeat from actual engine feedback');
+        await ui.ruleBlocked(scope).waitFor({state:'visible'});
+        rec.check('P3F fractional Repeat Save remains refused without committing a rule',await ui.ruleDialog(p).isVisible() && JSON.stringify(ruleOf(await stored(p)))===before);
+        rec.check('P3F fractional Repeat refusal focuses the actual Repeat field',await ui.ruleRepeat(scope).evaluate(e=>e===document.activeElement));
+        const description=await ui.ruleRepeat(scope).evaluate(e=>(e.getAttribute('aria-describedby')??'').split(/\s+/).filter(Boolean).map(id=>document.getElementById(id)?.textContent??'').join(' '));
+        rec.check('P3F Repeat has an actionable whole-tick error description',await ui.ruleRepeat(scope).getAttribute('aria-invalid')==='true' && /whole number of ticks/.test(description),description);
+        await checkFocusNotObscured(rec,p,'P3F refused fractional Repeat',{strict:true});
+        await checkAnnounced(rec,p,/Can't save yet:.*Repeat every.*whole number of ticks/,'P3F refused fractional Repeat announced');
+        await textContrast(p,rec,ui.ruleBlocked(scope),'P3F refused Save summary');
+        await audit(p,rec,'p3f-fractional-repeat-refused',[...targets(),['Save',ui.ruleSave(p)],['Cancel',ui.ruleCancel(p)]]);
+
+        // Fractional engine timing does not ban a player's whole-tick rule. Start=end is one inclusive tick.
+        await ui.ruleRepeat(scope).fill(''); await ui.ruleRepeat(scope).press('Tab');
+        await saveRule('List');
+        await storedUntil(p,c=>c.inserters[0].overrides?.enable_control?.mode==='CLOCKED','P3F manual whole-tick rule');
+        const rule=ruleOf(await saveFile(p));
+        rec.check('P3F manual inclusive start=end=1 is saved exactly',rule?.mode==='CLOCKED' && rule.ranges?.length===1 && rule.ranges[0].start===1 && rule.ranges[0].end===1 && !Object.hasOwn(rule,'period_duration_ticks'));
+        await openRule('List');
+        rec.check('P3F manual inclusive single-tick rule reopens unchanged',await ui.ruleStart(ui.ruleDialog(p)).inputValue()==='1' && await ui.ruleEnd(ui.ruleDialog(p)).inputValue()==='1' && await ui.ruleRepeat(ui.ruleDialog(p)).inputValue()==='');
+        scope=ui.ruleDialog(p); await audit(p,rec,'p3f-manual-inclusive-rule',targets()); await cancelRule('List');
     },p);
     rec.info('P3 adjunct limits','NOT RUN here: pending 3.3 cache, chosen-pick, cancel-keep and whole-library regression scripts. Run their preserved full gates after 3.3 integration; no cache feature is moved into this adjunct.');
 }

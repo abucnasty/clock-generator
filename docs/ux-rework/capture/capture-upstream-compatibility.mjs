@@ -482,6 +482,11 @@ try {
             await reload(p);
             assertMetadata(rec, await stored(p), 'M1 reload');
             await audit(p,rec,'m1-readonly-automatic',[['Stack Size',ui.compatStack(p,1)]]);
+            // Presentation only after the completed checks: show explicit8 without claiming scrolling earns keyboard PASS.
+            const shotScroll=await p.evaluate(()=>({x:scrollX,y:scrollY}));
+            await ui.compatInserterRow(p,3).scrollIntoViewIfNeeded();
+            await rec.shot(p,'m1-explicit-stack-no-helper',{locator:ui.compatInserterRow(p,3),aria:true,desc:'Explicit Stack size8 with read-only metadata and no helper block; positioned after all M1 keyboard/focus checks'});
+            await p.evaluate(pos=>window.scrollTo(pos.x,pos.y),shotScroll);
         },p);
 
         await rec.step('M2 clearing List is live; Diagram clear is a draft until Save', async () => {
