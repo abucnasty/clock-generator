@@ -35,6 +35,8 @@ describe("the clocks of a build with a deadlock risk", () => {
         // none is listed as having no recovery; from the prepared build "planned" was
         expect(no_recovery).toHaveLength(0);
         expect(no_recovery.every(it => it.assessment.backpressure_loss?.survives === false)).toBe(true);
-        expect(selected.id).toBe("planned-belt-slack");
+        // "fractional" since the belt wake rule (docs/simulator.md): its wake-ups fell to 16.07 where planned-belt-slack
+        // has 26.79, which tied before
+        expect(selected.id).toBe("fractional");
     });
 });

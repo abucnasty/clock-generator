@@ -133,8 +133,9 @@ describe("the belt a clock is made for", () => {
             const batched = alternative("planned-belt-slack");
             expect(batched.belt).toEqual({ kind: "non_moving" });
             expect(batched.verdict).not.toBe("unstable");
-            // from the staged start (empty machines): 0 from the prepared build
-            expect(batched.assessment.wake_ups_per_minute).toBeCloseTo(10.71, 2);
+            // from the staged start (empty machines); 10.71 before the belt wake rule (docs/simulator.md): a belt-fed
+            // inserter whose window opens on a machine at its output block now starts a tick later, as in the game
+            expect(batched.assessment.wake_ups_per_minute).toBeCloseTo(0, 2);
         });
 
         // The build has a deadlock risk (GOALS.md, "Two inserters that bring the same item"), which the trials for

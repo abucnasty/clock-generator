@@ -377,7 +377,8 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.search!.earliest).toEqual({
                     setting: -65,
                     is_search_limit: false,
-                    notes: ["Inserter 3 waits 9 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
+                    // 9 ticks before the belt wake rule (docs/simulator.md): the belt-fed inserter 3 starts a tick later
+                    notes: ["Inserter 3 waits 10 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
                 });
                 expect(shifted.result.search!.latest).toEqual({
                     setting: 60, // 45 from the prepared build
