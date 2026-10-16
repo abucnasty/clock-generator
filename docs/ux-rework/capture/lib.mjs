@@ -17,6 +17,7 @@ import { chromium } from 'playwright-core';
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 export const DEFAULT_BASE = process.env.BASE_URL ?? 'http://localhost:5199';
@@ -56,6 +57,8 @@ export const LOGISTIC = sample('science/logistic-science/logistic-science.json')
  * do not depend on the build's size; its Results are short, so use LOGISTIC for layout checks.
  */
 export const SMALL_SAMPLE = sample('science/logistic-science/logistic-science-sample.json');
+/** Below-target warning fixture: logistic science, fast/normal/4; historical engine run selected 120/s of 240/s, unstable, 131ms. Recheck on final engine. */
+export const BELOW_TARGET_SAMPLE = fileURLToPath(new URL('./fixtures/logistic-science-below-target-fast.json', import.meta.url));
 
 /**
  * A build whose generation takes about 2.6 s (military science, 5 copies at 120/s): long enough for `captureInFlight` to
@@ -65,6 +68,14 @@ export const SLOW_SAMPLE = sample('science/military-science/military-science-1-i
 
 /** The viewport height used with a width: 844 at 390 (a phone), 900 otherwise */
 export const heightFor = (width) => (width === 390 ? 844 : 900);
+
+// Width contexts share one system clipboard. Hold the complete write/action/read sequence, including resets.
+let clipboardTail = Promise.resolve();
+export function withClipboard(fn) {
+    const run = clipboardTail.then(fn, fn);
+    clipboardTail = run.catch(() => {});
+    return run;
+}
 
 const pad = (i) => String(i).padStart(2, '0');
 const firstLine = (e) => String(e?.message ?? e).split('\n')[0];
@@ -1403,6 +1414,44 @@ const btn = (page, name, exact = true) => page.getByRole('button', { name, exact
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
 
 export const ui = {
+    // ---- Upstream 0.15 compatibility (owner: upstream compatibility)
+
+    compatFile: p => p.locator('input[type=file]'),
+    compatCopiesProblem: p => p.locator('#target-copies-problem'),
+    compatCopiesHelper: p => p.locator('#target-copies-helper'),
+    compatMachineRow: (p,id) => p.getByRole('group', { name: `Machine ${id}`, exact: true }),
+    compatMachineSpeed: (p,id) => ui.compatMachineRow(p,id).getByRole('textbox', { name: 'Crafting Speed', exact: true }),
+    compatMachineSpeedStep: (p,id,name) => ui.compatMachineRow(p,id).locator('.MuiFormControl-root').filter({ has: p.getByRole('textbox', { name: 'Crafting Speed', exact: true }) }).getByRole('button', { name, exact: true }),
+    compatTooltips: p => p.getByRole('tooltip', { includeHidden: true }),
+    compatInserterRow: (p, id) => p.getByRole('group', { name: `Inserter ${id}`, exact: true }),
+    compatSource: (p,id) => ui.compatInserterRow(p,id).getByRole('combobox', { name: /^Source/ }),
+    compatDestination: (p,id) => ui.compatInserterRow(p,id).getByRole('combobox', { name: /^Destination/ }),
+    compatStack: (p, id) => p.locator(`#inserter-stack-size-${id}`),
+    compatMetadata: (p, id) => ui.compatInserterRow(p, id).getByText(/(?:bulk|fast|stack) inserter.*(?:normal|legendary)|(?:normal|legendary).*(?:bulk|fast|stack) inserter/i).last(),
+    compatAutomatic: (p, id, size) => ui.compatInserterRow(p, id).getByText(new RegExp(`Automatic.*\\b${size}\\b|\\b${size}\\b.*Automatic`, 'i')).last(),
+    compatTypeQualityControls: (p,id) => ui.compatInserterRow(p,id).getByRole('combobox', { name: /type|quality/i }),
+    compatFacts: p => p.getByRole('button', { name: /^Machine Facts/ }).first(),
+    compatFactsRate: p => ui.compatFacts(p).locator('.MuiChip-root').first(),
+    compatInserterNode: (p, id) => ui.diagram(p).getByRole('group', { name: new RegExp(`^Inserter ${id},`) }),
+    compatEditor: p => p.getByRole('dialog', { name: /^Inserter 1$/i }),
+    compatEditorStack: p => ui.compatEditor(p).locator('#diagram-inserter-stack-size-1'),
+    compatEditorAuto: (p, size) => ui.compatEditor(p).getByText(new RegExp(`Automatic.*\\b${size}\\b|\\b${size}\\b.*Automatic`, 'i')).last(),
+    compatEditorMetadata: p => ui.compatEditor(p).getByText(/bulk inserter.*normal|normal.*bulk inserter/i).last(),
+    compatSave: p => ui.compatEditor(p).getByRole('button', { name: 'Save', exact: true }),
+    compatCancel: p => ui.compatEditor(p).getByRole('button', { name: 'Cancel', exact: true }),
+    compatError: p => p.locator('#validation-error'),
+    compatCheckChip: (p, verdict) => p.getByRole('banner').getByText(`Check ${verdict}`, { exact: true }),
+    compatExamples: p => p.getByRole('dialog', { name: 'Try an example', exact: true }),
+    compatExampleRows: p => ui.compatExamples(p).getByRole('button').filter({ hasNotText: /^Cancel$/ }),
+    compatExample: (p, name) => ui.compatExamples(p).getByRole('button', { name }),
+    compatDialogCancel: p => ui.compatExamples(p).getByRole('button', { name: 'Cancel', exact: true }),
+    compatImportConfirm: p => p.getByRole('dialog').filter({ has: p.getByRole('button', { name: 'Import Selected', exact: true }) }),
+    compatImportSelected: p => ui.compatImportConfirm(p).getByRole('button', { name: 'Import Selected', exact: true }),
+    compatShareConfirm: p => p.getByRole('dialog', { name: 'Open a shared build?', exact: true }),
+    compatOpenShared: p => ui.compatShareConfirm(p).getByRole('button', { name: /^Open build$/ }),
+    compatBody: p => p.locator('body'),
+    compatMain: p => p.getByRole('main'),
+
     // ---- workflow bar and header
     /** Generate (the workflow bar). Label while busy: "Checking..." / "Generating..." (owner: 1.5 workflow bar) */
     generate: (page) => btn(page, 'Generate'),
@@ -1420,6 +1469,8 @@ export const ui = {
     menuButton: (page) => btn(page, 'More options'),
     /** The open ⋮ menu; 0 while it is closed (owner: 1.7 header) */
     menu: (page) => page.getByRole('menu', { name: 'More options' }),
+    /** Includes the exiting menu's modal layer after its contents leave the accessibility tree (owner: capture tooling). */
+    menuLayer: (page) => page.locator('.MuiPopover-root').filter({ has: page.getByRole('menu', { name: 'More options', includeHidden: true }) }),
     /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Try an example…, Getting started, Terms, Developer tools (a menuitemcheckbox: use developerToolsItem), Reset build (owner: 2.1 first visit, 2.5 B) */
     menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
     /** Paste from Factorio: the filled button in the header at every width; it reads "Paste" below 600 px, with the same name (owner: 2.1 first visit) */
@@ -1491,7 +1542,7 @@ export const ui = {
     // ---- Diagram
     /** List / Diagram view buttons of the Configure cards (owner: 1.x diagram) */
     listView: (page) => btn(page, /^List view/),
-    diagramView: (page) => btn(page, /^Diagram view/),
+    diagramView: (page) => btn(page, /^Diagram (?:beta )?view/),
     /** The diagram canvas (React Flow); 0 in List view (owner: 1.x diagram) */
     diagram: (page) => page.getByRole('main').locator('.react-flow').first(),
     /** The diagram's Fullscreen button; 0 in List view (owner: 1.x diagram) */
@@ -1563,6 +1614,12 @@ export async function openMoreMenu(page, { timeout = 5000 } = {}) {
         }
     }
     return menu;
+}
+
+/** Waits until a closed More options menu has also removed its pointer-intercepting transition layer. */
+export async function waitForMoreMenuClosed(page, { timeout = 5000 } = {}) {
+    await ui.menu(page).waitFor({ state: 'hidden', timeout });
+    await ui.menuLayer(page).waitFor({ state: 'detached', timeout });
 }
 
 /**

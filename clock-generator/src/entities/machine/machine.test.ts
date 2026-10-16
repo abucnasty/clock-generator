@@ -19,6 +19,14 @@ const createMachine = (recipeName: string, metadata: Partial<MachineMetadata> = 
 }
 
 describe("Machine Entity", () => {
+    test("serializes the exact output capacity without changing the numeric facts", () => {
+        const machine = createMachine("iron-gear-wheel", { crafting_speed: 1.123456789, productivity: 50 });
+        const rate = machine.output.production_rate.amount_per_second;
+        const facts = JSON.parse(JSON.stringify(Machine.getMachineFacts(machine)));
+        expect(facts.output_rate_per_second).toBe(rate.toDecimal());
+        expect(facts.output_rate_ratio).toEqual({ numerator: rate.getNumerator, denominator: rate.getDenominator });
+    });
+
     test("creates a machine with the correct recipe metadata", () => {
         const machine = createMachine("iron-gear-wheel")
         expect(machine.metadata.recipe.name).toBe("iron-gear-wheel")

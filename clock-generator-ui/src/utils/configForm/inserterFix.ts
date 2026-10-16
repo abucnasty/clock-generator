@@ -1,5 +1,6 @@
 import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
+import { effectiveInserterStackSize } from '../inserterMetadata';
 import { nextId } from './edits';
 import {
     BELT_FORM_DEFAULT_STACK_SIZE,
@@ -31,7 +32,8 @@ function inferStackSize(prev: ConfigFormData): number {
     if (prev.inserters.length === 0) return BELT_FORM_DEFAULT_STACK_SIZE;
     const counts = new Map<number, number>();
     for (const ins of prev.inserters) {
-        counts.set(ins.stack_size, (counts.get(ins.stack_size) ?? 0) + 1);
+        const size = effectiveInserterStackSize(ins);
+        if (Number.isFinite(size)) counts.set(size, (counts.get(size) ?? 0) + 1);
     }
     let best = BELT_FORM_DEFAULT_STACK_SIZE;
     let max = 0;

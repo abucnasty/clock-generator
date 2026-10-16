@@ -581,7 +581,7 @@ function App() {
                             onReplaceTarget={replaceTarget}
                             onReplaceMachines={(machines) => replaceMachines(machines.map((m) => ({ ...m, _uuid: crypto.randomUUID() })))}
                             onReplaceDrills={(drills) => replaceDrills(drills.map((d) => ({ ...d, _uuid: crypto.randomUUID() })))}
-                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), stack_size: ins.stack_size ?? 16, _uuid: crypto.randomUUID() })))}
+                            onReplaceInserters={(inserters) => replaceInserters(inserters.map((ins, i) => ({ ...ins, id: ins.id ?? (i + 1), _uuid: crypto.randomUUID() })))}
                             onReplaceBelts={(belts) => replaceBelts(belts.map((b) => ({ ...b, _uuid: crypto.randomUUID() })))}
                             onReplaceChests={(chests) => replaceChests(chests.map((c) => ({ ...c, _uuid: crypto.randomUUID() } as ChestFormData)))}
                             onUpdateMiningProductivityLevel={(level) => updateDrillsConfig('mining_productivity_level', level)}
@@ -686,9 +686,9 @@ function App() {
                                         <List fontSize="small" sx={{ mr: 0.5 }} />
                                         List
                                     </ToggleButton>
-                                    <ToggleButton value="diagram" aria-label="Diagram view">
+                                    <ToggleButton value="diagram" aria-label="Diagram beta view">
                                         <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
-                                        Diagram
+                                        Diagram{' '}
                                         {/* in the button's own colour, which is black on the selected orange */}
                                         <Chip label="beta" size="small" variant="outlined" sx={{ ml: 0.75, height: 16, fontSize: '0.6rem', color: 'inherit', borderColor: 'currentColor', '& .MuiChip-label': { px: 0.5 } }} />
                                     </ToggleButton>

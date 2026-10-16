@@ -28,4 +28,5 @@ export { combineClockAlternativeRuns, searchesAreNeeded } from "./crafting/rank"
 
 export { Option } from "./data-types/option";
 
-export { isShortDecimalCopies } from "./config/copies-value";
+export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";
+export { fraction } from "./data-types/fraction";

@@ -1,3 +1,4 @@
+import { copiesProblem } from '../utils/copiesProblem';
 import { Box, Paper, Typography } from '@mui/material';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
@@ -75,9 +76,10 @@ export function TargetOutputForm({
                     step={0.5}
                     sx={{ width: 200 }}
                     required
-                    error={copies <= 0}
+                    error={Boolean(copiesProblem(copies))}
                     helperText={COPIES_HELPER}
-                    problem={copies <= 0 ? 'Must be more than 0' : null}
+                    problem={copiesProblem(copies)}
+                    preserveInputOnBlur={Boolean(copiesProblem(copies))}
                 />
             </Box>
         </Paper>

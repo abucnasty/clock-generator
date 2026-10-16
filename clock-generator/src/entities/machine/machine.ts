@@ -266,6 +266,10 @@ function getMachineFacts(machine: Machine): SerializableMachineFacts {
         output_item: machine.output.item_name,
         output_per_craft: machine.output.amount_per_craft.toDecimal(),
         output_rate_per_second: machine.output.production_rate.amount_per_second.toDecimal(),
+        output_rate_ratio: {
+            numerator: machine.output.production_rate.amount_per_second.getNumerator,
+            denominator: machine.output.production_rate.amount_per_second.getDenominator,
+        },
         output_block_size: machine.output.outputBlock.ingredients_blocked_at,
         overload_multiplier: machine.overload_multiplier.overload_multiplier,
         ticks_per_craft: machine.crafting_rate.ticks_per_craft,

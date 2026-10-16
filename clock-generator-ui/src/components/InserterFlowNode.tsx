@@ -41,7 +41,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                             variant="caption"
                             sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2, display: 'block' }}
                         >
-                            Stack: {data.stackSize}
+                            Stack: {Number.isFinite(data.stackSize) ? data.stackSize : 'Automatic'}
                         </Typography>
                     </Box>
                 </Box>
