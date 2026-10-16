@@ -1,12 +1,17 @@
-import { Box, Paper, Tooltip, Typography } from '@mui/material';
+import { Box, Tooltip, Typography } from '@mui/material';
 import type { ShiftRangeEdge } from '../worker/types';
 import type { ShiftOptionsView } from '../worker/types';
 import { COLOR_BLIND_PALETTE } from './colors';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
+import { Panel } from './Panel';
+import { ScrollX } from './ScrollX';
 
 const WORKS_COLOR = COLOR_BLIND_PALETTE.green;
 const FAILS_COLOR = COLOR_BLIND_PALETTE.vermillion;
 const USED_COLOR = COLOR_BLIND_PALETTE.white;
 const ROW_HEIGHT = 18;
+/** A 150px label column and a 360px plot */
+const SHIFT_CHART_MIN_WIDTH = 510;
 
 const describeShift = (ticks: number) => ticks === 0 ? 'the planned position'
     : `${Math.abs(ticks)} ticks ${ticks < 0 ? 'earlier' : 'later'}`;
@@ -80,10 +85,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     const plannedChecked = options.rows.some(row => row.shifts.some(shift => shift.shift_ticks === 0));
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, mb: 1 }}>
-                {options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'}
-            </Typography>
+        <Panel title={options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'} level={4}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 {options.moved === 'swings' && options.plannedTicks
                     ? <>This clock moves the swings planned in clock ticks {options.plannedTicks.start}–{options.plannedTicks.end} ({options.movedDescription}) together, </>
@@ -98,6 +100,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                 {' '}Each place was checked with the clock-only simulation from 12 start points; the one in use was confirmed from 112.
             </Typography>
 
+            <ScrollX label={SCROLL_REGION_NAMES.shiftRange} minWidth={SHIFT_CHART_MIN_WIDTH} tickRoom sx={{ py: '3px' /* room for the planned-start line, which sticks out 3px above and below a row */ }}>
             {options.rows.map(row => (
                 <Box key={row.index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                     <Typography variant="caption" sx={{ width: 150, flexShrink: 0 }}>
@@ -152,6 +155,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     ))}
                 </Box>
             </Box>
+            </ScrollX>
 
             {options.earliest && options.latest && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
@@ -178,6 +182,6 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     </Typography>
                 </Box>
             </Box>
-        </Paper>
+        </Panel>
     );
 }

@@ -47,10 +47,53 @@ export const PROGRESS_NAMES = {
 
 export const CLOCK_TABLE_NAME = 'Clocks';
 
-/** The name of the (i) button beside a clock in the table */
+/** The box the clock table scrolls in when it is wider than the window (Show all columns) */
+export const CLOCK_TABLE_REGION = 'Clock comparison';
+
+/** The boxes that hold the charts and tables that scroll sideways below their floor, by what they hold */
+export const SCROLL_REGION_NAMES = {
+    fuelConsumption: 'Fuel consumption table',
+    fuelClocks: 'Fuel clocks table',
+    fuelTimeline: 'Fuel timeline chart',
+    stateTimeline: 'State transition timeline',
+    transferTimeline: 'Transfer activity timeline',
+    shiftRange: 'Shift range chart',
+    swingComparison: 'Swing comparison chart',
+    swingPlan: 'Swing plan table',
+} as const;
+
+/** The box the install steps' wiring list scrolls in, past 8 rows */
+export const WIRING_LIST_NAME = 'Wiring list';
+
+/** The name of the help button beside a clock in the table, which says what the clock is */
 export function clockHelpName(clockLabel: string): string {
-    return `How ${clockLabel} is made`;
+    return `About ${clockLabel}`;
 }
+
+/** The (i) by a clock table header, which opens the Terms with that column's terms first: "Terms for Works?" */
+export function termsHelpName(column: string): string {
+    return `Terms for ${column}`;
+}
+
+/** The tab lists of Results' Details and Developer tools sections */
+export const TABLIST_NAMES = {
+    details: 'Details',
+    developerTools: 'Developer tools',
+} as const;
+
+/** The names of the charts drawn on a canvas or in an SVG (no text of their own), each naming the clock it shows */
+export const CHART_NAMES = {
+    /** "Inserter 3 state timeline, 17 changes" */
+    stateTimeline: (rowLabel: string, changes: number) =>
+        `${rowLabel} state timeline, ${changes} ${changes === 1 ? 'change' : 'changes'}`,
+    /** "Inserter 3 state the game shows, 4 changes" */
+    factorioStrip: (rowLabel: string, changes: number) =>
+        `${rowLabel} state the game shows, ${changes} ${changes === 1 ? 'change' : 'changes'}`,
+    /** "Machine 1 fuel level over the run" */
+    fuelLevel: (machineLabel: string) => `${machineLabel} fuel level over the run`,
+    /** "Inserter 2 fuel clock wake windows and swings" */
+    fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock wake windows and swings`,
+} as const;
 
 /** The name of a row's drag handle, "Reorder Inserter 2" */
 export function reorderName(rowLabel: string): string {

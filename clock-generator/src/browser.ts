@@ -55,6 +55,8 @@ export {
     sidecarFeatureStep,
 } from './config/sidecar-version';
 export type { SidecarFeature } from './config/sidecar-version';
+export { suggestedTargetOf } from './config/suggested-target';
+export type { SuggestedTarget } from './config/suggested-target';
 export { ImportPipeline } from './config/import-pipeline';
 export type { ImportInput, ImportStep, ImportedMachine } from './config/import-pipeline';
 export { Option } from './data-types/option';

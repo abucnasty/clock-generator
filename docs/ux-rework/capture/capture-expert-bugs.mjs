@@ -93,8 +93,8 @@ async function goConfigure() {
 }
 
 async function validate() {
-    await page.getByRole('button', { name: 'Validate', exact: true }).first().click();
-    await page.waitForFunction(() => !document.body.innerText.includes('Validating...'), null, { timeout: 120_000 });
+    await page.getByRole('button', { name: 'Check only', exact: true }).first().click();
+    await page.waitForFunction(() => !document.body.innerText.includes('Checking...'), null, { timeout: 120_000 });
     await page.waitForTimeout(800);
 }
 
@@ -298,9 +298,11 @@ async function run() {
     // ------------------------------------------------------------ 4. Export has no flag (B5)
     await step('4-export-no-flag', async () => {
         await page.evaluate(() => window.scrollTo(0, 0));
+        // 2.1: Save build file, a ⋮ menu item at every width
+        await page.getByRole('button', { name: 'More options' }).click();
         const [download] = await Promise.all([
             page.waitForEvent('download'),
-            page.getByRole('button', { name: 'Export Config' }).click(),
+            page.getByRole('menuitem', { name: 'Save build file' }).click(),
         ]);
         const text = readFileSync(await download.path(), 'utf8');
         const storage = await page.evaluate((key) => localStorage.getItem(key) ?? '', STORAGE_KEY);
@@ -574,7 +576,7 @@ async function run() {
     };
     const storedInserter = async () => (await storedConfig()).inserters.find((ins) => ins.id === target);
     const setStackSize = async (value) => {
-        await inserterDialog().getByLabel('Stack Size').click();
+        await inserterDialog().getByLabel('Stack size').click();
         await page.keyboard.press('ControlOrMeta+A');
         await page.keyboard.type(value);
         await page.keyboard.press('Tab');
@@ -594,7 +596,7 @@ async function run() {
         await shot('b6-dialog-overrides-always', 'Overrides tab: ALWAYS picked');
         await dlg.getByRole('tab', { name: /Config/ }).click();
         await page.waitForTimeout(400);
-        const stack = await dlg.getByLabel('Stack Size').inputValue();
+        const stack = await dlg.getByLabel('Stack size').inputValue();
         const unsaved = await dlg.getByText('Unsaved changes', { exact: true }).isVisible().catch(() => false);
         const save = dlg.getByRole('button', { name: 'Save', exact: true });
         const saveEnabled = (await save.count()) > 0 && await save.isEnabled();

@@ -70,10 +70,19 @@ describe('the live region', () => {
             .toEqual({ id: 2, text: 'Build reset. Or press Ctrl+Z to undo.' });
     });
 
-    it('leaves errors and warnings to their own alert role', () => {
+    it('announces errors and warnings the same way, with their hint, under the message\'s id', () => {
         const before = notify(NO_MESSAGE, 1, { text: 'Build exported.', severity: 'success' });
-        expect(notify(before, 2, { text: 'Failed to paste: no', severity: 'error' }).announcement).toBe(before.announcement);
-        expect(notify(before, 3, { text: 'Copied. Slow.', severity: 'warning' }).announcement).toBe(before.announcement);
+        expect(notify(before, 2, { text: 'Failed to paste: no', severity: 'error' }).announcement)
+            .toEqual({ id: 2, text: 'Failed to paste: no' });
+        expect(notify(before, 3, { text: 'Copied. Slow.', severity: 'warning', hint: 'Check the rate.' }).announcement)
+            .toEqual({ id: 3, text: 'Copied. Slow. Check the rate.' });
+    });
+
+    it('announces the same message raised twice under two ids, so that it is read out twice', () => {
+        const once = notify(NO_MESSAGE, 1, { text: 'Failed to paste: no', severity: 'error' });
+        const twice = notify(once, 2, { text: 'Failed to paste: no', severity: 'error' });
+        expect(once.announcement?.id).not.toBe(twice.announcement?.id);
+        expect(twice.announcement?.text).toBe(once.announcement?.text);
     });
 
     it('announces text that shows no message, a new id each time so that the same text is read out again', () => {

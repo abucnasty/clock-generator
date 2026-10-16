@@ -44,7 +44,7 @@ The worst problems today:
 | Results charts | The current timelines mostly serve the owner. Add a new player-facing **Wake windows** view as the default chart. The timelines, Plan and Detailed mode move behind **Developer tools** and get light fixes only. |
 | Entity numbers | **Renumber, but consistently.** Every view shows the same current number (see 1.9). |
 | Safety net | **An Undo snackbar** on every destructive action. No full undo/redo history. |
-| Install steps | **The agent derives them** from the blueprint code and the in-game harness. The owner reviews them before merge. |
+| Install steps | **The agent derives them** from the blueprint code and the in-game harness. The owner reviews them in game before the Phase 2 PR merges into `feat/ux-rework` (the owner, 2026-10-15). |
 | Visual direction | **Factorio GUI grammar:** green filled means confirm or commit, orange means selection or accent, title-bar panel headers, inset slots. |
 | Accessibility | **Full WCAG 2.2 AA** for player-facing views. The developer timelines get light fixes only. |
 | Phase 3 scope | All four: rule editor upgrades, editing at scale, cancel and keep results, build library and share links. |
@@ -82,9 +82,10 @@ master
 
 ### Releases (only in the final PR)
 
-- Bump `clock-generator` and `clock-generator-ui` together from 0.9.0 to **0.10.0**, with a `CHANGELOG.md` section that
-  lists the changes players will notice.
-- Bump `clock-generator-sidecar` from 0.7.0 to **0.8.0**: `info.json`, `changelog.txt`, and `LATEST_SIDECAR_VERSION` in
+- Bump `clock-generator` and `clock-generator-ui` together from the then-current master version (currently **0.15.2**)
+  to the next release, with a `CHANGELOG.md` section listing the changes players will notice. Choose the final number
+  in the final PR; taking upstream version changes during integration is not a new phase release.
+- Bump `clock-generator-sidecar` from 0.7.1 to **0.8.0**: `info.json`, `changelog.txt`, and `LATEST_SIDECAR_VERSION` in
   `clock-generator/src/config/sidecar-version.ts`. A test fails if those three drift apart.
 - Merging to `master` releases the site, and publishes the mod because its folder changed (see the root `README.md`).
 - **Do not bump any version in a phase.**
@@ -100,6 +101,27 @@ master
   "Stop the sidecar crashing on an assembler without a recipe or a lab"). Code reads like the surrounding code.
 - **Write copy in plain words** from the player's side, using the glossary terms (1.12) once the owner has approved
   them.
+
+## Upstream compatibility (owner decisions, 2026-10-16)
+
+Master advanced from 0.11.0 to 0.15.1, then 0.15.2 during integration (#193, the near-lane bugfix).
+Integrate it into `feat/ux-rework`, then p2, then p3, preserving the UX work.
+The integration acceptance criteria are in [specs/upstream-0.15-compatibility.md](specs/upstream-0.15-compatibility.md).
+
+- **Keep this a UX rework.** Preserve imported inserter type and quality and show them read-only; no selectors.
+- **Clearing Stack size restores Automatic**, using that type’s fully researched capacity (4, 12 or 16). Preserve
+  omitted values and existing explicit overrides; show the effective value and the full-research assumption.
+- **Do not extend the sidecar to export type/quality in this rework.** Its existing 2.2 scope and 0.8.0 release plan
+  stand. Explain the default timing assumption where the UX needs it; no new sidecar in-game checkpoint for metadata.
+- **Repeated identical units:** explain the engine refusal and guide the player to select one unit and set Copies.
+  No conversion, automatic reduction, validation bypass or new engine behavior.
+- **Fractional Copies:** follow the engine’s positive short-decimal rule throughout fields, target limits, examples,
+  saved builds and share links. Values below one are supported. Editable invalid drafts remain recoverable.
+- Preserve locale-derived game names when merging the new data pipeline; repair removed example/capture paths,
+  refresh results-sensitive evidence, and keep all existing gates and owner phase/install checkpoints.
+
+The compatibility pass precedes final evidence/review for 2.7 B and 3.3. The shared editor in 3.2 A reuses the agreed
+metadata and Automatic behavior; 3.2 B preserves both on duplicate/bulk operations. No broader engine or mod work.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -223,7 +245,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - **crafting cycle**
   - **clock period:** how long until the clock repeats; LCM stays in the expert area only.
   - **wake window:** a stretch of ticks during which the clock switches an inserter on.
-  - **wake-up:** one start of a wake window.
+  - **wake-up:** use the engine’s count, distinct from a wake-window start. Inputs waiting on a machine wake on
+    true craft starts; outputs wake on finished crafts and productivity payouts. This corrects stale wording only;
+    the owner’s pending strict definition remains separate.
   - **copies**
 - **Fixes:**
   - "devided" (`OverridesForm.tsx:151`)
@@ -266,6 +290,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - The confirm dialog for a paste pre-fills Target Output from the export (2.2). Older exports infer it from the
     machines.
   - Reword the old-mod warning (A17).
+  - An untouched build shows its next step neutrally, not a red problem count. When the target rate is more than the
+    machines can make, a line under the field says so and it is a blocking problem, since the engine refuses such a
+    target (the owner, 2026-10-14, after the Phase 1 end review; built as 2.1 W).
 
 **2.2 Sidecar mod changes** (`clock-generator-sidecar/`, version 0.8.0 in the final PR)
 - **Export a suggested target.** Add the final product to the export in `scripts/export.lua`: the recipe whose output
@@ -390,6 +417,12 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - Fullscreen fits the view; Enter opens a focused node.
   - Make the belt lane (`near_lane`) settable in the List too.
 
+**2.F Phase-end factual copy and fractional scope** (fresh Phase2 A-P2-01/03, B1/11, C2E-6/9)
+- Reuse the current provisional wake-up definition in Wake windows and expanded comparison help.
+- Show Makes total scope for every Copies value other than1, including partial units.
+- Remove the introduction's unconditional net UPS-saving claim. No engine or design change.
+- Full item gates, independent code/UX and affected rechecks by all three phase personas remain.
+
 **Phase 2 done when:**
 - the items above are merged
 - the owner has reviewed the install steps
@@ -402,20 +435,25 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - **What:**
   - A live one-line preview of the rule.
   - CLOCKED ranges shown against the clock period, defaulting to the planned window.
-  - Inline checks that block Save: the end must be after the start, and the range must fit in the period.
+  - Inline checks that block Save: the end must not precede the start, and the range must fit in the period.
   - Templates ask for the item and confirm before replacing the current rule; the hard-coded 32 goes.
   - The editor says whether rules reach the blueprint or only shape the planning simulation. Find out which from the
     engine.
+  - The "Latched Output Drain" template releases on the source's level, as the owner's sample does (the owner,
+    2026-10-14). A Clocked range's end may equal its start (the engine's ranges include both ends).
 
 **3.2 Editing at scale** (B17, B22, B26)
 - **What:**
   - One inserter editor component, shared by the List rows and the Diagram dialog, with the same fields, labels and
-    fallbacks.
+    fallbacks. Show imported inserter type/quality read-only; clearing Stack size restores Automatic (owner,
+    2026-10-16; see Upstream compatibility).
   - Duplicate a row.
   - Multi-select with a bulk-edit bar for stack size, filters and enable mode.
   - New rows scroll into view and get focus.
   - Fewer tab stops per row.
   - The filter picker lists the source's items first.
+  - Drag reorder stays, with a message and Undo like a delete, and Move up / Move down for keyboard and single-pointer
+    users. Every Diagram dialog is a draft with Save and Cancel (the owner, 2026-10-14, after the Phase 1 end review).
 
 **3.3 Cancel, and keep the results** (B11, B18)
 - **What:**
@@ -423,17 +461,44 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - Copy is held back until generation ends, or labelled "Copy current best" while it runs.
   - Keep the last generation and the chosen clock per config key in IndexedDB, and restore them on reload.
   - Keep the player's pick across a regeneration when that clock still exists.
+  - Undo of an Import, Paste or Reset brings the clocks back; the stale banner lists what changed and when the clocks
+    were made (Phase 1 end review). Native IndexedDB, up to 10 builds and about 64 MB, no new dependency (the owner,
+    2026-10-14).
 
 **3.4 Build library and share links** (B20)
 - **What:**
   - Named builds with a switcher. Migrate the single `clock-generator-config` slot into it.
   - Warn when another tab edits the same build (the `storage` event).
   - "Copy share link" carries the compressed config in the URL hash. Opening a link imports it with a confirm and Undo.
+  - The glossary gains "Your builds" and "share link". No new dependency: links need a 2023-or-later browser (the
+    owner, 2026-10-14).
+
+**3.F Phase-end safety and accessibility carries** (fresh Phase2 review, explicit carry owners)
+- Give failed clipboard copying visible/spoken feedback and a usable manual-copy route.
+- Give player-facing Fuel event intervals/quantities and trace information keyboard/touch/text equivalents.
+- Preview current→incoming Paste counts and warn/confirm cross-category references. Append stays deferred.
+- Correct aggregate output-swing wording, use deliberate click/tap Advanced help, and keep stale-plan values readable
+  while their actions remain correctly inert.
+- Gather actual320px reflow evidence, distinguish applicable two-dimensional exceptions, and fix ordinary UI gaps
+  within the existing accessibility goal. Any remaining policy decision must use concrete evidence; no AA waiver or
+  broad phone-layout promise is inferred from the owner's ≥720 full-support decision.
+- Finalize a bounded spec against current P3 before implementation. No engine arithmetic, dependencies or deferred
+  D1–D8 features. Existing full gates, independent reviews and phase-end requirements apply.
 
 **Phase 3 done when:**
 - the items above are merged
 - the tests pass
 - the fresh UX review is attached to the phase PR.
+
+## Deferred roadmap: Compact view (D1)
+
+Owner feedback, 2026-10-16: scope an optional denser view for experienced users, especially Results. Reduce excessive padding, repeated labels/helpers and the double-header footprint; make the version visible without scrolling. Preserve newcomer defaults, essential feedback and accessibility. See [D1 scope](specs/D1-compact-view.md).
+
+This is planning only, deferred beyond the current implementation queue until the owner's broader audit. It does not extend the current phase completion criteria or release scope; no product implementation now.
+
+### Further deferred design proposals (D2–D8)
+
+Owner requested drafts for later discussion: light/dark mode; a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals are not finalized specs, implementation authorizations or additions to current phase/release completion criteria.
 
 ## Verification (every phase)
 

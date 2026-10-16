@@ -452,7 +452,7 @@ Every potential clock names the belt it is made for:
 - **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt pickup slack. It is a rule of thumb, not a simulated moving belt: it may work on one build and not on another.
 - **non-moving belt**: the belt inserters get only the windows they need on a full belt that does not move. "Batched swings, non-moving belt" is made this way on purpose; other clocks drop the slack when they do not hold the expected output with it. A clock with a period that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
 
-By default a non-moving belt clock is only selected for you when no clock for a moving belt holds the target rate. Set `non_moving_belts: true` ("Belts do not move" in the UI) when your belts are backed up and standing still: each clock is made without the slack, and the one with the fewest wake-ups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a non-moving belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
+By default a non-moving belt clock is only selected for you when no clock for a moving belt holds the target rate. Set `non_moving_belts: true` (the Belts section's "Backed up and standing still" answer in the UI) when your belts are backed up and standing still: each clock is made without the slack, and the one with the fewest wake-ups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a non-moving belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
 
 #### Searching for fewer wake-ups
 
@@ -518,7 +518,8 @@ src/
 └── verification/     # Comparing a recording with the simulator (verify)
 
 resources/
-├── data-filtered.json # The game data
+├── data-filtered.json # The game data, and under `names` the in-game English names of its items and recipes
+├── filter-raw.js     # Makes data-filtered.json from `factorio --dump-data` and the game's locale (FACTORIO_DATA_DIR)
 ├── clock_generator_staging.zip # The save test:game builds in
 └── config-samples/   # sample configurations and scaffolds, by build
 ```

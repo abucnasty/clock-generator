@@ -1,20 +1,31 @@
-import { Alert, Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { memo } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
+import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
-import { COLOR_BLIND_PALETTE } from './colors';
+import { GameName } from './GameName';
+import { InserterStatus, MachineStatus } from 'clock-generator/light';
+import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS, TIMELINE_TRACK_COLOR } from './colors';
+import { Panel } from './Panel';
+import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
+import { durationText } from '../utils/numberText';
 
 const LEVEL_COLOR = COLOR_BLIND_PALETTE.skyBlue;
 const WINDOW_COLOR = COLOR_BLIND_PALETTE.lightGrey;
-const SWING_COLOR = COLOR_BLIND_PALETTE.orange;
-const EMPTY_COLOR = COLOR_BLIND_PALETTE.vermillion;
+// the colours the Detailed state chart gives the same things: an inserter's swing, and a machine with no fuel
+const SWING_COLOR = INSERTER_STATUS_COLORS[InserterStatus.SWING];
+const EMPTY_COLOR = MACHINE_STATUS_COLORS[MachineStatus.NO_FUEL];
+/** One line to a cell, the first (the entity's name) apart: the tables scroll sideways in their box instead of breaking a value over five lines */
+/** The same for the fuel clocks, whose last cell ("17 in 3 wake windows (5.1/min)") is the one that wraps */
+const NOWRAP_CLOCK_CELLS = { '& td:not(:first-of-type):not(:last-of-type)': { whiteSpace: 'nowrap' } } as const;
+const NOWRAP_CELLS = { '& td:not(:first-of-type)': { whiteSpace: 'nowrap' } } as const;
 const LABEL_WIDTH = 200;
 const LEVEL_HEIGHT = 56;
 const ROW_HEIGHT = 20;
 
-const ticksAndSeconds = (ticks: number) => `${Math.round(ticks)} ticks (${(ticks / 60).toFixed(1)} s)`;
+const ticksAndSeconds = (ticks: number) => durationText(Math.round(ticks));
 const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
 
 interface FuelPanelProps {
@@ -61,8 +72,8 @@ function RanOutAlert({ run }: { run: FuelRunView }) {
 function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: FuelRunView | null }) {
     const levelsOf = (machineId: string) => run?.levels.find(levels => levels.machine_id === machineId);
     return (
-        <TableContainer>
-            <Table size="small">
+        <ScrollX label={SCROLL_REGION_NAMES.fuelConsumption} minWidth={720}>
+            <Table size="small" sx={NOWRAP_CELLS}>
                 <TableHead>
                     <TableRow>
                         <TableCell>Machine</TableCell>
@@ -82,17 +93,19 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                         const levels = levelsOf(machine.machine_id);
                         return (
                             <TableRow key={machine.machine_id}>
-                                <TableCell>
+                                <TableCell sx={{ minWidth: 160 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <FactorioIcon name={machine.output_item} size={18} />
-                                        {entityLabel('machine', machine.machine_number)}
-                                        <Typography variant="caption" color="text.secondary">{machine.recipe}</Typography>
+                                        <FactorioIcon name={machine.output_item} size={18} alt="" />
+                                        <Box>
+                                            {entityLabel('machine', machine.machine_number)}
+                                            <Typography variant="caption" color="text.secondary" component="div"><GameName id={machine.recipe} kind="recipe" /></Typography>
+                                        </Box>
                                     </Box>
                                 </TableCell>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <FactorioIcon name={machine.fuel_item} size={18} />
-                                        {machine.fuel_item}
+                                        <FactorioIcon name={machine.fuel_item} size={18} alt="" />
+                                        <GameName id={machine.fuel_item} />
                                     </Box>
                                 </TableCell>
                                 <TableCell align="right">{machine.burn_rate_per_second.toFixed(3)}/s</TableCell>
@@ -113,7 +126,7 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                                     </TableCell>
                                 )}
                                 {run && (
-                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.main' : undefined }}>
+                                    <TableCell align="right" sx={{ color: levels && levels.empty_ticks > 0 ? 'error.light' : undefined }}>
                                         {levels ? levels.min_level.toFixed(2) : '-'}
                                     </TableCell>
                                 )}
@@ -122,24 +135,24 @@ function MachineTable({ machines, run }: { machines: FuelMachinePlan[]; run: Fue
                     })}
                 </TableBody>
             </Table>
-        </TableContainer>
+        </ScrollX>
     );
 }
 
 function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run: FuelRunView | null }) {
     return (
-        <TableContainer>
-            <Table size="small">
+        <ScrollX label={SCROLL_REGION_NAMES.fuelClocks} minWidth={640}>
+            <Table size="small" sx={NOWRAP_CLOCK_CELLS}>
                 <TableHead>
                     <TableRow>
                         <TableCell>Inserter</TableCell>
                         <TableCell>Feeds</TableCell>
-                        <TableCell align="right">Enabled every</TableCell>
-                        <TableCell align="right">For ticks</TableCell>
-                        <TableCell align="right">Enables</TableCell>
+                        <TableCell align="right">Switched on every</TableCell>
+                        <TableCell align="right">Wake window (ticks)</TableCell>
+                        <TableCell align="right">Wake windows</TableCell>
                         <TableCell align="right">A hand lasts</TableCell>
                         <TableCell align="right">Expected swings</TableCell>
-                        <TableCell align="right">Enables that swing</TableCell>
+                        <TableCell align="right">Wake windows with a swing</TableCell>
                         {run && <TableCell align="right">Simulated swings</TableCell>}
                     </TableRow>
                 </TableHead>
@@ -161,7 +174,7 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
                                 <TableCell align="right">{percent(inserter.swing_share)}</TableCell>
                                 {run && (
                                     <TableCell align="right">
-                                        {swings.length} of {enables} enables ({(swings.length / run.durationTicks * 3600).toFixed(1)}/min)
+                                        {swings.length} in {enables} wake windows ({(swings.length / run.durationTicks * 3600).toFixed(1)}/min)
                                     </TableCell>
                                 )}
                             </TableRow>
@@ -169,12 +182,12 @@ function InserterTable({ inserters, run }: { inserters: FuelInserterPlan[]; run:
                     })}
                 </TableBody>
             </Table>
-        </TableContainer>
+        </ScrollX>
     );
 }
 
 /** The fuel a machine held: the highest of each sample as an area, the lowest as a line, and the insertion limit dashed */
-function FuelLevelChart({ levels, durationTicks, insertionLimit }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number }) {
+function FuelLevelChart({ levels, durationTicks, insertionLimit, label }: { levels: FuelLevelSeries; durationTicks: number; insertionLimit: number; label: string }) {
     const top = Math.max(levels.max_level, insertionLimit) * 1.08;
     const y = (level: number) => (1 - level / top) * LEVEL_HEIGHT;
     const x = (sample: number) => Math.min(sample * levels.ticks_per_sample, durationTicks);
@@ -185,9 +198,11 @@ function FuelLevelChart({ levels, durationTicks, insertionLimit }: { levels: Fue
     return (
         <Box
             component="svg"
+            role="img"
+            aria-label={CHART_NAMES.fuelLevel(label)}
             viewBox={`0 0 ${durationTicks} ${LEVEL_HEIGHT}`}
             preserveAspectRatio="none"
-            sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: 'action.hover', borderRadius: 0.5 }}
+            sx={{ display: 'block', width: '100%', height: LEVEL_HEIGHT, bgcolor: TIMELINE_TRACK_COLOR, borderRadius: 0.5 }}
         >
             <polygon points={[`0,${LEVEL_HEIGHT}`, ...steps(levels.max), `${durationTicks},${LEVEL_HEIGHT}`].join(' ')} fill={LEVEL_COLOR} fillOpacity={0.3} />
             <polyline points={steps(levels.min).join(' ')} fill="none" stroke={LEVEL_COLOR} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
@@ -247,9 +262,11 @@ function FuelClockRow({ inserter, swings, durationTicks }: { inserter: FuelInser
                     every {inserter.modulus}
                 </Typography>
             </Box>
-            <Box sx={{ flex: 1, height: ROW_HEIGHT, position: 'relative', bgcolor: 'action.hover', borderRadius: 0.5 }}>
+            <Box sx={{ flex: 1, height: ROW_HEIGHT, position: 'relative', bgcolor: TIMELINE_TRACK_COLOR, borderRadius: 0.5 }}>
                 <Box
                     component="svg"
+                    role="img"
+                    aria-label={CHART_NAMES.fuelClock(entityLabel('inserter', inserter.inserter_number))}
                     viewBox={`0 0 ${durationTicks} 1`}
                     preserveAspectRatio="none"
                     sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -289,11 +306,12 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
         <>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                 <LegendItem color={LEVEL_COLOR} label="Fuel in the machine" />
-                <LegendItem color={WINDOW_COLOR} label="Fuel clock enables the inserter" opacity={0.6} />
+                <LegendItem color={WINDOW_COLOR} label="Fuel clock switches the inserter on" opacity={0.6} />
                 <LegendItem color={SWING_COLOR} label="Inserter swings" />
                 <LegendItem color={EMPTY_COLOR} label="No fuel" opacity={0.5} />
             </Box>
 
+            <ScrollX label={SCROLL_REGION_NAMES.fuelTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
             <Box sx={{ display: 'flex', mb: 0.5 }}>
                 <Box sx={{ width: LABEL_WIDTH, flexShrink: 0 }} />
                 <Box sx={{ flex: 1, position: 'relative', height: 20 }}>
@@ -323,17 +341,18 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Box sx={{ width: LABEL_WIDTH, flexShrink: 0, pr: 1 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <FactorioIcon name={machine.output_item} size={18} />
-                                        <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem' }}>
-                                            {entityLabel('machine', machine.machine_number)} ({machine.recipe})
+                                        <FactorioIcon name={machine.output_item} size={18} alt="" />
+                                        {/* wraps: a long recipe name is not cut at the label column's edge */}
+                                        <Typography variant="body2" sx={{ fontSize: '0.75rem', minWidth: 0 }}>
+                                            {entityLabel('machine', machine.machine_number)} (<GameName id={machine.recipe} kind="recipe" />)
                                         </Typography>
                                     </Box>
                                     <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontSize: '0.65rem' }}>
-                                        {machine.fuel_item} {levels.min_level.toFixed(1)} to {levels.max_level.toFixed(1)}
+                                        <GameName id={machine.fuel_item} /> {levels.min_level.toFixed(1)} to {levels.max_level.toFixed(1)}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} />
+                                    <FuelLevelChart levels={levels} durationTicks={durationTicks} insertionLimit={machine.insertion_limit} label={entityLabel('machine', machine.machine_number)} />
                                 </Box>
                             </Box>
                         )}
@@ -348,6 +367,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
                     </Box>
                 );
             })}
+            </ScrollX>
         </>
     );
 }
@@ -362,32 +382,31 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
         <Box>
             {run && <RanOutAlert run={run} />}
 
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" component="h2">Fuel consumption</Typography>
+            {/* inside Results' Details, under its Fuel tab: the cards are a level below the section */}
+            <Panel title="Fuel consumption" level={3}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     A machine burns fuel only while it crafts, so it burns its crafting share of the rate over a clock period.
                 </Typography>
                 <MachineTable machines={plan.machines} run={run} />
-            </Paper>
+            </Panel>
 
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" component="h2">Fuel clocks</Typography>
+            <Panel title="Fuel clocks" level={3}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    A fuel inserter is enabled for a few ticks as often as the fuel slot's limit lasts, whatever the clock period is.
-                    It only swings when the slot is below the limit, so most enables pass without a swing. {exportedClockText(fuel)}
+                    A fuel clock switches its inserter on for a few ticks (a wake window) as often as the fuel slot's limit
+                    lasts, whatever the clock period is. The inserter only swings when the slot is below the limit, so most
+                    wake windows pass without a swing. {exportedClockText(fuel)}
                 </Typography>
                 <InserterTable inserters={plan.inserters} run={run} />
-            </Paper>
+            </Panel>
 
             {run && (
-                <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6" component="h2">Fuel timeline</Typography>
+                <Panel title="Fuel timeline" level={3} sx={{ mb: 0 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        The exported clock run for {run.periods} clock periods: {run.durationTicks} ticks ({(run.durationTicks / 60).toFixed(1)} seconds).
+                        The exported clock run for {run.periods} clock periods: {durationText(run.durationTicks)}.
                         The dashed line is the fuel slot's limit.
                     </Typography>
                     <FuelTimeline fuel={fuel} run={run} />
-                </Paper>
+                </Panel>
             )}
         </Box>
     );

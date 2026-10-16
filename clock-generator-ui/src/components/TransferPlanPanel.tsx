@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import {
     Accordion,
     AccordionDetails,
@@ -19,7 +19,11 @@ import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { EnableControlMode } from 'clock-generator/light';
 import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
+import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
+import { ScrollX } from './ScrollX';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 
 interface TransferPlanPanelProps {
     transferPlan: SerializableTransferPlan;
@@ -27,6 +31,11 @@ interface TransferPlanPanelProps {
     usedLcm: number;
     excludedIngredients: string[];
     onExcludeChange: (items: string[]) => void;
+}
+
+/** "inserter" as "Inserter" */
+function sentenceCase(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 const ALWAYS_ON = ENABLE_MODE_LABELS[EnableControlMode.ALWAYS];
@@ -43,6 +52,7 @@ function TransferPlanPanelComponent({
     onExcludeChange,
 }: TransferPlanPanelProps) {
     const { entities, computed_lcm } = transferPlan;
+    const { itemLabel } = useGameNames();
 
     const toggleExclude = (itemName: string) => {
         if (excludedIngredients.includes(itemName)) {
@@ -53,9 +63,10 @@ function TransferPlanPanelComponent({
     };
     const isLcmOverridden = usedLcm !== computed_lcm;
 
+    const summaryId = useId();
     return (
-        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' } }} sx={{ mt: 1 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId } }} sx={{ mt: 1 }}>
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMoreIcon />}>
                 <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                     Swing Plan
                 </Typography>
@@ -89,18 +100,20 @@ function TransferPlanPanelComponent({
                             icon={<BlockIcon />}
                             label={`${excludedIngredients.length} excluded`}
                             size="small"
-                            color="secondary"
                             variant="outlined"
                         />
                     )}
                 </Box>
-                <Table size="small">
+                <ScrollX label={SCROLL_REGION_NAMES.swingPlan}>
+                {/* from 600px up the columns keep their widths; below it they shrink to their content, with less padding, so that the
+                    Exclude from LCM column stays on screen on a phone (the box scrolls, with an edge fade, only when it still cannot fit) */}
+                <Table size="small" sx={{ '& th, & td': { px: { xs: 0.75, sm: 2 } } }}>
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{ width: '30%' }}>Entity</TableCell>
+                            <TableCell sx={{ width: { sm: '30%' } }}>Entity</TableCell>
                             <TableCell>Item</TableCell>
-                            <TableCell align="right" sx={{ width: '120px' }}>Swings / cycle</TableCell>
-                            <TableCell align="center" sx={{ width: '110px' }}>Exclude from LCM</TableCell>
+                            <TableCell align="right" sx={{ width: { sm: '120px' } }}>Swings / cycle</TableCell>
+                            <TableCell align="center" sx={{ width: { sm: '110px' } }}>Exclude from LCM</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -119,12 +132,12 @@ function TransferPlanPanelComponent({
                                     >
                                         <TableCell>
                                             {isFirstRow ? (
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                                                     <Chip
-                                                        label={entity.entity_type}
+                                                        label={sentenceCase(entity.entity_type)}
                                                         size="small"
                                                         variant="outlined"
-                                                        sx={{ fontSize: '0.65rem', height: 18 }}
+                                                        sx={{ fontSize: '0.7rem' }}
                                                     />
                                                     <Typography variant="body2">
                                                         {entityLabel(entity.entity_type, entity.entity_number)}
@@ -142,7 +155,7 @@ function TransferPlanPanelComponent({
                                                         color: isExcluded ? 'text.disabled' : 'text.primary',
                                                     }}
                                                 >
-                                                    {transfer.item_name}
+                                                    <GameName id={transfer.item_name} />
                                                 </Typography>
                                             </Box>
                                         </TableCell>
@@ -168,11 +181,10 @@ function TransferPlanPanelComponent({
                                             >
                                                 <Chip
                                                     // starts with the word on the chip, and says what it is about
-                                                    aria-label={`${isExcluded ? 'Excluded from' : 'Included in'} LCM: ${transfer.item_name}`}
+                                                    aria-label={`${isExcluded ? 'Excluded from' : 'Included in'} LCM: ${itemLabel(transfer.item_name)}`}
                                                     icon={isExcluded ? <BlockIcon /> : undefined}
                                                     label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"
-                                                    color={isExcluded ? 'secondary' : 'default'}
                                                     variant={isExcluded ? 'filled' : 'outlined'}
                                                     onClick={() => toggleExclude(transfer.item_name)}
                                                     sx={{ cursor: 'pointer' }}
@@ -185,13 +197,14 @@ function TransferPlanPanelComponent({
                         )}
                     </TableBody>
                 </Table>
+                </ScrollX>
                 <Box sx={{ px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="caption" color="text.secondary">
                         Swings per cycle can be fractions. The clock period is the number of crafting cycles (the LCM)
                         after which they all come out whole. Excluded ingredients are left out of that calculation, and an
                         inserter whose items are all excluded is forced to <strong>{ALWAYS_ON}</strong>, unless you gave
                         it an enable rule of your own, which stays.
-                        Validate again, then Generate, after making changes.
+                        Generate again after making changes.
                     </Typography>
                 </Box>
             </AccordionDetails>

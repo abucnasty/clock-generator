@@ -1,11 +1,12 @@
 import { Close } from '@mui/icons-material';
-import { Alert, Box, Button, IconButton, Portal, Snackbar } from '@mui/material';
+import { Alert, Box, Button, IconButton, Snackbar } from '@mui/material';
 import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
 import { MessageActionsContext, MessageStateContext, useDismissMessage, useMessageState } from '../hooks/useMessages';
 import { ANNOUNCER_ATTRIBUTE, announceText } from '../utils/announcer';
 import { isUrgent, messagesReducer, NO_MESSAGE, type Message, type MessageInput } from '../utils/messages';
-import { isEscapeForSomethingElse } from '../utils/undoKeys';
+import { entersOtherDialog, isEscapeForSomethingElse } from '../utils/undoKeys';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { CONTROL, SURFACE } from '../theme/tokens';
 
 /** Holds the one message shown, for any component to raise with `useNotify()`; goes above `App`, which raises some */
 export function MessageProvider({ children }: { children: ReactNode }) {
@@ -40,10 +41,11 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * The page's polite live region, always there and empty until something is announced, and the message shown, top
- * centre just below the header, over the page, its footer and any dialog. Rendered once, inside the theme. An error or
- * a warning is announced by its own alert role; any other message, and `announce` text, by the live region, so it is
- * read out once. While a dialog hides the app from screen readers, `announceText` uses a region on `<body>` instead.
+ * The page's polite live region, always there and empty until something is announced: every message is read out
+ * through it once, when it is raised, as `announce` text is. Rendered once, inside the theme. While a dialog hides the
+ * app from screen readers, `announceText` uses a region on `<body>` instead. The message itself is drawn by
+ * `MessageSlot`. A message without an action closes when a dialog other than the fullscreen diagram opens; one with
+ * Undo stays, behind the dialog, until the dialog closes.
  */
 export function MessageHost() {
     const { current, announcement } = useMessageState();
@@ -55,11 +57,47 @@ export function MessageHost() {
             announceText(regionRef.current, announcement.text);
         }
     }, [announcement]);
+
+    // read by the listener, so that it is added once
+    const currentRef = useRef(current);
+    useEffect(() => {
+        currentRef.current = current;
+    }, [current]);
+    useEffect(() => {
+        const onFocusIn = (event: FocusEvent) => {
+            const shown = currentRef.current;
+            const target = event.target instanceof Element ? event.target : null;
+            if (shown && !shown.action && entersOtherDialog(target, event.relatedTarget)) {
+                dismiss(shown.id);
+            }
+        };
+        document.addEventListener('focusin', onFocusIn);
+        return () => document.removeEventListener('focusin', onFocusIn);
+    }, [dismiss]);
+
+    return <Box ref={regionRef} role="status" sx={VISUALLY_HIDDEN} {...{ [ANNOUNCER_ATTRIBUTE]: '' }} />;
+}
+
+/**
+ * Where the message is drawn, in the page's flow: the header, or the fullscreen diagram's title bar. Exactly one slot
+ * is active at a time.
+ */
+export function MessageSlot({ active, inBar = false }: { active: boolean; inBar?: boolean }) {
+    const { current } = useMessageState();
+    const dismiss = useDismissMessage();
+    if (!active || !current) {
+        return null;
+    }
     return (
-        <>
-            <Box ref={regionRef} role="status" sx={VISUALLY_HIDDEN} {...{ [ANNOUNCER_ATTRIBUTE]: '' }} />
-            {current && <MessageSnackbar key={current.id} message={current} onDismiss={dismiss} />}
-        </>
+        <Box
+            sx={inBar
+                // its own row under the title and Exit when narrow; between them from sm
+                ? { order: { xs: 3, sm: 0 }, flexBasis: { xs: '100%', sm: 'auto' }, minWidth: 0, mr: { sm: 1 } }
+                // the padding of the workflow bar's own rows
+                : { px: { xs: 2, sm: 3 }, pb: 1 }}
+        >
+            <MessageSnackbar key={current.id} message={current} onDismiss={dismiss} />
+        </Box>
     );
 }
 
@@ -79,58 +117,62 @@ function MessageSnackbar({ message, onDismiss }: { message: Message; onDismiss: 
         }
     };
 
-    // the portal keeps it out of any stacking context a parent makes
     return (
-        <Portal>
-            <Snackbar
-                ref={rootRef}
-                // for whoever needs to tell focus in the message from focus on the page
-                data-message=""
-                open
-                autoHideDuration={message.durationMs}
-                // hovering or focusing it pauses the timer; leaving gives it its full time again, not MUI's half
-                resumeHideDuration={message.durationMs ?? undefined}
-                onClose={(event, reason) => {
-                    // a click elsewhere on the page does not close it, nor an Escape that closes a list, menu or dialog
-                    if (reason === 'clickaway') return;
-                    if (reason === 'escapeKeyDown' && isEscapeForSomethingElse(event as Event, document.activeElement)) return;
-                    leave();
-                }}
-                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        <Snackbar
+            ref={rootRef}
+            // for whoever needs to tell focus in the message from focus on the page
+            data-message=""
+            open
+            autoHideDuration={message.durationMs}
+            // hovering or focusing it pauses the timer; leaving gives it its full time again, not MUI's half
+            resumeHideDuration={message.durationMs ?? undefined}
+            onClose={(event, reason) => {
+                // a click elsewhere on the page does not close it, nor an Escape that closes a list, menu or dialog
+                if (reason === 'clickaway') return;
+                if (reason === 'escapeKeyDown' && isEscapeForSomethingElse(event as Event, document.activeElement)) return;
+                leave();
+            }}
+            anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+            // in the page's flow instead of over it: MUI's root is fixed at every width
+            sx={{ position: 'static', justifyContent: 'flex-start', minWidth: 0 }}
+        >
+            <Alert
+                severity={message.severity}
+                variant={urgent ? 'filled' : 'standard'}
+                // read out through the polite region, once, when it is raised
+                role="none"
+                elevation={0}
+                // compact: one line is 32px, lower than the fullscreen diagram's title bar row, so it adds no height there.
+                // An urgent one is filled in its colour; the others are a card with an edge (1px each side, taken off the
+                // padding, so still 32px), the severity in the icon, and the action (Undo) in the accent orange
                 sx={{
-                    top: { xs: 'calc(var(--app-header-height, 64px) + 8px)', sm: 'calc(var(--app-header-height, 64px) + 8px)' },
-                    width: { sm: 'max-content' },
-                    maxWidth: { sm: 'min(640px, calc(100vw - 16px))' },
+                    alignItems: 'center',
+                    maxWidth: '100%',
+                    py: 0,
+                    '& .MuiAlert-icon, & .MuiAlert-message': { py: urgent ? '5px' : '4px' },
+                    '& .MuiAlert-action': { pt: 0 },
+                    ...(!urgent && { bgcolor: SURFACE.panel, color: 'text.primary', border: `1px solid ${CONTROL.edge}` }),
                 }}
+                onClose={message.action ? undefined : () => leave()}
+                action={message.action && (
+                    <>
+                        <Button
+                            color={urgent ? 'inherit' : 'primary'}
+                            size="small"
+                            aria-keyshortcuts={message.action.keyShortcuts}
+                            onClick={() => leave(message.action?.onClick)}
+                        >
+                            {message.action.label}
+                        </Button>
+                        <IconButton size="small" color="inherit" aria-label="Close" onClick={() => leave()}>
+                            <Close fontSize="small" />
+                        </IconButton>
+                    </>
+                )}
             >
-                <Alert
-                    severity={message.severity}
-                    variant={urgent ? 'filled' : 'standard'}
-                    // the live region reads out the rest; a status mounted with its text is often not read out
-                    role={urgent ? 'alert' : 'none'}
-                    elevation={6}
-                    sx={{ width: '100%', alignItems: 'center' }}
-                    onClose={message.action ? undefined : () => leave()}
-                    action={message.action && (
-                        <>
-                            <Button
-                                color="inherit"
-                                size="small"
-                                aria-keyshortcuts={message.action.keyShortcuts}
-                                onClick={() => leave(message.action?.onClick)}
-                            >
-                                {message.action.label}
-                            </Button>
-                            <IconButton size="small" color="inherit" aria-label="Close" onClick={() => leave()}>
-                                <Close fontSize="small" />
-                            </IconButton>
-                        </>
-                    )}
-                >
-                    {message.text}
-                    {message.hint && <Box component="span" sx={VISUALLY_HIDDEN}> {message.hint}</Box>}
-                </Alert>
-            </Snackbar>
-        </Portal>
+                {message.text}
+                {message.hint && <Box component="span" sx={VISUALLY_HIDDEN}> {message.hint}</Box>}
+            </Alert>
+        </Snackbar>
     );
 }

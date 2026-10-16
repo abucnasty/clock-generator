@@ -10,7 +10,7 @@ import {
 } from "../common/enable-control-types";
 import { MachineStatus } from "../state/entity-status";
 import { MachineType } from "../entities";
-import { fraction } from "../data-types/fraction";
+import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 
 // ============================================================================
 // Machine Configuration
@@ -31,18 +31,6 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 // ============================================================================
 // Target Production Rate Configuration
 // ============================================================================
-
-/** The most the denominator of `copies` may be once it is read as a reduced fraction: 5.5 is 11/2, 2.25 is 9/4 */
-const MAX_COPIES_DENOMINATOR = 1000;
-
-/** Whether a number reads as an exact fraction with a small denominator, as a whole number or a short decimal does */
-function isShortDecimal(value: number): boolean {
-    try {
-        return fraction(value).getDenominator <= MAX_COPIES_DENOMINATOR;
-    } catch {
-        return false;
-    }
-}
 
 /**
  * Schema for target production rate configuration.
@@ -66,8 +54,8 @@ function isShortDecimal(value: number): boolean {
 export const TargetProductionRateConfigSchema = z.object({
     recipe: z.string(),
     items_per_second: z.number().positive(),
-    copies: z.number().positive().refine(isShortDecimal, {
-        message: "copies must be a whole number or a short decimal such as 5.5",
+    copies: z.number().positive().refine(isShortDecimalCopies, {
+        message: COPIES_DECIMAL_ERROR,
     })
 });
 

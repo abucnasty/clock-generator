@@ -26,8 +26,11 @@ import type {
     SerializableMachineFacts,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
+    SuggestedTarget,
     SwingBackoffReport,
 } from 'clock-generator/browser';
+import type { ClockInstallFacts } from './installFacts';
+import type { GameNames } from '../utils/gameNames';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -127,6 +130,8 @@ export interface ClockAlternativeView {
     /** Length of one crafting cycle; the clock period is a whole number of them */
     cycleTicks: number;
     blueprintString: string;
+    /** What installing the blueprint takes: whether it is a book, and which inserters each combinator is wired to */
+    install: ClockInstallFacts;
     transferHistory: SerializableTransferHistory;
     stateTransitionHistory: SerializableStateTransitionHistory;
     /**
@@ -139,6 +144,8 @@ export interface ClockAlternativeView {
     fuelView: FuelViewData | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
+    /** Ticks of belt pickup slack at the end of each window, by inserter id */
+    beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
     /** Null unless this clock moved a crafting cycle or an output swing */
@@ -282,6 +289,10 @@ export interface FactorioLookups {
     resourceNames: string[];
     /** By recipe name; a recipe the generator cannot use is left out */
     recipes: Map<string, RecipeInfo>;
+    /** The in-game names of the ids, from the data's `names` key (none when the data has no such key) */
+    names: GameNames;
+    /** The recipes the data marks hidden (recycling, parameters, mod and unused recipes) */
+    hiddenRecipes: string[];
 }
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -299,6 +310,8 @@ export interface PastedEntities {
     chests: ChestConfiguration[];
     /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
     guidance: Option<string>;
+    /** The target output the paste suggests: the mod's own, else worked out from the machines */
+    suggested_target: Option<SuggestedTarget>;
 }
 
 /**
@@ -324,6 +337,7 @@ export type EngineQuery =
         belts: unknown;
         chests: unknown;
         sidecar_version: unknown;
+        suggested_target: unknown;
     };
 
 export interface EngineAnswers {

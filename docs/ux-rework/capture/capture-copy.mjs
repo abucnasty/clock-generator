@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Screenshots + page checks for item 1.12 "Glossary and copy pass", Part A and Part B (spec: docs/ux-rework/specs/1.12-glossary-copy.md).
 // Usage: node capture-copy.mjs <out dir>
 //   BASE_URL     an app that is already running; without it the script serves the production build with `vite preview`
@@ -34,7 +35,7 @@ const STORAGE_KEY = 'clock-generator-config'; // hooks/usePersistedConfigForm.ts
 const FUEL_SAMPLE = sample('gleba/biochamber-fuel/nutrients-from-yumako-mash-fuel-bonus.json');
 const SHIFT_CANDIDATES = ['science/chemical-science/chemical-science.json', 'science/chemical-science/chemical-science-engines.json', 'science/utility-science/utility-science.json'].map(sample);
 const NO_RECOVERY_SAMPLE = sample('science/metallurgic-science/metallurgic-science.json'); // its only holding clock has no recovery
-const BELOW_RATE_SAMPLE = sample('science/utility-science/utility-science-direct-insert-lds.json'); // a clock below the target rate
+const BELOW_RATE_SAMPLE = BELOW_TARGET_SAMPLE; // a clock below the target rate
 
 /** Case-insensitive. Part A words, then the glossary of Part B (owner's decisions 2026-10-14). */
 const BANNED_PARTS = [
@@ -79,8 +80,8 @@ const SCAN_FN = ({ bannedSrc, lineSrc, rawSrc, allowSrcs, engineAll }) => {
     const rawRe = new RegExp(rawSrc);
     const allow = allowSrcs.map((s) => new RegExp(s.src, s.flags));
     const isBanned = (t) => re.test(t) || lineRe.test(t);
-    const labels = [...document.querySelectorAll('[aria-label^="How "]')]
-        .map((e) => e.getAttribute('aria-label').replace(/^How /, '').replace(/ is made$/, ''))
+    const labels = [...document.querySelectorAll('table [aria-label^="About "][aria-haspopup="dialog"]')]
+        .map((e) => e.getAttribute('aria-label').replace(/^About /, ''))
         .sort((a, b) => b.length - a.length);
     let cards = [...document.querySelectorAll('.MuiPaper-outlined')].filter((p) => {
         const ls = p.innerText.split('\n').map((l) => l.trim());
@@ -327,7 +328,14 @@ const debugSummary = (page) => page.getByRole('button', { name: /^Debug Output/ 
 
 // -------------------------------------------------------------------------------------------------- Part B helpers
 
-const validationPanel = (page) => page.locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: 'Validation', exact: true }) }).last(); // SELECTOR: confirm
+// Phase 2 (2.3) put the swing plan inside Advanced Overrides, which starts closed
+async function openAdvanced(page) {
+    if (!(await page.getByText('Force Output Swings', { exact: true }).first().isVisible().catch(() => false))) {
+        await page.getByRole('button', { name: /^Advanced\b/ }).click();
+        await page.waitForTimeout(500);
+    }
+}
+
 const swingPlan = (page) => page.locator('.MuiAccordion-root').filter({ hasText: /^(Swing Plan|Transfer Plan)/ }).first(); // SELECTOR: confirm (Part B renames the title)
 
 /** The five mode options of an enable-rule form in `scope`: wording and gloss against the glossary, and label in name */
@@ -379,28 +387,26 @@ const PART_B_BEFORE_GENERATE = [
         name: 'validation-ok',
         async run({ page, rec, state }) {
             await ensureValidated(page, state);
-            const panel = validationPanel(page);
-            await panel.scrollIntoViewIfNeeded();
-            const desc = await textOf(panel.locator('p.MuiTypography-body2').first());
-            const ok = await textOf(panel.locator('.MuiAlert-root').first());
-            await snap(page, rec, 'validation-ok', { gate: true, desc: 'Validation panel after Validate: description and success alert (spec state 6)' });
-            rec.info('validation description', desc);
-            rec.info('validation success alert', ok);
-            says(rec, 'description starts "Checks that your build can be clocked"', desc, /^Checks that your build can be clocked/);
-            says(rec, 'description ends the advice with "Validate again after you change anything."', desc, /Validate again after you change anything\./);
-            lacks(rec, 'description does not say configuration, hands or transfer plan', desc, /configuration|\bhands?\b|transfer plan/i);
-            says(rec, 'success alert starts "Your build can be clocked."', ok, /^Your build can be clocked\./);
-            says(rec, 'success alert: "makes N swing(s) per crafting cycle of X ticks"', ok, /makes \d+ swings? per crafting cycle of [\d,.]+ ticks/);
-            says(rec, 'success alert: "the clock repeats every Y ticks (Z crafting cycle(s))"', ok, /the clock repeats every [\d,.]+ ticks \(\d+ crafting cycles?\)/);
-            says(rec, 'success alert ends "Generating may still use fewer swings if this count does not hold the rate."', ok, /Generating may still use fewer swings if this count does not hold the rate\.$/);
-            lacks(rec, 'success alert has no hand(s), "is valid", unstable or configuration', ok, /\bhands?\b|is valid|unstable|configuration/i);
-            rec.check('the Validate button and the Valid chip keep their names (owner decision 3)', (await page.getByRole('button', { name: /^Validate/ }).count()) > 0 && (await page.locator('.MuiChip-label', { hasText: /^Valid$/ }).count()) > 0, 'button "Validate..." and chip "Valid"');
-            // the out-of-date alert
+            // Phase 2 (2.3): there is no Validation panel; the swing plan, with its success sentence, is in Advanced Overrides
+            await openAdvanced(page);
+            const plan = swingPlan(page);
+            await plan.scrollIntoViewIfNeeded();
+            const section = page.locator('.MuiAlert-root', { hasText: /Each output inserter makes/ }).first();
+            const ok = await textOf(section);
+            await snap(page, rec, 'validation-ok', { gate: true, desc: 'Swing plan section after a check: the success sentence (spec state 6, Phase 2 place)' });
+            rec.info('swing plan success sentence', ok);
+            says(rec, 'success sentence: "makes N swing(s) per crafting cycle of X ticks"', ok, /makes \d+ swings? per crafting cycle of [\d,.]+ ticks/);
+            says(rec, 'success sentence: "the clock repeats every Y ticks (Z crafting cycles)", or "the clock period is Y ticks (1 crafting cycle)"', ok, /the clock (repeats every|period is) [\d,.]+ ticks \(\d+ crafting cycles?\)/);
+            says(rec, 'success sentence ends "Generating may still use fewer swings if this count does not hold the rate."', ok, /Generating may still use fewer swings if this count does not hold the rate\.$/);
+            lacks(rec, 'success sentence has no hand(s), "takes", unstable or configuration', ok, /\bhands?\b|\btakes\b|unstable|configuration/i);
+            rec.check('the Check only button keeps its name', (await page.getByRole('button', { name: /^Check only/ }).count()) > 0, 'button "Check only"');
+            // the out-of-date line (CHECK_TEXT.planOutOfDate), after an edit
             const old = await bumpCopies(page);
-            await panel.scrollIntoViewIfNeeded();
-            const stale = await textOf(panel.locator('.MuiAlert-colorWarning, .MuiAlert-standardWarning').first());
-            await snap(page, rec, 'validation-out-of-date', { gate: true, desc: 'Validation panel after an edit: the out-of-date alert' });
-            says(rec, 'out-of-date alert: "Your build changed since it was validated. Validate again to check it and refresh the swing plan."', stale, /^Your build changed since it was validated\. Validate again to check it and refresh the swing plan\.$/);
+            await openAdvanced(page);
+            await swingPlan(page).scrollIntoViewIfNeeded();
+            const stale = await textOf(page.locator('.MuiAlert-colorWarning, .MuiAlert-standardWarning').filter({ hasText: /plan/ }).first());
+            await snap(page, rec, 'validation-out-of-date', { gate: true, desc: 'Swing plan section after an edit: the out-of-date line' });
+            says(rec, 'out-of-date line: "You changed the build since this plan was made. Check only (or Generate) makes a new one."', stale, /^You changed the build since this plan was made\. Check only \(or Generate\) makes a new one\.$/);
             await restoreCopies(page, old);
             await validate(page);
         },
@@ -410,6 +416,7 @@ const PART_B_BEFORE_GENERATE = [
         name: 'swing-plan',
         async run({ page, rec, state }) {
             await ensureValidated(page, state);
+            await openAdvanced(page);
             const plan = swingPlan(page);
             await plan.scrollIntoViewIfNeeded();
             const title = await textOf(plan.locator('.MuiAccordionSummary-content .MuiTypography-root').first());
@@ -432,7 +439,7 @@ const PART_B_BEFORE_GENERATE = [
             says(rec, 'note: "The clock period is the number of crafting cycles (the LCM) after which they all come out whole."', note, /The clock period is the number of crafting cycles \(the LCM\) after which they all come out whole\./);
             says(rec, 'note says "Always on"', note, /Always on/);
             lacks(rec, 'note has no raw ALWAYS and no "LCM period"', note, /ALWAYS|LCM period/);
-            says(rec, 'note still ends "Validate again, then Generate, after making changes."', note, /Validate again, then Generate, after making changes\.$/);
+            says(rec, 'note still ends "Generate again after making changes."', note, /Generate again after making changes\.$/);
             await checkLabelInName(rec, page, plan.locator('.MuiAccordionSummary-root'), 'the Swing Plan accordion button');
             await checkLabelInName(rec, page, plan.locator('.MuiChip-root[role=button]').first(), 'the first Included chip'); // SELECTOR: confirm
         },
@@ -442,8 +449,8 @@ const PART_B_BEFORE_GENERATE = [
         name: 'overrides-tooltips',
         async run({ page, rec }) {
             await goConfigure(page);
-            const summary = page.getByRole('button', { name: /^Advanced Overrides/ });
-            if (!(await page.getByText('Belts do not move', { exact: true }).first().isVisible())) await summary.click();
+            const summary = page.getByRole('button', { name: /^Advanced\b/ });
+            if (!(await page.getByText('Force Output Swings', { exact: true }).first().isVisible())) await summary.click();
             await page.waitForTimeout(400);
             const helper = await textOf(page.locator('.MuiFormHelperText-root').filter({ hasText: /LCM/ }));
             const controls = [
@@ -454,6 +461,8 @@ const PART_B_BEFORE_GENERATE = [
             ];
             const tips = {};
             for (const [key, name, locator] of controls) {
+                // 2.4 moved "Belts do not move" out of Advanced Overrides into the belt question
+                if (key === 'belts' && (await locator.count()) === 0) { tips[key] = null; continue; }
                 tips[key] = await hoverTip(page, locator);
                 await snap(page, rec, `overrides-tip-${key}`, { gate: true, desc: `Advanced Overrides, hover on ${name}` });
                 rec.check(`a tooltip opens on "${name}"`, tips[key] !== '', clip(tips[key]));
@@ -463,8 +472,16 @@ const PART_B_BEFORE_GENERATE = [
             says(rec, 'LCM Override helper: "Crafting cycles per clock period (overrides the calculated LCM)"', helper, /^Crafting cycles per clock period/);
             lacks(rec, 'Force Output Swings tooltip does not say "unstable" (it "does not hold the rate")', tips.force, /unstable/i); // SELECTOR: confirm (spec :63/:84 both name the Force/Fractional strings)
             lacks(rec, 'Enable Fractional Swings tooltip does not say "unstable"', tips.fractional, /unstable/i);
-            lacks(rec, 'Belts do not move tooltip: "window" only as "wake window"', tips.belts, /(?<!wake )\bwindows?\b/i);
-            says(rec, 'Belts do not move tooltip says "belt slack"', tips.belts, /belt slack/i);
+            if (tips.belts === null) {
+                // 2.4's belt question replaced the switch: read its words where it is asked
+                const belt = await textOf(page.getByText(/Your input belts are/).first().locator('xpath=ancestor::*[self::div or self::fieldset][2]'));
+                rec.info('belt question text', clip(belt, 300));
+                lacks(rec, 'belt question: no banned word, "window" only as "wake window"', belt, /potential clock|configuration|\bhands?\b|(?<!wake )\bwindows?\b/i);
+                if (belt) says(rec, 'belt question says "belt slack"', belt, /belt slack/i);
+            } else {
+                lacks(rec, 'Belts do not move tooltip: "window" only as "wake window"', tips.belts, /(?<!wake )\bwindows?\b/i);
+                says(rec, 'Belts do not move tooltip says "belt slack"', tips.belts, /belt slack/i);
+            }
             lacks(rec, 'Search tooltip: "window" only as "wake window" (the engine\'s search name "observed windows" excepted)', tips.search.replace(/observed windows/gi, ''), /(?<!wake )\bwindows?\b/i);
             rec.info('Search tooltip keeps the search name', /observed windows/i.test(tips.search) ? 'says "observed windows" (the engine\'s clock name)' : 'does not say "observed windows"');
         },
@@ -625,7 +642,7 @@ const PART_B_AFTER_GENERATE = [
             lacks(rec, 'Belt tooltip no longer says "belt pickup slack"', belt, /belt pickup slack/i);
             lacks(rec, 'Belt tooltip: "window" only as "wake window"', belt, /(?<!wake )\bwindows?\b/i);
             for (const tab of ['Timelines', 'Insights', 'Blueprint', 'Log']) await checkLabelInName(rec, page, page.getByRole('tab', { name: tab, exact: true }), `Results tab "${tab}"`);
-            const info = page.getByLabel(/^How .* is made$/).first();
+            const info = page.locator('table').getByLabel(/^About /).first();
             await info.scrollIntoViewIfNeeded().catch(() => {});
             await info.click().catch(() => {}); // the (i) opens a popover on click, not a tooltip on hover
             await page.locator('.MuiPopover-paper').first().waitFor({ timeout: 3000 }).catch(() => {});
@@ -682,7 +699,7 @@ const PART_B_AFTER_GENERATE = [
             for (const file of SHIFT_CANDIDATES) {
                 tried.push(file.split('/').pop());
                 await loadBuild(page, state, file);
-                const summary = page.getByRole('button', { name: /^Advanced Overrides/ });
+                const summary = page.getByRole('button', { name: /^Advanced\b/ });
                 const searchLabel = page.getByText('Search for fewer wake-ups', { exact: true }).first();
                 if (!(await searchLabel.isVisible())) await summary.click();
                 if (!(await page.getByRole('switch', { name: /Search for fewer wake-ups|Runs the four/ }).first().isChecked())) await searchLabel.click(); // SELECTOR: confirm (the switch's name is its tooltip text)
@@ -815,7 +832,7 @@ const STEP_LIST = [
         name: 'advanced-note',
         async run({ page, rec }) {
             await goConfigure(page);
-            const summary = page.getByRole('button', { name: /^Advanced Overrides/ }); // SELECTOR: confirm (accordion summary)
+            const summary = page.getByRole('button', { name: /^Advanced\b/ }); // SELECTOR: confirm (accordion summary)
             await summary.click();
             const note = page.getByText(/^Note: If the final output machine/); // SELECTOR: confirm (the note's first words, before and after the fix)
             await note.waitFor();
@@ -895,6 +912,7 @@ const STEP_LIST = [
             await goConfigure(page);
             await validate(page);
             state.validated = true;
+            await openAdvanced(page);
             const plan = page.locator('.MuiAccordion-root').filter({ hasText: /^(Swing Plan|Transfer Plan)/ }).first(); // SELECTOR: confirm (the accordion titled "Transfer Plan"; Part B renames it)
             await plan.waitFor();
             const note = plan.locator('.MuiTypography-caption').last(); // SELECTOR: confirm (the note is the last caption in the accordion)
@@ -903,7 +921,7 @@ const STEP_LIST = [
             await snap(page, rec, 'transfer-note', { desc: 'Validation panel after Validate, the Transfer Plan note at the bottom (spec state 5)' });
             const t = await text(note);
             rec.info('transfer note text', t);
-            rec.check('the plan note ends "Validate again, then Generate, after making changes."', t.endsWith('Validate again, then Generate, after making changes.'), `ends "...${t.slice(-70)}"`);
+            rec.check('the plan note ends "Generate again after making changes."', t.endsWith('Generate again after making changes.'), `ends "...${t.slice(-70)}"`);
             rec.check('the Transfer Plan note still contains item 1.8\'s clause ending "which stays."', /which stays\./.test(t), t);
             rec.check('the Transfer Plan note no longer says "Re-run the simulation"', !/Re-run the simulation/i.test(t), t);
         },

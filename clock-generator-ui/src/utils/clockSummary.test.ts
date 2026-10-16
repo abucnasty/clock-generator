@@ -1,0 +1,297 @@
+import { describe, expect, it } from 'vitest';
+import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
+import {
+    SUMMARY_COPY,
+    beltCellText,
+    beltLine,
+    beltValue,
+    clockTechnicalName,
+    differenceFromRecommended,
+    foldedMakes,
+    makesText,
+    plainClockName,
+    recoversOf,
+    wakeUpsText,
+    worksOf,
+    type SummaryClock,
+} from './clockSummary';
+
+const TARGET = 240;
+
+interface ClockOptions extends Partial<ClockRanking> {
+    verdict?: ClockVerdict;
+    beltLabel?: string;
+    deadlock?: boolean;
+    brokenBy?: string[];
+}
+
+/** A stable clock at the target rate, made for the belt asked for, with 10 wake-ups and 4 windows, unless told otherwise */
+function clock(id: string, options: ClockOptions = {}): SummaryClock {
+    const { verdict = 'stable', beltLabel = 'moving (+4 ticks)', deadlock = false, brokenBy, ...ranking } = options;
+    const full: ClockRanking = {
+        meets_target_rate: true,
+        rate_off_target: 0,
+        holds_expected_output: true,
+        matches_belt_choice: true,
+        wake_ups_per_minute: 10,
+        window_count: 4,
+        ...ranking,
+    };
+    return {
+        id,
+        label: `Engine name of ${id}`,
+        verdict,
+        beltLabel,
+        deadlockRisk: deadlock ? 'Deadlock risk: inserters 1 and 2 both bring the same item.' : null,
+        ranking: full,
+        assessment: {
+            holds: verdict !== 'unstable',
+            items_per_second: TARGET + full.rate_off_target,
+            wake_ups_per_minute: full.wake_ups_per_minute,
+            backpressure_loss: brokenBy ? { recovers: false, broken_by: brokenBy } as never : null,
+        },
+    };
+}
+
+const nameOf = (clocks: SummaryClock[], id: string) => plainClockName(clocks, clocks.findIndex(it => it.id === id));
+
+describe('plainClockName', () => {
+    it('names the clock with the fewest wake-ups among the contenders', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })];
+        expect(nameOf(clocks, 'b')).toBe('Fewest wake-ups');
+    });
+
+    it('gives tied clocks the same name', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })];
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'b')).toBe('Fewest wake-ups');
+    });
+
+    it('names a clock with more wake-ups but the fewest windows "Fewest wake windows"', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 8, window_count: 6 }), clock('b', { wake_ups_per_minute: 12, window_count: 3 })];
+        expect(nameOf(clocks, 'b')).toBe('Fewest wake windows');
+    });
+
+    it('falls through to the windows when the wake-ups were not counted', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: null, window_count: 5 }), clock('b', { wake_ups_per_minute: null, window_count: 3 })];
+        expect(nameOf(clocks, 'b')).toBe('Fewest wake windows');
+        expect(nameOf(clocks, 'a')).toBe('Another way to make 240/s');
+    });
+
+    it('names a clock that does not match the belt by its belt, even with the fewest wake-ups', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'non-moving' })];
+        expect(nameOf(clocks, 'b')).toBe('For belts that stand still');
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+    });
+
+    it('names a clock that does not recover, or does not hold its rate', () => {
+        const clocks = [clock('a'), clock('b', { verdict: 'no recovery', meets_target_rate: false }), clock('c', { verdict: 'unstable', meets_target_rate: false, holds_expected_output: false })];
+        expect(nameOf(clocks, 'b')).toBe('Does not recover when jammed or starved');
+        expect(nameOf(clocks, 'c')).toBe('Does not hold its rate');
+    });
+
+    it('names a clock off the target rate by its rate, below or above, before its verdict', () => {
+        const clocks = [
+            clock('a'),
+            clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
+            clock('above', { meets_target_rate: false, rate_off_target: 12.5 }),
+        ];
+        expect(nameOf(clocks, 'below')).toBe('Runs at 192/s, not 240/s');
+        expect(nameOf(clocks, 'above')).toBe('Runs at 252.5/s, not 240/s');
+    });
+
+    it('does not name a clock by a rate less than half a hundredth off', () => {
+        const clocks = [clock('a', { rate_off_target: -0.004 })];
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+    });
+
+    it('names any other clock by the rate it makes', () => {
+        const clocks = [clock('a', { wake_ups_per_minute: 4, window_count: 2 }), clock('b', { wake_ups_per_minute: 9, window_count: 7 })];
+        expect(nameOf(clocks, 'b')).toBe('Another way to make 240/s');
+    });
+
+    it('names a clock that holds the rate on a deadlock build by its trade-off, as its verdict does not decide', () => {
+        const clocks = [
+            clock('a', { verdict: 'no recovery', deadlock: true, wake_ups_per_minute: 6 }),
+            clock('b', { verdict: 'stable', deadlock: true, wake_ups_per_minute: 9, window_count: 5 }),
+        ];
+        expect(nameOf(clocks, 'a')).toBe('Fewest wake-ups');
+        expect(nameOf(clocks, 'b')).toBe('Another way to make 240/s');
+    });
+
+    it('is empty for an index with no clock', () => {
+        expect(plainClockName([], 0)).toBe('');
+    });
+
+    it('keeps the engine name as it is', () => {
+        expect(clockTechnicalName(clock('a'))).toBe('Engine name of a');
+    });
+});
+
+describe('recoversOf', () => {
+    it('says yes for a stable clock', () => {
+        expect(recoversOf(clock('a'))).toMatchObject({ kind: 'yes', value: 'Yes' });
+    });
+
+    it('says no, with the causes it does not recover from', () => {
+        const result = recoversOf(clock('a', { verdict: 'no recovery', brokenBy: ['coal stops arriving', 'iron-plate is not taken away'] }));
+        expect(result.kind).toBe('no');
+        expect(result.detail).toContain('coal stops arriving, or after iron-plate is not taken away');
+        expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toContain('starved or jammed');
+    });
+
+    it('says "in the simulator" for yes and for no alike', () => {
+        expect(recoversOf(clock('a')).detail).toMatch(/^In the simulator, /);
+        expect(recoversOf(clock('b', { verdict: 'no recovery' })).detail).toMatch(/^In the simulator, /);
+        expect(recoversOf(clock('c', { verdict: 'no recovery', brokenBy: ['coal stops arriving'] })).detail).toMatch(/^In the simulator, /);
+    });
+
+    it('says not tested for a clock that does not hold its rate', () => {
+        expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: 'Not tested' });
+    });
+});
+
+describe('makesText and wakeUpsText', () => {
+    it('names the total scope unless there is exactly one copy', () => {
+        expect(makesText(clock('a'), 11)).toEqual({ value: '240/s', sub: 'all 11 copies' });
+        expect(makesText(clock('a'), 1)).toEqual({ value: '240/s', sub: '' });
+    });
+
+    it.each([0.0625, 0.5, 0.9999, 1.0001, 2.25])('keeps Copies %s exact while leaving the total rate and one-copy wake-ups unchanged', copies => {
+        const result = clock('a', { rate_off_target: -0.125, wake_ups_per_minute: 17.6 });
+        expect(makesText(result, copies)).toEqual({ value: '239.88/s', sub: `all ${copies} copies` });
+        expect(wakeUpsText(result)).toEqual({ value: '18 a minute', sub: 'one copy' });
+    });
+
+    it('rounds the rate to two decimals', () => {
+        expect(makesText(clock('a', { rate_off_target: -0.123 }), 1).value).toBe('239.88/s');
+    });
+
+    it('rounds the wake-ups as the table does, for one copy', () => {
+        expect(wakeUpsText(clock('a', { wake_ups_per_minute: 17.6 }))).toEqual({ value: '18 a minute', sub: 'one copy' });
+    });
+
+    it('says "Not counted" when they were not', () => {
+        expect(wakeUpsText(clock('a', { wake_ups_per_minute: null }))).toEqual({ value: 'Not counted', sub: '' });
+    });
+});
+
+describe('beltLine and beltValue', () => {
+    const moving = { nonMovingBelts: false, searchedForFewerWakeUps: false };
+    const still = { nonMovingBelts: true, searchedForFewerWakeUps: false };
+
+    it('says moving for a clock made for a moving belt', () => {
+        expect(beltLine(moving, 'moving (+4 ticks)')).toBe('Made for moving belts.');
+        expect(beltValue(moving, 'moving (+4 ticks)')).toBe('Moving');
+    });
+
+    it('says standing still when the build or the clock says so', () => {
+        expect(beltLine(still, 'moving (+4 ticks)')).toBe('Made for belts that stand still.');
+        expect(beltLine(moving, 'non-moving')).toBe('Made for belts that stand still.');
+        expect(beltValue(moving, 'non-moving')).toBe('Standing still');
+    });
+
+    it('says there is no belt when no clocked inserter picks up from one', () => {
+        expect(beltLine(moving, '')).toBe('No inserter on the clock picks up from a belt.');
+        expect(beltValue(null, '')).toBe('No belt');
+    });
+
+    it('goes by the label alone without a rule', () => {
+        expect(beltLine(null, 'moving (+2 ticks)')).toBe('Made for moving belts.');
+    });
+});
+
+describe('beltCellText', () => {
+    it('says the belt in the belt question\'s words, with the slack', () => {
+        expect(beltCellText('moving (+4 ticks)')).toBe('Moving (+4 ticks belt slack)');
+        expect(beltCellText('moving (+2–4 ticks)')).toBe('Moving (+2–4 ticks belt slack)');
+        expect(beltCellText('non-moving')).toBe('Standing still');
+        expect(beltCellText('')).toBe('');
+    });
+});
+
+describe('differenceFromRecommended', () => {
+    const recommended = clock('r', { wake_ups_per_minute: 10 });
+
+    it('says the rate first', () => {
+        const selected = clock('s', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48, wake_ups_per_minute: 30 });
+        expect(differenceFromRecommended(selected, recommended))
+            .toBe('This one makes 192/s, not 240/s. It wakes inserters 20 more times a minute than the recommended clock.');
+    });
+
+    it('says more, fewer or nothing about the wake-ups', () => {
+        expect(differenceFromRecommended(clock('s', { wake_ups_per_minute: 11 }), recommended))
+            .toBe('It wakes inserters 1 more time a minute than the recommended clock.');
+        expect(differenceFromRecommended(clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), recommended))
+            .toBe('It wakes inserters 6 fewer times a minute than the recommended clock. It is made for belts that stand still.');
+        expect(differenceFromRecommended(clock('s', { wake_ups_per_minute: 10.2 }), recommended)).toBe('It is not the recommended clock.');
+    });
+
+    it('says nothing of uncounted wake-ups', () => {
+        expect(differenceFromRecommended(clock('s', { wake_ups_per_minute: null }), recommended)).toBe('It is not the recommended clock.');
+    });
+
+    it('says when it does not recover', () => {
+        expect(differenceFromRecommended(clock('s', { verdict: 'no recovery' }), recommended))
+            .toBe('It does not recover after it is starved or jammed.');
+    });
+
+    it('keeps to two sentences', () => {
+        const selected = clock('s', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48, wake_ups_per_minute: 30, matches_belt_choice: false });
+        expect(differenceFromRecommended(selected, recommended).match(/\./g)?.length).toBe(2);
+    });
+});
+
+describe('foldedMakes', () => {
+    it('folds 3 or more clocks that make the same rate into one line', () => {
+        expect(foldedMakes([clock('a'), clock('b'), clock('c')])).toBe('All 3 clocks make 240/s.');
+    });
+
+    it('keeps the column for two clocks', () => {
+        expect(foldedMakes([clock('a'), clock('b')])).toBeNull();
+    });
+
+    it('keeps the column when one clock differs at the second decimal', () => {
+        expect(foldedMakes([clock('a'), clock('b'), clock('c', { rate_off_target: -0.01 })])).toBeNull();
+    });
+
+    it('folds clocks that differ only past the second decimal', () => {
+        expect(foldedMakes([clock('a'), clock('b', { rate_off_target: 0.001 }), clock('c', { rate_off_target: -0.002 })]))
+            .toBe('All 3 clocks make 240/s.');
+    });
+});
+
+describe('worksOf', () => {
+    it('says yes for a clock that holds the rate and recovers, made for the belt asked for', () => {
+        expect(worksOf(clock('a'))).toEqual({ kind: 'yes', text: 'Yes' });
+    });
+
+    it('says a clock for belts that stand still is only for them', () => {
+        expect(worksOf(clock('a', { matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Only for belts that stand still' });
+    });
+
+    it('names the rate a clock that holds a rate misses, before whether it recovers', () => {
+        expect(worksOf(clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 })))
+            .toEqual({ kind: 'no', text: 'Misses the rate (192/s)' });
+    });
+
+    it('calls a clock that does not hold its rate unstable, whatever rate it runs at', () => {
+        expect(worksOf(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })))
+            .toEqual({ kind: 'no', text: 'Unstable' });
+    });
+
+    it('says a clock that does not recover so, and one that does not hold its rate is unstable', () => {
+        expect(worksOf(clock('a', { verdict: 'no recovery', matches_belt_choice: false }))).toEqual({ kind: 'caution', text: 'Does not recover' });
+        expect(worksOf(clock('b', { verdict: 'unstable' }))).toEqual({ kind: 'no', text: 'Unstable' });
+    });
+});
+
+describe('SUMMARY_COPY', () => {
+    it('uses the glossary words, not the old ones', () => {
+        const texts = Object.values(SUMMARY_COPY).map(it => typeof it === 'string' ? it : (it as (...args: unknown[]) => string)('2', '3'));
+        for (const text of texts) {
+            expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer/i);
+            expect(text.length).toBeGreaterThan(0);
+        }
+    });
+});

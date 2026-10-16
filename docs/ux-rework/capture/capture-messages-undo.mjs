@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Screenshots + page checks for the bundle of items 1.5 (messages above the footer, a quieter Ko-fi) and 1.3 (an Undo message on
 // every destructive action) of the UX rework. Written from docs/ux-rework/specs/1.5-messages-footer.md and 1.3-undo.md ("Acceptance
 // criteria", "Screens to capture", "Orchestrator notes (final)"), not from the new code. Every check prints PASS or FAIL.
@@ -18,9 +19,13 @@
 //   C  footer on a long page (not on screen at scroll 0, wraps at 390), forward Tab: no focus stop under the footer
 //   D  1.3 Undo: Reset menu (divider, error colour, contrast), Reset + Undo (+ reload), row deletes of every kind + Undo, two
 //      deletes (one slot), withdrawn on edit and by an editing dialog, no timer (the owner, 2026-10-14), focus after Undo and
-//      Close, Import + Undo, Paste + Undo, diagram delete (+ fullscreen, and focus after), Drills off, chest type switch, no false
+//      Close, Import + Undo, Paste + Undo, diagram delete (+ fullscreen, and focus after), chest type switch (Drills off went in 2.7 B), no false
 //      offers, Ctrl/Cmd+Z (not in a text input), the "Build restored..." notice (1440 only: one Generate)
 //   E  1.5 "Copied. {warning}" for a below-target clock (one Generate per width)
+//
+// Updated for 1.5 F (docs/ux-rework/specs/1.5F-messages-clear.md, Files item 11): the message is a row of the sticky header (the
+// fullscreen diagram's title bar while it is open), errors are announced through the polite region, and the Undo offer ends when
+// Check only or Generate starts a run.
 //
 // Where the new UI's exact text or role is unknown the selector is marked `// SELECTOR: confirm`; those are the lines to fix first.
 // "Before" run (today's UI): the checks that need the new code FAIL, the script still runs to the end.
@@ -44,7 +49,7 @@ const PROD = sample('science/production-science/production-science.json'); // 4 
 const PU = sample('intermediates/processing-units/processing-units.json'); // 2 chests
 const BAD = sample('intermediates/accumulator/accumulator-bad-config.json');
 /** A build whose best clock runs below the target, so Copy has a rate warning to show (capture-header.mjs uses it) */
-const BELOW_TARGET = sample('science/utility-science/utility-science-direct-insert-lds.json');
+const BELOW_TARGET = BELOW_TARGET_SAMPLE;
 
 const TMP = join(tmpdir(), 'ux-messages-undo');
 mkdirSync(TMP, { recursive: true });
@@ -140,7 +145,7 @@ function counts(saved) {
 
 /** A form section by its heading ("Machines (4)"), the innermost Paper holding it. SELECTOR: confirm (headings may change in 1.9/1.11) */
 const section = (page, title) =>
-    page.locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: new RegExp(`^${title} \\(`) }) }).last();
+    page.getByRole('main').getByRole('region', { name: new RegExp(`^${title} \\(`) }); // a section of the Build card (2.7 B)
 /** Trash buttons of a section's rows (not a belt lane's small one): marked data-row-delete; icons have no data-testid in a production build */
 const trash = (page, title) => section(page, title).locator('button[data-row-delete]');
 
@@ -149,35 +154,48 @@ const KINDS = {
     inserter: { title: 'Inserters', key: 'inserters', re: /^Deleted Inserter \d+\./ },
     belt: { title: 'Belts', key: 'belts', re: /^Deleted Belt \d+\./ },
     chest: { title: 'Chests', key: 'chests', re: /^Deleted Chest \d+\./ },
-    drill: { title: 'Mining Drills', key: 'drills', re: /^Deleted Drill \d+\./ },
+    drill: { title: 'Mining drills', key: 'drills', re: /^Deleted Drill \d+\./ },
 };
 
 async function exportConfig(page) {
-    const direct = page.getByRole('button', { name: 'Export Config' }); // SELECTOR: confirm (a button in the app bar at 900px and up, a menu item below)
-    if (await direct.count()) {
-        await direct.first().click();
-    } else {
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Export Config' }).click(); // SELECTOR: confirm
-    }
+    // 2.1: Save build file, a ⋮ menu item at every width
+    await openMenu(page);
+    await page.getByRole('menuitem', { name: 'Save build file' }).click();
 }
 
 /** Clipboard text, then the menu's Paste from Factorio; holds the shared clipboard until the paste has been read (dialog or message) */
 function pasteFromMenu(page, text) {
     return withClipboard(async () => {
         await page.evaluate((t) => navigator.clipboard.writeText(t), text);
-        await openMenu(page);
-        await page.getByRole('menuitem', { name: 'Paste from Factorio' }).click();
+        await page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }).click(); // 2.1: a header button, not a menu item
         await Promise.race([
             page.getByRole('dialog').getByText('Confirm Import from Factorio').waitFor({ timeout: 8000 }),
-            snack(page).first().waitFor({ timeout: 8000 }),
+            // the paste's own result, not any message (an Undo message already up would let the next width write the
+            // clipboard before this paste has read it): since 2.1 a failed paste opens the Paste from Factorio dialog
+            page.locator('#paste-from-factorio-title').waitFor({ timeout: 8000 }),
         ]).catch(() => {});
     });
 }
 
 const importDialog = (page) => page.getByRole('dialog').filter({ hasText: 'Confirm Import from Factorio' });
 
-async function pasteOk(page, text = readFileSync(LOGISTIC, 'utf8')) {
+/**
+ * The text of a Sidecar export of a sample build, as capture-first-visit.mjs builds it: since 2.1 a paste reads only the
+ * mod's export (with `sidecar_version`), and a build file's text opens the Paste from Factorio dialog instead
+ */
+function sidecarExportOf(file) {
+    const { target_output: _t, overrides: _o, ...rest } = JSON.parse(readFileSync(file, 'utf8'));
+    return JSON.stringify({
+        sidecar_version: '0.7.0',
+        ...rest,
+        machines: rest.machines.map((m) => ({ type: 'machine', ...m })),
+        inserters: rest.inserters.map((i) => (i.source?.type === 'belt' ? { ...i, source: { near_lane: 1, ...i.source } } : i)),
+        drills: { mining_productivity_level: 0, configs: [] },
+        chests: [],
+    });
+}
+
+async function pasteOk(page, text = sidecarExportOf(LOGISTIC)) {
     await pasteFromMenu(page, text);
     await importDialog(page).waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
@@ -185,12 +203,12 @@ async function pasteOk(page, text = readFileSync(LOGISTIC, 'utf8')) {
 }
 
 /**
- * "No items selected for import." cannot be reached with a real click: Import Selected is disabled when nothing is ticked.
+ * "Nothing was imported: no box was ticked." cannot be reached with a real click: Import Selected is disabled when nothing is ticked.
  * So the dialog is opened, everything unticked, and the button's React onClick is called directly (it works with the disabled prop).
  * If the new code makes this message reachable, replace this with a plain click.
  */
 async function pasteNoItems(page) {
-    await pasteFromMenu(page, readFileSync(LOGISTIC, 'utf8'));
+    await pasteFromMenu(page, sidecarExportOf(LOGISTIC));
     const dlg = importDialog(page);
     await dlg.waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
@@ -206,14 +224,14 @@ async function pasteNoItems(page) {
 
 async function resetViaMenu(page) {
     await openMenu(page);
-    await page.getByRole('menuitem', { name: 'Reset Configuration' }).click(); // SELECTOR: confirm
+    await page.getByRole('menuitem', { name: 'Reset build' }).click(); // SELECTOR: confirm
 }
 
 // ------------------------------------------------------------------------------------------------- message measurements
 
 /**
- * The shared check for "a message is shown properly": it shows, is fully inside the window, is below the header (at least 4px),
- * is top-centre, is not covered by the footer or anything (elementFromPoint at 5 points), covers no header control, its text is
+ * The shared check for "a message is shown properly": it shows, is fully inside the window, is in the header's flow (inside `header`, below its
+ * workflow bar and the rows under it; inside `[data-fullscreen-diagram]` while that is open), is not covered by the footer or anything (elementFromPoint at 5 points), covers no header control, its text is
  * not clipped, the page does not scroll sideways, and there is one message only. Then a shot, and optionally contrast.
  * @returns the message locator, or null if no message showed
  */
@@ -235,6 +253,21 @@ async function checkMessage(page, rec, slug, { re = null, label = slug, desc = '
         const headerBottom = Math.max(hdr ? hdr.getBoundingClientRect().bottom : 0, barEl ? barEl.getBoundingClientRect().bottom : 0);
         const footer = document.querySelector('footer');
         const fr = footer ? footer.getBoundingClientRect() : null;
+        // 1.5 F placement: in the header, under every other row of it (the workflow bar, its note and progress rows), or in the open fullscreen diagram
+        const fullscreen = document.querySelector('[data-fullscreen-diagram]');
+        const inHeader = !!hdr && hdr.contains(root);
+        const inFullscreen = !!fullscreen && fullscreen.contains(root);
+        let rowsAbove = 0; // bottom edge of the header's content that is not the message
+        if (hdr) {
+            for (const el of hdr.querySelectorAll('*')) {
+                if (root.contains(el) || el.contains(root)) continue;
+                // a button's click ripple is a circle larger than the button, clipped by it: not a row of the header
+                if (el.closest('.MuiTouchRipple-root')) continue;
+                const b = el.getBoundingClientRect();
+                if (b.width > 0 && b.height > 0) rowsAbove = Math.max(rowsAbove, b.bottom);
+            }
+        }
+        const barBottom = barEl ? barEl.getBoundingClientRect().bottom : 0;
         const inset = Math.min(6, r.width / 4, r.height / 4);
         const points = [
             [r.left + r.width / 2, r.top + r.height / 2],
@@ -253,14 +286,18 @@ async function checkMessage(page, rec, slug, { re = null, label = slug, desc = '
             const h = Math.min(r.bottom, fr.bottom) - Math.max(r.top, fr.top);
             footerOverlap = w > 0 && h > 0 ? Math.round(w * h) : 0;
         }
-        // header controls the message must not cover
+        // header controls the message must not cover; in the fullscreen diagram, which covers the page's header, its title bar's
+        // controls instead (the page's header is behind the dialog there, so anything in the dialog is over it)
         const covered = [];
-        for (const scope of [hdr, barEl].filter(Boolean)) {
+        const fsBar = inFullscreen ? fullscreen.querySelector('#diagram-fullscreen-title')?.parentElement : null;
+        const scopes = inFullscreen ? [fsBar] : [hdr, barEl];
+        const controlName = inFullscreen ? /^(Flow Diagram|Exit fullscreen)/ : /^(Configure|Results|Generate|Validate|Copy|More options|Factorio Clock Generator|Clock Generator)/;
+        for (const scope of scopes.filter(Boolean)) {
             for (const el of scope.querySelectorAll('button, .MuiTypography-h6')) {
                 const b = el.getBoundingClientRect();
                 if (b.width === 0 || b.height === 0) continue;
                 const name = (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24);
-                if (!/^(Configure|Results|Generate|Validate|Copy|More options|Factorio Clock Generator|Clock Generator)/.test(name)) continue;
+                if (!controlName.test(name)) continue;
                 const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
                 if (hit && root.contains(hit)) covered.push(name);
             }
@@ -268,7 +305,7 @@ async function checkMessage(page, rec, slug, { re = null, label = slug, desc = '
         const msg = root.querySelector('.MuiAlert-message');
         return {
             left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height,
-            iw, ih, headerBottom, hits, footerOverlap, covered,
+            iw, ih, headerBottom, inHeader, inFullscreen, rowsAbove, barBottom, hits, footerOverlap, covered,
             footerPosition: footer ? getComputedStyle(footer).position : 'none',
             clipped: msg ? msg.scrollWidth > msg.clientWidth + 1 || msg.scrollHeight > msg.clientHeight + 1 : false,
             count: document.querySelectorAll('.MuiSnackbar-root').length,
@@ -279,8 +316,9 @@ async function checkMessage(page, rec, slug, { re = null, label = slug, desc = '
     });
     rec.info(`${label}: the message`, `"${g.text}" ${g.cls}, role ${g.role}, box ${Math.round(g.left)},${Math.round(g.top)} ${Math.round(g.width)}x${Math.round(g.height)} in ${g.iw}x${g.ih}, header bottom ${Math.round(g.headerBottom)}, footer ${g.footerPosition}`);
     rec.check(`${label}: fully inside the window`, g.left >= -0.5 && g.right <= g.iw + 0.5 && g.top >= -0.5 && g.bottom <= g.ih + 0.5, `x ${Math.round(g.left)}..${Math.round(g.right)} of ${g.iw}, y ${Math.round(g.top)}..${Math.round(g.bottom)} of ${g.ih}`);
-    rec.check(`${label}: below the header (top at least 4px under its bottom edge)`, g.top >= g.headerBottom + 4 - 0.5, `message top ${Math.round(g.top)}, header bottom ${Math.round(g.headerBottom)}`);
-    rec.check(`${label}: top centre`, Math.abs((g.left + g.right) / 2 - g.iw / 2) <= 8, `centre ${Math.round((g.left + g.right) / 2)} of ${g.iw / 2}`);
+    // 1.5 F: in the header's flow (or the fullscreen diagram's title bar), not a layer over the page
+    rec.check(`${label}: in the header's flow (inside header, or inside [data-fullscreen-diagram] while it is open)`, g.inHeader || g.inFullscreen, g.inFullscreen ? 'inside the fullscreen diagram' : g.inHeader ? 'inside header' : 'a layer outside the header (a portal on body)');
+    if (g.inHeader) rec.check(`${label}: its top is at or below the workflow bar's bottom (and every other row of the header)`, g.top >= Math.max(g.barBottom, g.rowsAbove) - 0.5, `message top ${Math.round(g.top)}, workflow bar bottom ${Math.round(g.barBottom)}, other header content bottom ${Math.round(g.rowsAbove)}`);
     rec.check(`${label}: nothing is drawn over it (elementFromPoint at its centre and corners)`, g.hits.every(Boolean), g.hits.map((h) => (h ? 'ok' : 'COVERED')).join(' '));
     rec.check(`${label}: not covered by the footer`, g.footerOverlap === 0, g.footerOverlap ? `${g.footerOverlap}px2 overlap` : 'no overlap');
     rec.check(`${label}: covers no header control (title, Configure, Results, Generate, Copy, More options)`, g.covered.length === 0, g.covered.join(', ') || 'none');
@@ -602,22 +640,23 @@ try {
             rec.info('first visit: backgrounds to compare with Ko-fi', `Validate ${loud.validate}, Generate ${loud.generate}, Configure ${loud.configure}`);
         }, page);
 
-        await rec.step('A first visit: paste failure on the short page, errors persist', async () => {
-            await pasteFromMenu(page, 'not a factorio export');
-            await checkMessage(page, rec, 'msg-paste-fail-first-visit', { re: /Failed to paste/, label: 'paste failed (first visit, short page)', desc: 'Paste from Factorio with ordinary text on the clipboard, first visit (short page)', contrastOn: true });
-            await checkErrorPersists(page, rec, 'paste failed (first visit)', 'escape');
+        // 2.1 made a failed paste the Paste from Factorio dialog: the error message on the short page is now a file that cannot be opened
+        await rec.step('A first visit: a file error on the short page, errors persist', async () => {
+            await page.setInputFiles('input[type=file]', BROKEN);
+            await checkMessage(page, rec, 'msg-file-fail-first-visit', { re: /Could not open that file/, label: 'file error (first visit, short page)', desc: 'Open build file… with a broken file, first visit (short page)', contrastOn: true });
+            await checkErrorPersists(page, rec, 'file error (first visit)', 'escape');
         }, page);
 
         // ------------------------------------------------------------------------------------ B. 1.5 messages
         await rec.step('B import ok', async () => {
             await goConfigure(page);
-            await messageState(page, rec, 'msg-import-ok', { re: /^Build imported\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), desc: 'Import Config with the logistic sample: the import message' });
-            await messageState(page, rec, 'msg-import-ok', { re: /^Build imported\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), scrolled: true, desc: 'Import Config with the logistic sample' });
+            await messageState(page, rec, 'msg-import-ok', { re: /^Build file opened\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), desc: 'Open build file… with the logistic sample: the message' });
+            await messageState(page, rec, 'msg-import-ok', { re: /^Build file opened\./, run: (p) => p.setInputFiles('input[type=file]', LOGISTIC), scrolled: true, desc: 'Open build file… with the logistic sample' });
         }, page);
 
         await rec.step('B export, and a repeat restarts the timer', async () => {
-            await messageState(page, rec, 'msg-export', { re: /^Build exported\./, run: exportConfig, contrastOn: true, desc: 'Export Config: "Build exported."' });
-            await messageState(page, rec, 'msg-export', { re: /^Build exported\./, run: exportConfig, scrolled: true, desc: 'Export Config' });
+            await messageState(page, rec, 'msg-export', { re: /^Build saved to a file\./, run: exportConfig, contrastOn: true, desc: 'Save build file: "Build saved to a file."' });
+            await messageState(page, rec, 'msg-export', { re: /^Build saved to a file\./, run: exportConfig, scrolled: true, desc: 'Save build file' });
             // the repeat: second click 4 s after the first; the message must still be on screen 7 s after the first click and 5 s after the second
             await dismissMessage(page);
             await scrollTo(page, 0);
@@ -627,7 +666,7 @@ try {
             await exportConfig(page);
             const t0 = Date.now();
             await pointerOff();
-            await waitMessage(page, /^Build exported\./);
+            await waitMessage(page, /^Build saved to a file\./);
             await sleepUntil(t0 + 4000);
             await exportConfig(page);
             const t1 = Date.now();
@@ -641,17 +680,21 @@ try {
         }, page);
 
         await rec.step('B import failed', async () => {
-            await messageState(page, rec, 'msg-import-fail', { re: /Failed to import/, run: (p) => p.setInputFiles('input[type=file]', BROKEN), contrastOn: true, desc: 'Import Config with a broken file ({ not json): the error message' });
+            await messageState(page, rec, 'msg-import-fail', { re: /Could not open that file/, run: (p) => p.setInputFiles('input[type=file]', BROKEN), contrastOn: true, desc: 'Import Config with a broken file ({ not json): the error message' });
             await checkErrorPersists(page, rec, 'import failed', 'escape');
-            await messageState(page, rec, 'msg-import-fail', { re: /Failed to import/, run: (p) => p.setInputFiles('input[type=file]', BROKEN), scrolled: true, desc: 'Import Config with a broken file' });
+            await messageState(page, rec, 'msg-import-fail', { re: /Could not open that file/, run: (p) => p.setInputFiles('input[type=file]', BROKEN), scrolled: true, desc: 'Import Config with a broken file' });
             rec.check('import failed: no Undo button on the error message', (await undoBtn(page).count()) === 0);
         }, page);
 
+        // 2.1: a failed paste opens the Paste from Factorio dialog, saying why, instead of an error message
         await rec.step('B paste failed', async () => {
-            await messageState(page, rec, 'msg-paste-fail', { re: /Failed to paste/, run: (p) => pasteFromMenu(p, 'not a factorio export'), desc: 'Paste from Factorio with ordinary text on the clipboard: the error message' });
-            await checkErrorPersists(page, rec, 'paste failed', 'close button');
-            await messageState(page, rec, 'msg-paste-fail', { re: /Failed to paste/, run: (p) => pasteFromMenu(p, 'not a factorio export'), scrolled: true, desc: 'Paste from Factorio failed' });
-            rec.check('paste failed: no Undo button on the error message', (await undoBtn(page).count()) === 0);
+            await dismissMessage(page);
+            await pasteFromMenu(page, 'not a factorio export');
+            const opened = await page.locator('#paste-from-factorio-title').waitFor({ timeout: 4000 }).then(() => true, () => false);
+            rec.check('paste failed: the Paste from Factorio dialog opens', opened);
+            rec.check('paste failed: no message and no Undo', (await snack(page).count()) === 0 && (await undoBtn(page).count()) === 0, `${await snack(page).count()} message(s)`);
+            if (opened) await page.keyboard.press('Escape');
+            await page.waitForTimeout(500);
         }, page);
 
         await rec.step('B paste ok', async () => {
@@ -660,25 +703,25 @@ try {
             if (width === 1440) await watchAnnouncements(page);
             await pasteOk(page);
             if (width === 1440) await checkAnnounced(page, rec, 'announced: Paste > Import Selected (the dialog closing)', /^Imported .* from Factorio/);
-            // right after Import Selected the dialog is still fading out: the message must be above it
+            // 1.5 F: the message is now behind a modal, under the closing dialog: wait for the dialog to be gone, then it is visible and clickable
+            await page.locator('[role=dialog]').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
             const loc = await waitMessage(page, /Imported .* from Factorio/, 3500);
             if (loc) {
-                const above = await loc.evaluate((root) => {
+                rec.check('paste ok: once the dialog is gone the message is visible and clickable (elementFromPoint at its centre)', await loc.evaluate((root) => {
                     const r = root.getBoundingClientRect();
                     const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-                    return !!hit && root.contains(hit);
-                });
-                rec.check('paste ok: the message is above the closing dialog (elementFromPoint right after the click)', above);
+                    return r.width > 0 && !!hit && root.contains(hit);
+                }));
             }
             await checkMessage(page, rec, 'msg-paste-ok', { re: /Imported .* from Factorio/, label: 'paste imported', desc: 'Paste from Factorio > Import Selected: "Imported ... from Factorio"' });
         }, page);
 
-        await rec.step('B "No items selected for import."', async () => {
+        await rec.step('B "Nothing was imported: no box was ticked."', async () => {
             await dismissMessage(page);
             await scrollTo(page, 0);
             const forced = await pasteNoItems(page);
             rec.info('no items selected', forced ? 'Import Selected is disabled when nothing is ticked, so the button\'s onClick was called directly' : 'could not reach the message (no React props on the button)');
-            await checkMessage(page, rec, 'msg-no-items', { re: /No items selected for import/, label: 'no items selected (a warning)', desc: 'Paste dialog with nothing ticked, Import Selected: "No items selected for import."', contrastOn: true });
+            await checkMessage(page, rec, 'msg-no-items', { re: /Nothing was imported: no box was ticked/, label: 'no items selected (a warning)', desc: 'Paste dialog with nothing ticked, Import Selected: "Nothing was imported: no box was ticked."', contrastOn: true });
             rec.check('no items selected: it is a warning, not an error (a filled warning Alert)', (await snack(page).locator('.MuiAlert-filledWarning').count()) === 1, 'MuiAlert-filledWarning');
             rec.check('no items selected: no Undo (nothing changed)', (await undoBtn(page).count()) === 0);
             await dismissMessage(page);
@@ -690,11 +733,11 @@ try {
             await dismissMessage(page);
             await scrollTo(page, 0);
             await exportConfig(page);
-            await waitMessage(page, /^Build exported\./);
+            await waitMessage(page, /^Build saved to a file\./);
             await page.setInputFiles('input[type=file]', BROKEN);
-            await waitMessage(page, /Failed to import/);
+            await waitMessage(page, /Could not open that file/);
             await page.waitForTimeout(400);
-            rec.check('a newer message replaces the open one (one message, the newer text)', (await snack(page).count()) === 1 && (await snack(page).filter({ hasText: /Failed to import/ }).count()) === 1, `${await snack(page).count()} message(s)`);
+            rec.check('a newer message replaces the open one (one message, the newer text)', (await snack(page).count()) === 1 && (await snack(page).filter({ hasText: /Could not open that file/ }).count()) === 1, `${await snack(page).count()} message(s)`);
             await dismissMessage(page);
         }, page);
 
@@ -711,14 +754,20 @@ try {
                 const statuses = (tree.match(/^\s*- status\b/gm) ?? []).length;
                 const live = await loc.evaluate((el) => !!el.closest('[aria-live]') || !!el.querySelector('[aria-live]'));
                 if (kind === 'error') {
-                    rec.check('aria (error): exactly one alert and no status', alerts === 1 && statuses === 0, `${alerts} alert, ${statuses} status`);
+                    // 1.5 F: the message is in #root, which a closing dialog hides, and remounts between two slots: no alert role, read once through the polite region
+                    rec.check('aria (error): no alert role and no status in the message', alerts === 0 && statuses === 0, `${alerts} alert, ${statuses} status`);
+                    const region = await page.evaluate(() => {
+                        const holders = [...document.querySelectorAll('[role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')].filter((el) => /^Could not open that file/.test(el.textContent ?? ''));
+                        return { count: holders.length, app: holders.every((el) => el.matches('[data-message-announcer]') && !el.closest('[aria-hidden="true"]')) };
+                    });
+                    rec.check('aria (error): its text is written once into the polite region (the app\'s announcer, not hidden)', region.count === 1 && region.app, `${region.count} region(s)`);
                 } else {
                     // read out by the page's one polite live region instead: a status mounted with its text is often not read out
                     rec.check('aria (success): no alert and no status of its own', statuses === 0 && alerts === 0, `${statuses} status, ${alerts} alert`);
                     const region = await page.evaluate(() => {
                         // React Flow adds assertive status regions of its own (not the app's); the polite ones are the app's
                         const holders = [...document.querySelectorAll('[role="status"]:not([aria-live="assertive"]), [aria-live="polite"]')]
-                            .filter((el) => /^Build exported\./.test(el.textContent ?? ''));
+                            .filter((el) => /^Build saved to a file\./.test(el.textContent ?? ''));
                         return { count: holders.length, app: holders.every((el) => el.matches('[data-message-announcer]') && !el.closest('[aria-hidden="true"]')) };
                     });
                     rec.check('aria (success): one polite live region holds its text, the app\'s announcer, not hidden', region.count === 1 && region.app, `${region.count} region(s)`);
@@ -726,8 +775,8 @@ try {
                 rec.check(`aria (${kind}): no aria-live wrapper around the host`, !live);
                 rec.check(`aria (${kind}): a close button named "Close"`, (await closeBtn(page).count()) === 1, `${await closeBtn(page).count()} found`);
             };
-            await role('error', (p) => p.setInputFiles('input[type=file]', BROKEN), /Failed to import/);
-            await role('success', exportConfig, /^Build exported\./);
+            await role('error', (p) => p.setInputFiles('input[type=file]', BROKEN), /Could not open that file/);
+            await role('success', exportConfig, /^Build saved to a file\./);
             await dismissMessage(page);
         }, page);
 
@@ -760,7 +809,7 @@ try {
             const menu = page.getByRole('menu');
             await menu.waitFor();
             await page.waitForTimeout(300);
-            await rec.shot(page, 'undo-menu', { desc: 'The menu open: Reset Configuration last, under a divider, in the error colour' });
+            await rec.shot(page, 'undo-menu', { desc: 'The menu open: Reset build last, under a divider, in the error colour' });
             const info = await menu.evaluate((m) => {
                 const items = [...m.querySelectorAll('[role=menuitem]')];
                 const last = items[items.length - 1];
@@ -774,25 +823,25 @@ try {
                     rgb: m3 ? [Number(m3[1]), Number(m3[2]), Number(m3[3])] : null,
                 };
             });
-            rec.check('Reset menu: Reset Configuration is the last item', info.names[info.names.length - 1] === 'Reset Configuration', info.names.join(', '));
+            rec.check('Reset menu: Reset build is the last item', info.names[info.names.length - 1] === 'Reset build', info.names.join(', '));
             rec.check('Reset menu: a divider sits directly before it (at every width)', info.dividerBefore);
             rec.check('Reset menu: it is in the error colour (red)', !!info.rgb && info.rgb[0] >= 180 && info.rgb[1] <= 140 && info.rgb[2] <= 140, info.color);
-            const reset = menu.getByRole('menuitem', { name: 'Reset Configuration' });
+            const reset = menu.getByRole('menuitem', { name: 'Reset build' });
             await contrastPairs(page, [
-                { name: 'Reset Configuration text against the open menu (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true },
-                { name: 'Reset Configuration icon', locator: reset.locator('svg').first(), required: 3 },
+                { name: 'Reset build text against the open menu (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true },
+                { name: 'Reset build icon', locator: reset.locator('svg').first(), required: 3 },
             ], rec);
             // and while it is hovered, and focused from the keyboard (MUI lightens the item's background for both)
             await reset.hover();
             await page.waitForTimeout(300);
-            await contrastPairs(page, [{ name: 'Reset Configuration text, hovered (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true }], rec);
+            await contrastPairs(page, [{ name: 'Reset build text, hovered (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true }], rec);
             await page.mouse.move(5, page.viewportSize().height - 5);
             await reset.focus();
             await page.keyboard.press('ArrowUp');
             await page.keyboard.press('ArrowDown');
             await page.waitForTimeout(300);
-            await rec.shot(page, 'undo-menu-reset-focused', { desc: 'The menu with Reset Configuration focused from the keyboard' });
-            await contrastPairs(page, [{ name: 'Reset Configuration text, focused (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true }], rec);
+            await rec.shot(page, 'undo-menu-reset-focused', { desc: 'The menu with Reset build focused from the keyboard' });
+            await contrastPairs(page, [{ name: 'Reset build text, focused (sampled pixels)', locator: reset.locator('.MuiListItemText-primary'), sample: true }], rec);
             await page.keyboard.press('Escape');
             await page.waitForTimeout(400);
         }, page);
@@ -801,7 +850,7 @@ try {
             await fresh(page, LOGISTIC);
             const before = await readState(page);
             await resetViaMenu(page);
-            await undoMessage(page, rec, 'undo-reset', /^Build reset\./, 'reset', { desc: 'Reset Configuration: "Build reset." with Undo over the default form', contrastOn: true, action: true });
+            await undoMessage(page, rec, 'undo-reset', /^Build reset\./, 'reset', { desc: 'Reset build: "Build reset." with Undo over the default form', contrastOn: true, action: true });
             const accessible = await snack(page).first().evaluate((el) => `${el.textContent} ${[...el.querySelectorAll('[aria-label],[title]')].map((e) => e.getAttribute('aria-label') ?? e.getAttribute('title')).join(' ')}`).catch(() => '');
             rec.check('reset: the message tells the keyboard shortcut ("Or press Ctrl+Z to undo", Cmd+Z on a Mac)', /(Ctrl|Cmd)\s*\+\s*Z/i.test(accessible), accessible.slice(0, 120));
             rec.check('reset: the Undo button names its keys (aria-keyshortcuts)', (await undoBtn(page).first().getAttribute('aria-keyshortcuts').catch(() => null)) === 'Control+Z Meta+Z');
@@ -867,7 +916,7 @@ try {
             rec.check('two deletes: no Undo is left after it', (await undoBtn(page).count()) === 0);
         }, page);
 
-        await rec.step('D Undo is withdrawn on another edit, kept by non-edits', async () => {
+        await rec.step('D Undo is withdrawn on another edit, kept by non-edits, ended by a run', async () => {
             await fresh(page, LOGISTIC);
             await trash(page, 'Inserters').first().click();
             await waitMessage(page, /^Deleted /);
@@ -880,7 +929,7 @@ try {
             await field.fill('240');
             await dismissMessage(page);
 
-            // things that change no form data keep it
+            // things that change no form data and start no run keep it
             await fresh(page, LOGISTIC);
             await trash(page, 'Inserters').first().click();
             await waitMessage(page, /^Deleted /);
@@ -898,20 +947,34 @@ try {
             await keeps('the List/Diagram toggle');
             await goResults(page);
             await keeps('the Results toggle');
-            // Validate and Generate: after a delete the build has a missing inserter and cannot be checked, so the Undo here
-            // is an Import's (the build is LOGISTIC again, which can)
+
+            // 1.5 F (the owner, 2026-10-14): the offer ends when a check or a generation starts. After a delete the build has a missing inserter
+            // and a press only goes to the problem, so the Undo here is an Import's (the build is LOGISTIC again, which can run)
+            const endsOffer = async (what, press) => {
+                await dismissMessage(page);
+                await goConfigure(page);
+                await fresh(page, PROD); // a different build first, so an Undo of the import would be visible
+                const prod = await readState(page);
+                await page.setInputFiles('input[type=file]', LOGISTIC);
+                await waitMessage(page, /^Build file opened\./);
+                const imported = await readState(page);
+                rec.check(`${what} ends the offer: the import offers Undo first`, (await undoBtn(page).count()) === 1 && imported.saved !== prod.saved);
+                await press();
+                await page.waitForTimeout(150);
+                rec.check(`${what} ends the offer: no Undo button and no message right after the press`, (await undoBtn(page).count()) === 0 && (await snack(page).count()) === 0, `${await undoBtn(page).count()} Undo, ${await snack(page).count()} message(s)`);
+                await page.waitForTimeout(1500); // the run ends
+                await goConfigure(page);
+                await page.getByRole('button', { name: 'List view' }).focus().catch(() => {});
+                await page.keyboard.press('ControlOrMeta+z');
+                await page.waitForTimeout(600);
+                const now = await readState(page);
+                rec.check(`${what} ends the offer: Ctrl/Cmd+Z on the List toggle leaves the build as it is`, now.saved === imported.saved && now.saved !== prod.saved, now.saved === imported.saved ? '' : 'the build changed');
+                rec.check(`${what} ends the offer: and shows no message`, (await snack(page).count()) === 0, `${await snack(page).count()} message(s)`);
+            };
+            await endsOffer('Check only (Validate)', () => page.getByRole('button', { name: 'Check only', exact: true }).first().click());
+            await endsOffer('Generate', () => page.getByRole('button', { name: 'Generate', exact: true }).first().click());
             await dismissMessage(page);
             await goConfigure(page);
-            await importFile(page, LOGISTIC);
-            await waitMessage(page, /^Build imported\./);
-            await validate(page);
-            await keeps('Validate');
-            const gen = page.getByRole('button', { name: 'Generate', exact: true });
-            rec.check('kept: Generate can be clicked after Validate', await gen.isEnabled().catch(() => false));
-            await generate(page);
-            await keeps('Generate');
-            await goConfigure(page);
-            await dismissMessage(page);
         }, page);
 
         await rec.step('D no timer: the Undo message stays, Ctrl/Cmd+Z still works, Escape in a Select keeps it', async () => {
@@ -988,7 +1051,7 @@ try {
             await fresh(page, LOGISTIC);
             const before = await readState(page);
             await page.setInputFiles('input[type=file]', BAD);
-            await undoMessage(page, rec, 'undo-import', /^Build imported\./, 'import', { desc: 'Import Config over the logistic build: "Build imported." with Undo', contrastOn: true, action: true });
+            await undoMessage(page, rec, 'undo-import', /^Build file opened\./, 'import', { desc: 'Import Config over the logistic build: "Build file opened." with Undo', contrastOn: true, action: true });
             const text = (await snack(page).first().textContent().catch(() => '')) ?? '';
             rec.check('import: no second "imported successfully" toast (one message, no "successfully")', (await snack(page).count()) === 1 && !/successfully/i.test(text), `"${text.slice(0, 60)}"`);
             const after = await readState(page);
@@ -1000,7 +1063,7 @@ try {
             // a failed import offers no Undo and leaves the build alone
             await dismissMessage(page);
             await page.setInputFiles('input[type=file]', BROKEN);
-            await checkMessage(page, rec, 'undo-import-failed', { re: /Failed to import/, label: 'failed import (1.3)', desc: 'A failed import: the error and no Undo' });
+            await checkMessage(page, rec, 'undo-import-failed', { re: /Could not open that file/, label: 'failed import (1.3)', desc: 'A failed import: the error and no Undo' });
             rec.check('failed import: no Undo button', (await undoBtn(page).count()) === 0);
             const kept = await readState(page);
             rec.check('failed import: the build is untouched', kept.saved === before.saved);
@@ -1009,7 +1072,7 @@ try {
         await rec.step('D Paste and Undo; Cancel, a failed paste and No items offer no Undo', async () => {
             await fresh(page, LOGISTIC);
             const before = await readState(page);
-            await pasteOk(page, readFileSync(PROD, 'utf8'));
+            await pasteOk(page, sidecarExportOf(PROD));
             await undoMessage(page, rec, 'undo-paste', /Imported .* from Factorio/, 'paste', { desc: 'Paste from Factorio > Import Selected: "Imported ... from Factorio" with Undo', contrastOn: true, action: true });
             const after = await readState(page);
             rec.check('paste: the build changed', after.saved !== before.saved);
@@ -1019,20 +1082,22 @@ try {
             }
             // Cancel
             await dismissMessage(page);
-            await pasteFromMenu(page, readFileSync(PROD, 'utf8'));
+            await pasteFromMenu(page, sidecarExportOf(PROD));
             await importDialog(page).waitFor({ timeout: 8000 });
             await importDialog(page).getByRole('button', { name: 'Cancel' }).click();
             await page.waitForTimeout(900);
             rec.check('paste: Cancel offers no Undo', (await undoBtn(page).count()) === 0);
             // a failed paste
             await pasteFromMenu(page, 'not a factorio export');
-            await waitMessage(page, /Failed to paste/);
             rec.check('paste: a failed paste offers no Undo', (await undoBtn(page).count()) === 0);
+            // 2.1: it opened the Paste from Factorio dialog
+            if (await page.locator('#paste-from-factorio-title').count()) await page.keyboard.press('Escape');
+            await page.waitForTimeout(500);
             await dismissMessage(page);
             // nothing selected
             await pasteNoItems(page);
-            await waitMessage(page, /No items selected/);
-            rec.check('paste: "No items selected" offers no Undo', (await undoBtn(page).count()) === 0);
+            await waitMessage(page, /^Nothing was imported/);
+            rec.check('paste: "Nothing was imported" offers no Undo', (await undoBtn(page).count()) === 0);
             await dismissMessage(page);
             await page.keyboard.press('Escape');
             const still = await readState(page);
@@ -1089,21 +1154,14 @@ try {
             await dismissMessage(page);
         }, page);
 
-        await rec.step('D Drills off and a chest type switch', async () => {
-            await fresh(page, PROD);
-            const before = await readState(page);
-            const sw = section(page, 'Mining Drills').locator('.MuiSwitch-input').first(); // SELECTOR: confirm
-            await sw.click({ force: true });
-            await undoMessage(page, rec, 'undo-drills-off', /Mining drills turned off/, 'drills off', { desc: 'Mining Drills switched off: "Mining drills turned off" with Undo' });
-            const after = await readState(page);
-            rec.check('drills off: the drills are gone from the build', counts(after.saved)?.drills === 0, `drills ${counts(before.saved)?.drills} -> ${counts(after.saved)?.drills}`);
-            if (await clickUndo(page, rec, 'drills off')) await expectRestored(page, rec, 'drills off (drills and productivity level)', before);
-
+        // 2.7 B removed the drills' Enabled switch (no drills and drills off are the same build), and with it "Drills off";
+        // deleting a drill keeps its Undo (the delete steps above)
+        await rec.step('D a chest type switch', async () => {
             await fresh(page, PU);
             const beforeChest = await readState(page);
             const select = section(page, 'Chests').locator('.MuiSelect-select').first();
             const current = ((await select.textContent()) ?? '').trim();
-            const target = /Buffer/.test(current) ? 'Infinity Chest' : 'Buffer Chest';
+            const target = /Buffer/.test(current) ? 'Infinity chest' : 'Buffer chest';
             await select.click();
             await page.getByRole('option', { name: target }).click();
             await undoMessage(page, rec, 'undo-chest-switch', new RegExp(`^Chest \\d+ changed to ${target}`), 'chest type switch', { desc: `A chest switched from ${current} to ${target}: message with Undo` });
@@ -1217,7 +1275,8 @@ try {
                     const notice = await checkMessage(page, rec, 'undo-notice', { re: /Build restored/, label: 'notice after Undo with clocks generated', desc: 'Undo of Reset after Generate: the "Build restored..." notice' });
                     if (notice) {
                         const text = (await notice.textContent()) ?? '';
-                        rec.check('notice: it says the clocks were cleared and to Validate, then Generate', /clocks you had generated were cleared/i.test(text) && /Validate, then Generate/i.test(text), text.slice(0, 120));
+                        // (not a 1.5 F change: Phase 2's wording says "click Generate", Validate being Check only now)
+                        rec.check('notice: it says the clocks were cleared and to click Generate', /clocks you had generated were cleared/i.test(text) && /click Generate/i.test(text), text.slice(0, 120));
                         rec.check('notice: no Undo button on it (message only)', (await undoBtn(page).count()) === 0);
                         await sleepUntil(tUndo + 6000);
                         rec.check('notice: still on screen at 6 s (it lasts about 8 s)', (await snack(page).filter({ hasText: /Build restored/ }).count()) === 1);
@@ -1263,7 +1322,8 @@ try {
                 const box = await msg.boundingBox();
                 rec.check('Copied.: a long warning wraps inside the window (never clips)', !!box && box.x >= 0 && box.x + box.width <= page.viewportSize().width + 0.5, `${Math.round(box?.x ?? -1)}..${Math.round((box?.x ?? 0) + (box?.width ?? 0))} of ${page.viewportSize().width}`);
                 const role = await msg.locator('[role]').first().getAttribute('role');
-                rec.check('Copied.: announced as an alert (warning)', role === 'alert', String(role));
+                // 1.5 F changed this check beyond the four the spec names: a warning has no alert role now, the polite region reads it once
+                rec.check('Copied.: no alert role of its own (a warning is read once through the polite region)', role !== 'alert', String(role));
             }
             // controls stay usable under it
             for (const [name, loc] of [['Configure toggle', page.locator(GROUP).getByRole('button', { name: 'Configure', exact: true })], ['Copy', copy]]) {

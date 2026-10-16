@@ -87,10 +87,13 @@ export const ENERGY_CONSUMPTION_FEATURE: SidecarFeature = {
 /** Every feature the sidecar added to what it exports, oldest first. Add the next one here. */
 export const SIDECAR_FEATURES: readonly SidecarFeature[] = [ENERGY_CONSUMPTION_FEATURE];
 
+/** What `newerSidecarStep` says: an older sidecar exported the data, but it lacks nothing that this data needs */
+const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";
+
 /** Tells that there is a newer sidecar when nothing more specific was said about what an older one lacks */
 export const newerSidecarStep: ImportStep = input =>
     isOlderThan(input.sidecar_version, LATEST_SIDECAR_VERSION)
-        ? Option.some("Nothing in this import is affected by that.")
+        ? Option.some(NOTHING_MISSING_MESSAGE)
         : Option.none();
 
 /** What is checked on data pasted from the sidecar mod: what an older mod lacks, else that there is a newer one */
@@ -100,7 +103,8 @@ export const SIDECAR_IMPORT_PIPELINE: ImportPipeline = ImportPipeline
 
 /**
  * The guidance for data pasted from the sidecar mod, None when there is nothing to tell. The messages of the steps
- * are folded into one that says which version exported the data and, once, to update the mod to get everything.
+ * are folded into one that says which version exported the data and, once, to update the mod to get everything; when
+ * nothing is missing, the update is only offered.
  */
 export function checkSidecarImport(
     sidecar_version: unknown,
@@ -110,6 +114,11 @@ export function checkSidecarImport(
     const version = sidecarVersionOf(sidecar_version);
     return Option.map(
         pipeline.run({ sidecar_version: version, machines }),
-        missing => `This was exported by ${exportedBy(version)}. ${missing} Update the mod to ${LATEST_SIDECAR_VERSION} to import everything automatically.`,
+        missing => {
+            const update = missing === NOTHING_MISSING_MESSAGE
+                ? `You can update the mod to ${LATEST_SIDECAR_VERSION} when you like.`
+                : `Update the mod to ${LATEST_SIDECAR_VERSION} to import everything automatically.`;
+            return `This was exported by ${exportedBy(version)}. ${missing} ${update}`;
+        },
     );
 }

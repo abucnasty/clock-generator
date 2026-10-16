@@ -1,22 +1,31 @@
+import { COPIES_POSITIVE_PROBLEM, copiesProblem } from './copiesProblem';
 import type { InserterCoverageIssue } from 'clock-generator/browser';
+import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
+import { isTargetAboveMax, maxRateText, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
+
+/** The game name of an item id */
+type LabelOf = (id: string) => string;
+const identity: LabelOf = (id) => id;
 
 /**
- * Every sentence that says why Validate or Generate is off. The tooltips, the reason in the workflow bar, the problem
- * chip and the Validation panel's note all read from here, so the words are changed in one place.
+ * Every sentence that says what stops the build being clocked, and so where Generate goes. The tooltips, the note in the
+ * workflow bar and the problem chip all read from here, so the words are changed in one place.
  */
 export const PROBLEM_TEXT = {
     noRecipe: 'Set the recipe in Target Output',
     noRate: 'Set Items per Second in Target Output to more than 0',
-    noCopies: 'Set Copies in Target Output to 1 or more',
+    noCopies: COPIES_POSITIVE_PROBLEM,
     noMachines: 'Add a machine',
+    rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
-    missingInput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter bringing in ${item}`,
-    missingOutput: (machineId: number, item: string) => `${entityLabel('machine', machineId)} has no inserter taking ${item} out`,
-    checking: 'Checking the build…',
-    needsValidation: 'Validate the build first',
-    validationOutOfDate: 'The build changed since the last check. Validate again',
-    validationFailed: 'The last check failed. See Validation for why',
+    missingInput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
+        `${entityLabel('machine', machineId)} has no inserter bringing in ${itemLabel(item)}`,
+    missingOutput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
+        `${entityLabel('machine', machineId)} has no inserter taking ${itemLabel(item)} out`,
+    validationFailed: 'The last check failed. Show why',
+    /** On a build with nothing entered yet: its next step, said neutrally rather than as problems */
+    start: 'Start: pick the recipe you want to make',
 } as const;
 
 /** The ids of the elements a problem moves the keyboard focus to; the forms set them from here */
@@ -25,8 +34,9 @@ export const ELEMENT_IDS = {
     targetRate: 'target-items-per-second',
     targetCopies: 'target-copies',
     addMachine: 'add-machine',
+    /** The alert at the top of Configure with the reason the last check failed */
     validationError: 'validation-error',
-    /** The reason in the workflow bar, which describes the disabled Validate and Generate buttons */
+    /** The note in the workflow bar, which describes Generate and Check only */
     blockReason: 'workflow-block-reason',
 } as const;
 
@@ -52,7 +62,7 @@ export type FocusTarget =
     | { kind: 'coverage-issue'; issue: CoverageIssueKey }
     | { kind: 'validation-error' };
 
-/** Something that keeps the build from being validated or generated, or the next step before Generate; and where to go for it */
+/** Something that keeps the build from being clocked, or the reason the last check failed; and where to go for it */
 export interface Problem {
     text: string;
     /** Null for a next step that has nowhere to go */
@@ -63,13 +73,18 @@ interface ProblemsInput {
     targetOutput: { recipe: string; items_per_second: number; copies: number };
     machines: { id: number; recipe: string }[];
     coverageIssues: CoverageIssueKey[];
+    /** The most the machines making the target recipe can make; null or left out while it is not known */
+    machinesMax?: MachinesMax | null;
+    /** The game name of an item id for the sentences; left out, the ids are said as they are */
+    itemLabel?: LabelOf;
 }
 
 /**
- * What keeps the build from being generated, in the order it is best fixed: the target, the machines, then the
- * inserters the engine found missing, in its order. Empty when the build can be generated.
+ * What keeps the build from being generated, in the order it is best fixed: the target, the machines, a target more
+ * than the machines can make (which their recipes change), then the inserters the engine found missing, in its order.
+ * Empty when the build can be generated.
  */
-export function problemsOf({ targetOutput, machines, coverageIssues }: ProblemsInput): Problem[] {
+export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax = null, itemLabel = identity }: ProblemsInput): Problem[] {
     const problems: Problem[] = [];
     if (!targetOutput.recipe) {
         problems.push({ text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } });
@@ -77,8 +92,9 @@ export function problemsOf({ targetOutput, machines, coverageIssues }: ProblemsI
     if (!(targetOutput.items_per_second > 0)) {
         problems.push({ text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } });
     }
-    if (!(targetOutput.copies > 0)) {
-        problems.push({ text: PROBLEM_TEXT.noCopies, target: { kind: 'target-copies' } });
+    const copiesIssue = copiesProblem(targetOutput.copies);
+    if (copiesIssue) {
+        problems.push({ text: copiesIssue, target: { kind: 'target-copies' } });
     }
     if (machines.length === 0) {
         problems.push({ text: PROBLEM_TEXT.noMachines, target: { kind: 'add-machine' } });
@@ -91,11 +107,19 @@ export function problemsOf({ targetOutput, machines, coverageIssues }: ProblemsI
             });
         }
     }
+    // the engine's check refuses such a target too; said here, the player is sent to the field instead of a failed check
+    const capacity = machinesMax ? totalMachineCapacity(machinesMax, targetOutput.copies) : null;
+    if (capacity !== null && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
+        problems.push({
+            text: PROBLEM_TEXT.rateAboveMax(capacity),
+            target: { kind: 'target-rate' },
+        });
+    }
     for (const { kind, machine_id, item_name } of coverageIssues) {
         problems.push({
             text: kind === 'missing_input_inserter'
-                ? PROBLEM_TEXT.missingInput(machine_id, item_name)
-                : PROBLEM_TEXT.missingOutput(machine_id, item_name),
+                ? PROBLEM_TEXT.missingInput(machine_id, item_name, itemLabel)
+                : PROBLEM_TEXT.missingOutput(machine_id, item_name, itemLabel),
             target: { kind: 'coverage-issue', issue: { kind, machine_id, item_name } },
         });
     }
@@ -107,40 +131,30 @@ export function firstProblemOf(input: ProblemsInput): Problem | null {
     return problemsOf(input)[0] ?? null;
 }
 
-type ValidationStatus = 'none' | 'running' | 'valid' | 'invalid' | 'out-of-date';
-
 /**
- * Why each of Validate and Generate is off, or null when it is on or says on its own label what it is doing. The
- * build's problems come first; with none, Generate waits for the coverage check and then for a valid, up-to-date
- * Validate step.
+ * The one note in the workflow bar, which says where Generate and Check only go: the first problem, else the reason the
+ * last check failed. Null while something runs (the buttons then say what it is) or when there is nothing to say. On a
+ * `blank` build (nothing entered yet) the problems are only the next step: the note says where to start.
  */
-export function blockedActionsOf({ problems, coverageChecked, isRunning, validationStatus }: {
+export function barNoteOf({ problems, busy, checkStatus, blank = false }: {
     problems: Problem[];
-    coverageChecked: boolean;
-    isRunning: boolean;
-    validationStatus: ValidationStatus;
-}): { validate: Problem | null; generate: Problem | null } {
-    if (isRunning) {
-        return { validate: null, generate: null };
+    busy: boolean;
+    checkStatus: CheckStatus;
+    blank?: boolean;
+}): Problem | null {
+    if (busy) {
+        return null;
+    }
+    if (blank && problems.length > 0) {
+        return { text: PROBLEM_TEXT.start, target: { kind: 'target-recipe' } };
     }
     if (problems.length > 0) {
-        return { validate: problems[0], generate: problems[0] };
+        return problems[0];
     }
-    if (!coverageChecked) {
-        const checking = { text: PROBLEM_TEXT.checking, target: null };
-        return { validate: checking, generate: checking };
+    if (checkStatus === 'invalid') {
+        return { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } };
     }
-    switch (validationStatus) {
-        case 'running':
-        case 'valid':
-            return { validate: null, generate: null };
-        case 'none':
-            return { validate: null, generate: { text: PROBLEM_TEXT.needsValidation, target: null } };
-        case 'out-of-date':
-            return { validate: null, generate: { text: PROBLEM_TEXT.validationOutOfDate, target: null } };
-        case 'invalid':
-            return { validate: null, generate: { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } } };
-    }
+    return null;
 }
 
 /** "1 problem", "3 problems" */
@@ -184,5 +198,18 @@ export function focusProblemTarget(target: FocusTarget): boolean {
     }
     element.focus({ preventScroll: true });
     element.scrollIntoView({ block: 'center' });
+    return true;
+}
+
+/**
+ * Moves the keyboard focus to the note in the workflow bar, without scrolling: the bar is sticky, so it is in view
+ * already. False when there is no note.
+ */
+export function focusBarNote(): boolean {
+    const element = document.getElementById(ELEMENT_IDS.blockReason);
+    if (!element) {
+        return false;
+    }
+    element.focus({ preventScroll: true });
     return true;
 }

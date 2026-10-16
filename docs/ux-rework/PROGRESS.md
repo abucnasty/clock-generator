@@ -9,7 +9,7 @@ come from here.
 - **Review:** [SYNTHESIS.md](review/SYNTHESIS.md) · [A-newcomer.md](review/A-newcomer.md) ·
   [B-power-user.md](review/B-power-user.md) · [C-visual-a11y.md](review/C-visual-a11y.md) · [BRIEF.md](review/BRIEF.md)
 - **GitHub:** [feat/ux-rework](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework) ·
-  [feat/ux-rework-p1](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) ·
+  [Phase 1 snapshot](https://github.com/abucnasty/clock-generator/tree/17a889d55e334e2dfbec2640a0f28444613c7693) ·
   [child PRs into feat/ux-rework-p1](https://github.com/abucnasty/clock-generator/pulls?q=is%3Apr+base%3Afeat%2Fux-rework-p1) ·
   [phase PRs into feat/ux-rework](https://github.com/abucnasty/clock-generator/pulls?q=is%3Apr+base%3Afeat%2Fux-rework)
 - In the item tables, the item number opens its spec, and the PR column links the child PR once it is open.
@@ -29,14 +29,29 @@ come from here.
 | `merged` | merged into the phase branch |
 | `carried` | moved to a later phase |
 | `dropped` | the owner decided against it |
+| `deferred` | scoped for later; excluded from the current implementation queue |
 
 ## Current state
 
-- **Phase:** 1 (started 2026-10-14)
-- **Branch:** [`feat/ux-rework-p1`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p1) (from `feat/ux-rework` at c8896e2)
-- **Open checkpoints:** none yet; the Phase 1 merge into `feat/ux-rework` will need the owner's approval
-- **Phase 1:** all 14 items merged (#145–#164); phase-end review done ([reviews and synthesis](review/phase1-end/)); phase-end fixes on `feat/ux-rework-p1-phase-end-fixes`; then the phase PR (owner approval)
+- **Phase:** 2 (Phase 1 merged into `feat/ux-rework`, #170, 877989d)
+- **Branch:** [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2); the ledger lives here now. Phase 1 history is linked by its permanent commit and merged PR.
+- **Open checkpoints:** Phase 2 merge approval (owner), after its reviewable PR. Both current Sidecar → app and 2.5 A generated-clock installation checks PASS, owner confirmed2026-10-16.
+- **Phase 1:** merged into `feat/ux-rework` (#170) after the end review, its fixes (#168) and the owner's approval
+- **Phase 2 remaining:** original items and targeted2.F correction merged; fresh four-width review and all three affected rechecks complete. Explicit3.F carries and owner phase approval remain.3.2 A+B merged into P3;3.F implementation/evidence complete, independent whole-item reviews resumed.
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
+- **Phase 2 end:** fresh main four-width walkthrough28/0/0 and extra two-width6/0/0; rest-settled1440/extra reruns7/0/0 and6/0/0 preserve the original transition frames. [Evidence](capture/phase2-end-EVIDENCE.md). All three independent Sol/high/fast-off personas completed in parallel: [reports, synthesis and retro](review/phase2-end/SYNTHESIS.md). Targeted2.F fixes are merged in #200 after code/UX and all three affected persona rechecks PASS; original failed reports remain preserved. Clipboard/Fuel/partial-Paste and focused accessibility/copy leftovers→3.F. Installation checkpoint now owner PASS; explicit carries and phase merge approval remain.
+
+- **Upstream compatibility:** 0.15.1 and 0.15.2 (#193) downmerged and pushed through feature (`41eb648`),
+  p2 (`9e2646c`) and p3 (`df21248`). Root checked the recorded test result lines; these historical integration gates
+  do not replace the reviewed compatibility child's independent evidence. #194 at master `1d27cde` is frozen for
+  the current integration cycle; fresh full gates passed and feature `cdf2425`, p2 `cf7a8c7` and p3 `66dc5c9` are pushed.
+  Compatibility provider merged as [#195](https://github.com/abucnasty/clock-generator/pull/195), `c8ba1dd`:
+  code and UX PASS after one fix round; CI unit/UI jobs pass (generation job skipped by existing workflow;
+  local 142 generation tests pass). Full evidence: [provider evidence](capture/upstream-compatibility-EVIDENCE.md).
+  Completed provider remote/local branch and worktree removed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md)
+  merged as [#196](https://github.com/abucnasty/clock-generator/pull/196), `1d955b2`: independent GPT-6.1 Sol/high code and UX PASS after one evidence fix round; CI unit/UI pass, local142 generation tests pass. Source evidence is committed on p3. Completed adjunct remote/local branch/worktree removed; owner preview remains live. P3 now includes #197 at `865f460`; combined P2/P3 integration is being verified before promotion.
+- **Worker checkpoints:** 2.7 B merged in #198 and 3.3 merged in #197 after final independent code/UX PASS and exact-head CI. See their item rows and evidence notes for final gates and retained failed runs. Combined merge product `83e2573` passes engine1008 unit/142 generation and UI1199 tests/69 files plus all other gates; root's independent test/build repeat passes. Capture-only `effe58e` repairs stale selftests; the three-width PHASE3 selector matrix now passes. Combined browser evidence and independent conflict-delta reviews PASS; c29db81 was promoted into P3.3.2 A subsequently merged in #199/4b86e77.
+  The nested `.claude/worktrees` path makes Knip ignore its own npm script entries; standard Knip passes on identical detached trees outside that path. No source/configuration suppression was used. Future immutable verifiers use the established external layout; detailed failed/valid logs stay in the local evidence directories.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -61,42 +76,131 @@ come from here.
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | implementing | | | `feat/ux-rework-p2-first-visit`. One unit under coach run 5's counting (about 11 existing files). Also owns: the contradictory old-mod sentence (`sidecar-version.ts:94`; 2.2's A17 is only partly fixed), the red "2 problems" on a blank form (Phase 1 end), the raw JSON import error |
+| [2.1](specs/2.1-first-visit.md) | First visit and the way in | opus | merged (p2) | [#172](https://github.com/abucnasty/clock-generator/pull/172) | 1 | Round 0: code review opus FIX and UX audit opus FIX on one major (focus fell to body after the intro card's actions). Round 1: one focus target (the Target Output heading), announced paste prompts, plain errors, wording, one filled button on first visit. Re-checks both PASS. A1, A2, A3, A4, A15, A17 and Phase 1 end 1, 2, 3, 13, 14, 20 fixed. Capture 368/350/349 PASS; 2 FAIL at 390 are 1.5 F's (message over the heading). CI green. The target-rate addendum split into 2.1 W |
+| [2.1 W](specs/2.1-first-visit.md) | Target-rate limit | opus | merged (p2) | [#173](https://github.com/abucnasty/clock-generator/pull/173) | 2 | Split from 2.1. Owner: block with the clear line (the engine refuses such targets). Round 1 code review opus FIX (2-decimal boundary let a refused target through; engine compares exactly and picks machines by output item); UX sonnet PASS with wording. Round 2: exact compare, figures rounded down, machines by output item, "At most 252.65/s: …" wording; re-check PASS (agrees with `validateConfig` at every boundary). Capture 153 PASS. CI green. Implementer wrote its own capture |
 | [2.2](specs/2.2-sidecar.md) | Sidecar mod changes | opus | merged (p2) | [#154](https://github.com/abucnasty/clock-generator/pull/154) | 0 | Into `feat/ux-rework-p2`. CI green. **In-game check: passed** (owner, 2026-10-14: "looks good"). Code review opus PASS (Lua read line by line; checks re-run); UX audit sonnet FIX on the owner steps only (fixed by the orchestrator). A17, Q3 fixed; A2, A3 partly (site side is 2.1); B19 to 2.1. Started early on `feat/ux-rework-p2-sidecar` (from `feat/ux-rework-p2`, cut from p1 at 9505eca). Checkpoint: owner runs the in-game steps |
 | [2.3](specs/2.3-validate-into-generate.md) | Fold Validate into Generate | opus | merged (p2) | [#161](https://github.com/abucnasty/clock-generator/pull/161) | 1 | Round 0: code review opus PASS (races fine); UX audit opus FIX (a mouse click on Check only looked silent). Round 1: a visible landing and the reason in the tooltip, plan stays mounted, alert named, announcements in 1.11 A's rule set; merged 2.11 and 1.11 A. Re-review both PASS: A12, B10 fixed. CI green |
 | [2.4](specs/2.4-belt-question.md) | Ask the belt question | opus | merged (p2) | [#163](https://github.com/abucnasty/clock-generator/pull/163) | 0 | Code review opus PASS (storage, 2.3 interplay, double press, hint all checked; deviations accepted); UX audit opus PASS: A10 fixed, C7 (2.4's part) fixed. 498 tests; capture 274 PASS, 1 FAIL = 1.5's message over the action at 720 (ledgered). CI green |
-| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | A owner check | | A 2 | Two PRs. A (opus): round 0 code review FIX (drills taken from the form, not the clock), UX audit FIX (the wiring list gives only numbers). Round 1 (merged 2.4 and p2's glossary; drills read from the clock, wiring rows with item and ends, nothing-to-wire step): both re-reviews PASS. Minors round (no-wire Copy hidden, no-belt line, step 4 wording, drill cross-check with `drill:N` keys): UX re-check PASS, code re-check running. A21 fixed; A8 in app (owner's in-game check pending); A19, A20, C§2.3 A's share fixed. Owner checkpoint: install steps in game. B after A (gains "Stable" in the reason, the Works? column, Phase 1 end items) |
+| [2.5](specs/2.5-results-answer.md) | Results lead with the answer | opus | merged (p2) | A [#176](https://github.com/abucnasty/clock-generator/pull/176), B [#182](https://github.com/abucnasty/clock-generator/pull/182) | A 2, B 1 | A: the "Your clock" card, plain clock names and tiles, install steps from the clock, wiring list with **item icons** (owner), drills from the clock. Round 0 both FIX; round 1 both PASS; minors round PASS; Never on wording corrected (owner kept "keep it off yourself"); merges with 2.1, 2.1 W, 1.5 F, 2.8 b; final re-checks PASS. A21 fixed; A8 in app. **Owner in-game installation check PASS2026-10-16 (“All those cases pass”): import and both book variants, output connector/wiring list, Anything >0, startup, lock on/off, pole relays, drills and older-clock replacement. Phase merge approval remains separate.** CI green. B merged at c95d964. Round 0: code PASS, UX FIX on five cheap minors; round 1 both PASS. Captures: results-b 654/0, results-answer 264/264/262 PASS at 1440/720/390 (0 FAIL), text-names 1113/0; 878 tests. |
 | [2.6](specs/2.6-wake-windows.md) | Wake windows view | opus | merged (p2) | [#156](https://github.com/abucnasty/clock-generator/pull/156) | 1 | Code review opus PASS (window maths correct; checks re-run), UX audit opus PASS (C2 fixed for the new chart; old charts → 2.5/2.10); one minors round, re-checked. CI green. Follow-up PR: switch to `announce()`, drop `scrollMarginBottom` |
-| [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus | A implementing | | | Two PRs. A `feat/ux-rework-p2-gui-grammar`, stacked on 2.5 A (coach run 5); capture writer alongside. Gains from the Phase 1 end: Copy blueprint the one filled button on fresh Results (C3), the Recommended chip vs selection orange, red only for problems (trash icons, filter ×), keep the MuiChip focus ring. B layout after 2.1 |
-| [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | a evidence | | | 2.8a (opus) `feat/ux-rework-p2-item-names`, 18 files: 397 item and 746 recipe names from the 2.0.77 locale, 102 fallbacks. Two spec checks were wrong ("science pack" ties keep data order; no picker lists fluids): orchestrator changed them to "among the first 10" and "Fluoroketone (Cold) barrel". Reviews next. 2.8b (sonnet, text sites) late |
-| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | spec | | | Spec final. Runs after 2.5 B, in parallel with 2.7 (coach run 5: its order after 2.7 was only so the layout is final; 2.7 runs the geometry sweep). Gains: header height and the reason line (Phase 1 end) |
+| [2.7](specs/2.7-gui-grammar.md) | Factorio GUI grammar pass | opus; Sol rechecks | A+B merged (p2) | A [#177](https://github.com/abucnasty/clock-generator/pull/177), B [#198](https://github.com/abucnasty/clock-generator/pull/198) | A2; B1 | B merged869318b after final minors and owner-approved explicit Stack helper removal. Historical round1 PASS retained; final Sol/high code and UX PASS. Full gates engine1008/142/UI961+repeat; Build fivewidth1856/0/0, firstvisit1090/0/0, repaired GUI dialogs426/0/0 and beltDiagram27/0/0. Failed originals preserved in [evidence](capture/build-card-EVIDENCE.md). Halfwidth775/9/0 reproduces exact historical390 limitations;720–1440 PASS. One cosmetic Automatic-helper filter alignment follow-up assigned to3.2A; explicit alignment closed. CI green; install/phase owner checkpoints retained. |
+| [2.8](specs/2.8-item-names.md) | In-game item names | opus + sonnet | merged (p2) | a [#171](https://github.com/abucnasty/clock-generator/pull/171), b [#175](https://github.com/abucnasty/clock-generator/pull/175) | a 1, b 2 | a (opus): pickers show game names; ids stored. b (sonnet): names in every text site; **owner: item icons in the Wake windows rows** (game name as hover and screen-reader name); internal and hidden entries out of the pickers, recycling recipes found by typing (orchestrator); sentence-case type labels. b round 0 code PASS / UX FIX (rows broke at 390, no icon shots); round 1 both PASS; minors round PASS. A27 fixed (Insights engine prose partly). Capture b 1005/0. CI green. 2.5 A's wiring list gets the icons when it merges (`row.detail` removed) |
+| [2.9](specs/2.9-half-width.md) | Half-width layout | sonnet | merged (p2) | [#184](https://github.com/abucnasty/clock-generator/pull/184) | 1 | Merged at 96a69c7. Round 0 code PASS / UX FIX; round 1 both PASS. C#1 fixed at 720–960; C#10 fixed. Capture 775 PASS / 9 FAIL, all at out-of-scope 390; 884 tests. Shared AXE_RULES now includes landmark-unique. |
 | [2.10](specs/2.10-timelines.md) | Developer timelines: light fixes | sonnet | merged (p2) | [#165](https://github.com/abucnasty/clock-generator/pull/165) | 1 | Sonnet. Code review opus PASS, UX audit sonnet PASS (C11, C12, the fuel chart's name); one minors round (Blocked painted last, device-pixel rounding), re-check PASS. CI green |
 | [2.11](specs/2.11-diagram.md) | Diagram readability | opus | merged (p2) | [#159](https://github.com/abucnasty/clock-generator/pull/159) | 1 | Code review opus and UX audit opus: ESCALATE on the 720 fullscreen fit ("No minZoom"); orchestrator ruled lowering minZoom allowed (spec clarified). Round 1: minZoom 0.1, compact layout, React Flow descriptions, in/out twins, Tab order. Re-review: both PASS (B17, C20 fixed; B16 partly by decision). White node focus ring by design. CI green |
-| [1.5 F](specs/1.5F-messages-clear.md) | Messages that don't cover the page | opus | spec | | | Phase 1 follow-up, built on p2 (`feat/ux-rework-p2-messages-clear`). Messages move into the sticky header under the bar; the fullscreen Diagram shows them in its title bar; non-action messages close when a dialog opens; Undo ends when a check or generation starts (owner). 13 files, one unit |
+| [1.5 F](specs/1.5F-messages-clear.md) | Messages that don't cover the page | opus | merged (p2) | [#174](https://github.com/abucnasty/clock-generator/pull/174) | 0 | Messages in the sticky header (and the fullscreen title bar); Undo ends when a check or generation starts (owner); stale errors close on a dialog or a retry; one polite announcement each. Code review opus PASS, UX audit opus PASS (the raised-priority follow-up, A6, A7, B1, B11, C5 fixed); merged 2.1 and 2.1 W (stale errors on 2.1's flows), re-check PASS. Capture clear 1045/5, undo 1372/3 (all pre-existing; Copy tooltip → 2.7 A). CI green |
+| [2.F](specs/2.F-phase-end-copy.md) | Phase-end factual copy and fractional scope | Sol/high | merged (p2) | [#200](https://github.com/abucnasty/clock-generator/pull/200) | 0 | Merged8fa2c15 after independent code/UX PASS and all three affected phase-persona rechecks PASS. UI967/57/all gates+root repeat; baseline99/0/0, fullafter777/3/0 preserved, corrected help498/0/0. Exact old-source fractional regression fails3 cases;412 asset hashes match. [Evidence](capture/phase2-copy-EVIDENCE.md). Exact-head CI green; install/phase approvals remain. |
 
-**Phase 2 chains** (re-derived at the Phase 1 end, coach run 5; a freed slot goes to the unblocked item heading the longest chain):
+**Phase 2 chains** (re-derived after reviewed provider/API commits; a freed slot goes to the longest unblocked chain):
 
 | Chain | Length | Next unblocked |
 |---|---|---|
-| 2.5 A → 2.7 A → 2.7 B | 3 | 2.7 A, stacked on 2.5 A (running) |
-| 2.1 → 2.7 B | 2 | 2.1 (running) |
-| 2.5 A → 2.5 B → 2.9 | 3 | 2.5 B once 2.5 A merges |
-| 2.8 a → 2.8 b | 2 | 2.8 a in review |
-| 1.5 F | 1 | next free slot |
-| Phase 3: 3.1 (barely touches Phase 2), 3.4 (after 2.1), 3.3 (after 2.7 A), 3.2 (after 2.7 B and 2.8 b) | | specs being drafted |
+| 3.2 | complete | A merged #199/4b86e77; B full5775/0/0 and preservation2289/0/0, UI1216/72/all gates+root repeat. Code/UX round0 PASS and capture-only ambiguity minor closed (old helper7/1,new8/0); #201 merged18f1bed after exact-head CI. Normal P3 inheritance376 product identical335; six conflicts read by root |
+| 3.3 | complete | #197 merged865f460, formalround2 codePASS/round1UXPASS; owner checkpoints retained |
+| 2.F | complete | #200 merged8fa2c15 with code/UX and three affected persona rechecks PASS; normally integrated into P3 at88eab3a; full1222/72 gates/root repeat, fresh F795/0/0 and independent CODE/UX merge supplements PASS |
+| Frozen master #194 → feat/ux-rework → p2 → p3 | complete | All three full gates and pushes done; current3.2A merged-tree typecheckPASS on capture-onlyf74 afterP3c29 promotion |
+| Phase 2 end | | Fresh fourwidth capture, all three Sol personas and coach/retro complete.2.F all three affected rechecks PASS. Install check holds phase PR; owner approval includes explicit3.F carries before phase merge |
 
 ## Phase 3: expert depth
 
 | Item | Title | Implementer | Status | PR | Rounds | Notes |
 |---|---|---|---|---|---|---|
-| 3.1 | Rule editor upgrades | opus | todo | | | |
-| 3.2 | Editing at scale | opus | todo | | | |
-| 3.3 | Cancel, and keep the results | opus | todo | | | |
-| 3.4 | Build library and share links | opus | todo | | | |
+| [3.1](specs/3.1-rule-editor.md) | Rule editor upgrades | opus | merged (p3) | [#179](https://github.com/abucnasty/clock-generator/pull/179) | 1 | Stacked on 2.7 A, reviewed against its head (coach run 6). Live "In words" sentence, "In the blueprint" note (rules shape the planning run only; engine-verified), Clocked strip against the clock's windows, inline problems block Save (shown after leaving a field or a refused Save), templates ask item and amount; latched template releases on the source's level (owner; engine-verified to match the sample). Round 0 code PASS / UX FIX (errors on untouched fields); round 1 both PASS. B8, B9 fixed. Capture 902/0. CI green. First Phase 3 merge |
+| [3.2](specs/3.2-editing-at-scale.md) | Editing at scale | Sol/high | A+B merged (p3) | A [#199](https://github.com/abucnasty/clock-generator/pull/199), B [#201](https://github.com/abucnasty/clock-generator/pull/201) | 0 | A merged4b86e77: UI1202/71/full gates+root repeat, full5307/9/0 retained then affected462/0/0 and strict consumer passes;30 alignments0px; cheap focus minor156/0/0 and code/UX closures PASS. B final215abfb/product335, normal P3 merge376 exact product, full5775/0/0/preservation2289/0/0/helper7/7/UI1216/72+root repeat. Code/UX PASS; capture ambiguity minor closed with old7/1/new8/0 proof and repeated gates. #201 merged18f1bed after exact-head CI; no blocker/major fix round. |
+| [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus; Sol fix/rechecks | merged (p3) | [#197](https://github.com/abucnasty/clock-generator/pull/197) | 2 | Merged865f460. Native IndexedDB10builds/~64MB, kept choice/results, immediate Cancel and worker recovery. Sol/high UX round1 PASS; code round1 FIX on startup-dead-worker next-action hang, formalround2 PASS after9 meaningful lifecycle regressions. UI1186/full gate+independent repeat PASS; original full661/0/library375/0, affected489/0/0 and strengthened startup237/0/0. Capture minor closed; no unresolved blocker/major. [Evidence](https://github.com/abucnasty/clock-generator/blob/865f460c36b71108e7e9b2d20ef40f13997de836/docs/ux-rework/capture/cancel-keep-EVIDENCE.md). CI green; no engine/dependency/version change. |
+| [3.4](specs/3.4-build-library.md) | Build library and share links | opus | merged (p3) | [#180](https://github.com/abucnasty/clock-generator/pull/180) | 1 | "Your builds" switcher, migration of the single save, other-tab warning, share links (`CompressionStream`, no dependency; owner-approved terms). Round 0 code PASS / UX FIX (a new build showed the previous recipe — `ItemSelector` now controls its input, closing the 1.3 stale-text follow-up); round 1 both PASS; a flaky first-visit check was a script race (menu exit time), fixed in the script. Post-merge type-check caught duplicate hooks with 2.5 A. B20 fixed. Capture 1077/0. CI green |
+| [3.F](specs/3.F-safety-accessibility-followups.md) | Phase-end safety and accessibility carries | Sol/high | review | | 0 | Product7d2153e / final childbcd4f77: UI1289/80 and all gates plus root repeat; full six-width14349/0/0 with450 geometry/PNG/ARIA/full-axe states; strict320478/0/0.24 existing files =13 product+11 capture, two-unit implementation ended12:36:31. Open larger-plan focused-chip visibility diagnostic remains explicit; native extra-input running interval unsampleable on real larger fixture, controlled guard tests retained. Earlier usage-limit attempts produced no verdict. Fresh independent Sol/high CODE and UX whole-item reviews restarted; no verdict or merge yet. [Detailed evidence on child](https://github.com/abucnasty/clock-generator/blob/bcd4f77a05e160f9e546bc8925dd8056424a48c4/docs/ux-rework/capture/phase3-followups-EVIDENCE.md). |
+
+## Deferred roadmap
+
+| Item | Title | Status | Notes |
+|---|---|---|---|
+| [D1](specs/D1-compact-view.md) | Compact view | deferred | Owner requested roadmap scope only: denser Results/forms, fewer redundant labels/helpers, shorter title/workflow header, version visible without scrolling. Preserve essential feedback/accessibility; revisit after broader audit. No implementation or current release-scope expansion. |
+| [D2–D8](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings, working-context preservation and per-machine target/max/achieved rates. Reconcile overlaps with D1/3.3; no current implementation scope added. |
 
 ## Decisions log
 
+- 2026-10-16: Owner confirms “All those cases pass” for the requested app → game installation matrix: blueprint and both book variants, combinator output/wiring identification, green wire with Anything >0, automatic startup, lock on/off, long wiring via poles, drills and replacing an older clock. Together with the prior Sidecar → app PASS, the2.5 in-game checkpoint is satisfied. No repeat manual test requested now; phase merge approval remains separate. Fresh independent Sol/high/fast-off3.F whole-item CODE/UX reviews resumed after capacity became available; all existing verification and three phase-end reviewers retained.
+
+- 2026-10-16: Owner reports “Mod to app looks good and passes.” Recorded the current Sidecar → app export/import path as PASS. This does not yet confirm app → game blueprint import, wiring/Anything >0, fresh startup, lock, book variants, pole relays, drills or older-clock replacement. The2.5 installation checkpoint and phase approval remain pending those applicable results; no additional Sidecar → app retest requested.
+
+- 2026-10-16: Owner confirmed that all game instances use the shared `~/Library/Application Support/factorio/mods` and deleted the extra Beta folder. Installed the same verified UX development ZIP there (still version0.7.1); all12 source files/archive hashes pass, older matching archives backed up, existing enabled setting preserved. Restarted an actual Vite dev server at `http://127.0.0.1:5280/` on reviewed combined88eab3a source with its own engine and11 exact JSON resources; root HTML/main/App modules return200. Server proof `/tmp/ux-owner-preview-fab7ef4/DEV-SERVER.json`; pending3.F remains excluded. Actual in-game check remains pending.
+
+- 2026-10-16: Owner confirmed `~/Library/Application Support/factorio_beta` as the destination. Created its missing `mods` directory and installed `clock-generator-sidecar_0.7.1.zip`; archive integrity/version,12 entries and exact previously verified SHA256 all pass. No Beta mod-list existed and none was created or edited. Regular Factorio remains restored to its previous three archives. Receipt `/Users/abucnasty/.codex/artifacts/factorio-sidecar-install-20261016T134618Z/RECEIPT.json` now records the corrected installation. Actual in-game installation check still awaits the owner.
+
+- 2026-10-16: Owner corrected the mod destination to `factorio_beta`. Root restored the regular Factorio mods folder exactly (three previous archives, our matching0.7.1 ZIP removed). The verified build remains ready; installation into Beta is pending the owner’s full folder path because no existing Beta folder was found in the searched locations. Receipt above now records the correction. This is still preparation for the pending in-game check.
+
+- 2026-10-16: Owner authorized building/installing the current Sidecar via its script before testing. Ran `clock-generator-sidecar/build.sh --install`: installed0.7.1 to `/Users/abucnasty/Library/Application Support/factorio/mods/clock-generator-sidecar_0.7.1.zip`; verified all12 source-file bytes and archive SHA2567df9d88095cccba02be0f67d95097e03744fb95b5d880481f9eceb237cfc3445. Three previous archives backed up under `/Users/abucnasty/.codex/artifacts/factorio-sidecar-install-20261016T134618Z/previous/`; mod was already enabled, mod-list unchanged. Owner preview5280 restarted on reviewed88eab3a snapshot and14 HTTP resources byte-verified. This prepares the test; it does not satisfy2.5 installation or phase approval. Worker usage limit currently holds formal3.F reviews, with all review/verification requirements retained.
+
+- 2026-10-16: Reconciled3.2 literal/bookkeeping with existing approved behavior: Undo says sentence-case “Infinity chest.”; row Tab formula counts the required Use automatic filters action and an Add slot only when present. Explicit logistic10/10/9, Automatic2/2/1 slots10/10/8; essential actions stay reachable. Source-name search retains established translated-name OR rendered internal-ID matching. No semantic gate or assertion was removed.
+- 2026-10-16: All three fresh Phase2 personas completed independently on final fourwidth evidence; exact reports and root synthesis preserved.2.F fixes the inherited factual wake-up drift, fractional Makes caption and unconditional net-UPS claim.3.F now owns clipboard failure/Fuel equivalence/partial-Paste safety and focused expert-help/scope/reflow carries; Append and D1–D8 remain deferred. No accessibility waiver or phase PASS.
+- 2026-10-16: Reviewed P2→P3 product83e passes root engine1008/142/UI1199/allgates, selector selftest and Build1856/0/0/Cancel901/0/0/library375/0/0/affectedcompat11380/0/0. Independent code and UX merge supplements PASS. Capture-only inheritancec29db81 preserves product trees and44 exact runtime files; normal FF promotedc29 intoP3.3.2 A started from that provider after an untouched List baseline (capture-onlyf74bf6d), one unit, Sol/high/fast off; no phase→feature/master merge.
+- 2026-10-16: Independent Sol code approval added optional rowActions?:ReactNode to exported InserterEditorProps as a trailing row-only layout slot, retaining caller-owned handlers/names and the nested/1600 grid. Both A/B interface contracts updated together; actual±1px geometry remains required.
+- 2026-10-16: Phase-end coach verified PR handling already takes about 2.5 minutes and final parallel reviews about 5 minutes; capture drift was the larger avoidable delay. Applied two routine recommendations: reconcile all affected capture consumers with bounded probes before full runs, and standardize immutable verifiers outside ignored worktrees with local-engine source proof. Full gates, independent reruns, three phase personas and owner checkpoints remain. Deferred source-review/capture overlap suggestion; current physical slots are occupied and complete fresh evidence is imminent.
+- 2026-10-16: #197 merged865f460 intoP3 and #198 merged869318b intoP2 after exact-head CI and independent passing reviews. Completed child origin/local branches, original worktrees and placeholders removed after clean-tree verification; phase/master boundaries retained.
+- 2026-10-16: Reconciled3.2 spec with resolved Q2/Q3(a), sentence-case Stack size and approved shared metadata/helper behaviour. Carry Automatic-helper filter alignment into3.2A with explicit input-box geometry acceptance (31.86px baseline at1440/800/720); no deferredD1–D8 scope added.
+- 2026-10-16: Owner requested showing each machine’s target production rate, alongside maximum capacity. Added deferred D8 draft, with likely engine/worker/UI scope, explicit units and distinction from achieved output; no current engine changes authorized.
+
+- 2026-10-16: Owner requested recording the additional design recommendations for later discussion. Added deferred D2–D7 draft backlog; existing implementation queue, phase gates and release scope remain in place.
+
+- 2026-10-16: Owner requested compact-view planning and explicitly deferred implementation. Added PLAN's deferred D1 section and scoped spec; current roadmap execution and phase criteria remain in place.
+
+- 2026-10-16: Temporary owner model override: every worker, including every reviewer and all three phase-end personas, uses GPT-6.1 Sol / high reasoning / fast off until revoked. Owner handles parent model. Replace Astra workers on next use; preserve role independence, review rounds and all verification/checkpoints.
+
+- 2026-10-16: Owner preview correction: remove “Items per swing. Clear for Automatic.” under explicit Stack size fields and reclaim its helper space, in both List and Diagram. Include in the pending P3 compatibility adjunct and carry to2.7B; preserve Automatic explanations, values and clearing semantics. Focused five-width visual/accessibility checks passed (1483/0/0); owner approved the preview improvement, reserving a broader audit for later. Existing review counters and phase/install checkpoints retained.
+
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
+
+- 2026-10-16: Owner requested cleanup of obsolete origin branches. Deleted `feat/goal-2-true-starts` (#185),
+  `feat/rule-count-advice` (#178), `feat/true-start-count` (#181), `fix/recorder-near-lane` (#193), and
+  `feat/ux-rework-p1` (#170). Root verified each current remote tip exactly matched its merged PR head,
+  each merge commit remained reachable from its target branch, no open PR or attached worktree used the branch,
+  and the five remote refs were absent after deletion/prune. Phase 1 ledger links now use a permanent commit.
+  Retained active feature/phase/child branches and `trial/s5-slack-first`, which has no matching merged PR.
+  Inventory and pre-deletion SHAs: `/tmp/ux-origin-cleanup/INVENTORY.md` and `source.json`.
+
+- 2026-10-16: Owner paused and explicitly resumed the session. Runtime now reports unrestricted filesystem/network
+  and no command approvals. Previous agents were unavailable; replacements retain Astra/high implementation,
+  Luna/high checks and Sol/high capture roles. No owner checkpoint was waived.
+- 2026-10-16: Corrected the post-merge check setup: linking main UI dependencies resolved stale main engine dist,
+  so those TypeScript failures were invalid evidence. Fresh isolated local-engine builds passed merged-tree tsc for
+  build-card `90ce76c`, cancel-keep `49f6cc6` and compatibility `d33b6e1`. Independent compatibility product
+  `fe18341` passed UI 926 tests, tsc and build; root inspected command exits and counts. Logs:
+  `/tmp/ux-upstream-194-evidence/independent-postmerge/`. New product repairs will need fresh checks.
+- 2026-10-16: Compatibility browser evidence identified genuine Destination truncation and a Diagram beta
+  accessible-name mismatch alongside capture setup defects. Orchestrator authorized minimal reuse of the existing
+  ce131ae inserter grid for changed metadata rows, retaining the old outer card and deferring full Build card,
+  Panel and filter-slot work to 2.7B. Both specs record the shared-hunk reconciliation; final geometry remains required.
+  Finalized the Phase 3 adjunct spec around the two effective-capacity rule callers and genuine persistence/share
+  boundary tests; pending 3.3 retains its cache feature and current review rounds.
+
+- 2026-10-16: Fresh session resumed from the owner's handover after the previous session stopped. The owner confirmed
+  parent Astra / High / fast off in the client; tools could not independently verify or change the parent setting.
+  Fresh worker assignments explicitly set: compatibility implementation `gpt-6-astra/high` (two units), #194 mechanical
+  gates/merges `gpt-6-luna/high`, capture authoring `gpt-6.1-sol/high`. Every review and coach remains Astra/high.
+  Preserve the dirty compatibility worktree; backups are recovery-only. No new scope decisions were reopened.
+- 2026-10-16: Reconciled the completed #193 chain from fetched refs and durable logs: feature `41eb648`
+  (943 engine unit / 142 generation / 349 UI), p2 `9e2646c` (1004 / 142 / 885), p3 `df21248`
+  (1004 / 142 / 1010). The #194 local merge `cdf2425` had no completed gate before the stop and was not pushed.
+  Freeze master `1d27cde` while gathering fresh integration/compatibility evidence. No game harness result is claimed.
+- 2026-10-16: Fresh Luna integration gates completed and root inspected durable result lines for #194:
+  feature `cdf2425` (946 engine unit / 142 generation / 349 UI) and p2 `cf7a8c7` (1007 / 142 / 885),
+  with engine/UI build, lint, knip, UI tsc and icons passing. Both were text-clean and fast-forward pushed;
+  main p2 fast-forwarded with its documentation edit preserved. P3 `66dc5c9` then passed the same full gate
+  (1007 / 142 / 1010) and was fast-forward pushed. No conflict resolution, game harness run or new version bump.
+  The compatibility implementer preserved/completed WIP in `100b704`, added capture tooling in `a0a6084`, and
+  merged the tested p2 base at `fe18341`; final child evidence/reviews remain pending.
+
+- 2026-10-16: Upstream 0.15.1 integration completed through feature → p2 → p3. Reported gates, checked against logs:
+  feature 943 engine unit / 142 generation / 349 UI tests; p2 1004 / 142 / 885; p3 1004 / 142 / 1010.
+  Locale names and UX conflict resolutions retained. Post-merge checks of the two active item branches are text-clean;
+  scratch merged-tree type checks remain queued for a Luna runner. This is integration evidence, not final product review.
+- 2026-10-16: Master moved again to `da6867f` (#193, 0.15.2; sidecar 0.7.1). Root inspected the lane-signature fix.
+  Integrate this existing upstream bugfix separately through the same chain, under the owner's upstream authorization.
+  PLAN release baselines updated; final sidecar 0.8.0 unchanged. Deferred new metadata export stays out of scope.
+- 2026-10-16: Owner asked that finished Astra workers give way to the agreed role models. Completed workers receive
+  no unrelated small tasks: Sol handles capture/scouting/contained implementation, Luna mechanical gates/merges,
+  Astra high complex implementation and every review. Fast mode remains prohibited.
 
 - 2026-10-14: The orchestrator runs on Opus 5.5. Code review of the items implemented on `opus` uses Fable 5.1.
 - 2026-10-14: 1.9, the id question: the owner chose the recommendation. Delete renumbers the remaining ids of its kind
@@ -195,6 +299,68 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   helpers in `lib.mjs`. Not paying off: the chain table went stale (re-derived now, after every unblocking merge).
 - 2026-10-14: 2.8 a: the spec's "science pack lists Logistic first" and "fluoroketone cold lists the fluid" can't hold
   (ties keep data order; no picker lists fluids). The orchestrator changed both checks; the spec is corrected.
+
+- 2026-10-14: Phase 1 merged into `feat/ux-rework` (#170, merge commit 877989d; the owner approved; CI passed).
+- 2026-10-14: `master` moved again outside the rework: #166 (the even hands clock, release 0.10.0). Merged into
+  `feat/ux-rework` (3306841; engine 739 and UI tests pass; generation tests run 38661710992 passed) and on into
+  `feat/ux-rework-p2` (3e4c8d7). A scout found no UI change needed: the clock is grouped, named ("Fewest wake-ups" in
+  the card) and wired correctly. The final PR's version bump starts from 0.10.0.
+- 2026-10-14: Owner decisions after the Phase 1 end review: a target above what the machines can make **warns, doesn't
+  block** (2.1); drag reorder **stays with a message and Undo** and Move up/down (3.2); Diagram dialogs are **drafts
+  with Save** (3.2); the terms **"Your builds" and "share link"** are approved with **no new dependency** (3.4);
+  results storage **10 builds, about 64 MB, no fake-indexeddb** (3.3); the latched template **releases on the
+  source's level** like the owner's sample (3.1). [PLAN.md](PLAN.md) 2.1 and 3.1–3.4 updated; Phase 3 specs committed.
+- 2026-10-14: 2.5 A install steps: step 6 and the nothing-to-wire step were wrong for an inserter set to Never on (found
+  by the 3.1 spec writer); corrected, and the owner is asked how a player should keep one switched off in game.
+
+- 2026-10-14: Target above what the machines can make: the engine refuses it, so the earlier "warn, don't block" could
+  only end in a failed run with the engine's text. The owner chose **block, with the clear line** (2.1 W).
+  [PLAN.md](PLAN.md) 2.1 updated.
+- 2026-10-14: Phase 3 started early in an idle slot: `feat/ux-rework-p3` cut from p2 (b8dc424) and fast-forwarded to
+  p2 after each p2 merge while no Phase 3 item has merged. 3.1 stacked on 2.7 A. It was paused once when two waiting
+  items went back into fix rounds and the four-unit cap was exceeded; the orchestrator now counts a waiting item's
+  slot as reserved until its re-review lands.
+- 2026-10-14: 3.1: a Clocked range ending at tick 0 is refused ("The end must be tick 1 or later."), since the engine's
+  schema needs a positive end.
+
+- 2026-10-15: Process coach run 6 ([ORCHESTRATOR.md](ORCHESTRATOR.md) updated). 32.6 min per item since run 5 (20
+  min per PR); half the slots idle behind one owner check. Applied: (1) **owner approved**: 2.5 A merges when its
+  reviews pass and the in-game check of the install steps holds the Phase 2 PR instead ([PLAN.md](PLAN.md) updated);
+  (2) unit counting: an item counts while its implementer works and during its first review; re-reviews, owner checks,
+  CI and predecessors count zero; a returning round over the cap pauses the newest item (replaces "reserved until
+  re-review"); (3) stacked items take the phase branch only through their predecessor and are reviewed against its
+  head; (4) premise check and one batched message for owner asks; `ISSUES.md` drafted at the Phase 2 end; (5) type-check
+  merged trees after every merge; worktrees removed only after the agent's final report. Not paying off: the chain
+  table went stale again — it now lives in the handoff and is re-derived at every merge.
+- 2026-10-15: Owner: install step 6's Never on wording stays ("keep it off in the game yourself").
+
+- 2026-10-15: The owner opened #178 into `master` (engine: clock-or-unwired advice from the rule count, release 0.11.0;
+  33 files, all under `clock-generator/` plus the package versions). Its head merges cleanly with p2. When it merges,
+  `master` is merged into `feat/ux-rework`, then into p2 and p3, with the generation tests run; the final PR's version
+  bump starts from 0.11.0.
+
+- 2026-10-15: Owner: **PR #178 (the clock-or-unwired advice) is out of scope** for the UX rework. No UI item is
+  built for it; the drafted spec is not committed. `master` 0.11.0 is merged into `feat/ux-rework` (829befc,
+  generation tests run 38731611174 passed), p2 (4e8619c) and p3 (e842f9a) as an ordinary upstream merge; the final
+  PR's version bump starts from 0.11.0.
+
+- 2026-10-15: The owner paused work. All in-flight branches were committed and pushed.
+- 2026-10-16: Owner approved three token-saving process changes: coach only at phase ends or on request; background commands instead of command-only agents; detailed evidence stored once with compact reports and changed-field handoffs. Updated ORCHESTRATOR.md. All three phase-end reviewers, independent reruns, full evidence gates, model rules and owner checkpoints remain required.
+- 2026-10-16: The owner resumed from the local handover. Model mapping: gpt-6-astra with high reasoning for orchestration, cross-cutting implementation and every review; gpt-6.1-sol for scouts/capture writers; gpt-6-luna for mechanical runners. Fast mode prohibited. This chat cannot change its own model through available controls; delegated roles explicitly set their models.
+- 2026-10-16: master advanced from 0.11.0 to 0.15.1 (a67d5a2). Authorized down-merge: master → feat/ux-rework → p2 → p3, with semantic checks for fractional Copies, target-rate limits, library/share validation and optional stack_size, generation tests and full gates. No new version bump in the phases; the final PR starts from master’s then-current version.
+
+- 2026-10-16: Upstream plan resolution complete (owner): preserve/display imported inserter type/quality, no selectors;
+  clearing Stack size restores Automatic; **no sidecar metadata export extension** (focus on UX); repeated units get
+  explanation/manual correction, no converter. PLAN and specs 2.1, 2.2, 2.7, 3.1–3.4 reconciled, with a bounded upstream
+  compatibility spec. The old 2.1 warn-only addendum is superseded, and release baseline follows current master.
+  Scope excludes new engine behavior/mod features. Audits are source-only; no merged-tree check claimed yet.
+
+- 2026-10-16: Integration partition: pure master downmerges, reviewed p2 compatibility child, then p3 adjunct.
+  Shared `inserterMetadata.ts` effective-size/read-only-text API recorded in provider and 3.2 A specs before coding.
+
+- 2026-10-16: Owner requested Codex model names in ORCHESTRATOR. Replaced legacy role suggestions throughout with
+  gpt-6-astra (high reasoning), gpt-6.1-sol and gpt-6-luna; every review uses Astra/high. Removed the obsolete fast-mode
+  recommendation and review-downgrade exception. Actual parent-model limitations must be disclosed.
 
 ## Open questions
 
@@ -381,6 +547,41 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
   drill against an expected developer-timeline count of 0); script or 2.5 B.
 - 2.5 A: in the nothing-to-wire case the bar still shows the yellow Copy blueprint → 2.7 A.
 - 2.8 a: knip inside `.claude/worktrees` lists the 3 `scripts/*.mjs` as unused (location only; passes elsewhere).
+- master 0.10.0: `SLOW_TASKS` (`useSimulationWorker.ts:87`) does not list `even-hands`; add it if timing shows it is
+  slow. The engine's even hands name and description use "hand" for a trip and a bare "window" → the engine-text pass
+  (2.5).
+- 2.5 A: when the first clock arrives with no belt, the belt action unmounts and focus can drop to the body.
+- 2.1: the 0.6.0 notice should be info, not warning colour; paste counts and an Append option (B19) are in no spec;
+  `ignore-scripts` builds skip the example copy until `copy-factorio-data.mjs` is run; the recipe box keeps stale
+  text after Undo or Reset (1.3; priority raised: it contradicts 2.1's start line).
+- 1.5 F evidence: pre-existing p2 failures "diagram delete: focus stays in the diagram" (every width) and a 15 s click
+  timeout in "D Paste and Undo" at 390; Copy's and Check only's tooltips (WorkflowBar, 2.7) cover the message and ⋮.
+- 2.3: Check only's interactive tooltip stays open over ⋮ while hovered.
+- 2.1 W: machines whose facts come back empty are left out of the sum (could block a build wrongly); a limit under
+  0.01/s could print rounded up.
+- 1.5 F (review PASS): Copy's tooltip covers the message row at 720/390 (2.7 A is moving it on top); in fullscreen,
+  Tab from Exit takes 16 presses to reach Undo; Safari may shift the page 39px at any scroll position (untested).
+- 2.8 b: the Swing Plan's type chip is redundant; Source/Destination says "Machine 1 - Name" where elsewhere it is
+  "Machine 1 (Name)"; a bracket holding more than an id keeps its ids.
+- Process: `git merge-tree` reports text conflicts only. 2.8 b removed `WakeWindowRow.detail`, which 2.5 A uses, and the
+  merge was clean but would not compile. Type-check (`tsc -b`) the merged tree of in-flight branches when an item
+  changes a shared type (coach run 6).
+- Process: the orchestrator removed 1.5 F's worktree while its implementer was still re-running captures; a
+  post-merge rerun on p2 closed the gap (no new failures). Remove a worktree only after the agent's final report.
+- Engine (from 2.5 A's re-check): Never on is ignored in agriculture science (an inserter set to it still moves and
+  appears in the wiring list) and empties the whole schedule in logistic science (0/s). Engine follow-up; 2.5 B fixes
+  the `installSteps.ts` comment that claims Never on gets no combinator.
+- 3.1 (review): the Never on and Auto notes depend on the engine follow-up above; a stored rule's problem blocks a
+  Config-only save in the Diagram dialog (spec allows). capture-a11y-names has 6 stale Phase 1 checks (Validation /
+  Swing Plan headings, LCM chip) failing on p2 since 2.3 — update the script.
+- 3.4 × 2.5 A: the merged tree did not type-check (both added the same message hooks to App.tsx); caught by the new
+  post-merge type-check (coach run 6) before any PR.
+
+- 2.5 B (#182): engine text still uses old terms (Even hands, Observed windows, Full-hand output swings and Insights prose); Works? is off the right edge at 390; glossary definitions for hand and assembling machine read as notes to copywriters (owner).
+- 2.9 (#184): below 720, the compact table overflows by 174px and Check passed wraps; Fuel clocks is 5px over at 960; front-load the key fact in the two longest problem notes; macOS Chrome uses overlay scrollbars; a focused scroll box loses focus when it stops overflowing.
+- 3.3: a stopped run keeps a pick even when that clock was not made yet. Check the spec’s PLAN-note against current PLAN (Undo restores clocks and stale changes are already present) before adding duplicate bullets.
+
+- Deferred by owner (2026-10-16): sidecar type/quality export; current exports omit metadata and retain the legendary stack timing assumption. No mod change in this UX rework.
 
 ## Retros
 
@@ -436,3 +637,12 @@ recommended row first, "Copied" reset on a change, Debug Output while generating
 line); 3.2 (reorder message and Undo per Q2, diagram dialogs per Q3); 3.3 (Undo of an import restores the clocks; the
 stale banner lists what changed). Ledger corrections: 2.2's "A17 fixed" → only the export part (2.1 owns the warning);
 close line 318 (lane field, fixed on p1).
+
+- 2026-10-16: #199 shared editor/all-five Diagram drafts merged4b86e77 after exact-head CI and independent code/UX plus minor closures; obsolete origin/local child removed and managed worktree archived. Owner preview5280 refreshed atomically to reviewed0e6 product. #200 factual copy/fractional scope merged8fa2c15 after code/UX and all three phase-persona affected rechecks PASS; failed baselines/captures retained. Phase2 install and phase approval remain pending.
+- 2026-10-16: Post-#199 merged-tree check initially resolved stale main-checkout engine declarations, not the merged source. Retained diagnostic; verified the clean merged tree equals immutable B376 and independently passed its own-engine TypeScript/test/build. Routine dependency instruction now uses verified matching engine builds; no check is waived.
+
+- 2026-10-16: Reviewed P2F normally propagated into P3 at88eab3a, then evidence-only26de723. UI1222/72/allgates, root independent test/build, fresh combined F795/0/0 and independent code/UX supplements PASS. Exact evidence/reports on P3: [integration evidence](https://github.com/abucnasty/clock-generator/blob/26de723a28f1f0d3f7ea69f3e10d443cddfc6478/docs/ux-rework/capture/integration-p2-copy-EVIDENCE.md). Owner preview5280 refreshed atomically11:04UTC to reviewed combined88; unfinished3.F excluded. #201 and completed integration origin/local branches removed; managed B worktree archived and immutable verifiers retained.
+
+- 2026-10-16: 3.F bounded browser probes caught two real accessibility regressions before formal review: MUI input descriptions dropped existing switch roles (fixed9682276 with2real SSR tests; UI1272/78/allgates+rootrepeat), and Exclude update→check effect replaced the focused Chip during a stale frame (private pending-validation bridge independently approved with valid/no-op/cancel refinement; implementation/evidence pending). Initial capture failures and401-file missing prebuild-data artifact retained separately; corrected own-source412-resource runtime verified. No full3.F/phase PASS or waiver; formal code/UX and three phase-end reviewers remain.
+
+- 2026-10-16: 3.F clipboard probes caught real recovery-close focus falling to BODY after its snackbar opener dismisses; private post-MUI actual-focus fallback independently approved11:43:37–49, implemented06763da with11focused cleanup cases and fullUI1289/80/allgates. Root repeat/browser closure still pending. WholePaste functional counts/crossings/ack/reset/rawUndo/library/selected-clock checks reachedPASS; original7focus failures and unpainted-input capture contrast error retained. Exact prebuild conditions in [manual focus review](review/3.F/MANUAL-FOCUS-CODE.md). No formal item/phase PASS or waived gate.

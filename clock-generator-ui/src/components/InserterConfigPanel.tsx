@@ -1,9 +1,9 @@
+import { INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import {
     Autocomplete,
     Box,
     Button,
     Chip,
-    MenuItem,
     Tab,
     Tabs,
     TextField,
@@ -18,15 +18,17 @@ import type {
     MachineFormData,
 } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
+import { useGameNames } from '../hooks/useGameNames';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
+import { describeEnableRule } from '../utils/enableRuleLabel';
 import { entityLabel } from '../utils/entityLabel';
 import { inferInserterItems } from '../utils/inferInserterItems';
-import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
 import { changedConfigFields } from '../utils/inserterDraft';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
+import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 
 // ---- Local types ----
@@ -63,13 +65,14 @@ function InserterEditSection({
     getRecipeInfo: (name: string) => RecipeInfo | null;
     onUpdate: (index: number, updates: Partial<InserterFormData>) => void;
 }) {
+    const { itemLabel, recipeLabel } = useGameNames();
     const entityOptions = useMemo<EntityOption[]>(() => {
         const options: EntityOption[] = [];
         machines.forEach(m => options.push({
             type: TargetType.MACHINE, id: m.id,
             label: entityLabel('machine', m.id),
             icon: m.recipe || 'assembling-machine-3',
-            sublabel: m.recipe || 'No recipe',
+            sublabel: m.recipe ? recipeLabel(m.recipe) : 'No recipe',
         }));
         belts.forEach(b => {
             const ingredientIcons = b.lanes.map(l => l.ingredient).filter(Boolean);
@@ -83,10 +86,10 @@ function InserterEditSection({
             type: TargetType.CHEST, id: c.id,
             label: entityLabel('chest', c.id),
             icon: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest',
-            sublabel: isBufferChest(c) ? (c.item_filter || 'No filter') : undefined,
+            sublabel: isBufferChest(c) ? (c.item_filter ? itemLabel(c.item_filter) : 'No filter') : undefined,
         }));
         return options;
-    }, [machines, belts, chests]);
+    }, [machines, belts, chests, itemLabel, recipeLabel]);
 
     const findOption = (type: SourceSinkType, id: number) =>
         entityOptions.find(o => o.type === type && o.id === id);
@@ -95,13 +98,6 @@ function InserterEditSection({
         () => inferInserterItems(inserter, machines, belts, chests, getRecipeInfo),
         [inserter, machines, belts, chests, getRecipeInfo],
     );
-
-    // the two lanes of the belt this inserter picks up from, when they carry different items it could choose between
-    const sourceLanes = useMemo<string[] | null>(() => {
-        if (inserter.source.type !== TargetType.BELT) return null;
-        const lanes = belts.find(b => b.id === inserter.source.id)?.lanes.map(l => l.ingredient) ?? [];
-        return lanes.length === 2 && lanes[0] && lanes[1] && lanes[0] !== lanes[1] ? lanes : null;
-    }, [inserter.source, belts]);
 
     const handleFilterChange = (slotIndex: number, item: string) => {
         const filters = [...(inserter.filters || [])];
@@ -121,8 +117,8 @@ function InserterEditSection({
     const renderAdornment = (opt: EntityOption | undefined) =>
         opt ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
-                <FactorioIcon name={opt.icon} size={20} />
-                {opt.ingredientIcons?.map((ing, i) => <FactorioIcon key={i} name={ing} size={16} />)}
+                <FactorioIcon name={opt.icon} size={20} titled />
+                {opt.ingredientIcons?.map((ing, i) => <FactorioIcon key={i} name={ing} size={16} titled />)}
             </Box>
         ) : null;
 
@@ -130,7 +126,7 @@ function InserterEditSection({
         const { key, ...rest } = props;
         return (
             <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FactorioIcon name={option.icon} size={24} />
+                <FactorioIcon name={option.icon} size={24} alt="" />
                 <Box>
                     <Typography variant="body2">{option.label}</Typography>
                     {option.sublabel ? (
@@ -167,45 +163,27 @@ function InserterEditSection({
                 disableClearable
             />
 
-            {sourceLanes && (
-                <TextField
-                    select
-                    size="small"
-                    fullWidth
-                    label="Nearest lane of the belt"
-                    helperText="An inserter takes from the lane nearest to it first when its machine takes both items. The sidecar mod exports it; not set, the order of the filters is used."
-                    value={inserter.source.near_lane ?? 0}
-                    onChange={(e) => {
-                        const lane = Number(e.target.value);
-                        const source = { ...inserter.source };
-                        delete source.near_lane;
-                        onUpdate(entityIndex, { source: lane === 1 || lane === 2 ? { ...source, near_lane: lane } : source });
-                    }}
-                >
-                    <MenuItem value={0}>Not set</MenuItem>
-                    {sourceLanes.map((item, i) => (
-                        <MenuItem key={i} value={i + 1}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={item} size={18} />
-                                Lane {i + 1}: {item}
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </TextField>
+            <NearLaneSelect source={inserter.source} belts={belts} onChange={(source) => onUpdate(entityIndex, { source })} />
+            <Typography variant="body2" color="text.secondary">{inserterMetadataText(inserter)}</Typography>
+            {(!inserter.prototype || !inserter.quality) && (
+                <Typography variant="body2" color="text.secondary">{INSERTER_TIMING_ASSUMPTION}</Typography>
             )}
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <FactorioIcon name="stack-inserter" size={22} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                <FactorioIcon name={inserter.prototype ?? 'stack-inserter'} size={22} alt="" />
                 <Typography variant="body2" color="text.secondary">
                     {entityLabel('inserter', inserter.id)} — Tile 2
                 </Typography>
                 <Box sx={{ flex: 1 }} />
                 <NumberField
-                    label="Stack Size"
-                    value={inserter.stack_size}
-                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 1 })}
+                    id={`diagram-inserter-stack-size-${inserter.id}`}
+                    label="Stack size"
+                    value={inserter.stack_size ?? null}
+                    placeholder="Automatic"
+                    helperText={inserterStackSizeHelp(inserter)}
+                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: val === null ? undefined : Math.trunc(val) })}
                     min={1}
-                    sx={{ width: 130 }}
+                    sx={{ width: 180, maxWidth: '100%' }}
                     size="small"
                 />
             </Box>
@@ -301,10 +279,9 @@ export function InserterConfigPanel({
     const [draft, setDraft] = useState(inserter);
     const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false });
 
-    // the tab's chip shows the saved rule
+    // the tab's chip shows the saved rule, in the words of the List row's chip
     const currentOverride = inserter.overrides?.enable_control;
-    const overrideMode = currentOverride?.mode ?? EnableControlMode.AUTO;
-    const hasNonDefaultOverride = overrideMode !== EnableControlMode.AUTO;
+    const savedRule = describeEnableRule(currentOverride, { forcedAlways: inserter._forced_always });
 
     const availableItems = useMemo<string[]>(() => {
         const items = new Set<string>();
@@ -389,9 +366,9 @@ export function InserterConfigPanel({
                     aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
                     icon={
-                        hasNonDefaultOverride
-                            ? <Chip label={ENABLE_MODE_LABELS[overrideMode]} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
-                            : undefined
+                        savedRule.quiet
+                            ? undefined
+                            : <Chip label={savedRule.chip} title={savedRule.summary} size="small" color="primary" sx={{ fontSize: '0.7rem' }} />
                     }
                 />
             </Tabs>
@@ -443,8 +420,8 @@ export function InserterConfigPanel({
                         Unsaved changes
                     </Typography>
                 )}
-                <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained" disabled={!dirty}>
+                <Button onClick={onClose} color="inherit">Cancel</Button>
+                <Button onClick={handleSave} variant="contained" color="secondary" disabled={!dirty}>
                     Save
                 </Button>
             </Box>

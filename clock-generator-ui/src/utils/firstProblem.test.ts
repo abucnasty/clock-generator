@@ -5,7 +5,7 @@ import { updateTargetOutput } from './configForm/edits';
 import {
     ELEMENT_IDS,
     PROBLEM_TEXT,
-    blockedActionsOf,
+    barNoteOf,
     coverageIssueElementId,
     firstProblemOf,
     focusIdOf,
@@ -41,6 +41,15 @@ describe('problemsOf', () => {
         expect(firstProblemOf(filledIn())).toBeNull();
     });
 
+    it('defers unsupported target/capacity arithmetic to worker validation without formatting an unknown limit', () => {
+        const max = { machineIds: [1], perCopy: 2, perCopyRatio: { numerator: 2, denominator: 1 } };
+        for (const [copies, items_per_second] of [[1, 1e-23], [1e308, 1]]) {
+            expect(problemsOf(filledIn({ machinesMax: max,
+                targetOutput: { recipe: 'logistic-science-pack', copies, items_per_second },
+            }))).toEqual([]);
+        }
+    });
+
     it('finds two problems in the default build: the target recipe, then the machine recipe', () => {
         const config = createDefaultConfig();
         const problems = problemsOf({ targetOutput: config.target_output, machines: config.machines, coverageIssues: [] });
@@ -66,7 +75,7 @@ describe('problemsOf', () => {
             expect(problemsOf(input)).toEqual([expected]);
         }
         expect(PROBLEM_TEXT.noRate).toBe('Set Items per Second in Target Output to more than 0');
-        expect(PROBLEM_TEXT.noCopies).toBe('Set Copies in Target Output to 1 or more');
+        expect(PROBLEM_TEXT.noCopies).toBe('Set Copies to more than 0.');
     });
 
     it('names each machine without a recipe, in machine order', () => {
@@ -86,6 +95,14 @@ describe('problemsOf', () => {
             coverageIssues: [issue('missing_input_inserter', 1, 'a'), issue('missing_input_inserter', 1, 'b'), issue('missing_output_inserter', 1, 'c')],
         }));
         expect(three).toHaveLength(3);
+    });
+
+    it('says the item by its game name when given a label function, and keeps the id in the element id', () => {
+        const itemLabel = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
+        const [output] = problemsOf({ ...filledIn({ coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')] }), itemLabel });
+        expect(output.text).toBe('Machine 1 has no inserter taking Logistic science pack out');
+        expect(focusIdOf(output.target!)).toBe('coverage-issue-missing_output_inserter-1-logistic-science-pack');
+        expect(PROBLEM_TEXT.missingInput(2, 'logistic-science-pack', itemLabel)).toBe('Machine 2 has no inserter bringing in Logistic science pack');
     });
 
     it('puts the target first, then the machines, then the coverage issues in the engine\'s order', () => {
@@ -128,38 +145,71 @@ describe('problemsOf', () => {
     });
 });
 
-describe('blockedActionsOf', () => {
+describe('a target more than the machines can make', () => {
+    // Machine 1 of the logistic science sample: 11 copies make 252.656…/s, printed rounded down as 252.65
+    const machinesMax = { machineIds: [1], perCopy: 22.96874920527133 };
+    const target = (items_per_second: number) => ({ recipe: 'logistic-science-pack', items_per_second, copies: 11 });
+    const tooHigh = filledIn({ targetOutput: target(240200), machinesMax });
+    const rateProblem: Problem = { text: 'Items per Second is more than the machines can make (at most 252.65/s)', target: { kind: 'target-rate' } };
+
+    it('is a problem that goes to Items per Second', () => {
+        expect(problemsOf(tooHigh)).toEqual([rateProblem]);
+        expect(firstProblemOf(tooHigh)).toEqual(rateProblem);
+    });
+
+    it('comes after the machines and before the missing inserters', () => {
+        const problems = problemsOf({
+            ...tooHigh,
+            machines: [{ id: 1, recipe: 'logistic-science-pack' }, { id: 2, recipe: '' }],
+            coverageIssues: [issue('missing_output_inserter', 1, 'logistic-science-pack')],
+        });
+        expect(problems.map((p) => p.target?.kind)).toEqual(['machine-recipe', 'target-rate', 'coverage-issue']);
+    });
+
+    it('is not there for a target the copies make (252.65 is, 252.66 is not), or while the most is not known', () => {
+        expect(problemsOf(filledIn({ targetOutput: target(240), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.65), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.66), machinesMax }))).toEqual([rateProblem]);
+        expect(problemsOf({ ...tooHigh, machinesMax: null })).toEqual([]);
+        expect(problemsOf({ ...tooHigh, machinesMax: undefined })).toEqual([]);
+    });
+
+    it('is the bar\'s note, ahead of a failed check', () => {
+        expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
+    });
+});
+
+describe('barNoteOf', () => {
     const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
-    const base = { problems: [] as Problem[], coverageChecked: true, isRunning: false, validationStatus: 'valid' as const };
+    const rateProblem: Problem = { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } };
+    const failed: Problem = { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } };
 
-    it('says nothing while a generation runs, whatever else is wrong', () => {
-        expect(blockedActionsOf({ ...base, problems: [recipeProblem], coverageChecked: false, isRunning: true, validationStatus: 'invalid' }))
-            .toEqual({ validate: null, generate: null });
+    it('says nothing while something runs, whatever else is wrong', () => {
+        expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'invalid' })).toBeNull();
+        expect(barNoteOf({ problems: [], busy: true, checkStatus: 'invalid' })).toBeNull();
     });
 
-    it('gives the first problem to both buttons, ahead of the validation status', () => {
-        for (const validationStatus of ['none', 'running', 'valid', 'invalid', 'out-of-date'] as const) {
-            expect(blockedActionsOf({ ...base, problems: [recipeProblem], validationStatus }))
-                .toEqual({ validate: recipeProblem, generate: recipeProblem });
+    it('gives the first problem with its target, ahead of a failed check', () => {
+        expect(barNoteOf({ problems: [recipeProblem, rateProblem], busy: false, checkStatus: 'none' })).toEqual(recipeProblem);
+        expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
+    });
+
+    it('says where to start, neutrally, on a build with nothing entered yet', () => {
+        const start = { text: 'Start: pick the recipe you want to make', target: { kind: 'target-recipe' } };
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true })).toEqual(start);
+        expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'none', blank: true })).toBeNull();
+        expect(barNoteOf({ problems: [], busy: false, checkStatus: 'none', blank: true })).toBeNull();
+    });
+
+    it('points at the reason for a failed check when the build has no problem', () => {
+        expect(barNoteOf({ problems: [], busy: false, checkStatus: 'invalid' })).toEqual(failed);
+        expect(PROBLEM_TEXT.validationFailed).toBe('The last check failed. Show why');
+    });
+
+    it('says nothing for any other check status', () => {
+        for (const checkStatus of ['none', 'valid', 'out-of-date', 'running'] as const) {
+            expect(barNoteOf({ problems: [], busy: false, checkStatus })).toBeNull();
         }
-    });
-
-    it('waits for the coverage check, unless a problem is already known', () => {
-        const checking = { text: 'Checking the build…', target: null };
-        expect(blockedActionsOf({ ...base, coverageChecked: false })).toEqual({ validate: checking, generate: checking });
-        expect(blockedActionsOf({ ...base, problems: [recipeProblem], coverageChecked: false }))
-            .toEqual({ validate: recipeProblem, generate: recipeProblem });
-    });
-
-    it('asks for the Validate step before Generate', () => {
-        expect(blockedActionsOf({ ...base, validationStatus: 'none' }))
-            .toEqual({ validate: null, generate: { text: 'Validate the build first', target: null } });
-        expect(blockedActionsOf({ ...base, validationStatus: 'out-of-date' }))
-            .toEqual({ validate: null, generate: { text: 'The build changed since the last check. Validate again', target: null } });
-        expect(blockedActionsOf({ ...base, validationStatus: 'invalid' }))
-            .toEqual({ validate: null, generate: { text: 'The last check failed. See Validation for why', target: { kind: 'validation-error' } } });
-        expect(blockedActionsOf({ ...base, validationStatus: 'valid' })).toEqual({ validate: null, generate: null });
-        expect(blockedActionsOf({ ...base, validationStatus: 'running' })).toEqual({ validate: null, generate: null });
     });
 });
 

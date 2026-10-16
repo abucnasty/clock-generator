@@ -1,9 +1,11 @@
-import { Add, Close } from '@mui/icons-material';
-import { Box, IconButton, Typography, Popover, TextField, Button } from '@mui/material';
+import { Add } from '@mui/icons-material';
+import { Box, Typography, Popover, TextField, Button } from '@mui/material';
 import { useRef, useState } from 'react';
-import { removeFilterName } from '../utils/a11yLabels';
+import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
+import { SLOT_COUNT_SX, insetSlotSx } from './insetSlot';
+import { SlotRemoveButton } from './SlotRemoveButton';
 
 export interface ChestFilterSlot {
     item_name: string;
@@ -31,6 +33,7 @@ export function ChestFilterSlotSelector({
     quantityLabel = 'Count',
     canAddMore = true,
 }: ChestFilterSlotSelectorProps) {
+    const { itemLabel } = useGameNames();
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
     const [pendingItem, setPendingItem] = useState<string | null>(null);
@@ -98,22 +101,23 @@ export function ChestFilterSlotSelector({
     };
 
     const displayedFilters = filters.slice(0, maxSlots);
-    const showAddButton = canAddMore && filters.length < maxSlots;
+    // one "+" at the end, unless an empty slot already offers it
+    const showAddButton = canAddMore && filters.length < maxSlots && filters.every((filter) => filter.item_name);
 
     return (
         // the gap keeps a remove button, which sticks out past its slot's corner, a few pixels off the next slot
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', columnGap: 2.5, rowGap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Render existing filter slots */}
             {displayedFilters.map((filter, slotIndex) => (
                 // the slot and its remove button are siblings: a button inside a button cannot be reached or named
-                <Box key={slotIndex} sx={{ position: 'relative', m: 0.5 }}>
+                <Box key={slotIndex} sx={{ position: 'relative' }}>
                     <Box
                         ref={(element: HTMLDivElement | null) => { slotRefs.current[slotIndex] = element; }}
                         tabIndex={0}
                         role="button"
                         aria-label={
                             filter.item_name
-                                ? `Filter ${slotIndex + 1}: ${filter.item_name} (${filter.quantity})`
+                                ? `Filter ${slotIndex + 1}: ${itemLabel(filter.item_name)} (${filter.quantity})`
                                 : `Configure filter ${slotIndex + 1}`
                         }
                         onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
@@ -121,81 +125,26 @@ export function ChestFilterSlotSelector({
                             if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
                                 handleSlotClick(slotIndex, e.currentTarget);
-                            } else if (e.key === 'Delete' && filter.item_name) {
+                            } else if ((e.key === 'Delete' || e.key === 'Backspace') && filter.item_name) {
                                 e.preventDefault();
                                 removeFilter(slotIndex);
                             }
                         }}
-                        sx={{
-                            width: 44,
-                            height: 44,
-                            border: '2px solid',
-                            borderColor: filter.item_name ? 'primary.main' : 'divider',
-                            borderRadius: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            bgcolor: 'background.paper',
-                            position: 'relative',
-                            // not the outline: the focus ring appears at once, in its place
-                            transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
-                            // the pointer tints the slot; focus is the theme's ring alone, so an empty slot does not
-                            // take a filled slot's orange border when focused
-                            '&:hover': {
-                                borderColor: 'primary.light',
-                                bgcolor: 'action.hover',
-                                transform: 'scale(1.05)',
-                            },
-                        }}
+                        sx={insetSlotSx({ open: activeSlotIndex === slotIndex })}
                     >
                         {filter.item_name ? (
                             <>
-                                <FactorioIcon name={filter.item_name} size={32} />
-                                {/* Quantity badge */}
-                                <Box
-                                    sx={{
-                                        position: 'absolute',
-                                        bottom: -6,
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        bgcolor: 'primary.main',
-                                        color: 'primary.contrastText',
-                                        fontSize: '10px',
-                                        fontWeight: 'bold',
-                                        px: 0.5,
-                                        py: 0.25,
-                                        borderRadius: 0.5,
-                                        lineHeight: 1,
-                                        minWidth: 16,
-                                        textAlign: 'center',
-                                    }}
-                                >
-                                    {filter.quantity}
-                                </Box>
+                                <FactorioIcon name={filter.item_name} size={24} alt="" titled />
+                                {/* the count is in the slot's name too */}
+                                <Box aria-hidden sx={SLOT_COUNT_SX}>{filter.quantity}</Box>
                             </>
                         ) : (
-                            <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
+                            <Add sx={{ fontSize: 16, color: 'text.secondary' }} />
                         )}
                     </Box>
                     {/* Remove button */}
                     {filter.item_name && (
-                        <IconButton
-                            size="small"
-                            aria-label={removeFilterName(slotIndex + 1, filter.item_name)}
-                            onClick={() => removeFilter(slotIndex)}
-                            sx={{
-                                position: 'absolute',
-                                top: -10,
-                                right: -10,
-                                width: 24,
-                                height: 24,
-                                bgcolor: 'error.main',
-                                '&:hover': { bgcolor: 'error.dark' },
-                            }}
-                        >
-                            <Close sx={{ fontSize: 14, color: 'white' }} />
-                        </IconButton>
+                        <SlotRemoveButton slotNumber={slotIndex + 1} itemName={itemLabel(filter.item_name)} onClick={() => removeFilter(slotIndex)} />
                     )}
                 </Box>
             ))}
@@ -214,27 +163,9 @@ export function ChestFilterSlotSelector({
                             handleAddClick(e.currentTarget);
                         }
                     }}
-                    sx={{
-                        width: 44,
-                        height: 44,
-                        border: '2px dashed',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        bgcolor: 'transparent',
-                        // not the outline: the focus ring appears at once, in its place
-                        transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
-                        m: 0.5,
-                        '&:hover': {
-                            borderColor: 'primary.light',
-                            bgcolor: 'action.hover',
-                        },
-                    }}
+                    sx={insetSlotSx({ open: activeSlotIndex === filters.length })}
                 >
-                    <Add sx={{ fontSize: 20, color: 'text.disabled' }} />
+                    <Add sx={{ fontSize: 16, color: 'text.secondary' }} />
                 </Box>
             )}
 

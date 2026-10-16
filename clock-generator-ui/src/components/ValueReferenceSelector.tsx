@@ -22,7 +22,7 @@ const VALUE_TYPES = [
     { value: ValueReferenceType.CRAFTING_PROGRESS, label: 'Crafting Progress %' },
     { value: ValueReferenceType.BONUS_PROGRESS, label: 'Bonus Progress %' },
     { value: ValueReferenceType.HAND_QUANTITY, label: 'Hand Quantity' },
-    { value: ValueReferenceType.INSERTER_STACK_SIZE, label: 'Inserter Stack Size' },
+    { value: ValueReferenceType.INSERTER_STACK_SIZE, label: 'Inserter stack size' },
 ] as const;
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
@@ -149,6 +149,7 @@ export function ValueReferenceSelector({
                     exclusive
                     onChange={handleEntityChange}
                     size="small"
+                    sx={{ '& .MuiToggleButton-root': { minWidth: 44 } }}
                 >
                     <ToggleButton value={EntityReference.SOURCE} disabled={entityDisabled(EntityReference.SOURCE)}>
                         Src

@@ -25,16 +25,17 @@ preview unless you are debugging.
 - `capture.mjs` runs the four widths of the plan (1440, 960, 720, 390) at once, each in its own browser context, into
   `<out dir>/w<width>/` with a merged `INDEX.md`:
   - **1440** is the full walkthrough: first visit, the ⋮ menu and Paste from Factorio, an imported build in the List and the
-    Diagram, with the editors, Validate and Generate, every Results tab, copy, an edit after generating (the stale
+    Diagram, with the editors, Check only and Generate, every Results tab, copy, an edit after generating (the stale
     banner and "Copy old clock…"), a broken build, a fuel build, and a run in flight.
   - **960, 720 and 390** take the layout states: first visit, Configure (List), Results and every tab, with a
     no-side-scroll check and whether the Configure and Results tabs can be clicked. `WIDTHS=1440,390` picks other widths.
-- `capture-extra.mjs` covers the info tooltip, the narrow window above the fold, a broken build and a fuel build at 1440 and
+- `capture-extra.mjs` covers the clock's click/touch help dialog, the narrow window above the fold, a broken build and a fuel build at 1440 and
   390, into `<out dir>/extra/`.
 - Both use the sample configs in `clock-generator/resources/config-samples/` (`SAMPLES_DIR` for another checkout), and find
-  elements by their current labels ("Validate", "Generate", "Advanced Overrides", "Copy old clock…"…) and, for the enable
-  rule of an inserter, the chip's name (`/, Inserter \d+\. Edit rule$/`). **Update the selectors as the rework changes the
-  UI.** Waits for button text read `textContent`, not `innerText`: MUI upper-cases labels with CSS.
+  controls through the shared `ui` map. **Update the selectors and affected consumers as the rework changes the UI.**
+  The main walkthrough keeps both build-file rejection in Paste and a valid sidecar-format test input derived from
+  the logistic sample; that fixture is not an export captured in game. Dialog screenshots wait for their finite
+  entry animations to finish. Waits for button text read `textContent`, not `innerText`: MUI upper-cases labels with CSS.
 - `capture-enable-chip.mjs <out dir> <before|after> [port]` checks the enable chip (item 1.13) at 1440px and 720px.
   `before` runs against the gear icon of 0.9.0; `after` runs the whole sequence and writes a pass or fail line per check
   into `INDEX.md`.
@@ -43,6 +44,7 @@ preview unless you are debugging.
   Facts, the diagram's machine node and the Potential Clocks headers. It writes a pass or fail line per check into
   `INDEX.md`. Set `SAMPLES_DIR` to read the sample configs from another checkout (a worktree's
   `clock-generator/resources/config-samples`).
+- `capture-half-width.mjs <out dir>` (on `lib.mjs`; `BASE_URL`, `WIDTHS` default 960,800,720,390, `STEPS`) checks item 2.9: the header's height and rows (steady through a reason line, a check and Copy), no sideways page scroll, nothing off-screen or clipped, the clock table's decision columns and the scroll boxes (named region, tabindex 0, edge fade), Fuel, Swing Plan and Transfer Plan columns, forms and dialogs (no control under 40px). Any item that adds or rebuilds a view runs it.
 - `capture-header.mjs <out dir> [port]` checks the header (item 1.2) at 1440, 960, 720 and 390px: the Configure and Results
   toggles, Generate and Copy are clickable (`elementFromPoint`), nothing in the header overlaps, the content starts below
   the header, the header stays pinned on scroll, the title, the ⋮ menu, Export, Import and Paste from Factorio from the
@@ -57,6 +59,29 @@ preview unless you are debugging.
 - `capture-first-problem-warning.mjs <out dir>` (on `lib.mjs`) checks items 1.4 and 1.14 at 1440, 720 and 390px: the problem
   chip and reason in the bar, the jump to the first problem, the disabled buttons' reasons, the warning yellow and the
   below-target Copy. `STEPS` (a regexp: `^P` for 1.4, `^W` for 1.14) runs a part; `UI_DIR` names the checkout it greps.
+- `capture-diagram.mjs <out dir>` (on `lib.mjs`) checks the Diagram's readability (item 2.11) at 1440 and 720px: the split
+  "(in)"/"(out)" belt and the left-to-right order, arrowheads and their hover colour, 12px text and its contrast, overlaps,
+  the node chips against the List's, Enter on a focused node and the focus ring, the fullscreen fit, and the List's
+  "Nearest lane of the belt" select. `STEPS` (a regexp on the step numbers) runs a part.
+- `capture-timelines.mjs <out dir>` (on `lib.mjs`) checks the developer timelines (item 2.10) at 1440 and 720px: the
+  `#1b1b1b` track and legend chips, 3:1 contrast of every colour drawn, the six item colours and the repeat caption, bars
+  and Blocked runs at least 3px, the strip legend row, Detailed-mode swatches, canvas and SVG `role="img"` names, the
+  fuel chart, fullscreen, and the drill label's orange. `BASE_URL`, `WIDTHS` and `STEPS` as above.
+- `capture-gui-grammar.mjs <out dir>` (on `lib.mjs`) checks the GUI grammar's tokens and components (item 2.7 PR A) at
+  1440, 720 and 390px: one filled next-step button per state (first visit, ready, fresh on both views, below target,
+  stale, in flight), the colour roles of confirm, cancel, danger and selection, square chips, title bars on cards,
+  dialogs and accordions, the help controls, focus rings (black in a filled alert), messages and menus on the card
+  surface, and that each surface is its token. `BASE_URL`, `UI_DIR`, `WIDTHS` and `STEPS` as above.
+- `capture-build-card.mjs <out dir>` (on `lib.mjs`) checks the Configure layout (item 2.7 PR B) at 1440, 720 and 390px:
+  Target Output, the Build card (its sections in order, the List/Diagram toggle in its title bar) and Advanced
+  (collapsed, and again after Import and Reset), the "Add chest" and "Add mining drill" rows and where the focus goes
+  when a row is added or the last one deleted, the inserter row grid, inset filter slots with one "+", grey delete and ×
+  until hovered or focused, the help buttons, "Show rates", headings, contrast and the narrow layout. `BASE_URL`,
+  `UI_DIR`, `WIDTHS` and `STEPS` as above.
+- `capture-messages-clear.mjs <out dir>` (on `lib.mjs`) checks messages that don't cover the page (item 1.5 F) at 1440,
+  720 and 390px: the message in the header's flow and in the fullscreen diagram's title bar, never over a focused
+  control or a dialog, errors closing when a dialog opens or the action starts again, keyboard reach of Undo, the Undo
+  offer ending when a check or generation starts, and the announcements. `BASE_URL`, `WIDTHS` and `STEPS` as above.
 
 ## Shared helpers
 
@@ -98,8 +123,12 @@ The helpers:
   number the shots and write `INDEX.md` with a PASS or FAIL line per check. `finish()` returns a non-zero exit code if a
   check or a step failed.
 - `importFile`, `goConfigure`, `goResults`, `validate`, `generate` and `openMenu` are the app actions. `importFile` waits
-  until Validate is usable, `validate` until the status chip changes, `generate` until the busy label is gone (both read
-  the buttons' `textContent`). `goConfigure` and `goResults` force the click, with a note, when another element covers the
+  until Check only is usable, `validate` (it clicks "Check only", which replaced Validate in 2.3) until the check's chip
+  changes, `generate` until neither busy label ("Checking...", "Generating...") shows (both read the buttons'
+  `textContent`). Generate alone is enough to get clocks: it checks first.
+- Scripts written before 2.3 (`capture-header.mjs`, `capture-first-problem-warning.mjs`, `capture-messages-undo.mjs`,
+  `capture-copy.mjs`) target the Validate button and the Validation card, which 2.3 removed; for the current UI use
+  `capture.mjs` and `capture-generate-checks.mjs`. `goConfigure` and `goResults` force the click, with a note, when another element covers the
   tab (the header at 390 before item 1.2).
 - `contrast(page, locator, { sample })` is the text colour against the colour painted behind it: it blends the ancestors'
   background colours **and** MUI's dark Paper elevation overlay (the `background-image` gradient). `sample: true` also
@@ -152,3 +181,30 @@ The helpers:
 - The default widths are 1440 and 720. Add 390 (at 844 high) when the item affects reachability, and 960 at phase end.
 
 - Never commit the screenshots. Attach a summary of the review to the phase PR instead.
+
+## The `ui` map, `itemLabel`, `openTooltip` and the menu helpers
+
+Capture scripts kept breaking when an item renamed a control or when a tooltip or menu opened slowly. The shared helpers in `lib.mjs`
+now own those two things. **Scripts find controls only through `ui` and `itemLabel`, and open tooltips and menus only with
+`openTooltip`/`openMenu`; an item that renames a control updates `ui` in the same commit.** (`openMenu` below means `openMoreMenu` and
+`chooseMenuItem`; the older `openMenu(page)` still exists, clicks "More options" and waits a fixed 300 ms, and stays for the scripts that use it.)
+
+- `ui.<name>(page, ...args)` returns a Playwright `Locator` (never awaited, so `.click()`, `.count()` and `.first()` chain on it). Each
+  entry is role plus accessible name, with a comment naming the item that owns the control. Entries: `generate`, `checkOnly` (the workflow
+  bar's, the first of two), `copyBlueprint` (header, Results only), `viewToggle(page, 'Configure'|'Results')`, `resultsTab(page, name)`,
+  `menuButton`, `menu`, `menuItem(page, name)`, `pasteFromFactorio`, `reset`, `importConfig`, `exportConfig`, `advancedOverrides`,
+  `card(page, key)` and `add(page, key)` (keys `target`, `machines`, `inserters`, `belts`, `chests`, `drills`; Target Output has no Add),
+  `addChest(page, 'buffer'|'infinity')`, `clockTable`, `clockRows(page, index?)`, `resultsCard`, `message`, `messageUndo`, `messageClose`,
+  `listView`, `diagramView`, `diagram`, `diagramFullscreen`, `diagramDialog`, `diagramClose`.
+- A name that varies is handled inside the entry: `importConfig` and `exportConfig` are header buttons at 900 px and up and ⋮ menu items below
+  it (there they resolve only while the menu is open, so click them with `chooseMenuItem`). An entry for a control that is absent in a state
+  resolves to 0 (`copyBlueprint` before a generation, `diagram` in List view, `message` when none shows, `resultsCard` before 2.6).
+- `itemLabel(id)` is what the UI shows for a game id. Today that is the id; once `clock-generator/resources/data-filtered.json` has a `names` key
+  (branch `feat/ux-rework-p2-item-names`, items 2.8 a/b) it returns the in-game name, so scripts do not change. It reads the file beside `UI_DIR`.
+- `openTooltip(page, locator, { timeout = 5000 })` hovers and focuses the locator, waits for a visible `[role=tooltip]` and returns it, or throws
+  an error naming the control and the tooltips found. It leaves the mouse there; `page.mouse.move(0, 0)` before a shot.
+- `openMoreMenu(page)` opens ⋮ (unless it is open), waits for the menu and returns it. `chooseMenuItem(page, name)` picks an item at any width:
+  Import Config and Export Config are clicked in the header at 900 px and up, everything else goes through the menu; it waits for the menu to close.
+- `selftest.mjs` resolves every `ui` entry at 1440, 720 and 390 against a running build and exercises the tooltip and menu helpers
+  (`BASE_URL=http://localhost:5239 UI_DIR=<checkout>/clock-generator-ui node selftest.mjs`). Run it after editing `ui`; it expects the
+  documented 0 counts, so update its expectations in the same commit when an item adds a control (for example `resultsCard` after 2.6).

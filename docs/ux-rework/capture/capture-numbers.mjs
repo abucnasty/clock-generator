@@ -142,8 +142,8 @@ async function listView() {
 
 async function validateAndGenerate() {
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.getByRole('button', { name: 'Validate', exact: true }).first().click();
-    await page.waitForFunction(() => !document.body.innerText.includes('Validating...'), null, { timeout: 120_000 });
+    await page.getByRole('button', { name: 'Check only', exact: true }).first().click();
+    await page.waitForFunction(() => !document.body.innerText.includes('Checking...'), null, { timeout: 120_000 });
     await page.waitForTimeout(800);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole('button', { name: 'Generate', exact: true }).click();
@@ -208,7 +208,17 @@ async function noSideScroll() {
     check('nothing scrolls sideways', scrollWidth <= innerWidth, `scrollWidth ${scrollWidth}, innerWidth ${innerWidth}`);
 }
 
-const clocksPanel = () => page.getByText('Clocks', { exact: true }).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
+// the clocks table's panel, headed "Compare other clocks" since 2.5 B (was "Clocks")
+const clocksPanel = () => page.getByText('Compare other clocks', { exact: true }).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
+
+/** 1.10's headers are those of the full table: Show all columns, unless it is shown already (2.5 B) */
+async function fullColumns() {
+    const toggle = clocksPanel().getByRole('button', { name: 'Show all columns', exact: true });
+    if ((await toggle.count()) > 0 && (await toggle.getAttribute('aria-expanded')) === 'false') {
+        await toggle.click();
+        await page.waitForTimeout(300);
+    }
+}
 
 async function tableHeaders() {
     return clocksPanel().locator('thead th').allTextContents();
@@ -235,6 +245,7 @@ async function headersBrokenInBrackets() {
 
 async function shotClocks(slug, desc) {
     const panel = clocksPanel();
+    await fullColumns();
     await panel.scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     await shot(slug, desc, panel);

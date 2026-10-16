@@ -1,5 +1,5 @@
-import { memo, useState } from 'react';
-import { Add, Delete, Info } from '@mui/icons-material';
+import { memo } from 'react';
+import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -7,21 +7,24 @@ import {
     IconButton,
     InputLabel,
     MenuItem,
-    Paper,
-    Popover,
     Select,
     Tooltip,
     Typography,
 } from '@mui/material';
 import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { SURFACE } from '../theme/tokens';
 import { FactorioIcon } from './FactorioIcon';
+import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
-import { BELT_TYPES } from './entityTypes';
+import { useGameNames } from '../hooks/useGameNames';
+import { BELT_TYPES, entityTypeLabel } from './entityTypes';
+import { BeltAssumption } from './BeltAssumption';
+import type { BeltAnswer, BeltQuestion } from '../utils/beltQuestion';
 
 interface BeltsFormProps {
     belts: BeltFormData[];
@@ -30,6 +33,9 @@ interface BeltsFormProps {
     onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
+    /** Asked when an inserter takes from one of these belts */
+    beltQuestion: BeltQuestion;
+    onBeltAnswer: (answer: BeltAnswer) => void;
 }
 
 function BeltsFormComponent({
@@ -39,8 +45,10 @@ function BeltsFormComponent({
     onUpdate,
     onRemove,
     onReorder,
+    beltQuestion,
+    onBeltAnswer,
 }: BeltsFormProps) {
-    const [infoAnchor, setInfoAnchor] = useState<HTMLButtonElement | null>(null);
+    const { itemLabel } = useGameNames();
 
     const handleLaneUpdate = (
         beltIndex: number,
@@ -77,38 +85,38 @@ function BeltsFormComponent({
     const { cardRef, remove } = useFocusAfterRemove(belts.length, onRemove);
 
     return (
-        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6" component="h2">
-                        Belts ({belts.length})
-                    </Typography>
-                    <IconButton size="small" onClick={(e) => setInfoAnchor(e.currentTarget)} color="info" aria-label="About belt strategies">
-                        <Info fontSize="small" />
-                    </IconButton>
-                    <Popover
-                        open={Boolean(infoAnchor)}
-                        anchorEl={infoAnchor}
-                        onClose={() => setInfoAnchor(null)}
-                        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                    >
-                        <Box sx={{ p: 2, maxWidth: 380 }}>
-                            {BELT_STRATEGIES.map((strategy) => (
-                                <Typography key={strategy.value} variant="body2" sx={{ mb: 1 }}>
-                                    <strong>{strategy.label}:</strong> {strategy.description}
-                                </Typography>
-                            ))}
-                            <Typography variant="body2" color="text.secondary">
-                                Inserters putting items onto a belt are clocked for what the inserters in this build take off
-                                it. Use an export belt when machines outside this build take items off it too.
+        <PanelSection
+            ref={cardRef}
+            level={4}
+            title={`Belts (${belts.length})`}
+            help={{
+                label: 'About belt strategies',
+                content: (
+                    <>
+                        {BELT_STRATEGIES.map((strategy) => (
+                            <Typography key={strategy.value} variant="body2" sx={{ mb: 1 }}>
+                                <strong>{strategy.label}:</strong> {strategy.description}
                             </Typography>
-                        </Box>
-                    </Popover>
-                </Box>
+                        ))}
+                        <Typography variant="body2" color="text.secondary">
+                            Inserters putting items onto a belt are clocked for what the inserters in this build take off
+                            it. Use an export belt when machines outside this build take items off it too.
+                        </Typography>
+                    </>
+                ),
+            }}
+            actions={(
                 <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Belt
                 </Button>
-            </Box>
+            )}
+        >
+
+            {beltQuestion.ask && (
+                <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2, mb: 2 }}>
+                    <BeltAssumption answer={beltQuestion.answer} onChange={onBeltAnswer} />
+                </Box>
+            )}
 
             <SortableList itemKeys={belts.map((b) => b._uuid)} itemLabels={belts.map((b) => entityLabel('belt', b.id))} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
@@ -121,8 +129,7 @@ function BeltsFormComponent({
                     sx={{
                         mb: 2,
                         p: 2,
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
+                        bgcolor: SURFACE.row,
                     }}
                 >
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
@@ -141,7 +148,7 @@ function BeltsFormComponent({
                                 renderValue={(selected) => (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <FactorioIcon name={selected} size={20} alt="" />
-                                        {BELT_TYPES.find((bt) => bt.value === selected)?.label}
+                                        {entityTypeLabel(selected, itemLabel)}
                                     </Box>
                                 )}
                             >
@@ -149,7 +156,7 @@ function BeltsFormComponent({
                                     <MenuItem key={bt.value} value={bt.value}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <FactorioIcon name={bt.value} size={20} alt="" />
-                                            {bt.label}
+                                            {entityTypeLabel(bt.value, itemLabel)}
                                         </Box>
                                     </MenuItem>
                                 ))}
@@ -206,7 +213,7 @@ function BeltsFormComponent({
                                     sx={{ flex: '1 1 200px' }}
                                 />
                                 <NumberField
-                                    label="Stack Size"
+                                    label="Stack size"
                                     value={lane.stack_size}
                                     onValueChange={(val) => {
                                         const integer = parseInt(val?.toString() || '');
@@ -265,7 +272,7 @@ function BeltsFormComponent({
                     No belts configured.
                 </Typography>
             )}
-        </Paper>
+        </PanelSection>
     );
 }
 

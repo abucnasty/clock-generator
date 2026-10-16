@@ -3,15 +3,15 @@ import * as edits from './configForm/edits';
 import { isInfinityChest, type ConfigFormData, type EntityKind } from './configForm/formData';
 import { deleteButtonLabel, entityLabel, type LabelKind } from './entityLabel';
 import type { MessageInput } from './messages';
+import { exampleTitle, type ExampleBuild } from './exampleBuilds';
 
 // Every text of the Undo messages, so that the copy changes in one place. An Undo message has no timer: it stays until
 // the build is edited, another action offers Undo, or it is closed (the owner, 2026-10-14). The notice after it has one.
 const UNDO_NOTICE_DURATION_MS = 8_000;
 const UNDO_LABEL = 'Undo';
 export const UNDO_RESET_MESSAGE = 'Build reset.';
-export const UNDO_IMPORT_MESSAGE = 'Build imported.';
-const UNDO_DRILLS_OFF_MESSAGE = 'Mining drills turned off.';
-export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Validate, then Generate to make them again.';
+export const UNDO_IMPORT_MESSAGE = 'Build file opened.';
+export const UNDO_RESULTS_NOTE = 'Build restored. The clocks you had generated were cleared; click Generate to make them again.';
 /** Read out when an editing dialog opening takes the offer away */
 export const UNDO_WITHDRAWN_MESSAGE = 'Undo is no longer offered.';
 /** Read out after an Undo message: the key that undoes too, on a Mac and elsewhere */
@@ -29,8 +29,8 @@ const KINDS: Record<EntityKind, { one: LabelKind; many: string }> = {
 };
 
 const CHEST_TYPE_NAMES: Record<ChestType, string> = {
-    [ChestType.BUFFER_CHEST]: 'Buffer Chest',
-    [ChestType.INFINITY_CHEST]: 'Infinity Chest',
+    [ChestType.BUFFER_CHEST]: 'Buffer chest',
+    [ChestType.INFINITY_CHEST]: 'Infinity chest',
 };
 
 /**
@@ -114,6 +114,11 @@ function idList(ids: number[]): string {
     return consecutive && ids.length > 1 ? `${ids[0]}–${ids[ids.length - 1]}` : ids.join(', ');
 }
 
+/** The Undo message after an example replaced the build: "Example loaded: Logistic science pack." */
+export function exampleUndoMessage(example: Pick<ExampleBuild, 'recipe'>, name: (id: string) => string): string {
+    return `Example loaded: ${exampleTitle(example, name)}.`;
+}
+
 /** "3 machines", "1 machine" */
 export const countOf = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -187,7 +192,7 @@ export function removedDeleteLabel(form: ConfigFormData, kind: EntityKind, index
     return removed ? deleteButtonLabel(KINDS[kind].one, removed.id) : null;
 }
 
-/** "Chest 2 changed to Infinity Chest."; null when the chest is already of that type or there is none */
+/** "Chest 2 changed to Infinity chest."; null when the chest is already of that type or there is none */
 export function describeChestSwitch(form: ConfigFormData, index: number, newType: ChestType): string | null {
     const chest = form.chests[index];
     if (!chest) {
@@ -195,11 +200,6 @@ export function describeChestSwitch(form: ConfigFormData, index: number, newType
     }
     const type = isInfinityChest(chest) ? ChestType.INFINITY_CHEST : ChestType.BUFFER_CHEST;
     return type === newType ? null : `${entityLabel('chest', chest.id)} changed to ${CHEST_TYPE_NAMES[newType]}.`;
-}
-
-/** Null when the drills are already off */
-export function describeDrillsOff(form: ConfigFormData): string | null {
-    return form.drills === undefined ? null : UNDO_DRILLS_OFF_MESSAGE;
 }
 
 /** "Imported 3 machines, 1 inserter from Factorio." */

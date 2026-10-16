@@ -10,29 +10,54 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
+import { useId, type ReactNode } from 'react';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 
 interface OverridesFormProps {
     lcm?: number;
     terminalSwingCount?: number;
     useFractionalSwings?: boolean;
-    nonMovingBelts?: boolean;
     searchForFewerWakeUps?: boolean;
-    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'non_moving_belts' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
+    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
+    /** The swing plan of the last check, under the fields */
+    planSlot?: ReactNode;
+    /** Closed on a first visit, and again when the build is replaced (Import, Paste, Reset) */
+    expanded: boolean;
+    onExpandedChange: (expanded: boolean) => void;
+    /** How many of its settings the build uses (`advancedSetCount`), shown in the title */
+    setCount: number;
 }
 
 export function OverridesForm({
     lcm,
     terminalSwingCount,
     useFractionalSwings,
-    nonMovingBelts,
     searchForFewerWakeUps,
     onUpdate,
+    planSlot,
+    expanded,
+    onExpandedChange,
+    setCount,
 }: OverridesFormProps) {
+    const summaryId = useId();
     return (
-        <Accordion slotProps={{ heading: { component: 'h2' } }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
+        <Accordion
+            expanded={expanded}
+            onChange={(_, open) => onExpandedChange(open)}
+            slotProps={{ heading: { component: 'h2' }, region: { 'aria-labelledby': summaryId } }}
+        >
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
-                    Advanced Overrides (Optional)
+                    Advanced
+                    {/* it folds after Import, Paste and Reset: says that a build sets some all the same */}
+                    {setCount > 0 && (
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                            {/* read "Advanced, 1 set": a comma for the pause, the dot for the eye */}
+                            <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>
+                            <span aria-hidden="true">· </span>
+                            {setCount} set
+                        </Typography>
+                    )}
                 </Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -57,7 +82,7 @@ export function OverridesForm({
                         slotProps={{ htmlInput: { min: 1 } }}
                         sx={{ width: 200 }}
                         size="small"
-                        helperText="Crafting cycles per clock period (overrides the calculated LCM)"
+                        helperText="Crafting cycles per clock period (overrides the calculated LCM). The swing plan below shows the calculated value."
                     />
                     <Tooltip
                         title="Uses exactly this many output swings per crafting cycle for every clock, even if the clock does not hold the rate. Leave empty to let the generator pick the count, lower it until the output holds the rate, and offer other counts as clocks."
@@ -105,29 +130,6 @@ export function OverridesForm({
                         />
                     </Tooltip>
                     <Tooltip
-                        title="Turn on when the belts your inserters pick up from are backed up and standing still. By default a clock is made for a moving belt: each wake window of an inserter that picks up from a belt stays open a few ticks longer (belt slack), because a pickup can come late on a moving belt, and a non-moving belt clock is only selected when no other holds the target rate. When enabled, every clock is made without the slack and the one with the fewest wake-ups is selected. A clock that does not hold the target rate without the slack is listed as unstable."
-                        arrow
-                        describeChild
-                        placement="top"
-                    >
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={nonMovingBelts ?? false}
-                                    color="primary"
-                                    onChange={(e) =>
-                                        onUpdate(
-                                            'non_moving_belts',
-                                            e.target.checked ? true : undefined
-                                        )
-                                    }
-                                />
-                            }
-                            label="Belts do not move"
-                            sx={{ ml: 1 }}
-                        />
-                    </Tooltip>
-                    <Tooltip
                         title="Runs the four searches for every build: observed wake windows, uneven output swings, shifted swings and full-hand output swings. They take most of the time of a generation, so by default they only run when no clock made without a search is stable. Where one is, a search can still find a stable clock with fewer wake-ups: turn this on to look for it."
                         arrow
                         describeChild
@@ -151,6 +153,7 @@ export function OverridesForm({
                         />
                     </Tooltip>
                 </Box>
+                {planSlot && <Box sx={{ mt: 2 }}>{planSlot}</Box>}
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
                     Note: If the final output machine has more than one inserter, the output swings you force are divided equally between them.
                 </Typography>

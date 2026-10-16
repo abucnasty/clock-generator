@@ -1,4 +1,5 @@
 import type { Theme, ThemeOptions } from '@mui/material/styles';
+import { CONTROL } from '../theme/tokens';
 
 /**
  * The theme's accessibility rules, added to the base theme in `App.tsx`: a visible 2px focus ring in the brand colour
@@ -47,11 +48,11 @@ export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
                 root: {
                     variants: [{
                         // the orange is too close to a filled alert's colour (1.55:1 on the yellow warning); a control
-                        // in one takes the alert's own text colour, which is chosen to read on the fill. One class more
+                        // in one gets a black ring, 4.7:1 or more on every fill (the roles' dark shades). One class more
                         // than the rules above, so it wins whichever is inserted first
                         props: { variant: 'filled' },
                         style: {
-                            '& .MuiButtonBase-root.Mui-focusVisible, & :focus-visible': { outlineColor: 'currentColor' },
+                            '& .MuiButtonBase-root.Mui-focusVisible, & :focus-visible': { outlineColor: CONTROL.focusOnFill },
                         },
                     }],
                 },

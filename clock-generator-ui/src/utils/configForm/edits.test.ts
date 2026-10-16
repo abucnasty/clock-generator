@@ -265,10 +265,12 @@ describe('chests', () => {
 });
 
 describe('drills', () => {
-    it('enables drills with none and disables them altogether', () => {
-        const enabled = edits.enableDrills(createDefaultConfig());
-        expect(enabled.drills).toEqual({ mining_productivity_level: 0, configs: [] });
-        expect('drills' in edits.disableDrills(enabled)).toBe(false);
+    it('turns drills on with the first drill added, and keeps them on with none left', () => {
+        const added = edits.addDrill(createDefaultConfig());
+        expect(added.drills?.mining_productivity_level).toBe(0);
+        expect(added.drills?.configs).toHaveLength(1);
+        // the stored build keeps an empty drills entry, which the generator reads as no drills
+        expect(edits.removeDrill(added, 0).drills).toEqual({ mining_productivity_level: 0, configs: [] });
     });
 
     it('sets the mining productivity level only when drills are enabled', () => {

@@ -9,15 +9,17 @@ import { applyInserterFix } from './configForm/inserterFix';
 import {
     createUndoEntry,
     describeChestSwitch,
-    describeDrillsOff,
     describePaste,
     describeRemoval,
     countOf,
+    exampleUndoMessage,
     removalMessage,
     removedDeleteLabel,
     settleUndoEntry,
     undoMessageInput,
     undoOutcome,
+    UNDO_IMPORT_MESSAGE,
+    UNDO_RESET_MESSAGE,
     UNDO_RESULTS_NOTE,
     type UndoEntry,
 } from './undoSnapshot';
@@ -127,16 +129,7 @@ describe('Undo after Reset, Import and Paste', () => {
     });
 });
 
-describe('Undo after Drills off and a chest switch', () => {
-    it('brings back the drills and the productivity level', () => {
-        const original = form();
-        const { after, entry } = act(original, edits.disableDrills);
-        expect(after.drills).toBeUndefined();
-        const restored = undoOutcome(entry, 2)!.form;
-        expect(restored.drills?.mining_productivity_level).toBe(3);
-        expect(restored.drills?.configs).toHaveLength(2);
-    });
-
+describe('Undo after a chest switch', () => {
     it('brings back the chest\'s old type, storage size and filter', () => {
         const original = form();
         const { after, entry } = act(original, (config) => edits.switchChestType(config, 0, ChestType.INFINITY_CHEST));
@@ -197,7 +190,7 @@ describe('the snapshot', () => {
             (c) => edits.addChest(c), (c) => edits.updateChest(c, 0, { storage_size: 2 }), (c) => edits.removeChest(c, 0),
             (c) => edits.reorderChests(c, 0, 1), (c) => edits.replaceChests(c, []),
             (c) => edits.switchChestType(c, 0, ChestType.INFINITY_CHEST), (c) => edits.switchChestType(c, 1, ChestType.BUFFER_CHEST),
-            (c) => edits.enableDrills(c), (c) => edits.disableDrills(c), (c) => edits.updateDrillsConfig(c, 'mining_productivity_level', 1),
+            (c) => edits.updateDrillsConfig(c, 'mining_productivity_level', 1),
             (c) => edits.addDrill(c), (c) => edits.updateDrill(c, 0, { speed_bonus: 1 }), (c) => edits.removeDrill(c, 0),
             (c) => edits.reorderDrills(c, 0, 1), (c) => edits.replaceDrills(c, []), (c) => edits.mergeDrills(c, []),
             (c) => edits.updateOverrides(c, 'lcm', 60), (c) => edits.updateIgnoredIngredients(c, ['iron-plate'], plan),
@@ -289,7 +282,7 @@ describe('the messages', () => {
     it('are null when there is nothing to delete', () => {
         expect(removalMessage(form(), 'inserters', 3)).toBeNull();
         expect(removalMessage(form(), 'machines', -1)).toBeNull();
-        expect(removalMessage(edits.disableDrills(form()), 'drills', 0)).toBeNull();
+        expect(removalMessage({ ...form(), drills: undefined }, 'drills', 0)).toBeNull();
     });
 
     it('say which of the kind were renumbered', () => {
@@ -326,21 +319,23 @@ describe('the messages', () => {
     });
 
     it('name a chest switch, and nothing for a switch to the same type', () => {
-        expect(describeChestSwitch(form(), 0, ChestType.INFINITY_CHEST)).toBe('Chest 1 changed to Infinity Chest.');
-        expect(describeChestSwitch(form(), 1, ChestType.BUFFER_CHEST)).toBe('Chest 2 changed to Buffer Chest.');
+        expect(describeChestSwitch(form(), 0, ChestType.INFINITY_CHEST)).toBe('Chest 1 changed to Infinity chest.');
+        expect(describeChestSwitch(form(), 1, ChestType.BUFFER_CHEST)).toBe('Chest 2 changed to Buffer chest.');
         expect(describeChestSwitch(form(), 0, ChestType.BUFFER_CHEST)).toBeNull();
         expect(describeChestSwitch(form(), 5, ChestType.BUFFER_CHEST)).toBeNull();
-    });
-
-    it('say Drills off only when there are drills', () => {
-        expect(describeDrillsOff(form())).toBe('Mining drills turned off.');
-        expect(describeDrillsOff(edits.disableDrills(form()))).toBeNull();
     });
 
     it('list what a paste imported, one or many of each', () => {
         expect(describePaste(['3 machines', '2 inserters'])).toBe('Imported 3 machines, 2 inserters from Factorio.');
         expect(describePaste([countOf(1, 'machine', 'machines'), countOf(1, 'belt', 'belts'), countOf(2, 'drill', 'drills')]))
             .toBe('Imported 1 machine, 1 belt, 2 drills from Factorio.');
+        expect(describePaste(['Target Output', '1 machine'])).toBe('Imported Target Output, 1 machine from Factorio.');
+    });
+
+    it('name a build file, a reset and an example in the words of the menu', () => {
+        expect(UNDO_IMPORT_MESSAGE).toBe('Build file opened.');
+        expect(UNDO_RESET_MESSAGE).toBe('Build reset.');
+        expect(exampleUndoMessage({ recipe: 'logistic-science-pack' }, (id) => id)).toBe('Example loaded: Logistic science pack.');
     });
 });
 

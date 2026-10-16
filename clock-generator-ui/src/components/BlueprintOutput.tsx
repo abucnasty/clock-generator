@@ -5,17 +5,14 @@ import {
     Button,
     IconButton,
     LinearProgress,
-    Paper,
     TextField,
     Typography,
 } from '@mui/material';
-import { useCallback, useState } from 'react';
-import { useAnnounce } from '../hooks/useMessages';
 import { useGenerationProgress, type GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { BUTTON_NAMES, FIELD_NAMES, PROGRESS_NAMES } from '../utils/a11yLabels';
+import { SURFACE } from '../theme/tokens';
+import { durationText } from '../utils/numberText';
 import { STALE_BLUEPRINT_NOTE, STALE_COPY_LABEL, type GeneratedFor } from '../utils/resultsStaleness';
-import { ANNOUNCEMENTS } from '../utils/workflowAnnouncement';
-import { StaleCopyDialog } from './StaleCopyDialog';
 
 interface BlueprintOutputProps {
     blueprintString: string | null;
@@ -27,38 +24,31 @@ interface BlueprintOutputProps {
      * copied by hand, and copying asks first. Null when not
      */
     staleFor?: GeneratedFor | null;
+    /** Every Copy button says "Copied" for a moment after any of them copied */
+    copied: boolean;
+    /** The copy every Copy button shares: it asks first for the clock of an earlier build */
+    onCopy: () => void;
 }
 
-/** The selected clock's blueprint string, for reading or copying by hand */
-export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor }: BlueprintOutputProps) {
-    const [copied, setCopied] = useState(false);
-    const [confirmingOld, setConfirmingOld] = useState(false);
-    const announce = useAnnounce();
+/** Under the string */
+const STRING_CAPTION = 'Copy this string and import it in Factorio 2.1. The steps are at the top of Results.';
+/** Before the clock's period over the string */
+const CLOCK_PERIOD_LABEL = 'Clock period:';
 
-    const handleCopy = useCallback(async () => {
-        if (!blueprintString) return;
-        
-        try {
-            await navigator.clipboard.writeText(blueprintString);
-            setCopied(true);
-            // the rate warning, if any, is the alert above, already on screen
-            announce(ANNOUNCEMENTS.copied);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
-    }, [blueprintString, announce]);
-
+/**
+ * The selected clock's blueprint string, for reading or copying by hand. The Details tab it is in names it, so it has
+ * no heading of its own.
+ */
+export function BlueprintOutput({ blueprintString, simulationDurationTicks, rateWarning, staleFor, copied, onCopy }: BlueprintOutputProps) {
     if (!blueprintString) {
         return null;
     }
 
     return (
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Box>
             {simulationDurationTicks !== undefined && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Simulation duration: {simulationDurationTicks} ticks (
-                    {(simulationDurationTicks / 60).toFixed(2)} seconds)
+                    {CLOCK_PERIOD_LABEL} {durationText(simulationDurationTicks)}
                 </Typography>
             )}
             {rateWarning && (
@@ -73,23 +63,15 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         variant="outlined"
                         size="small"
                         color="warning"
-                        onClick={() => setConfirmingOld(true)}
+                        onClick={onCopy}
                         startIcon={copied ? <Check /> : <Warning />}
                     >
                         {copied ? 'Copied' : STALE_COPY_LABEL}
                     </Button>
-                    <StaleCopyDialog
-                        open={confirmingOld && staleFor !== null}
-                        generatedFor={staleFor}
-                        onCancel={() => setConfirmingOld(false)}
-                        onConfirm={() => {
-                            setConfirmingOld(false);
-                            handleCopy();
-                        }}
-                    />
                 </Box>
             ) : (
-                <Box sx={{ position: 'relative' }}>
+                // the Copy button beside the box, not over it, so it never covers the string
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                     <TextField
                         multiline
                         rows={6}
@@ -97,19 +79,15 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
                         value={blueprintString}
                         slotProps={{
                             htmlInput: { 'aria-label': FIELD_NAMES.blueprintString },
-                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem' } },
+                            // an inset box, as the game draws a text field
+                            input: { readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.75rem', bgcolor: SURFACE.inset } },
                         }}
                     />
                     <IconButton
-                        onClick={handleCopy}
+                        onClick={onCopy}
                         aria-label={copied ? BUTTON_NAMES.blueprintCopied : BUTTON_NAMES.copyBlueprintString}
-                        sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            bgcolor: 'background.paper',
-                        }}
                         color={copied ? 'success' : 'default'}
+                        sx={{ flexShrink: 0 }}
                     >
                         {copied ? <Check /> : <ContentCopy />}
                     </IconButton>
@@ -117,10 +95,10 @@ export function BlueprintOutput({ blueprintString, simulationDurationTicks, rate
             )}
             {!staleFor && (
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    Copy this string and paste it in Factorio (Ctrl+V while in blueprint library)
+                    {STRING_CAPTION}
                 </Typography>
             )}
-        </Paper>
+        </Box>
     );
 }
 

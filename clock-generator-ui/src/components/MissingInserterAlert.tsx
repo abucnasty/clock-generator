@@ -3,6 +3,7 @@ import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/b
 import { entityLabel } from '../utils/entityLabel';
 import { coverageIssueElementId } from '../utils/firstProblem';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 
 interface Props {
     issues: InserterCoverageIssue[];
@@ -45,13 +46,13 @@ export function MissingInserterAlert({ issues, onApplyFix, focusTargets = true }
                             '&:focus': { outline: '2px solid', outlineColor: 'error.main', outlineOffset: 2 },
                         }}
                     >
-                        <FactorioIcon name={issue.item_name} size={20} />
+                        <FactorioIcon name={issue.item_name} size={20} alt="" />
                         {/* wraps in a narrow window instead of running out of the row */}
                         <Typography variant="body2" sx={{ minWidth: 0 }}>
-                            <strong>{entityLabel('machine', issue.machine_id)}</strong> ({issue.recipe}):{' '}
+                            <strong>{entityLabel('machine', issue.machine_id)}</strong> (<GameName id={issue.recipe} kind="recipe" />):{' '}
                             missing{' '}
                             {issue.kind === 'missing_input_inserter' ? 'input' : 'output'}{' '}
-                            inserter for <strong>{issue.item_name}</strong>
+                            inserter for <strong><GameName id={issue.item_name} /></strong>
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                             {issue.fix_options.map((fix, j) => (
@@ -59,7 +60,8 @@ export function MissingInserterAlert({ issues, onApplyFix, focusTargets = true }
                                     key={j}
                                     size="small"
                                     variant="outlined"
-                                    color="error"
+                                    // in the alert's own text colour: red text is for a card or the bar, not the alert's red tint
+                                    color="inherit"
                                     onClick={() => onApplyFix(issue, fix)}
                                     sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
                                 >

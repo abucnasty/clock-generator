@@ -28,11 +28,9 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
             maxWidth="xs"
             aria-labelledby={`${id}-title`}
             aria-describedby={`${id}-description`}
+            // the theme draws every dialog flat, in the card colour, with an edge that stands it out from the dimmed
+            // dialog behind it
             slotProps={{
-                // the plain paper colour, without the dark theme's elevation overlay (a background image), which
-                // lightens it to #474747 and leaves the buttons' text below 4.5:1
-                // and a divider-grey edge, so that it stands out from the dimmed dialog behind it
-                paper: { sx: { bgcolor: 'background.paper', backgroundImage: 'none', border: 1, borderColor: 'divider' } },
                 // opened over another dialog, autoFocus alone loses the focus to the dialogs' focus traps
                 transition: { onEntered: () => keepEditingRef.current?.focus() },
             }}
@@ -45,7 +43,7 @@ export function DiscardChangesDialog({ open, title, onKeepEditing, onDiscard }: 
             </DialogContent>
             <DialogActions>
                 {/* the theme's focus ring marks focus; the focus ripple would lower the text's contrast */}
-                <Button ref={keepEditingRef} onClick={onKeepEditing} autoFocus disableFocusRipple>
+                <Button ref={keepEditingRef} onClick={onKeepEditing} color="inherit" autoFocus disableFocusRipple>
                     Keep editing
                 </Button>
                 <Button onClick={onDiscard} color="error" disableFocusRipple>

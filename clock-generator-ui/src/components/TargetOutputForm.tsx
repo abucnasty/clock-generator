@@ -1,15 +1,21 @@
-import { Autocomplete, Box, Paper, TextField, Typography } from '@mui/material';
-import { FactorioIcon } from './FactorioIcon';
+import { Box } from '@mui/material';
+import { Panel } from './Panel';
+import { copiesProblem } from '../utils/copiesProblem';
+import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { TARGET_RECIPE_NAME } from '../utils/a11yLabels';
 import { COPIES_HELPER, itemsPerSecondHelper } from '../utils/numberText';
 import { ELEMENT_IDS } from '../utils/firstProblem';
+import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
+import { targetRateLineOf, type MachinesMax } from '../utils/targetRateLimit';
 
 interface TargetOutputFormProps {
     recipe: string;
     itemsPerSecond: number;
     /** Number of duplicate setups being modeled; may be fractional, such as 5.5, for a partial block */
     copies: number;
+    /** The most the machines making the recipe can make, for the problem line under Items per Second; null while unknown */
+    machinesMax: MachinesMax | null;
     recipeNames: string[];
     onRecipeChange: (recipe: string) => void;
     onItemsPerSecondChange: (value: number) => void;
@@ -20,54 +26,31 @@ export function TargetOutputForm({
     recipe,
     itemsPerSecond,
     copies,
+    machinesMax,
     recipeNames,
     onRecipeChange,
     onItemsPerSecondChange,
     onCopiesChange,
 }: TargetOutputFormProps) {
     return (
-        <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" component="h2" gutterBottom>
-                Target Output
-            </Typography>
+        // the heading is focused by script when the intro card or a dialog that held the focus goes
+        <Panel title="Target Output" focusableTitleId={TARGET_OUTPUT_HEADING_ID}>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Autocomplete
-                    id={ELEMENT_IDS.targetRecipe}
-                    sx={{ minWidth: 300, flex: 1 }}
+                <ItemSelector
+                    kind="recipe"
+                    inputId={ELEMENT_IDS.targetRecipe}
+                    sx={{ flex: 1 }}
+                    minWidth={300}
+                    size="medium"
                     options={recipeNames}
                     value={recipe || null}
-                    onChange={(_, newValue) => onRecipeChange(newValue || '')}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Recipe"
-                            placeholder="Search recipes..."
-                            required
-                            slotProps={{
-                                // the label says "Recipe" in every row: say whose it is
-                                htmlInput: { ...params.inputProps, 'aria-label': TARGET_RECIPE_NAME },
-                                input: {
-                                    ...params.InputProps,
-                                    startAdornment: recipe ? (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                            <FactorioIcon name={recipe} size={20} alt="" />
-                                        </Box>
-                                    ) : null,
-                                },
-                            }}
-                        />
-                    )}
-                    renderOption={(props, option) => {
-                        const { key, ...rest } = props;
-                        return (
-                            <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={option} size={20} alt="" />
-                                {option}
-                            </Box>
-                        );
-                    }}
+                    onChange={(newValue) => onRecipeChange(newValue || '')}
+                    label="Recipe"
+                    placeholder="Search recipes..."
+                    required
+                    // the label says "Recipe" in every row: say whose it is
+                    inputAriaLabel={TARGET_RECIPE_NAME}
                     freeSolo
-                    autoHighlight
                 />
                 <NumberField
                     id={ELEMENT_IDS.targetRate}
@@ -80,6 +63,7 @@ export function TargetOutputForm({
                     required
                     error={itemsPerSecond <= 0}
                     helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : itemsPerSecondHelper(itemsPerSecond, copies)}
+                    problem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax })}
                 />
                 <NumberField
                     id={ELEMENT_IDS.targetCopies}
@@ -90,10 +74,12 @@ export function TargetOutputForm({
                     step={0.5}
                     sx={{ width: 200 }}
                     required
-                    error={copies <= 0}
-                    helperText={copies <= 0 ? 'Must be more than 0' : COPIES_HELPER}
+                    error={Boolean(copiesProblem(copies))}
+                    helperText={COPIES_HELPER}
+                    problem={copiesProblem(copies)}
+                    preserveInputOnBlur={Boolean(copiesProblem(copies))}
                 />
             </Box>
-        </Paper>
+        </Panel>
     );
 }

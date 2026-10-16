@@ -1,3 +1,4 @@
+import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 /**
  * Web Worker for running clock-generator simulation.
  *
@@ -9,12 +10,18 @@
 import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
+import { installFactsOf } from './installFacts';
+import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
 import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
 // imported dynamically in the worker context
 let clockGenerator: ClockGenerator;
+/** The data's in-game names, kept here so that the main thread does not parse the whole data for them */
+let gameNames: GameNames = NO_NAMES;
+/** The recipes the data marks hidden, which the pickers leave out */
+let hiddenRecipes: string[] = [];
 
 const LOG_FLUSH_INTERVAL_MS = 100;
 
@@ -29,7 +36,10 @@ async function handleInitialize(factorioData: string): Promise<void> {
         // Dynamically import the clock-generator browser module
         clockGenerator = await import('clock-generator/browser');
 
-        clockGenerator.FactorioDataService.initialize(JSON.parse(factorioData));
+        const parsed = JSON.parse(factorioData);
+        clockGenerator.FactorioDataService.initialize(parsed);
+        gameNames = parsed.names ?? NO_NAMES;
+        hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
         postResponse({ type: 'initialized' });
     } catch (error) {
@@ -112,12 +122,14 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         terminalSwingCount: result.used_terminal_swing_count,
         cycleTicks: result.crafting_cycle_plan.total_duration.ticks,
         blueprintString: clockGenerator.encodeBlueprintFileBrowser(clockGenerator.blueprintFileFor(result)),
+        install: installFactsOf(result),
         transferHistory: result.serializable_transfer_history,
         stateTransitionHistory: result.serializable_state_transition_history,
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
         fuelView: fuelViewOf(result),
         clockWindows: result.clock_windows,
+        beltPickupSlackTicks: result.belt_pickup_slack_ticks,
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
@@ -167,7 +179,8 @@ function runStreaming(
         postResponse({
             type: 'error',
             runId,
-            message: error instanceof Error ? error.message : 'Simulation failed',
+            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
+                : error instanceof Error ? error.message : 'Simulation failed',
             stack: error instanceof Error ? error.stack : undefined,
         });
     }
@@ -180,7 +193,8 @@ function handleValidate(requestId: number, config: Config): void {
         postResponse({
             type: 'validation-failed',
             requestId,
-            message: error instanceof Error ? error.message : 'Validation failed',
+            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
+                : error instanceof Error ? error.message : 'Validation failed',
         });
     }
 }
@@ -200,7 +214,7 @@ function lookups(): FactorioLookups {
             // a recipe the generator cannot use has no info
         }
     }
-    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes };
+    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes, names: gameNames, hiddenRecipes };
 }
 
 /** Validate each entry of a pasted list, throwing on the first one the schema rejects */
@@ -225,6 +239,7 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
         guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines),
+        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
     };
 }
 

@@ -1,6 +1,5 @@
 import { Close, DeleteOutline } from '@mui/icons-material';
 import {
-    Autocomplete,
     Box,
     Button,
     Dialog,
@@ -16,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useMemo, useState } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { ChestType } from 'clock-generator/light';
 import type {
@@ -47,7 +47,7 @@ import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
-import { BELT_TYPES, DRILL_TYPES, MACHINE_TYPE_LABELS } from './entityTypes';
+import { BELT_TYPES, DRILL_TYPES, MACHINE_TYPE_LABELS, entityTypeLabel } from './entityTypes';
 
 // ---- Props ----
 
@@ -92,39 +92,14 @@ function MachineEditSection({
 }) {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Autocomplete
+            <ItemSelector
+                kind="recipe"
                 options={recipeNames}
                 value={machine.recipe || null}
-                onChange={(_, newValue) => onUpdate(entityIndex, 'recipe', newValue || '')}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Recipe"
-                        placeholder="Search recipes..."
-                        size="small"
-                        slotProps={{
-                            input: {
-                                ...params.InputProps,
-                                startAdornment: machine.recipe ? (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                        <FactorioIcon name={machine.recipe} size={20} />
-                                    </Box>
-                                ) : null,
-                            },
-                        }}
-                    />
-                )}
-                renderOption={(props, option) => {
-                    const { key, ...rest } = props;
-                    return (
-                        <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FactorioIcon name={option} size={20} />
-                            {option}
-                        </Box>
-                    );
-                }}
+                onChange={(newValue) => onUpdate(entityIndex, 'recipe', newValue || '')}
+                label="Recipe"
+                placeholder="Search recipes..."
                 freeSolo
-                autoHighlight
             />
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                 <NumberField
@@ -178,6 +153,7 @@ function BeltEditSection({
     itemNames: string[];
     onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
 }) {
+    const { itemLabel } = useGameNames();
     const updateLane = (laneIndex: number, field: keyof BeltLaneFormData, value: string | number | undefined) => {
         const newLanes = [...belt.lanes] as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
         newLanes[laneIndex] = { ...newLanes[laneIndex], [field]: value };
@@ -211,7 +187,7 @@ function BeltEditSection({
                     renderValue={(selected) => (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FactorioIcon name={selected} size={20} alt="" />
-                            {BELT_TYPES.find((bt) => bt.value === selected)?.label}
+                            {entityTypeLabel(selected, itemLabel)}
                         </Box>
                     )}
                 >
@@ -219,7 +195,7 @@ function BeltEditSection({
                         <MenuItem key={bt.value} value={bt.value}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name={bt.value} size={20} alt="" />
-                                {bt.label}
+                                {entityTypeLabel(bt.value, itemLabel)}
                             </Box>
                         </MenuItem>
                     ))}
@@ -259,7 +235,7 @@ function BeltEditSection({
                         sx={{ flex: 1 }}
                     />
                     <NumberField
-                        label="Stack Size"
+                        label="Stack size"
                         value={lane.stack_size}
                         onValueChange={(val) => updateLane(laneIndex, 'stack_size', parseInt(val?.toString() || '') || BELT_FORM_DEFAULT_STACK_SIZE)}
                         min={1}
@@ -355,13 +331,13 @@ function ChestEditSection({
                     <MenuItem value={ChestType.BUFFER_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FactorioIcon name="iron-chest" size={20} alt="" />
-                            Buffer Chest
+                            Buffer chest
                         </Box>
                     </MenuItem>
                     <MenuItem value={ChestType.INFINITY_CHEST}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FactorioIcon name="infinity-chest" size={20} alt="" />
-                            Infinity Chest
+                            Infinity chest
                         </Box>
                     </MenuItem>
                 </Select>
@@ -420,6 +396,7 @@ function DrillEditSection({
     itemNames: string[];
     onUpdate: (index: number, updates: Partial<DrillFormData>) => void;
 }) {
+    const { itemLabel, recipeLabel } = useGameNames();
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <FormControl size="small" fullWidth>
@@ -432,7 +409,7 @@ function DrillEditSection({
                     renderValue={(selected) => (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FactorioIcon name={selected} size={20} alt="" />
-                            {DRILL_TYPES.find((dt) => dt.value === selected)?.label}
+                            {entityTypeLabel(selected, itemLabel)}
                         </Box>
                     )}
                 >
@@ -440,7 +417,7 @@ function DrillEditSection({
                         <MenuItem key={dt.value} value={dt.value}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name={dt.value} size={20} alt="" />
-                                {dt.label}
+                                {entityTypeLabel(dt.value, itemLabel)}
                             </Box>
                         </MenuItem>
                     ))}
@@ -477,7 +454,7 @@ function DrillEditSection({
                         <MenuItem key={m.id} value={m.id}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <FactorioIcon name={m.recipe || 'assembling-machine-3'} size={20} alt="" />
-                                {entityLabel('machine', m.id)}{m.recipe ? ` (${m.recipe})` : ''}
+                                {entityLabel('machine', m.id)}{m.recipe ? ` (${recipeLabel(m.recipe)})` : ''}
                             </Box>
                         </MenuItem>
                     ))}

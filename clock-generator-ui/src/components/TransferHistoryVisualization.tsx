@@ -2,29 +2,16 @@ import { Close, Fullscreen } from '@mui/icons-material';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
-import { BUTTON_NAMES } from '../utils/a11yLabels';
+import { useGameNames } from '../hooks/useGameNames';
+import { BUTTON_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
-import { COLOR_BLIND_PALETTE, COLOR_BLIND_PALETTE_ALL } from './colors';
+import { GameName } from './GameName';
+import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
+import { COLOR_BLIND_PALETTE, ITEM_COLOR_COUNT, TIMELINE_TRACK_COLOR, itemColorMap } from './colors';
+import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
 interface TransferHistoryVisualizationProps {
     transferHistory: SerializableTransferHistory;
-}
-
-/** Build a map of item names to colors, assigning each unique item a distinct color */
-function buildItemColorMap(entities: SerializableEntityTransferHistory[]): Map<string, string> {
-    const itemSet = new Set<string>();
-    entities.forEach(entity => {
-        entity.transfers.forEach(transfer => {
-            itemSet.add(transfer.item_name);
-        });
-    });
-
-    const colorMap = new Map<string, string>();
-    const sortedItems = Array.from(itemSet).sort();
-    sortedItems.forEach((item, index) => {
-        colorMap.set(item, COLOR_BLIND_PALETTE_ALL[index % COLOR_BLIND_PALETTE_ALL.length]);
-    });
-    return colorMap;
 }
 
 interface TransferBarProps {
@@ -37,15 +24,15 @@ interface TransferBarProps {
 function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferBarProps) {
     const startPercent = (transfer.start_tick / totalDuration) * 100;
     const widthPercent = ((transfer.end_tick - transfer.start_tick) / totalDuration) * 100;
-    const color = colorMap.get(transfer.item_name) ?? COLOR_BLIND_PALETTE_ALL[0];
+    const color = colorMap.get(transfer.item_name) ?? 'currentColor'; // unreachable: the map is built from these same transfers
 
     return (
         <Tooltip
             title={
                 <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                        <FactorioIcon name={transfer.item_name} size={16} />
-                        <Typography variant="body2">{transfer.item_name}</Typography>
+                        <FactorioIcon name={transfer.item_name} size={16} alt="" />
+                        <Typography variant="body2"><GameName id={transfer.item_name} /></Typography>
                     </Box>
                     <Typography variant="caption" display="block">
                         Amount: {transfer.amount}
@@ -64,8 +51,8 @@ function TransferBar({ transfer, totalDuration, rowHeight, colorMap }: TransferB
             <Box
                 sx={{
                     position: 'absolute',
-                    left: `${startPercent}%`,
-                    width: `${Math.max(widthPercent, 0.5)}%`,
+                    left: `min(${startPercent}%, calc(100% - ${MIN_MARK_PX}px))`,
+                    width: `max(${widthPercent}%, ${MIN_MARK_PX}px)`,
                     height: rowHeight - 4,
                     top: 2,
                     bgcolor: color,
@@ -91,6 +78,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProps) {
+    const { nameIdsIn } = useGameNames();
     // Collect unique items transferred by this entity
     const transferredItems = Array.from(new Set(entity.transfers.map(t => t.item_name))).sort();
 
@@ -104,15 +92,15 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                 <Tooltip
                     title={
                         <Box>
-                            <Typography variant="body2">{entity.label}</Typography>
+                            <Typography variant="body2">{nameIdsIn(entity.label)}</Typography>
                             {entity.source && (
                                 <Typography variant="caption" display="block">
-                                    From: {entity.source.label}
+                                    From: {nameIdsIn(entity.source.label)}
                                 </Typography>
                             )}
                             {entity.sink && (
                                 <Typography variant="caption" display="block">
-                                    To: {entity.sink.label}
+                                    To: {nameIdsIn(entity.sink.label)}
                                 </Typography>
                             )}
                             <Typography variant="caption" display="block">
@@ -137,7 +125,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                                 color: entity.entity_type === 'drill' ? COLOR_BLIND_PALETTE.orange : 'text.primary',
                             }}
                         >
-                            {entity.label}
+                            {nameIdsIn(entity.label)}
                         </Typography>
                         {/* Show total amount transferred */}
                         <Typography
@@ -169,7 +157,7 @@ function EntityRow({ entity, totalDuration, rowHeight, colorMap }: EntityRowProp
                     flex: 1,
                     height: rowHeight,
                     position: 'relative',
-                    bgcolor: 'action.hover',
+                    bgcolor: TIMELINE_TRACK_COLOR,
                     borderRadius: 0.5,
                 }}
             >
@@ -197,7 +185,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
     const drills = transferHistory.entities.filter(e => e.entity_type === 'drill');
 
     // Build color map - assign each unique item a distinct color
-    const colorMap = buildItemColorMap(transferHistory.entities);
+    const colorMap = itemColorMap(transferHistory.entities.flatMap(e => e.transfers.map(t => t.item_name)));
     const allItems = Array.from(colorMap.keys());
 
     // Calculate tick markers
@@ -210,7 +198,8 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
     const timelineContent = (isFullscreen: boolean) => (
         <>
             {/* Legend */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {allItems.map(item => (
                     <Box
                         key={item}
@@ -220,7 +209,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                             gap: 0.5,
                             px: 1,
                             py: 0.25,
-                            bgcolor: 'action.hover',
+                            bgcolor: TIMELINE_TRACK_COLOR,
                             borderRadius: 1,
                         }}
                     >
@@ -232,12 +221,19 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                                 borderRadius: 0.25,
                             }}
                         />
-                        <FactorioIcon name={item} size={14} />
-                        <Typography variant="caption">{item}</Typography>
+                        <FactorioIcon name={item} size={14} alt="" />
+                        <Typography variant="caption"><GameName id={item} /></Typography>
                     </Box>
                 ))}
             </Box>
+            {allItems.length > ITEM_COLOR_COUNT && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                    Colours repeat after {ITEM_COLOR_COUNT} items; the icons name each item.
+                </Typography>
+            )}
+            </Box>
 
+            <ScrollX label={SCROLL_REGION_NAMES.transferTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
             {/* Tick markers */}
             <Box sx={{ display: 'flex', mb: 0.5 }}>
                 <Box sx={{ width: 200, flexShrink: 0 }} />
@@ -295,6 +291,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                     ))}
                 </Box>
             )}
+            </ScrollX>
         </>
     );
 
@@ -302,7 +299,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
         <>
             <Paper sx={{ p: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6" component="h2">
+                    <Typography variant="h6" component="h3">
                         Transfer Activity Timeline
                     </Typography>
                     <Tooltip title="Open fullscreen">

@@ -9,7 +9,7 @@ import InputLabel from '@mui/material/InputLabel';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { FIELD_DECIMALS, shownNumberText } from '../utils/numberText';
+import { FIELD_DECIMALS, NUMBER_FIELD_INPUT_FORMAT, isUneditedPrecisionLoss, shownNumberText } from '../utils/numberText';
 
 /**
  * This component is a placeholder for FormControl to correctly set the shrink label state on SSR.
@@ -25,9 +25,17 @@ interface NumberFieldProps extends BaseNumberField.Root.Props {
     size?: 'small' | 'medium';
     error?: boolean;
     helperText?: string;
+    placeholder?: string;
+    /**
+     * What is wrong with the value, under the helper text, which then stays as it is: the field is marked invalid and
+     * the line is in the lighter red (the error red is 4.4:1 on a card, under the 4.5 text needs)
+     */
+    problem?: string | null;
     sx?: SxProps<Theme>;
     /** Decimals shown while the field is not focused; the full value shows on focus and is the one stored */
     displayDecimals?: number;
+    /** Keep an invalid value legible while blurred, without changing the stored number. */
+    preserveInputOnBlur?: boolean;
 }
 
 export function NumberField({
@@ -35,6 +43,8 @@ export function NumberField({
     label,
     error,
     helperText,
+    placeholder,
+    problem,
     size = 'medium',
     sx,
     min,
@@ -42,6 +52,7 @@ export function NumberField({
     onValueChange,
     format,
     displayDecimals = FIELD_DECIMALS,
+    preserveInputOnBlur = false,
     ...other
 }: NumberFieldProps) {
     let id = React.useId();
@@ -49,11 +60,8 @@ export function NumberField({
         id = idProp;
     }
 
-    // Default format to preserve high precision decimals
-    const effectiveFormat: Intl.NumberFormatOptions = format ?? {
-        maximumFractionDigits: 20,
-        useGrouping: false,
-    };
+    const effectiveFormat = format ?? NUMBER_FIELD_INPUT_FORMAT;
+    const editedSinceFocus = React.useRef(false);
 
     // Compute validation error message
     const [validationError, setValidationError] = React.useState<string | null>(null);
@@ -70,6 +78,14 @@ export function NumberField({
 
     const handleValueChange = React.useCallback<NonNullable<BaseNumberField.Root.Props['onValueChange']>>(
         (value: number | null, eventDetails) => {
+            if (isUneditedPrecisionLoss({
+                value: other.value, nextValue: value, reason: eventDetails.reason,
+                edited: editedSinceFocus.current, customFormat: format !== undefined, min, max,
+            })) {
+                // Cancel only Base UI's no-edit blur quantization; its controlled-value sync restores the full input text.
+                eventDetails.cancel();
+                return;
+            }
             // Validate against min/max
             if (value !== null) {
                 if (min !== undefined && value < min) {
@@ -86,11 +102,12 @@ export function NumberField({
             // Call original onValueChange if provided
             onValueChange?.(value, eventDetails);
         },
-        [min, max, onValueChange]
+        [min, max, onValueChange, other.value, format]
     );
 
-    const hasError = error || Boolean(validationError);
+    const hasError = error || Boolean(validationError) || Boolean(problem);
     const displayHelperText = validationError || helperText;
+    const describedBy = [displayHelperText && `${id}-helper`, problem && `${id}-problem`].filter(Boolean).join(' ') || undefined;
 
     return (
         <BaseNumberField.Root
@@ -119,9 +136,11 @@ export function NumberField({
             <InputLabel htmlFor={id}>{label}</InputLabel>
             <BaseNumberField.Input
                 id={id}
+                placeholder={placeholder}
                 render={(props, state) => {
                     const shown = shownNumberText({
                         focused,
+                        preserveInputOnBlur,
                         value: state.value,
                         inputValue: state.inputValue,
                         maxDecimals: displayDecimals,
@@ -137,10 +156,14 @@ export function NumberField({
                                 props.onBlur?.(e);
                                 setFocused(false);
                             }}
-                            onChange={props.onChange}
+                            onChange={(e) => {
+                                editedSinceFocus.current = true;
+                                props.onChange?.(e);
+                            }}
                             onKeyUp={props.onKeyUp}
                             onKeyDown={props.onKeyDown}
                             onFocus={(e) => {
+                                editedSinceFocus.current = false;
                                 props.onFocus?.(e);
                                 const input = e.currentTarget;
                                 const allSelected = input.value !== ''
@@ -155,7 +178,9 @@ export function NumberField({
                                     // the input slot's props are spread over the value above, so it is set again here
                                     value: shown,
                                     title: shown !== state.inputValue ? state.inputValue : undefined,
-                                    'aria-describedby': displayHelperText ? `${id}-helper` : undefined,
+                                    'aria-describedby': describedBy,
+                                    // the input slot's props come from the number field, which does not say it is invalid
+                                    'aria-invalid': hasError || undefined,
                                 },
                             }}
                             endAdornment={
@@ -200,8 +225,19 @@ export function NumberField({
                 }}
             />
             {displayHelperText && (
-                <FormHelperText id={`${id}-helper`} sx={{ ml: 0, '&:empty': { mt: 0 } }}>
+                <FormHelperText
+                    id={`${id}-helper`}
+                    // with a problem line of its own the helper text is not the problem: it keeps its colour
+                    error={problem && !error && !validationError ? false : undefined}
+                    sx={{ ml: 0, '&:empty': { mt: 0 } }}
+                >
                     {displayHelperText}
+                </FormHelperText>
+            )}
+            {problem && (
+                // not a live region: it is read with the field, and the workflow bar's note names it too
+                <FormHelperText id={`${id}-problem`} sx={{ ml: 0, mt: 0.5, '&, &.Mui-error': { color: 'error.light' } }}>
+                    {problem}
                 </FormHelperText>
             )}
         </BaseNumberField.Root>

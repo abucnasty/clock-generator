@@ -89,6 +89,7 @@ export function RuleSetEditor({
                     exclusive
                     onChange={handleOperatorChange}
                     size="small"
+                    sx={{ '& .MuiToggleButton-root': { minWidth: 44 } }}
                 >
                     <ToggleButton value={RuleOperator.AND}>AND</ToggleButton>
                     <ToggleButton value={RuleOperator.OR}>OR</ToggleButton>

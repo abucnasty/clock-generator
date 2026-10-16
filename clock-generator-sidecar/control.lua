@@ -83,6 +83,9 @@ local function on_gui_click(event)
         end
     elseif element.name == "clock_generator_sidecar_close" then
         gui.destroy_all(player, player_data)
+    elseif element.name == "clock_generator_sidecar_select_all" then
+        -- Select the JSON again, in case the player clicked away from it
+        gui.select_json(player)
     elseif element.name == "clock_generator_sidecar_copy_close" then
         -- Close just the copy popup
         local copy_frame = player.gui.screen[gui.COPY_GUI_NAME]

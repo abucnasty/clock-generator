@@ -15,8 +15,9 @@
 // size does not matter, and shoot a running generation with `captureInFlight` instead of waiting for it to end.
 import { chromium } from 'playwright-core';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 export const DEFAULT_BASE = process.env.BASE_URL ?? 'http://localhost:5199';
@@ -40,7 +41,7 @@ export const LOGISTIC = sample('science/logistic-science/logistic-science.json')
 /**
  * The build whose generation finishes fastest: use it where the build's size does not matter (a dialog, a header, a
  * chip, a colour). Timed once against `vite preview` on 2026-10-14, in the page, from the click on Generate to "Generating..."
- * gone (Validate takes 20 to 40 ms for every one of them):
+ * gone (the check, Check only, takes 20 to 40 ms for every one of them):
  *   science/logistic-science/logistic-science-sample.json                0.22 s  <- SMALL_SAMPLE (1.0 KB, the smallest)
  *   science/logistic-science/logistic-science-shared-inserter.json       0.22 s
  *   science/logistic-science/logistic-science.json (LOGISTIC)             0.23 s
@@ -56,6 +57,8 @@ export const LOGISTIC = sample('science/logistic-science/logistic-science.json')
  * do not depend on the build's size; its Results are short, so use LOGISTIC for layout checks.
  */
 export const SMALL_SAMPLE = sample('science/logistic-science/logistic-science-sample.json');
+/** Below-target warning fixture: logistic science, fast/normal/4; historical engine run selected 120/s of 240/s, unstable, 131ms. Recheck on final engine. */
+export const BELOW_TARGET_SAMPLE = fileURLToPath(new URL('./fixtures/logistic-science-below-target-fast.json', import.meta.url));
 
 /**
  * A build whose generation takes about 2.6 s (military science, 5 copies at 120/s): long enough for `captureInFlight` to
@@ -65,6 +68,14 @@ export const SLOW_SAMPLE = sample('science/military-science/military-science-1-i
 
 /** The viewport height used with a width: 844 at 390 (a phone), 900 otherwise */
 export const heightFor = (width) => (width === 390 ? 844 : 900);
+
+// Width contexts share one system clipboard. Hold the complete write/action/read sequence, including resets.
+let clipboardTail = Promise.resolve();
+export function withClipboard(fn) {
+    const run = clipboardTail.then(fn, fn);
+    clipboardTail = run.catch(() => {});
+    return run;
+}
 
 const pad = (i) => String(i).padStart(2, '0');
 const firstLine = (e) => String(e?.message ?? e).split('\n')[0];
@@ -390,12 +401,12 @@ export async function forWidths(widths, fn, { out, base = DEFAULT_BASE, goto = t
 
 // ------------------------------------------------------------------------------------------------------ app actions
 
-/** Imports a config through the hidden file input of the app bar, and waits until the Validate button is usable */
+/** Imports a config through the hidden file input of the app bar, and waits until the Check only button is usable */
 export async function importFile(page, path) {
     await page.setInputFiles('input[type=file]', path);
     await page.waitForTimeout(400);
     await page
-        .waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^validate/i.test(b.textContent ?? '') && !b.disabled), null, { timeout: 5000 })
+        .waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^check only/i.test(b.textContent ?? '') && !b.disabled), null, { timeout: 5000 })
         .catch(() => {});
     await page.waitForTimeout(300);
 }
@@ -441,39 +452,48 @@ function buttonLabelGone(page, label, timeout) {
     );
 }
 
-/** The status chip of the workflow bar ("Valid", "Invalid", "Changed since validation"), or '' */
-const validationChip = (page) =>
-    page.evaluate(() => [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '');
+/** The check's chip in the workflow bar ("Check passed", "Check failed"), or '' */
+const checkChip = (page) =>
+    page.evaluate(() => [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Check passed|Check failed)$/.test(t)) ?? '');
 
-/** Clicks Validate and waits until validating has finished (the status chip changed, or the busy label came and went) */
+/**
+ * Clicks "Check only" (the check without a generation, which used to be Validate) and waits until checking has finished
+ * (the chip changed, or the busy label "Checking..." came and went)
+ */
 export async function validate(page, { timeout = 120_000 } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
-    const before = await validationChip(page);
-    await page.getByRole('button', { name: 'Validate', exact: true }).first().click();
-    // A fast run may skip the busy label: then the chip changes, or (validating again) nothing does; give that 1 s.
+    const before = await checkChip(page);
+    await page.getByRole('button', { name: 'Check only', exact: true }).first().click();
+    // A fast run may skip the busy label: then the chip changes, or (checking again) nothing does; give that 1 s.
     await page
         .waitForFunction(
             ([text, chip]) => {
                 const busy = [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text));
-                const now = [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Valid|Invalid|Changed since validation)$/.test(t)) ?? '';
+                const now = [...document.querySelectorAll('.MuiChip-label')].map((c) => c.textContent ?? '').find((t) => /^(Check passed|Check failed)$/.test(t)) ?? '';
                 return busy || now !== chip;
             },
-            ['Validating...', before],
+            ['Checking...', before],
             { timeout: 1000 },
         )
         .catch(() => {});
-    await buttonLabelGone(page, 'Validating...', timeout);
+    await buttonLabelGone(page, 'Checking...', timeout);
     await page.waitForTimeout(300);
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
-/** Clicks Generate (which opens the Results tab) and waits until generating has finished */
+/**
+ * Clicks Generate and waits until generating has finished. Generate checks the build first when it has no passed check
+ * ("Checking..."), then generates ("Generating...", on the Results tab); it waits until neither label shows. A build with
+ * a problem or a failed check goes to Configure instead, and nothing is generated.
+ */
 export async function generate(page, { timeout = GEN_TIMEOUT } = {}) {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole('button', { name: 'Generate', exact: true }).click();
-    await page
-        .waitForFunction((text) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(text)), 'Generating...', { timeout: 5000 })
-        .catch(() => {}); // a fast run may skip the busy label
+    const busyLabel = (text) => page.waitForFunction((t) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').includes(t)), text, { timeout: 5000 });
+    await Promise.any([busyLabel('Checking...'), busyLabel('Generating...')]).catch(() => {}); // a fast run may skip both
+    await buttonLabelGone(page, 'Checking...', timeout);
+    // after a check that passed, the generation follows at once
+    await busyLabel('Generating...').catch(() => {});
     await buttonLabelGone(page, 'Generating...', timeout);
     await page.waitForTimeout(500);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -482,7 +502,7 @@ export async function generate(page, { timeout = GEN_TIMEOUT } = {}) {
 /**
  * Shoots the state while a generation is running, without waiting for it to end: clicks Generate, waits until the
  * progress bar is on screen, shoots `name`, then reloads the page (which drops the run). The page is left on a fresh load
- * with the imported build restored by the app; validate again before generating again.
+ * with the imported build restored by the app (and no check: Generate checks it again first).
  *
  * Needs a run that lasts longer than the shot (about 0.1 s; CPU throttling slows the shot as much as the run, so it
  * does not help). The small samples finish in 0.25 s, too fast: import `SLOW_SAMPLE` (2.6 s) for this state. If
@@ -501,7 +521,7 @@ export async function captureInFlight(page, rec, name, { desc = '', fullPage = f
             () =>
                 new Promise((resolve, reject) => {
                     const button = [...document.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === 'Generate');
-                    if (!button || button.disabled) return reject(new Error('the Generate button is missing or disabled (validate first)'));
+                    if (!button || button.disabled) return reject(new Error('the Generate button is missing or disabled (something is running)'));
                     const barShown = () => [...document.querySelectorAll('.MuiLinearProgress-root')].some((bar) => bar.getBoundingClientRect().width > 0);
                     const timer = setTimeout(() => reject(new Error('no progress bar within 10 s of clicking Generate')), 10_000);
                     const observer = new MutationObserver(() => {
@@ -1208,7 +1228,7 @@ async function announcedOnce(page, source, flags, isRegex) {
 /** The axe rules `checkAxe` runs by default (ids checked against axe-core 4.14) */
 export const AXE_RULES = [
     'nested-interactive', 'duplicate-id-aria', 'button-name', 'select-name', 'label', 'aria-input-field-name',
-    'aria-toggle-field-name', 'aria-valid-attr-value', 'aria-allowed-role', 'target-size', 'landmark-one-main', 'region',
+    'aria-toggle-field-name', 'aria-valid-attr-value', 'aria-allowed-role', 'target-size', 'landmark-one-main', 'landmark-unique', 'region',
     'empty-table-header', 'heading-order',
 ];
 
@@ -1381,4 +1401,308 @@ export async function checkMouseActivationVisible(rec, page, locator, label) {
         changes.length > 0,
         changes.length ? changes.join('; ') : `nothing changed in the viewport (scrollY ${after.scrollY}, focus ${after.focus ? `${after.focus.desc}, ring ${after.focus.ring}` : 'none'})`,
     );
+}
+
+// ======================================================================================== ui map and shared UI helpers
+// Added after Phase 2 began. Rule: scripts find controls only through `ui` and `itemLabel`, and open tooltips and menus only with
+// `openTooltip` / `openMoreMenu` / `chooseMenuItem`. An item that renames a control updates `ui` in the same commit.
+// Every `ui` entry is a function `(page, ...args) => Locator` (never awaited, so it can be chained and counted). Entries that
+// the app shows only in some states resolve to 0 elements elsewhere; the comment says when.
+
+const btn = (page, name, exact = true) => page.getByRole('button', { name, exact });
+/** A Configure card: the Paper that holds the card's h2 (the innermost one, so a wrapping Paper is not taken) */
+const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
+
+export const ui = {
+    // ---- 2.F factual copy capture (additive; existing aliases remain)
+    copyIntroSentence: p => ui.introCard(p).locator('p').first(),
+    copyIntroAction: (p, name) => ui.introCard(p).getByRole('button', { name, exact: true }),
+    copyWakeView: p => p.locator('[data-wake-view]'),
+    copyWakeDefinition: (p, term) => ui.copyWakeView(p).locator('dt').filter({ hasText: new RegExp(`^${term}$`) }).locator('xpath=following-sibling::dd[1]'),
+    copyWakeSummary: p => ui.copyWakeView(p).locator('[data-wake-summary]'),
+    copyTermsEntry: (p, term) => ui.termsPopover(p).locator('dt').filter({ hasText: new RegExp(`^${term}(?: \\(provisional\\))?$`) }).locator('xpath=following-sibling::dd[1]'),
+    copyTermsTerm: (p, term) => ui.termsPopover(p).locator('dt').filter({ hasText: new RegExp(`^${term}(?: \\(provisional\\))?$`) }),
+    copyTermsClose: p => ui.termsPopover(p).getByRole('button', { name: 'Close terms', exact: true }),
+    copyWakeHeaderHelp: p => ui.clockTable(p).getByRole('button', { name: /^About Wake-ups\/min \(1\s+copy\)$/ }),
+    copyWakeHelpDialog: p => p.getByRole('dialog', { name: /^About Wake-ups\/min \(1\s+copy\)$/ }),
+    copyWakeHelpText: p => ui.copyWakeHelpDialog(p).locator('p'),
+    copyWakeHelpClose: p => ui.copyWakeHelpDialog(p).getByRole('button', { name: 'Close', exact: true }),
+    copyTile: (p, label) => ui.resultsCard(p).locator(`[data-summary-tile="${label}"]`),
+    copyTileValue: (p, label) => ui.copyTile(p, label).locator('[data-tile-value]'),
+    copyTileSub: (p, label) => ui.copyTile(p, label).locator('[data-tile-sub]'),
+    copyFinishedRecommendation: p => ui.resultsCard(p).locator('[data-card-chip]').getByText('Recommended', { exact: true }),
+
+    // ---- Upstream 0.15 compatibility (owner: upstream compatibility)
+
+    compatFile: p => p.locator('input[type=file]'),
+    compatCopiesProblem: p => p.locator('#target-copies-problem'),
+    compatCopiesHelper: p => p.locator('#target-copies-helper'),
+    compatMachineRow: (p,id) => p.getByRole('group', { name: `Machine ${id}`, exact: true }),
+    compatMachineSpeed: (p,id) => ui.compatMachineRow(p,id).getByRole('textbox', { name: 'Crafting Speed', exact: true }),
+    compatMachineSpeedStep: (p,id,name) => ui.compatMachineRow(p,id).locator('.MuiFormControl-root').filter({ has: p.getByRole('textbox', { name: 'Crafting Speed', exact: true }) }).getByRole('button', { name, exact: true }),
+    compatTooltips: p => p.getByRole('tooltip', { includeHidden: true }),
+    compatInserterRow: (p, id) => p.getByRole('group', { name: `Inserter ${id}`, exact: true }),
+    compatSource: (p,id) => ui.compatInserterRow(p,id).getByRole('combobox', { name: /^Source/ }),
+    compatDestination: (p,id) => ui.compatInserterRow(p,id).getByRole('combobox', { name: /^Destination/ }),
+    compatStack: (p, id) => p.locator(`#inserter-stack-size-${id}`),
+    compatMetadata: (p, id) => ui.compatInserterRow(p, id).getByText(/(?:bulk|fast|stack) inserter.*(?:normal|legendary)|(?:normal|legendary).*(?:bulk|fast|stack) inserter/i).last(),
+    compatAutomatic: (p, id, size) => ui.compatInserterRow(p, id).getByText(new RegExp(`Automatic.*\\b${size}\\b|\\b${size}\\b.*Automatic`, 'i')).last(),
+    compatTypeQualityControls: (p,id) => ui.compatInserterRow(p,id).getByRole('combobox', { name: /type|quality/i }),
+    compatFacts: p => p.getByRole('button', { name: /^Machine Facts/ }).first(),
+    compatFactsRate: p => ui.compatFacts(p).locator('.MuiChip-root').first(),
+    compatInserterNode: (p, id) => ui.diagram(p).getByRole('group', { name: new RegExp(`^Inserter ${id},`) }),
+    compatEditor: p => p.getByRole('dialog', { name: /^Inserter 1$/i }),
+    compatEditorStack: p => ui.compatEditor(p).locator('#diagram-inserter-stack-size-1'),
+    compatEditorAuto: (p, size) => ui.compatEditor(p).getByText(new RegExp(`Automatic.*\\b${size}\\b|\\b${size}\\b.*Automatic`, 'i')).last(),
+    compatEditorMetadata: p => ui.compatEditor(p).getByText(/bulk inserter.*normal|normal.*bulk inserter/i).last(),
+    compatSave: p => ui.compatEditor(p).getByRole('button', { name: 'Save', exact: true }),
+    compatCancel: p => ui.compatEditor(p).getByRole('button', { name: 'Cancel', exact: true }),
+    compatError: p => p.locator('#validation-error'),
+    compatCheckChip: (p, verdict) => p.getByRole('banner').getByText(`Check ${verdict}`, { exact: true }),
+    compatExamples: p => p.getByRole('dialog', { name: 'Try an example', exact: true }),
+    compatExampleRows: p => ui.compatExamples(p).getByRole('button').filter({ hasNotText: /^Cancel$/ }),
+    compatExample: (p, name) => ui.compatExamples(p).getByRole('button', { name }),
+    compatDialogCancel: p => ui.compatExamples(p).getByRole('button', { name: 'Cancel', exact: true }),
+    compatImportConfirm: p => p.getByRole('dialog').filter({ has: p.getByRole('button', { name: 'Import Selected', exact: true }) }),
+    compatImportSelected: p => ui.compatImportConfirm(p).getByRole('button', { name: 'Import Selected', exact: true }),
+    compatShareConfirm: p => p.getByRole('dialog', { name: 'Open a shared build?', exact: true }),
+    compatOpenShared: p => ui.compatShareConfirm(p).getByRole('button', { name: /^Open build$/ }),
+    compatBody: p => p.locator('body'),
+    compatMain: p => p.getByRole('main'),
+
+    // ---- workflow bar and header
+    /** Generate (the workflow bar). Label while busy: "Checking..." / "Generating..." (owner: 1.5 workflow bar) */
+    generate: (page) => btn(page, 'Generate'),
+    /** Check only. The workflow bar's button, which is the first; Configure repeats one at its foot (owner: 1.5 workflow bar) */
+    checkOnly: (page) => btn(page, 'Check only').first(),
+    /** Copy blueprint in the header. Its name can carry the rate ("Copy blueprint (192/s, below target)"); it exists on Results only (owner: 2.2 Copy) */
+    copyBlueprint: (page) => page.getByRole('banner').getByRole('button', { name: /^Copy blueprint/ }),
+    /** Configure / Results toggle: pass 'Configure' or 'Results' (owner: 1.1 workflow bar) */
+    viewToggle: (page, which) => page.getByRole('group', { name: 'Configure the build or look at its results' }).getByRole('button', { name: which, exact: true }),
+    /** The Results tabs: Details has 'Insights', 'Fuel' (a fuel build) and 'Blueprint string'; Developer tools (when on) 'Timelines' and 'Log' (owner: 2.5 B results) */
+    resultsTab: (page, name) => page.getByRole('tab', { name, exact: true }),
+
+    // ---- the ⋮ menu and what moves into it
+    /** The ⋮ button (BUTTON_NAMES.moreOptions) (owner: 1.7 header) */
+    menuButton: (page) => btn(page, 'More options'),
+    /** The open ⋮ menu; 0 while it is closed (owner: 1.7 header) */
+    menu: (page) => page.getByRole('menu', { name: 'More options' }),
+    /** Includes the exiting menu's modal layer after its contents leave the accessibility tree (owner: capture tooling). */
+    menuLayer: (page) => page.locator('.MuiPopover-root').filter({ has: page.getByRole('menu', { name: 'More options', includeHidden: true }) }),
+    /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Try an example…, Getting started, Terms, Developer tools (a menuitemcheckbox: use developerToolsItem), Reset build (owner: 2.1 first visit, 2.5 B) */
+    menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
+    /** Paste from Factorio: the filled button in the header at every width; it reads "Paste" below 600 px, with the same name (owner: 2.1 first visit) */
+    pasteFromFactorio: (page) => page.getByRole('banner').getByRole('button', { name: 'Paste from Factorio', exact: true }),
+    /** Reset build: ⋮ menu item at every width (owner: 2.1 first visit) */
+    reset: (page) => ui.menuItem(page, 'Reset build'),
+    /** Open build file… (was Import Config): ⋮ menu item at every width; resolves only while the menu is open, so use chooseMenuItem (owner: 2.1 first visit) */
+    importConfig: (page) => ui.menuItem(page, 'Open build file…'),
+    /** Save build file (was Export Config): ⋮ menu item at every width (see importConfig) (owner: 2.1 first visit) */
+    exportConfig: (page) => ui.menuItem(page, 'Save build file'),
+    /** The intro card above Target Output: shown on a blank build until closed, and from Getting started in the ⋮ menu (owner: 2.1 first visit) */
+    introCard: (page) => page.getByRole('region', { name: 'Make a clock for your build' }),
+
+    // ---- Configure
+    /** The Advanced accordion button (was "Advanced Overrides (Optional)"); collapsed on a first visit and after Import, Paste, Reset (owner: 2.7 B) */
+    advancedOverrides: (page) => btn(page, /^Advanced\b/),
+    /** The Build card (an h2 "Build" Panel; its title bar holds the List/Diagram toggle) (owner: 2.7 B) */
+    buildCard: (page) => page.getByRole('main').getByRole('region', { name: 'Build', exact: true }),
+    /**
+     * A Configure card or section by key: 'target' (the Target Output card), 'build' (the Build card), or a section of the
+     * Build card: 'machines' | 'inserters' | 'belts' (Belts (n)) | 'chests' (Chests (n), 0 while there are none: see
+     * addChestRow) | 'drills' (Mining drills, which holds the addDrillRow while there are none) (owner: 2.7 B)
+     */
+    card: (page, key) => {
+        if (key === 'target') return card(page, /^Target Output/);
+        if (key === 'build') return ui.buildCard(page);
+        const name = { machines: /^Machines \(/, inserters: /^Inserters \(/, belts: /^Belts \(/, chests: /^Chests \(/, drills: /^Mining drills/ }[key] ?? new RegExp(`^${key}`, 'i');
+        return page.getByRole('main').getByRole('region', { name });
+    },
+    /** The Add button of a section by key: 'machines' | 'inserters' | 'belts' | 'drills' ("Add mining drill": the header button while drills are listed, else the Add row, addDrillRow). Target Output has none (0). Chests: see addChest (owner: 2.7 B) */
+    add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add mining drill' }[key] ?? `Add ${key}`),
+    /** While there are chests: the Chests section's add buttons, by type 'buffer' (default) or 'infinity'; 0 with none (see addChestRow) (owner: 2.7 B) */
+    addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity chest' : 'Buffer chest'),
+    /** With no chests: the dashed "Add chest" row, which opens a menu (see addChestMenuItem); 0 once there is a chest (owner: 2.7 B) */
+    addChestRow: (page) => btn(page, 'Add chest'),
+    /** An item of the "Add chest" row's menu: 'buffer' (default) or 'infinity'; 0 while the menu is closed (owner: 2.7 B) */
+    addChestMenuItem: (page, kind = 'buffer') => page.getByRole('menuitem', { name: kind === 'infinity' ? 'Infinity chest' : 'Buffer chest', exact: true }),
+    /** With no drills (and productivity level 0): the dashed "Add mining drill" row; 0 once there is a drill (owner: 2.7 B) */
+    addDrillRow: (page) => btn(page, 'Add mining drill'),
+    /** Target Output's Items per Second input (ELEMENT_IDS.targetRate) (owner: 1.10 numbers) */
+    targetRate: (page) => page.locator('#target-items-per-second'),
+    /** Target Output's Copies input (ELEMENT_IDS.targetCopies) (owner: 1.10 numbers) */
+    targetCopies: (page) => page.locator('#target-copies'),
+    /** The problem line under Items per Second when the target is more than the machines can make; 0 otherwise (owner: 2.1 W rate limit) */
+    targetRateProblem: (page) => page.locator('#target-items-per-second-problem'),
+
+    // ---- the workflow bar's problems
+    /** The note under the bar's buttons (ELEMENT_IDS.blockReason): the first problem, the failed check or where to start; 0 when none (owner: 1.4 first problem) */
+    barNote: (page) => page.getByRole('banner').locator('#workflow-block-reason'),
+    /** The red "N problems" chip in the bar, named "N problems. Go to the first one."; 0 when nothing blocks (owner: 1.4 first problem) */
+    problemCount: (page) => page.getByRole('banner').getByRole('button', { name: /^\d+ problems?\. Go to the first one\.$/ }),
+
+    // ---- Results
+    /** The Clocks table (CLOCK_TABLE_NAME); Results only (owner: 2.x clock table) */
+    clockTable: (page) => page.getByRole('table', { name: 'Clocks', exact: true }),
+    /** The Clocks table's body rows; pass an index for one row (owner: 2.x clock table) */
+    clockRows: (page, index) => {
+        const rows = ui.clockTable(page).locator('tbody tr');
+        return index === undefined ? rows : rows.nth(index);
+    },
+    /** The Results answer card, headed "Your clock"; 0 until item 2.6 (results answer) is on the branch (owner: 2.6 results answer) */
+    resultsCard: (page) => card(page, /^Your clock$/),
+    /** The h2 of the clocks to compare (was "Clocks"); the table inside keeps the name "Clocks" (owner: 2.5 B results) */
+    compareHeading: (page) => page.getByRole('main').getByRole('heading', { name: 'Compare other clocks', level: 2, exact: true }),
+    /** Show all columns: toggles the compact clock table and the full one; same name both ways, the state is aria-expanded (owner: 2.5 B results) */
+    showAllColumns: (page) => page.getByRole('main').getByRole('button', { name: 'Show all columns', exact: true }),
+    /** The h2 of Details (tabs Insights, Fuel for a fuel build, Blueprint string: use resultsTab) (owner: 2.5 B results) */
+    detailsHeading: (page) => page.getByRole('main').getByRole('heading', { name: 'Details', level: 2, exact: true }),
+    /** The h2 of Developer tools (tabs Timelines and Log); 0 while the tools are off (owner: 2.5 B results) */
+    developerTools: (page) => page.getByRole('main').getByRole('heading', { name: 'Developer tools', level: 2, exact: true }),
+    /** ⋮ > Developer tools, a menuitemcheckbox (aria-checked); resolves only while the menu is open (owner: 2.5 B results) */
+    developerToolsItem: (page) => page.getByRole('menuitemcheckbox', { name: 'Developer tools', exact: true }),
+    /** ⋮ > Terms; resolves only while the menu is open, so use chooseMenuItem(page, 'Terms') (owner: 2.5 B results) */
+    termsItem: (page) => ui.menuItem(page, 'Terms'),
+    /** The Terms popover (role dialog, named "Terms") from ⋮ > Terms; the (i) by a clock table header opens one named "Terms for <column>" (owner: 2.5 B results) */
+    termsPopover: (page) => page.getByRole('dialog', { name: 'Terms', exact: true }),
+
+    // ---- phase-end walkthrough controls (additive selector ownership; no action/helper changes)
+    /** Footer version button (owner: App changelog). */
+    changelog: (page) => page.getByRole('button', { name: /^v\d/ }).and(page.getByTitle('View changelog')),
+    /** Recipe combobox by owning entity; same key/signature as the Phase 3 ui map (owner: 2.8 names). */
+    recipeField: (page, owner) => page.getByRole('combobox', { name: `Recipe, ${owner}`, exact: true }),
+    /** Row enable chip; same key/signature as the Phase 3 ui map (owner: 1.13). */
+    enableChip: (page, entityLabel) => page.getByRole('button', { name: new RegExp(`, ${entityLabel}\\. Edit rule$`) }),
+    /** An accessible diagram node, by its current name (owner: 2.11 diagram). */
+    diagramNode: (page, name) => ui.diagram(page).getByRole('group', typeof name === 'string' ? { name, exact: true } : { name }),
+    /** Developer timeline run toggle, only while the Timelines tab is selected (owner: 2.5 B). */
+    timelineRun: (page, name) => page.getByRole('group', { name: 'Simulation shown in the timelines', exact: true }).getByRole('button', { name, exact: true }),
+    /** Click help for a displayed clock; it opens a named dialog, not a hover tooltip (owner: 2.7 A). */
+    clockHelp: (page) => ui.clockTable(page).getByRole('button', { name: /^About / }),
+    /** Show hidden unstable clocks (owner: 1.6 clock pick). */
+    showUnstable: (page) => page.getByRole('button', { name: /^Show \d+ unstable clock/ }),
+    /** Header stale-copy action; separate from copyBlueprint's fresh-results contract (owner: 1.1). */
+    copyOldClock: (page) => page.getByRole('banner').getByRole('button', { name: /^Copy old clock/ }),
+
+    // ---- messages
+    /** The message on screen (the Snackbar carries data-message); 0 when none shows (owner: 1.5 messages) */
+    message: (page) => page.locator('[data-message]'),
+    /** The Undo button inside the message; 0 when the message has none, or Undo ended (owner: 1.5 messages, F) */
+    messageUndo: (page) => ui.message(page).getByRole('button', { name: 'Undo', exact: true }),
+    /** The message's Close button (owner: 1.5 messages) */
+    messageClose: (page) => ui.message(page).getByRole('button', { name: 'Close', exact: true }),
+
+    // ---- Diagram
+    /** List / Diagram view buttons of the Configure cards (owner: 1.x diagram) */
+    listView: (page) => btn(page, /^List view/),
+    diagramView: (page) => btn(page, /^Diagram (?:beta )?view/),
+    /** The diagram canvas (React Flow); 0 in List view (owner: 1.x diagram) */
+    diagram: (page) => page.getByRole('main').locator('.react-flow').first(),
+    /** The diagram's Fullscreen button; 0 in List view (owner: 1.x diagram) */
+    diagramFullscreen: (page) => btn(page, 'Fullscreen'),
+    /** The fullscreen dialog; 0 until Fullscreen is pressed (owner: 1.x diagram) */
+    diagramDialog: (page) => page.getByRole('dialog'),
+    /** The diagram's fullscreen dialog's close button, named "Exit fullscreen" (the timelines' dialogs use "Close fullscreen" instead) (owner: 1.x diagram) */
+    diagramClose: (page) => ui.diagramDialog(page).getByRole('button', { name: 'Exit fullscreen', exact: true }),
+};
+
+let namesCache;
+/** The `names` key of data-filtered.json (game id -> in-game name), or {} while the file has none */
+function gameNames() {
+    if (namesCache) return namesCache;
+    namesCache = {};
+    try {
+        const file = join(UI_DIR, '..', 'clock-generator', 'resources', 'data-filtered.json');
+        if (existsSync(file)) namesCache = JSON.parse(readFileSync(file, 'utf8')).names ?? {};
+    } catch {
+        /* no names: the id is shown */
+    }
+    return namesCache;
+}
+
+/**
+ * What the UI shows for a game id. TODO(2.8 a/b): the app switches from the id to the in-game name; until the data file has a
+ * `names` key (branch feat/ux-rework-p2-item-names adds it) this is the id itself. Once it has, this reads the name from it, so
+ * scripts do not change. Set UI_DIR to the checkout whose build you are driving.
+ */
+export function itemLabel(id) {
+    // the data file keys the names by kind ({ item: {...}, recipe: {...} }, 2.8 a); a flat map is read as it is
+    const names = gameNames();
+    const entry = names.item?.[id] ?? names[id];
+    return typeof entry === 'string' ? entry : (entry?.name ?? id);
+}
+
+/**
+ * Hovers and focuses `locator`, waits for a visible `[role=tooltip]` and returns it (the first visible one). Leaves the mouse
+ * there; move it away (`page.mouse.move(0, 0)`) before a shot. Throws a clear error naming the control when no tooltip opens.
+ */
+export async function openTooltip(page, locator, { timeout = 5000 } = {}) {
+    const what = String(locator);
+    try {
+        await locator.first().scrollIntoViewIfNeeded({ timeout });
+    } catch (e) {
+        throw new Error(`openTooltip: ${what} is not on the page (${firstLine(e)})`);
+    }
+    await locator.first().hover({ timeout });
+    await locator.first().focus({ timeout: 1000 }).catch(() => {}); // not focusable: the hover is enough
+    const tip = page.locator('[role=tooltip]:visible').first();
+    try {
+        await tip.waitFor({ state: 'visible', timeout });
+    } catch {
+        const seen = await page.locator('[role=tooltip]').allTextContents();
+        throw new Error(`openTooltip: no visible [role=tooltip] within ${timeout} ms after hover and focus on ${what} (tooltips in the DOM: ${seen.length ? JSON.stringify(seen) : 'none'})`);
+    }
+    return tip;
+}
+
+/** Opens the ⋮ menu if it is not open, waits until it is visible and returns it. Like `openMenu`, but it waits for the menu itself and not a fixed 300 ms */
+export async function openMoreMenu(page, { timeout = 5000 } = {}) {
+    const menu = ui.menu(page);
+    if (!(await menu.isVisible())) {
+        await ui.menuButton(page).click({ timeout });
+        try {
+            await menu.waitFor({ state: 'visible', timeout });
+        } catch {
+            throw new Error(`openMoreMenu: the "More options" menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`);
+        }
+    }
+    return menu;
+}
+
+/** Waits until a closed More options menu has also removed its pointer-intercepting transition layer. */
+export async function waitForMoreMenuClosed(page, { timeout = 5000 } = {}) {
+    await ui.menu(page).waitFor({ state: 'hidden', timeout });
+    await ui.menuLayer(page).waitFor({ state: 'detached', timeout });
+}
+
+/**
+ * Picks an item of the ⋮ menu by name, at any width (every item is in the menu: Paste from Factorio is a header button,
+ * `ui.pasteFromFactorio`). Waits for the menu to close after the item.
+ */
+export async function chooseMenuItem(page, name, { timeout = 5000 } = {}) {
+    const menu = await openMoreMenu(page, { timeout });
+    const item = menu.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name });
+    try {
+        await item.waitFor({ state: 'visible', timeout });
+    } catch {
+        const have = await menu.getByRole('menuitem').allTextContents();
+        throw new Error(`chooseMenuItem: no menu item ${String(name)} at ${page.viewportSize()?.width}px (the menu has: ${JSON.stringify(have)})`);
+    }
+    await item.click({ timeout });
+    await menu.waitFor({ state: 'hidden', timeout }).catch(() => {});
+}
+
+/**
+ * Turns ⋮ > Developer tools (the Timelines and Log tabs at the end of Results) on or off; nothing when it already is.
+ * The setting is kept in localStorage for the next load. Returns whether it was on before.
+ */
+export async function setDeveloperTools(page, on, { timeout = 5000 } = {}) {
+    const menu = await openMoreMenu(page, { timeout });
+    const item = ui.developerToolsItem(page);
+    await item.waitFor({ state: 'visible', timeout });
+    const was = (await item.getAttribute('aria-checked')) === 'true';
+    if (was === on) await page.keyboard.press('Escape');
+    else await item.click({ timeout });
+    await menu.waitFor({ state: 'hidden', timeout }).catch(() => {});
+    return was;
 }

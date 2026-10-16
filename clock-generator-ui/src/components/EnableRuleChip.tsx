@@ -29,7 +29,6 @@ export function EnableRuleChip({ override, entityLabel, entityType, forcedAlways
                     maxWidth: '100%',
                     ...(description.quiet && {
                         color: 'text.secondary',
-                        borderColor: 'grey.500',
                         '&:hover': { borderColor: 'text.primary' },
                     }),
                 }}
