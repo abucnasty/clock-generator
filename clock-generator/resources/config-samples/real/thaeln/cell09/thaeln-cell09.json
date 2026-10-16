@@ -1,8 +1,8 @@
 {
  "target_output": {
   "recipe": "utility-science-pack",
-  "items_per_second": 137,
-  "copies": 1
+  "items_per_second": 480,
+  "copies": 3.5
  },
  "machines": [
   {
