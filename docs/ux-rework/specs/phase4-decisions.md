@@ -2,7 +2,7 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1–D5 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1–D6 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
@@ -13,7 +13,7 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D3 Task-based usability audit | Approved — A / A / A | Integrated bounded exercise: two representative builds, three tasks; baseline before D1 and repeat after Phase 4; agent measurements, owner participation optional |
 | D4 Clock recommendation and tradeoffs | Approved — A / A / A | Group by belt compatibility; concise selected-clock reason/tradeoff with deeper details on demand; both explanatory and Compact views; existing ranking/selection rules unchanged |
 | D5 Exceptions and assumptions | Approved — A / A / A | Compact summarizes common defaults per section, differences visible on rows; explanatory view keeps fuller labels; distinguish Automatic/Explicit even when values match; import and result-snapshot assumption summaries |
-| D6 Display preferences | Pending | One entry; preference placement; persistence separate from build data |
+| D6 Display preferences | Approved — A / A / A | Labeled Display button in slim header, no extra row; Compact and System/Light/Dark in immediate-apply popover; one browser-wide preference set shared across builds |
 | D7 Working context | Pending | Specific remaining gaps after Phase 3; reset and persistence rules |
 | D8 Per-machine production rates | Pending | Semantics/feasibility only versus implementation; authoritative source; target/max/achieved and units |
 | D9 Independent audit of new UI tests | Pending | Audit/proposal versus approved cleanup; only UX-rework additions in clock-generator-ui; remaining coverage |
@@ -72,4 +72,14 @@ Owner: “Approve D5 with A / A / A.”
 - Preserve consequential missing-metadata timing assumptions and accessible names, essential warnings and validation. Reuse existing metadata/editors; no new type/quality selectors or change-history system are implied. Routine defaults do not become warning banners.
 - Finalize exact summarized fields and assumption placement with D1's finished editor/layout. Normal independent review, checks and all three phase-end reviewers remain required.
 
-Next discussion: D6 display preferences. D6–D9 and first-visit refinement remain pending.
+### D6 approved, 2026-10-16
+
+Owner: “Approve D6 with A / A / A.”
+
+- Placement A: one labeled Display button in the slim header without adding another header row.
+- Application A: a small popover containing Compact on/off and System / Light / Dark; apply changes immediately and remember them.
+- Scope A: one preference set for this browser shared across all builds. Keep preferences outside build exports/share links; preserve D1's explanatory default and D2's System default for new installations.
+- Responsive composition adapts to available width automatically. This bounded entry does not add a manual layout mode or broader settings project.
+- Preserve editing state, results and selection when display changes. Finalize accessible keyboard/focus/dismissal and narrow-width behavior in the item spec; existing verification/reviews remain required.
+
+Next discussion: D7 working context. D7–D9 and first-visit refinement remain pending.

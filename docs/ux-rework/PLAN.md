@@ -516,9 +516,13 @@ Owner approval, 2026-10-16, A / A / A: group comparison clocks by belt compatibi
 
 Owner approval, 2026-10-16, A / A / A: summarize common defaults once per section in Compact and show differences on rows, retaining fuller labels in the explanatory view. Distinguish Automatic/Explicit even when numerical values match, using text. Show concise assumptions during import review and on Results, with detail available and result assumptions tied to the saved result's snapshot. Reuse existing metadata/editors; preserve essential feedback and accessibility without turning routine defaults into warnings or adding a change-history system. See [D5 scope](specs/D5-exceptions-assumptions.md).
 
-### Further deferred design proposals (D6–D8)
+### Approved Phase 4 scope: Display preferences (D6)
 
-Owner requested drafts for later discussion: one display-preferences entry and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
+Owner approval, 2026-10-16, A / A / A: one labeled Display button in the slim header, without another header row. Use a small popover for immediately applied, remembered Compact and System / Light / Dark choices. One browser-wide preference set is shared across builds and excluded from build data/exports/share links. Preserve D1/D2 defaults, editing state, results and selection; responsive layout remains automatic. See [D6 scope](specs/D6-display-preferences.md).
+
+### Further deferred design proposals (D7–D8)
+
+Owner requested a draft for preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
 
 ### Independent audit of new UI tests (D9)
 
