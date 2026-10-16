@@ -40,7 +40,13 @@ export function CheckPlanSection({
     if (current !== undefined && current !== lastPlan) {
         setLastPlan(current);
     }
-    const running = checkStatus === 'running';
+    // An Exclude edit reaches the worker through App's effect. Keep the same guarded chip through that gap.
+    const [pendingValidation, setPendingValidation] = useState<ValidationState | null>(null);
+    if (pendingValidation && (pendingValidation !== validation || checkStatus === 'valid')) {
+        setPendingValidation(null);
+    }
+    const running = checkStatus === 'running'
+        || (pendingValidation === validation && checkStatus === 'out-of-date');
     const checkingRow = (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
             <CircularProgress size={16} color="inherit" aria-hidden />
@@ -106,7 +112,11 @@ export function CheckPlanSection({
                     transferPlan={plan.transfer_plan}
                     usedLcm={plan.used_lcm}
                     excludedIngredients={excludedIngredients}
-                    onExcludeChange={onExcludeChange}
+                    onExcludeChange={items => {
+                        if (checkStatus !== 'valid' || validation.status !== 'valid') return;
+                        setPendingValidation(validation);
+                        onExcludeChange(items);
+                    }}
                 />
             </Box>
         </>
