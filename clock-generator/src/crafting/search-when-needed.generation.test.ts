@@ -15,7 +15,8 @@ const selectedOf = (generated: ClockAlternativesResult) => generated.alternative
 // selected as stable, unless the config asks for them (`overrides.search_for_fewer_wake_ups`).
 describe("the searches only run when they are needed", () => {
 
-    // planned with belt slack is stable at 10.7 wake-ups a minute; the clocks the searches find have 21.4 to 42.9
+    // planned with belt slack is stable at 26.8 wake-ups a minute (from the staged start; 10.7 from the prepared build);
+    // the searches find shifted swings, stable at 21.4, and observed windows, which gets back from no loss, at 32.1
     describe("utility science, where a clock made without a search is stable", () => {
         let config: Config;
         let by_default: ClockAlternativesResult;
@@ -39,14 +40,18 @@ describe("the searches only run when they are needed", () => {
             expect(selectableAsStable(selected.ranking)).toBe(true);
         });
 
-        // the clocks the searches find have more wake-ups a minute, so the clock selected is the same
-        it("runs the searches when the config asks for them, and selects a clock with no more wake-ups", () => {
+        // from the staged start the search for shifted swings finds a clock with fewer wake-ups than the clock made
+        // without a search, so the search selects it
+        it("runs the searches when the config asks for them, and selects a clock with fewer wake-ups", () => {
             expect(searched.skipped_searches).toEqual([]);
-            expect(idsOf(searched)).toEqual(expect.arrayContaining(["derived", "uneven-output", "shifted-swings"]));
+            // the search for uneven output swings finds no clock for this build from the staged start (the prepared
+            // build gave one), nor does the search for full-hand swings
+            expect(idsOf(searched).filter(id => SEARCH_IDS.includes(id)).sort()).toEqual(["derived", "shifted-swings"]);
             const selected = selectedOf(searched);
-            expect(selected.id).toBe("planned-belt-slack");
+            expect(selected.id).toBe("shifted-swings");
             expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(selectedOf(by_default).assessment.wake_ups_per_minute!, 6);
+            expect(selected.assessment.wake_ups_per_minute!).toBeCloseTo(21.43, 2);
+            expect(selected.assessment.wake_ups_per_minute!).toBeLessThan(selectedOf(by_default).assessment.wake_ups_per_minute!);
         });
 
         it("lists the clocks made without a search in the same order either way", () => {

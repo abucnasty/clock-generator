@@ -538,6 +538,26 @@ export const ConfigOverridesSchema = z.object({
      */
     search_for_fewer_wake_ups: z.boolean().optional(),
     /**
+     * Try every clock from other starts than the plain cold start of the staged scaffold too: with the clock standing 30,
+     * 300, 700 and 1000 ticks into its period at the first tick, and with the inserters that compete for one machine's
+     * product served in ascending config ids and in two random orders. The clock is stable when it reaches its target
+     * from every start, start-dependent when it does from some, unstable when it does from none; a start-dependent
+     * clock is listed with where it reaches its target and where it settles elsewhere.
+     *
+     * By default every clock is judged from the cold start alone, and the generator says that start dependence was
+     * not checked. Takes a few more long runs of every clock.
+     *
+     * @default false
+     */
+    check_start_dependence: z.boolean().optional(),
+    /**
+     * Items of its own product a machine whose recipe makes its own ingredient (pentapod eggs) is given once when a clock
+     * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines are seeded by hand.
+     *
+     * @default 200
+     */
+    loop_seed_items: z.number().int().nonnegative().optional(),
+    /**
      * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
      * offered as potential clocks.
      */

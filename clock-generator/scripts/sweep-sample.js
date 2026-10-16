@@ -1,6 +1,6 @@
 // node scripts/sweep-sample.js <out dir> <KEY>
 // Every potential clock of one sample, as <out dir>/<KEY>.json: verdict, rate, wake-ups, belt and windows of each, and
-// which one is selected. NON_MOVING=1 turns "Belts do not move" on, SEARCH=1 "Search for fewer wake-ups". See sweep.sh
+// which one is selected. NON_MOVING=1 turns "Belts do not move" on, SEARCH=1 "Search for fewer wake-ups", START_DEPENDENCE=1 "Check start dependence". See sweep.sh
 // for all samples.
 const path = require("path"), fs = require("fs");
 const out = path.resolve(process.argv[2]);
@@ -14,17 +14,19 @@ const { describeSharedItem } = dist("crafting/deadlock-risk.js");
     const row = { key };
     try {
         const config = await loadSample(key, process.env.NON_MOVING === "1");
-        const { alternatives, selected_index, skipped_searches } = generateClockAlternatives(config, { logger: quiet });
+        const { alternatives, selected_index, skipped_searches, start_dependence_checked } = generateClockAlternatives(config, { logger: quiet });
         row.selected = alternatives[selected_index]?.id;
         // the searches that did not run, since a clock made without one is stable
         row.skipped_searches = skipped_searches;
+        row.start_dependence_checked = start_dependence_checked;
         // of the build, the same for every clock: two inserters that bring the same item to a machine
         row.deadlock_risks = (alternatives[0]?.deadlock_risks ?? []).map(describeSharedItem);
         row.alternatives = alternatives.map(a => ({
             id: a.id, label: a.label, is_stable: a.verdict === "stable", holds_expected_output: a.verdict !== "unstable",
             broken_by: a.assessment.backpressure_loss?.broken_by ?? null, meets_target_rate: a.ranking.meets_target_rate,
             matches_belt_choice: a.ranking.matches_belt_choice, items_per_second: a.assessment.items_per_second,
-            wake_ups_per_minute: a.assessment.wake_ups_per_minute, belt: a.belt === null ? null : clockBeltLabel(a.belt),
+            wake_ups_per_minute: a.assessment.wake_ups_per_minute, start_dependence: a.assessment.start_dependence,
+            start_dependence_note: a.insights.find(it => it.id === "start-dependence")?.what ?? null, belt: a.belt === null ? null : clockBeltLabel(a.belt),
             period: a.result.simulation_duration.ticks, window_count: a.inserter_window_count,
             windows: Object.fromEntries(Object.entries(a.result.clock_windows).map(([k, v]) => [k, v.map(r => `${r.start}-${r.end}`).join(",")])),
         }));

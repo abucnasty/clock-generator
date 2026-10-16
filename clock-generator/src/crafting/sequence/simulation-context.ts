@@ -3,6 +3,8 @@ import { AlwaysEnabledControl, EnableControl, MutableTickProvider } from "../../
 import { DrillStateMachine } from "../../control-logic/drill/drill-state-machine";
 import { InserterStateMachine } from "../../control-logic/inserter/inserter-state-machine";
 import { MachineStateMachine } from "../../control-logic/machine/machine-state-machine";
+import { DEFAULT_TAKER_ORDER, InserterUpdates, TakerOrder } from "../../control-logic/inserter/competing-takers";
+import { ControlLogic } from "../../control-logic";
 import { Belt, Chest, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { MiningProductivity } from "../../entities/drill/mining-productivity";
@@ -23,7 +25,14 @@ export class SimulationContext {
         public readonly inserters: InserterStateMachine[],
         public readonly drills: DrillStateMachine[],
         public readonly target_production_rate: TargetProductionRate,
+        /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide */
+        public competing_takers_order: TakerOrder = DEFAULT_TAKER_ORDER,
     ) {}
+
+    /** The update of every inserter in a tick, in the order of the list and of `competing_takers_order` */
+    public inserterUpdates(): ControlLogic {
+        return new InserterUpdates(this.inserters, this.state_registry, this.competing_takers_order);
+    }
 
     public clone(args: Partial<SimulationContext> = {}): SimulationContext {
         return new SimulationContext(
@@ -33,7 +42,8 @@ export class SimulationContext {
             args.machines ?? [...this.machines],
             args.inserters ?? [...this.inserters],
             args.drills ?? [...this.drills],
-            args.target_production_rate ?? this.target_production_rate
+            args.target_production_rate ?? this.target_production_rate,
+            args.competing_takers_order ?? this.competing_takers_order,
         );
     }
 

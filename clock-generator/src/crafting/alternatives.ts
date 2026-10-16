@@ -6,7 +6,7 @@ import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { Logger, defaultLogger } from "../common/logger";
 import { BackpressureLossVerdict } from "./backpressure-loss";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight } from "./insights";
+import { backpressureLossInsight, ClockInsight, clockInsights, deadlockRiskInsight, startDependenceInsight } from "./insights";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { evenHandsClock } from "./candidates/even-hands";
 import { fullHandClock } from "./candidates/full-hand";
@@ -15,7 +15,8 @@ import { shiftedSwingsClock } from "./candidates/shifted-swings";
 import { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
-import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf } from "./trial";
+import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, startDependenceVerdictOf } from "./trial";
+import { CLOCK_STARTS, START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
 
 
 export interface ClockAlternative {
@@ -57,6 +58,13 @@ export interface ClockAlternativesResult {
      * `searchesAreNeeded`); empty when they ran. `overrides.search_for_fewer_wake_ups` runs them for every build.
      */
     skipped_searches: string[];
+    /**
+     * Whether the clocks were tried from other starts than the cold start (`overrides.check_start_dependence`).
+     * When not, `start_dependence_note` says so plainly.
+     */
+    start_dependence_checked: boolean;
+    /** What the generator says of start dependence for the build: that it was not checked, or how many clocks depend on the start */
+    start_dependence_note: string;
 }
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional period) */
@@ -454,6 +462,11 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const { as_built, actual_output_items, expected_output_items } = result.stability_check;
     const held = holds(result);
     const backpressure_loss = held ? backpressureLossVerdictOf(definition.planned_on ?? config, result, logger, report) : null;
+    const start_dependence = config.overrides?.check_start_dependence === true
+        ? startDependenceVerdictOf(definition.planned_on ?? config, result, held, logger, report)
+        : null;
+    const start_dependence_note = start_dependence === null ? null
+        : startDependenceNote(start_dependence, items => itemsPerSecondOverCopies(items, result.simulation_duration.ticks, copies));
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items per period; `
@@ -468,12 +481,13 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const { belt } = result;
     const belt_note = beltNote(config, result, id === WITHOUT_BELT_PICKUP_SLACK_ID);
     const description = definition.description + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
-        + backpressureLossNote(backpressure_loss);
+        + backpressureLossNote(backpressure_loss) + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`);
     // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
     const insights = [
         ...clockInsights(result, held),
         ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
         ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
+        ...(start_dependence_note !== null ? [startDependenceInsight(start_dependence_note)] : []),
     ];
     const period = result.simulation_duration.ticks;
     // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
@@ -481,7 +495,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
     /** The alternative for the clock run at `clock_period` ticks a period: the exact period, or the rounded one */
     const alternativeAt = (clock_period: number, row: { id: string; label: string; description: string; result: BlueprintGenerationResult }): ClockAlternative => {
-        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute };
+        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute, start_dependence };
         const clock = { ...row, inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         return { ...clock, ranking: rankingOf(clock, config) };
     };
@@ -560,6 +574,19 @@ export function runClockAlternativeTask(
     return runAlternative(definition, config, logger, options.on_progress_detail);
 }
 
+/** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */
+export function startDependenceSummary(config: Config, alternatives: readonly ClockAlternative[]): Pick<ClockAlternativesResult, "start_dependence_checked" | "start_dependence_note"> {
+    if (config.overrides?.check_start_dependence !== true) {
+        return { start_dependence_checked: false, start_dependence_note: START_DEPENDENCE_NOT_CHECKED };
+    }
+    const dependent = alternatives.filter(it => it.assessment.start_dependence?.verdict === "start-dependent").map(it => it.id);
+    return {
+        start_dependence_checked: true,
+        start_dependence_note: `Start dependence was checked from ${CLOCK_STARTS.length} starts: `
+            + (dependent.length === 0 ? "no clock is start-dependent." : `start-dependent: ${dependent.join(", ")}.`),
+    };
+}
+
 /**
  * Generates the same config several ways (batched swings with and without belt pickup slack, derived
  * per-craft windows, fractional swings toggled, lower output swing counts, full-hand output) and checks each
@@ -619,5 +646,6 @@ export function generateClockAlternatives(
 
     current_step = "Done";
     report();
-    return { ...combineClockAlternativeRuns(runs, it => it.ranking), skipped_searches: searches_run ? [] : searches.map(it => it.label) };
+    const combined = combineClockAlternativeRuns(runs, it => it.ranking);
+    return { ...combined, skipped_searches: searches_run ? [] : searches.map(it => it.label), ...startDependenceSummary(config, combined.alternatives) };
 }
