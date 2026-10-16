@@ -1097,6 +1097,11 @@ async function stepDialogs({ page, rec, width }) {
         await stack.focus(); await stack.press('ControlOrMeta+A'); await page.keyboard.type('15'); await stack.press('Tab');
         rec.check('diagram inserter dialog: Stack size15 draft enables Save without committing', await save.isEnabled()
             && await stack.inputValue() === '15' && await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
+        // The disabled-click left the pointer over Save. Measure its rest state after native finite transitions finish.
+        await page.mouse.move(0, 0);
+        await page.waitForFunction((button) => !button.getAnimations().some((animation) =>
+            animation.playState !== 'finished' && animation.playState !== 'idle'
+            && Number.isFinite(animation.effect?.getComputedTiming().endTime)), await save.elementHandle());
         await rec.shot(page, 'dialog-diagram-inserter-edited', { aria: true, desc: 'Unsaved Stack size15 draft: Save enabled for its existing contrast/grammar checks' });
         await dialogChecks(page, rec, width, 'diagram inserter dialog', { cancel: /^Cancel$/, confirm: /^Save$/ });
         rec.check('diagram inserter dialog: Cancel discards the draft without changing the build', await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
