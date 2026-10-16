@@ -1,0 +1,48 @@
+{
+ "name": "stupidfathobbit-cell06",
+ "product": "steel-plate",
+ "recipe": "casting-steel",
+ "copies": 1,
+ "items_per_second": 24.9,
+ "target": {
+  "items_per_second": {
+   "fraction": "249/10",
+   "decimal": 24.9
+  },
+  "source": "measured",
+  "fallback_reason": "the line runs out of the dump at the underground belt at -139.5,172.5 (no exit in the dump): the consumers lie outside it",
+  "capacity": {
+   "fraction": "925/4",
+   "decimal": 231.25
+  },
+  "measured": 24.907359,
+  "demand": {
+   "reason": "the line runs out of the dump at the underground belt at -139.5,172.5 (no exit in the dump): the consumers lie outside it"
+  }
+ },
+ "measured_items_per_second": 24.907359,
+ "rate_source": "products finished by the casting-steel machines over 36000 sampled ticks",
+ "source": {
+  "crafts_per_second": 24.90735853773716,
+  "items_per_second": 24.90735853773716,
+  "sampled_ticks": 36000,
+  "start_tick": 2814471,
+  "per_machine": [
+   {
+    "u": 1199240,
+    "recipe": "casting-steel",
+    "x": -132.5,
+    "y": 267.5,
+    "crafts_per_second": 24.90735853773716,
+    "status": {
+     "full_output": 0.9049,
+     "working": 0.0951
+    }
+   }
+  ],
+  "output_inserter_waiting": {
+   "unit": 1184581,
+   "share": 0.8961
+  }
+ }
+}

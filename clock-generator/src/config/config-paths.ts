@@ -45,8 +45,7 @@ export const ConfigPaths = {
     AUTOMATION_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation-science', 'automation-science.json'),
     /** Two foundries casting gears and copper onto one belt, which feeds an assembler making the packs */
     AUTOMATION_SCIENCE_BELTED_BUFFER: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation-science', 'automation-science-belted-buffer.json'),
-    UTILITY_SCIENCE_DIRECT_INSERT_LDS: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science-direct-insert-lds.json'),
-    /** The same build with the low density structure chain's inserters always on */
+    /** Utility science with low density structure inserted directly, the chain's inserters always on (its clocked twin and scaffold were replaced by REAL_THAELN_CELL09) */
     UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility-science', 'utility-science-direct-insert-lds-chain-always-on.json'),
     PRODUCTION_SCIENCE_JSON: path.join(CONFIG_SAMPLES_DIR, 'science', 'production-science', 'production-science.json'),
     PROCESSING_UNITS_BELT_EXPORT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-units', 'processing-units-belt-export.json'),
@@ -59,4 +58,10 @@ export const ConfigPaths = {
     IRON_BACTERIA_CULTIVATION: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'iron-bacteria-cultivation', 'iron-bacteria-cultivation.json'),
     BIOCHAMBER_FUEL: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'biochamber-fuel', 'nutrients-from-yumako-mash-fuel-bonus.json'),
     JELLYNUT_PROCESSING_ROCKET_FUEL_BIOCHAMBERS: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'jellynut-processing', 'jellynut-processing-rocket-fuel-biochambers.json'),
+    /** Real cells of the owner's bases, with their scaffold and the rate measured in the base (milestone M1) */
+    REAL_STUPIDFATHOBBIT_CELL02: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell02', 'stupidfathobbit-cell02.json'),
+    REAL_COMPOSITE04_CELL07: path.join(CONFIG_SAMPLES_DIR, 'real', 'composite04', 'cell07', 'composite04-cell07.json'),
+    REAL_THAELN_CELL09: path.join(CONFIG_SAMPLES_DIR, 'real', 'thaeln', 'cell09', 'thaeln-cell09.json'),
+    REAL_STUPIDFATHOBBIT_CELL06: path.join(CONFIG_SAMPLES_DIR, 'real', 'stupidfathobbit', 'cell06', 'stupidfathobbit-cell06.json'),
+    REAL_ATLAN_CELL29: path.join(CONFIG_SAMPLES_DIR, 'real', 'atlan', 'cell29', 'atlan-cell29.json'),
 } as const;

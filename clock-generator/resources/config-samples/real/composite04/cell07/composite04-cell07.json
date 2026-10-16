@@ -1,0 +1,250 @@
+{
+ "target_output": {
+  "recipe": "advanced-circuit",
+  "items_per_second": 90.0416666667,
+  "copies": 1
+ },
+ "machines": [
+  {
+   "id": 1,
+   "recipe": "advanced-circuit",
+   "productivity": 175,
+   "crafting_speed": 100.0625,
+   "type": "machine"
+  },
+  {
+   "id": 2,
+   "recipe": "plastic-bar",
+   "productivity": 300,
+   "crafting_speed": 38.936,
+   "type": "machine"
+  },
+  {
+   "id": 3,
+   "recipe": "casting-copper-cable",
+   "productivity": 150,
+   "crafting_speed": 157.075,
+   "type": "machine"
+  },
+  {
+   "id": 4,
+   "recipe": "plastic-bar",
+   "productivity": 300,
+   "crafting_speed": 38.936,
+   "type": "machine"
+  },
+  {
+   "id": 5,
+   "recipe": "advanced-circuit",
+   "productivity": 175,
+   "crafting_speed": 100.0625,
+   "type": "machine"
+  }
+ ],
+ "inserters": [
+  {
+   "id": 1,
+   "source": {
+    "type": "machine",
+    "id": 1
+   },
+   "sink": {
+    "type": "chest",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "advanced-circuit"
+   ]
+  },
+  {
+   "id": 2,
+   "source": {
+    "type": "chest",
+    "id": 2
+   },
+   "sink": {
+    "type": "machine",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "electronic-circuit"
+   ]
+  },
+  {
+   "id": 3,
+   "source": {
+    "type": "machine",
+    "id": 2
+   },
+   "sink": {
+    "type": "machine",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "plastic-bar"
+   ]
+  },
+  {
+   "id": 4,
+   "source": {
+    "type": "machine",
+    "id": 3
+   },
+   "sink": {
+    "type": "machine",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "copper-cable"
+   ]
+  },
+  {
+   "id": 5,
+   "source": {
+    "type": "belt",
+    "id": 1
+   },
+   "sink": {
+    "type": "machine",
+    "id": 2
+   },
+   "stack_size": 16,
+   "filters": [
+    "coal"
+   ]
+  },
+  {
+   "id": 6,
+   "source": {
+    "type": "belt",
+    "id": 1
+   },
+   "sink": {
+    "type": "machine",
+    "id": 4
+   },
+   "stack_size": 16,
+   "filters": [
+    "coal"
+   ]
+  },
+  {
+   "id": 7,
+   "source": {
+    "type": "machine",
+    "id": 3
+   },
+   "sink": {
+    "type": "machine",
+    "id": 5
+   },
+   "stack_size": 16,
+   "filters": [
+    "copper-cable"
+   ]
+  },
+  {
+   "id": 8,
+   "source": {
+    "type": "machine",
+    "id": 4
+   },
+   "sink": {
+    "type": "machine",
+    "id": 5
+   },
+   "stack_size": 16,
+   "filters": [
+    "plastic-bar"
+   ]
+  },
+  {
+   "id": 9,
+   "source": {
+    "type": "chest",
+    "id": 3
+   },
+   "sink": {
+    "type": "machine",
+    "id": 5
+   },
+   "stack_size": 16,
+   "filters": [
+    "electronic-circuit"
+   ]
+  },
+  {
+   "id": 10,
+   "source": {
+    "type": "machine",
+    "id": 5
+   },
+   "sink": {
+    "type": "chest",
+    "id": 4
+   },
+   "stack_size": 16,
+   "filters": [
+    "advanced-circuit"
+   ]
+  }
+ ],
+ "belts": [
+  {
+   "id": 1,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "coal",
+     "stack_size": 4
+    }
+   ]
+  }
+ ],
+ "chests": [
+  {
+   "type": "infinity-chest",
+   "id": 1,
+   "item_filter": [
+    {
+     "item_name": "advanced-circuit",
+     "request_count": 1000
+    }
+   ]
+  },
+  {
+   "type": "infinity-chest",
+   "id": 2,
+   "item_filter": [
+    {
+     "item_name": "electronic-circuit",
+     "request_count": 1000
+    }
+   ]
+  },
+  {
+   "type": "infinity-chest",
+   "id": 3,
+   "item_filter": [
+    {
+     "item_name": "electronic-circuit",
+     "request_count": 1000
+    }
+   ]
+  },
+  {
+   "type": "infinity-chest",
+   "id": 4,
+   "item_filter": [
+    {
+     "item_name": "advanced-circuit",
+     "request_count": 1000
+    }
+   ]
+  }
+ ]
+}

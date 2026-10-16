@@ -1,0 +1,301 @@
+{
+ "name": "thaeln-cell09",
+ "product": "utility-science-pack",
+ "recipe": "utility-science-pack",
+ "copies": 1,
+ "items_per_second": 137,
+ "target": {
+  "items_per_second": {
+   "fraction": "137",
+   "decimal": 137
+  },
+  "source": "measured",
+  "capacity": {
+   "fraction": "8065/56",
+   "decimal": 144.017857143
+  },
+  "measured": 137.123809,
+  "demand": {
+   "items_per_second": {
+    "fraction": "240",
+    "decimal": 240
+   },
+   "source": "demand (belt lane, line ends in a void)",
+   "producers_sharing": 1,
+   "consumers": 0,
+   "consumers_demand": {
+    "fraction": "0",
+    "decimal": 0
+   },
+   "consumers_demand_per_producer": {
+    "fraction": "0",
+    "decimal": 0
+   },
+   "void_at": [
+    [
+     105.5,
+     163.5
+    ],
+    [
+     105.5,
+     185.5
+    ]
+   ],
+   "lane_limit": {
+    "fraction": "240",
+    "decimal": 240
+   },
+   "lanes": [
+    {
+     "lane": "left",
+     "belts": 16,
+     "speed": 0.125,
+     "stack": 4,
+     "lane_limit": {
+      "fraction": "120",
+      "decimal": 120
+     },
+     "cells_on_lane": 1
+    },
+    {
+     "lane": "right",
+     "belts": 16,
+     "speed": 0.125,
+     "stack": 4,
+     "lane_limit": {
+      "fraction": "120",
+      "decimal": 120
+     },
+     "cells_on_lane": 1
+    }
+   ]
+  },
+  "fallback_reason": "flag: output blocked and measurement off the target",
+  "flagged": {
+   "items_per_second": {
+    "fraction": "8065/56",
+    "decimal": 144.017857143
+   },
+   "source": "capacity",
+   "demand": {
+    "items_per_second": {
+     "fraction": "240",
+     "decimal": 240
+    },
+    "source": "demand (belt lane, line ends in a void)",
+    "producers_sharing": 1,
+    "consumers": 0,
+    "consumers_demand": {
+     "fraction": "0",
+     "decimal": 0
+    },
+    "consumers_demand_per_producer": {
+     "fraction": "0",
+     "decimal": 0
+    },
+    "void_at": [
+     [
+      105.5,
+      163.5
+     ],
+     [
+      105.5,
+      185.5
+     ]
+    ],
+    "lane_limit": {
+     "fraction": "240",
+     "decimal": 240
+    },
+    "lanes": [
+     {
+      "lane": "left",
+      "belts": 16,
+      "speed": 0.125,
+      "stack": 4,
+      "lane_limit": {
+       "fraction": "120",
+       "decimal": 120
+      },
+      "cells_on_lane": 1
+     },
+     {
+      "lane": "right",
+      "belts": 16,
+      "speed": 0.125,
+      "stack": 4,
+      "lane_limit": {
+       "fraction": "120",
+       "decimal": 120
+      },
+      "cells_on_lane": 1
+     }
+    ]
+   },
+   "flags": [
+    "output blocked and measurement off the target"
+   ]
+  }
+ },
+ "measured_items_per_second": 137.123809,
+ "rate_source": "products finished by the utility-science-pack machines over 36000 sampled ticks",
+ "source": {
+  "crafts_per_second": 45.707936331564774,
+  "items_per_second": 137.12380899469431,
+  "sampled_ticks": 36000,
+  "start_tick": 591040,
+  "per_machine": [
+   {
+    "u": 1825473,
+    "recipe": "utility-science-pack",
+    "x": 11.5,
+    "y": 165.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   },
+   {
+    "u": 1693549,
+    "recipe": "utility-science-pack",
+    "x": 11.5,
+    "y": 183.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   },
+   {
+    "u": 1781243,
+    "recipe": "casting-low-density-structure",
+    "x": 14.5,
+    "y": 170.5,
+    "crafts_per_second": 17.138809411372538,
+    "status": {
+     "working": 0.3213,
+     "full_output": 0.649,
+     "item_ingredient_shortage": 0.0297
+    }
+   },
+   {
+    "u": 1721669,
+    "recipe": "casting-low-density-structure",
+    "x": 14.5,
+    "y": 178.5,
+    "crafts_per_second": 17.138809411372538,
+    "status": {
+     "working": 0.3213,
+     "full_output": 0.649,
+     "item_ingredient_shortage": 0.0297
+    }
+   },
+   {
+    "u": 1825470,
+    "recipe": "utility-science-pack",
+    "x": 17.5,
+    "y": 165.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   },
+   {
+    "u": 1693543,
+    "recipe": "utility-science-pack",
+    "x": 17.5,
+    "y": 183.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   },
+   {
+    "u": 1750135,
+    "recipe": "plastic-bar",
+    "x": 20.5,
+    "y": 174.5,
+    "crafts_per_second": 42.801188921914495,
+    "status": {
+     "full_output": 0.9287,
+     "working": 0.0713
+    }
+   },
+   {
+    "u": 1825467,
+    "recipe": "utility-science-pack",
+    "x": 23.5,
+    "y": 165.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   },
+   {
+    "u": 1693537,
+    "recipe": "utility-science-pack",
+    "x": 23.5,
+    "y": 183.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   },
+   {
+    "u": 1781234,
+    "recipe": "casting-low-density-structure",
+    "x": 26.5,
+    "y": 170.5,
+    "crafts_per_second": 17.138809411372538,
+    "status": {
+     "working": 0.3213,
+     "full_output": 0.649,
+     "item_ingredient_shortage": 0.0297
+    }
+   },
+   {
+    "u": 1721660,
+    "recipe": "casting-low-density-structure",
+    "x": 26.5,
+    "y": 178.5,
+    "crafts_per_second": 17.138809411372538,
+    "status": {
+     "working": 0.3213,
+     "full_output": 0.649,
+     "item_ingredient_shortage": 0.0297
+    }
+   },
+   {
+    "u": 1825464,
+    "recipe": "utility-science-pack",
+    "x": 29.5,
+    "y": 165.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   },
+   {
+    "u": 1693531,
+    "recipe": "utility-science-pack",
+    "x": 29.5,
+    "y": 183.5,
+    "crafts_per_second": 5.713492041445596,
+    "status": {
+     "working": 0.9495,
+     "item_ingredient_shortage": 0.0505
+    }
+   }
+  ],
+  "output_inserter_waiting": {
+   "unit": 1855159,
+   "share": 0.0713
+  }
+ }
+}

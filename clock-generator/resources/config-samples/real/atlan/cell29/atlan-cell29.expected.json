@@ -1,0 +1,158 @@
+{
+ "name": "atlan-cell29",
+ "product": "iron-gear-wheel",
+ "recipe": "iron-gear-wheel",
+ "copies": 1,
+ "items_per_second": 9.97,
+ "target": {
+  "items_per_second": {
+   "fraction": "997/100",
+   "decimal": 9.97
+  },
+  "source": "measured",
+  "capacity": {
+   "fraction": "23097/200",
+   "decimal": 115.485
+  },
+  "measured": 9.97361,
+  "demand": {
+   "items_per_second": {
+    "fraction": "723/64",
+    "decimal": 11.296875
+   },
+   "source": "demand (consumers)",
+   "producers_sharing": 1,
+   "consumers": 2,
+   "consumers_demand": {
+    "fraction": "723/64",
+    "decimal": 11.296875
+   },
+   "consumers_demand_per_producer": {
+    "fraction": "723/64",
+    "decimal": 11.296875
+   },
+   "lane_limit": {
+    "fraction": "240",
+    "decimal": 240
+   },
+   "lanes": [
+    {
+     "lane": "right",
+     "belts": 8,
+     "speed": 0.125,
+     "stack": 4,
+     "lane_limit": {
+      "fraction": "120",
+      "decimal": 120
+     },
+     "cells_on_lane": 1
+    },
+    {
+     "lane": "right",
+     "belts": 12,
+     "speed": 0.125,
+     "stack": 4,
+     "lane_limit": {
+      "fraction": "120",
+      "decimal": 120
+     },
+     "cells_on_lane": 1
+    }
+   ]
+  },
+  "fallback_reason": "flag: output blocked and measurement off the target",
+  "flagged": {
+   "items_per_second": {
+    "fraction": "723/64",
+    "decimal": 11.296875
+   },
+   "source": "demand (consumers)",
+   "demand": {
+    "items_per_second": {
+     "fraction": "723/64",
+     "decimal": 11.296875
+    },
+    "source": "demand (consumers)",
+    "producers_sharing": 1,
+    "consumers": 2,
+    "consumers_demand": {
+     "fraction": "723/64",
+     "decimal": 11.296875
+    },
+    "consumers_demand_per_producer": {
+     "fraction": "723/64",
+     "decimal": 11.296875
+    },
+    "lane_limit": {
+     "fraction": "240",
+     "decimal": 240
+    },
+    "lanes": [
+     {
+      "lane": "right",
+      "belts": 8,
+      "speed": 0.125,
+      "stack": 4,
+      "lane_limit": {
+       "fraction": "120",
+       "decimal": 120
+      },
+      "cells_on_lane": 1
+     },
+     {
+      "lane": "right",
+      "belts": 12,
+      "speed": 0.125,
+      "stack": 4,
+      "lane_limit": {
+       "fraction": "120",
+       "decimal": 120
+      },
+      "cells_on_lane": 1
+     }
+    ]
+   },
+   "flags": [
+    "output blocked and measurement off the target"
+   ]
+  }
+ },
+ "measured_items_per_second": 9.97361,
+ "rate_source": "products finished by the iron-gear-wheel machines over 36000 sampled ticks",
+ "source": {
+  "crafts_per_second": 9.973610378066057,
+  "items_per_second": 9.973610378066057,
+  "sampled_ticks": 36000,
+  "start_tick": 18388412,
+  "per_machine": [
+   {
+    "u": 603113,
+    "recipe": "iron-gear-wheel",
+    "x": 88.5,
+    "y": -6022.5,
+    "crafts_per_second": 9.973610378066057,
+    "status": {
+     "full_output": 0.8695,
+     "item_ingredient_shortage": 0.0474,
+     "working": 0.0831
+    }
+   },
+   {
+    "u": 603115,
+    "recipe": "iron-plate",
+    "x": 92.5,
+    "y": -6022.5,
+    "crafts_per_second": 10.000277785494042,
+    "status": {
+     "no_ingredients": 0.3593,
+     "working": 0.2599,
+     "full_output": 0.3808
+    }
+   }
+  ],
+  "output_inserter_waiting": {
+   "unit": 602984,
+   "share": 0.9584
+  }
+ }
+}

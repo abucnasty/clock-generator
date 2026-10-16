@@ -1,0 +1,384 @@
+{
+ "schema": 1,
+ "save": "stupidfathobbit-cell06.manifest.json",
+ "steps": [
+  {
+   "step": "extract-cell",
+   "ok": true,
+   "tool": {
+    "tag": null,
+    "commit": "2fe844b",
+    "dirty": false
+   },
+   "args": {
+    "cell": "1199240",
+    "box": null,
+    "name": "stupidfathobbit-cell06",
+    "version": "2.1.21",
+    "sample_ticks": 36000,
+    "warmup": 1800,
+    "check_ticks": 36000,
+    "tolerance": 0.01,
+    "strict": false
+   },
+   "game_version": "2.1.21",
+   "input": {
+    "file": "../../../real/real.zip",
+    "sha256": "dfd676f4809e75979ccd5534650a88f4a8e5673634e08d10622d99a065e4254e"
+   },
+   "output": {
+    "file": "stupidfathobbit-cell06-scaffold.txt",
+    "sha256": "85311deb8f9bc0e2329993f7853b665bac7a692cb27053ac611ce639d1c1f4f6"
+   },
+   "tick_before": 2814471,
+   "tick_after": null,
+   "entities_player": 14,
+   "files": [
+    {
+     "file": "stupidfathobbit-cell06.json",
+     "sha256": "b1d7f57a8c8dc5f04833dfbc82e0bb94dd5e3f7a9f626925e39152c49b280d7c"
+    },
+    {
+     "file": "stupidfathobbit-cell06.expected.json",
+     "sha256": "7c673c19a5c3a4ec69d729925c173263e6546af4613abfac31cbe6d1a316a8b9"
+    }
+   ],
+   "checks": [
+    {
+     "name": "scaffold rate against the target",
+     "pass": true,
+     "figures": {
+      "rule": "the scaffold's rate must be at least 99% of the target and at most 101% of the machines' capacity (a free scaffold runs at capacity whatever limited the source)",
+      "target_items_per_second": 24.9,
+      "target_crafts_per_second": 24.9,
+      "machine_capacity_per_second": 231.25,
+      "scaffold_crafts_per_second": 159.99777771604766,
+      "ratio_to_target": 6.4256135628934805,
+      "source_crafts_per_second": 24.90735853773716,
+      "ratio_to_source": 6.423715203426124,
+      "source_items_per_second": 24.907359,
+      "scaffold_items_per_second": 159.99777771604766,
+      "source_limit": {
+       "limit": "downstream: output waiting for space",
+       "output_waiting_share": 0.8961,
+       "ingredient_shortage_share": 0
+      },
+      "head_stacks": [],
+      "warmup_ticks": 1800,
+      "ticks": 36000,
+      "machines": [
+       {
+        "recipe": "casting-steel",
+        "source_at": [
+         -132.5,
+         267.5
+        ],
+        "scaffold_at": [
+         0.5,
+         1.5
+        ],
+        "source_crafts_per_second": 24.90735853773716,
+        "scaffold_crafts_per_second": 159.99777771604766,
+        "ratio": 6.423715203426124,
+        "scaffold_status": {
+         "working": 0.5556,
+         "full_output": 0.4444
+        },
+        "source_crafting_speed": 185,
+        "scaffold_crafting_speed": 185,
+        "source_effects": {
+         "consumption": 9.8,
+         "speed": 17.5,
+         "productivity": 0.5
+        },
+        "scaffold_effects": {
+         "consumption": 9.8,
+         "speed": 17.5,
+         "productivity": 0.5
+        },
+        "source_beacons": 4,
+        "scaffold_beacons": 4
+       }
+      ],
+      "harness_problems": []
+     }
+    },
+    {
+     "name": "config validates against the clock generator's loader",
+     "pass": true,
+     "figures": {
+      "pass": true,
+      "generator": "/home/abucnasty/dev/factorio-scripts/clock-generator",
+      "version": "0.14.0",
+      "commit": "b29e79e",
+      "tag": "v0.14.0",
+      "dirty": false
+     }
+    }
+   ],
+   "started": "2026-10-15T23:11:34.606Z",
+   "seconds": 89.8,
+   "cell": {
+    "id": 1199240,
+    "anchor": [
+     -132.5,
+     267.5
+    ],
+    "recipes": [
+     "casting-steel"
+    ],
+    "machines": 1,
+    "inserters": 2,
+    "copies": 1,
+    "identical_in_save": 240
+   },
+   "box": null,
+   "cut": {
+    "entities": 14,
+    "source_entities": 9
+   },
+   "removed": [],
+   "inserters_unwired": [],
+   "wires_cut": 0,
+   "replaced": [],
+   "skipped": [],
+   "environment": [
+    {
+     "kind": "loader and void chest after the belt",
+     "belt": [
+      -136.5,
+      269.5
+     ],
+     "loader": [
+      -136.5,
+      268
+     ],
+     "underground": null,
+     "lane": null,
+     "chest": [
+      -136.5,
+      266.5
+     ],
+     "items": null
+    },
+    {
+     "kind": "loader and void chest after the belt",
+     "belt": [
+      -128.5,
+      269.5
+     ],
+     "loader": [
+      -128.5,
+      268
+     ],
+     "underground": null,
+     "lane": null,
+     "chest": [
+      -128.5,
+      266.5
+     ],
+     "items": null
+    },
+    {
+     "kind": "infinity pipe (supply)",
+     "at": [
+      -129.5,
+      266.5
+     ],
+     "fluid": "molten-iron"
+    }
+   ],
+   "extended": [],
+   "bridged": [],
+   "power": {
+    "substations": 0,
+    "eei": null,
+    "note": "no power entities: the harness powers its whole surface with one electric energy interface (the benchmark template's way)"
+   },
+   "scaffold_notes": [],
+   "config_notes": [],
+   "expected": {
+    "name": "stupidfathobbit-cell06",
+    "product": "steel-plate",
+    "recipe": "casting-steel",
+    "copies": 1,
+    "items_per_second": 24.9,
+    "target": {
+     "items_per_second": {
+      "fraction": "249/10",
+      "decimal": 24.9
+     },
+     "source": "measured",
+     "fallback_reason": "the line runs out of the dump at the underground belt at -139.5,172.5 (no exit in the dump): the consumers lie outside it",
+     "capacity": {
+      "fraction": "925/4",
+      "decimal": 231.25
+     },
+     "measured": 24.907359,
+     "demand": {
+      "reason": "the line runs out of the dump at the underground belt at -139.5,172.5 (no exit in the dump): the consumers lie outside it"
+     }
+    },
+    "measured_items_per_second": 24.907359,
+    "rate_source": "products finished by the casting-steel machines over 36000 sampled ticks",
+    "source": {
+     "crafts_per_second": 24.90735853773716,
+     "items_per_second": 24.90735853773716,
+     "sampled_ticks": 36000,
+     "start_tick": 2814471,
+     "per_machine": [
+      {
+       "u": 1199240,
+       "recipe": "casting-steel",
+       "x": -132.5,
+       "y": 267.5,
+       "crafts_per_second": 24.90735853773716,
+       "status": {
+        "full_output": 0.9049,
+        "working": 0.0951
+       }
+      }
+     ],
+     "output_inserter_waiting": {
+      "unit": 1184581,
+      "share": 0.8961
+     }
+    }
+   },
+   "target": {
+    "items_per_second": {
+     "fraction": "249/10",
+     "decimal": 24.9
+    },
+    "source": "measured",
+    "capacity": {
+     "fraction": "925/4",
+     "decimal": 231.25
+    },
+    "measured": 24.907359,
+    "demand": {
+     "items_per_second": {
+      "fraction": "13355/256",
+      "decimal": 52.16796875
+     },
+     "source": "demand (consumers)",
+     "producers_sharing": 1,
+     "consumers": 16,
+     "consumers_demand": {
+      "fraction": "13355/256",
+      "decimal": 52.16796875
+     },
+     "consumers_demand_per_producer": {
+      "fraction": "13355/256",
+      "decimal": 52.16796875
+     },
+     "lane_limit": {
+      "fraction": "240",
+      "decimal": 240
+     },
+     "lanes": [
+      {
+       "lane": "left",
+       "belts": 67,
+       "speed": 0.125,
+       "stack": 4,
+       "lane_limit": {
+        "fraction": "120",
+        "decimal": 120
+       },
+       "cells_on_lane": 1
+      },
+      {
+       "lane": "right",
+       "belts": 67,
+       "speed": 0.125,
+       "stack": 4,
+       "lane_limit": {
+        "fraction": "120",
+        "decimal": 120
+       },
+       "cells_on_lane": 1
+      }
+     ]
+    },
+    "fallback_reason": "flag: output blocked and measurement off the target",
+    "flagged": {
+     "items_per_second": {
+      "fraction": "13355/256",
+      "decimal": 52.16796875
+     },
+     "source": "demand (consumers)",
+     "demand": {
+      "items_per_second": {
+       "fraction": "13355/256",
+       "decimal": 52.16796875
+      },
+      "source": "demand (consumers)",
+      "producers_sharing": 1,
+      "consumers": 16,
+      "consumers_demand": {
+       "fraction": "13355/256",
+       "decimal": 52.16796875
+      },
+      "consumers_demand_per_producer": {
+       "fraction": "13355/256",
+       "decimal": 52.16796875
+      },
+      "lane_limit": {
+       "fraction": "240",
+       "decimal": 240
+      },
+      "lanes": [
+       {
+        "lane": "left",
+        "belts": 67,
+        "speed": 0.125,
+        "stack": 4,
+        "lane_limit": {
+         "fraction": "120",
+         "decimal": 120
+        },
+        "cells_on_lane": 1
+       },
+       {
+        "lane": "right",
+        "belts": 67,
+        "speed": 0.125,
+        "stack": 4,
+        "lane_limit": {
+         "fraction": "120",
+         "decimal": 120
+        },
+        "cells_on_lane": 1
+       }
+      ]
+     },
+     "flags": [
+      "output blocked and measurement off the target"
+     ]
+    }
+   },
+   "source_limit": {
+    "limit": "downstream: output waiting for space",
+    "output_waiting_share": 0.8961,
+    "ingredient_shortage_share": 0
+   },
+   "flags": [
+    "output blocked and measurement off the target"
+   ],
+   "source_dump": {
+    "mods": {
+     "base": "2.1.21",
+     "design-extractor": "0.1.0",
+     "elevated-rails": "2.1.21",
+     "recycler": "2.1.21",
+     "quality": "2.1.21",
+     "space-age": "2.1.21"
+    },
+    "tick": 2814471
+   },
+   "n": 1,
+   "retargeted": "target recomputed from the whole-surface walk without a game run (scaffold unchanged)"
+  }
+ ]
+}
