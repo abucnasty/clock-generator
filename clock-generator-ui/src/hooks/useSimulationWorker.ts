@@ -214,6 +214,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const alternativesRef = useRef<ClockAlternativeView[]>([]);
     const [error, setError] = useState<string | null>(null);
     const workersRef = useRef<Worker[]>([]);
+    // startup failures stay in their slots until an explicit Check only or Generate retries them
+    const unusableWorkersRef = useRef(new Set<Worker>());
     const generationRef = useRef<Generation | null>(null);
     const runIdRef = useRef(0);
     const [validation, setValidation] = useState<ValidationState>({ status: 'none' });
@@ -257,6 +259,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const terminateWorkers = useCallback(() => {
         workersRef.current.forEach(worker => worker.terminate());
         workersRef.current = [];
+        unusableWorkersRef.current.clear();
     }, []);
 
     useEffect(() => terminateWorkers, [terminateWorkers]);
@@ -268,6 +271,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const replace = useCallback((busy: Worker[]) => {
         const before = workersRef.current;
         workersRef.current = replaceWorkers(before, busy, () => startWorkerRef.current());
+        busy.forEach(worker => unusableWorkersRef.current.delete(worker));
         const resend = checkToResend(before, workersRef.current, checkRunningRef.current ? validationRef.current : null);
         if (resend) {
             workersRef.current[0].postMessage({ type: 'validate', requestId: resend.requestId, config: resend.config } satisfies WorkerRequest);
@@ -515,12 +519,16 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     /**
      * A worker that stopped unexpectedly: a check it was running ends as failed (and Generate checks again), a
      * generation running ends with an error, and the worker is replaced once it had started (one that never loaded the
-     * data is not, or a page that cannot load a worker would keep trying). The player is told it was not their build;
-     * the browser's own words go to the Log.
+     * data waits for the next explicit Check only or Generate, so a failed startup cannot keep trying). The player is
+     * told it was not their build; the browser's own words go to the Log.
      */
     const handleCrash = useCallback((worker: Worker, detail: string, started: boolean) => {
-        if (!workersRef.current.includes(worker)) {
+        if (!workersRef.current.includes(worker) || unusableWorkersRef.current.has(worker)) {
             return;
+        }
+        if (!started) {
+            unusableWorkersRef.current.add(worker);
+            worker.terminate();
         }
         setLogs(previous => [...previous, { level: 'error', message: `A simulation worker stopped: ${detail}`, timestamp: Date.now() }]);
         console.error('Simulation worker stopped:', detail);
@@ -552,35 +560,40 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const startWorker = useCallback((replacement: boolean): { worker: Worker; ready: Promise<void> } => {
         const worker = createSimulationWorker();
         let started = false;
+        const current = () => workersRef.current.includes(worker) && !unusableWorkersRef.current.has(worker);
         const ready = new Promise<void>((resolve, reject) => {
             worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+                if (!current()) return;
                 const response = event.data;
                 if (response.type === 'initialized') {
                     started = true;
                     resolve();
-                } else if (response.type === 'error' && response.runId === undefined) {
+                } else if (!started && response.type === 'error' && response.runId === undefined) {
                     reject(new Error(response.message));
+                    return;
                 }
                 handleResponse(worker, response);
             };
             worker.onerror = (event) => {
+                if (!current()) return;
                 const message = event.message || 'The simulation worker stopped unexpectedly';
                 if (!started) {
                     reject(new Error(message));
-                    // one of the first pool fails the page's start; a replacement still loading ends what it was given
-                    if (!replacement) {
-                        return;
-                    }
+                    return;
                 }
                 handleCrash(worker, message, started);
             };
             loadFactorioData().then(
-                data => worker.postMessage({ type: 'initialize', factorioData: data } satisfies WorkerRequest),
+                data => {
+                    if (current()) worker.postMessage({ type: 'initialize', factorioData: data } satisfies WorkerRequest);
+                },
                 reject,
             );
         });
-        // a replacement's failure shows when it is asked for something
-        ready.catch(() => {});
+        // all startup failures end what a replacement was given, without starting an automatic retry loop
+        ready.catch((error: Error) => {
+            if (replacement && current()) handleCrash(worker, error.message, false);
+        });
         return { worker, ready };
     }, [handleCrash, handleResponse]);
 
@@ -615,6 +628,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [startWorker, terminateWorkers]);
 
     const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper = false) => {
+        replace(workersRef.current.filter(worker => unusableWorkersRef.current.has(worker)));
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
@@ -650,9 +664,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };
         worker.postMessage({ type: 'plan', runId, config: engineConfig, debugSteps, streamLogs } satisfies WorkerRequest);
-    }, [progressStore]);
+    }, [progressStore, replace]);
 
     const validate = useCallback((config: Config): Promise<CheckOutcome> => {
+        replace(workersRef.current.slice(0, 1).filter(worker => unusableWorkersRef.current.has(worker)));
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
@@ -669,7 +684,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setValidation({ status: 'running', config });
         worker.postMessage({ type: 'validate', requestId, config } satisfies WorkerRequest);
         return outcome;
-    }, [pendingChecks]);
+    }, [pendingChecks, replace]);
 
     /** The check waiting for its answer is dropped: its promise resolves `dropped`, and a late answer matches nothing */
     const dropCheck = useCallback(() => {

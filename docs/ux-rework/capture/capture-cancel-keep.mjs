@@ -10,13 +10,15 @@
 //                (build first; UI_DIR names the checkout, PREVIEW_PORT the port)
 //   SAMPLES_DIR  the sample configs of another checkout or worktree (lib.mjs default otherwise)
 //   WIDTHS       optional, e.g. "1440,390" (default 1440,720,390)
-//   STEPS        optional, comma list of: check,sweep,cancel,again,copy,pick,reload,stale,nodb,undo,import,crash (default all)
+//   STEPS        optional, comma list of: check,sweep,cancel,again,copy,pick,reload,stale,nodb,undo,import,crash,startup (default all)
 //
 // How the fleeting states are held still. An init script (`INIT`) is put in every page: it records announcements written into the
 // polite region(s) (`window.__ux.ann`), whether "Generating..." or "Checking..." ever showed, and what the header held while a check
 // ran. It also wraps `Worker.prototype.postMessage` so a test can (a) hold back a `validate` or `plan` request by N ms (so the
 // check stage and the "starting" stage of a run last long enough to shoot, run axe on, and Cancel by keyboard), and (b) swallow the next
 // `validate` request and fire an `error` event on that worker, which is what a crashed worker looks like to `onerror`.
+// The startup scenario also substitutes a real module that throws before installing a message handler for the next
+// replacement Worker. It records that the browser's error arrived before initialized; engine answers are never fabricated.
 // The wrap relies on the request `type` strings of worker/types.ts ('validate', 'plan', 'task'). SELECTOR: confirm if they change.
 //
 // The controls 3.3 added are found through lib.mjs's `ui` map: `cancel`, `progressRow`, `staleBanner`, `generateAgain`, `runNote`.
@@ -86,7 +88,7 @@ const WORDS = {
 
 /** Runs in every page before the app (context.addInitScript). Must not use anything from the module. */
 function INIT() {
-    const R = (window.__ux = { ann: [], generating: false, checkSeen: false, checkSnaps: [], hold: {}, crashNext: 0, autoCancel: false, autoCancelled: false });
+    const R = (window.__ux = { ann: [], generating: false, checkSeen: false, checkSnaps: [], hold: {}, crashNext: 0, failStartupNext: 0, startupFailures: [], workersCreated: 0, autoCancel: false, autoCancelled: false });
     const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
     const regionOf = (n) => {
         const el = n && n.nodeType === 1 ? n : n && n.parentElement;
@@ -118,6 +120,28 @@ function INIT() {
         }
         scan();
     }).observe(document, { childList: true, subtree: true, characterData: true });
+    const NativeWorker = Worker;
+    window.Worker = class extends NativeWorker {
+        constructor(url, options) {
+            const failStartup = R.failStartupNext > 0;
+            if (failStartup) R.failStartupNext--;
+            const failingUrl = failStartup ? URL.createObjectURL(new Blob([
+                'throw new Error("capture: replacement module startup failed");',
+            ], { type: 'text/javascript' })) : null;
+            super(failingUrl ?? url, options);
+            R.workersCreated++;
+            if (failingUrl) {
+                let initialized = false;
+                this.addEventListener('message', (event) => { if (event.data?.type === 'initialized') initialized = true; });
+                this.addEventListener('error', (event) => {
+                    // This expected fault still reaches the hook's onerror; stop its default window-level report.
+                    event.preventDefault();
+                    R.startupFailures.push({ initialized });
+                    URL.revokeObjectURL(failingUrl);
+                }, { once: true });
+            }
+        }
+    };
     const original = Worker.prototype.postMessage;
     Worker.prototype.postMessage = function (message, ...rest) {
         const type = message && message.type;
@@ -879,6 +903,45 @@ const run = await forWidths(
                 await idle(page);
                 const ms = Date.now() - t0;
                 rec.check('the next Generate finishes in normal time (< 2.5 s for the small sample; the dropped work is not queued ahead)', ms < 2500 && (await clocksMade(page)) >= 1, `${ms} ms`);
+            });
+        }
+
+        // =========================================================================== startup: replacement module fails
+        if (want('startup')) {
+            await step('a replacement module startup failure settles and the next explicit action recovers', async () => {
+                // Test both next actions independently. The first crash replaces worker0; the replacement is a real
+                // throwing module, so unlike the older crash case below it never sends initialized or handles requests.
+                for (const nextAction of ['Check only', 'Generate']) {
+                    await importFile(page, SMALL_SAMPLE);
+                    await resetFlags(page);
+                    await goConfigure(page);
+                    const before = await page.evaluate(() => {
+                        window.__ux.crashNext = 1;
+                        window.__ux.failStartupNext = 1;
+                        return window.__ux.startupFailures.length;
+                    });
+                    await ui.checkOnly(page).click();
+                    const failed = await until(() => page.evaluate((count) => window.__ux.startupFailures.length > count, before), 4000);
+                    rec.check(`${nextAction}: replacement really failed before initialized`, !!failed && await page.evaluate(() => window.__ux.startupFailures.at(-1)?.initialized === false));
+                    rec.check(`${nextAction}: the first check settles after replacement startup fails`, !!await until(async () => !(await isRunning(page)) && (await chipsOf(page)).includes('Check failed'), 4000));
+                    await rec.shot(page, `startup-failed-before-${nextAction === 'Check only' ? 'check' : 'generate'}`, { desc: 'A replacement module failed before initialized; the check has ended', aria: true });
+                    await checkAxe(rec, page, 'replacement startup failure');
+                    const created = await page.evaluate(() => window.__ux.workersCreated);
+                    await sleep(350);
+                    rec.check(`${nextAction}: startup failure does not automatically restart`, await page.evaluate((count) => window.__ux.workersCreated === count, created));
+                    if (nextAction === 'Check only') {
+                        await ui.checkOnly(page).click();
+                        rec.check('next Check only succeeds on a fresh worker', !!await until(async () => (await chipsOf(page)).includes('Check passed'), 6000));
+                        rec.check('Check only creates one replacement', await page.evaluate((count) => window.__ux.workersCreated === count + 1, created));
+                    }
+                    await ui.generate(page).click({ timeout: 3000 });
+                    const made = await until(async () => { await goResults(page).catch(() => {}); return (await clocksMade(page)) >= 1; }, 9000, 300);
+                    rec.check(`${nextAction}: next Generate makes real clocks after startup failure`, !!made);
+                    await idle(page);
+                    rec.check(`${nextAction}: recovery creates exactly one replacement`, await page.evaluate((count) => window.__ux.workersCreated === count + 1, created));
+                    await rec.shot(page, `startup-recovery-${nextAction === 'Check only' ? 'check' : 'generate'}`, { desc: 'The next explicit action recovered from a replacement module startup failure', aria: true });
+                    await checkAxe(rec, page, 'replacement startup recovery');
+                }
             });
         }
 
