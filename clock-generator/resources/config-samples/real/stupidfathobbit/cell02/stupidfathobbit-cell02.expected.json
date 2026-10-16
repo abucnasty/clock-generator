@@ -1,0 +1,239 @@
+{
+ "name": "stupidfathobbit-cell02",
+ "product": "processing-unit",
+ "recipe": "processing-unit",
+ "copies": 1,
+ "items_per_second": 80,
+ "target": {
+  "items_per_second": {
+   "fraction": "80",
+   "decimal": 80
+  },
+  "source": "measured",
+  "capacity": {
+   "fraction": "9023/100",
+   "decimal": 90.23
+  },
+  "measured": 80.020556,
+  "demand": {
+   "items_per_second": {
+    "fraction": "8065/96",
+    "decimal": 84.0104166667
+   },
+   "source": "demand (consumers)",
+   "producers_sharing": 1,
+   "consumers": 14,
+   "consumers_demand": {
+    "fraction": "8065/96",
+    "decimal": 84.0104166667
+   },
+   "consumers_demand_per_producer": {
+    "fraction": "8065/96",
+    "decimal": 84.0104166667
+   },
+   "lane_limit": {
+    "fraction": "240",
+    "decimal": 240
+   },
+   "lanes": [
+    {
+     "lane": "right",
+     "belts": 3,
+     "speed": 0.125,
+     "stack": 4,
+     "lane_limit": {
+      "fraction": "120",
+      "decimal": 120
+     },
+     "cells_on_lane": 1
+    },
+    {
+     "lane": "left",
+     "belts": 3,
+     "speed": 0.125,
+     "stack": 4,
+     "lane_limit": {
+      "fraction": "120",
+      "decimal": 120
+     },
+     "cells_on_lane": 1
+    }
+   ]
+  },
+  "fallback_reason": "flag: output blocked and measurement off the target",
+  "flagged": {
+   "items_per_second": {
+    "fraction": "8065/96",
+    "decimal": 84.0104166667
+   },
+   "source": "demand (consumers)",
+   "demand": {
+    "items_per_second": {
+     "fraction": "8065/96",
+     "decimal": 84.0104166667
+    },
+    "source": "demand (consumers)",
+    "producers_sharing": 1,
+    "consumers": 14,
+    "consumers_demand": {
+     "fraction": "8065/96",
+     "decimal": 84.0104166667
+    },
+    "consumers_demand_per_producer": {
+     "fraction": "8065/96",
+     "decimal": 84.0104166667
+    },
+    "lane_limit": {
+     "fraction": "240",
+     "decimal": 240
+    },
+    "lanes": [
+     {
+      "lane": "right",
+      "belts": 3,
+      "speed": 0.125,
+      "stack": 4,
+      "lane_limit": {
+       "fraction": "120",
+       "decimal": 120
+      },
+      "cells_on_lane": 1
+     },
+     {
+      "lane": "left",
+      "belts": 3,
+      "speed": 0.125,
+      "stack": 4,
+      "lane_limit": {
+       "fraction": "120",
+       "decimal": 120
+      },
+      "cells_on_lane": 1
+     }
+    ]
+   },
+   "flags": [
+    "output blocked and measurement off the target"
+   ]
+  }
+ },
+ "measured_items_per_second": 80.020556,
+ "rate_source": "products finished by the processing-unit machines over 36000 sampled ticks",
+ "source": {
+  "crafts_per_second": 80.02055612655906,
+  "items_per_second": 80.02055612655906,
+  "sampled_ticks": 36000,
+  "start_tick": 2814471,
+  "per_machine": [
+   {
+    "u": 1041496,
+    "recipe": "advanced-circuit",
+    "x": -140,
+    "y": 291,
+    "crafts_per_second": 20.00388899691658,
+    "status": {
+     "working": 0.9596,
+     "full_output": 0.0328,
+     "item_ingredient_shortage": 0.0076
+    }
+   },
+   {
+    "u": 1072625,
+    "recipe": "processing-unit",
+    "x": -137,
+    "y": 286,
+    "crafts_per_second": 40.012778132725906,
+    "status": {
+     "working": 0.8743,
+     "item_ingredient_shortage": 0.0483,
+     "full_output": 0.0774
+    }
+   },
+   {
+    "u": 1011478,
+    "recipe": "casting-copper-cable",
+    "x": -136.5,
+    "y": 296.5,
+    "crafts_per_second": 167.05130698074947,
+    "status": {
+     "full_output": 0.5372,
+     "working": 0.4628
+    }
+   },
+   {
+    "u": 1041491,
+    "recipe": "electronic-circuit",
+    "x": -135,
+    "y": 291,
+    "crafts_per_second": 254.47373538153838,
+    "status": {
+     "working": 0.9688,
+     "full_output": 0.0227,
+     "item_ingredient_shortage": 0.0085
+    }
+   },
+   {
+    "u": 1079822,
+    "recipe": "casting-iron",
+    "x": -132.5,
+    "y": 285.5,
+    "crafts_per_second": 101.74449290258063,
+    "status": {
+     "working": 0.9011,
+     "full_output": 0.0989
+    }
+   },
+   {
+    "u": 1041484,
+    "recipe": "electronic-circuit",
+    "x": -130,
+    "y": 291,
+    "crafts_per_second": 254.55707102975083,
+    "status": {
+     "working": 0.9691,
+     "full_output": 0.0222,
+     "item_ingredient_shortage": 0.0087
+    }
+   },
+   {
+    "u": 1011472,
+    "recipe": "casting-copper-cable",
+    "x": -128.5,
+    "y": 296.5,
+    "crafts_per_second": 167.0829745270702,
+    "status": {
+     "working": 0.4632,
+     "full_output": 0.5368
+    }
+   },
+   {
+    "u": 1072622,
+    "recipe": "processing-unit",
+    "x": -128,
+    "y": 286,
+    "crafts_per_second": 40.00777799383316,
+    "status": {
+     "working": 0.8738,
+     "item_ingredient_shortage": 0.0498,
+     "full_output": 0.0763
+    }
+   },
+   {
+    "u": 1041479,
+    "recipe": "advanced-circuit",
+    "x": -125,
+    "y": 291,
+    "crafts_per_second": 20.010555848773578,
+    "status": {
+     "working": 0.7882,
+     "full_output": 0.1877,
+     "item_ingredient_shortage": 0.0241
+    }
+   }
+  ],
+  "output_inserter_waiting": {
+   "unit": 1094768,
+   "share": 0.3594
+  }
+ }
+}

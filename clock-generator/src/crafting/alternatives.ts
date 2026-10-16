@@ -1,4 +1,5 @@
 import assert from "../common/assert";
+import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -421,6 +422,17 @@ function backpressureLossNote(verdict: BackpressureLossVerdict | null): string {
 }
 
 
+/**
+ * Items a second the clock moves over all copies. A whole number of copies keeps the plain product; a fractional one
+ * is multiplied as an exact fraction, so 5.5 copies carry no float error of their own.
+ */
+function itemsPerSecondOverCopies(items_per_period: number, period_ticks: number, copies: number): number {
+    if (Number.isInteger(copies)) {
+        return items_per_period * 60 / period_ticks * copies;
+    }
+    return fraction(copies).multiply(items_per_period * 60).divide(period_ticks).toDecimal();
+}
+
 function runAlternative(definition: AlternativeDefinition, config: Config, logger: Logger, report?: (detail: string) => void): ClockAlternativeRun | null {
     const copies = config.target_output.copies ?? 1;
     let result: BlueprintGenerationResult;
@@ -469,7 +481,7 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
     const wake_ups_per_minute = as_built?.wake_ups?.wake_ups_per_minute ?? null;
     /** The alternative for the clock run at `clock_period` ticks a period: the exact period, or the rounded one */
     const alternativeAt = (clock_period: number, row: { id: string; label: string; description: string; result: BlueprintGenerationResult }): ClockAlternative => {
-        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: achieved_output_items * 60 / clock_period * copies, wake_ups_per_minute };
+        const assessment: ClockAssessment = { holds: held, backpressure_loss, items_per_second: itemsPerSecondOverCopies(achieved_output_items, clock_period, copies), wake_ups_per_minute };
         const clock = { ...row, inserter_window_count, ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights };
         return { ...clock, ranking: rankingOf(clock, config) };
     };

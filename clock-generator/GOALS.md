@@ -1,225 +1,98 @@
 ## Goals of this Algorithm
 
 1. match the target rate of the recipe chosen exactly
-2. minimize "active inserter windows" whenever possible to reduce update time in factorio
+2. reduce the update time the build costs the game (UPS)
 
 The goals above are listed in priority order.
 
+Goal 2 was first written as "minimize active inserter windows whenever possible to reduce update time in factorio". Its aim is the update time itself (the owner, 2026-10-15: "The specific goal is to reduce UPS. Goal as stated is outdated."). The selection does not measure update time yet: it ranks clocks by their wake-ups ("Wake-ups, the measure for goal 2"), which stand in for it. The wake-ups stay the measure until a plan to measure update time replaces them.
+
+### Goal 1: match the target rate exactly
+
+> A clock must always recover. When any item of a build stops arriving for a while, or its output stops being taken, the machines run dry or fill up, and when the item comes back the build has to return to its target rate under the same clock by itself. Nobody should have to restart a build because one input ran out.
+>
+> A clock that does this survives backpressure loss, and one that does not cannot survive backpressure loss. This is what "stable" has meant in this project: a stable clock is one that survives backpressure loss. A clock that only makes its target rate from a clean start, with every machine full of ingredients and emptied of products, does not meet goal 1.
+
+The detail is in [docs/stability.md](docs/stability.md).
+
+### Goal 2: reduce the update time the build costs the game
+
+> The measure for goal 2 is the number of wake-ups per minute, summed over the inserters of one copy of the build. Among the clocks that meet goal 1, the one with the fewest wake-ups is the best. It is defined in `clock-generator/src/crafting/wake-ups.ts`. Since 0.13.0 it follows the mechanic above: the inserters into a machine are woken by its craft starts, which the simulator counts itself, and not by its payouts. Before that both lists were woken by finishes and payouts, which on a machine with productivity counted more wake-ups of the inserters into it than the game makes (the advanced circuit scaffold's inputs: 1,075 a minute against 625). The game's figure in a recording is read by the series' method from status and products_finished ("The rule's count and the clock-or-unwired advice"), whose standing per machine type is named with it; on a biochamber it is a known miss, and on machine types never recorded it is not checked.
+
+The detail is in [docs/wake-ups.md](docs/wake-ups.md).
+
 ## Backpressure Loss
 
-A clock must always recover. When any item of a build stops arriving for a while, or its output stops being taken, the machines run dry or fill up, and when the item comes back the build has to return to its target rate under the same clock by itself. Nobody should have to restart a build because one input ran out.
-
-A clock that does this survives backpressure loss, and one that does not cannot survive backpressure loss. This is what "stable" has meant in this project: a stable clock is one that survives backpressure loss. A clock that only makes its target rate from a clean start, with every machine full of ingredients and emptied of products, does not meet goal 1.
-
-Builds are classified the same way. Some builds cannot survive backpressure loss whatever the clock, such as a loop of machines that does not start again once it has run dry. That is a limit of the build, and it is fine to say so and to give such a build the clocks it can have, as long as they are named for what they are.
-
-Decided on 2026-10-10, after a clock for the advanced circuit build that makes its 704 a period from a clean start made 608 and 624 in the game: one of its two plants held products when the clock started, and never caught up.
+Moved to docs/stability.md.
 
 ### How a clock is tried for it
 
-The generator tries every clock that holds its expected output, in the simulator. A loss is one item that stops arriving from the belts and infinity chests of the build, or one output that is no longer taken away. Each loss is cut at four places in the clock period, and at each it lasts a quarter, a half, three quarters and all of the time the build takes to stop. The build has stopped when nothing was moved, crafted or burned for a whole period; a loss ends after 200 periods at the latest. When the item is back the build has 40 periods to be at exactly its expected output again, and has to stay there. The slowest clock of the samples that gets back takes 19. The trials are the same for every build and every clock, and are defined in `clock-generator/src/crafting/backpressure-loss.ts`.
-
-A clock that holds its expected output and does not get back from a loss is not stable. It is listed as a clock with no recovery, with the losses that break it, and it is only selected when no clock of the build survives. On the samples the selection changed for two builds: agricultural science, whose selected clock did not get back from a loss of nutrients, and military science, where every clock but the one without belt pickup slack is broken by a loss of coal. No clock of the metallurgic science sample gets back from a loss of tungsten ore, so that build keeps its clocks under that name; its selected clock holds its output and does not get back from that loss, and comes before the plain 1-swing clock at the same rate, which does not hold at all (see "Wake-ups", two clocks equally near the target).
-
-One kind of build is left out of this. Where a build has a deadlock risk (see "Two inserters that bring the same item"), its clocks are tried and their verdicts shown, and the verdict does not decide which is selected.
-
-This can cost wake-ups: goal 1 comes first. The clock selected for agricultural science then had 3,950 a minute where the one before had 2,543. Since the rules of issue 152 (2026-10-14, "When a waiting inserter acts") batched swings gets back from every loss on that build and is selected again, at 3,651.
-
-Fluids are not cut, as the simulator leaves them out. None of this has been checked in the game: the harness cannot cut a supply.
-
-The trials do not catch the clock that led to this rule. The advanced circuit clock with windows of 4 ticks gets back from all 48 of its trials in the simulator, and made 608 and 624 of 704 in the game. That is a known gap. The trials are not to be changed until they fail that one clock: a check that is tuned to a build is no longer a check for any build.
+Moved to docs/stability.md.
 
 ## Working Rules
 
-Decided on 2026-10-10, after a day in which each recording of the game led to another rule for the simulator and the work on goal 2 did not start.
-
-1. The simulator is the judge of a clock, because it is the only judge that ships with the generator. The game is what the simulator is calibrated against.
-2. A difference between the simulator and the game is chased only when it changes whether a clock is stable, or which clock is selected, on some sample. Any other difference gets a line in `resources/config-samples/README.md` and is left.
-3. Margin comes before precision. A clock has to recover from losses and hold with its windows a tick off, so that a modelling error of one tick does not decide whether it works.
-4. Scaffold tests are a regression check. They do not decide whether a change ships.
-5. The generator is built from general patterns. A sample, a scaffold or a clock someone made by hand is evidence and a benchmark, never the target. A build the generator cannot clock is a gap to record, not a reason to change the build.
-6. The time spent searching at generation does not grow: no new search dimension, no more start phases, no more trials. A new idea has to be a rule that builds or rejects a clock from the config and the plan, with the simulator confirming it.
+Moved to docs/working-rules.md.
 
 ## Active Inserter Windows
 
-An active inserter window is defined as a period where an inserter receives a signal from a decider combinator telling it to be enabled. During that window it has the ability to actively do work and transfer materials from a source to a sink.
-
+Moved to docs/stability.md.
 
 ### Active Inserter Windows Definition of Good
 
-A good clock output reduces an active inserter window to run just in time to transfer the items the machine needs to keep on crafting to meet the target production rate. This means that many times the inserter will transfer multiple times back to back to meet the transfer goal. Reducing the duration of an active window can lead to instability. The measure for a good active inserter window is when the inserter can pick up the items it needs in the least number of ticks. The output from a machine has also another special consideration which is that it should attempt to pick up the full stack size whenever possible. If it cannot do this, it should minimize the amount of time sitting idle over the machine, picking up the output one craft at a time.
+Moved to docs/stability.md.
 
 ## How clocking impacts updates per second
-Clocking can reduce updates per second in theory by minimizing active inserter windows. Most notably, minimize the amount of crafts an inserter sees on its source or sink while idle and not transferring materials. These count as wasted updated checks. This doesn't always translate to improved performance on all hardware, but for the intents and purposes of this algorithm, it is assumed that it *always* does. The choice of removing a clock from an inserter is left up to the user and they can do this by overriding the inserter to "always" enabled in the config. An inserter that is set to "always" enabled is to get no combinator in the blueprint.
 
-Given a recipe chain to produce a target end product, the amount of items that are needed are consistent in this build. Mathematically, the amount of items that need to be transferred is an independent concern of clocking. What clocking can control however is *when* those items get transferred.
-
-Inserters have been measured to have lower update time cost when clocked. When an inserter is not controlled by the circuit network (control behavior enabling / disabling it) it checks every craft finish of its source or sink machine if it has new items to pick up or new items to drop into the sink. Clocking can help by creating a window (active inserter window) narrowing the amount of ticks these checks can happen. Ideally, the inserter is always enabled "just in time" and can transfer in a batch as many items at once as it can.
+Moved to docs/wake-ups.md.
 
 ## Wake-up Lists
 
-Wake-up lists are how the game decides which idle inserters to check, and they are what goal 2 is measured in.
-
-An inserter with nothing to move goes to sleep on the wake-up list of the machine it is waiting on. Each time that machine finishes a craft it wakes the inserters on its list. A woken inserter looks for something to move, finds nothing or only part of a hand, and goes back to sleep. An inserter that is disabled by the circuit network is on no list and is never woken: the debug tooltip of a disabled inserter reads "Wakeup list count: 0".
-
-This can be seen in the game with the debug setting `show-wakeup-lists`, which draws a yellow line from a waiting inserter to what it waits on. A line that flickers on and off very frequently is an inserter that keeps getting woken for nothing, and that is considered bad.
+Moved to docs/wake-ups.md.
 
 ### Wake-ups, the measure for goal 2
 
-A wake-up is one waking of an inserter by a machine: the machine finished a craft, or paid out a productivity bonus, while the inserter was enabled and asleep on its list. A machine wakes an inserter at most once in a tick. The measure for goal 2 is the number of wake-ups per minute, summed over the inserters of one copy of the build. Among the clocks that meet goal 1, the one with the fewest wake-ups is the best. It is defined in `clock-generator/src/crafting/wake-ups.ts`.
-
-There are two kinds of design: a clock that only works when its inserters pick up from a belt that does not move, and a clock that also works when the items on the belt are moving. An inserter changes its tick timing when the belt is moving, and all the more when the belt has gaps, which it can have when the build needs the whole capacity of the belt. The simulator only has the first kind of belt: always full, and not moving. So do the scaffolds, all but one: their belts are closed at the end and stand still once they are full. The iron bacteria scaffold lets 32 items through in every 61 ticks to keep its nutrients fresh, so its belt creeps.
-
-What a build does when its belt moves has to be accounted for (decided on 2026-10-10), and nothing checks it yet: a clock made for a moving belt has never been recorded on one. It needs scaffolds whose belt moves as the belt of a row of copies does, where what passes one copy is what the copies after it take.
-
-Belt pickup slack is an easy way to get a clock for a moving belt without modelling one. Each window of an inserter that picks up from a belt stays open a few ticks longer: the ticks one more full hand takes at one belt stack a tick, which is 4 for a hand of 16 from stacks of 4. It is a rule of thumb. It may work on one build and not on another, and neither the simulator nor a scaffold can tell which.
-
-The generator selects the clock with the fewest wake-ups among those that meet goal 1, with one exception: it must not give up belt pickup slack to get there on its own. A clock without the slack is a clock for a belt that does not move, a non-moving belt clock, and in the simulator it looks better than it is on a moving belt. Leaving the slack out is a choice for the user, made with `overrides.non_moving_belts` in the config (the Belts section's "Backed up and standing still" answer in the UI): then each clock is made without the slack and the clock with the fewest wake-ups is selected; a clock that does not hold the target rate without the slack is offered as unstable, and is not made again with it. Without that choice a clock without the slack is only selected when no clock with it meets goal 1, whether the slack was left out on purpose or because the clock does not hold with it. The order is in `combineClockAlternativeRuns` in `clock-generator/src/crafting/generate-blueprint.ts`.
-
-When no clock meets goal 1, the generator selects the one whose rate in the simulator is nearest to the target, above or below, whatever belt it is made for, and says so when its blueprint is copied. When no clock meets goal 1 and two are equally near the target rate, the one that holds its expected output from the generator's start is selected before one that does not: a clock that only fails to get back from a loss is nearer to goal 1 than one that drifts from a clean start. The processing unit sample with a belt export and the utility science sample with direct-insert low density structures are the two without a clock that holds: the first selects 31.8 of 40 a second (34.6 before the rules of issue 152 of 2026-10-14), the second 200 of 240.
-
-The generator does not make every clock for every build (decided on 2026-10-12). Four of its clocks are found by a search, which tries many clocks in the simulator to find one: observed windows, uneven output swings, shifted swings and full-hand output swings. The others are made straight from the plan: batched swings, fractional swings, even hands and the other output swing counts. The searches take about nine tenths of the ticks a generation simulates, and they only run when no clock made without one can be selected as stable: one that holds its expected output, survives backpressure loss, meets the target rate and is made for the belt the config asks for. That is the test the selection itself puts first (`selectableAsStable` in `clock-generator/src/crafting/rank.ts`), so on a build with a deadlock risk a clock that holds at the target rate is enough, as it is for the selection. When the searches are needed all four run, and the selection is made among all the clocks as above.
-
-So goal 1 decides whether the generator searches, and goal 2 does not. Where a clock made without a search is stable, a search could still find a stable clock with fewer wake-ups, and by default it is not looked for. Looking for it is a choice for the user, made with `overrides.search_for_fewer_wake_ups` in the config ("Search for fewer wake-ups" in the UI): then the searches run for every build and the clock with the fewest wake-ups of all is selected. Without it the generator names the searches it left out.
-
-On the samples a clock made without a search is stable on 30 of 38 with belts moving and on 31 with belts that do not move, and there the searches are left out. That is 68% and 73% of the ticks simulated over all the samples, and 78% and 81% without the processing unit sample with a belt export, which takes more than a third of the time of them all and still searches. A search is the only source of a stable clock on four samples: automation science, advanced circuit at 230 a second, and logistic science with direct insertion and with inserter crafting. The selection changes on 7 samples with belts moving and on 8 with belts that do not move, each time from one stable clock to another; no sample loses a stable clock. The wake-ups given up are 0 to 43 a minute on all but two: 75 on the utility science chain (`UTILITY_SCIENCE_DIRECT_INSERT_LDS_CHAIN_ALWAYS_ON`, 787 to 862) and 90 on chemical science with engines with belts that do not move (`CHEMICAL_SCIENCE_ENGINES`, 255 to 345).
-
-An inserter that takes fuel for its machine off a belt, as well as an ingredient, needs longer windows on a belt that does not move too. The fuel slot asks for a hand when it falls below its limit, which does not repeat with the clock: the hand of fuel comes at any tick of any window, ahead of the hands the window is planned for. A window ends where its last planned hand is back from the drop, so with a hand of fuel ahead that hand is full later than the window ends, by the ticks the fuel hand takes to fill: 4 for a hand of 16 from stacks of 4. Without them the window closes on a partly filled hand, and an inserter that holds an ingredient takes no fuel. This is room for a hand of fuel, and it is as long as belt pickup slack. A clock for belts that do not move gets it when it does not hold the target rate without, and stays a clock for a belt that does not move; one that does not hold with the room either is offered as it is, unstable. The agricultural science sample is the case: 377 of 400 a period in the game without the room, 400 with it. On a moving belt the two are not added up: the slack is all such an inserter has there, a hand of fuel uses it up, and nothing is left for a pickup that comes late. That is a known limit of the rule of thumb, left as it is so that the clocks for a moving belt stay as they are.
-
-Every clock the generator offers names the belt it is made for: moving, with the ticks of slack it has, or non-moving. The slack is not given to a clock with a period that is not a whole number of ticks, so a subtick clock is a non-moving belt clock for now. It is not ranked behind the clocks for a moving belt, as a clock that left the slack out is. On the three samples with a subtick clock, no clock with the slack meets goal 1.
-
-The inserters of a loop of machines, and those that take from its machines to another machine, are left always enabled by every clock, whatever that costs in wake-ups: a loop that runs dry does not start again. The one exception is an inserter that feeds the machine the build's output is taken from, which gets windows when the clock holds with them. Clocking them can save a lot. On the iron bacteria sample a clock with windows on its two loop inserters held the target rate in the game for ten minutes at 1,587 wake-ups a minute, where the selected clock has 4,490. It is not offered: ten minutes on one build is not enough to risk a loop on, and the rule stays until it is decided otherwise.
-
-The game does not expose its wake-up lists to mods, so they cannot be recorded directly. They are worked out from what the game does show: the status of each inserter, which names what it is waiting for, and the number of products each machine has finished. The same calculation is used on a simulated run and on a recording of the game, so that the two can be compared.
-
-Which list an inserter sleeps on follows its status: the machine it takes from while it is waiting for source items or for more items, and the machine it puts into while it is waiting for space in the destination. Whether a waiting inserter is also on the list of the machine at its other end has not been confirmed yet.
-
-A clock can settle into more than one steady state with the same output, depending on what the machines hold when it starts, and each has wake-ups of its own. Batched swings on the utility science sample makes 192 a period in each of three, at 10.7, 26.8 and 32.1 wake-ups a minute; in the game it settled into the second. The generator counts the wake-ups of the state its own run settles into, so its figure for such a clock is one of several. A scaffold test looks for the game's figure among those the simulator counts from other starts of the clock.
-
-Most clocks are like that. Surveyed on 2026-10-11 over the samples, from 24 places in the period to start each clock at (`clock-generator/.scratch/probes/steady-states/` on the machine the survey ran on): with belts moving, 91 of the 149 clocks whose long run counts wake-ups settle into more than one steady state, and 69 of 121 with belts that do not move. Batched swings on the gleba rocket fuel sample (`GLEBA_ROCKET_FUEL`) counts 1,187 a minute from the start the generator gives it and from 952 to 2,052 from the others, a different figure from each of the 24 starts. Fractional swings on the electric furnace sample (`ELECTRIC_FURNACE`) counts 33 from its own start and up to 96 from another. Batched swings without the slack on the flying robot frame sample (`FLYING_ROBOT_FRAME`) counts 12.5 from its own start and none from another. Over all the clocks surveyed, the range between the lowest and the highest figure is a third of the highest at the median, and the whole of it at the widest. The wake-ups the generator reports for a clock are the count from one start, its own, and that is what the selection compares. Ranked by the highest figure instead, 7 samples with belts moving and 8 without would select another clock; on utility science (`UTILITY_SCIENCE`) that would be the uneven output swings that deadlocked in the game (21.4 a minute from every start), over batched swings (10.7 from its own start, 32.1 at the highest), since on a build with a deadlock risk the wake-ups decide. Counting the range for the clocks that compete would cost about 60% more time searching, which is not spent (Working Rules, 6).
-
-Belts and chests are left out of this measure. An inserter that works with a moving belt tracks the position of the item it is going to pick up, which costs more than a wake-up. Belts that do not move are cheaper and are what the simulator models, for simplicity.
+Moved to docs/wake-ups.md.
 
 ### Even hands
 
-A build in which one machine feeds several, or which is two halves doing the same thing, is best clocked so that every source is emptied by its takers in a fixed order, the same every period, and the two halves open and close together on one window decider for each thing they do. The batched swings plan does not give that: its windows are read off a planning run in which every inserter waits on its machines, so a machine with several takers gets whatever windows those waits made, and every cycle gets the same windows, which cannot move a hand count that is not a whole number a cycle.
-
-Even hands (2026-10-14, for the accumulator build of issue 152) is made from the plan's hand counts and the rules of the game alone. Every inserter gets one window for each hand the plan has it move in the period, spread evenly over the period, each a tick shorter than its hand cycle. A window that long starts one hand and no more (pickups in a window = floor((W - 1) / cycle) + 1, factorio-benchmarks docs/mechanics, inserters.md section 9), at whichever of its ticks the source has the hand and the sink takes it. Inserters that move the same hands a period get the same windows, so the halves share deciders and two takers of one machine at one rate take from it in the same ticks. It is only made where every inserter takes from a machine or a chest (a hand from a belt fills a stack a tick, and a moving belt is not modelled), every inserter moves a whole number of hands a period, and no inserter is outside the plan (loops, fuel, by-products, drills). It is checked as every clock is, and is not a search.
-
-The windows have to be that long. On the accumulator build windows of one tick at the same places made 144 of 288 a period: the plants run at 90 and 95% of their speed, a hand now and then finds 15 where it needs 16, takes a part hand and finishes it a window later, and an exact clock never makes that up. Windows of 7 held from 60 of 60 random places of the five groups in the period.
-
-On the samples it is made for the accumulator build and the processing unit build (unstable there, 9.8 of 10 a second). On the accumulator build it is the only stable clock made without a search, and is selected, so the searches are left out there too (30 of 41 samples with belts moving and 32 of 41 with belts that do not move, on the full sweep of that day, against 29 and 31 before): 601.9 wake-ups a minute against 2,906.7 for the observed windows clock selected before, with 5 window deciders. Recorded on the scaffold: 576 in each of 46 periods, no difference between the simulator and the game, at 972 wake-ups a minute in the game, a figure the simulator counts (940.7) from another start of the clock (278.5 to 940.7 by where it starts).
+Moved to docs/wake-ups.md.
 
 ## The rule's count and the clock-or-unwired advice
 
-The inserter cost series of factorio-benchmarks timed builds with and without their clocks and closed with a rule: whether a group of inserters is worth clocking follows from w, the wake-ups a minute a clock removes from each wired inserter of the group (`benchmarks/2026-10-12-inserter-cost-2.1.21/closing/CLOSING-2-RESULT.md`). The generator gives that call for each group as advice (since 0.11.0). The advice changes no clock, no selection and no wake-up figure the generator reports. It is about update time only, never a reason to drop a clock a build needs for goal 1.
-
-The rule's w is not goal 2's measure ("Wake-ups, the measure for goal 2"), which the selection uses and which is left as it is. It is counted as the series counted it, so that the generator and the series count a save the same way (`clock-generator/src/crafting/rule-count.ts`, a port of the series' recount script):
-- A source wake-up is a craft finished by the machine the inserter takes from while it waited for items. "Finished" is any rise of the machine's `products_finished`, which counts productivity payouts as well as crafts.
-- A sink wake-up is a craft started by the machine the inserter puts into while it waited for space, not counting a start in the tick of the inserter's own drop. The rule does not see a start: it reads one off a finish or the machine's status turning to working, and where those differ from the finishes by more than 3% over the count it takes the finishes. Since a payout is a finish, on a machine with much productivity it counts more starts than there are: on the advanced circuit sample, whose machines run at 175% productivity, the inserters into them count 1,075 sink wake-ups a minute unclocked, where the true starts give 625. The thresholds were set with this count, so it is kept as it is. A simulated run also reports the true starts beside it.
-- A pickup from a machine that no counted wake-up and no closed window in the 3 ticks before explains is counted too: the pickups of an output that takes part hands.
-- An inserter that waits on a belt is never counted, nor are belts, chests and vehicles.
-- The state read is the one at the start of the tick, as goal 2 reads it.
-
-Groups are keyed as the series keys them: the kinds of the two ends, the items seen in the hand, and the recipes at the two ends. A group's w removed is its w a minute for each inserter with every inserter unwired, less its w on the clock; the pooled figure is all wake-ups removed over the inserters newly wired. The call:
-
-| w removed | Call |
-|---|---|
-| below 63.5 | leave unwired |
-| 63.5 to below 158.6 | leave unwired, marginal |
-| 158.6 to 207.6 | clock, marginal |
-| above 207.6 | clock |
-
-"Firm" means outside the band, not certain. Outside the band the call was right in every timed case of the series that showed a sign, and never shown wrong; 7 timed groups outside it showed no sign, all on one utility science design whose pooled 215 calls "clock". The evidence is thinner near the edges of the band, and inside it the call is the cheaper one on expected cost, placed by one held-out measurement. The rule was measured on saves of 91,000 to 606,000 entities; below that it is not known, and the generator does not know the size of the save a build goes into.
-
-`npm run calls` gives the calls from two dumps of the series' extractor or two recordings of the recorder (one unwired, one clocked), or from a sample, whose selected clock is run in the simulator against the build with every inserter always enabled. That second run costs time, so generation never makes it. Checked before 0.11.0: on the series' own dumps (15 pairs of its timed builds) the generator's count equals the series' recount on every group, and w removed agrees to 1e-12. The simulator's count was laid against the game on one build, the advanced circuit scaffold, unclocked and on its selected clock (2026-10-14): every call agreed; on the clock w agreed within 10 a minute for each group, and unclocked by -8% to +24% for a group, most where the simulator shows an output that takes part hands as waiting on its machine and the game shows it working (samples README, Advanced circuit). The calls from a simulated run are checked on that one build only.
+Moved to docs/advice.md.
 
 ## The rules of the game, indexed
 
-Each rule of the game below is one named function, and `clock-generator/src/rules-of-the-game.ts` names all twelve: where each lives, the GOALS.md section it comes from, and the test that holds its recorded cases. The recorded figures travel with the code, as numbers in those tests and in the comments next to the functions; none of those tests reads a recording.
+Moved to docs/rules-of-the-game.md.
 
 ## Crafting Constraints
 
-The game has two primary constraints that make clocking difficult. Both of these are governed by the overload multiplier of the machine.
-
-1. automated insertion limit
-2. machine output block
-
-The overload multiplier comes from adding beacons to an assembly machine, increasing the crafting speed of the machine. It is defined in the relative reference for this project here `clock-generator/src/entities/machine/traits/overload-multiplier.ts`
-
-Insertion limits is a well defined term within factorio and can be observed by hovering over an input slot and reading the automated insertion limit value. In a given machine, if the input slot has inventory at or above the automated insertion limit, the inserter will not top up the items in it. If it is below it, then this constraint is removed. A hand that is taken goes in whole, so the stock can end over the limit (factorio-benchmarks docs/mechanics, machines.md section 5). The plan counts the hands an input can bring in a row by this (since 2026-10-14; before, it held the stock after the drop to the limit): the iron of an accumulator plant of the accumulator sample, limit 32, takes a third hand at 25 and not a fourth, so its 8/3 hands a cycle can be planned as 3, 3 and 2. Fractional swings, which could not be planned on that sample and six others before, is now offered on them (and the production science sample, planned with fractional swings, gets its 4 and 5 output swing clocks, unstable); on the chemical science sample it is stable at 10.1 wake-ups a minute and selected with belts moving, where batched swings had 20.4.
-
-There is a secondary constraint: the amount of items currently sitting in the output slot. If the amount of the recipe's main product in the output slot is greater than or equal to the output block, the machine will lock out all ingredient inputs. The output block is the overload multiplier times the amount of the main product one craft makes. Where that is more than a stack of the product, the block is never reached: such a machine stops crafting when its stack is full and goes on taking ingredients up to their insertion limits. Recorded in Factorio 2.1.21 on the cryogenic plant that makes plastic in three scaffolds: with an overload multiplier of 73 and 2 plastic bars a craft its block is 146 against a stack of 100, and with 100 plastic bars and the status full output it took coal at 69 and left its inserter waiting for space in the destination at 73, the insertion limit of coal. It is defined in `clock-generator/src/entities/machine/output/output-block.ts`. A furnace, a recipe without item ingredients and a by-product block only at the stack size. Any inserter wanting to insert an ingredient into the machine must wait until the output of the machine drops again below the output block. The fuel slot is not locked out: a machine at its output block still takes fuel while it is below its fuel limit. The machine also keeps crafting from the ingredients it already holds, so its output can grow well past the output block.
-
-A final constraint is the stack size of the output product. If the stack size is met, then the machine will stop crafting. This can most notably cause issues with recipes that stack to only 50 items. Low density structures, lithium, carbon, all stack only to 50. The machines that craft these recipes are extremely fast with maximum productivity research in the game, so naturally many designs will try to sink 1 machine into four assembly machines. This in practice is a disaster for clocking since it wants to control all four output inserters at stack size 16 to have the same active inserter window. Since it stacks to only 50, one inserter will always be short. Ideally if the stack size was 64, these problems would be removed however this is a decision as of 2.1.21 of factorio and has not changed since the original 2.0 release for Factorio Space Age. The work around has been to only have two inserters or to reduce the stack size to 12. 
+Moved to docs/rules-of-the-game.md.
 
 ## Stack Inserter Constraints
 
-Stack inserters behave functionally different than a bulk inserter in factorio. Many articles online reference clocking in the 1.x days of the game. These clocking methods are outdated since bulk inserters do not retain the items in their hand until they reach their stack size. Bulk inserters are much more flexible and allow transferring a dynamic amount of items to fit within the crafting constraints of the machine. Given that stack inserters are much less forgiving, creating a simulation like this is imperative to reduce the manual testing efforts required to figure out by trial and error a stable clock.
-
-The reason that stack inserters are chosen by most end game designs where clocking is applicable is that it has the advantage of transferring 4 extra items (stack size 16) over a bulk inserter (stack size 12). This reduces the amount of inventory transfers from one machine to another, saving update time in the game (goal 2).
+Moved to docs/rules-of-the-game.md.
 
 ## Constraint Exceptions
 
-Mining drills are an exception to the insertion limit rule as defined in the function: `clock-generator/src/entities/drill/mining-drill-ext.ts`
-
-The actual limit of how much the drill can insert into a machine per tick is the automated insertion limit + 64, however, in practice it is observed that the mining drill will stop at a minimum of 114 items the assumption is due to the stack size of stone being 50 + 64 = 114.
-
-Fuel consumption also deviates from the automated insertion rule as it has its own logic for determining when to insert into a fuel slot of a target entity. A machine that burns fuel fast is topped up to more than 5 items: to the fuel that holds this many times its energy buffer, rounded up to whole items. That is the fuel for 192 ticks at its full energy consumption. In the words of a Factorio developer, a burner does not obey the inserter limit if the fuel does not give it energy for at least 3 seconds of work, with the example of a buffer of 0.4 MJ times 180 ticks. Biochambers were tested in steps of +495% to +1427% energy consumption, whose slots were filled up to 5 to 13 nutrients in Factorio 2.1, all fit it.
-
-Sources:
-- https://forums.factorio.com/123927 ([2.0.24] High burner inserter to burner inserter fuel insertion limit)
-- https://forums.factorio.com/124272 ([2.0.23] Tooltip for automated insertion limit of burnable fuel is often wrong)
-- https://forums.factorio.com/viewtopic.php?p=705411#p705411 this is my own post on factorio where even I was confused until I tested the above and found the reason behind it in other forum posts.
+Moved to docs/rules-of-the-game.md.
 
 ## Simulator Goals
 
-This project actively runs a simulation of the machines, inserters and mining drills that are in the configuration file. It simulates all their crafts and transfers every tick. Belts and infinity chests are not simulated tick by tick: they are a supply that is always full, which is the environment a scaffold gives the build, and fluids are left out. The status of each simulated entity matches exactly the statuses seen in the game and provides state transition logs in debug mode to provide insights into what each entity is doing and a description for why it wanted to transition to a different state. Any deviation from the game is measured by running "scaffold" tests. These tests are driven by having a "scaffold" blueprint paired with a configuration file. Any scaffold can be tested directly in factorio. The `clock-generator-recorder` can help record and run this scaffold and provide per tick entity statistics to compare against the simulator. This is a verification process that the simulator backing the algorithm is doing the right thing. A scaffold test checks both goals against the game: that every clock period moves exactly the expected output, and that the simulator counts the wake-ups the game shows. It also lays the simulator against the game entity by entity: a run of the same clock in the simulator has to move what the game moved through every inserter and finish what it finished in every machine. For that the simulator writes its run in the format of the recorder, so that one set of functions reads both (`clock-generator/src/verification/compare-recordings.ts`); `npm run verify` makes the same comparison for any recording.
+Moved to docs/simulator.md.
 
 ### The status of an inserter
 
-The status the game shows for an inserter is decided by its sink before the inserter itself, and not by what the inserter carries. It is defined in `clock-generator/src/state/factorio-entity-state.ts` and was derived from recordings of five scaffolds in Factorio 2.1.21.
-
-- An inserter that is switched off by its circuit condition shows as disabled from that tick on, even while it finishes the swing and the drop it had already started. A window of 4 ticks shows as 4 ticks that are not disabled.
-- The status is a tick ahead of what the inserter does. It takes nothing in the first tick it shows as enabled, and it can still take in the first tick it shows as disabled, never after that. So an inserter acts in as many ticks as its window has, the first one included, and the simulator enables it for exactly those.
-- With an empty hand, it is waiting for space in the destination whenever the sink takes nothing from anyone: the output of the machine is at its output block, or every ingredient is at its insertion limit, and its fuel is at its limit too. This is shown even while the arm is still swinging back.
-- With an empty hand and a sink that still takes something, it is working while it swings back, and waiting for source items once there is nothing for it to take. This is also what it shows when the sink is full of the one item this inserter brings.
-- With a hand it is still filling, it is waiting for more items between pickups.
-- A full hand is working, until it cannot be dropped in one go. A hand goes onto a belt one stack at a time and shows as waiting for space in the destination in between.
+Moved to docs/simulator.md.
 
 ### What an inserter takes off a belt first
 
-An inserter that takes two items off one belt, one from each lane, takes from the lane nearest to it first whenever its sink takes both, and from the far lane only when the sink takes nothing more of the item on the near one. The order of its filters has no say in it. Recorded on the utility science scaffold in Factorio 2.1.21: the inserter that brings processing units and low density structures took the low density structures first while they were on its near lane, and the processing units first once the two lanes were swapped, with the same filters both times.
-
-Which item comes first decides how an ingredient is split between two inserters that both bring it, and with it whether a clock holds. Under one clock for that build the simulator made 192 of 192 a period with the processing units taken first, where the game, taking the low density structures first, made 96.
-
-The config names the nearest lane with `near_lane` on the belt an inserter picks up from, and the sidecar exports it for an inserter beside a straight piece of belt. Without it the simulator takes the items in the order of the inserter's filters, or of the sink's ingredients, which is a guess. A scaffold test fails when the config and the recorded build disagree on which item comes first, or on the stack size of an inserter.
+Moved to docs/simulator.md.
 
 ### Two inserters that bring the same item
 
-When two inserters bring the same item to a machine, one of them can be left holding it. If it starts picking the item up after the other has already put it in, the item is at its insertion limit by the time its hand is ready, and it holds the hand until the machine has used enough for it to drop.
-
-That alone only costs time. It is a deadlock when the inserter that is stuck is also the one that brings another ingredient. While it holds the first item it takes nothing else off the belt. If the machine then runs out of that other ingredient while the first is still at or over its insertion limit, the machine cannot craft, the first item never goes down, and the inserter never lets go. The build stays that way for good, whatever the clock does afterwards.
-
-This is a risk of the build, whatever the items are: a machine with an inserter that brings two items, where another inserter brings one of the same items. Whether it happens is a matter of the timing of the two inserters against each other. This rule comes from my own testing of the game.
-
-Seen on the utility science sample in Factorio 2.1.21 on 2026-10-10, under uneven output swings with belts that do not move: the machine held 16 processing units, 16 low density structures and no flying robot frames, the inserter that brings the frames held 12 low density structures, and the build made 0 of 192 in each of 53 periods. Under batched swings it made 192 in each. The simulator has the deadlock: started in that state it stays in it. None of its checks gets a build into it.
-
-The generator reads the risk off the config alone, with the items of an inserter that has no filters worked out from its belt and its machine (`clock-generator/src/crafting/deadlock-risk.ts`). A build that has it is named as a deadlock risk wherever its clocks are listed, and copying the blueprint of one of its clocks warns which two inserters share which item. On such a build the verdict of the trials for backpressure loss does not decide the selection, since the trials do not see the deadlock: its clocks that hold their expected output are ranked as they were before a clock had to get back from a loss, by their wake-ups.
+Moved to docs/simulator.md.
 
 ### When a waiting inserter acts
 
-An inserter that waits for space in a machine is asleep, and acts in the tick after the one that wakes it. Two things wake it: the machine finishes a craft, or another inserter takes the machine's products. So when the output inserter takes a machine down from its output block, an inserter that was waiting to put into it takes its first items one tick later. Only when the machine finished a craft in the tick before the products were taken was it awake already, and then it takes them in the tick they are taken. An inserter whose arm comes back in that tick is not held up. It is defined in `clock-generator/src/control-logic/inserter/waiting-inserter.ts`, and applied by the idle transition of an inserter and by the pickup of a hand from a belt.
-
-Recorded in Factorio 2.1.21 on the scaffolds, on inserters that take from a machine or a chest and had waited 6 ticks or more: the first items came a tick later in 5,777 cases of 5,777 where no craft was finished the tick before, and in the same tick in 3,756 of 3,756 where one was. A hand from a belt that stopped part way at the output block goes by the same rule (843 of 843 and 248 of 248). A hand from a belt that had not started lands its first stack a tick after the products are taken either way.
-
-An inserter whose window opens in the tick the products are taken is held up as well (decided on 2026-10-14, issue 152). The game shows an inserter on a clock as enabled the tick before its window, and it waits in that tick: it finds the machine at its block, and is asleep on it when the products are taken. So it takes its first items a tick later, also where the machine finished a craft in the tick before. Only when the inserter that takes the products has a window that opens in that same tick too does it take them in that tick. Recorded in Factorio 2.1.21 on inserters that take from a machine, on the accumulator build of the issue and on the scaffolds: a tick later in 1,158 of 1,170 cases where the inserter that took the products was enabled before (44 of 44 where a craft finished the tick before), and in the same tick in 852 of 888 where its window opened too. The 12 are at one sample of the agricultural science recording; the 36 are at one place in the seven-period cycle the 0.9.0 clock of the accumulator build settled into, where the same window a period later takes its items in the tick; what decides it is not known. Recorded since on the same build under an even hands clock whose windows all start at 0 (2026-10-14, see "Even hands" under "Wake-up Lists"): at the one place in the period where all its windows open together, the iron and battery inserters of both accumulator plants took their first items a tick later in all 300 cases (4 places in the period), though the output inserter's window opened in that tick too; the simulator, in the steady state it settles into from its own start, has 22 such places and takes them in the tick. Neither how long the machine had been at its block (1 tick there, 2 to 17 on the advanced circuit build) nor a craft finishing or starting in the tick of the take tells the two apart. No verdict changes with it: game and simulator both move 288 every period.
-
-A hand that an inserter takes from a machine stops filling while the machine it puts into takes nothing of its item, as a hand from a belt does: it keeps what it holds, also through a closed window, and goes on once the machine is under its block. Recorded: such a hand did not grow in 20,701 samples of 20,701 with products to take where the machine it puts into was at its output block, and grew in 11,561 of 11,561 where it was not. It is in the pickup of the inserter (`clock-generator/src/control-logic/inserter/modes/pickup-mode.ts`).
-
-Without these two rules the clock version 0.9.0 selected for the accumulator build of issue 152 (640 a second over 18 copies, `resources/config-samples/intermediates/accumulator/accumulator-640.json`) made 512 to 544 of its 576 a period in the game, in a cycle of seven periods, where the simulator had 576 in every one. The iron and battery inserters of the accumulator plants opened their windows in the tick their output inserter, on its way back from the belt, took the products, and took their hands a tick later than the simulator had them; the battery inserters held 13 of 16 batteries through their closed window where the simulator filled the hand in its last tick. With the two rules the simulator has that clock at 512, and the clock it selects instead made 576 in each of 58 periods in the game, after 3 at 544 while it settled from the scaffold's start.
-
-That one tick decides whether a clock holds when its windows are as long as the hands they are made for. Under a clock for the advanced circuit build with windows of 4 ticks for the inserters that take off a belt, the game made 608 and 624 of 704 a period in turn, where the simulator made 704. One of the two plants had fallen two hands of plastic and of cable behind the other. Its output stood over the output block for the ticks before every output window, the plastic and the cable inserter whose windows opened in those ticks took their hands a tick after the output inserter had cleared it, and a window that was a tick short for it lost a hand: 192 of 256 plastic, 384 of 512 cable and 264 of 352 products a period. With this rule and the output block above, a run of the simulator that starts in the state the game was recorded in holds what every machine and every inserter of the game held, tick for tick, for the 36,372 ticks the recording goes on, and so it does for the recording of the clock tightened by hand that holds 704.
-
-That clock has two states, and the game was in both: one plant made its 352 a period and the other 264, under the same windows. Which one a machine ends up in is decided by what it holds when the clock starts. Started as the generator starts every clock, with the machines filled with ingredients and emptied of products, the simulator holds 704 from every place in the period, and so the generator still takes this clock for one that meets goal 1. Started with the plants short of ingredients it ends up in a state that is short from 12 of 108 starts tried, where the clock tightened by hand and the clock version 0.5.0 made get back to 704 from all 108. The clock selected for this build ends up short from some of those starts too in the simulator, which the game was not seen to do: it has only been recorded from the start a scaffold gives it, which is the build as it runs without a clock. The trials for backpressure loss start a clock on a build that has run dry or filled up, and do not catch this either (see "Backpressure Loss").
-
+Moved to docs/simulator.md.

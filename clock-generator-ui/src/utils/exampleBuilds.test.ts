@@ -32,6 +32,17 @@ describe('readExampleManifest', () => {
         expect(readExampleManifest(JSON.stringify({ examples: [logistic] }))).toEqual([]);
     });
 
+    it('keeps every example when one has supported fractional Copies', () => {
+        for (const copies of [5.5, 2.25, 0.5, 0.001, 0.0625]) {
+            const chemical = { ...logistic, id: 'chemical-science', copies };
+            expect(readExampleManifest(JSON.stringify([logistic, chemical]))).toEqual([logistic, chemical]);
+        }
+        for (const copies of [0.0001, 0.3333333333333333, -1]) {
+            expect(readExampleManifest(JSON.stringify([{ ...logistic, copies }]))).toEqual([]);
+        }
+        expect(readExampleManifest(JSON.stringify([{ ...logistic, copies: 5.5, machines: 1.5 }]))).toEqual([]);
+    });
+
     it('reads an empty list as no examples', () => {
         expect(readExampleManifest('[]')).toEqual([]);
     });

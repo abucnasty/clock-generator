@@ -265,7 +265,7 @@ export function fullHandTransferWindows(
         }
         const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
         const stack_size = Entity.isMachine(source) ? handSizeFor(entity, source.output.item_name) : entity.metadata.stack_size;
-        if (!Entity.isMachine(source) || stack_size >= source.output.outputBlock.quantity
+        if (!Entity.isMachine(source) || stack_size >= source.output.outputBlock.ingredients_blocked_at
             || transfers.length === 0 || transfers.some(t => t.amount !== stack_size)) {
             continue;
         }
@@ -292,7 +292,7 @@ export function fullHandClock(config: Config, options: GenerateClockOptions = {}
     // waiting for a full hand past the output block would refuse input drops every cycle
     const full_hand_fits = output_inserters.every((os, index) =>
         handSizeFor(os.inserter, output_machine_state_machines[index].machine_state.machine.output.item_name)
-            < output_machine_state_machines[index].machine_state.machine.output.outputBlock.quantity);
+            < output_machine_state_machines[index].machine_state.machine.output.outputBlock.ingredients_blocked_at);
     const output_swings = new Map<string, number>();
     for (const [entity_id, etc] of swing_counts.entries()) {
         if (output_inserter_ids.has(entity_id.id)) {

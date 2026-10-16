@@ -1,3 +1,4 @@
+import { effectiveInserterStackSize } from './inserterMetadata';
 import dagre from '@dagrejs/dagre';
 import { MarkerType, type Node, type Edge } from '@xyflow/react';
 import type { MachineFormData, BeltFormData, ChestFormData, InserterFormData, DrillFormData } from '../hooks/useConfigForm';
@@ -322,7 +323,7 @@ export function buildFlowGraph(
             ariaLabel: nodeAriaLabel(label, `${items ? `takes ${items} ` : ''}${route}`, rule.quiet ? undefined : `Enable: ${rule.summary}`),
             data: {
                 inserterId: inserter.id,
-                stackSize: inserter.stack_size,
+                stackSize: effectiveInserterStackSize(inserter),
                 filterIcons,
                 ...(!rule.quiet && { enableChip: rule.chip, enableSummary: rule.summary }),
             } satisfies InserterNodeData,

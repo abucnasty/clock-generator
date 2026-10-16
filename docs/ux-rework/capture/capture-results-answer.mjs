@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Item 2.5, PR A "the answer" (Results lead with the answer): screenshots and PASS/FAIL checks from the spec
 // `docs/ux-rework/specs/2.5-results-answer.md` (the parts marked [A], "Acceptance criteria / PR A", "Screens to capture [A]",
 // "Slots for 2.4 and 2.6", "Orchestrator notes (final)").
@@ -30,7 +31,7 @@ import { join } from 'node:path';
 import { inflateSync } from 'node:zlib';
 import {
     forWidths, previewServer, sample, LOGISTIC, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate,
-    waitReady, noSideScroll, isClickable, contrastPairs, checkLabelInName, checkTabTo, checkFocusNotObscured, checkAnnounced,
+    waitReady, noSideScroll, isClickable, contrastPairs, checkLabelInName, checkTabTo, checkFocusNotObscured, checkAnnounced, withClipboard,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -51,7 +52,7 @@ const FUEL = sample('gleba/biochamber-fuel/nutrients-from-yumako-mash-fuel-bonus
 const ROCKET = sample('gleba/rocket-fuel/rocket-fuel-jelly-stack-15.json'); // a book with many combinators: the long wiring list
 const FRACTIONAL = sample('gleba/iron-bacteria-cultivation/iron-bacteria-cultivation.json'); // gives "..., subtick clock" rows (a fractional period)
 const DRILLS = sample('smelting/stone-bricks/stone-bricks-direct-insert.json'); // has a `drills` block
-const BELOW = sample('science/utility-science/utility-science-direct-insert-lds.json'); // best clock runs below the target (1.14)
+const BELOW = BELOW_TARGET_SAMPLE; // best clock runs below the target (1.14)
 /** A small build whose inserters are all ALWAYS enabled: no combinator to wire. Written to a temp folder, never into the repo */
 const NOWIRE = (() => {
     const config = JSON.parse(readFileSync(SMALL_SAMPLE, 'utf8'));
@@ -629,7 +630,11 @@ async function a11yChecks({ page, rec }) {
  * descriptions' inserter numbers, "Copied" on both, and "Blueprint copied." announced once per click.
  * `expect.book` / `expect.fuel` / `expect.longList` add checks for the build.
  */
-async function copyChecks({ page, rec, tag, path, expect = {}, withTab = false }) {
+function copyChecks(options) {
+    return withClipboard(() => copyChecksSerial(options));
+}
+
+async function copyChecksSerial({ page, rec, tag, path, expect = {}, withTab = false }) {
     const p = `${tag}:`;
     const card = await cardOf(page);
     const noCard = !card.present || (await count(mainCopy(page))) === 0;

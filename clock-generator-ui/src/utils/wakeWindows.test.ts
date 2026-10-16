@@ -49,6 +49,7 @@ function asBuilt(wakeUps: Record<string, number> | null): AsBuiltStabilityCheck 
         ...(wakeUps === null ? {} : {
             wake_ups: {
                 ticks: 36000,
+                true_starts_unknown: [],
                 wake_ups_per_minute: inserters.reduce((sum, it) => sum + it.wake_ups_per_minute, 0),
                 inserters,
             },

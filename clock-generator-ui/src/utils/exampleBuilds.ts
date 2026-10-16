@@ -1,3 +1,4 @@
+import { isShortDecimalCopies } from 'clock-generator/light';
 import { formatNumberText } from './numberText';
 
 /** Where the examples dialog finds the list, which `scripts/copy-factorio-data.mjs` writes into `public/` */
@@ -28,7 +29,7 @@ function isExampleBuild(row: unknown): row is ExampleBuild {
     const r = row as Record<string, unknown>;
     return isText(r.id) && isText(r.file) && isText(r.recipe)
         && typeof r.items_per_second === 'number' && Number.isFinite(r.items_per_second) && r.items_per_second > 0
-        && isCount(r.copies) && r.copies >= 1
+        && typeof r.copies === 'number' && Number.isFinite(r.copies) && r.copies > 0 && isShortDecimalCopies(r.copies)
         && isCount(r.machines) && isCount(r.inserters) && isCount(r.belts) && isCount(r.chests);
 }
 

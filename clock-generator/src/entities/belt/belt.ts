@@ -5,7 +5,7 @@ import { BeltStackSize, isValidBeltStackSize } from "./belt-stack-size";
 import { EntityId } from "../entity-id";
 import { Entity } from "../entity";
 import { Duration } from "../../data-types";
-import Fraction, { fraction } from "fractionability";
+import Fraction, { fraction } from "../../data-types/fraction";
 import { BeltStrategy } from "../../common/entity-types";
 
 export interface Lane {

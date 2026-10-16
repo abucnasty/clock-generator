@@ -123,8 +123,8 @@ export class MachineWorkingMode implements MachineMode {
             return "a by-product has filled its stack";
         }
         const output_block = this.state.machine.output.outputBlock;
-        if (output_item.quantity >= output_block.quantity) {
-            return `output item "${output_item.item_name}" = ${output_item.quantity} is at its output block of ${output_block.quantity}`;
+        if (output_item.quantity >= output_block.ingredients_blocked_at) {
+            return `output item "${output_item.item_name}" = ${output_item.quantity} is at its output block of ${output_block.ingredients_blocked_at}`;
         }
         return null;
     }

@@ -95,7 +95,9 @@ describe("a simulated run in the format of the recorder", () => {
             { inserter_id: "inserter:1", source_machine_id: null, sink_machine_id: "machine:1" },
             { inserter_id: "inserter:2", source_machine_id: "machine:1", sink_machine_id: null },
         ], from);
-        const of_recording = wakeUpsOfRecording(simulated, matchOfSimulatedRecording(simulated), from);
+        // the simulated recording carries the simulator's own true starts, so the two counts are the same count
+        const { machine_standings, ...of_recording } = wakeUpsOfRecording(simulated, matchOfSimulatedRecording(simulated), from);
+        expect(machine_standings).toEqual([{ machine_id: "machine:1", standing: "simulator" }]);
         const by_id = (a: { inserter_id: string }, b: { inserter_id: string }) => a.inserter_id.localeCompare(b.inserter_id);
         expect({ ...of_recording, inserters: [...of_recording.inserters].sort(by_id) }).toEqual({ ...of_stock, inserters: [...of_stock.inserters].sort(by_id) });
         expect(of_recording.wake_ups_per_minute).toBeCloseTo(112.5, 1);

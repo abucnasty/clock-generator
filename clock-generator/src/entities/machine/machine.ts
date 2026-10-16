@@ -1,4 +1,4 @@
-import { fraction } from "fractionability"
+import { fraction } from "../../data-types/fraction"
 import { MachineConfiguration } from "../../config";
 import { AutomatedInsertionLimit, ConsumptionRate } from "./input";
 import { BurnerEnergySource, FuelSlot } from "./fuel";
@@ -221,7 +221,7 @@ function printMachineFacts(machine: Machine, logger: Logger = defaultLogger): vo
     logger.log(`  Productivity: ${machine.metadata.productivity}%`);
     logger.log(`  Output Per Craft: ${machine.output.amount_per_craft.toDecimal().toFixed(2)}`);
     logger.log(`  Output Rate: ${machine.output.production_rate.amount_per_second.toDecimal().toFixed(2)} per second`);
-    logger.log(`  Output Block: ${machine.output.outputBlock.quantity} ${machine.output.outputBlock.item_name}`);
+    logger.log(`  Output Block: ${machine.output.outputBlock.ingredients_blocked_at} ${machine.output.outputBlock.item_name}`);
     logger.log(`  Overload Multiplier: ${machine.overload_multiplier.overload_multiplier.toString()}`);
     logger.log(`  Ticks per craft: ${machine.crafting_rate.ticks_per_craft.toFixed(2)} ticks`);
     logger.log(`  Ticks per Bonus Craft: ${machine.bonus_productivity_rate.ticks_per_bonus.toFixed(2)} ticks`);
@@ -266,7 +266,11 @@ function getMachineFacts(machine: Machine): SerializableMachineFacts {
         output_item: machine.output.item_name,
         output_per_craft: machine.output.amount_per_craft.toDecimal(),
         output_rate_per_second: machine.output.production_rate.amount_per_second.toDecimal(),
-        output_block_size: machine.output.outputBlock.quantity,
+        output_rate_ratio: {
+            numerator: machine.output.production_rate.amount_per_second.getNumerator,
+            denominator: machine.output.production_rate.amount_per_second.getDenominator,
+        },
+        output_block_size: machine.output.outputBlock.ingredients_blocked_at,
         overload_multiplier: machine.overload_multiplier.overload_multiplier,
         ticks_per_craft: machine.crafting_rate.ticks_per_craft,
         ticks_per_bonus_craft: machine.bonus_productivity_rate.ticks_per_bonus,

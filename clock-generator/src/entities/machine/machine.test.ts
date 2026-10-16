@@ -3,7 +3,7 @@ import { Machine } from './machine'
 import { RecipeMetadata } from './recipe'
 import { MachineMetadata } from './machine-metadata';
 import { Ingredient } from '../../data/factorio-data-types';
-import { fraction } from 'fractionability';
+import { fraction } from "../../data-types/fraction";
 import { TICKS_PER_SECOND } from '../../data-types';
 
 
@@ -19,6 +19,14 @@ const createMachine = (recipeName: string, metadata: Partial<MachineMetadata> = 
 }
 
 describe("Machine Entity", () => {
+    test("serializes the exact output capacity without changing the numeric facts", () => {
+        const machine = createMachine("iron-gear-wheel", { crafting_speed: 1.123456789, productivity: 50 });
+        const rate = machine.output.production_rate.amount_per_second;
+        const facts = JSON.parse(JSON.stringify(Machine.getMachineFacts(machine)));
+        expect(facts.output_rate_per_second).toBe(rate.toDecimal());
+        expect(facts.output_rate_ratio).toEqual({ numerator: rate.getNumerator, denominator: rate.getDenominator });
+    });
+
     test("creates a machine with the correct recipe metadata", () => {
         const machine = createMachine("iron-gear-wheel")
         expect(machine.metadata.recipe.name).toBe("iron-gear-wheel")
@@ -172,7 +180,7 @@ describe("Biochamber", () => {
         // 4s recipe at speed 2 = 2s per craft
         expect(biochamber.fuel_consumption?.amount_per_craft).toBeCloseTo(0.75)
         expect(Machine.getMachineFacts(biochamber).fuel).toMatchObject({ item_name: "nutrients", energy_consumption_bonus: 50 })
-        expect(biochamber.output.outputBlock.quantity).toBeGreaterThan(0)
+        expect(biochamber.output.outputBlock.held_limit).toBeGreaterThan(0)
     })
 
     test("machines without a burner have no fuel consumption", () => {

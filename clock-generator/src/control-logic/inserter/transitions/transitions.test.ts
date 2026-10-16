@@ -155,7 +155,7 @@ describe("transitions (belt to machine)", () => {
             });
 
             const machineState = testContext.sinkState as MachineState;
-            const output_block_quantity = machineState.machine.output.outputBlock.quantity;
+            const output_block_quantity = machineState.machine.output.outputBlock.held_limit;
             machineState.inventoryState.setQuantity("iron-gear-wheel", output_block_quantity);
 
             const nextMode = evaluator.evaluateTransition();
@@ -400,7 +400,7 @@ describe("transitions (belt to machine)", () => {
 
             // the machine's output reaches the block: the hand waits with what it holds
             const block = mockSink.machine.output.outputBlock;
-            mockSink.inventoryState.addQuantity(block.item_name, block.quantity);
+            mockSink.inventoryState.addQuantity(block.item_name, block.held_limit);
             pickup_mode.executeForTick();
             pickup_mode.executeForTick();
             expect(inserterState.held_item?.quantity).toBe(4);

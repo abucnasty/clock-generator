@@ -1,7 +1,8 @@
+import { COPIES_POSITIVE_PROBLEM, copiesProblem } from './copiesProblem';
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import type { CheckStatus } from './checkThenGenerate';
 import { entityLabel } from './entityLabel';
-import { isTargetAboveMax, maxRateText, type MachinesMax } from './targetRateLimit';
+import { isTargetAboveMax, maxRateText, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
 
 /** The game name of an item id */
 type LabelOf = (id: string) => string;
@@ -14,7 +15,7 @@ const identity: LabelOf = (id) => id;
 export const PROBLEM_TEXT = {
     noRecipe: 'Set the recipe in Target Output',
     noRate: 'Set Items per Second in Target Output to more than 0',
-    noCopies: 'Set Copies in Target Output to 1 or more',
+    noCopies: COPIES_POSITIVE_PROBLEM,
     noMachines: 'Add a machine',
     rateAboveMax: (total: number) => `Items per Second is more than the machines can make (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
@@ -91,8 +92,9 @@ export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax
     if (!(targetOutput.items_per_second > 0)) {
         problems.push({ text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } });
     }
-    if (!(targetOutput.copies > 0)) {
-        problems.push({ text: PROBLEM_TEXT.noCopies, target: { kind: 'target-copies' } });
+    const copiesIssue = copiesProblem(targetOutput.copies);
+    if (copiesIssue) {
+        problems.push({ text: copiesIssue, target: { kind: 'target-copies' } });
     }
     if (machines.length === 0) {
         problems.push({ text: PROBLEM_TEXT.noMachines, target: { kind: 'add-machine' } });
@@ -106,9 +108,10 @@ export function problemsOf({ targetOutput, machines, coverageIssues, machinesMax
         }
     }
     // the engine's check refuses such a target too; said here, the player is sent to the field instead of a failed check
-    if (machinesMax && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
+    const capacity = machinesMax ? totalMachineCapacity(machinesMax, targetOutput.copies) : null;
+    if (capacity !== null && targetOutput.recipe && isTargetAboveMax(targetOutput.items_per_second, targetOutput.copies, machinesMax)) {
         problems.push({
-            text: PROBLEM_TEXT.rateAboveMax(machinesMax.perCopy * targetOutput.copies),
+            text: PROBLEM_TEXT.rateAboveMax(capacity),
             target: { kind: 'target-rate' },
         });
     }

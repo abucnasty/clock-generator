@@ -13,6 +13,7 @@
  */
 
 import { FactorioInserterState } from "../state/factorio-entity-state";
+import { TrueStartMethodInput, TrueStartStanding, trueStartStandingOf, worseStanding } from "./true-start-standing";
 
 /**
  * What the end of an inserter is. Any other end is named by its entity type, as the series names it ("car", "rocket-silo"),
@@ -51,6 +52,16 @@ export interface RuleCountMachine {
     working: readonly boolean[];
     /** Simulated runs only: crafts started so far (the simulator's true starts), per index */
     crafts_started?: readonly number[];
+    /**
+     * The machine truly started a craft in the tick, per index (its ingredients were consumed), for the count in true
+     * starts (version A): from `crafts_started` in a simulated run, from crafting progress in a recording, and inferred
+     * from status, products_finished, crafting speed and recipe energy in an extractor dump (true-starts.ts). Absent when
+     * it cannot be known (a dump's machine without a crafting speed or a recipe): the count then uses the starts the
+     * series' original count infers, and names the machine.
+     */
+    true_starts?: readonly boolean[];
+    /** What the true-start method read this machine's true starts with (game data only), for their standing */
+    true_start_method?: TrueStartMethodInput;
 }
 
 /** An inserter's per-index counts of the rule over the counted indices */
@@ -70,12 +81,16 @@ export interface InserterRuleCount {
     pickups_per_minute: number;
     wake_ups_per_minute: number;
     /**
-     * Simulated runs only (the sink machine has `crafts_started`): the sink wake-ups counted with the machine's true
-     * starts in place of the starts the rule infers from `products_finished` and `working`. Null otherwise. The call
-     * always uses `sink_wake_ups`, the inferred figure.
+     * The count in true starts (version A of the series' productivity recount): the sink wake-ups counted on the
+     * crafts the sink truly started (`true_starts`), payouts left out, where the series' original count infers them.
+     * The source half is the same in both counts.
      */
-    sink_wake_ups_true_starts: number | null;
-    sink_wake_ups_true_starts_per_minute: number | null;
+    true_sink_wake_ups: number;
+    /** Pickups the true-start count's own wake-ups and disabled indices do not explain */
+    true_pickups: number;
+    /** The inserter's `w` in true starts: `source_wake_ups + true_sink_wake_ups + true_pickups` */
+    true_wake_ups: number;
+    true_wake_ups_per_minute: number;
 }
 
 /** The series' key of a group of inserters: what each moves, between what, in which machines */
@@ -104,12 +119,22 @@ export interface RuleCountGroup extends RuleCountGroupKey {
     /** The group's `w`: source, sink and pickup wake-ups of all its inserters over the counted indices */
     wake_ups: number;
     wake_ups_per_minute: number;
-    /** Sink wake-ups of the group's inserters that have a true-start count, by the inferred starts (to lay against the next) */
-    sink_wake_ups_where_true_starts_known: number;
-    /** Inserters of the group that have a true-start count */
-    inserters_with_true_starts: number;
-    /** Sink wake-ups of those same inserters by the true starts; null when no inserter of the group has them */
-    sink_wake_ups_true_starts: number | null;
+    true_sink_wake_ups: number;
+    true_pickups: number;
+    /** The group's `w` in true starts */
+    true_wake_ups: number;
+    true_wake_ups_per_minute: number;
+    /**
+     * How far the true starts of the group's sink machines can be trusted (true-start-standing.ts): the worst over
+     * them. Null when no sink is a machine whose starts the method worked out (a simulated run counts its own).
+     */
+    true_start_standing: TrueStartStanding | null;
+}
+
+/** A machine whose true starts are not known, so the true-start count uses the starts the original count infers */
+export interface TrueStartUnknown {
+    machine_id: string;
+    recipe: string;
 }
 
 /** A machine whose starts the rule could not read from its finishes and its working status */
@@ -132,6 +157,8 @@ export interface RuleCountRun {
     groups: RuleCountGroup[];
     /** Machines that counted by finishes: their starts differed from their finishes by more than 3% */
     start_rule_fallback: StartRuleFallback[];
+    /** Machines without `true_starts`, whose inferred starts stand in for them in the true-start count */
+    true_start_unknown: TrueStartUnknown[];
 }
 
 /** The starts of a machine differ from its finishes by more than this share of the finishes: it counts by finishes */
@@ -145,7 +172,10 @@ interface MachineEvents {
     recipe: string;
     finished: Uint8Array;
     started: Uint8Array;
-    started_true: Uint8Array | null;
+    /** The true starts, or the inferred starts where they are not known */
+    started_true: Uint8Array;
+    /** The standing of the method on this machine; null where it did not work them out */
+    standing: TrueStartStanding | null;
 }
 
 function isWaitingForSource(state: string): boolean {
@@ -173,6 +203,12 @@ function isWaitingForSource(state: string): boolean {
  * (a furnace that melts ore, say), the machine's finishes are used as its starts and the machine is reported in
  * `start_rule_fallback`.
  *
+ * Beside it the same count is made in true starts (version A of the series' productivity recount,
+ * `closing/evidence/productivity-recount-1.md`): the sink half counts the crafts the sink truly started
+ * (`true_starts`), so a productivity payout, which wakes no input (docs/mechanics, D7 a1), is left out; the source half
+ * is the same, payouts in (D7 b); pickups are read against the true-start count's own wake-ups (the recount's
+ * `e_pick_A`). A machine without `true_starts` stands in with its inferred starts and is named in `true_start_unknown`.
+ *
  * Minutes are `ticks / 3600` for the `ticks` counted: a dump of n samples counted whole (from 0 to n) is n-1 ticks,
  * the series' `(n - 1) / 3600`. The counted range ends early at the shortest series given.
  */
@@ -189,8 +225,8 @@ export function ruleCount(
     }
     for (const machine of machines) {
         end = Math.min(end, machine.products_finished.length, machine.working.length);
-        if (machine.crafts_started !== undefined) {
-            end = Math.min(end, machine.crafts_started.length);
+        if (machine.true_starts !== undefined) {
+            end = Math.min(end, machine.true_starts.length);
         }
     }
     const ticks = Math.max(0, end - first);
@@ -198,6 +234,7 @@ export function ruleCount(
     const per_minute = (count: number) => minutes === 0 ? 0 : count / minutes;
 
     const fallback: StartRuleFallback[] = [];
+    const unknown: TrueStartUnknown[] = [];
     const events = new Map<string, MachineEvents>();
     for (const machine of machines) {
         const finished = new Uint8Array(end);
@@ -217,20 +254,26 @@ export function ruleCount(
         if (uses_finishes) {
             fallback.push({ machine_id: machine.machine_id, recipe: machine.recipe, starts, finishes });
         }
-        let started_true: Uint8Array | null = null;
-        if (machine.crafts_started !== undefined) {
+        const inferred = uses_finishes ? finished : started;
+        let started_true = inferred;
+        if (machine.true_starts !== undefined) {
             started_true = new Uint8Array(end);
             for (let t = 1; t < end; t++) {
-                started_true[t] = machine.crafts_started[t] > machine.crafts_started[t - 1] ? 1 : 0;
+                started_true[t] = machine.true_starts[t] ? 1 : 0;
             }
+        } else {
+            unknown.push({ machine_id: machine.machine_id, recipe: machine.recipe });
         }
-        events.set(machine.machine_id, { recipe: machine.recipe, finished, started: uses_finishes ? finished : started, started_true });
+        const standing = machine.true_starts !== undefined && machine.true_start_method !== undefined
+            ? trueStartStandingOf(machine.true_start_method) : null;
+        events.set(machine.machine_id, { recipe: machine.recipe, finished, started: inferred, started_true, standing });
     }
 
     const counts: InserterRuleCount[] = [];
     const groups = new Map<string, RuleCountGroup>();
-    // the index an inserter is woken at, or disabled at, for the window of a pickup
+    // the index an inserter is woken at, or disabled at, for the window of a pickup: in each count, its own wake-ups
     const marked = new Uint8Array(end);
+    const marked_true = new Uint8Array(end);
     for (const inserter of inserters) {
         const source = inserter.source_machine_id === null ? undefined : events.get(inserter.source_machine_id);
         const sink = inserter.sink_machine_id === null ? undefined : events.get(inserter.sink_machine_id);
@@ -238,7 +281,8 @@ export function ruleCount(
         let source_wake_ups = 0;
         let sink_wake_ups = 0;
         let pickups = 0;
-        let sink_true = sink?.started_true ? 0 : null;
+        let true_sink_wake_ups = 0;
+        let true_pickups = 0;
         for (let t = 0; t < end; t++) {
             let woken_by_source = false;
             let woken_by_sink = false;
@@ -248,26 +292,30 @@ export function ruleCount(
                 const waited_for_space = states[t - 1] === FactorioInserterState.WAITING_FOR_SPACE_IN_DESTINATION;
                 const own_drop = held[t] < held[t - 1];
                 woken_by_sink = sink !== undefined && waited_for_space && sink.started[t] === 1 && !own_drop;
-                woken_by_true_start = sink?.started_true != null && waited_for_space && sink.started_true[t] === 1 && !own_drop;
+                woken_by_true_start = sink !== undefined && waited_for_space && sink.started_true[t] === 1 && !own_drop;
             }
-            marked[t] = woken_by_source || woken_by_sink || states[t] === FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR ? 1 : 0;
+            const disabled = states[t] === FactorioInserterState.DISABLED_BY_CONTROL_BEHAVIOR;
+            marked[t] = woken_by_source || woken_by_sink || disabled ? 1 : 0;
+            marked_true[t] = woken_by_source || woken_by_true_start || disabled ? 1 : 0;
             if (t < first) {
                 continue;
             }
             source_wake_ups += woken_by_source ? 1 : 0;
             sink_wake_ups += woken_by_sink ? 1 : 0;
-            if (sink_true !== null && woken_by_true_start) {
-                sink_true++;
-            }
+            true_sink_wake_ups += woken_by_true_start ? 1 : 0;
             if (source !== undefined && held[t] > held[t - 1]) {
                 let explained = false;
+                let explained_true = false;
                 for (let back = 0; back <= PICKUP_WINDOW && t - back >= 0; back++) {
                     explained ||= marked[t - back] === 1;
+                    explained_true ||= marked_true[t - back] === 1;
                 }
                 pickups += explained ? 0 : 1;
+                true_pickups += explained_true ? 0 : 1;
             }
         }
         const wake_ups = source_wake_ups + sink_wake_ups + pickups;
+        const true_wake_ups = source_wake_ups + true_sink_wake_ups + true_pickups;
         counts.push({
             inserter_id: inserter.inserter_id,
             wired: inserter.wired,
@@ -276,8 +324,8 @@ export function ruleCount(
             sink_wake_ups_per_minute: per_minute(sink_wake_ups),
             pickups_per_minute: per_minute(pickups),
             wake_ups_per_minute: per_minute(wake_ups),
-            sink_wake_ups_true_starts: sink_true,
-            sink_wake_ups_true_starts_per_minute: sink_true === null ? null : per_minute(sink_true),
+            true_sink_wake_ups, true_pickups, true_wake_ups,
+            true_wake_ups_per_minute: per_minute(true_wake_ups),
         });
 
         const items = [...inserter.items].sort().join("+") || "-";
@@ -292,8 +340,8 @@ export function ruleCount(
         if (group === undefined) {
             group = {
                 ...key, key: text, inserters: 0, wired: 0, source_wake_ups: 0, sink_wake_ups: 0, pickups: 0, wake_ups: 0,
-                wake_ups_per_minute: 0, sink_wake_ups_where_true_starts_known: 0, inserters_with_true_starts: 0,
-                sink_wake_ups_true_starts: null,
+                wake_ups_per_minute: 0, true_sink_wake_ups: 0, true_pickups: 0, true_wake_ups: 0, true_wake_ups_per_minute: 0,
+                true_start_standing: null,
             };
             groups.set(text, group);
         }
@@ -303,38 +351,17 @@ export function ruleCount(
         group.sink_wake_ups += sink_wake_ups;
         group.pickups += pickups;
         group.wake_ups += wake_ups;
-        if (sink_true !== null) {
-            group.inserters_with_true_starts++;
-            group.sink_wake_ups_where_true_starts_known += sink_wake_ups;
-            group.sink_wake_ups_true_starts = (group.sink_wake_ups_true_starts ?? 0) + sink_true;
-        }
+        group.true_sink_wake_ups += true_sink_wake_ups;
+        group.true_pickups += true_pickups;
+        group.true_wake_ups += true_wake_ups;
+        group.true_start_standing = worseStanding(group.true_start_standing, sink?.standing ?? null);
     }
     for (const group of groups.values()) {
         group.wake_ups_per_minute = per_minute(group.wake_ups);
+        group.true_wake_ups_per_minute = per_minute(group.true_wake_ups);
     }
-    return { ticks, minutes, inserters: counts, groups: [...groups.values()], start_rule_fallback: fallback };
-}
-
-/** How the sink wake-ups counted with the inferred starts compare with those counted with the true starts, for a group */
-export interface TrueStartAgreement {
-    key: string;
-    /** Inserters of the group whose sink machine has true starts */
-    inserters: number;
-    /** Their sink wake-ups by the starts the rule infers */
-    inferred: number;
-    /** Their sink wake-ups by the simulator's true starts */
-    true_starts: number;
-    /** `inferred - true_starts` */
-    difference: number;
-}
-
-/** Per group of a simulated run, the sink wake-ups by inferred starts against those by true starts; only groups that have the latter */
-export function trueStartAgreementOf(run: RuleCountRun): TrueStartAgreement[] {
-    return run.groups.flatMap(group => group.sink_wake_ups_true_starts === null ? [] : [{
-        key: group.key,
-        inserters: group.inserters_with_true_starts,
-        inferred: group.sink_wake_ups_where_true_starts_known,
-        true_starts: group.sink_wake_ups_true_starts,
-        difference: group.sink_wake_ups_where_true_starts_known - group.sink_wake_ups_true_starts,
-    }]);
+    return {
+        ticks, minutes, inserters: counts, groups: [...groups.values()], start_rule_fallback: fallback,
+        true_start_unknown: unknown,
+    };
 }

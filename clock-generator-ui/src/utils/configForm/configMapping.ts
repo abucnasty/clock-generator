@@ -58,6 +58,8 @@ export function configToFormData(imported: Config): ConfigFormData {
             _uuid: crypto.randomUUID(),
             source: ins.source,
             sink: ins.sink,
+            prototype: ins.prototype,
+            quality: ins.quality,
             stack_size: ins.stack_size,
             filters: ins.filters,
             overrides: ins.overrides ? {

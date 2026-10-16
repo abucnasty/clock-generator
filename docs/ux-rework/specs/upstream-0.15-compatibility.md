@@ -31,6 +31,10 @@ full gate; engine/generation tests cover the new upstream engine. No merge to ma
 - Existing List/Diagram inserter editors and a small shared helper: read-only metadata, Automatic/effective stack
   display and clearing. 3.2 A reuses this API; communicate its exact exports before implementation there begins.
   Keep the two existing surfaces' commit models until 3.2 A changes them. Do not prematurely build the shared editor.
+  If the changed metadata rows expose the existing Source/Destination truncation, reuse the minimal already-designed
+  2.7B aligned inserter grid (ce131ae), preserving the current outer card; do not import the full Build card, Panel or
+  filter-slot feature. 2.7B reconciles those shared layout hunks when it inherits compatibility and retains its final
+  full geometry evidence. Keep the Diagram toggle's accessible name consistent with its visible beta text.
 - p3 rule-editor callers/templates: use effective hand size, not a literal 16 when the value is omitted. No new rule modes.
 - `scripts/copy-factorio-data.mjs`, `utils/exampleBuilds.ts`: replace removed chemical sample with the upstream
   shared-foundry sample; accept supported fractional Copies without loosening integer entity counts. Time the example
@@ -85,3 +89,21 @@ Code and UX review are independent Astra/high roles; root or a runner independen
 
 Preserve existing item review/fix rounds. Finish compatibility before the resumed items' final evidence and reviews.
 Owner install-step and phase-merge checkpoints remain unchanged; no additional sidecar metadata check is opened.
+
+## Shared metadata API (integration contract, 2026-10-16)
+
+The upstream compatibility provider commits `clock-generator-ui/src/utils/inserterMetadata.ts` before 3.2 A uses it:
+
+```ts
+export function effectiveInserterStackSize(
+    inserter: Pick<InserterFormData, 'prototype' | 'stack_size'>,
+): number;
+export function inserterMetadataText(
+    inserter: Pick<InserterFormData, 'prototype' | 'quality'>,
+): string;
+```
+
+`InserterFormData` gains optional `prototype`, the engine's optional quality union and optional `stack_size`.
+The effective-size helper agrees with engine game data (4/12/16), honors explicit values and defaults an absent
+prototype to stack-inserter. Metadata text shows the effective type/quality, including defaults, read-only.
+Clearing writes `undefined`; template callers pass the effective size. 3.2 A reuses these exports, not another fallback.

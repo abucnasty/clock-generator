@@ -1,0 +1,1411 @@
+{
+  "schema": 1,
+  "save": "thaeln-cell09.manifest.json",
+  "steps": [
+    {
+      "step": "extract-cell",
+      "ok": true,
+      "tool": {
+        "tag": null,
+        "commit": "ead5a6f",
+        "dirty": true
+      },
+      "args": {
+        "cell": "1825473",
+        "box": null,
+        "name": "thaeln-cell09",
+        "version": "2.1.21",
+        "sample_ticks": 36000,
+        "warmup": 1800,
+        "check_ticks": 36000,
+        "tolerance": 0.01,
+        "strict": false
+      },
+      "game_version": "2.1.21",
+      "input": {
+        "file": "../../thaeln_q1_960_m2121/thaeln_q1_960_m2121.zip",
+        "sha256": "9550892de86e6c43bac83e578d169ee15e902f2f35d4b3c4e433aee77b937516"
+      },
+      "output": {
+        "file": "thaeln-cell09-scaffold.txt",
+        "sha256": "87b163c39cb94cf8906403b3018abfde3290da8ee69598dce811b2836586af5a"
+      },
+      "tick_before": 591040,
+      "tick_after": null,
+      "entities_player": 186,
+      "files": [
+        {
+          "file": "thaeln-cell09.json",
+          "sha256": "a69dc2f78ced55b51f4ee2edc27f04ba2901d6575d8a1eb1896e652a59247b54"
+        },
+        {
+          "file": "thaeln-cell09.expected.json",
+          "sha256": "4c73dd549f6077d93d177c0a88299ad79c012ae332f22b585e5dfbbabc667c73"
+        }
+      ],
+      "checks": [
+        {
+          "name": "scaffold rate against the target",
+          "pass": true,
+          "figures": {
+            "rule": "the scaffold's rate must be at least 99% of the target and at most 101% of the machines' capacity (a free scaffold runs at capacity whatever limited the source)",
+            "target_items_per_second": 137,
+            "target_crafts_per_second": 45.666666666666664,
+            "machine_capacity_per_second": 48.005952380952394,
+            "scaffold_crafts_per_second": 48.001333370371405,
+            "ratio_to_target": 1.0511240884022937,
+            "source_crafts_per_second": 45.707936331564774,
+            "ratio_to_source": 1.0501750291715286,
+            "source_items_per_second": 137.123809,
+            "scaffold_items_per_second": 144.0040001111142,
+            "source_limit": {
+              "limit": "downstream: output waiting for space",
+              "output_waiting_share": 0.0713,
+              "ingredient_shortage_share": 0.050499999999999996
+            },
+            "head_stacks": [
+              {
+                "supplied": true,
+                "item": "processing-unit",
+                "stack_wanted": 4,
+                "stack_found_max": 4,
+                "stack_found_min": 4,
+                "lanes_seen": 8
+              },
+              {
+                "supplied": true,
+                "item": "flying-robot-frame",
+                "stack_wanted": 4,
+                "stack_found_max": 4,
+                "stack_found_min": 4,
+                "lanes_seen": 8
+              },
+              {
+                "supplied": true,
+                "item": "coal",
+                "stack_wanted": 4,
+                "stack_found_max": 4,
+                "stack_found_min": 4,
+                "lanes_seen": 1
+              }
+            ],
+            "warmup_ticks": 1800,
+            "ticks": 36000,
+            "machines": [
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  11.5,
+                  165.5
+                ],
+                "scaffold_at": [
+                  -8.5,
+                  -8.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              },
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  11.5,
+                  183.5
+                ],
+                "scaffold_at": [
+                  -8.5,
+                  9.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              },
+              {
+                "recipe": "casting-low-density-structure",
+                "source_at": [
+                  14.5,
+                  170.5
+                ],
+                "scaffold_at": [
+                  -5.5,
+                  -3.5
+                ],
+                "source_crafts_per_second": 17.138809411372538,
+                "scaffold_crafts_per_second": 17.987166310175283,
+                "ratio": 1.0494991733929788,
+                "scaffold_status": {
+                  "working": 0.3341,
+                  "full_output": 0.6034,
+                  "item_ingredient_shortage": 0.0625
+                },
+                "source_crafting_speed": 199.75,
+                "scaffold_crafting_speed": 199.75,
+                "source_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "source_beacons": 5,
+                "scaffold_beacons": 5
+              },
+              {
+                "recipe": "casting-low-density-structure",
+                "source_at": [
+                  14.5,
+                  178.5
+                ],
+                "scaffold_at": [
+                  -5.5,
+                  4.5
+                ],
+                "source_crafts_per_second": 17.138809411372538,
+                "scaffold_crafts_per_second": 17.987166310175283,
+                "ratio": 1.0494991733929788,
+                "scaffold_status": {
+                  "working": 0.3341,
+                  "full_output": 0.6065,
+                  "item_ingredient_shortage": 0.0594
+                },
+                "source_crafting_speed": 199.75,
+                "scaffold_crafting_speed": 199.75,
+                "source_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "source_beacons": 5,
+                "scaffold_beacons": 5
+              },
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  17.5,
+                  165.5
+                ],
+                "scaffold_at": [
+                  -2.5,
+                  -8.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              },
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  17.5,
+                  183.5
+                ],
+                "scaffold_at": [
+                  -2.5,
+                  9.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              },
+              {
+                "recipe": "plastic-bar",
+                "source_at": [
+                  20.5,
+                  174.5
+                ],
+                "scaffold_at": [
+                  0.5,
+                  0.5
+                ],
+                "source_crafts_per_second": 42.801188921914495,
+                "scaffold_crafts_per_second": 45.001250034723185,
+                "ratio": 1.0514018691588785,
+                "scaffold_status": {
+                  "full_output": 0.9313,
+                  "working": 0.0688
+                },
+                "source_crafting_speed": 117.5,
+                "scaffold_crafting_speed": 117.5,
+                "source_effects": {
+                  "consumption": 12.6,
+                  "speed": 22.5
+                },
+                "scaffold_effects": {
+                  "consumption": 12.6,
+                  "speed": 22.5
+                },
+                "source_beacons": 4,
+                "scaffold_beacons": 4
+              },
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  23.5,
+                  165.5
+                ],
+                "scaffold_at": [
+                  3.5,
+                  -8.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              },
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  23.5,
+                  183.5
+                ],
+                "scaffold_at": [
+                  3.5,
+                  9.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              },
+              {
+                "recipe": "casting-low-density-structure",
+                "source_at": [
+                  26.5,
+                  170.5
+                ],
+                "scaffold_at": [
+                  6.5,
+                  -3.5
+                ],
+                "source_crafts_per_second": 17.138809411372538,
+                "scaffold_crafts_per_second": 18.020500569460264,
+                "ratio": 1.0514441310901488,
+                "scaffold_status": {
+                  "full_output": 0.6028,
+                  "item_ingredient_shortage": 0.0625,
+                  "working": 0.3348
+                },
+                "source_crafting_speed": 199.75,
+                "scaffold_crafting_speed": 199.75,
+                "source_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "source_beacons": 5,
+                "scaffold_beacons": 5
+              },
+              {
+                "recipe": "casting-low-density-structure",
+                "source_at": [
+                  26.5,
+                  178.5
+                ],
+                "scaffold_at": [
+                  6.5,
+                  4.5
+                ],
+                "source_crafts_per_second": 17.138809411372538,
+                "scaffold_crafts_per_second": 18.020500569460264,
+                "ratio": 1.0514441310901488,
+                "scaffold_status": {
+                  "full_output": 0.6028,
+                  "item_ingredient_shortage": 0.0625,
+                  "working": 0.3348
+                },
+                "source_crafting_speed": 199.75,
+                "scaffold_crafting_speed": 199.75,
+                "source_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "scaffold_effects": {
+                  "consumption": 10.626,
+                  "speed": 18.975,
+                  "productivity": 0.5
+                },
+                "source_beacons": 5,
+                "scaffold_beacons": 5
+              },
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  29.5,
+                  165.5
+                ],
+                "scaffold_at": [
+                  9.5,
+                  -8.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              },
+              {
+                "recipe": "utility-science-pack",
+                "source_at": [
+                  29.5,
+                  183.5
+                ],
+                "scaffold_at": [
+                  9.5,
+                  9.5
+                ],
+                "source_crafts_per_second": 5.713492041445596,
+                "scaffold_crafts_per_second": 6.000166671296425,
+                "ratio": 1.0501750291715286,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 63.00781250000001,
+                "scaffold_crafting_speed": 63.00781250000001,
+                "source_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 14.267,
+                  "speed": 19.1625,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 10,
+                "scaffold_beacons": 10
+              }
+            ],
+            "harness_problems": []
+          }
+        },
+        {
+          "name": "config validates against the clock generator's loader",
+          "pass": true,
+          "figures": {
+            "pass": true,
+            "generator": "/home/abucnasty/dev/factorio-scripts/clock-generator",
+            "version": "0.14.0",
+            "commit": "b29e79e",
+            "tag": "v0.14.0",
+            "dirty": false
+          }
+        }
+      ],
+      "started": "2026-10-15T23:26:23.333Z",
+      "seconds": 90.8,
+      "cell": {
+        "id": 1825473,
+        "anchor": [
+          11.5,
+          165.5
+        ],
+        "recipes": [
+          "utility-science-pack",
+          "casting-low-density-structure",
+          "plastic-bar"
+        ],
+        "machines": 13,
+        "inserters": 29,
+        "copies": 1,
+        "identical_in_save": 60
+      },
+      "box": null,
+      "cut": {
+        "entities": 186,
+        "source_entities": 154
+      },
+      "removed": [],
+      "inserters_unwired": [
+        {
+          "u": 1810597,
+          "x": 10.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711381,
+          "x": 10.5,
+          "y": 181.5,
+          "was_switched": true
+        },
+        {
+          "u": 1855159,
+          "x": 11.5,
+          "y": 163.5,
+          "was_switched": true
+        },
+        {
+          "u": 1680160,
+          "x": 11.5,
+          "y": 185.5,
+          "was_switched": true
+        },
+        {
+          "u": 1810595,
+          "x": 12.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711375,
+          "x": 12.5,
+          "y": 181.5,
+          "was_switched": true
+        },
+        {
+          "u": 1810590,
+          "x": 16.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711373,
+          "x": 16.5,
+          "y": 181.5,
+          "was_switched": true
+        },
+        {
+          "u": 1855148,
+          "x": 17.5,
+          "y": 163.5,
+          "was_switched": true
+        },
+        {
+          "u": 1767005,
+          "x": 17.5,
+          "y": 172.5,
+          "was_switched": true
+        },
+        {
+          "u": 1732667,
+          "x": 17.5,
+          "y": 176.5,
+          "was_switched": true
+        },
+        {
+          "u": 1680155,
+          "x": 17.5,
+          "y": 185.5,
+          "was_switched": true
+        },
+        {
+          "u": 1810588,
+          "x": 18.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711369,
+          "x": 18.5,
+          "y": 181.5,
+          "was_switched": true
+        },
+        {
+          "u": 1810583,
+          "x": 22.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711359,
+          "x": 22.5,
+          "y": 181.5,
+          "was_switched": true
+        },
+        {
+          "u": 1855137,
+          "x": 23.5,
+          "y": 163.5,
+          "was_switched": true
+        },
+        {
+          "u": 1767001,
+          "x": 23.5,
+          "y": 172.5,
+          "was_switched": true
+        },
+        {
+          "u": 1732665,
+          "x": 23.5,
+          "y": 176.5,
+          "was_switched": true
+        },
+        {
+          "u": 1680150,
+          "x": 23.5,
+          "y": 185.5,
+          "was_switched": true
+        },
+        {
+          "u": 1810581,
+          "x": 24.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711353,
+          "x": 24.5,
+          "y": 181.5,
+          "was_switched": true
+        },
+        {
+          "u": 1855128,
+          "x": 28.5,
+          "y": 163.5,
+          "was_switched": true
+        },
+        {
+          "u": 1810576,
+          "x": 28.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711351,
+          "x": 28.5,
+          "y": 181.5,
+          "was_switched": true
+        },
+        {
+          "u": 1680145,
+          "x": 28.5,
+          "y": 185.5,
+          "was_switched": true
+        },
+        {
+          "u": 1810574,
+          "x": 30.5,
+          "y": 167.5,
+          "was_switched": true
+        },
+        {
+          "u": 1711347,
+          "x": 30.5,
+          "y": 181.5,
+          "was_switched": true
+        }
+      ],
+      "wires_cut": 19,
+      "replaced": [
+        {
+          "u": 1767009,
+          "name": "turbo-underground-belt",
+          "to": "turbo-transport-belt",
+          "reason": "the other end of this underground belt is outside the cut"
+        }
+      ],
+      "skipped": [],
+      "environment": [],
+      "dead_ends": [],
+      "scaffold_supplied": {
+        "file": "thaeln-cell09-owner.txt",
+        "sha256": "87b163c39cb94cf8906403b3018abfde3290da8ee69598dce811b2836586af5a",
+        "entities": 186
+      },
+      "extended": [
+        {
+          "kind": "head",
+          "from": [
+            10.5,
+            168.5
+          ],
+          "to": [
+            4.5,
+            168.5
+          ],
+          "belts": 5
+        },
+        {
+          "kind": "head",
+          "from": [
+            10.5,
+            180.5
+          ],
+          "to": [
+            4.5,
+            180.5
+          ],
+          "belts": 5
+        },
+        {
+          "kind": "head",
+          "from": [
+            16.5,
+            173.5
+          ],
+          "to": [
+            15.5,
+            173.5
+          ],
+          "belts": 1
+        },
+        {
+          "kind": "tail",
+          "from": [
+            28.5,
+            162.5
+          ],
+          "to": [
+            34.5,
+            163.5
+          ],
+          "belts": 4
+        },
+        {
+          "kind": "tail",
+          "from": [
+            28.5,
+            186.5
+          ],
+          "to": [
+            34.5,
+            185.5
+          ],
+          "belts": 4
+        }
+      ],
+      "bridged": [
+        {
+          "u": 1792461,
+          "name": "turbo-underground-belt",
+          "x": 11.5,
+          "y": 168.5
+        },
+        {
+          "u": 1792459,
+          "name": "turbo-underground-belt",
+          "x": 17.5,
+          "y": 168.5
+        },
+        {
+          "u": 1711377,
+          "name": "turbo-underground-belt",
+          "x": 11.5,
+          "y": 180.5
+        },
+        {
+          "u": 1711371,
+          "name": "turbo-underground-belt",
+          "x": 17.5,
+          "y": 180.5
+        },
+        {
+          "u": 1855155,
+          "name": "turbo-underground-belt",
+          "x": 12.5,
+          "y": 162.5
+        },
+        {
+          "u": 1855150,
+          "name": "turbo-underground-belt",
+          "x": 16.5,
+          "y": 162.5
+        },
+        {
+          "u": 1667749,
+          "name": "turbo-underground-belt",
+          "x": 12.5,
+          "y": 186.5
+        },
+        {
+          "u": 1667747,
+          "name": "turbo-underground-belt",
+          "x": 16.5,
+          "y": 186.5
+        },
+        {
+          "u": 1855144,
+          "name": "turbo-underground-belt",
+          "x": 18.5,
+          "y": 162.5
+        },
+        {
+          "u": 1855139,
+          "name": "turbo-underground-belt",
+          "x": 22.5,
+          "y": 162.5
+        },
+        {
+          "u": 1667743,
+          "name": "turbo-underground-belt",
+          "x": 18.5,
+          "y": 186.5
+        },
+        {
+          "u": 1667741,
+          "name": "turbo-underground-belt",
+          "x": 22.5,
+          "y": 186.5
+        },
+        {
+          "u": 1792455,
+          "name": "turbo-underground-belt",
+          "x": 19.5,
+          "y": 168.5
+        },
+        {
+          "u": 1792451,
+          "name": "turbo-underground-belt",
+          "x": 21.5,
+          "y": 168.5
+        },
+        {
+          "u": 1711365,
+          "name": "turbo-underground-belt",
+          "x": 19.5,
+          "y": 180.5
+        },
+        {
+          "u": 1711361,
+          "name": "turbo-underground-belt",
+          "x": 21.5,
+          "y": 180.5
+        },
+        {
+          "u": 1792447,
+          "name": "turbo-underground-belt",
+          "x": 23.5,
+          "y": 168.5
+        },
+        {
+          "u": 1792443,
+          "name": "turbo-underground-belt",
+          "x": 29.5,
+          "y": 168.5
+        },
+        {
+          "u": 1711355,
+          "name": "turbo-underground-belt",
+          "x": 23.5,
+          "y": 180.5
+        },
+        {
+          "u": 1711349,
+          "name": "turbo-underground-belt",
+          "x": 29.5,
+          "y": 180.5
+        },
+        {
+          "u": 1855133,
+          "name": "turbo-underground-belt",
+          "x": 24.5,
+          "y": 162.5
+        },
+        {
+          "u": 1667737,
+          "name": "turbo-underground-belt",
+          "x": 24.5,
+          "y": 186.5
+        }
+      ],
+      "power": {
+        "substations": 0,
+        "eei": null,
+        "note": "no power entities: the harness powers its whole surface with one electric energy interface (the benchmark template's way)"
+      },
+      "scaffold_notes": [
+        "the belt at 8.5,168.5 is also side-loaded by 1 other belt(s): the line was followed through the belt behind it, the side-loaded items are fed by the chest only if the head's lanes carry them",
+        "the belt at 8.5,180.5 is also side-loaded by 1 other belt(s): the line was followed through the belt behind it, the side-loaded items are fed by the chest only if the head's lanes carry them"
+      ],
+      "config_notes": [],
+      "expected": {
+        "name": "thaeln-cell09",
+        "product": "utility-science-pack",
+        "recipe": "utility-science-pack",
+        "copies": 1,
+        "items_per_second": 137,
+        "target": {
+          "items_per_second": {
+            "fraction": "137",
+            "decimal": 137
+          },
+          "source": "measured",
+          "capacity": {
+            "fraction": "8065/56",
+            "decimal": 144.017857143
+          },
+          "measured": 137.123809,
+          "demand": {
+            "items_per_second": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "source": "demand (belt lane, line ends in a void)",
+            "producers_sharing": 1,
+            "consumers": 0,
+            "consumers_demand": {
+              "fraction": "0",
+              "decimal": 0
+            },
+            "consumers_demand_per_producer": {
+              "fraction": "0",
+              "decimal": 0
+            },
+            "void_at": [
+              [
+                105.5,
+                163.5
+              ],
+              [
+                105.5,
+                185.5
+              ]
+            ],
+            "lane_limit": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "lanes": [
+              {
+                "lane": "left",
+                "belts": 16,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              },
+              {
+                "lane": "right",
+                "belts": 16,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              }
+            ]
+          },
+          "fallback_reason": "flag: output blocked and measurement off the target",
+          "flagged": {
+            "items_per_second": {
+              "fraction": "8065/56",
+              "decimal": 144.017857143
+            },
+            "source": "capacity",
+            "demand": {
+              "items_per_second": {
+                "fraction": "240",
+                "decimal": 240
+              },
+              "source": "demand (belt lane, line ends in a void)",
+              "producers_sharing": 1,
+              "consumers": 0,
+              "consumers_demand": {
+                "fraction": "0",
+                "decimal": 0
+              },
+              "consumers_demand_per_producer": {
+                "fraction": "0",
+                "decimal": 0
+              },
+              "void_at": [
+                [
+                  105.5,
+                  163.5
+                ],
+                [
+                  105.5,
+                  185.5
+                ]
+              ],
+              "lane_limit": {
+                "fraction": "240",
+                "decimal": 240
+              },
+              "lanes": [
+                {
+                  "lane": "left",
+                  "belts": 16,
+                  "speed": 0.125,
+                  "stack": 4,
+                  "lane_limit": {
+                    "fraction": "120",
+                    "decimal": 120
+                  },
+                  "cells_on_lane": 1
+                },
+                {
+                  "lane": "right",
+                  "belts": 16,
+                  "speed": 0.125,
+                  "stack": 4,
+                  "lane_limit": {
+                    "fraction": "120",
+                    "decimal": 120
+                  },
+                  "cells_on_lane": 1
+                }
+              ]
+            },
+            "flags": [
+              "output blocked and measurement off the target"
+            ]
+          }
+        },
+        "measured_items_per_second": 137.123809,
+        "rate_source": "products finished by the utility-science-pack machines over 36000 sampled ticks",
+        "source": {
+          "crafts_per_second": 45.707936331564774,
+          "items_per_second": 137.12380899469431,
+          "sampled_ticks": 36000,
+          "start_tick": 591040,
+          "per_machine": [
+            {
+              "u": 1825473,
+              "recipe": "utility-science-pack",
+              "x": 11.5,
+              "y": 165.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            },
+            {
+              "u": 1693549,
+              "recipe": "utility-science-pack",
+              "x": 11.5,
+              "y": 183.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            },
+            {
+              "u": 1781243,
+              "recipe": "casting-low-density-structure",
+              "x": 14.5,
+              "y": 170.5,
+              "crafts_per_second": 17.138809411372538,
+              "status": {
+                "working": 0.3213,
+                "full_output": 0.649,
+                "item_ingredient_shortage": 0.0297
+              }
+            },
+            {
+              "u": 1721669,
+              "recipe": "casting-low-density-structure",
+              "x": 14.5,
+              "y": 178.5,
+              "crafts_per_second": 17.138809411372538,
+              "status": {
+                "working": 0.3213,
+                "full_output": 0.649,
+                "item_ingredient_shortage": 0.0297
+              }
+            },
+            {
+              "u": 1825470,
+              "recipe": "utility-science-pack",
+              "x": 17.5,
+              "y": 165.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            },
+            {
+              "u": 1693543,
+              "recipe": "utility-science-pack",
+              "x": 17.5,
+              "y": 183.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            },
+            {
+              "u": 1750135,
+              "recipe": "plastic-bar",
+              "x": 20.5,
+              "y": 174.5,
+              "crafts_per_second": 42.801188921914495,
+              "status": {
+                "full_output": 0.9287,
+                "working": 0.0713
+              }
+            },
+            {
+              "u": 1825467,
+              "recipe": "utility-science-pack",
+              "x": 23.5,
+              "y": 165.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            },
+            {
+              "u": 1693537,
+              "recipe": "utility-science-pack",
+              "x": 23.5,
+              "y": 183.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            },
+            {
+              "u": 1781234,
+              "recipe": "casting-low-density-structure",
+              "x": 26.5,
+              "y": 170.5,
+              "crafts_per_second": 17.138809411372538,
+              "status": {
+                "working": 0.3213,
+                "full_output": 0.649,
+                "item_ingredient_shortage": 0.0297
+              }
+            },
+            {
+              "u": 1721660,
+              "recipe": "casting-low-density-structure",
+              "x": 26.5,
+              "y": 178.5,
+              "crafts_per_second": 17.138809411372538,
+              "status": {
+                "working": 0.3213,
+                "full_output": 0.649,
+                "item_ingredient_shortage": 0.0297
+              }
+            },
+            {
+              "u": 1825464,
+              "recipe": "utility-science-pack",
+              "x": 29.5,
+              "y": 165.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            },
+            {
+              "u": 1693531,
+              "recipe": "utility-science-pack",
+              "x": 29.5,
+              "y": 183.5,
+              "crafts_per_second": 5.713492041445596,
+              "status": {
+                "working": 0.9495,
+                "item_ingredient_shortage": 0.0505
+              }
+            }
+          ],
+          "output_inserter_waiting": {
+            "unit": 1855159,
+            "share": 0.0713
+          }
+        }
+      },
+      "target": {
+        "items_per_second": {
+          "fraction": "137",
+          "decimal": 137
+        },
+        "source": "measured",
+        "capacity": {
+          "fraction": "8065/56",
+          "decimal": 144.017857143
+        },
+        "measured": 137.123809,
+        "demand": {
+          "items_per_second": {
+            "fraction": "240",
+            "decimal": 240
+          },
+          "source": "demand (belt lane, line ends in a void)",
+          "producers_sharing": 1,
+          "consumers": 0,
+          "consumers_demand": {
+            "fraction": "0",
+            "decimal": 0
+          },
+          "consumers_demand_per_producer": {
+            "fraction": "0",
+            "decimal": 0
+          },
+          "void_at": [
+            [
+              105.5,
+              163.5
+            ],
+            [
+              105.5,
+              185.5
+            ]
+          ],
+          "lane_limit": {
+            "fraction": "240",
+            "decimal": 240
+          },
+          "lanes": [
+            {
+              "lane": "left",
+              "belts": 16,
+              "speed": 0.125,
+              "stack": 4,
+              "lane_limit": {
+                "fraction": "120",
+                "decimal": 120
+              },
+              "cells_on_lane": 1
+            },
+            {
+              "lane": "right",
+              "belts": 16,
+              "speed": 0.125,
+              "stack": 4,
+              "lane_limit": {
+                "fraction": "120",
+                "decimal": 120
+              },
+              "cells_on_lane": 1
+            }
+          ]
+        },
+        "fallback_reason": "flag: output blocked and measurement off the target",
+        "flagged": {
+          "items_per_second": {
+            "fraction": "8065/56",
+            "decimal": 144.017857143
+          },
+          "source": "capacity",
+          "demand": {
+            "items_per_second": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "source": "demand (belt lane, line ends in a void)",
+            "producers_sharing": 1,
+            "consumers": 0,
+            "consumers_demand": {
+              "fraction": "0",
+              "decimal": 0
+            },
+            "consumers_demand_per_producer": {
+              "fraction": "0",
+              "decimal": 0
+            },
+            "void_at": [
+              [
+                105.5,
+                163.5
+              ],
+              [
+                105.5,
+                185.5
+              ]
+            ],
+            "lane_limit": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "lanes": [
+              {
+                "lane": "left",
+                "belts": 16,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              },
+              {
+                "lane": "right",
+                "belts": 16,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              }
+            ]
+          },
+          "flags": [
+            "output blocked and measurement off the target"
+          ]
+        }
+      },
+      "source_limit": {
+        "limit": "downstream: output waiting for space",
+        "output_waiting_share": 0.0713,
+        "ingredient_shortage_share": 0.050499999999999996
+      },
+      "flags": [
+        "output blocked and measurement off the target"
+      ],
+      "source_dump": {
+        "mods": {
+          "base": "2.1.21",
+          "design-extractor": "0.1.0",
+          "elevated-rails": "2.1.21",
+          "recycler": "2.1.21",
+          "quality": "2.1.21",
+          "space-age": "2.1.21"
+        },
+        "tick": 591040
+      },
+      "n": 1
+    }
+  ]
+}

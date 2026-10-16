@@ -12,6 +12,8 @@ import {
     maxRateLabel,
     rateHeader,
     shownNumberText,
+    NUMBER_FIELD_INPUT_FORMAT,
+    isUneditedPrecisionLoss,
 } from './numberText';
 
 const locale = 'en-US';
@@ -77,6 +79,14 @@ describe('shownNumberText', () => {
         expect(shownNumberText({ ...field, focused: false })).toBe('68.906');
     });
 
+    it('keeps invalid input full when requested, retaining valid blurred rounding by default', () => {
+        const third = { ...field, value: 0.3333333333333333, inputValue: '0.3333333333333333', focused: false };
+        expect(shownNumberText({ ...third, preserveInputOnBlur: true })).toBe('0.3333333333333333');
+        expect(shownNumberText({ ...third, preserveInputOnBlur: false })).toBe('0.333');
+        expect(shownNumberText(third)).toBe('0.333');
+        expect(third.value).toBe(0.3333333333333333);
+    });
+
     it('shows what is typed when the field holds no number', () => {
         expect(shownNumberText({ ...field, focused: false, value: null, inputValue: '' })).toBe('');
         expect(shownNumberText({ ...field, focused: false, value: NaN, inputValue: 'abc' })).toBe('abc');
@@ -93,6 +103,7 @@ describe('maxRateLabel', () => {
 describe('itemsPerSecondHelper', () => {
     it('gives the total and the share of each copy', () => {
         expect(itemsPerSecondHelper(240, 11, locale)).toBe('Total for all 11 copies (21.82/s each)');
+        expect(itemsPerSecondHelper(5, 0.5, locale)).toBe('Total for all 0.5 copies (10/s each)');
     });
 
     it('says the total is for the build with one copy or numbers that cannot be shared', () => {
@@ -107,6 +118,7 @@ describe('rateHeader', () => {
     it('names the copies the rate is the total of', () => {
         expect(rateHeader(11)).toBe('Rate (items/s,\u00a0all\u00a011\u00a0copies)');
         expect(rateHeader(1)).toBe('Rate (items/s)');
+        expect(rateHeader(0.5)).toBe('Rate (items/s, all 0.5 copies)');
     });
 });
 
@@ -114,6 +126,7 @@ describe('makesHeader', () => {
     it('says what the clock makes, for every copy', () => {
         expect(makesHeader(11)).toBe('Makes (items/s, all 11 copies)');
         expect(makesHeader(1)).toBe('Makes (items/s)');
+        expect(makesHeader(0.5)).toBe('Makes (items/s, all 0.5 copies)');
     });
 });
 
@@ -146,6 +159,37 @@ describe('the clocks table headers', () => {
 
 describe('COPIES_HELPER', () => {
     it('says what a copy is and what the clock is made for', () => {
-        expect(COPIES_HELPER).toBe("Identical copies of this build you'll place. The clock is made for one copy.");
+        expect(COPIES_HELPER).toBe("Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.");
+    });
+});
+
+describe('controlled NumberField precision', () => {
+    it.each([1e-23, Number.MIN_VALUE, 0.3333333333333333, 0.0625, 68.906247615814, Number.MAX_VALUE])(
+        'keeps %s in the default input text while retaining twenty-fraction-digit edit precision', value => {
+            expect(NUMBER_FIELD_INPUT_FORMAT.maximumFractionDigits).toBe(20);
+            expect(Number(new Intl.NumberFormat('en-US', NUMBER_FIELD_INPUT_FORMAT).format(value))).toBe(value);
+        },
+    );
+
+    const blur = { value: 1e-23, nextValue: 0, reason: 'input-blur', edited: false, customFormat: false };
+    it('preserves an unedited tiny controlled value on blur', () => {
+        expect(isUneditedPrecisionLoss(blur)).toBe(true);
+        expect(isUneditedPrecisionLoss({ ...blur, value: Number.MIN_VALUE, min: 0 })).toBe(true);
+    });
+
+    it('leaves actual edits, steppers, clearing, normal numbers and supplied formats unchanged', () => {
+        for (const change of [
+            { edited: true }, { reason: 'input-change' }, { reason: 'increment-press' },
+            { nextValue: null }, { value: 0, nextValue: 0 }, { value: 0.0625, nextValue: 0.0625 },
+            { value: 16, nextValue: 17 }, { customFormat: true },
+            { value: undefined }, { value: null }, { value: Infinity }, { value: NaN },
+        ]) expect(isUneditedPrecisionLoss({ ...blur, ...change })).toBe(false);
+    });
+
+    it('does not mistake min/max clamping for precision rounding', () => {
+        expect(isUneditedPrecisionLoss({ ...blur, value: -1e-23, min: 0 })).toBe(false);
+        expect(isUneditedPrecisionLoss({ ...blur, max: 0 })).toBe(false);
+        expect(isUneditedPrecisionLoss({ ...blur, value: -1, min: 0 })).toBe(false);
+        expect(isUneditedPrecisionLoss({ ...blur, value: 17, nextValue: 16, max: 16 })).toBe(false);
     });
 });

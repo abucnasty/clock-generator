@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // Screenshots + page checks for item 1.2 (the header stays usable at every width).
 // Usage: node capture-header.mjs <out dir> [port]
 // Run it once on the code before the change and once after, into two out dirs. At 1440, 960, 720 and 390px it checks that
@@ -20,8 +21,8 @@ const SAMPLES = process.env.SAMPLES_DIR ?? '/Users/abucnasty/dev/factorio-script
 const LOGISTIC = `${SAMPLES}/science/logistic-science/logistic-science.json`;
 const WIDTHS = [1440, 960, 720, 390];
 const HEIGHT = (w) => (w === 390 ? 844 : 900);
-/** A build whose best clock runs at 200 of 240 a second in the simulator, so Copy has a rate warning to show */
-const BELOW_TARGET = `${SAMPLES}/science/utility-science/utility-science-direct-insert-lds.json`;
+/** A build whose best clock runs at 120 of 240 a second in the simulator, so Copy has a rate warning to show */
+const BELOW_TARGET = fileURLToPath(new URL('./fixtures/logistic-science-below-target-fast.json', import.meta.url));
 
 mkdirSync(OUT, { recursive: true });
 const index = [];

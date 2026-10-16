@@ -117,8 +117,14 @@ export function useMachinesMax(recipe: string, machines: MachineSettings[]): Mac
     // the same object while the machines and their sum are the same, for what is worked out from it
     const ids = max?.machineIds.join(',') ?? null;
     const perCopy = max?.perCopy ?? null;
+    const numerator = max?.perCopyRatio?.numerator ?? null;
+    const denominator = max?.perCopyRatio?.denominator ?? null;
     return useMemo(
-        () => (ids === null || perCopy === null ? null : { machineIds: ids.split(',').map(Number), perCopy }),
-        [ids, perCopy],
+        () => (ids === null || perCopy === null ? null : {
+            machineIds: ids.split(',').map(Number),
+            perCopy,
+            ...(numerator !== null && denominator !== null && { perCopyRatio: { numerator, denominator } }),
+        }),
+        [ids, perCopy, numerator, denominator],
     );
 }

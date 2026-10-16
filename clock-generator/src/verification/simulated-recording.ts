@@ -1,7 +1,7 @@
 import { Config } from "../config";
 import { simulateClockOnly, SerializableClockWindows } from "../crafting/generate-blueprint";
 import { StockRecording } from "../crafting/machine-stock";
-import { EntityId, Machine } from "../entities";
+import { configuredHandSize, EntityId, Machine } from "../entities";
 import { FACTORIO_MACHINE_STATE } from "../state/factorio-entity-state";
 import { MachineStatus } from "../state";
 import { EntityMatch } from "./entity-matching";
@@ -65,7 +65,7 @@ export function recordingOfStock(stock: StockRecording, config: Config, clock_ti
                 name: "simulated",
                 source: inserter.source as Target,
                 sink: inserter.sink as Target,
-                stack_size: inserter.stack_size,
+                stack_size: configuredHandSize(inserter),
                 samples: {
                     held_count: series.held,
                     held_item: changeList(series.held_item).filter(([, item_name]) => item_name !== ""),
@@ -86,6 +86,7 @@ export function recordingOfStock(stock: StockRecording, config: Config, clock_ti
                     crafting_progress: [],
                     bonus_progress: [],
                     products_finished: series.products_finished,
+                    crafts_started: series.crafts_started,
                     inputs: series.inputs,
                     outputs: series.outputs,
                     fuel: series.fuel !== undefined && fuel_item !== undefined ? { [fuel_item]: series.fuel } : undefined,

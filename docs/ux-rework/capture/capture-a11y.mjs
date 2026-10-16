@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // Screenshots + page checks for item 1.11 "Accessibility basics", PR A (spec: docs/ux-rework/specs/1.11-a11y-basics.md).
 // Usage: node capture-a11y.mjs <out dir>
 //   BASE_URL     an app that is already running; without it the script serves the production build with `vite preview`
@@ -676,7 +677,7 @@ const STEP_LIST = [
         name: 'chest-slots',
         async run({ page, rec, width }) {
             // a chest with three filters, so the remove buttons sit between slots (and wrap at narrow widths)
-            const base = JSON.parse(readFileSync(sample('science/utility-science/utility-science-direct-insert-lds.json'), 'utf8'));
+            const base = JSON.parse(readFileSync(fileURLToPath(new URL('./fixtures/three-filter-infinity-chest.json', import.meta.url)), 'utf8'));
             base.chests[0].item_filter = ['utility-science-pack', 'low-density-structure', 'processing-unit']
                 .map((item_name, i) => ({ item_name, request_count: i + 1 }));
             const file = join(rec.out, 'chest-filters.json');
