@@ -1,6 +1,6 @@
 # 3.2 A — one editor, every Diagram edit a draft
 
-Implementation start: **2026-10-16 09:44:58 UTC**. Baseline product: `c29db81d21ba442fef8066279078ab4a2751050a`; capture-only adoption: `f74bf6d`. Final verified product: **`e7830d36278666c6589c41c8bd0db7f7b10f0a3e`**. Later capture/evidence commits do not alter that product tree. No PR, phase merge, release or owner checkpoint is claimed here; independent code/UX reviews remain required.
+Implementation start: **2026-10-16 09:44:58 UTC**. Baseline product: `c29db81d21ba442fef8066279078ab4a2751050a`; capture-only adoption: `f74bf6d`. Initial complete-capture product: **`e7830d36278666c6589c41c8bd0db7f7b10f0a3e`**. Reviewed minor follow-up product: **`0e6e3fa41354f520d0298fc436b49f50bca480ff`** (see the final section); later evidence-only commits do not alter it. No PR, phase merge, release or owner checkpoint is claimed here; independent code/UX reviews remain required.
 
 ## Source and gates
 
@@ -70,3 +70,16 @@ Visually inspected: the 720 Automatic row (`w1440/68-alignment-720-stack-inserte
 ## Scope retained
 
 PR B's duplicate/bulk/reorder/new-row focus behavior is not implemented. Engine, dependencies/lockfiles, versions, CI, theme/compact/machine-rate proposals, P2 intro/wake-up/fraction copy, failed Copy/Fuel keyboard/partial-paste findings and phase/install decisions are left alone. Existing rules/templates, Cancel/results cache/library/share persistence, metadata, exact fractions, Build panel/Advanced/grid behavior and slot affordances remain in place. No phase PASS or install approval is asserted.
+
+
+## Reviewed minor follow-up
+
+Start **2026-10-16 10:19:00 UTC**. Round-0 [code report](/tmp/ux-one-editor-review/CODE-ROUND0.md): PASS with whitespace nit; [UX report](/tmp/ux-one-editor-review/UX-ROUND0.md): PASS with one nonblocking focus minor. Root relayed independent code approval at **10:18:23 UTC** for a ref on the existing filter wrapper: focus its actual first `[role="button"]` slot before committing Automatic, then retain the existing announcement. Slot zero survives the switch. No effect, timer, state, DOM/layout wrapper or public API was added. The two whitespace-only lines were cleaned. `origin/feat/ux-rework-p3`'s documentation-only updates were merged normally before the product commit.
+
+Fresh immutable source **`0e6e3fa41354f520d0298fc436b49f50bca480ff`** lives at `/tmp/ux-one-editor-verifier-0e6e3fa`; its engine dependency resolves to `/private/tmp/ux-one-editor-verifier-0e6e3fa/clock-generator`. Setup and the same full UI command sequence above were rerun there. Actual results: **1202 tests/71 files PASS**, TypeScript/lint/default Knip/icons PASS, production build PASS (4.30s). Logs: `/tmp/ux-one-editor-0e6-{ci,engine-build,test,tsc,lint,knip,icons,build}.log`. `git diff --check c29db81..HEAD` is clean. Engine/dependencies/settings/versions and every existing layout/helper contract remain unchanged.
+
+Fresh production preview: **http://127.0.0.1:5301** with `--strictPort` (5296 retains the original immutable full-capture build; B5298 and owner5280 were untouched). `STEPS=automatic-focus` against the new source at 1440/720/390 records **156 PASS / 0 FAIL / 0 failed steps**, six fresh PNGs and ARIA snapshots, **102 actual axe PASS lines / zero axe INFO/skips**: `/tmp/ux-one-editor-minor-0e6e3fa/INDEX.md`, `/tmp/ux-one-editor-minor-0e6e3fa.log`. Its `SOURCE.json` records the new source, own engine dependency and JS asset hashes.
+
+Each List/Diagram case reaches **Use automatic filters** by Tab and activates it with real **Enter**. After the commit, `document.activeElement` is the **same connected actual slot-zero element** captured before activation; `:focus-visible` and the painted outline are present, and shared focus checks find no obscuration. List returns to the exact serialized live form with no filters key; Diagram leaves the exact saved form unchanged throughout. Each automatic-return announcement reaches exactly one unhidden live region. Visually inspected `w1440/01-list-automatic-return-keyboard-focus-1440.png` and `w390/02-diagram-automatic-return-keyboard-focus-390.png`.
+
+This is the approved **minor-only** evidence refresh, not a repetition or replacement of the original complete capture. All original failed/corrected reports and provenance above are retained. Root's new-product independent test/build repeat and focused UX/code closures remain separate gates; no phase/install approval or merge is asserted.
