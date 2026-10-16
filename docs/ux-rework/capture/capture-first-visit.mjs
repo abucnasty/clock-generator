@@ -33,7 +33,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as lib from './lib.mjs';
 import {
-    forWidths, previewServer, LOGISTIC, SMALL_SAMPLE,
+    forWidths, previewServer, LOGISTIC, SMALL_SAMPLE, ui,
     importFile, goConfigure, goResults, openMenu, noSideScroll, isClickable, contrast, waitReady,
     checkLabelInName, checkTabTo, checkFocusNotObscured, checkAnnounced,
 } from './lib.mjs';
@@ -667,6 +667,7 @@ try {
                 rec.check('latest mod: no old-mod notice in the confirm dialog', (await r.dlg.locator('.MuiAlert-message').count()) === 0);
                 await axe(rec, page, 'confirm dialog');
                 // the old-mod warning for 0.7.1 is none; import it
+                if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
                 await r.dlg.getByRole('button', { name: 'Import Selected', exact: true }).click();
                 await page.waitForTimeout(900);
                 const t = await targetNow(page);
@@ -690,6 +691,7 @@ try {
                 await dismissMessage(page);
                 await clickPaste(page, 'bar', text(FIXTURES.inferred));
                 if (await appears(confirmDlg(page), 12_000)) {
+                    if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
                     await confirmDlg(page).getByRole('button', { name: 'Import Selected', exact: true }).click();
                     await page.waitForTimeout(900);
                 }
@@ -731,6 +733,7 @@ try {
                 rec.check('already set: "Tick to replace your current target (… at 240/s)"', /Tick to replace your current target/i.test(r.t) && /240\/s/.test(r.t), r.t.match(/Tick to replace[^.]*\./)?.[0] ?? '');
                 if (r.has) {
                     await targetRow(r.dlg).check();
+                    if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
                     await r.dlg.getByRole('button', { name: 'Import Selected', exact: true }).click();
                     await page.waitForTimeout(900);
                     const t = await targetNow(page);

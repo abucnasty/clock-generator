@@ -374,51 +374,35 @@ async function runSteps(page, width) {
     }, page);
 
     // ------------------------------------------------------------------ 7. validation panel
-    await rec.step('7 the Swing Plan cannot be edited after the delete', async () => {
-        const warning = page.getByText(/changed since it was validated/i).first();
+    await rec.step('7 the stale Swing Plan remains readable and cannot change the build', async () => {
+        const warning = ui.followText(ui.followMain(page), /You changed the build since this plan was made/).first();
         await warning.scrollIntoViewIfNeeded();
-        await rec.shot(page, 'validation-after', { desc: 'Validation panel after the delete: the "changed since it was validated" warning and the dimmed Swing Plan (spec state 7)' });
-        rec.check('the "changed since it was validated" warning shows', await warning.isVisible());
-        const dim = await planAccordion(page).evaluate((el) => {
-            const s = getComputedStyle(el.parentElement);
-            return { pointerEvents: s.pointerEvents, opacity: Number(s.opacity) };
+        const plan = ui.safetySwingPlan(page);
+        await rec.shot(page, 'validation-after', { desc: 'After delete: readable stale Swing Plan with actions removed' });
+        rec.check('the plan says the build changed', await warning.isVisible());
+        const state = await plan.evaluate(el => {
+            let opacity = 1, inert = false;
+            for (let node = el; node && node.tagName !== 'MAIN'; node = node.parentElement) {
+                opacity *= Number(getComputedStyle(node).opacity); inert ||= node.hasAttribute('inert');
+            }
+            return { opacity, inert, cells: el.querySelectorAll('tbody td').length };
         });
-        rec.check('the Swing Plan is dimmed and ignores clicks', dim.pointerEvents === 'none' && dim.opacity < 1, show(dim));
-
-        // nor can it be used from the keyboard: Tab through the page from the top and press Enter on whatever has focus
+        rec.check('stale plan text remains readable and in the accessibility tree', state.opacity === 1 && !state.inert && state.cells > 0, show(state));
+        rec.check('stale Exclude controls have no action or Tab stop', await ui.followExclude(page).count() === 0);
         const stored = (await readStored(page)).text;
-        /** Where the focus is against the dimmed panel: 'in', 'before' or 'after' it in document order, or 'none' */
-        const focusAt = () => page.evaluate(() => {
-            const acc = [...document.querySelectorAll('.MuiAccordion-root')].find((a) => /^Swing Plan/.test(a.textContent.trim()));
-            const panel = acc?.parentElement;
-            const focused = document.activeElement;
-            if (!panel || !focused || focused === document.body) return 'none';
-            if (panel.contains(focused)) return 'in';
-            return panel.compareDocumentPosition(focused) & Node.DOCUMENT_POSITION_FOLLOWING ? 'after' : 'before';
-        });
-        const inert = await planAccordion(page).evaluate((el) => el.parentElement.inert === true);
-        rec.check('the dimmed Swing Plan is inert', inert);
-        await page.evaluate(() => { document.activeElement?.blur(); window.scrollTo(0, 0); });
-        let landed = 0;
-        let passedIt = false;
-        for (let i = 0; i < 400 && !passedIt; i++) {
-            await page.keyboard.press('Tab');
-            const at = await focusAt();
-            if (at === 'in') landed++;
-            if (at === 'after') passedIt = true;
+        const chip = ui.followReadOnlyState(page).first();
+        await chip.click();
+        await page.keyboard.press('Enter'); await page.keyboard.press('Space');
+        const scroller = ui.followPlanScroll(page);
+        const scrollable = await scroller.evaluate(el => el.scrollWidth > el.clientWidth + 1);
+        if (scrollable) {
+            rec.check('stale table keeps its keyboard scroll stop', await scroller.getAttribute('tabindex') === '0');
+            await scroller.focus(); await page.keyboard.press('ArrowRight');
         }
-        rec.check('Tab reaches past the dimmed Swing Plan', passedIt);
-        // try the chip itself as well: with nothing else focused, focus it directly and press Enter and Space
-        await page.evaluate(() => document.activeElement?.blur());
-        const chip = planAccordion(page).getByText(/^(Included|Excluded)$/).first();
-        await chip.evaluate((el) => el.closest('[role=button]')?.focus());
-        if ((await focusAt()) === 'in') landed++;
-        await page.keyboard.press('Enter');
-        await page.keyboard.press('Space');
+        await ui.followPlanToggle(page).click(); await ui.followPlanToggle(page).click();
+        rec.check('stale inspection disclosure still operates', await plan.isVisible());
         await page.waitForTimeout(500);
-        rec.check('Tab never lands in the dimmed Swing Plan, nor does focusing a chip directly', landed === 0, `${landed} times`);
-        const after = (await readStored(page)).text;
-        rec.check('Enter and Space on a dimmed Included/Excluded chip leave the form unchanged', after === stored, after === stored ? '' : 'the saved form changed');
+        rec.check('pointer, Enter, Space and inspection cannot mutate the old plan', (await readStored(page)).text === stored);
     }, page);
 
     // ------------------------------------------------------------------ 8. Diagram

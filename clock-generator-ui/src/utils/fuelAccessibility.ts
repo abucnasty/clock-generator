@@ -41,7 +41,7 @@ export function fuelTraceSummary(levels: FuelLevelSeries, durationTicks: number)
     const intervals = fuelSampledEmptyIntervals(levels, durationTicks);
     return `Machine ${levels.machine_number}, over ${durationTicks} ticks: fuel started at ${levels.start_level} items and ended at ${levels.end_level} items. `
         + `Minimum ${levels.min_level} items; maximum ${levels.max_level} items. ${levels.inserted} items inserted; ${levels.burned} items burned. `
-        + `${levels.empty_ticks} ticks without fuel.`
+        + `${levels.empty_ticks} ticks with no fuel.`
         + (levels.first_empty_tick !== null ? ` First empty tick: ${levels.first_empty_tick}.` : '')
         + (intervals.length ? ` Sampled intervals containing an empty level: ${intervals.map(range => `${range.startTick} to ${range.endTick}`).join(', ')} ticks. Exact empty-interval boundaries are unavailable.` : '');
 }

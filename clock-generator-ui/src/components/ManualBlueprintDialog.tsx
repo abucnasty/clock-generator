@@ -3,7 +3,7 @@ import { useEffect, useId, useRef } from 'react';
 import type { BlueprintCopyFailure } from '../hooks/useCopyBlueprint';
 import { useGameNames } from '../hooks/useGameNames';
 import { focusTargetOutputHeading } from '../utils/introCard';
-import { generatedForText } from '../utils/resultsStaleness';
+import { generatedForText, madeAtText } from '../utils/resultsStaleness';
 
 /** A failed attempt's exact snapshot; selecting text never writes to the clipboard or pins a clock. */
 export function ManualBlueprintDialog({ failure, onClose }: { failure: BlueprintCopyFailure; onClose: () => void }) {
@@ -34,7 +34,7 @@ export function ManualBlueprintDialog({ failure, onClose }: { failure: Blueprint
                 <Typography variant="body2" sx={{ mb: 2 }}>
                     This is the blueprint from the failed copy attempt. Select the string, then copy it using your device's copy command.
                 </Typography>
-                {failure.staleFor && <Alert severity="warning" sx={{ mb: 2 }}>This is an old clock. {generatedForText(failure.staleFor, recipeLabel)}</Alert>}
+                {failure.staleFor && <Alert severity="warning" sx={{ mb: 2 }}>This is an old clock. {generatedForText(failure.staleFor, recipeLabel)}, {madeAtText(failure.staleFor.generatedAt)}.</Alert>}
                 {failure.rateWarning && <Alert severity="warning" sx={{ mb: 2 }}>{failure.rateWarning}</Alert>}
                 <TextField
                     inputRef={field}

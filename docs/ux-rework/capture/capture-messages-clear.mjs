@@ -34,7 +34,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-    forWidths, previewServer, sample, LOGISTIC, SLOW_SAMPLE,
+    forWidths, previewServer, inertFromKeyboard, sample, LOGISTIC, SLOW_SAMPLE,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll, isClickable,
     contrastPairs, tabTo, checkTabTo, focusNotObscured, checkFocusNotObscured, checkFocusNotObscuredAtHeight,
     checkAnnounced, checkAxe, checkMouseActivationVisible, ui, chooseMenuItem,
@@ -207,27 +207,23 @@ async function pasteOk(page, text = sidecarExportOf(LOGISTIC)) {
     await pasteFromMenu(page, text);
     await importDialog(page).waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
+    if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
     await importDialog(page).getByRole('button', { name: 'Import Selected' }).click();
 }
 
-/**
- * "Nothing was imported: no box was ticked." cannot be reached with a real click: Import Selected is disabled when nothing is ticked.
- * So the dialog is opened, everything unticked, and the button's React onClick is called directly (it works with the disabled prop).
- * If the new code makes this message reachable, replace this with a plain click.
- */
+/** No selected work is blocked by the actual disabled control; never call a hidden React handler. */
 async function pasteNoItems(page) {
+    const before = await readState(page);
     await pasteFromMenu(page, sidecarExportOf(LOGISTIC));
     const dlg = importDialog(page);
     await dlg.waitFor({ timeout: 8000 });
     await page.waitForTimeout(300);
     for (const box of await dlg.getByRole('checkbox').all()) if (await box.isChecked()) await box.uncheck();
-    await page.waitForTimeout(150);
-    return dlg.getByRole('button', { name: 'Import Selected' }).evaluate((el) => {
-        const key = Object.keys(el).find((k) => k.startsWith('__reactProps'));
-        if (!key || typeof el[key].onClick !== 'function') return false;
-        el[key].onClick({});
-        return true;
-    });
+    const button = ui.safetyPasteImport(page);
+    const disabled = await button.isDisabled();
+    const inert = await inertFromKeyboard(page, button);
+    const after = await readState(page);
+    return { disabled: disabled && inert, unchanged: typeof before.saved === 'string' && before.saved === after.saved, open: await dlg.isVisible() };
 }
 
 async function resetViaMenu(page) {
@@ -1371,18 +1367,13 @@ try {
             await page.getByRole('button', { name: 'List view' }).click().catch(() => {});
             await dismissMessage(page);
 
-            // "Nothing was imported: no box was ticked." is raised as the confirm dialog closes
+            // No selected work never calls Apply or announces a fictitious import result.
             await watchAnnouncements(page);
-            await pasteNoItems(page);
-            await page.waitForTimeout(900);
-            const no = (await announcedWrites(page)).filter((w) => /^Nothing was imported: no box was ticked\./.test(w.text));
-            rec.check('"Nothing was imported: no box was ticked." is written once, into a region with no aria-hidden ancestor', no.length === 1 && no.every((w) => !w.hidden), no.map((w) => `${w.onBody ? 'body' : 'app'} region${w.hidden ? ' UNDER aria-hidden' : ''}`).join(', ') || 'never written');
-            await checkAnnounced(rec, page, /Nothing was imported: no box was ticked\./, '"Nothing was imported: no box was ticked." (live region, accessibility tree)');
-            const roleNo = await page.evaluate(() => document.querySelectorAll('[data-message][role=alert], [data-message] [role=alert]').length);
-            rec.check('"Nothing was imported: no box was ticked." has no role=alert', roleNo === 0, `${roleNo}`);
-            await dismissMessage(page);
-            await page.keyboard.press('Escape');
-            await page.waitForTimeout(400);
+            const noItems = await pasteNoItems(page);
+            rec.check('no selected work: actual disabled Apply preserves raw build and preview', noItems.disabled && noItems.unchanged && noItems.open);
+            const no = (await announcedWrites(page)).filter(w => /^Nothing was imported:/.test(w.text));
+            rec.check('no selected work: no fabricated import announcement', no.length === 0);
+            await page.keyboard.press('Escape'); await page.waitForTimeout(400);
 
             // "Could not open that file: ..." (2.1: the error message left; a failed paste is a dialog now)
             await watchAnnouncements(page);

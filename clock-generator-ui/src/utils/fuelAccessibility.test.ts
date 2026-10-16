@@ -35,11 +35,11 @@ describe('Fuel text equivalents', () => {
         view.run = { ...fuel().run!, fuelSwingsRecorded: false, swings: {} }; expect(fuelEventRows(view)).toEqual([]);
     });
     it('summarizes exact start, end, min, max, inserted, burned, duration and zero empty ticks', () => {
-        expect(fuelTraceSummary(levels(), 25)).toBe('Machine 1, over 25 ticks: fuel started at 4 items and ended at 3 items. Minimum 1 items; maximum 4 items. 7.5 items inserted; 8.5 items burned. 0 ticks without fuel.');
+        expect(fuelTraceSummary(levels(), 25)).toBe('Machine 1, over 25 ticks: fuel started at 4 items and ended at 3 items. Minimum 1 items; maximum 4 items. 7.5 items inserted; 8.5 items burned. 0 ticks with no fuel.');
     });
     it('preserves first empty tick zero and never claims sampled bin boundaries are exact', () => {
         const text = fuelTraceSummary(levels({ empty_ticks: 2, first_empty_tick: 0, min: [0, 1, 0] }), 25);
-        expect(text).toContain('2 ticks without fuel. First empty tick: 0.');
+        expect(text).toContain('2 ticks with no fuel. First empty tick: 0.');
         expect(text).toContain('Sampled intervals containing an empty level: 0 to 10, 20 to 25 ticks. Exact empty-interval boundaries are unavailable.');
     });
     it('merges adjacent sampled bins, separates others and clips a partial last bin', () => {

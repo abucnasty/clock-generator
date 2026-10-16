@@ -849,6 +849,7 @@ const run = await forWidths(
                                 const dlg = page.getByRole('dialog', { name: 'Confirm Import from Factorio' });
                                 await dlg.waitFor({ timeout: 15_000 });
                                 await sleep(300);
+                                if (await ui.safetyPasteAcknowledgment(page).isVisible().catch(() => false)) await ui.safetyPasteAcknowledgment(page).check();
                                 await dlg.getByRole('button', { name: 'Import Selected' }).click();
                                 await sleep(400);
                             }),

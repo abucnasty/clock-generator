@@ -15,6 +15,7 @@ import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { pastePreview, type ImportSelections } from '../utils/pastePreview';
+import { entityLabel } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
 import {
@@ -170,6 +171,7 @@ export function ConfigImportExport({
     const preview = pendingImport ? pastePreview(currentForm, pendingImport, importSelections) : null;
     const acknowledgedCurrent = acknowledged?.incoming === pendingImport && acknowledged?.current === currentForm
         && acknowledged?.selections === importSelections;
+    if (acknowledged && !acknowledgedCurrent) setAcknowledged(null);
     const hasImportWork = (importSelections.target && pendingImport?.fill != null) || preview?.counts.some(row => row.replacing) === true;
     const canImport = hasImportWork && (!preview?.crossings.length || acknowledgedCurrent);
 
@@ -692,8 +694,8 @@ export function ConfigImportExport({
                                         <Box component="ul" sx={{ pl: 2.5, mb: 0 }}>
                                             {preview.crossings.map(warning => (
                                                 <li key={`${warning.ownerType}-${warning.ownerId}-${warning.slot}`}>
-                                                    {warning.direction === 'incoming-to-retained' ? 'Imported' : 'Retained'} {warning.ownerType} {warning.ownerId} {warning.slot}
-                                                    {' → '}{warning.direction === 'incoming-to-retained' ? 'retained' : 'imported'} {warning.endpointType} {warning.endpointId}
+                                                    {warning.direction === 'incoming-to-retained' ? 'Imported' : 'Retained'} {entityLabel(warning.ownerType, warning.ownerId)} {warning.slot}
+                                                    {' → '}{warning.direction === 'incoming-to-retained' ? 'retained' : 'imported'} {entityLabel(warning.endpointType, warning.endpointId)}
                                                     {warning.destinationExists ? '.' : ' (missing from the resulting build).'}
                                                 </li>
                                             ))}
