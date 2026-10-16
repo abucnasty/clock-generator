@@ -23,7 +23,8 @@ export function useFocusAfterRemove(count: number, onRemove: (index: number) => 
             const first = firsts?.[firsts.length - 1];
             const control = first?.matches('input, button, [role="combobox"]') ? first : first?.querySelector<HTMLElement>('input, button, [role="combobox"]');
             control?.focus();
-            control?.scrollIntoView({ block: 'nearest' });
+            // Center the new field to leave room for its border and any fractional layout pixels.
+            control?.scrollIntoView({ block: 'center' });
         }
         const removed = pending.current;
         pending.current = null;

@@ -17,8 +17,6 @@ export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown }: Row
     const open = anchor !== null;
     const close = () => {
         setAnchor(null);
-        // Capture the persistent row button for Undo, rather than the disappearing menu item.
-        anchor?.focus();
     };
     const choose = (action: () => void) => { close(); action(); };
     return <>
@@ -29,7 +27,7 @@ export function RowActionsMenu({ label, onDuplicate, onMoveUp, onMoveDown }: Row
                 <MoreVert fontSize="small" />
             </IconButton>
         </Tooltip>
-        <Menu id={menuId} anchorEl={anchor} open={open} onClose={close} disableRestoreFocus
+        <Menu id={menuId} anchorEl={anchor} open={open} onClose={close}
             slotProps={{ list: { 'aria-label': rowActionsName(label) } }}>
             <MenuItem onClick={() => choose(onDuplicate)}>Duplicate</MenuItem>
             <MenuItem disabled={!onMoveUp} onClick={() => { if (onMoveUp) choose(onMoveUp); }}>Move up</MenuItem>

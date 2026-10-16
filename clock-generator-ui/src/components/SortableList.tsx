@@ -63,7 +63,7 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
-            accessibility={{ announcements: SILENT }}
+            accessibility={{ announcements: SILENT, restoreFocus: false }}
         >
             <SortableContext items={localItemKeys} strategy={verticalListSortingStrategy}>
                 {children}
@@ -141,7 +141,7 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
     );
 
     return (
-        <div ref={setNodeRef} style={style}>
+        <div ref={setNodeRef} style={style} data-row-key={stableKey}>
             {children(dragHandle)}
         </div>
     );
