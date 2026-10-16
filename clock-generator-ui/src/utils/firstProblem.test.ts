@@ -194,9 +194,11 @@ describe('barNoteOf', () => {
         expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
     });
 
-    it('says where to start, neutrally, on a build with nothing entered yet', () => {
+    it('describes entry routes until building by hand is chosen, then points to the recipe', () => {
+        const routes = { text: 'Start with Paste from Factorio, try an example, or build by hand.', target: null };
         const start = { text: 'Start: pick the recipe you want to make', target: { kind: 'target-recipe' } };
-        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true })).toEqual(start);
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true })).toEqual(routes);
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true, entryRoute: 'manual' })).toEqual(start);
         expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'none', blank: true })).toBeNull();
         expect(barNoteOf({ problems: [], busy: false, checkStatus: 'none', blank: true })).toBeNull();
     });

@@ -251,7 +251,15 @@ export function WorkflowBar({
                             {note.text}
                         </Button>
                     ) : (
-                        <Typography id={ELEMENT_IDS.blockReason} variant="body2" color="text.secondary" noWrap={inBar} title={inBar ? note.text : undefined}>
+                        <Typography
+                            id={ELEMENT_IDS.blockReason}
+                            tabIndex={-1}
+                            variant="body2"
+                            color="text.secondary"
+                            noWrap={inBar}
+                            title={inBar ? note.text : undefined}
+                            sx={{ '&:focus': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 } }}
+                        >
                             {note.text}
                         </Typography>
                     )

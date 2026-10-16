@@ -33,6 +33,7 @@ export const INTRO_BUTTONS = {
     paste: 'Paste from Factorio',
     example: 'Try an example',
     byHand: 'Build by hand',
+    guide: 'How to export with the Sidecar mod',
     hide: 'Hide this introduction',
 } as const;
 
