@@ -2,7 +2,7 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1–D8 are approved for Phase 4 with the exact choices below; D8 approves investigation only, not engine/UI implementation. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1–D9 are approved for Phase 4 with the exact choices below; D8 approves investigation only, not engine/UI implementation. D9 includes actual cleanup and is mandatory before the feature branch merges to master, regardless of phase label. First-visit refinement remains pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
@@ -16,7 +16,7 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D6 Display preferences | Approved — A / A / A | Labeled Display button in slim header, no extra row; Compact and System/Light/Dark in immediate-apply popover; one browser-wide preference set shared across builds |
 | D7 Working context | Approved — A / A / A | Selected entity/view/detail/sections, existing sort/filter and approximate page position; locally per build across reloads/switches; retain Save/Cancel, no unsaved-draft recovery |
 | D8 Per-machine production rates | Approved — A / A / A, investigation only | Define rate semantics and engine-data feasibility; return for implementation approval. Read-only engine-derived planned demand; each machine in one modeled unit, all-Copies totals separate |
-| D9 Independent audit of new UI tests | Pending | Audit/proposal versus approved cleanup; only UX-rework additions in clock-generator-ui; remaining coverage |
+| D9 Independent audit and cleanup of new UI tests | Approved — B; mandatory before feature→master | Independently audit and implement justified removals/consolidations of UX-rework-added UI tests. Prevent coverage-driven additions now; show actual diff/CI-workload reduction before release, regardless of phase label |
 | First-visit route refinement | Pending | Choices before instructions; guide default; preserve Paste/Example/Manual routes |
 
 ## Decisions
@@ -102,4 +102,14 @@ Owner: “Approve D8 with A / A / A.”
 - Investigate Check versus Generate availability, multiple outputs/by-products, intermediate demand allocation, fractional Copies, and stale/unknown values. Use authoritative planning data; do not derive demand by scaling intrinsic maximum in UI code.
 - Deliver a semantic contract, worked fixtures, engine/worker/UI impact and bounded implementation options/effort. Return to the owner before implementing the feature; current reviews/verification remain unchanged.
 
-Next discussion: D9 independent audit of new UI tests. D9 and first-visit refinement remain pending.
+### D9 approved with hard pre-merge requirements, 2026-10-16
+
+Owner chose B for audit plus cleanup. For timing: “it just has to go out to reduce the giant diff before the feature branch gets merged. Hard requirements”. Phase numbering is flexible.
+
+- Independently audit and implement justified removals/consolidations; a report alone does not satisfy this item. Scope remains only tests added by the UX rework inside clock-generator-ui, including new cases in existing files and later UX additions before final merge. Exclude engine/capture/pre-existing UI/unrelated upstream tests.
+- Effective immediately, new tests must protect meaningful behavior or a concrete regression. Do not add/commit arbitrary tests or permutations to maximize coverage numbers. Existing coverage of a behavior should be reused; the reviewer checks the necessity of additions as well as their correctness.
+- Planned delivery is toward the end of Phase 4 after product changes settle, with a final check of subsequent test additions. It may be separated into another cleanup phase if needed, but must land in feat/ux-rework BEFORE its merge to master. Do not defer cleanup beyond release or carry it as a future issue.
+- Deliver the independent keep/consolidate/remove decisions and implemented cleanup diff, with remaining behavioral coverage, before/after test counts, net added test files/lines versus the UX baseline, and comparable runtime/CI evidence where available. Do not promise CI speedup from a lower count alone or impose an arbitrary removal percentage.
+- No new framework/dependencies or CI configuration changes. Preserve meaningful regression coverage and all existing checks, independent reviews and three phase-end reviewers. If actual reduction cannot be justified, bring the specific evidence to the owner rather than declare this hard requirement complete.
+
+Next discussion: first-visit route refinement, the last pending proposal.

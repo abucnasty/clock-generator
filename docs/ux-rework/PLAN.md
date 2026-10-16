@@ -528,13 +528,13 @@ Owner approval, 2026-10-16, A / A / A: remember selected entity, Configure/Resul
 
 Owner approval, 2026-10-16, A / A / A: define rate semantics and investigate authoritative engine data, then return with an implementation proposal for owner approval. The intended target is read-only engine-derived per-machine planned demand, alongside distinct maximum/achieved values, for one modeled unit with all-Copies totals labeled separately. Investigate Check/Generate availability, multiple outputs/by-products, intermediate allocation, fractional Copies and stale/unknown values. This approval does not implement the engine/UI feature or display. See [D8 investigation scope](specs/D8-machine-rate-feasibility.md).
 
-### Independent audit of new UI tests (D9)
+### Approved Phase 4 scope and hard final-merge requirement: UI test audit/cleanup (D9)
 
-Owner requested a deferred independent audit limited to tests added by this UX rework inside `clock-generator-ui`, including new cases in existing files. Identify redundant, brittle or low-value additions and propose specific removals/consolidations with evidence of remaining behavioral coverage. Exclude engine tests, capture scripts, pre-existing UI tests and unrelated upstream additions. See [D9 audit scope](specs/D9-ui-test-audit.md). No current test deletion or change to verification/review requirements is authorized by this planning item.
+Owner approval, 2026-10-16: choice B authorizes independent audit AND implemented cleanup of tests added by this UX rework inside `clock-generator-ui`, including new cases in existing files and later UX additions. Exclude engine tests, capture scripts, pre-existing UI tests and unrelated upstream additions. Effective immediately, add only tests protecting meaningful behavior/regressions; do not add/commit arbitrary tests or permutations to maximize coverage. D9 must deliver justified removals/consolidations, remaining-coverage evidence and before/after diff/test/runtime evidence before `feat/ux-rework` merges to `master`. Phase numbering/timing is flexible; do not carry cleanup beyond release or close on a report alone. Current checks/reviews and all three phase-end reviewers remain required. See [D9 scope](specs/D9-ui-test-audit.md).
 
 ## Verification (every phase)
 
-1. **Tests.** Vitest tests for every piece of logic touched:
+1. **Tests.** Meaningful Vitest behavioral/regression coverage for touched logic; reuse existing coverage and avoid arbitrary additions or redundant permutations intended to maximize coverage numbers (owner hard requirement, 2026-10-16):
    - the staleness check
    - undo snapshots
    - renumbering and remapping
@@ -558,6 +558,8 @@ Owner requested a deferred independent audit limited to tests added by this UX r
 
 ## The final PR (`feat/ux-rework` → `master`)
 
+**Hard pre-merge requirement (owner, 2026-10-16):** D9's independently reviewed UI-test cleanup must be implemented and included in `feat/ux-rework` before merge to `master`, regardless of phase numbering. Link its actual scope reduction and remaining-coverage evidence in the final PR. A cleanup proposal or deferred issue alone is insufficient. Keep the full existing check workflow and three phase-end reviewers; no coverage-number-driven additions or pipeline changes are authorized.
+
 0. **File the issues found (owner, 2026-10-14).** Every finding that was not fixed in the rework (the ledger's
    Follow-ups, the known issues, and anything left open by the last UX review) becomes a GitHub issue, in one pass:
    - the orchestrator drafts them in `docs/ux-rework/ISSUES.md`: one entry per issue with a title, a body (what's wrong,
@@ -568,7 +570,7 @@ Owner requested a deferred independent audit limited to tests added by this UX r
 1. Delete `docs/ux-rework/` in its own last commit.
 2. Bump the versions and changelogs (see Releases above).
 3. Run the full test workflow on the branch, including the generation tests.
-4. Open the PR with a summary of the three phases and the last UX review. **The owner merges it.**
+4. Open the PR with a summary of the completed phases, the last UX review and D9 cleanup evidence. **The owner merges it.**
 
 ## Out of scope (decided)
 

@@ -84,6 +84,10 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
    - **You** check the spec against the plan and the owner's decisions, tighten the acceptance criteria, and look for
      checkpoint triggers. If the spec trips one, stop and ask the owner before implementing.
 2. **Implement** (implementer), with a **capture writer** alongside.
+   - Owner hard requirement, 2026-10-16: add tests only for meaningful behavior/regressions not already sufficiently
+     protected. Do not add/commit arbitrary cases, implementation-mirroring assertions or permutations to maximize
+     coverage. Existing full checks and reviews remain required. D9 independently audits and implements cleanup of
+     UX-rework-added UI tests before feat/ux-rework merges to master; see specs/D9-ui-test-audit.md.
    - Create the child branch `feat/ux-rework-p<N>-<topic>` from the phase branch.
    - As soon as the spec is final and re-checked against the phase head (coach run 4), a `gpt-6.1-sol` capture writer turns the spec's "Screens to capture" and acceptance criteria into
      `docs/ux-rework/capture/capture-<topic>.mjs` on `lib.mjs`, with PASS/FAIL checks, written against the phase branch
@@ -130,7 +134,8 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
 4. **Code review** (code reviewer, read-only). It reviews the child branch's diff against the spec for:
    - correctness bugs, including edge cases and state that goes out of date
    - whether the code reads like the surrounding code
-   - whether the tests are enough
+   - whether tests protect meaningful behavior and whether each new case/group is necessary; flag redundant,
+     brittle or coverage-number-driven additions as well as missing regression protection
    - scope creep
    - dead code and leftovers
    - lockfile and npm-version rules
