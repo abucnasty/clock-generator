@@ -22,6 +22,10 @@ export const ConfigPaths = {
     ADVANCED_CIRCUIT_230: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'advanced-circuit', 'advanced-circuit-230.json'),
     /** One block of four chemical science assemblers, four engine assemblers and one foundry casting the pipes for all four engines; 5.5 copies make 240 a second */
     CHEMICAL_SCIENCE_SHARED_FOUNDRY: path.join(CONFIG_SAMPLES_DIR, 'science', 'chemical-science', 'chemical-science-shared-foundry.json'),
+    /** One electromagnetic plant making electromagnetic science packs from accumulators and supercapacitors on one belt; 11 copies make 330 a second */
+    ELECTROMAGNETIC_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'electromagnetic-science', 'electromagnetic-science.json'),
+    /** The same build with the enable control of both output inserters on AUTO */
+    ELECTROMAGNETIC_SCIENCE_AUTO: path.join(CONFIG_SAMPLES_DIR, 'science', 'electromagnetic-science', 'electromagnetic-science-auto.json'),
     ELECTRIC_FURNACE: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'electric-furnace', 'electric-furnace.json'),
     LOGISTIC_SCIENCE: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science.json'),
     LOGISTIC_SCIENCE_SHARED_INSERTER: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic-science', 'logistic-science-shared-inserter.json'),
