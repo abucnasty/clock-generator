@@ -14,7 +14,7 @@ import { NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, t
 import type { ExampleBuild } from '../utils/exampleBuilds';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import type { ConfigFormData } from '../utils/configForm/formData';
-import { pastePreview, type ImportSelections } from '../utils/pastePreview';
+import { pastePreview, type ImportSelections, type PasteReferenceWarning } from '../utils/pastePreview';
 import { entityLabel } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
@@ -43,6 +43,14 @@ import { ExamplesDialog } from './ExamplesDialog';
 const SAVED_MESSAGE = 'Build saved to a file.';
 const TARGET_CAPTION_ID = 'paste-target-caption';
 const EXAMPLE_FAILED_MESSAGE = 'Could not load the example. Check your connection and try again.';
+
+/** Describe the destination of this exact preview without suggesting a silent rebind or renumber. */
+function crossingText(warning: PasteReferenceWarning): string {
+    const imported = warning.direction === 'incoming-to-retained';
+    return `${imported ? 'Imported' : 'Retained'} ${entityLabel(warning.ownerType, warning.ownerId)} ${warning.slot}`
+        + ` → ${imported ? 'retained' : 'imported'} ${entityLabel(warning.endpointType, warning.endpointId)}`
+        + (warning.destinationExists ? '.' : ' (missing from the resulting build).');
+}
 
 interface PendingImport extends PastedEntities {
     miningProductivityLevel?: number;
@@ -694,9 +702,7 @@ export function ConfigImportExport({
                                         <Box component="ul" sx={{ pl: 2.5, mb: 0 }}>
                                             {preview.crossings.map(warning => (
                                                 <li key={`${warning.ownerType}-${warning.ownerId}-${warning.slot}`}>
-                                                    {warning.direction === 'incoming-to-retained' ? 'Imported' : 'Retained'} {entityLabel(warning.ownerType, warning.ownerId)} {warning.slot}
-                                                    {' → '}{warning.direction === 'incoming-to-retained' ? 'retained' : 'imported'} {entityLabel(warning.endpointType, warning.endpointId)}
-                                                    {warning.destinationExists ? '.' : ' (missing from the resulting build).'}
+                                                    {crossingText(warning)}
                                                 </li>
                                             ))}
                                         </Box>

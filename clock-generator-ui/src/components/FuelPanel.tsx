@@ -10,7 +10,7 @@ import { InserterStatus, MachineStatus } from 'clock-generator/light';
 import { COLOR_BLIND_PALETTE, INSERTER_STATUS_COLORS, MACHINE_STATUS_COLORS, TIMELINE_TRACK_COLOR } from './colors';
 import { Panel } from './Panel';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
-import { fuelEventRows, fuelTraceSummary } from '../utils/fuelAccessibility';
+import { fuelEventRows, fuelTraceSummary, type FuelEventRow } from '../utils/fuelAccessibility';
 import { durationText } from '../utils/numberText';
 
 const LEVEL_COLOR = COLOR_BLIND_PALETTE.skyBlue;
@@ -301,7 +301,7 @@ function LegendItem({ color, label, opacity = 1 }: { color: string; label: strin
 function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
     const { durationTicks } = run;
     const summaryId = useId();
-    const events = fuelEventRows(fuel);
+    const events: FuelEventRow[] = fuelEventRows(fuel);
     const markerInterval = Math.ceil(durationTicks / 10 / 100) * 100;
     const tickMarkers: number[] = [];
     for (let tick = 0; tick <= durationTicks; tick += markerInterval) {
