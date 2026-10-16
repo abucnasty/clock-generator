@@ -149,6 +149,7 @@ export function ValueReferenceSelector({
                     exclusive
                     onChange={handleEntityChange}
                     size="small"
+                    sx={{ '& .MuiToggleButton-root': { minWidth: 44 } }}
                 >
                     <ToggleButton value={EntityReference.SOURCE} disabled={entityDisabled(EntityReference.SOURCE)}>
                         Src

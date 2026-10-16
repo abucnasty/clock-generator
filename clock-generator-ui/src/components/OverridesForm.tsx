@@ -10,7 +10,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 
 interface OverridesFormProps {
@@ -39,9 +39,14 @@ export function OverridesForm({
     onExpandedChange,
     setCount,
 }: OverridesFormProps) {
+    const summaryId = useId();
     return (
-        <Accordion expanded={expanded} onChange={(_, open) => onExpandedChange(open)} slotProps={{ heading: { component: 'h2' } }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
+        <Accordion
+            expanded={expanded}
+            onChange={(_, open) => onExpandedChange(open)}
+            slotProps={{ heading: { component: 'h2' }, region: { 'aria-labelledby': summaryId } }}
+        >
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
                     Advanced
                     {/* it folds after Import, Paste and Reset: says that a build sets some all the same */}

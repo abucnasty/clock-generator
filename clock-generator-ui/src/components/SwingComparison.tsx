@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Box, Button, Typography, useTheme } from '@mui/material';
 import type { SwingComparison as SwingComparisonData } from 'clock-generator/browser';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
+import { ScrollX } from './ScrollX';
 
 /** A clocked drop further than this from every planned drop is a swing of its own, not the planned one moved */
 const PAIR_WITHIN_TICKS = 40;
@@ -12,6 +14,9 @@ const LABEL_WIDTH = 150;
 const LANE_HEIGHT = 46;
 const AXIS_HEIGHT = 22;
 const PLOT_PADDING = 12;
+/** The narrowest the plot gets: a box narrower than the label column and this scrolls instead */
+const MIN_PLOT_WIDTH = 300;
+const MIN_SVG_WIDTH = LABEL_WIDTH + PLOT_PADDING * 2 + MIN_PLOT_WIDTH;
 
 interface Pair { planned: number | null; clocked: number | null }
 
@@ -65,7 +70,8 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
     const theme = useTheme();
     const [width, setWidth] = useState(900);
     const lanes = groupLanes(data);
-    const plotWidth = Math.max(300, width - LABEL_WIDTH - PLOT_PADDING * 2);
+    const svgWidth = Math.max(width, MIN_SVG_WIDTH);
+    const plotWidth = svgWidth - LABEL_WIDTH - PLOT_PADDING * 2;
     const x = (tick: number) => LABEL_WIDTH + PLOT_PADDING + (tick / data.period) * plotWidth;
     const height = AXIS_HEIGHT + lanes.length * LANE_HEIGHT;
     const step = [10, 20, 25, 50, 100, 200].find(it => data.period / it <= 12) ?? 500;
@@ -87,7 +93,8 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
                 <Legend color={movedColor} text="Clock, moved (arrow points to where it drops)" />
                 <Legend color={extraColor} text="Only in one run" />
             </Box>
-            <svg width={width} height={height} role="img" aria-label="Plan and exported clock drop ticks per inserter">
+            <ScrollX label={SCROLL_REGION_NAMES.swingComparison}>
+            <svg width={svgWidth} height={height} role="img" aria-label="Plan and exported clock drop ticks per inserter">
                 <defs>
                     <marker id="swing-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
                         <path d="M0,0 L6,3 L0,6 z" fill={movedColor} />
@@ -105,7 +112,7 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
                     const clockY = top + 33;
                     return (
                         <g key={index}>
-                            <line x1={0} x2={width} y1={top} y2={top} stroke={theme.palette.divider} />
+                            <line x1={0} x2={svgWidth} y1={top} y2={top} stroke={theme.palette.divider} />
                             <text x={4} y={top + 20} fontSize={12} fill={theme.palette.text.primary}>
                                 <title>{lane.labels.join(', ')}</title>
                                 {laneName(lane.labels)}
@@ -141,6 +148,7 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
                     );
                 })}
             </svg>
+            </ScrollX>
             <Typography variant="caption" color="text.secondary">
                 Top row of each lane is the plan, bottom row the exported clock. Inserters that swing identically share a lane.
             </Typography>

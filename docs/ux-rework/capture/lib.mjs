@@ -1217,7 +1217,7 @@ async function announcedOnce(page, source, flags, isRegex) {
 /** The axe rules `checkAxe` runs by default (ids checked against axe-core 4.14) */
 export const AXE_RULES = [
     'nested-interactive', 'duplicate-id-aria', 'button-name', 'select-name', 'label', 'aria-input-field-name',
-    'aria-toggle-field-name', 'aria-valid-attr-value', 'aria-allowed-role', 'target-size', 'landmark-one-main', 'region',
+    'aria-toggle-field-name', 'aria-valid-attr-value', 'aria-allowed-role', 'target-size', 'landmark-one-main', 'landmark-unique', 'region',
     'empty-table-header', 'heading-order',
 ];
 

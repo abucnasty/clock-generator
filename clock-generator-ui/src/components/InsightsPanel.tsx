@@ -9,7 +9,6 @@ import {
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
     Typography,
@@ -19,6 +18,7 @@ import type { ClockInsight } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
 import { GameName } from './GameName';
 import { Panel } from './Panel';
+import { ScrollX } from './ScrollX';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
 /** Every string of the panel that is not the engine's */
@@ -81,7 +81,7 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
                 <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>
             </Collapse>
             {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}
-            {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} /></ExactTicks> : <InsightTable table={insight.table} />)}
+            {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} title={insight.title} /></ExactTicks> : <InsightTable table={insight.table} title={insight.title} />)}
         </Panel>
     );
 }
@@ -97,7 +97,7 @@ function numericColumns(table: NonNullable<ClockInsight['table']>): boolean[] {
     });
 }
 
-function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) {
+function InsightTable({ table, title }: { table: NonNullable<ClockInsight['table']>; title: string }) {
     const { names, nameIdsIn } = useGameNames();
     const numeric = numericColumns(table);
     // a cell that is exactly an id of the game data shows its name; the engine's other text is left as it is
@@ -107,7 +107,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
         return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : nameIdsIn(cell);
     };
     return (
-        <TableContainer sx={{ mt: 1 }}>
+        <ScrollX label={`${title} table`} sx={{ mt: 1 }}>
             <Table size="small">
                 <TableHead>
                     <TableRow>
@@ -126,7 +126,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
                     ))}
                 </TableBody>
             </Table>
-        </TableContainer>
+        </ScrollX>
     );
 }
 
@@ -137,6 +137,7 @@ function InsightTable({ table }: { table: NonNullable<ClockInsight['table']> }) 
 export function InsightsPanel({ insights, children }: InsightsPanelProps) {
     const build = insights.filter(insight => insight.scope === 'build');
     const clock = insights.filter(insight => insight.scope === 'clock');
+    const buildSummaryId = useId();
 
     return (
         <Box>
@@ -152,8 +153,8 @@ export function InsightsPanel({ insights, children }: InsightsPanelProps) {
             </Panel>
 
             {build.length > 0 && (
-                <Accordion disableGutters variant="outlined" slotProps={{ heading: { component: 'h3' } }}>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Accordion disableGutters variant="outlined" slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': buildSummaryId } }}>
+                    <AccordionSummary id={buildSummaryId} expandIcon={<ExpandMoreIcon />}>
                         <Typography variant="subtitle1" component="span" sx={{ fontWeight: 600 }}>{INSIGHTS_COPY.buildHeading}</Typography>
                     </AccordionSummary>
                     <AccordionDetails>

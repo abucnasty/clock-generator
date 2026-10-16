@@ -3,9 +3,10 @@ import { Box, Dialog, DialogContent, DialogTitle, IconButton, Paper, Tooltip, Ty
 import { useState, memo } from 'react';
 import type { SerializableEntityTransferHistory, SerializableTransferEntry, SerializableTransferHistory } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
-import { BUTTON_NAMES } from '../utils/a11yLabels';
+import { BUTTON_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { GameName } from './GameName';
+import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import { COLOR_BLIND_PALETTE, ITEM_COLOR_COUNT, TIMELINE_TRACK_COLOR, itemColorMap } from './colors';
 import { MIN_MARK_PX } from '../utils/timelineGeometry';
 
@@ -232,6 +233,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
             )}
             </Box>
 
+            <ScrollX label={SCROLL_REGION_NAMES.transferTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
             {/* Tick markers */}
             <Box sx={{ display: 'flex', mb: 0.5 }}>
                 <Box sx={{ width: 200, flexShrink: 0 }} />
@@ -289,6 +291,7 @@ function TransferHistoryVisualizationComponent({ transferHistory }: TransferHist
                     ))}
                 </Box>
             )}
+            </ScrollX>
         </>
     );
 
