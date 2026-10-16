@@ -9,7 +9,7 @@ if (!OUT || !process.env.BASE_URL || new URL(process.env.BASE_URL).port === '528
 mkdirSync(OUT, { recursive: true });
 const { ui } = L;
 const H = createHarness(L, OUT);
-const paints = [], traces = [];
+const paints = [], traces = [], scrollProof = [];
 const widths = (process.env.WIDTHS ?? '1440,960,800,720,390,320').split(',').map(Number);
 const negative = process.env.NEGATIVE_OLD === '1';
 async function measure(p, rec, state) {
@@ -34,7 +34,13 @@ const result = await L.forWidths(widths, async ctx => {
             const chip = ui.followExclude(p).first();
             await H.reach(p, rec, chip, `${kind} Included`);
             await measure(p, rec, `${kind}-ordinary-included`);
-            if (!negative) await H.shot(p, rec, `${kind}-ordinary-included`);
+            if (!negative) {
+                // Settle the disclosure through its normal keyboard stop before grading the whole active view.
+                await p.keyboard.press('Shift+Tab');
+                await H.reach(p,rec,ui.followPlanToggle(p),`${kind} ordinary plan disclosure`);
+                await H.shot(p, rec, `${kind}-ordinary-included`);
+                await H.reach(p,rec,chip,`${kind} Included before exclusion`);
+            }
             const handle = await chip.elementHandle(), before = await stored(p);
             const beforeWidth = await handle.evaluate(e => e.getBoundingClientRect().width);
             await handle.evaluate(e => {
@@ -60,13 +66,25 @@ const result = await L.forWidths(widths, async ctx => {
             rec.check(`${kind}: exclusion changed form`, await stored(p)!==before);
             await measure(p, rec, `${kind}-editable-excluded`);
             if (negative) {await p.keyboard.press('Escape');await H.shot(p,rec,`${kind}-old-excluded-negative`);continue;}
-            const tip = await L.openTooltip(p, chip);
-            await rest(p);
+            // Keep the exact partial-help failure above as a diagnostic. Ordinary native wheel movement
+            // exposes the focused plan while taking the previous offscreen help completely out of the viewport.
+            const geometry = () => p.evaluate(() => ({scrollY,active:document.activeElement?.getBoundingClientRect().toJSON(),help:document.querySelector('button[aria-label="About Force Output Swings"]')?.getBoundingClientRect().toJSON(),headerBottom:document.querySelector('header')?.getBoundingClientRect().bottom}));
+            const prior = await geometry();
+            if (prior.help && prior.help.top < 0 && prior.help.bottom > 0) {
+                await p.mouse.move(ctx.width-5,p.viewportSize().height-5);
+                await p.mouse.wheel(0,100);await rest(p);
+                const after=await geometry();scrollProof.push({width:ctx.width,kind,before:prior,after,nativeWheelY:100});
+                writeFileSync(join(OUT,'NATIVE-SCROLL-PROOF.json'),JSON.stringify(scrollProof,null,2));
+                rec.check(`${kind}: native wheel moves prior partial help fully outside viewport`,after.help.bottom<=0,JSON.stringify({before:prior,after}));
+                await L.checkFocusNotObscured(rec,p,`${kind}: focus after native wheel`,{strict:true});
+            }
+            const tip = await L.openTooltip(p,chip);
+            await rest(p,{keepPointer:true});
             rec.check(`${kind}: tooltip remains within named plan landmark`, await tip.evaluate(e => !!e.closest('[role=region][aria-labelledby]')));
             const tipRect = await tip.boundingBox();
             rec.check(`${kind}: tooltip exposed within viewport`, !!tipRect&&tipRect.x>=0&&tipRect.x+tipRect.width<=ctx.width&&tipRect.y>=0&&tipRect.y+tipRect.height<=p.viewportSize().height,JSON.stringify(tipRect));
-            await H.appearance(p,rec,tip,`${kind} excluded tooltip`,{nameCheck:false});
-            await H.shot(p, rec, `${kind}-editable-excluded-tooltip`);
+            for (const pair of await textContrastPairs(tip)) rec.check(`${kind}: tooltip rendered leaf AA`,pair.ratio>=pair.required,JSON.stringify(pair));
+            await H.shot(p, rec, `${kind}-editable-excluded-tooltip`,{keepPointer:true});
             await p.keyboard.press('Escape');
             await ui.compatTooltips(p).filter({hasText:'Click to include in LCM'}).waitFor({state:'hidden'});
             await H.reach(p, rec, chip, `${kind} Excluded at rest`);
@@ -78,7 +96,7 @@ const result = await L.forWidths(widths, async ctx => {
             await measure(p, rec, `${kind}-readonly-excluded`);
             const disclosure=ui.followPlanToggle(p);await H.reach(p,rec,disclosure,`${kind} readonly plan disclosure`);
             await H.shot(p, rec, `${kind}-readonly-excluded`);
-        } finally { await p.context().close(); }
+        } catch(error) { rec.info(`${kind}: exact capture error`,error.stack);throw error; } finally { await p.context().close(); }
     }
 }, {out:OUT,base:process.env.BASE_URL});
 process.exitCode = result.finish({title:negative?'3.F old excluded contrast negative control':'3.F round 1 affected plan states',note:'Observer-only checking coverage; no extra native input dispatched while busy. Shared lib/default axe unchanged.'});
