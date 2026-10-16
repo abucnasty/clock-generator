@@ -23,6 +23,7 @@ import { CopyLabel } from './WorkflowBar';
 import type { GenerationAssumptions } from '../worker/types';
 import { MODELED_START, PLANNING_START, modeledDetails, startCheckSummary } from '../utils/modelAssumptions';
 import { formatNumberText } from '../utils/numberText';
+import { useGameNames } from '../hooks/useGameNames';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -95,6 +96,7 @@ type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView }
 
 /** The selected clock's name, why it is the one, and its four facts */
 function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingElement | null> }) {
+    const { itemLabel } = useGameNames();
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected, nameRef } = props;
     const isRecommended = selectedIndex === recommendedIndex;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
@@ -131,7 +133,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
             <Box component="details" sx={{ mt: 1, maxWidth: '80ch', overflowWrap: 'anywhere' }} data-model-assumptions>
                 <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Model and tested starts</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START} {PLANNING_START}</Typography>
-                {modeledDetails(selected).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
+                {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>
                     Existing clock-phase checks: {selected.asBuilt?.start_phases_checked ?? 'unavailable'}. Extended sampled starts are a separate check.
                 </Typography>
