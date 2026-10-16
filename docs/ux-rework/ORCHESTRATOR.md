@@ -50,7 +50,7 @@ export into both specs at once, and the provider commits it (a stub is fine) fir
 branch into the next), run
 `git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch (a stacked one against its
 predecessor), and run a background command to type-check each clean result (`git commit-tree` the merged tree,
-add it as a scratch worktree, link `clock-generator-ui/node_modules` from the main checkout, `npx tsc -b`, remove it).
+add it as a scratch worktree, link UI dependencies from a verified checkout whose engine build matches the merged source, verify that engine path/tree, run `npx tsc -b`, then remove the scratch worktree). Do not reuse stale main-checkout engine declarations; if the merged tree exactly equals an existing immutable verifier, its independent type-check is equivalent and records that tree identity.
 Tell any branch with a text or type conflict to merge now, while its implementer still has the context (coach run 6).
 Remove an item's worktree only after its agent's final report says it is done. **Stacking:** whenever the next item on a chain is held only by its predecessor's review, fix round, minors round or
 owner check (e.g. 1.11 A → 1.11 B → 1.12 B; coach run 5), it branches from its predecessor's head once the predecessor's interface is committed (or at once when the
