@@ -941,6 +941,11 @@ export async function focusNotObscured(page) {
  * @returns {Promise<{ found: boolean, inert: boolean, reason: string, candidates: { el: string, focusable: boolean, tabbable: boolean, why: string[] }[], tabbable: string[], tabLanded: string, reacted: string[] }>}
  */
 export async function inertFromKeyboardReport(page, locator, { afterTabProbe } = {}) {
+    if (afterTabProbe) {
+        const count = await locator.count();
+        const valid = count === 1 && await locator.isVisible() && await locator.evaluate(el => el.isConnected);
+        if (!valid) return { found: count > 0, inert: false, reason: `afterTabProbe target must be exactly one visible connected element (count ${count})`, candidates: [], tabbable: [], tabLanded: '', reacted: [] };
+    }
     const target = locator.first();
     if ((await target.count()) === 0) {
         return { found: false, inert: false, reason: 'the locator matches no element', candidates: [], tabbable: [], tabLanded: '', reacted: [] };
@@ -999,8 +1004,8 @@ export async function inertFromKeyboardReport(page, locator, { afterTabProbe } =
                 // Menus dismiss on Tab. Reopen the same real widget, then strictly reacquire its live target.
                 await afterTabProbe();
                 await handle.dispose();
-                const count = await target.count();
-                const valid = count === 1 && await target.isVisible() && await target.evaluate(el => el.isConnected);
+                const count = await locator.count();
+                const valid = count === 1 && await locator.isVisible() && await locator.evaluate(el => el.isConnected);
                 if (!valid) return { found: count > 0, inert: false, reason: `afterTabProbe target must be exactly one visible connected element (count ${count})`, candidates, tabbable, tabLanded, reacted: [] };
                 handle = await target.elementHandle();
             }

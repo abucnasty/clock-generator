@@ -16,6 +16,17 @@ try {
     check('default native enabled is rejected',!enabled.inert&&enabled.tabbable.length>0&&enabled.reacted.length>0,enabled);
     const missing=await L.inertFromKeyboardReport(p,p.getByRole('button',{name:'Missing native'}));
     check('missing initial target fails',!missing.found&&!missing.inert,missing);
+    const ambiguous=[];
+    for(const duplicateAt of [0,1,2]){
+        await p.setContent('<button disabled>Ambiguous native</button>');
+        const duplicate=()=>p.evaluate(()=>document.body.append(document.querySelector('button').cloneNode(true)));
+        if(duplicateAt===0)await duplicate();
+        let probes=0;
+        ambiguous.push(await L.inertFromKeyboardReport(p,p.getByRole('button',{name:'Ambiguous native'}),{afterTabProbe:async()=>{
+            if(++probes===duplicateAt)await duplicate();
+        }}));
+    }
+    check('ambiguous original target fails initially and after each Tab callback',ambiguous.every(r=>r.found&&!r.inert&&r.reason.includes('exactly one')&&r.reason.includes('count 2')),ambiguous);
     await p.setContent('<style>button{color:white;background:rgba(0,0,0,0);border:none;padding:16px}button:hover{background:rgba(200,100,50,0);border-color:blue}</style><button>No-op paint</button>');
     const observations=[];const rec={check:(name,pass,detail)=>{observations.push({name,pass,detail});return pass;}};
     const noOp=await L.checkMouseActivationVisible(rec,p,p.getByRole('button',{name:'No-op paint'}),'no-op control',{controlPaint:true});
