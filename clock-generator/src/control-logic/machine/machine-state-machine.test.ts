@@ -220,7 +220,7 @@ describe("Machine State Machine at the output block", () => {
 
     test("the output block is the overload multiplier times the recipe amount, without productivity", () => {
         const { machine_state } = createRocketFuel(0, 0)
-        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "rocket-fuel", quantity: 11, max_stack_size: 20, ingredients_blocked_at: 11 })
+        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "rocket-fuel", held_limit: 11, max_stack_size: 20, ingredients_blocked_at: 11 })
     })
 
     // The cryogenic plant of the advanced circuit scaffold: 61.5 crafting speed, 2 plastic bars a craft, overload
@@ -231,7 +231,7 @@ describe("Machine State Machine at the output block", () => {
     // coal at a full stack as well (188 and 6 hands in their recordings).
     test("a machine whose output block is more than a stack takes ingredients with its stack full", () => {
         const machine_state = MachineState.forMachine(createMachine("plastic-bar", { crafting_speed: 61.5, productivity: 300 }))
-        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "plastic-bar", quantity: 100, max_stack_size: 100, ingredients_blocked_at: 146 })
+        expect(machine_state.machine.output.outputBlock).toEqual({ item_name: "plastic-bar", held_limit: 100, max_stack_size: 100, ingredients_blocked_at: 146 })
         machine_state.inventoryState.setQuantity("plastic-bar", 100)
         machine_state.inventoryState.setQuantity("coal", 69)
         expect(MachineState.machineIsOutputBlocked(machine_state)).toBe(false)
@@ -275,7 +275,7 @@ describe("Machine State Machine at the output block", () => {
         { recipe: "tungsten-plate", crafting_speed: 169.331, productivity: 150, block: 21 },            // full at 28, short at 16
     ])("$recipe blocks at $block like in game", ({ recipe, crafting_speed, productivity, block }) => {
         const machine = createMachine(recipe, { crafting_speed, productivity })
-        expect(machine.output.outputBlock.quantity).toBe(block)
+        expect(machine.output.outputBlock.held_limit).toBe(block)
     })
 
     test("keeps crafting with its ingredients while its output is over the block", () => {
@@ -395,7 +395,7 @@ describe("Machine State Machine with a fuel slot", () => {
     test("is out of fuel before it is output full", () => {
         // an idle machine with its output at the block shows full output, unless it has no fuel
         const { machine_state, state_machine } = createBiochamberState(0, 0)
-        machine_state.inventoryState.setQuantity("nutrients", machine_state.machine.output.outputBlock.quantity)
+        machine_state.inventoryState.setQuantity("nutrients", machine_state.machine.output.outputBlock.held_limit)
         executeControlLogicForTicks(state_machine, 1)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         // with fuel, the full output is what stops it

@@ -31,7 +31,7 @@ export class OutputFullModeTransitionEvaluator implements ModeTransitionEvaluato
         if (this.working_mode.outputFullReason() === null) {
             const output_item = this.working_mode.output_item;
             const output_block = this.machine_state.machine.output.outputBlock;
-            return ModeTransition.transition(this.ingredient_shortage_mode, `output "${output_item.item_name}" ${output_item.quantity} < ${output_block.quantity} and not enough inputs for craft`);
+            return ModeTransition.transition(this.ingredient_shortage_mode, `output "${output_item.item_name}" ${output_item.quantity} < ${output_block.ingredients_blocked_at} and not enough inputs for craft`);
         }
         return ModeTransition.NONE;
     }
