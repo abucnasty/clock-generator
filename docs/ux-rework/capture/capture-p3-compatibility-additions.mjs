@@ -101,6 +101,10 @@ export async function captureP3Compatibility(h) {
     }
     async function cancelRule(surface) {
         await (surface === 'List' ? ui.ruleCancel(p) : ui.compatRuleEditorCancel(p,1)).click();
+        if(surface === 'Diagram' && await ui.oneEditorDiscardDialog(p,'Inserter 1').count()) {
+            rec.check('P3 Diagram Cancel asks before discarding a dirty rule', await ui.oneEditorDiscard(p).isVisible());
+            await ui.oneEditorDiscard(p).click();
+        }
         await (surface === 'List' ? ui.ruleDialog(p) : ui.compatRuleEditor(p,1)).waitFor({ state: 'hidden' });
     }
     async function saveRule(surface) {

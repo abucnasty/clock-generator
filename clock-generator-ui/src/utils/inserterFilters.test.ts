@@ -19,3 +19,17 @@ describe('inserter filter edits', () => {
         expect(usesAutomaticFilters(['a'])).toBe(false);
     });
 });
+
+
+describe('filter slot preservation', () => {
+    it('adds after the automatic items, or replaces one, retaining the rest', () => {
+        expect(setFilterSlot(undefined, ['iron-plate', 'copper-plate'], 2, 'coal').filters).toEqual(['iron-plate', 'copper-plate', 'coal']);
+        expect(setFilterSlot([], ['iron-plate', 'copper-plate'], 0, 'coal').filters).toEqual(['coal', 'copper-plate']);
+        expect(setFilterSlot(['iron-plate'], ['copper-plate'], 0, 'coal').filters).toEqual(['coal']);
+    });
+    it('drops trailing empties and returns to Automatic after the last removal', () => {
+        expect(setFilterSlot(['iron-plate', 'copper-plate'], [], 1, '').filters).toEqual(['iron-plate']);
+        expect(removeFilterSlot(undefined, ['iron-plate'], 0).filters).toBeUndefined();
+        expect(removeFilterSlot(['iron-plate', 'coal'], ['copper-plate'], 1).filters).toEqual(['iron-plate']);
+    });
+});

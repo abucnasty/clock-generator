@@ -1,5 +1,6 @@
 import { selftestCompatibilityEmpty, selftestCompatibilityPopulated } from './selftest-compatibility-ui.mjs';
 import { setDeveloperTools } from './lib.mjs';
+import { selftestOneEditorUi } from './selftest-one-editor-ui.mjs';
 // Self-test of the `ui` map and the tooltip/menu helpers against a running build (BASE_URL, default http://localhost:5239).
 //   BASE_URL=http://localhost:5239 UI_DIR=<worktree>/clock-generator-ui node selftest.mjs
 // Resolves every ui entry at 1440, 720 and 390 in four states and checks the count (1, or a documented 0).
@@ -132,6 +133,8 @@ for (const w of [1440, 720, 390]) {
     log(true, `${w} resultsTab click`);
     try { await selftestCompatibilityPopulated(page,E,log); }
     catch(e) { log(false,`${w} compatibility ui selftest: ${e.message}`); }
+    try { await selftestOneEditorUi(page,E); }
+    catch(e) { log(false,`${w} shared editor ui selftest: ${e.message}`); }
     await browser.close();
 }
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');

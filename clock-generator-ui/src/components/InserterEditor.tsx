@@ -86,6 +86,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
             getOptionLabel={option => option.sublabel ? `${option.label} - ${option.sublabel}` : option.label}
             isOptionEqualToValue={(a, b) => a.type === b.type && a.id === b.id}
             renderInput={params => input(params, name, findOption(ownOptions, value[side].type, value[side].id))}
+            slotProps={{ popper: { role: 'region', 'aria-label': `${name} options` } }}
             renderOption={renderOption} autoHighlight disableClearable
             data-row-first={side === 'source' ? '' : undefined}
         />

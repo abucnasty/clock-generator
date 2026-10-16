@@ -127,7 +127,7 @@ async function freshPage(ctx, rec, file, { view = 'list' } = {}) {
     const imported = typeof file === 'string' ? JSON.parse(readFileSync(file, 'utf8')) : file;
     const projection = c => ({ target: [c.target_output.recipe, c.target_output.items_per_second, c.target_output.copies],
         inserters: c.inserters.map(i => [i.prototype ?? null, i.quality ?? null, i.stack_size ?? null, i.source, i.sink, i.filters ?? null]),
-        machines: c.machines.map(m => [m.id,m.recipe,m.crafting_speed,m.productivity]), chests: c.chests.length });
+        machines: c.machines.map(m => [m.id,m.recipe,m.crafting_speed,m.productivity]), chests: (c.chests ?? []).length });
     const expected = JSON.stringify(projection(imported));
     await storedUntil(page, new Function('c', `return JSON.stringify((${projection.toString()})(c)) === ${JSON.stringify(expected)}`), 'the imported sample values');
     await goConfigure(page);
@@ -585,7 +585,7 @@ const run = await forWidths(
                 const form0 = await stored(page);
                 const chest0 = JSON.parse(form0).chests?.[0];
                 await ui.oneEditorChestType(dlg).click(); // SELECTOR: confirm (SELECT_NAMES.chestType)
-                await ui.oneEditorOption(page, 'Infinity Chest').click();
+                await ui.oneEditorOption(page, /^Infinity chest$/i).click();
                 await wait(page, 400);
                 rec.check('N5 the type switch only changes the draft (stored chest unchanged)', (await stored(page)) === form0);
                 // a filter for the infinity chest: "Add new filter" opens a popover with an item picker and Confirm

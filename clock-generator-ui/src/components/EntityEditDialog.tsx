@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useGameNames } from '../hooks/useGameNames';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { ChestType } from 'clock-generator/light';
@@ -662,7 +663,7 @@ export function EntityEditDialog({
                                 onUpdate={(index, field, value) => updateDraft(index, { [field]: value })}
                             />
                             {machineEntity?.recipe && (
-                                <MachineFactsAccordion facts={machineFacts} error={machineFactsError} />
+                                <MachineFactsAccordion facts={machineFacts} error={machineFactsError} headingLevel={3} />
                             )}
                         </Box>
                     )}
@@ -697,6 +698,7 @@ export function EntityEditDialog({
                             onUpdate={onUpdateInserter}
                             onClose={onClose}
                             onDirtyChange={setInserterDirty}
+                            onCancel={requestClose}
                         />
                     )}
                     {draft && entityType === 'drill' && onUpdateDrill && (
@@ -719,7 +721,8 @@ export function EntityEditDialog({
                 title={`Discard changes to ${title}?`}
                 onKeepEditing={() => setConfirmOpen(false)}
                 onDiscard={() => {
-                    setConfirmOpen(false);
+                    // Restore the nested prompt into the still-open editor before its own trap returns to the node.
+                    flushSync(() => setConfirmOpen(false));
                     onClose();
                 }}
             />

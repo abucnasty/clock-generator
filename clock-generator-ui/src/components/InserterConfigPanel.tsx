@@ -42,6 +42,8 @@ interface InserterConfigPanelProps {
     onUpdate: (index: number, updates: Partial<InserterFormData>) => void;
     /** Closes the dialog the panel is in: after Save, and on Cancel */
     onClose: () => void;
+    /** Cancel asks the parent to discard a dirty draft. */
+    onCancel?: () => void;
     /** Told whether either tab has unsaved changes; pass a stable function (a state setter) */
     onDirtyChange?: (dirty: boolean) => void;
 }
@@ -80,6 +82,7 @@ export function InserterConfigPanel({
     getRecipeInfo,
     onUpdate,
     onClose,
+    onCancel,
     onDirtyChange,
 }: InserterConfigPanelProps) {
     const id = useId();
@@ -211,7 +214,7 @@ export function InserterConfigPanel({
                 />
             </Box>
 
-            <DraftFooter dirty={dirty} onCancel={onClose} onSave={handleSave}>
+            <DraftFooter dirty={dirty} onCancel={onCancel ?? onClose} onSave={handleSave}>
                 {saveRefused && rule.problems.length > 0 && (
                     <Typography variant="body2" color="error" sx={{ mr: 1 }} data-rule-blocked="">
                         {blockedSummaryOf(rule.problems)}

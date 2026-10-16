@@ -147,6 +147,7 @@ export function FilterSlotSelector({
 
             {/* Item selector popover */}
             <Popover
+                slotProps={{ paper: { role: 'region', 'aria-label': 'Choose a filter' } }}
                 open={Boolean(anchorEl)}
                 anchorEl={anchorEl}
                 onClose={handleClose}

@@ -95,6 +95,7 @@ export function ItemSelector({
             size={size}
             sx={{ minWidth: effectiveMinWidth, ...sx }}
             options={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).ids : everyOption}
+            slotProps={{ popper: { role: 'region', 'aria-label': `${label} options` } }}
             groupBy={grouped ? prioritizedIds('', grouped.ids, everyOption, nameOf, grouped.label).groupOf : undefined}
             value={value}
             open={open}

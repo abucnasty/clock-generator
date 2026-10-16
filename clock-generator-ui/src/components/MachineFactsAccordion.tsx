@@ -18,9 +18,10 @@ import { TICK_DECIMALS, formatNumberText, maxRateLabel } from '../utils/numberTe
 interface MachineFactsAccordionProps {
     facts: SerializableMachineFacts | null;
     error?: string | null;
+    headingLevel?: 3 | 4;
 }
 
-export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionProps) {
+export function MachineFactsAccordion({ facts, error, headingLevel = 4 }: MachineFactsAccordionProps) {
     if (error) {
         return (
             <Typography variant="caption" sx={{ color: 'error.light' }}>
@@ -35,8 +36,8 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
 
     return (
         <Accordion
-            // under the Machines section's h3
-            slotProps={{ heading: { component: 'h4' } }}
+            // Under the List's section heading, or the Diagram dialog's title.
+            slotProps={{ heading: { component: `h${headingLevel}` } }}
             sx={{
                 mt: 1,
                 bgcolor: 'background.paper',
