@@ -114,10 +114,11 @@ come from here.
 | Item | Title | Status | Notes |
 |---|---|---|---|
 | [D1](specs/D1-compact-view.md) | Compact view | deferred | Owner requested roadmap scope only: denser Results/forms, fewer redundant labels/helpers, shorter title/workflow header, version visible without scrolling. Preserve essential feedback/accessibility; revisit after broader audit. No implementation or current release-scope expansion. |
-
-| [D2–D7](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings and working-context preservation. Reconcile overlaps with D1/3.3; no current implementation scope added. |
+| [D2–D8](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings, working-context preservation and per-machine target/max/achieved rates. Reconcile overlaps with D1/3.3; no current implementation scope added. |
 
 ## Decisions log
+
+- 2026-10-16: Owner requested showing each machine’s target production rate, alongside maximum capacity. Added deferred D8 draft, with likely engine/worker/UI scope, explicit units and distinction from achieved output; no current engine changes authorized.
 
 - 2026-10-16: Owner requested recording the additional design recommendations for later discussion. Added deferred D2–D7 draft backlog; existing implementation queue, phase gates and release scope remain in place.
 

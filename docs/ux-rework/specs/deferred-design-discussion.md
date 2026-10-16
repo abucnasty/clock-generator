@@ -16,3 +16,16 @@ Owner request: 2026-10-16. Record these ideas for later discussion, not implemen
 Finish current safety/persistence work. Use D3 and the owner's audit to prioritize D1 and D4–D7; consider D2 separately as a colour-scheme feature. This is a discussion sequence, not a new implementation schedule.
 
 For any proposal selected later, finalize exact behaviour/files, measurable acceptance, risks and evidence before implementing. Keep newcomer defaults, essential validation/status feedback, keyboard/focus/contrast requirements and the owner's then-current model instructions.
+
+## D8 — Per-machine target production rate
+
+Owner addition, 2026-10-16: show the target production rate for each machine alongside maximum capacity. Deferred draft; no engine or UI implementation now.
+
+- Intended display: required/planned average output for each machine, maximum attainable output, and optionally utilization/headroom. Keep requested target, maximum capacity and selected-clock achieved/simulated output distinct, especially for below-target clocks.
+- Current boundary: `SerializableMachineFacts` exposes intrinsic `output_rate_per_second` and its exact ratio, not a required per-entity target. `TargetProductionRate.fromConfig` represents build-total/per-copy final-output demand; that is not sufficient by itself to assign an intermediate machine's rate. Inspect existing cycle/transfer planning before proposing new calculation logic.
+- Likely work spans engine planning/serialization, the worker response and machine display. Prefer publishing authoritative engine-derived rates over independently reconstructing flow arithmetic in the UI.
+- Define units explicitly: each machine in one modeled unit versus totals across Copies, including fractional Copies. Cover multiple machines producing the same item, intermediates, productivity, by-products, loops, fuel/fluid cases where relevant, and ambiguous or infeasible plans without inventing a target.
+- Decide later whether targets become available after Check or Generate, and how stale/missing planning is represented after changes. New target values depend on build target, Copies and connected build topology, not just intrinsic machine settings.
+- Later acceptance: validate simple hand-calculable chains and real representative builds; preserve exact rational boundaries; update freshness/versioned payload handling as needed; ensure compact and normal views distinguish target/max/actual clearly and accessibly.
+
+This draft does not extend the currently frozen upstream integration or authorize engine changes during the current compatibility pass.
