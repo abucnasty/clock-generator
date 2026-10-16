@@ -12,7 +12,7 @@ const libURL = process.env.COMPAT_LIB ? pathToFileURL(resolve(process.env.COMPAT
 const L = await import(libURL);
 const { ui, itemLabel, SMALL_SAMPLE, UI_DIR, forWidths, previewServer, noSideScroll, isClickable,
     contrast, checkLabelInName, checkTabTo, checkFocusNotObscured, checkFocusNotObscuredAtHeight,
-    checkAxe, checkAnnounced, checkMouseActivationVisible, openTooltip, openMoreMenu, chooseMenuItem } = L;
+    checkAxe, checkAnnounced, checkMouseActivationVisible, accessibleName, openTooltip, openMoreMenu, chooseMenuItem } = L;
 const OUT = process.argv[2];
 if (!OUT) throw new Error('usage: node capture-upstream-compatibility.mjs <out dir>');
 const WIDTHS = (process.env.WIDTHS ?? '1440,960,800,720,390').split(',').map(Number);
@@ -79,19 +79,22 @@ async function load(p, config, label) {
     await ui.compatFile(p).setInputFiles({ name: `${label}.json`, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(config)) });
     // Compare imported values, not the rounded unfocused field text or a generic "loaded" signal from the previous build.
     const expected = {
-        target: config.target_output,
+        target: [config.target_output.recipe,config.target_output.items_per_second,config.target_output.copies],
         machines: config.machines.map(m => [m.id,m.recipe,m.crafting_speed,m.productivity]),
         inserters: config.inserters.map(i => [i.prototype ?? null,i.quality ?? null,i.stack_size ?? null,i.source,i.sink]),
     };
-    await storedUntil(p,new Function('c',`return JSON.stringify({target:c.target_output,machines:c.machines.map(m=>[m.id,m.recipe,m.crafting_speed,m.productivity]),inserters:c.inserters.map(i=>[i.prototype??null,i.quality??null,i.stack_size??null,i.source,i.sink])}) === ${JSON.stringify(JSON.stringify(expected))}`),'the imported values');
+    await storedUntil(p,new Function('c',`return JSON.stringify({target:[c.target_output.recipe,c.target_output.items_per_second,c.target_output.copies],machines:c.machines.map(m=>[m.id,m.recipe,m.crafting_speed,m.productivity]),inserters:c.inserters.map(i=>[i.prototype??null,i.quality??null,i.stack_size??null,i.source,i.sink])}) === ${JSON.stringify(JSON.stringify(expected))}`),'the imported values');
     await ui.targetCopies(p).focus();
     await p.waitForFunction(copies => document.querySelector('#target-copies')?.value === String(copies), config.target_output.copies);
     await ui.checkOnly(p).waitFor({ state: 'visible' });
 }
-async function edit(p, field, value, { blur = true } = {}) {
+async function edit(p, field, value, { blur = true, typing = false } = {}) {
     await field.focus();
     await p.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
-    await field.fill(String(value));
+    if(typing) {
+        await field.press('ControlOrMeta+A');
+        await p.keyboard.type(String(value));
+    } else await field.fill(String(value));
     await p.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
     if (blur) await field.press('Tab');
     // NumberField deliberately rounds its unfocused presentation. Refocus to inspect the stored full decimal.
@@ -102,15 +105,29 @@ async function edit(p, field, value, { blur = true } = {}) {
     }, { id: await field.getAttribute('id'), value: String(value) }).catch(async e => { throw new Error(`Editing ${await field.getAttribute('id')}: expected ${JSON.stringify(String(value))}, got ${JSON.stringify(await field.inputValue())}; ${e.message}`); });
 }
 async function saveFile(p) {
-    const pending = p.waitForEvent('download');
+    // A prior Save notice can cover the menu's second row at narrow widths. Close only that notice, never Undo.
+    if(await ui.message(p).isVisible() && (await txt(ui.message(p))).includes('Build saved to a file.')) {
+        await ui.messageClose(p).click(); await ui.message(p).waitFor({state:'hidden'});
+    }
+    // Handle the event promise immediately: a menu error must remain a recorded failed step, not an unhandled timeout.
+    const pending = p.waitForEvent('download').then(download=>({download}),error=>({error}));
     await chooseMenuItem(p, 'Save build file');
-    const d = await pending;
+    const result = await pending;
+    if(result.error) throw result.error;
+    const d = result.download;
+    await L.waitForMoreMenuClosed(p);
     return JSON.parse(readFileSync(await d.path(), 'utf8'));
 }
 async function dismiss(p) {
     if (await ui.messageClose(p).isVisible().catch(() => false)) await ui.messageClose(p).click();
 }
 async function reload(p) { await p.reload({ waitUntil: 'commit' }); await ready(p); await configure(p); await ui.targetCopies(p).focus(); }
+async function rateShot(p,rec,name) {
+    // Separate presentation shot after all audit/Tab/focus checks; positioning is not counted as their PASS.
+    await ui.targetRate(p).focus(); await ui.targetRate(p).scrollIntoViewIfNeeded();
+    await p.mouse.move(0,0); await ui.compatTooltips(p).waitFor({state:'detached'});
+    await rec.shot(p,name,{aria:true,desc:'Items per Second explicitly positioned after the completed keyboard/focus checks'});
+}
 async function audit(p, rec, name, targets = []) {
     // Start the scan from a stable viewport; preceding Tab walks may leave a row partly under the sticky header.
     // Focus-not-obscured checks still run at each actual keyboard stop below.
@@ -156,6 +173,8 @@ const metadataFixture = () => {
     return c;
 };
 const small = JSON.parse(readFileSync(SMALL_SAMPLE, 'utf8'));
+// Exact review C1 fixture; read the real config rather than mocking worker facts or hook state.
+const exactRateFixture = JSON.parse(readFileSync(new URL('./fixtures/compatibility-exact-rate.json',import.meta.url),'utf8'));
 const fractional = n => ({ ...clone(small), target_output: { ...small.target_output, copies: n, items_per_second: 0.001 } });
 const repeated = () => {
     const c = fractional(3);
@@ -196,6 +215,8 @@ let code = 1;
 try {
     const run = await forWidths(WIDTHS, async ({ page: p, rec, width }) => {
         p.setDefaultTimeout(8000);
+        const pageErrors = [];
+        p.on('pageerror',error => pageErrors.push(error.message));
         if (process.env.STEPS) {
             const selected = new RegExp(process.env.STEPS);
             const step = rec.step.bind(rec);
@@ -220,7 +241,9 @@ try {
             await edit(p,ui.targetCopies(p),0.5);
             await ui.targetCopies(p).press('ArrowUp');
             rec.check('F1 spinner increments by 0.5', Number(await ui.targetCopies(p).inputValue()) === 1);
-            await edit(p,ui.targetCopies(p),0.0625);
+            await edit(p,ui.targetCopies(p),0.0625,{typing:true});
+            await storedUntil(p,c=>c.target_output.copies===0.0625,'manually typed fractional Copies');
+            rec.check('F1 manual keyboard typing stores exact0.0625',Number(await ui.targetCopies(p).inputValue())===0.0625);
             await audit(p, rec, 'f1-fractional-copies', [['Copies', ui.targetCopies(p)]]);
             await textContrast(p, rec, ui.compatCopiesHelper(p), 'F1 Copies help');
         }, p);
@@ -228,7 +251,7 @@ try {
         await rec.step('F2 invalid Copies inline problem, firstProblem, no generation', async () => {
             await load(p, fractional(0.5), 'valid-before-invalid');
             for (const n of ['0','-1','0.0001','0.3333333333333333']) {
-                await edit(p, ui.targetCopies(p), n, { blur: n !== '-1' });
+                await edit(p, ui.targetCopies(p), n, { blur: n !== '-1', typing: n === '0.3333333333333333' });
                 const problem = ui.compatCopiesProblem(p);
                 await problem.waitFor({ state: 'visible' });
                 rec.check(`F2 ${n} remains visible`, await ui.targetCopies(p).inputValue() === n);
@@ -236,6 +259,14 @@ try {
                 const desc = (await ui.targetCopies(p).getAttribute('aria-describedby') ?? '').split(' ');
                 rec.check(`F2 ${n} described by inline error`, desc.includes(await problem.getAttribute('id')));
                 rec.check(`F2 ${n} actionable explanation`, /more than 0|positive|denominator|1000|fraction|decimal|exact/i.test(await txt(problem)), await txt(problem));
+                if (n === '0.3333333333333333') {
+                    await ui.targetRate(p).focus();
+                    rec.check('F2 invalid repeating-third remains full text after blur',await ui.targetCopies(p).inputValue() === n);
+                    rec.check('F2 repeating-third blur does not focus Copies',!(await ui.targetCopies(p).evaluate(e => e === document.activeElement)));
+                    await storedUntil(p,c => c.target_output.copies === 0.3333333333333333,'full invalid repeating-third draft');
+                    await audit(p,rec,'f2-invalid-third-blurred',[['Items per Second',ui.targetRate(p)]]);
+                    rec.check('F2 blurred screenshot retains the actual invalid decimal',await ui.targetCopies(p).inputValue() === n && await ui.targetCopies(p).getAttribute('aria-invalid') === 'true');
+                }
                 rec.check(`F2 ${n} firstProblem names Copies`, /Copies/i.test(await txt(ui.barNote(p))));
                 await ui.targetRate(p).focus();
                 await checkMouseActivationVisible(rec,p,ui.problemCount(p),`F2 ${n} first problem`);
@@ -300,6 +331,123 @@ try {
             await audit(p, rec, 'r1-half-copy-target-limit', [['Items per Second', ui.targetRate(p)], ['Copies', ui.targetCopies(p)]]);
         }, p);
 
+        await rec.step('R2 real worker facts survive the hook at exact decimal capacity',async()=>{
+            // Actual validateConfig probes pin the adjacent doubles as normalized equality, not excess.
+            // Both the accepted neighbor and the rejected decimal excess retain the engine's existing policy.
+            for (const [copies,equal,neighbor,excess] of [[2.25,1.35,1.3500000000000003,1.351],[0.5,0.3,0.30000000000000004,0.301]]) {
+                const c=clone(exactRateFixture); c.target_output={...c.target_output,copies,items_per_second:equal};
+                await load(p,c,`exact-rate-${copies}`); await list(p);
+                await ui.compatFactsRate(p).waitFor({state:'visible'});
+                const tip=await openTooltip(p,ui.compatFactsRate(p));
+                const raw=await txt(tip), match=raw.match(/make:\s*([\d.e+-]+)\/s/i);
+                rec.check(`R2 Copies ${copies}: genuine worker Machine Facts are 0.6/s`,Boolean(match)&&Number(match[1])===0.6,raw);
+                await p.mouse.move(0,0); await p.keyboard.press('Escape');
+                await tip.waitFor({state:'detached'});
+                await checkNow(p);
+                rec.check(`R2 Copies ${copies}: exact equality ${equal}/s is accepted by the actual App`,await ui.targetRateProblem(p).count()===0 && await ui.targetRate(p).getAttribute('aria-invalid')!=='true');
+                rec.check(`R2 Copies ${copies}: equality Check passes through the real engine worker`,await ui.compatCheckChip(p,'passed').isVisible());
+                rec.check(`R2 Copies ${copies}: equality remains exact in saved form`,(await stored(p)).target_output.items_per_second===equal);
+                await audit(p,rec,`r2-exact-capacity-${copies}`,[['Items per Second',ui.targetRate(p)],['Copies',ui.targetCopies(p)]]);
+                await edit(p,ui.targetRate(p),neighbor); await checkNow(p);
+                rec.check(`R2 Copies ${copies}: adjacent double follows engine-normalized equality`,await ui.targetRateProblem(p).count()===0 && await ui.compatCheckChip(p,'passed').isVisible());
+                await edit(p,ui.targetRate(p),excess);
+                await ui.targetRateProblem(p).waitFor({state:'visible'});
+                const problem=await txt(ui.targetRateProblem(p));
+                rec.check(`R2 Copies ${copies}: decimal excess ${excess}/s is refused at ${equal}/s`,problem.includes(String(equal))&&/Machine 1/.test(problem),problem);
+                const requests=await p.evaluate(()=>window.__compatRequests.length);
+                await ui.generate(p).click();
+                rec.check(`R2 Copies ${copies}: refused excess focuses Items per Second`,await ui.targetRate(p).evaluate(e=>e===document.activeElement));
+                await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+                rec.check(`R2 Copies ${copies}: excess sends no engine work`,await p.evaluate(n=>window.__compatRequests.length===n,requests));
+                await audit(p,rec,`r2-decimal-excess-${copies}`,[['Items per Second',ui.targetRate(p)],['Copies',ui.targetCopies(p)]]);
+            }
+        },p);
+
+        await rec.step('R3 unsupported finite precision survives genuine file import and reload',async()=>{
+            const c=clone(small); c.target_output.items_per_second=1e-23;
+            // Mapping assigns inserter ids to legacy input. Compare every original payload field, not generated ids.
+            const payload=x=>JSON.stringify({target:x.target_output,machines:x.machines.map(m=>[m.id,m.recipe,m.productivity,m.crafting_speed,m.type??null,m.energy_consumption_bonus??null]),inserters:x.inserters.map(i=>[i.source,i.sink,i.stack_size??null,i.prototype??null,i.quality??null,i.filters]),belts:x.belts});
+            const errorsBefore=pageErrors.length;
+            await load(p,c,'finite-tiny-rate');
+            for (const cycle of [1,2]) {
+                await ui.targetRate(p).focus(); await ui.targetRate(p).press('Tab');
+                await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+                rec.check(`R3 explicit focus then Tab cycle${cycle} preserves stored tiny rate before reload`,(await stored(p)).target_output.items_per_second===1e-23 && Number(await ui.targetRate(p).inputValue())===1e-23);
+            }
+            for (const stage of ['import','reload']) {
+                if(stage==='reload') await reload(p);
+                await ui.targetRate(p).focus();
+                rec.check(`R3 ${stage}: exact tiny rate remains in editable input`,Number(await ui.targetRate(p).inputValue())===1e-23 && await ui.targetRate(p).isEditable());
+                const saved=await stored(p), exported=await saveFile(p);
+                rec.check(`R3 ${stage}: tiny rate and original Copies remain stored/exported`,saved.target_output.items_per_second===1e-23 && exported.target_output.items_per_second===1e-23 && saved.target_output.copies===c.target_output.copies && exported.target_output.copies===c.target_output.copies);
+                rec.check(`R3 ${stage}: imported build data is retained`,payload(exported)===payload(c));
+                rec.check(`R3 ${stage}: usable Configure UI remains`,await ui.targetCopies(p).isEditable() && await ui.checkOnly(p).isEnabled() && await ui.generate(p).isEnabled() && (await txt(ui.compatBody(p))).includes('Copies'));
+                rec.check(`R3 ${stage}: no uncaught page error`,pageErrors.length===errorsBefore,JSON.stringify(pageErrors.slice(errorsBefore)));
+                await audit(p,rec,`r3-tiny-rate-${stage}`,[['Items per Second',ui.targetRate(p)],['Copies',ui.targetCopies(p)],['Check only',ui.checkOnly(p)]]);
+                await rateShot(p,rec,`r3-tiny-rate-${stage}-visible`);
+            }
+            // The existing worker rejects this unsupported precision. Keep that boundary and prove correction is usable.
+            await checkNow(p,'failed');
+            const reason=await txt(ui.compatError(p));
+            rec.check('R3 actual worker Check rejects unsupported precision with its visible reason',await ui.compatCheckChip(p,'failed').isVisible() && await ui.compatError(p).isVisible() && reason.includes('1e-23') && /fraction|decimal|precision/i.test(reason),reason);
+            rec.check('R3 worker response leaves tiny rate editable with no render crash',await ui.targetRate(p).isEditable() && (await stored(p)).target_output.items_per_second===1e-23 && pageErrors.length===errorsBefore,JSON.stringify(pageErrors.slice(errorsBefore)));
+            await audit(p,rec,'r3-tiny-rate-checked',[['Items per Second',ui.targetRate(p)],['Copies',ui.targetCopies(p)]]);
+            await rateShot(p,rec,'r3-tiny-rate-checked-visible');
+            await p.evaluate(()=>window.scrollTo(0,0)); await ui.compatError(p).scrollIntoViewIfNeeded();
+            await rec.shot(p,'r3-worker-failure-visible',{aria:true,desc:'Actual worker unsupported-precision failure, explicitly positioned after the completed keyboard checks'});
+            await edit(p,ui.targetRate(p),1); await checkNow(p);
+            const corrected=clone(c); corrected.target_output.items_per_second=1;
+            rec.check('R3 correction to supported1/s passes the genuine worker Check',await ui.compatCheckChip(p,'passed').isVisible() && await ui.targetRateProblem(p).count()===0);
+            rec.check('R3 correction changes only the rate and retains the original build',payload(await saveFile(p))===payload(corrected));
+            rec.check('R3 correction leaves no uncaught page error',pageErrors.length===errorsBefore,JSON.stringify(pageErrors.slice(errorsBefore)));
+            await audit(p,rec,'r3-tiny-rate-corrected',[['Items per Second',ui.targetRate(p)],['Copies',ui.targetCopies(p)]]);
+            await rateShot(p,rec,'r3-tiny-rate-corrected-visible');
+        },p);
+
+        await rec.step('N1 shared numeric field preserves full Crafting Speed precision',async()=>{
+            const c=clone(small); c.target_output.items_per_second=1;
+            const original=68.906247615814, full=String(original);
+            rec.check('N1 actual small sample has the reviewed full Crafting Speed',c.machines[0].crafting_speed===original);
+            await load(p,c,'numeric-field-precision'); await list(p);
+            const speed=ui.compatMachineSpeed(p,1);
+            await ui.targetCopies(p).focus();
+            rec.check('N1 Crafting Speed is rounded68.906 while blurred',await speed.inputValue()==='68.906');
+            for (const cycle of [1,2]) {
+                await speed.focus();
+                rec.check(`N1 focus cycle${cycle} reveals the entire Crafting Speed`,await speed.inputValue()===full);
+                await speed.press('Tab');
+                await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+                rec.check(`N1 blur cycle${cycle} rounds display without stored drift`,await speed.inputValue()==='68.906' && (await stored(p)).machines[0].crafting_speed===original);
+            }
+            await audit(p,rec,'n1-crafting-speed-blurred',[['Copies',ui.targetCopies(p)]]);
+            await ui.targetCopies(p).focus();
+            await checkTabTo(rec,p,speed,'N1 keyboard Tab reaches Crafting Speed');
+            const selection=await speed.evaluate(e=>({focused:e===document.activeElement,value:e.value,start:e.selectionStart,end:e.selectionEnd}));
+            rec.check('N1 keyboard Tab selects all of the full Crafting Speed',selection.focused && selection.value===full && selection.start===0 && selection.end===full.length,JSON.stringify(selection));
+            await checkFocusNotObscured(rec,p,'N1 selected Crafting Speed',{strict:true});
+            // The keyboard walk can leave this input at the viewport edge. Center it only after those checks;
+            // otherwise the stepper's input focus can scroll between mouse down/up and miss the intended release.
+            await speed.evaluate(e=>e.scrollIntoView({block:'center',inline:'nearest'}));
+            const increased=original+0.1;
+            const beforeIncrease=await speed.inputValue();
+            await ui.compatMachineSpeedStep(p,1,'Increase').click();
+            await storedUntil(p,new Function('c',`return Math.abs(c.machines[0].crafting_speed-${increased}) <= Number.EPSILON*${increased}*2`),'N1 Increase retains fractional remainder');
+            rec.check('N1 mouse Increase visibly changes Crafting Speed',await speed.inputValue()!==beforeIncrease);
+            const afterIncrease=(await stored(p)).machines[0].crafting_speed;
+            rec.check('N1 Increase preserves the full fractional remainder',Math.abs(afterIncrease-increased)<=Number.EPSILON*increased*2,JSON.stringify({before:original,expected:increased,stored:afterIncrease,input:await speed.inputValue()}));
+            const beforeDecrease=await speed.inputValue();
+            await ui.compatMachineSpeedStep(p,1,'Decrease').click();
+            await storedUntil(p,new Function('c',`return Math.abs(c.machines[0].crafting_speed-${original}) <= Number.EPSILON*${original}*2`),'N1 Decrease restores full precision');
+            rec.check('N1 mouse Decrease visibly changes Crafting Speed',await speed.inputValue()!==beforeDecrease);
+            const afterDecrease=(await stored(p)).machines[0].crafting_speed;
+            rec.check('N1 Decrease restores original speed within floating-point precision',Math.abs(afterDecrease-original)<=Number.EPSILON*original*2,JSON.stringify({before:afterIncrease,expected:original,stored:afterDecrease,input:await speed.inputValue()}));
+            await edit(p,speed,1.23456,{typing:true}); await speed.press('Tab');
+            await storedUntil(p,c=>c.machines[0].crafting_speed===1.23456,'N1 typed1.23456 persisted');
+            rec.check('N1 typing1.23456 persists the full value', (await stored(p)).machines[0].crafting_speed===1.23456);
+            rec.check('N1 typed Crafting Speed rounds only its blurred presentation',await speed.inputValue()==='1.235');
+            await audit(p,rec,'n1-crafting-speed-typed',[['Crafting Speed',speed]]);
+        },p);
+
         await rec.step('M1 read-only metadata and automatic capacities', async () => {
             await load(p, metadataFixture(), 'metadata');
             await list(p);
@@ -345,6 +493,21 @@ try {
             await textContrast(p,rec,ui.compatEditorMetadata(p),'M2 Diagram metadata');
             await audit(p,rec,'m2-diagram-uncommitted',[['Stack Size',ui.compatEditorStack(p)],['Save',ui.compatSave(p)],['Cancel',ui.compatCancel(p)]]);
             await checkFocusNotObscuredAtHeight(rec,p,{height:width >=960 ?640:560,walk:ui.compatEditor(p)});
+            const beforeCancel=JSON.stringify(await stored(p));
+            await checkMouseActivationVisible(rec,p,ui.compatCancel(p),'Cancel unsaved Automatic stack size');
+            await ui.compatEditor(p).waitFor({state:'hidden'});
+            rec.check('M2 Cancel leaves the entire stored explicit build unchanged',JSON.stringify(await stored(p))===beforeCancel);
+            rec.check('M2 Cancel keeps explicit7 and bulk/normal metadata in the file',((await saveFile(p)).inserters[0].stack_size===7) && (await stored(p)).inserters[0].prototype==='bulk-inserter' && (await stored(p)).inserters[0].quality==='normal');
+            await L.waitForMoreMenuClosed(p);
+            await ui.compatInserterNode(p,1).scrollIntoViewIfNeeded();
+            await checkMouseActivationVisible(rec,p,ui.compatInserterNode(p,1),'reopen Inserter 1 after Cancel');
+            await ui.compatEditor(p).waitFor({state:'visible'});
+            await ui.compatEditorStack(p).focus();
+            rec.check('M2 reopening after Cancel shows explicit7',await ui.compatEditorStack(p).inputValue()==='7');
+            rec.check('M2 reopened clean draft has Save disabled',await ui.compatSave(p).isDisabled());
+            await audit(p,rec,'m2-diagram-cancel-reopened',[['Stack Size',ui.compatEditorStack(p)],['Cancel',ui.compatCancel(p)]]);
+            await edit(p,ui.compatEditorStack(p),'');
+            await ui.compatEditorAuto(p,12).waitFor({state:'visible'});
             await checkMouseActivationVisible(rec,p,ui.compatSave(p),'Save Automatic stack size');
             await ui.compatEditor(p).waitFor({state:'hidden'});
             await storedUntil(p,c => !Object.hasOwn(c.inserters[0],'stack_size'),'Diagram Save clear');
@@ -381,6 +544,7 @@ try {
             const c = repeated(); await load(p,c,'repeated-units');
             const before = await saveFile(p);
             await checkNow(p,'failed');
+            await checkAnnounced(rec,p,'Check failed. The reason is at the top of Configure.','U1 actual global Check-failed announcement');
             const error = ui.compatError(p); await error.waitFor({state:'visible'});
             const text = await txt(error);
             rec.check('U1 error names both machine groups', /machine(?:s)?\s*1\b/i.test(text) && /machine(?:s)?\s*2\b/i.test(text),text);
@@ -397,6 +561,13 @@ try {
             await p.waitForFunction(n=>window.__compatRequests.length>n,requestsBeforeGenerate,{timeout:60000});
             await ui.generate(p).waitFor({state:'visible',timeout:60000});
             await error.waitFor({state:'visible'});
+            await p.waitForFunction(e=>e===document.activeElement,await error.elementHandle());
+            rec.check('U1 fresh Generate failure focuses the actual error note',await error.evaluate(e=>e===document.activeElement));
+            rec.check('U1 focused error note has the actual accessible name',await accessibleName(p,error)==="The build can't be clocked yet");
+            const description=await error.evaluate(e=>(e.getAttribute('aria-describedby')??'').split(/\s+/).filter(Boolean).map(id=>document.getElementById(id)?.textContent??'').join(' '));
+            rec.check('U1 focused error note describes machine groups and Copies6',/machine(?:s)?\s*1\b/i.test(description)&&/machine(?:s)?\s*2\b/i.test(description)&&/Copies[^\d]*6\b/i.test(description),description);
+            await checkFocusNotObscured(rec,p,'U1 Generate-failure note',{strict:true});
+            await audit(p,rec,'u1-generate-failure-focus');
             rec.check('U1 Generate refuses repeated units without changing the build', JSON.stringify(await saveFile(p)) === JSON.stringify(before) && await ui.clockRows(p).count() === 0);
             // A real valid unit (the shared sample has one machine and distinct input/output roles) still checks.
             await load(p,fractional(0.5),'valid-unit-control'); await checkNow(p);
