@@ -51,7 +51,7 @@ export function DetailsPanel(props: DetailsPanelProps) {
     const shownTab: DetailsTab = tab === 'fuel' && fuelView === null ? 'insights' : tab;
 
     return (
-        <Panel title={DETAILS_COPY.heading} sx={{ mt: 2, mb: 0 }} data-details="">
+        <Panel title={DETAILS_COPY.heading} level={3} sx={{ mt: 2, mb: 0 }} data-details="">
             <Tabs
                 value={shownTab}
                 onChange={(_, value: DetailsTab) => setTab(value)}

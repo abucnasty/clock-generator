@@ -36,6 +36,8 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
     return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
+// This shared public module intentionally exposes the stable provider and its consumer hook together.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDisplayPreferences(): DisplayPreferencesContextValue {
     const value = useContext(Context);
     if (!value) throw new Error('Display preferences require DisplayPreferencesProvider');

@@ -1,7 +1,7 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Box, Button, Chip, CircularProgress, LinearProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { useEffect, useRef } from 'react';
-import { useAnnounce, useMessageState } from '../hooks/useMessages';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { useAnnounce } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
@@ -17,9 +17,10 @@ export type WorkflowView = 'configure' | 'results';
 /** Before the selected clock's name in the bar */
 const SELECTED_CLOCK_PREFIX = 'Selected clock: ';
 /** The note's line in the bar: its button (23px) and the 8px under it */
-const NOTE_LINE_HEIGHT = 31;
 
 interface WorkflowBarProps {
+    /** Build identity, entry/tools and browser display choices share the workflow toolbar. */
+    identity?: ReactNode;
     view: WorkflowView;
     onViewChange: (view: WorkflowView) => void;
     isLoading: boolean;
@@ -104,6 +105,7 @@ export function CopyLabel({ label }: { label: string }) {
  * and keeps the steps of the workflow (check, generate, copy the blueprint) one click away from either.
  */
 export function WorkflowBar({
+    identity,
     view,
     onViewChange,
     isLoading,
@@ -216,8 +218,7 @@ export function WorkflowBar({
     // Generate tooltips and their description); below md it has the line under the bar
     const theme = useTheme();
     const wide = useMediaQuery(theme.breakpoints.up('md'));
-    const messageShown = useMessageState().current !== null;
-    const noteInBar = wide && note !== null;
+    const noteInBar = false;
     const noteNode = (inBar: boolean) => note && (
         note.target ? (
                         <Button
@@ -290,8 +291,9 @@ export function WorkflowBar({
     ) : null;
 
     return (
-        <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
-            <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: { xs: 1, sm: 2 }, py: 1 }}>
+        <Box>
+            <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: 1, py: 1, px: { xs: 2, sm: 2 } }}>
+                {identity}
                 <ToggleButtonGroup
                     value={view}
                     exclusive
@@ -308,10 +310,10 @@ export function WorkflowBar({
                 {noteInBar && <Box sx={{ flex: '1 1 0', minWidth: 0 }}>{noteNode(true)}</Box>}
 
                 {/* the actions wrap together and stay on the right, instead of one dropping to a row of its own */}
-                <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 1, sm: 2 } }}>
+                <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
                     {blueprintString && (
                         <>
-                            {selectedLabel && !noteInBar && (
+                            {selectedLabel && !identity && !noteInBar && (
                                 <Typography
                                     variant="body2"
                                     color="text.secondary"
@@ -410,24 +412,23 @@ export function WorkflowBar({
             {/* Below md the reason has a line of its own under the bar, reserved even when empty, so that the pinned header keeps its
                 height as the note comes and goes, on every edit and check; the generation's progress takes the line when there
                 is no note. A message row under the bar takes the line's place, so that no empty band sits above it. */}
-            {!wide && (note || progressNode || !messageShown) && (
+            {note && (
                 <Box
                     sx={{
                         px: { xs: 2, sm: 3 },
                         pb: 1,
                         mt: -0.5,
                         // one line of the note's button (23px) and the padding under it
-                        minHeight: NOTE_LINE_HEIGHT,
                         minWidth: 0,
                         display: 'flex',
                         justifyContent: 'flex-start',
                         textAlign: 'left',
                     }}
                 >
-                    {note ? noteNode(false) : progressNode}
+                    {noteNode(false)}
                 </Box>
             )}
-            {progressNode && (wide || note) && (
+            {progressNode && (
                 <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1 }}>
                     {progressNode}
                 </Box>
