@@ -350,6 +350,9 @@ export async function captureP3Compatibility(h) {
         await storedUntil(p,c=>c.inserters[0].overrides?.enable_control?.mode==='CLOCKED','P3F manual whole-tick rule');
         const rule=ruleOf(await saveFile(p));
         rec.check('P3F manual inclusive start=end=1 is saved exactly',rule?.mode==='CLOCKED' && rule.ranges?.length===1 && rule.ranges[0].start===1 && rule.ranges[0].end===1 && !Object.hasOwn(rule,'period_duration_ticks'));
+        // Save/export can leave interactive header tooltips over Configure at phone width. Dismiss them normally.
+        await p.mouse.move(0,0); await p.keyboard.press('Escape');
+        await ui.compatTooltips(p).first().waitFor({state:'detached'});
         await openRule('List');
         rec.check('P3F manual inclusive single-tick rule reopens unchanged',await ui.ruleStart(ui.ruleDialog(p)).inputValue()==='1' && await ui.ruleEnd(ui.ruleDialog(p)).inputValue()==='1' && await ui.ruleRepeat(ui.ruleDialog(p)).inputValue()==='');
         scope=ui.ruleDialog(p); await audit(p,rec,'p3f-manual-inclusive-rule',targets()); await cancelRule('List');
