@@ -961,10 +961,21 @@ const run = await forWidths(
                         await checkAnnounced(rec, page, 'Check passed.', 'next Check only after replacement startup failure');
                         rec.check('Check only creates one replacement', await page.evaluate((count) => window.__ux.workersCreated === count + 1, created));
                     }
+                    const generationMark = await page.evaluate(() => {
+                        window.__ux.generating = false;
+                        return window.__ux.ann.length;
+                    });
                     await ui.generate(page).click({ timeout: 3000 });
-                    const made = await until(async () => { await goResults(page).catch(() => {}); return (await clocksMade(page)) >= 1; }, 9000, 300);
-                    rec.check(`${nextAction}: next Generate makes real clocks after startup failure`, !!made);
-                    await idle(page);
+                    const started = await until(() => page.evaluate(() => window.__ux.generating), 6000);
+                    rec.check(`${nextAction}: next Generate visibly starts a new generation`, !!started);
+                    const finished = await until(async () => (await annSince(page, generationMark))
+                        .find(text => /^Finished generating\. Selected clock: .+\.$/.test(text)), 9000);
+                    const ended = await idle(page);
+                    rec.check(`${nextAction}: next Generate reaches idle with a NEW finished-generation announcement`, !!finished && !!ended);
+                    if (finished) await checkAnnounced(rec, page, finished, `${nextAction}: completed recovery generation`);
+                    await goResults(page);
+                    const made = await clocksMade(page);
+                    rec.check(`${nextAction}: next Generate makes real clocks after startup failure`, !!started && !!finished && !!ended && made >= 1, `${made} clocks after the new run completed`);
                     rec.check(`${nextAction}: recovery creates exactly one replacement`, await page.evaluate((count) => window.__ux.workersCreated === count + 1, created));
                     await rec.shot(page, `startup-recovery-${nextAction === 'Check only' ? 'check' : 'generate'}`, { desc: 'The next explicit action recovered from a replacement module startup failure', aria: true });
                     await checkAxe(rec, page, 'replacement startup recovery');
