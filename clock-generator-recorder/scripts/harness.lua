@@ -235,7 +235,8 @@ local function wire_clock(state, clock)
                 local input = inserter.get_wire_connector(defines.wire_connector_id.circuit_green, true)
                 output.connect_to(input, false, defines.wire_origin.player)
                 local behavior = inserter.get_or_create_control_behavior()
-                if not behavior.circuit_enable_disable and not behavior.circuit_set_filters then
+                -- a condition left from the base's own clock (on a signal this clock never sends) would hold the inserter off for good
+                if not behavior.circuit_set_filters then
                     behavior.circuit_enable_disable = true
                     behavior.circuit_condition = ANYTHING_POSITIVE
                 end
