@@ -14,6 +14,18 @@ The owner reports scroll fatigue, especially on Results: accumulated padding, la
 - Show the application version without scrolling and retain changelog access, without adding another header row solely for version information.
 - Extend density consistently to Configure, forms and dialogs where safe, with Results and header as the first priorities. Preserve keyboard focus visibility, readable text, contrast and usable pointer targets.
 
+## Wider-screen composition — design direction, not an approved final layout
+
+The owner asked whether wide screens warrant a different layout. Explore composition separately from density: Compact changes spacing and routine copy; available width determines whether related views can sit together. Either density should work in the appropriate responsive layout.
+
+- Results candidate: a dense clock-selection/comparison table beside a selected-clock detail area containing metrics, warnings and timelines. Keep selection visible while inspecting details; avoid stacking every card into a long page or duplicating summary information across panels.
+- Configure candidate: compact entity navigation/list beside the selected shared editor, with contextual facts and warnings adjacent when space allows. Reuse the finished editor and its existing commit/draft semantics.
+- One slim toolbar holds build identity, navigation, primary actions/status and version. Allow space for long build names and in-progress actions.
+- Choose breakpoints by content fit and useful minimum pane widths; initially compare1440/1600/1920/2560px, not a fixed “desktop” label. Fall back to the established stacked flow as width decreases.
+- Avoid scroll fatigue becoming nested-scroll fatigue: make pane ownership clear, preserve keyboard navigation/focus and selected-row visibility, and provide meaningful region names where independent scrolling is necessary.
+
+Validate these options with a later wireframe/audit before implementation; this note does not select a final layout or schedule product work.
+
 ## Files to assess later
 
 Provisional, not an implementation prescription: `clock-generator-ui/src/App.tsx` (header/footer/version and preference placement), `components/WorkflowBar.tsx`, `components/ResultSummaryCard.tsx`, Results table/detail components, `hooks/useStickyHeaderHeight.ts`, theme tokens and shared form/section components. Reconcile against the finished3.2/3.3 tree and final original-roadmap audit before selecting APIs or files.
