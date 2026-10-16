@@ -43,14 +43,15 @@ come from here.
   p2 (`9e2646c`) and p3 (`df21248`). Root checked the recorded test result lines; these historical integration gates
   do not replace the reviewed compatibility child's independent evidence. #194 at master `1d27cde` is frozen for
   the current integration cycle; fresh full gates passed and feature `cdf2425`, p2 `cf7a8c7` and p3 `66dc5c9` are pushed.
-  Compatibility round 0 reviewed `bcc6db7`: code FIX (exact-rate transport and unsafe rational arithmetic), UX PASS
-  with an invalid-Copies display minor. Fix round 1 product `4c8a6b9` preserves exact facts, handles unsupported
-  arithmetic, and retains untouched tiny values through focus/blur. Full and independent UI 948 tests/build pass;
-  expanded browser evidence is underway, so no final re-review or merge approval is claimed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md) and final
-  2.7 B / 3.3 evidence follow the reviewed child.
-- **Worker checkpoints:** 2.7 B `79e7abc` inherits the current compatibility product; its prior review counters remain.
-  P3 adjunct `06289e7` has provisional evidence and awaits latest-provider inheritance/final validation.
-  3.3 remains `38a7b25` with corrected non-recommended-pick capture. Final gates and re-reviews remain open.
+  Compatibility provider merged as [#195](https://github.com/abucnasty/clock-generator/pull/195), `c8ba1dd`:
+  code and UX PASS after one fix round; CI unit/UI jobs pass (generation job skipped by existing workflow;
+  local 142 generation tests pass). Full evidence: [provider evidence](capture/upstream-compatibility-EVIDENCE.md).
+  Completed provider remote/local branch and worktree removed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md)
+  and final 2.7 B / 3.3 evidence remain next.
+- **Worker checkpoints:** 2.7 B `a794421` has resolved provider-squash conflicts, preserving prior product source and
+  review counters. P3 phase integration `8c974cf` is prepared, full gate running before push. Adjunct `fa73634`
+  passes full UI 1099 tests, engine 1008 unit/142 generation and independent UI test/build; final browser gate underway.
+  3.3 remains `38a7b25` with corrected non-recommended-pick capture. Live details are in the excluded handoff.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -93,8 +94,8 @@ come from here.
 
 | Chain | Length | Next unblocked |
 |---|---|---|
-| Compatibility p2 child → 2.7 B → 3.2 A → 3.2 B | 4 | Compatibility implementation (two units); 2.7 B retains its review/minors history; 3.2 A after 2.7 B reaches p3; 3.2 B is two units |
-| Compatibility p2 child → p3 adjunct → 3.3 | 3 | p3 adjunct follows the reviewed p2 child; 3.3 retains fix round 1 |
+| Reviewed compatibility → 2.7 B → 3.2 A → 3.2 B | 3 | 2.7 B inherits provider #195; final evidence follows adjunct completion. Prior review/minors history retained; 3.2 A after 2.7 B reaches p3; 3.2 B is two units |
+| P3 adjunct → 3.3 | 2 | Adjunct final evidence; 3.3 retains fix round 1 |
 | Frozen master #194 → feat/ux-rework → p2 → p3 | complete | All three full gates and pushes done; in-flight merged-tree type-check sweep underway |
 | Phase 2 end | | After 2.7 B; install check holds the phase PR, owner approval holds phase merge |
 
