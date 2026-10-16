@@ -35,6 +35,8 @@ export interface Message extends Omit<MessageInput, 'severity' | 'durationMs' | 
 export interface Announcement {
     id: number;
     text: string;
+    /** A deferred completion remains valid only while this message is still offered */
+    ownerMessageId?: number;
 }
 
 export interface MessageState {
@@ -89,7 +91,13 @@ export function messagesReducer(state: MessageState, event: MessageEvent): Messa
             // completion has a newer id too, so the same callback cannot read the offer out twice.
             const message = state.current;
             if (message?.id !== event.messageId || (state.announcement?.id ?? 0) > event.messageId) return state;
-            return { ...state, announcement: { id: event.id, text: [message.text, message.hint, event.suffix].filter(Boolean).join(' ') } };
+            return { ...state, announcement: { id: event.id, text: [message.text, message.hint, event.suffix].filter(Boolean).join(' '), ownerMessageId: message.id } };
         }
     }
+}
+
+/** Rechecked at delivery: dismissal, newer news or an unmounted host can invalidate a queued completion. */
+export function canDeliverAnnouncement(state: MessageState | null, announcement: Announcement): boolean {
+    return announcement.ownerMessageId === undefined || (state?.current?.id === announcement.ownerMessageId
+        && state?.announcement?.id === announcement.id);
 }

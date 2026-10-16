@@ -38,8 +38,9 @@ function removeSpare() {
     spare = null;
 }
 
-/** Announces `text` in `main` if a screen reader can hear it there, otherwise in the region on `<body>` */
-export function announceText(main: HTMLElement | null, text: string) {
+/** Announces in an exposed region; an owned completion rechecks its validity at the actual write. */
+export function announceText(main: HTMLElement | null, text: string, stillCurrent?: () => boolean) {
+    if (stillCurrent && !stillCurrent()) return;
     clearTimeout(pendingWrite);
     if (main && main.isConnected && !isHidden(main)) {
         spare?.replaceChildren();
@@ -57,7 +58,9 @@ export function announceText(main: HTMLElement | null, text: string) {
     }
     const region = spare;
     region.replaceChildren();
-    pendingWrite = setTimeout(() => write(region, text), WRITE_DELAY_MS);
+    pendingWrite = setTimeout(() => {
+        if (!stillCurrent || stillCurrent()) write(region, text);
+    }, WRITE_DELAY_MS);
     clearTimeout(idleTimer);
     idleTimer = setTimeout(removeSpare, IDLE_MS);
 }
