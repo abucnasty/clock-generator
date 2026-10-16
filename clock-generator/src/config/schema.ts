@@ -10,7 +10,7 @@ import {
 } from "../common/enable-control-types";
 import { MachineStatus } from "../state/entity-status";
 import { MachineType } from "../entities";
-import { isShortDecimalCopies } from "./copies-value";
+import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 
 // ============================================================================
 // Machine Configuration
@@ -55,7 +55,7 @@ export const TargetProductionRateConfigSchema = z.object({
     recipe: z.string(),
     items_per_second: z.number().positive(),
     copies: z.number().positive().refine(isShortDecimalCopies, {
-        message: "copies must be a whole number or a short decimal such as 5.5",
+        message: COPIES_DECIMAL_ERROR,
     })
 });
 

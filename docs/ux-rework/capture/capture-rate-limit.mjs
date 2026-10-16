@@ -26,11 +26,11 @@ if (!OUT) {
 }
 const WIDTHS = (process.env.WIDTHS ?? '1440,720,390').split(',').map(Number);
 
-const LINE_240200 = 'At most 252.65/s: Machine 1 makes 22.96/s, times 11 copies. Lower the rate, or raise Copies or add machines.';
-const LINE_12_COPIES = 'At most 275.62/s: Machine 1 makes 22.96/s, times 12 copies. Lower the rate, or raise Copies or add machines.'; // 12 x 22.9687492… = 275.6249…
-const LINE_ONE_COPY = 'At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or add machines.';
+const LINE_240200 = 'At most 252.65/s: Machine 1 makes 22.96/s, times 11 copies. Lower the rate or raise Copies. Describe one unit in the build.';
+const LINE_12_COPIES = 'At most 275.62/s: Machine 1 makes 22.96/s, times 12 copies. Lower the rate or raise Copies. Describe one unit in the build.'; // 12 x 22.9687492… = 275.6249…
+const LINE_ONE_COPY = 'At most 22.96/s: Machine 1 makes 22.96/s. Lower the rate or raise Copies. Describe one unit in the build.';
 const NOTE_240200 = 'Items per Second is more than the machines can make (at most 252.65/s)';
-const ERROR_LIGHT = 'rgb(255, 122, 121)'; // error.light, as the bar's problem note; error.main #ff5958 is 4.4:1 on a card
+const ERROR_LIGHT = 'rgb(255, 148, 147)'; // current error.light token, also used for the bar's problem note
 const ENGINE_WORDS = /cannot meet the target production rate|Total output capacity/;
 const SHORT_HEIGHT = { 1440: 640, 720: 560, 390: 600 };
 

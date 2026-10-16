@@ -1,3 +1,4 @@
+import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 /**
  * Web Worker for running clock-generator simulation.
  *
@@ -178,7 +179,8 @@ function runStreaming(
         postResponse({
             type: 'error',
             runId,
-            message: error instanceof Error ? error.message : 'Simulation failed',
+            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
+                : error instanceof Error ? error.message : 'Simulation failed',
             stack: error instanceof Error ? error.stack : undefined,
         });
     }
@@ -191,7 +193,8 @@ function handleValidate(requestId: number, config: Config): void {
         postResponse({
             type: 'validation-failed',
             requestId,
-            message: error instanceof Error ? error.message : 'Validation failed',
+            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
+                : error instanceof Error ? error.message : 'Validation failed',
         });
     }
 }

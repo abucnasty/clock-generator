@@ -25,6 +25,7 @@ interface NumberFieldProps extends BaseNumberField.Root.Props {
     size?: 'small' | 'medium';
     error?: boolean;
     helperText?: string;
+    placeholder?: string;
     /**
      * What is wrong with the value, under the helper text, which then stays as it is: the field is marked invalid and
      * the line is in the lighter red (the error red is 4.4:1 on a card, under the 4.5 text needs)
@@ -40,6 +41,7 @@ export function NumberField({
     label,
     error,
     helperText,
+    placeholder,
     problem,
     size = 'medium',
     sx,
@@ -126,6 +128,7 @@ export function NumberField({
             <InputLabel htmlFor={id}>{label}</InputLabel>
             <BaseNumberField.Input
                 id={id}
+                placeholder={placeholder}
                 render={(props, state) => {
                     const shown = shownNumberText({
                         focused,

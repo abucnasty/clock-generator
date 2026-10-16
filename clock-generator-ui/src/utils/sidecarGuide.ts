@@ -15,7 +15,7 @@ export const NEW_TAB_CUE = '(opens in a new tab)';
 /** How to copy a build in Factorio with the mod, as the mod's portal page says it */
 export const SIDECAR_COPY_STEPS = [
     "In Factorio, press Alt+E to pick up the Sidecar mod's selection tool.",
-    'Drag a box over the machines, inserters, belts and chests of your build.',
+    'Drag a box over the machines, inserters, belts and chests of one unit of your build. For repeated identical units, select just one and set Copies here.',
     'Click Copy JSON.',
     'Press Ctrl+C.',
 ] as const;
@@ -59,7 +59,7 @@ export const PASTE_PROMPTS: Record<SidecarExportProblem | ClipboardProblem, Past
     },
     'no-entities': {
         severity: 'warning',
-        text: 'The export has no machines, inserters, belts or chests. Drag a box over the whole build in Factorio, then click Copy JSON again.',
+        text: 'The export has no machines, inserters, belts or chests. Drag a box over one complete unit of the build in Factorio, then click Copy JSON again.',
     },
 };
 

@@ -106,3 +106,15 @@ describe('configToFormData and the forced flag', () => {
         expect(configToFormData(imported).inserters.some((ins) => '_forced_always' in ins)).toBe(false);
     });
 });
+
+describe('imported inserter metadata', () => {
+    it.each([undefined, 8, 16])('preserves normal bulk type, quality and stack override %s through file round trips', stack_size => {
+        const config: Config = { ...imported, inserters: [{ ...imported.inserters[0], prototype: 'bulk-inserter', quality: 'normal', stack_size }] };
+        const form = configToFormData(config);
+        const file = JSON.parse(JSON.stringify(formDataToConfig(form))) as Config;
+        expect(file.inserters[0]).toMatchObject({ prototype: 'bulk-inserter', quality: 'normal' });
+        expect(file.inserters[0].stack_size).toBe(stack_size);
+        expect(Object.hasOwn(file.inserters[0], 'stack_size')).toBe(stack_size !== undefined);
+        expect(configToFormData(file).inserters[0].stack_size).toBe(stack_size);
+    });
+});

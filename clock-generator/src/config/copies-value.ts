@@ -12,3 +12,5 @@ export function isShortDecimalCopies(value: number): boolean {
     }
 }
 
+/** The schema refinement message also identifies this editable form-value problem at the worker boundary. */
+export const COPIES_DECIMAL_ERROR = "copies must be a whole number or a short decimal such as 5.5";

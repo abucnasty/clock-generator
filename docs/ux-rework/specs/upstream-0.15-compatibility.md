@@ -31,6 +31,10 @@ full gate; engine/generation tests cover the new upstream engine. No merge to ma
 - Existing List/Diagram inserter editors and a small shared helper: read-only metadata, Automatic/effective stack
   display and clearing. 3.2 A reuses this API; communicate its exact exports before implementation there begins.
   Keep the two existing surfaces' commit models until 3.2 A changes them. Do not prematurely build the shared editor.
+  If the changed metadata rows expose the existing Source/Destination truncation, reuse the minimal already-designed
+  2.7B aligned inserter grid (ce131ae), preserving the current outer card; do not import the full Build card, Panel or
+  filter-slot feature. 2.7B reconciles those shared layout hunks when it inherits compatibility and retains its final
+  full geometry evidence. Keep the Diagram toggle's accessible name consistent with its visible beta text.
 - p3 rule-editor callers/templates: use effective hand size, not a literal 16 when the value is omitted. No new rule modes.
 - `scripts/copy-factorio-data.mjs`, `utils/exampleBuilds.ts`: replace removed chemical sample with the upstream
   shared-foundry sample; accept supported fractional Copies without loosening integer entity counts. Time the example

@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
+import { COPIES_DECIMAL_ERROR } from 'clock-generator/light';
+import { copiesProblem } from '../utils/copiesProblem';
+import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { ConfigSchema } from 'clock-generator/browser';
 import { readConfigFile } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
@@ -58,5 +62,41 @@ describe('parseFormConfig', () => {
     it('rejects a file that is not a config', () => {
         expect(parseFormConfig(ConfigSchema, readConfigFile('[1, 2]')).success).toBe(false);
         expect(() => readConfigFile('{ not json')).toThrow();
+    });
+});
+
+
+describe('fractional Copies and metadata draft round trips', () => {
+    it.each([5.5, 2.25, 0.5, 0.001, 0.0625, 0.0001, 1 / 3])('retains %s without resetting the editable build', copies => {
+        const form = edits.updateTargetOutput(createDefaultConfig(), 'copies', copies);
+        form.inserters = [{ id: 1, _uuid: 'bulk', prototype: 'bulk-inserter', quality: 'normal', source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 } }];
+        const saved = readSavedConfig(serializeConfig(form))!;
+        expect(saved.target_output.copies).toBe(copies);
+        const parsed = parseFormConfig(ConfigSchema, formDataToConfig(saved));
+        expect(parsed.success).toBe(true);
+        const reopened = configToFormData(parsed.data!);
+        expect(reopened.target_output.copies).toBe(copies);
+        expect(reopened.inserters[0]).toMatchObject({ prototype: 'bulk-inserter', quality: 'normal' });
+        expect(reopened.inserters[0].stack_size).toBeUndefined();
+        const file = exportAndImport(reopened);
+        expect(file.success).toBe(true);
+        expect(file.data!.target_output.copies).toBe(copies);
+        expect(ConfigSchema.safeParse(file.data).success).toBe(copiesProblem(copies) === null);
+    });
+
+    it('rejects a malformed structure even alongside an editable Copies refinement', () => {
+        const form = edits.updateTargetOutput(createDefaultConfig(), 'copies', 0.0001);
+        expect(parseFormConfig(ConfigSchema, { ...formDataToConfig(form), machines: 'broken' }).success).toBe(false);
+    });
+
+    it('does not allow other custom errors at the Copies path or the Copies message at another path', () => {
+        const config = formDataToConfig(createDefaultConfig());
+        for (const [path, message] of [
+            [['target_output', 'copies'], 'A different custom constraint'],
+            [['machines'], COPIES_DECIMAL_ERROR],
+        ] as const) {
+            const schema = ConfigSchema.superRefine((_value, ctx) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path], message }));
+            expect(parseFormConfig(schema, config).success).toBe(false);
+        }
     });
 });

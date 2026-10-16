@@ -20,6 +20,8 @@ export interface SerializableMachineFacts {
     output_item: string;
     output_per_craft: number;
     output_rate_per_second: number;
+    /** Exact capacity for browser validation; optional for consumers of older serialized facts. */
+    output_rate_ratio?: { numerator: number; denominator: number };
     output_block_size: number;
     overload_multiplier: number;
     ticks_per_craft: number;
