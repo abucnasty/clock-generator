@@ -186,11 +186,14 @@ export function addInserter(prev: ConfigFormData): ConfigFormData {
 function withPreservedEndpoints(ins: InserterFormData, updates: Partial<InserterFormData>): InserterFormData {
     const endpoint = <E extends { type: string; id: number }>(before: E, after: E | undefined): E => {
         if (after === undefined) return before;
-        // A no-op picker sends only type/id. Merge it so it cannot strip imported geometry or near_lane.
-        if (before.type === after.type && before.id === after.id) return { ...before, ...after };
+        // Source updates are complete endpoints: withNearLane deliberately removes the optional key for Not set.
+        // No-op pickers/connections use endpointUpdate and send no replacement at all.
+        if (before.type === after.type && before.id === after.id) return after;
         return ins.sink.drop === undefined ? after : before;
     };
-    return { ...ins, ...updates, source: endpoint(ins.source, updates.source), sink: endpoint(ins.sink, updates.sink) };
+    return { ...ins, ...updates, source: endpoint(ins.source, updates.source),
+        // Imported drop geometry is read-only, including attempts to clear it on the same route.
+        sink: ins.sink.drop !== undefined ? ins.sink : endpoint(ins.sink, updates.sink) };
 }
 
 /** An update with `overrides` replaces the rule, so it is no longer one forced by Exclude from LCM. */

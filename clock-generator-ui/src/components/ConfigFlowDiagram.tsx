@@ -28,6 +28,7 @@ import type { FlowNodeEntity } from '../utils/buildFlowGraph';
 import { EntityEditDialog } from './EntityEditDialog';
 import type { EntityEditDialogProps } from './EntityEditDialog';
 import { FLOW_NODE_BOX_CLASS } from './flowNodeStyle';
+import { endpointUpdate } from '../utils/inserterMetadata';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
@@ -249,11 +250,11 @@ function FlowContent({
         if (tgt.type === 'inserter' && ENTITY_TYPES.has(src.type)) {
             if (!onUpdateInserter) return;
             const idx = inserters.findIndex(i => i.id === tgt.id);
-            if (idx !== -1) onUpdateInserter(idx, { source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.id } });
+            if (idx !== -1) onUpdateInserter(idx, endpointUpdate(inserters[idx], 'source', { type: src.type as 'machine' | 'belt' | 'chest', id: src.id }));
         } else if (src.type === 'inserter' && ENTITY_TYPES.has(tgt.type)) {
             if (!onUpdateInserter) return;
             const idx = inserters.findIndex(i => i.id === src.id);
-            if (idx !== -1) onUpdateInserter(idx, { sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.id } });
+            if (idx !== -1) onUpdateInserter(idx, endpointUpdate(inserters[idx], 'sink', { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.id }));
         } else if (ENTITY_TYPES.has(src.type) && ENTITY_TYPES.has(tgt.type)) {
             if (!onAddInserter || !onUpdateInserter) return;
             const newIndex = inserters.length;
