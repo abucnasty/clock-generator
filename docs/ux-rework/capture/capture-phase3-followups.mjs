@@ -8,7 +8,7 @@
 import { readFileSync,writeFileSync,mkdirSync } from 'node:fs';
 import {resolve,join} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {rest,restDialog,stored,storedUntil,rawUntil,rows,eq,norm,createHarness} from './followups-full-common.mjs';
+import {rest,restDialog,stored,storedUntil,rawUntil,rows,eq,norm,createHarness,textContrastPairs} from './followups-full-common.mjs';
 const OUT=process.argv[2];if(!OUT)throw Error('Usage: node capture-phase3-followups.mjs OUT');
 if(process.env.BASELINE_ONLY==='1'){
  await import('./capture-baseline-320.mjs');
@@ -64,7 +64,7 @@ if(process.env.BASELINE_ONLY==='1'){
  }
  async function stale(ctx,rec,p){await ui.viewToggle(p,'Configure').click();await checkOnly(p,rec,'stale-plan initial');if(await ui.advancedOverrides(p).getAttribute('aria-expanded')!=='true')await ui.advancedOverrides(p).click();const plan=ui.followPlan(p);await plan.waitFor();const rowsBefore=norm(await ui.followPlanRows(p).allInnerTexts());const oldRate=await ui.targetRate(p).inputValue();await ui.targetRate(p).fill(String(Number(oldRate)*0.9));await ui.targetRate(p).press('Tab');await rest(p);const raw=await stored(p);
   rec.check('stale plan remains readable in accessibility tree',(await ui.followBody(p).ariaSnapshot()).includes('Swing Plan')&&norm(await ui.followPlanRows(p).allInnerTexts())===rowsBefore);rec.check('stale plan removes actionable Exclude controls',await ui.followExclude(p).count()===0);rec.check('stale plan is not an inert subtree',await plan.evaluate(e=>!e.closest('[inert],[aria-hidden=true]')));
-  for(const v of await ui.followReadOnlyPlanValues(p).all()){if(norm(await v.innerText())){const c=await contrast(p,v);rec.check('read-only value measured AA',c.ratio>=c.required,JSON.stringify(c));}}
+  for(const v of await ui.followReadOnlyPlanValues(p).all()){if(norm(await v.innerText())){const c=await contrast(p,v);rec.check('read-only value measured AA',c.ratio>=c.required,JSON.stringify(c));for(const leaf of await textContrastPairs(v))rec.check('read-only rendered text leaf measured AA',leaf.ratio>=leaf.required,JSON.stringify(leaf));}}
   const sc=ui.followPlanScroll(p),hasScroll=await sc.count()===1;
   if(hasScroll){
    await reach(p,rec,sc,'stale plan labelled keyboard scroll');const x=await sc.evaluate(e=>e.scrollLeft),sizes=await sc.evaluate(e=>({client:e.clientWidth,scroll:e.scrollWidth}));

@@ -115,32 +115,60 @@ export const rows=(c,k)=>k==='drills'?c.drills?.configs??[]:c[k]??[];
 export async function stored(p){return p.evaluate(()=>{const index=JSON.parse(localStorage.getItem('clock-generator-builds')??'null');const id=sessionStorage.getItem('clock-generator-tab-build');const row=index?.builds?.find(b=>b.id===id)??[...(index?.builds??[])].sort((a,b)=>b.openedAt-a.openedAt)[0];const key=!row||row.id==='default'?'clock-generator-config':`clock-generator-build:${row.id}`;const raw=localStorage.getItem(key);if(typeof raw!=='string')throw Error(`No saved form at ${key}`);return raw;});}
 export async function storedUntil(p,predicate,description){await p.waitForFunction(({source})=>{const index=JSON.parse(localStorage.getItem('clock-generator-builds')??'null'),id=sessionStorage.getItem('clock-generator-tab-build');const row=index?.builds?.find(b=>b.id===id)??[...(index?.builds??[])].sort((a,b)=>b.openedAt-a.openedAt)[0];const key=!row||row.id==='default'?'clock-generator-config':`clock-generator-build:${row.id}`;const c=JSON.parse(localStorage.getItem(key)??'null');return c&&new Function('c',`return (${source})(c)`)(c);},{source:predicate.toString()},{timeout:10000}).catch(e=>{throw Error(`${description}: ${e.message}`);});}
 export async function rawUntil(p,expected,description){await p.waitForFunction(expected=>{const index=JSON.parse(localStorage.getItem('clock-generator-builds')??'null'),id=sessionStorage.getItem('clock-generator-tab-build');const row=index?.builds?.find(b=>b.id===id)??[...(index?.builds??[])].sort((a,b)=>b.openedAt-a.openedAt)[0];const key=!row||row.id==='default'?'clock-generator-config':`clock-generator-build:${row.id}`;return localStorage.getItem(key)===expected;},expected,{timeout:10000}).catch(e=>{throw Error(`${description}: exact raw serialization did not restore: ${e.message}`);});}
-// Actual non-text paint on changed controls. This is local evidence code, never a shared-helper override.
-async function controlPairs(locator) {
- return locator.evaluate(element => {
+// Scoped rendered paint measurement. Each text node uses its actual parent color, then all
+// enclosing backgrounds and group opacities are composited before comparing final pixels.
+async function renderedPairs(locator, textOnly) {
+ return locator.evaluate((element, textOnly) => {
   const parse = text => {
    const m = /rgba?\(([^)]+)\)/.exec(text);
-   if (!m) return null;
+   if (!m) throw Error(`Unsupported measured paint ${text}`);
    const [r,g,b,a=1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return {r,g,b,a};
   };
-  const over = (a,b) => ({r:a.r*a.a+b.r*(1-a.a),g:a.g*a.a+b.g*(1-a.a),b:a.b*a.a+b.b*(1-a.a),a:1});
-  const bg = element => {
-   const layers=[]; for(let e=element;e;e=e.parentElement){const c=parse(getComputedStyle(e).backgroundColor);if(c&&c.a>0){layers.push(c);if(c.a===1)break;}}
-   return layers.reverse().reduce((under,top)=>over(top,under),{r:255,g:255,b:255,a:1});
+  const clear = () => ({r:0,g:0,b:0,a:0});
+  const over = (top,under) => {
+   const a=top.a+under.a*(1-top.a);
+   return a?{r:(top.r*top.a+under.r*under.a*(1-top.a))/a,g:(top.g*top.a+under.g*under.a*(1-top.a))/a,b:(top.b*top.a+under.b*under.a*(1-top.a))/a,a}:clear();
+  };
+  const pixel = (node,color) => {
+   let result=color;const ancestors=[];
+   for(let e=node;e;e=e.parentElement){
+    const css=getComputedStyle(e);
+    if(css.backgroundImage!=='none')throw Error(`Unsupported measured background image ${css.backgroundImage}`);
+    result=over(result,parse(css.backgroundColor));
+    const opacity=Number(css.opacity);result={...result,a:result.a*opacity};
+    ancestors.push({tag:e.tagName,color:css.color,background:css.backgroundColor,opacity});
+   }
+   return {color:over(result,{r:255,g:255,b:255,a:1}),ancestors};
   };
   const lum = c => {const f=v=>{const n=v/255;return n<=0.04045?n/12.92:((n+0.055)/1.055)**2.4;};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
   const pairs=[];
-  const add=(kind,foreground,background)=>{const color=parse(foreground);if(!color||color.a===0)return;const rendered=over(color,background),a=lum(rendered),b=lum(background);pairs.push({kind,foreground,background,ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),required:3});};
-  const root=element.closest('.MuiCheckbox-root,.MuiSwitch-root,.MuiOutlinedInput-root')??element;
-  if(element.matches('button,input,textarea,summary,[role=button]')){
-   for(const svg of root.querySelectorAll('svg'))add('control glyph',getComputedStyle(svg).fill,bg(svg));
-   for(const fieldset of root.querySelectorAll('fieldset')){const c=getComputedStyle(fieldset);if(parseFloat(c.borderTopWidth)>0)add('field boundary',c.borderTopColor,bg(fieldset));}
-   const css=getComputedStyle(element);if(css.outlineStyle!=='none'&&parseFloat(css.outlineWidth)>0)add('focus outline',css.outlineColor,bg(element.parentElement??element));
-   if(element.tagName==='SUMMARY')add('disclosure marker',getComputedStyle(element,'::marker').color,bg(element));
+  const add=(node,kind,color,required,text) => {
+   const parsed=parse(color);if(!parsed.a)return;
+   const foreground=pixel(node,parsed),background=pixel(node,clear()),a=lum(foreground.color),b=lum(background.color);
+   pairs.push({kind,text,color,foreground:foreground.color,background:background.color,ancestors:foreground.ancestors,ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),required});
+  };
+  if(textOnly){
+   const walk=document.createTreeWalker(element,NodeFilter.SHOW_TEXT);
+   for(let text=walk.nextNode();text;text=walk.nextNode()){
+    const value=text.textContent.trim(),node=text.parentElement;if(!value||!node)continue;
+    const css=getComputedStyle(node),range=document.createRange();range.selectNodeContents(text);
+    if(css.visibility!=='visible'||!range.getBoundingClientRect().width)continue;
+    add(node,'rendered text leaf',css.color,4.5,value);
+   }
+  }else{
+   const root=element.closest('.MuiCheckbox-root,.MuiSwitch-root,.MuiOutlinedInput-root')??element;
+   if(element.matches('button,input,textarea,summary,[role=button]')){
+    for(const svg of root.querySelectorAll('svg'))add(svg,'control glyph',getComputedStyle(svg).fill,3);
+    for(const fieldset of root.querySelectorAll('fieldset')){const c=getComputedStyle(fieldset);if(parseFloat(c.borderTopWidth)>0)add(fieldset,'field boundary',c.borderTopColor,3);}
+    const css=getComputedStyle(element);if(css.outlineStyle!=='none'&&parseFloat(css.outlineWidth)>0)add(element,'focus outline',css.outlineColor,3);
+    if(element.tagName==='SUMMARY')add(element,'disclosure marker',getComputedStyle(element,'::marker').color,3);
+   }
   }
   return pairs;
- });
+ },textOnly);
 }
+const controlPairs = locator => renderedPairs(locator,false);
+export const textContrastPairs = locator => renderedPairs(locator,true);
 
 export function createHarness(L,OUT){const {ui,waitReady,checkAxe,noSideScroll,contrast,checkLabelInName,checkTabTo,checkFocusNotObscured,checkMouseActivationVisible,checkFocusNotObscuredAtHeight,checkAnnounced}=L;const geometry=[],paints=[];
  async function shot(p,rec,name,{short=false,scope}={}){await rest(p);for(const d of await ui.followDialogs(p).all())await restDialog(p,d);const g=await geometryOf(p);geometry.push({width:p.viewportSize().width,name,...g});writeFileSync(join(OUT,'geometry.json'),JSON.stringify(geometry,null,2));rec.info(`${name} actual geometry`,JSON.stringify(g));assertOrdinaryLocal(rec,g,name);const a=await noSideScroll(p);rec.check(`${name}: ordinary page reflows`,a.pass,a.detail);await rec.shot(p,name,{aria:true});const axe=await checkAxe(rec,p,name);if(axe?.length){const details=await p.evaluate(()=>[...document.querySelectorAll('button,input,[role=button],summary,[tabindex],[role=tooltip]')].map(e=>({id:e.id,tag:e.tagName,name:e.getAttribute('aria-label')??e.textContent?.trim(),html:e.outerHTML,rect:e.getBoundingClientRect().toJSON(),focused:e===document.activeElement,centerHit:(()=>{const r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,700)})(),ancestors:(()=>{const a=[];for(let n=e.parentElement;n&&a.length<5;n=n.parentElement)a.push({tag:n.tagName,role:n.getAttribute('role'),rect:n.getBoundingClientRect().toJSON(),overflow:getComputedStyle(n).overflow});return a;})(),scrollY,header:document.querySelector('header')?.getBoundingClientRect().toJSON(),scrollPaddingTop:getComputedStyle(document.documentElement).scrollPaddingTop})));writeFileSync(join(OUT,`INTERACTIVE-${name}-${p.viewportSize().width}.json`),JSON.stringify(details,null,2));}rec.check(`${name}: axe executes (zero skips)`,Array.isArray(axe));if(short)await checkFocusNotObscuredAtHeight(rec,p,{height:560,walk:scope,max:150});}
@@ -148,7 +176,7 @@ export function createHarness(L,OUT){const {ui,waitReady,checkAxe,noSideScroll,c
  async function paint(p,rec,loc,name){const pairs=await controlPairs(loc);paints.push({width:p.viewportSize().width,name,pairs});writeFileSync(join(OUT,'PAINT.json'),JSON.stringify(paints,null,2));for(const pair of pairs)rec.check(`${name}: actual ${pair.kind} contrast`,pair.ratio>=pair.required,JSON.stringify(pair));}
  async function reach(p,rec,loc,name){await checkTabTo(rec,p,loc,name,{max:1000});await checkFocusNotObscured(rec,p,name,{strict:true});await paint(p,rec,loc,name);}
  async function mouse(p,rec,loc,name,options){if(await loc.count()!==1)throw Error(`${name}: expected one actual control, found ${await loc.count()}`);await loc.scrollIntoViewIfNeeded();await rest(p);await checkMouseActivationVisible(rec,p,loc,name,options);await rest(p);}
- async function appearance(p,rec,loc,name,{nameCheck=true,required}={}){if(await loc.count()!==1)throw Error(`${name}: target missing/nonunique`);await loc.scrollIntoViewIfNeeded();await rest(p);if(nameCheck)await checkLabelInName(rec,p,loc,name);const c=await contrast(p,loc);rec.check(`${name}: measured text contrast`,c.ratio>=(required??c.required),JSON.stringify(c));await paint(p,rec,loc,name);}
+ async function appearance(p,rec,loc,name,{nameCheck=true,required}={}){if(await loc.count()!==1)throw Error(`${name}: target missing/nonunique`);await loc.scrollIntoViewIfNeeded();await rest(p);if(nameCheck)await checkLabelInName(rec,p,loc,name);const c=await contrast(p,loc);rec.check(`${name}: measured text contrast`,c.ratio>=(required??c.required),JSON.stringify(c));const leaves=await textContrastPairs(loc);paints.push({width:p.viewportSize().width,name,pairs:leaves});writeFileSync(join(OUT,'PAINT.json'),JSON.stringify(paints,null,2));for(const pair of leaves)rec.check(`${name}: actual rendered text leaf contrast`,pair.ratio>=(required??pair.required),JSON.stringify(pair));await paint(p,rec,loc,name);}
  async function announcements(p,rec,text,name){await checkAnnounced(rec,p,text,name);const usable=await ui.followLive(p).evaluateAll((els,source)=>els.filter(e=>!e.closest('[aria-hidden=true],[inert]')&&e.getAttribute('aria-live')!=='off'&&e.textContent?.includes(source)).map(e=>({role:e.getAttribute('role'),live:e.getAttribute('aria-live'),text:e.textContent})),typeof text==='string'?text:text.source);if(typeof text==='string')rec.check(`${name}: exactly one unhidden live message`,usable.length===1,JSON.stringify(usable));}
  async function complete(p,rec,name){await ui.resultsCard(p).waitFor({timeout:60000});await ui.cancel(p).waitFor({state:'hidden',timeout:60000});await p.waitForFunction(()=>[...document.querySelectorAll('header button')].some(b=>b.textContent?.trim()==='Generate'&&!b.disabled),null,{timeout:60000});rec.check(`${name}: completed real recommendation and idle`,await ui.resultsCard(p).count()===1&&await ui.cancel(p).count()===0);rec.check(`${name}: no validation error`,await ui.followError(p).count()===0);await rest(p);}
  
