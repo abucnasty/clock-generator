@@ -867,7 +867,7 @@ function App() {
 
     return (
         <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} ruleTiming={ruleTiming}>
-            <CssBaseline />
+            <CssBaseline enableColorScheme />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
                     {isInitialized && (
