@@ -1,5 +1,6 @@
 import { Box, Paper, Tab, Tabs, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useState } from 'react';
+import type { TimelineViewContext } from '../utils/buildViewContext';
 import type {
     DebugSteps,
     LogMessage,
@@ -31,6 +32,8 @@ const DEVELOPER_COPY = {
 const PREFIX = 'developer';
 
 interface DeveloperToolsPanelProps {
+    timeline: TimelineViewContext;
+    onTimelineChange(timeline: TimelineViewContext): void;
     /** A generation has clocks, or some on the way */
     hasResults: boolean;
     transferHistory: SerializableTransferHistory | null;
@@ -65,7 +68,7 @@ export function DeveloperToolsPanel(props: DeveloperToolsPanelProps) {
     const stateTransitionHistory = showClockOnlyRun ? props.clockOnlyStateTransitionHistory : props.stateTransitionHistory;
 
     return (
-        <Panel title={DEVELOPER_COPY.heading} sx={{ mt: 2, mb: 0 }} data-developer-tools="">
+        <Panel title={DEVELOPER_COPY.heading} sx={{ mt: 2, mb: 0 }} data-developer-tools="" data-build-anchor="developer">
             <Tabs
                 value={shownTab}
                 onChange={(_, value: DeveloperTab) => setTab(value)}
@@ -104,6 +107,8 @@ export function DeveloperToolsPanel(props: DeveloperToolsPanelProps) {
                 {stateTransitionHistory && (
                     <Box sx={{ mt: 2 }}>
                         <StateTransitionTimeline
+                            options={props.timeline}
+                            onOptionsChange={props.onTimelineChange}
                             stateTransitionHistory={stateTransitionHistory}
                             clockWindows={props.clockWindows ?? undefined}
                         />

@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import type { Config } from 'clock-generator/browser';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import type { ResultDetail } from '../utils/resultsView';
+import type { BuildViewContext, DetailsTab, TimelineViewContext } from '../utils/buildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
 import type {
@@ -30,6 +31,14 @@ import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
 
 interface ResultsWorkspaceProps {
+    detailsTab: DetailsTab;
+    onDetailsTabChange(tab: DetailsTab): void;
+    comparison: BuildViewContext['comparison'];
+    onComparisonChange(comparison: BuildViewContext['comparison']): void;
+    wakeAsTable: boolean;
+    onWakeAsTableChange(asTable: boolean): void;
+    timeline: TimelineViewContext;
+    onTimelineChange(timeline: TimelineViewContext): void;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
     generatedFor: GeneratedFor | null;
@@ -181,6 +190,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             </Box>}
             <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }, gap: density === 'compact' ? 1.5 : 2, alignItems: 'start', '& > *': { minWidth: 0 } }}>
                 <ClockAlternativesPanel
+                    comparison={props.comparison}
+                    onComparisonChange={props.onComparisonChange}
                     alternatives={props.alternatives}
                     selectedIndex={props.selectedIndex}
                     onSelect={props.onSelect}
@@ -203,8 +214,11 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 {selected && (
                     <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
                         generation={props.generationAssumptions} stale={props.staleFor !== null}
+                        wakeAsTable={props.wakeAsTable} onWakeAsTableChange={props.onWakeAsTableChange}
                         assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
                         <DetailsPanel
+                            tab={props.detailsTab}
+                            onTabChange={props.onDetailsTabChange}
                             insights={selected.insights}
                             shiftOptions={props.shiftOptions}
                             swingBackoffReport={props.swingBackoffReport}
@@ -223,6 +237,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             {/* not mounted while off: no timelines, no log and no debug switches on the page */}
             {props.developerTools && (
                 <DeveloperToolsPanel
+                    timeline={props.timeline}
+                    onTimelineChange={props.onTimelineChange}
                     hasResults={hasResults}
                     transferHistory={props.transferHistory}
                     stateTransitionHistory={props.stateTransitionHistory}

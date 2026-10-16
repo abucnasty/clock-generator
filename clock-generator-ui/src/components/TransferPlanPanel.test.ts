@@ -5,6 +5,7 @@ import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { TransferPlanPanel } from './TransferPlanPanel';
 
 vi.mock('react', async importOriginal => ({ ...await importOriginal<typeof import('react')>(), memo: (component: unknown) => component, useId: () => 'plan-test', useRef: () => ({ current: null }) }));
+vi.mock('../hooks/useBuildViewContext', () => ({ useBuildSection: () => [true, () => {}] }));
 vi.mock('../hooks/useGameNames', () => ({ useGameNames: () => ({ itemLabel: (id: string) => id }) }));
 
 // Inspect actual element props from the component without mounting a DOM. Browser evidence owns focus/AT behavior.

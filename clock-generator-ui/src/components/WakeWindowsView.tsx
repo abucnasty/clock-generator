@@ -32,6 +32,8 @@ import { WakeWindowsTable } from './WakeWindowsTable';
 import { Panel } from './Panel';
 
 interface WakeWindowsViewProps {
+    asTable: boolean;
+    onAsTableChange(asTable: boolean): void;
     /** The selected clock; nothing is shown without one */
     alternative: ClockAlternativeView | null;
     /** A card inside Results by default */
@@ -90,8 +92,7 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
  * When the selected clock switches each inserter and drill on, over one clock period: a chart (or two tables) of
  * every wake window, with the wake-ups the engine counted for each inserter. Assumes no layout around it.
  */
-export function WakeWindowsView({ alternative, headingLevel = 'h3' }: WakeWindowsViewProps) {
-    const [asTable, setAsTable] = useState(false);
+export function WakeWindowsView({ alternative, headingLevel = 'h3', asTable, onAsTableChange: setAsTable }: WakeWindowsViewProps) {
     // keyed on the clock object, not its id: a new generation repeats the ids, and its selection must start empty
     const [selection, setSelection] = useState<{ alternative: ClockAlternativeView; rowId: string; windowIndex: number } | null>(null);
     const viewId = useId();

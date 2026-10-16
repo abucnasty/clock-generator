@@ -12,19 +12,23 @@ import { InstallSteps } from './InstallSteps';
 import { WakeWindowsView } from './WakeWindowsView';
 import { tabProps } from '../utils/tabIds';
 import { TabBody } from './TabBody';
+import { useBuildSection } from '../hooks/useBuildViewContext';
 
-export function SelectedClockContext({ selected, detail, onDetailChange, generation, stale, assumptions, children }: {
+export function SelectedClockContext({ selected, detail, onDetailChange, wakeAsTable, onWakeAsTableChange, generation, stale, assumptions, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
+    wakeAsTable: boolean;
+    onWakeAsTableChange(asTable: boolean): void;
     generation: GenerationAssumptions | null;
     stale: boolean;
     assumptions: ReactNode;
     children: ReactNode;
 }) {
     const { itemLabel } = useGameNames();
+    const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
     const moves = new Map(buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]));
-    return <Panel title="Selected clock details" sx={{ mb: 0 }} data-result-context="">
+    return <Panel title="Selected clock details" sx={{ mb: 0 }} data-result-context="" data-build-anchor="clock-context">
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
             aria-label="Selected clock details" sx={{ borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Why" value="why" {...tabProps('result-context', 'why')} />
@@ -36,7 +40,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, generat
             <Typography variant="body2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{selected.description}</Typography>
             <Typography variant="body2">Clock period: {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks; {selected.inserterWindowCount} wake windows. Wake-ups count one modeled unit, and are different from wake windows.</Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>{recoversOf(selected).detail}</Typography>
-            <Box component="details" sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions>
+            <Box component="details" open={assumptionsOpen} onToggle={event => { const open = (event.currentTarget as HTMLDetailsElement).open; if (open !== assumptionsOpen) setAssumptionsOpen(open); }} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions>
                 <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Model and tested starts</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START} {PLANNING_START}</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{startCheckSummary([selected], generation)}</Typography>
@@ -51,7 +55,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, generat
             {children}
         </TabBody>
         <TabBody prefix="result-context" tab="wake" shown={detail === 'wake'}>
-            <WakeWindowsView alternative={selected} headingLevel="h3" />
+            <WakeWindowsView asTable={wakeAsTable} onAsTableChange={onWakeAsTableChange} alternative={selected} headingLevel="h3" />
         </TabBody>
         <TabBody prefix="result-context" tab="install" shown={detail === 'install'}>
             <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Install in Factorio</Typography>

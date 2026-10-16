@@ -20,6 +20,7 @@ export function BuildPanel({ view, onViewChange, children }: BuildPanelProps) {
         <Panel
             title="Build"
             id="build"
+            data-build-anchor="build"
             actions={(
                 <ToggleButtonGroup
                     value={view}

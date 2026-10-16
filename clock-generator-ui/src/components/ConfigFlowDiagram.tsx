@@ -103,11 +103,18 @@ type ConfigFlowDiagramProps = Omit<EntityEditDialogProps, 'open' | 'onClose' | '
     onAddBelt?: () => void;
     onAddChest?: () => void;
     onAddDrill?: () => void;
+    selection: { kind: EntityClickType; id: number } | null;
+    onSelectionChange(selection: { kind: EntityClickType; id: number } | null): void;
+    detailedMode: boolean;
+    onDetailedModeChange(detailed: boolean): void;
     onRequestFullscreen?: () => void;
     height?: number | string;
 };
 
 interface FlowContentProps {
+    selection: { kind: EntityClickType; id: number } | null;
+    detailedMode: boolean;
+    onDetailedModeChange(detailed: boolean): void;
     machines: MachineFormData[];
     inserters: InserterFormData[];
     belts: BeltFormData[];
@@ -125,6 +132,9 @@ interface FlowContentProps {
 }
 
 function FlowContent({
+    selection,
+    detailedMode,
+    onDetailedModeChange: setDetailedMode,
     machines,
     inserters,
     belts,
@@ -141,7 +151,6 @@ function FlowContent({
     onRequestFullscreen,
 }: FlowContentProps) {
     const [addMenuAnchor, setAddMenuAnchor] = useState<HTMLElement | null>(null);
-    const [detailedMode, setDetailedMode] = useState(true);
     const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
@@ -167,7 +176,7 @@ function FlowContent({
     const refitUntil = useRef(0);
     const toggleDetailedMode = () => {
         refitUntil.current = Date.now() + REFIT_WINDOW_MS;
-        setDetailedMode(d => !d);
+        setDetailedMode(!detailedMode);
     };
     // declared before the effect below, so it has run when that one first does
     useEffect(() => {
@@ -187,8 +196,11 @@ function FlowContent({
     // hovering or focusing one half of a belt drawn twice outlines the other half
     const twinId = twinNodeId(hoveredNodeId) ?? twinNodeId(focusedNodeId);
     const nodes = useMemo(
-        () => (twinId ? graphNodes.map(node => (node.id === twinId ? { ...node, className: TWIN_CLASS } : node)) : graphNodes),
-        [graphNodes, twinId],
+        () => graphNodes.map(node => {
+            const entity = flowNodeEntity(node);
+            return { ...node, selected: entity.type === selection?.kind && entity.id === selection.id, ...(node.id === twinId ? { className: TWIN_CLASS } : {}) };
+        }),
+        [graphNodes, twinId, selection],
     );
     // the entity behind each node, by node id, for the ends of a connection or an edge
     const nodeEntities = useMemo(() => new Map(nodes.map(node => [node.id, flowNodeEntity(node)])), [nodes]);
@@ -470,6 +482,10 @@ function FlowContent({
 }
 
 function ConfigFlowDiagramComponent({
+    selection,
+    onSelectionChange,
+    detailedMode,
+    onDetailedModeChange,
     onAddMachine,
     onAddInserter,
     onAddBelt,
@@ -484,6 +500,7 @@ function ConfigFlowDiagramComponent({
     const [selectedId, setSelectedId] = useState<number | null>(null);
 
     const handleNodeSelect = (type: EntityClickType, id: number) => {
+        onSelectionChange({ kind: type, id });
         setSelectedType(type);
         setSelectedId(id);
         setDialogOpen(true);
@@ -493,11 +510,13 @@ function ConfigFlowDiagramComponent({
     const deselectOnDelete = (onDelete?: (index: number) => void) =>
         onDelete && ((index: number) => {
             setSelectedId(null);
+            onSelectionChange(null);
             onDelete(index);
         });
 
     return (
         <>
+            {selection && <Typography variant="body2" sx={{ mb: 0.5 }}>Selected: {entityLabel(selection.kind, selection.id)}. Open it to edit.</Typography>}
             <Box
                 sx={{
                     height,
@@ -522,6 +541,7 @@ function ConfigFlowDiagramComponent({
                     '& .react-flow__controls-button:last-child': {
                         borderBottom: 'none',
                     },
+                    [`& .react-flow__node.selected > .${FLOW_NODE_BOX_CLASS}`]: { outline: `2px solid ${HIGHLIGHT_COLOR}`, outlineOffset: 3 },
                     // React Flow's CSS removes the focused node's outline; white is far above 3:1 on the canvas, and
                     // is not the orange that hover and selection use
                     [`& .react-flow__node:focus-visible > .${FLOW_NODE_BOX_CLASS}`]: {
@@ -538,6 +558,9 @@ function ConfigFlowDiagramComponent({
             >
                 <ReactFlowProvider>
                     <FlowContent
+                        selection={selection}
+                        detailedMode={detailedMode}
+                        onDetailedModeChange={onDetailedModeChange}
                         machines={dialogProps.machines}
                         inserters={dialogProps.inserters}
                         belts={dialogProps.belts}
