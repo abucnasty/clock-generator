@@ -11,7 +11,8 @@ import { useMemo, useState, useCallback, useEffect, useRef, memo, type MouseEven
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { PanelSection } from './Panel';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
@@ -66,7 +67,7 @@ const ROW_GRID_SX = {
     p: 2,
     // and above a one-line row's
     pt: 2.5,
-    bgcolor: SURFACE.row,
+    bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
 };
 interface InsertersFormProps {
     inserters: InserterFormData[];

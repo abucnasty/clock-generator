@@ -1,3 +1,5 @@
+import { useTheme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
 import { Clear, ExpandMore } from '@mui/icons-material';
 import {
     Accordion,
@@ -36,6 +38,7 @@ export function DebugPanel({
     onStreamLogsChange,
     onClearLogs,
 }: DebugPanelProps) {
+    const tokens = themeTokens(useTheme());
     const logsEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new logs arrive
@@ -53,11 +56,11 @@ export function DebugPanel({
     const getLogColor = (level: LogMessage['level']): string => {
         switch (level) {
             case 'error':
-                return '#f44336';
+                return tokens.text.error;
             case 'warn':
-                return '#ff9800';
+                return tokens.role.yellow.main;
             case 'debug':
-                return '#9e9e9e';
+                return tokens.text.secondary;
             default:
                 return 'inherit';
         }
@@ -114,8 +117,8 @@ export function DebugPanel({
                 <Paper
                     variant="outlined"
                     sx={{
-                        bgcolor: '#1e1e1e',
-                        color: '#d4d4d4',
+                        bgcolor: tokens.surface.inset,
+                        color: tokens.text.primary,
                         p: 1,
                         maxHeight: 400,
                         overflow: 'auto',
@@ -129,8 +132,8 @@ export function DebugPanel({
                             position: 'absolute',
                             top: 4,
                             right: 4,
-                            color: '#9e9e9e',
-                            '&:hover': { color: '#fff' },
+                            color: tokens.text.secondary,
+                            '&:hover': { color: tokens.text.primary },
                         }}
                         title="Clear logs"
                     >
@@ -140,7 +143,7 @@ export function DebugPanel({
                     {logs.length === 0 ? (
                         <Typography
                             variant="body2"
-                            sx={{ color: '#9e9e9e', fontStyle: 'italic', py: 2, textAlign: 'center' }}
+                            sx={{ color: tokens.text.secondary, fontStyle: 'italic', py: 2, textAlign: 'center' }}
                         >
                             No logs yet. Turn on the generator log above and press Generate.
                         </Typography>

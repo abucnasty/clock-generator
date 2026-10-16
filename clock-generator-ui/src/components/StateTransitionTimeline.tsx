@@ -1,3 +1,4 @@
+import { useChartColors } from '../hooks/useChartColors';
 import { Close, Fullscreen, FilterList, Sort, Visibility, Palette } from '@mui/icons-material';
 import {
     Box,
@@ -33,19 +34,13 @@ import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGe
 import { FactorioIcon } from './FactorioIcon';
 import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import {
-    getStatusColor,
-    getCategoryColor,
     getStatusLabel,
-    getFactorioStateColor,
     getFactorioStateLabel,
     getCategoryLabel,
     formatTransitionReason,
-    CATEGORY_COLORS,
     INSERTER_STATUS_COLORS,
     MACHINE_STATUS_COLORS,
     DRILL_STATUS_COLORS,
-    COLOR_BLIND_PALETTE,
-    TIMELINE_TRACK_COLOR,
     factorioStatesIn,
 } from './colors';
 import { sortByRelationship, sortByType } from './topological-sort';
@@ -56,7 +51,6 @@ interface StateTransitionTimelineProps {
     clockWindows?: SerializableClockWindows;
 }
 
-const CLOCK_WINDOW_COLOR = '#ffffff';
 const CLOCK_WINDOW_LABEL = 'Wake window (decider on; the inserter reacts 2 ticks later)';
 
 /** The thin strip under each row that shows the state the entity would show in Factorio */
@@ -99,6 +93,7 @@ interface TimelineBarProps {
 
 /** Drawn on a canvas: an element per transition does not scale to tens of thousands of transitions */
 function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered, label }: TimelineBarProps) {
+    const { status: getStatusColor, categoryColor: getCategoryColor, clock: CLOCK_WINDOW_COLOR } = useChartColors();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableStateTransition | null>(null);
@@ -116,7 +111,7 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
 
     const colorOf = useCallback((transition: SerializableStateTransition) => viewMode === 'detailed'
         ? getStatusColor(entityType, transition.to_status)
-        : getCategoryColor(statusToCategory(entityType, transition.to_status)), [entityType, viewMode]);
+        : getCategoryColor(statusToCategory(entityType, transition.to_status)), [entityType, viewMode, getStatusColor, getCategoryColor]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -149,11 +144,11 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         if (hovered) {
             const span = markSpan(hovered.tick, hovered.duration_ticks, totalDuration, width);
             context.globalAlpha = 1;
-            context.strokeStyle = '#ffffff';
+            context.strokeStyle = CLOCK_WINDOW_COLOR;
             const snapped = snapSpan(span, ratio);
             context.strokeRect(snapped.x + 0.5, 0.5, snapped.width - 1, height - 1);
         }
-    }, [marks, totalDuration, width, height, colorOf, isFiltered, hovered]);
+    }, [marks, totalDuration, width, height, colorOf, isFiltered, hovered, CLOCK_WINDOW_COLOR]);
 
     const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
         const rect = event.currentTarget.getBoundingClientRect();
@@ -227,6 +222,7 @@ interface FactorioStateStripProps {
 
 /** The state the entity would show in Factorio, under the simulator's phases: the shared language with a recording */
 function FactorioStateStrip({ states, totalDuration, height, label }: FactorioStateStripProps) {
+    const { factorio: getFactorioStateColor } = useChartColors();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableFactorioState | null>(null);
@@ -265,7 +261,7 @@ function FactorioStateStrip({ states, totalDuration, height, label }: FactorioSt
             const snapped = snapSpan(span, ratio);
             context.fillRect(snapped.x, 0, snapped.width, height);
         }
-    }, [marks, width, height]);
+    }, [marks, width, height, getFactorioStateColor]);
 
     const stateAt = useCallback((clientX: number): SerializableFactorioState | null => {
         const canvas = canvasRef.current;
@@ -313,6 +309,7 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, clockWindows = [] }: EntityRowProps) {
+    const { track: TIMELINE_TRACK_COLOR, clock: CLOCK_WINDOW_COLOR, palette: COLOR_BLIND_PALETTE } = useChartColors();
     const { nameIdsIn } = useGameNames();
     // Determine if a transition is filtered out
     const isTransitionFiltered = (transition: SerializableStateTransition): boolean => {
@@ -515,6 +512,7 @@ function LegendChip({ label, color, active = true, swatch = { width: 12, height:
     active?: boolean;
     swatch?: { width: number; height: number };
 }) {
+    const { track: TIMELINE_TRACK_COLOR } = useChartColors();
     return (
         <Box
             sx={{
@@ -535,6 +533,7 @@ function LegendChip({ label, color, active = true, swatch = { width: 12, height:
 }
 
 function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioStates }: LegendProps) {
+    const { category: CATEGORY_COLORS, machine: MACHINE_STATUS_COLORS, inserter: INSERTER_STATUS_COLORS, drill: DRILL_STATUS_COLORS, factorio: getFactorioStateColor, clock: CLOCK_WINDOW_COLOR } = useChartColors();
     const items: { label: string; color: string; active: boolean }[] = [];
 
     if (viewMode === 'simplified') {
@@ -600,6 +599,7 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows, factorioSt
 }
 
 function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows }: StateTransitionTimelineProps) {
+    const { categoryColor: getCategoryColor, status: getStatusColor } = useChartColors();
     const factorioStates = useMemo(
         () => factorioStatesIn(stateTransitionHistory.entities.flatMap(entity => (entity.factorio_states ?? []).map(state => state.state))),
         [stateTransitionHistory.entities],
@@ -1062,7 +1062,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                 slotProps={{
                     paper: {
                         sx: {
-                            bgcolor: 'common.black',
+                            bgcolor: 'background.default',
                         },
                     }
                 }}

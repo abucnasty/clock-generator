@@ -1,3 +1,5 @@
+import { useTheme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
@@ -7,12 +9,6 @@ import { useMachineFacts } from '../hooks/useMachineFacts';
 import { formatNumberText, machineNodeCraftLine } from '../utils/numberText';
 import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
-const BORDER_COLORS: Record<EntityNodeData['entityType'], string> = {
-    machine: '#fca300',
-    belt: '#4fc3f7',
-    chest: '#81c784',
-};
-
 const TYPE_LABELS: Record<EntityNodeData['entityType'], string> = {
     machine: 'M',
     belt: 'B',
@@ -20,13 +16,14 @@ const TYPE_LABELS: Record<EntityNodeData['entityType'], string> = {
 };
 
 function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
+    const tokens = themeTokens(useTheme());
     const { facts } = useMachineFacts(params);
     if (!facts) return null;
     return (
-        <Box sx={{ mt: 0.75, pt: 0.75, borderTop: '1px solid #444', width: '100%' }}>
+        <Box sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${tokens.control.edge}`, width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <FactorioIcon name={facts.output_item} size={14} titled />
-                <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: '#fca300', lineHeight: 1.2 }}>
+                <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: tokens.role.orange.main, lineHeight: 1.2 }}>
                     {formatNumberText(facts.output_rate_per_second)}/s out
                 </Typography>
             </Box>
@@ -51,7 +48,9 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
 type EntityFlowNodeType = Node<EntityNodeData, 'entityNode'>;
 
 export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
-    const borderColor = BORDER_COLORS[data.entityType];
+    const tokens = themeTokens(useTheme());
+    const borderRole = tokens.role[data.entityType === 'machine' ? 'orange' : data.entityType === 'belt' ? 'blue' : 'green'];
+    const borderColor = borderRole.main;
     // a half takes only its own side's connections: the `in` half feeds, the `out` half receives
     const hasTarget = data.half !== 'in';
     const hasSource = data.half !== 'out';
@@ -63,7 +62,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: '#232323',
+                    bgcolor: tokens.surface.panel,
                     border: `2px solid ${borderColor}`,
                     borderRadius: 1,
                     display: 'flex',
@@ -71,7 +70,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     cursor: 'pointer',
                     width: ENTITY_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: '#2d2d2d' },
+                    '&:hover': { bgcolor: tokens.hover.panel },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -124,7 +123,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                             height: 20,
                             fontSize: FLOW_NODE_FONT_SIZE,
                             bgcolor: borderColor,
-                            color: '#000',
+                            color: borderRole.on,
                             fontWeight: 700,
                             flexShrink: 0,
                             '& .MuiChip-label': { px: 0.75 },

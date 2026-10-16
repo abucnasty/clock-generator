@@ -1,3 +1,5 @@
+import { useTheme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
@@ -8,6 +10,7 @@ import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
 
 export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
+    const tokens = themeTokens(useTheme());
     return (
         <>
             <Box
@@ -15,8 +18,8 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: '#1e1e1e',
-                    border: '2px solid #666',
+                    bgcolor: tokens.surface.inset,
+                    border: `2px solid ${tokens.control.border}`,
                     borderRadius: 1,
                     display: 'flex',
                     flexDirection: 'column',
@@ -25,7 +28,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     cursor: 'pointer',
                     width: data.enableChip ? INSERTER_NODE_CHIP_WIDTH : INSERTER_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: '#2a2a2a', borderColor: '#999' },
+                    '&:hover': { bgcolor: tokens.hover.panel, borderColor: tokens.control.border },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -33,7 +36,7 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     <Box>
                         <Typography
                             variant="caption"
-                            sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: '#ccc' }}
+                            sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: tokens.text.primary }}
                         >
                             {entityLabel('inserter', data.inserterId)}
                         </Typography>
@@ -65,8 +68,8 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                                 maxWidth: '100%',
                                 fontSize: FLOW_NODE_FONT_SIZE,
                                 fontWeight: 700,
-                                bgcolor: '#fca300',
-                                color: '#000',
+                                bgcolor: tokens.role.orange.main,
+                                color: tokens.role.orange.on,
                                 '& .MuiChip-label': { px: 0.75, py: 0.25, whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.2 },
                             }}
                         />

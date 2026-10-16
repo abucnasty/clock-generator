@@ -14,7 +14,8 @@ import {
 } from '../utils/clockSummary';
 import { REQUIRES_FACTORIO, needsNoClock } from '../utils/installSteps';
 import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
-import { SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { CopyLabel } from './WorkflowBar';
@@ -72,7 +73,7 @@ function Tile({ label, value, sub, icon }: { label: string; value: string; sub: 
     const { density } = useDisplayPreferences();
     return (
         // a row of the card, as an entity row is on Configure
-        <Box sx={{ bgcolor: SURFACE.row, p: density === 'compact' ? 1 : 1.5, minWidth: 0 }} data-summary-tile={label}>
+        <Box sx={{ bgcolor: (theme: Theme) => themeTokens(theme).surface.row, p: density === 'compact' ? 1 : 1.5, minWidth: 0 }} data-summary-tile={label}>
             <Typography variant="body2" color="text.secondary" component="p">{label}</Typography>
             <Typography variant="h6" component="p" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }} data-tile-value>
                 {icon}

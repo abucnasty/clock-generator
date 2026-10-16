@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AA, contrastRatio } from './contrast';
-import { appTheme } from './theme';
-import { ROLE, SURFACE, TEXT } from './tokens';
+import { appTheme, createAppTheme } from './theme';
+import { ROLE, SURFACE, TEXT, tokensFor } from './tokens';
 
 const { palette } = appTheme;
 const ROLES = ['primary', 'secondary', 'success', 'warning', 'error', 'info'] as const;
@@ -65,4 +65,16 @@ describe('appTheme', () => {
         const buttonBase = appTheme.components?.MuiButtonBase?.styleOverrides?.root as Record<string, { outline: string }>;
         expect(buttonBase['&.Mui-focusVisible'].outline).toBe(`2px solid ${ROLE.orange.main}`);
     });
+});
+
+it('builds stable per-mode themes from the corresponding tokens', () => {
+    const light = createAppTheme('light');
+    expect(createAppTheme('light')).toBe(light);
+    expect(createAppTheme('dark')).toBe(appTheme);
+    expect(light.factorio).toEqual(tokensFor('light'));
+    expect(light.palette.mode).toBe('light');
+    expect(light.palette.background.paper).toBe(light.factorio.surface.panel);
+    expect(light.palette.primary.main).toBe(light.factorio.role.orange.main);
+    expect(light.palette.secondary.main).toBe(light.factorio.role.green.main);
+    expect(light.palette.text.primary).toBe(light.factorio.text.primary);
 });

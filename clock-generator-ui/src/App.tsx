@@ -68,7 +68,8 @@ import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, nonMovingBeltsFor, standingBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
-import { appTheme } from './theme/theme';
+import { createAppTheme } from './theme/theme';
+import { useResolvedColorScheme } from './hooks/useResolvedColorScheme';
 import { nextStepOf } from './utils/nextStep';
 import { needsNoClock } from './utils/installSteps';
 import { itemName, recipeName, type GameNames } from './utils/gameNames';
@@ -106,17 +107,22 @@ const TOOLS_MENU = {
     developerTools: 'Developer tools',
 };
 
+function DisplayThemeProvider({ children }: { children: ReactNode }) {
+    const mode = useResolvedColorScheme();
+    return <ThemeProvider theme={createAppTheme(mode)}>{children}</ThemeProvider>;
+}
+
 /** The theme, the in-game names every picker and label reads, and the timing the rule editor checks a rule against */
 function PageProviders({ gameNames, searchOnlyRecipes, ruleTiming, children }: { gameNames: GameNames; searchOnlyRecipes: string[]; ruleTiming: RuleTiming; children: ReactNode }) {
     return (
         <DisplayPreferencesProvider>
-            <ThemeProvider theme={appTheme}>
+            <DisplayThemeProvider>
                 <GameNamesContext value={gameNames}>
                     <SearchOnlyRecipesContext value={searchOnlyRecipes}>
                         <RuleTimingContext value={ruleTiming}>{children}</RuleTimingContext>
                     </SearchOnlyRecipesContext>
                 </GameNamesContext>
-            </ThemeProvider>
+            </DisplayThemeProvider>
         </DisplayPreferencesProvider>
     );
 }

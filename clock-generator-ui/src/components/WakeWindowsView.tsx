@@ -1,3 +1,6 @@
+import type { Theme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
+import { chartColorsFor } from './colors';
 import { Box, FormControlLabel, Switch, Typography } from '@mui/material';
 import { useCallback, useId, useMemo, useState } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
@@ -21,11 +24,7 @@ import {
 } from '../utils/wakeWindowCopy';
 import {
     FORCED_COLORS,
-    SLACK_BACKGROUND,
     SLACK_BACKGROUND_FORCED,
-    WAKE_BAR_COLOR,
-    WAKE_SELECTED_COLOR,
-    WAKE_TRACK_COLOR,
     WakeWindowsChart,
 } from './WakeWindowsChart';
 import { WakeWindowsTable } from './WakeWindowsTable';
@@ -42,7 +41,7 @@ interface WakeWindowsViewProps {
 function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track' }) {
     // in forced colours, the system colours the chart uses (see FORCED_COLORS)
     const base = { width: 28, height: 12, boxSizing: 'border-box', flexShrink: 0, forcedColorAdjust: 'none' } as const;
-    const solid = { bgcolor: WAKE_BAR_COLOR, [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
+    const solid = { bgcolor: (theme: Theme) => chartColorsFor(theme.palette.mode).palette.skyBlue, [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
     switch (kind) {
         case 'window':
             return <Box aria-hidden sx={{ ...base, ...solid }} />;
@@ -52,8 +51,8 @@ function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track
                     aria-hidden
                     sx={{
                         ...base,
-                        background: SLACK_BACKGROUND,
-                        border: `1px solid ${WAKE_BAR_COLOR}`,
+                        background: (theme: Theme) => `repeating-linear-gradient(45deg, ${chartColorsFor(theme.palette.mode).palette.skyBlue} 0 3px, transparent 3px 6px)`,
+                        border: (theme: Theme) => `1px solid ${chartColorsFor(theme.palette.mode).palette.skyBlue}`,
                         [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
                     }}
                 />
@@ -64,7 +63,7 @@ function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track
                     aria-hidden
                     sx={{
                         p: '2px',
-                        outline: `2px solid ${WAKE_SELECTED_COLOR}`,
+                        outline: (theme: Theme) => `2px solid ${themeTokens(theme).control.focus}`,
                         outlineOffset: 0,
                         display: 'flex',
                         forcedColorAdjust: 'none',
@@ -75,7 +74,7 @@ function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track
                 </Box>
             );
         case 'track':
-            return <Box aria-hidden sx={{ ...base, border: `1px solid ${WAKE_TRACK_COLOR}`, [FORCED_COLORS]: { borderColor: 'CanvasText' } }} />;
+            return <Box aria-hidden sx={{ ...base, border: (theme: Theme) => `1px solid ${themeTokens(theme).control.border}`, [FORCED_COLORS]: { borderColor: 'CanvasText' } }} />;
     }
 }
 

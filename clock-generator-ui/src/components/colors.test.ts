@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     CATEGORY_COLORS, DRILL_STATUS_COLORS, INSERTER_STATUS_COLORS, ITEM_COLOR_COUNT, MACHINE_STATUS_COLORS,
-    TIMELINE_TRACK_COLOR, factorioStatesIn, getFactorioStateColor, itemColorMap,
+    TIMELINE_TRACK_COLOR, chartColorsFor, factorioStatesIn, getFactorioStateColor, itemColorMap,
 } from './colors';
 import { StatusCategory, InserterStatus, DrillStatus } from 'clock-generator/light';
 
@@ -83,4 +83,20 @@ describe('factorioStatesIn', () => {
     it('returns [] for none', () => {
         expect(factorioStatesIn([])).toEqual([]);
     });
+});
+
+it('keeps chart semantics and contrasting marks on each actual theme track', () => {
+    for (const mode of ['light', 'dark'] as const) {
+        const chart = chartColorsFor(mode);
+        const states = [...Object.values(chart.category), ...Object.values(chart.inserter),
+            ...Object.values(chart.machine), ...Object.values(chart.drill), ...STRIP_STATES.map(chart.factorio)];
+        const items = chart.itemMap(['f', 'a', 'b', 'c', 'd', 'e', 'a']);
+        expect([...items.keys()]).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+        expect(chart.inserter.DISABLED).toBe(chart.category.DISABLED);
+        expect(chart.factorio('disabled_by_control_behavior')).toBe(chart.category.DISABLED);
+        for (const color of [...states, ...items.values(), chart.clock]) {
+            expect(contrastRatio(color, chart.track), `${mode}: ${color}`).toBeGreaterThanOrEqual(3);
+        }
+        for (const color of items.values()) expect(states).not.toContain(color);
+    }
 });

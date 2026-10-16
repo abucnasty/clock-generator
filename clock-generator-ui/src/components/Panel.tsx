@@ -1,6 +1,6 @@
 import { Box, Paper, Typography, type SxProps, type Theme } from '@mui/material';
 import { useId, type FocusEventHandler, type ReactNode, type Ref } from 'react';
-import { CONTROL, SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
 import { HelpButton } from './HelpButton';
 
 interface PanelProps {
@@ -51,8 +51,8 @@ export function Panel({ title, level = 2, id, focusableTitleId, help, actions, c
                     minHeight: 40,
                     px: 2,
                     py: 0.5,
-                    bgcolor: SURFACE.titleBar,
-                    borderBottom: `1px solid ${SURFACE.inset}`,
+                    bgcolor: (theme: Theme) => themeTokens(theme).surface.titleBar,
+                    borderBottom: (theme: Theme) => `1px solid ${themeTokens(theme).surface.inset}`,
                 }}
             >
                 {/* the level is set: the theme makes a subtitle a paragraph */}
@@ -117,7 +117,7 @@ export function PanelSection({ title, level, help, actions, children, sx, ref, o
                     columnGap: 1,
                     minHeight: part ? 32 : 40,
                     mb: part ? 1 : 1.5,
-                    borderBottom: part ? 'none' : `1px solid ${CONTROL.edge}`,
+                    borderBottom: part ? 'none' : (theme: Theme) => `1px solid ${themeTokens(theme).control.edge}`,
                 }}
             >
                 {/* the level is set: the theme makes a subtitle a paragraph */}

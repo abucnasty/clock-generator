@@ -1,6 +1,7 @@
 import { Close } from '@mui/icons-material';
 import { IconButton } from '@mui/material';
-import { CONTROL, ROLE, SURFACE } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 import { removeFilterName } from '../utils/a11yLabels';
 
 interface SlotRemoveButtonProps {
@@ -32,10 +33,10 @@ export function SlotRemoveButton({ slotNumber, itemName, onClick, tabIndex }: Sl
                 right: -16,
                 width: 24,
                 height: 24,
-                bgcolor: SURFACE.panel,
-                border: `1px solid ${CONTROL.border}`,
+                bgcolor: (theme: Theme) => themeTokens(theme).surface.panel,
+                border: (theme: Theme) => `1px solid ${themeTokens(theme).control.border}`,
                 color: 'text.secondary',
-                '&:hover, &.Mui-focusVisible': { bgcolor: SURFACE.panel, color: ROLE.red.main, borderColor: ROLE.red.main },
+                '&:hover, &.Mui-focusVisible': { bgcolor: (theme: Theme) => themeTokens(theme).surface.panel, color: (theme: Theme) => themeTokens(theme).role.red.main, borderColor: (theme: Theme) => themeTokens(theme).role.red.main },
             }}
         >
             <Close sx={{ fontSize: 14 }} />

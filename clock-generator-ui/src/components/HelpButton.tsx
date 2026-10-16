@@ -1,7 +1,9 @@
 import { Close, HelpOutline } from '@mui/icons-material';
 import { Box, Button, IconButton, Popover, Typography } from '@mui/material';
 import { useState, type ReactNode } from 'react';
-import { POPOVER_MS, SURFACE } from '../theme/tokens';
+import { POPOVER_MS } from '../theme/tokens';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { Theme } from '@mui/material/styles';
 
 /** The name of the button that closes the popover */
 const HELP_CLOSE = 'Close';
@@ -71,7 +73,7 @@ export function HelpButton({ label, children }: HelpButtonProps) {
 export function HelpCommand({ command }: { command: string }) {
     const [copied, setCopied] = useState(false);
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: SURFACE.inset, p: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: (theme: Theme) => themeTokens(theme).surface.inset, p: 1 }}>
             <Typography component="code" sx={{ flex: 1, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.85rem' }}>
                 {command}
             </Typography>
