@@ -120,6 +120,8 @@ come from here.
 
 ## Decisions log
 
+- 2026-10-16: Owner corrected the mod destination to `factorio_beta`. Root restored the regular Factorio mods folder exactly (three previous archives, our matching0.7.1 ZIP removed). The verified build remains ready; installation into Beta is pending the owner’s full folder path because no existing Beta folder was found in the searched locations. Receipt above now records the correction. This is still preparation for the pending in-game check.
+
 - 2026-10-16: Owner authorized building/installing the current Sidecar via its script before testing. Ran `clock-generator-sidecar/build.sh --install`: installed0.7.1 to `/Users/abucnasty/Library/Application Support/factorio/mods/clock-generator-sidecar_0.7.1.zip`; verified all12 source-file bytes and archive SHA2567df9d88095cccba02be0f67d95097e03744fb95b5d880481f9eceb237cfc3445. Three previous archives backed up under `/Users/abucnasty/.codex/artifacts/factorio-sidecar-install-20261016T134618Z/previous/`; mod was already enabled, mod-list unchanged. Owner preview5280 restarted on reviewed88eab3a snapshot and14 HTTP resources byte-verified. This prepares the test; it does not satisfy2.5 installation or phase approval. Worker usage limit currently holds formal3.F reviews, with all review/verification requirements retained.
 
 - 2026-10-16: Reconciled3.2 literal/bookkeeping with existing approved behavior: Undo says sentence-case “Infinity chest.”; row Tab formula counts the required Use automatic filters action and an Add slot only when present. Explicit logistic10/10/9, Automatic2/2/1 slots10/10/8; essential actions stay reachable. Source-name search retains established translated-name OR rendered internal-ID matching. No semantic gate or assertion was removed.
