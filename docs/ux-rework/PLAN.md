@@ -417,6 +417,12 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - Fullscreen fits the view; Enter opens a focused node.
   - Make the belt lane (`near_lane`) settable in the List too.
 
+**2.F Phase-end factual copy and fractional scope** (fresh Phase2 A-P2-01/03, B1/11, C2E-6/9)
+- Reuse the current provisional wake-up definition in Wake windows and expanded comparison help.
+- Show Makes total scope for every Copies value other than1, including partial units.
+- Remove the introduction's unconditional net UPS-saving claim. No engine or design change.
+- Full item gates, independent code/UX and affected rechecks by all three phase personas remain.
+
 **Phase 2 done when:**
 - the items above are merged
 - the owner has reviewed the install steps
@@ -466,6 +472,18 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - "Copy share link" carries the compressed config in the URL hash. Opening a link imports it with a confirm and Undo.
   - The glossary gains "Your builds" and "share link". No new dependency: links need a 2023-or-later browser (the
     owner, 2026-10-14).
+
+**3.F Phase-end safety and accessibility carries** (fresh Phase2 review, explicit carry owners)
+- Give failed clipboard copying visible/spoken feedback and a usable manual-copy route.
+- Give player-facing Fuel event intervals/quantities and trace information keyboard/touch/text equivalents.
+- Preview current→incoming Paste counts and warn/confirm cross-category references. Append stays deferred.
+- Correct aggregate output-swing wording, use deliberate click/tap Advanced help, and keep stale-plan values readable
+  while their actions remain correctly inert.
+- Gather actual320px reflow evidence, distinguish applicable two-dimensional exceptions, and fix ordinary UI gaps
+  within the existing accessibility goal. Any remaining policy decision must use concrete evidence; no AA waiver or
+  broad phone-layout promise is inferred from the owner's ≥720 full-support decision.
+- Finalize a bounded spec against current P3 before implementation. No engine arithmetic, dependencies or deferred
+  D1–D8 features. Existing full gates, independent reviews and phase-end requirements apply.
 
 **Phase 3 done when:**
 - the items above are merged

@@ -22,7 +22,7 @@ export const SIDECAR_COPY_STEPS = [
 
 export const INTRO_HEADING = 'Make a clock for your build';
 export const INTRO_SENTENCE =
-    'This tool makes a circuit clock that switches your inserters on only when they have work, so your build holds the rate you want and costs less UPS.';
+    'This tool makes a circuit clock that switches your inserters on only when they have work, so your build holds the rate you want with fewer inserter wake-ups.';
 export const INTRO_STEPS = {
     getBuildIn: 'Get your build in. With the Sidecar mod:',
     getBuildInLast: 'Then click Paste from Factorio here.',

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { GLOSSARY, TERMS_FOCUS, glossaryWithFocus, type GlossaryId } from './glossary';
+import { GLOSSARY, PROVISIONAL_WAKE_UP_DEFINITION, TERMS_FOCUS, glossaryWithFocus, type GlossaryId } from './glossary';
+
+import { WAKE_UP_DEFINITION, TERMS } from './wakeWindowCopy';
+import comparisonSource from '../components/ClockAlternativesPanel.tsx?raw';
 
 const IDS: GlossaryId[] = [
     'swing', 'swing-plan', 'crafting-cycle', 'clock-period', 'wake-window', 'wake-up', 'start-point', 'copies', 'build', 'your-builds', 'share-link',
@@ -30,6 +33,18 @@ describe('GLOSSARY', () => {
 
     it('marks "wake-up" provisional, and only it', () => {
         expect(GLOSSARY.filter(entry => entry.provisional).map(entry => entry.id)).toEqual(['wake-up']);
+    });
+
+    it('keeps the three wake-up help surfaces tied to the provisional glossary definition', () => {
+        const entry = GLOSSARY.find(item => item.id === 'wake-up');
+        expect(entry).toMatchObject({ definition: PROVISIONAL_WAKE_UP_DEFINITION, provisional: true });
+        expect(WAKE_UP_DEFINITION).toBe(PROVISIONAL_WAKE_UP_DEFINITION);
+        expect(TERMS.find(item => item.term === 'Wake-up')?.definition).toBe(PROVISIONAL_WAKE_UP_DEFINITION);
+        // The table keeps its own scope qualifiers, but must compose its factual account from the same source.
+        expect(comparisonSource).toMatch(/import\s*\{[^}]*\bPROVISIONAL_WAKE_UP_DEFINITION\b[^}]*\}\s*from ['"]\.\.\/utils\/glossary['"]/);
+        expect(comparisonSource).toMatch(/wakeUpsHelp:\s*PROVISIONAL_WAKE_UP_DEFINITION\s*\+/);
+        expect(PROVISIONAL_WAKE_UP_DEFINITION).toMatch(/started a craft \(inputs\)/);
+        expect(PROVISIONAL_WAKE_UP_DEFINITION).toMatch(/finished a craft or paid out productivity \(outputs\)/);
     });
 
     it('lists the expert LCM last', () => {
