@@ -472,6 +472,16 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - the tests pass
 - the fresh UX review is attached to the phase PR.
 
+## Deferred roadmap: Compact view (D1)
+
+Owner feedback, 2026-10-16: scope an optional denser view for experienced users, especially Results. Reduce excessive padding, repeated labels/helpers and the double-header footprint; make the version visible without scrolling. Preserve newcomer defaults, essential feedback and accessibility. See [D1 scope](specs/D1-compact-view.md).
+
+This is planning only, deferred beyond the current implementation queue until the owner's broader audit. It does not extend the current phase completion criteria or release scope; no product implementation now.
+
+### Further deferred design proposals (D2–D8)
+
+Owner requested drafts for later discussion: light/dark mode; a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals are not finalized specs, implementation authorizations or additions to current phase/release completion criteria.
+
 ## Verification (every phase)
 
 1. **Tests.** Vitest tests for every piece of logic touched:

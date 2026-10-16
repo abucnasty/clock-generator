@@ -13,6 +13,8 @@ pending. Do not treat that checkpoint as an approved implementation baseline.
 
 ## Change
 
+- Owner preview correction (2026-10-16): remove explicit Stack size’s repeated “Items per swing. Clear for Automatic.” helper in List and Diagram without reserving its space. Keep the Stack size label, actual values and Automatic capacity explanation when empty. This shared helper correction also lands in pending2.7B.
+
 - Latched output drain uses twice the effective inserter hand: Automatic bulk gives
   24, Automatic fast gives 8, and explicit 16 gives 32 in both rule editor surfaces.
 - Fractional Copies, imported type/quality, and omitted versus explicit stack size

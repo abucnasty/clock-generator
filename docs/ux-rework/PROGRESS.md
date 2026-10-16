@@ -29,6 +29,7 @@ come from here.
 | `merged` | merged into the phase branch |
 | `carried` | moved to a later phase |
 | `dropped` | the owner decided against it |
+| `deferred` | scoped for later; excluded from the current implementation queue |
 
 ## Current state
 
@@ -43,14 +44,15 @@ come from here.
   p2 (`9e2646c`) and p3 (`df21248`). Root checked the recorded test result lines; these historical integration gates
   do not replace the reviewed compatibility child's independent evidence. #194 at master `1d27cde` is frozen for
   the current integration cycle; fresh full gates passed and feature `cdf2425`, p2 `cf7a8c7` and p3 `66dc5c9` are pushed.
-  Compatibility round 0 reviewed `bcc6db7`: code FIX (exact-rate transport and unsafe rational arithmetic), UX PASS
-  with an invalid-Copies display minor. Fix round 1 product `4c8a6b9` preserves exact facts, handles unsupported
-  arithmetic, and retains untouched tiny values through focus/blur. Full and independent UI 948 tests/build pass;
-  expanded browser evidence is underway, so no final re-review or merge approval is claimed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md) and final
-  2.7 B / 3.3 evidence follow the reviewed child.
-- **Worker checkpoints:** 2.7 B `79e7abc` inherits the current compatibility product; its prior review counters remain.
-  P3 adjunct `06289e7` has provisional evidence and awaits latest-provider inheritance/final validation.
-  3.3 remains `38a7b25` with corrected non-recommended-pick capture. Final gates and re-reviews remain open.
+  Compatibility provider merged as [#195](https://github.com/abucnasty/clock-generator/pull/195), `c8ba1dd`:
+  code and UX PASS after one fix round; CI unit/UI jobs pass (generation job skipped by existing workflow;
+  local 142 generation tests pass). Full evidence: [provider evidence](capture/upstream-compatibility-EVIDENCE.md).
+  Completed provider remote/local branch and worktree removed. Its [p3 adjunct](specs/upstream-0.15-compatibility-p3.md)
+  and final 2.7 B / 3.3 evidence remain next.
+- **Worker checkpoints:** 2.7 B `a794421` has resolved provider-squash conflicts, preserving prior product source and
+  review counters. P3 phase integration `8c974cf` is prepared, full gate running before push. Adjunct `fa73634`
+  passes full UI 1099 tests, engine 1008 unit/142 generation and independent UI test/build; final browser gate underway.
+  3.3 remains `38a7b25` with corrected non-recommended-pick capture. Live details are in the excluded handoff.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -93,8 +95,8 @@ come from here.
 
 | Chain | Length | Next unblocked |
 |---|---|---|
-| Compatibility p2 child → 2.7 B → 3.2 A → 3.2 B | 4 | Compatibility implementation (two units); 2.7 B retains its review/minors history; 3.2 A after 2.7 B reaches p3; 3.2 B is two units |
-| Compatibility p2 child → p3 adjunct → 3.3 | 3 | p3 adjunct follows the reviewed p2 child; 3.3 retains fix round 1 |
+| Reviewed compatibility → 2.7 B → 3.2 A → 3.2 B | 3 | 2.7 B inherits provider #195; final evidence follows adjunct completion. Prior review/minors history retained; 3.2 A after 2.7 B reaches p3; 3.2 B is two units |
+| P3 adjunct → 3.3 | 2 | Adjunct final evidence; 3.3 retains fix round 1 |
 | Frozen master #194 → feat/ux-rework → p2 → p3 | complete | All three full gates and pushes done; in-flight merged-tree type-check sweep underway |
 | Phase 2 end | | After 2.7 B; install check holds the phase PR, owner approval holds phase merge |
 
@@ -107,7 +109,24 @@ come from here.
 | [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus | fix-1 | | 1 | Resumed from e6870af after the owner’s pause. Majors 1 and 3, minors and nits done except accepted install-step wording. Remaining: B11 non-recommended pick capture, build-library capture, full gate, p3 merge and re-checks. One unit (20 existing, 12 new files). After 2.7 A and 1.5 F. `offerUndo` loses `resultsCleared` (also in 3.4) |
 | [3.4](specs/3.4-build-library.md) | Build library and share links | opus | merged (p3) | [#180](https://github.com/abucnasty/clock-generator/pull/180) | 1 | "Your builds" switcher, migration of the single save, other-tab warning, share links (`CompressionStream`, no dependency; owner-approved terms). Round 0 code PASS / UX FIX (a new build showed the previous recipe — `ItemSelector` now controls its input, closing the 1.3 stale-text follow-up); round 1 both PASS; a flaky first-visit check was a script race (menu exit time), fixed in the script. Post-merge type-check caught duplicate hooks with 2.5 A. B20 fixed. Capture 1077/0. CI green |
 
+## Deferred roadmap
+
+| Item | Title | Status | Notes |
+|---|---|---|---|
+| [D1](specs/D1-compact-view.md) | Compact view | deferred | Owner requested roadmap scope only: denser Results/forms, fewer redundant labels/helpers, shorter title/workflow header, version visible without scrolling. Preserve essential feedback/accessibility; revisit after broader audit. No implementation or current release-scope expansion. |
+| [D2–D8](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings, working-context preservation and per-machine target/max/achieved rates. Reconcile overlaps with D1/3.3; no current implementation scope added. |
+
 ## Decisions log
+
+- 2026-10-16: Owner requested showing each machine’s target production rate, alongside maximum capacity. Added deferred D8 draft, with likely engine/worker/UI scope, explicit units and distinction from achieved output; no current engine changes authorized.
+
+- 2026-10-16: Owner requested recording the additional design recommendations for later discussion. Added deferred D2–D7 draft backlog; existing implementation queue, phase gates and release scope remain in place.
+
+- 2026-10-16: Owner requested compact-view planning and explicitly deferred implementation. Added PLAN's deferred D1 section and scoped spec; current roadmap execution and phase criteria remain in place.
+
+- 2026-10-16: Temporary owner model override: every worker, including every reviewer and all three phase-end personas, uses GPT-6.1 Sol / high reasoning / fast off until revoked. Owner handles parent model. Replace Astra workers on next use; preserve role independence, review rounds and all verification/checkpoints.
+
+- 2026-10-16: Owner preview correction: remove “Items per swing. Clear for Automatic.” under explicit Stack size fields and reclaim its helper space, in both List and Diagram. Include in the pending P3 compatibility adjunct and carry to2.7B; preserve Automatic explanations, values and clearing semantics. Focused five-width visual/accessibility checks passed (1483/0/0); owner approved the preview improvement, reserving a broader audit for later. Existing review counters and phase/install checkpoints retained.
 
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
 
