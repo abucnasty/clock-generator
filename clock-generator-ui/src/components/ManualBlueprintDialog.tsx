@@ -2,7 +2,7 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextF
 import { useEffect, useId, useRef } from 'react';
 import type { BlueprintCopyFailure } from '../hooks/useCopyBlueprint';
 import { useGameNames } from '../hooks/useGameNames';
-import { focusTargetOutputHeading } from '../utils/introCard';
+import { TARGET_OUTPUT_HEADING_ID } from '../utils/introCard';
 import { generatedForText, madeAtText } from '../utils/resultsStaleness';
 
 /** A failed attempt's exact snapshot; selecting text never writes to the clipboard or pins a clock. */
@@ -10,11 +10,23 @@ export function ManualBlueprintDialog({ failure, onClose }: { failure: Blueprint
     const titleId = useId();
     const { recipeLabel } = useGameNames();
     const field = useRef<HTMLTextAreaElement>(null);
-    const opener = useRef(document.activeElement);
     useEffect(() => () => {
-        if (!(opener.current instanceof HTMLElement) || !opener.current.isConnected) {
-            queueMicrotask(focusTargetOutputHeading);
-        }
+        // MUI restores first; the recovery action itself may already have left the message slot.
+        queueMicrotask(() => {
+            const usable = (element: Element | null): element is HTMLElement => element instanceof HTMLElement
+                && element !== document.body && element !== document.documentElement && element.isConnected
+                && !element.closest('[hidden], [inert], [aria-hidden="true"]') && element.getClientRects().length > 0
+                && getComputedStyle(element).visibility === 'visible';
+            // A new dialog may not have moved focus yet: its own autofocus owns that next step.
+            if ([...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].some(usable)
+                || usable(document.activeElement)) return;
+            const selected = document.querySelector('[data-focus-fallback] [aria-pressed="true"]');
+            if (usable(selected) && !selected.matches(':disabled, [aria-disabled="true"]')) selected.focus();
+            else {
+                const heading = document.getElementById(TARGET_OUTPUT_HEADING_ID);
+                if (usable(heading)) heading.focus();
+            }
+        });
     }, []);
     const selectString = () => {
         field.current?.focus();
