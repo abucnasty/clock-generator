@@ -88,3 +88,7 @@ The full source uses real file imports and workers. The sole substituted API is 
 - Independent prebuild reports are preserved in `review/3.F/`: DESIGN-CODE, ON-ATTEMPT-CODE, CHECKING-CONTINUITY-CODE, STICKY-CAPTURE-UX and MANUAL-FOCUS-CODE. These are mechanism/ordering approvals, not formal whole-item reviews.
 
 Formal CODE/UX, fresh Phase3 personas/coach, owner install and phase/final approvals remain pending with root. No deferred finding is silently closed by this implementation report.
+
+## Formal fix round 1 — 2026-10-16
+
+Round0 formal CODE requested one contrast major; UX passed with two minors. Their exact reports are now preserved in `review/3.F/`. [Round1 evidence](phase3-followups-ROUND1-EVIDENCE.md) records the readable excluded text, stable chip footprint, independently approved tooltip mounting, new own-engine1289/80 gates/root repeat, old2.279:1 negative control and six-width **4,830/0/0** affected-state capture. All prior totals above remain historical and unchanged. Residual passive320 clipping and unsampled painted busy-tooltip visibility remain explicit for independent reviewers. Formal round1 verdicts remain pending; no implementer self-approval.
