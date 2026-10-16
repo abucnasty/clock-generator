@@ -139,9 +139,11 @@ export function useUndo(
                 revert?: (snapshot: ConfigFormData) => void;
                 /** Keep Undo immediate, but announce it together with the replacement's asynchronous outcome */
                 deferAnnouncement?: boolean;
+                /** An already guarded whole-build snapshot supplied by its authoritative owner. */
+                snapshot?: ConfigFormData;
             },
         ) => {
-            const form = configRef.current;
+            const form = options?.snapshot ?? configRef.current;
             const text = typeof message === 'function' ? message(form) : message;
             if (text === null) return;
             const record: ReturnFocus = {

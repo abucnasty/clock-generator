@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClockAlternativeContext, ConfigValidation, DebugSteps } from 'clock-generator/browser';
-import type { ClockAlternativeView, WorkerRequest, WorkerResponse } from '../worker/types';
+import type { ClockAlternativeView, RepeatedUnitsRecovery, WorkerRequest, WorkerResponse } from '../worker/types';
 import { afterCheck, CHECK_TEXT, decideGenerate, PendingChecks } from '../utils/checkThenGenerate';
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -122,6 +122,33 @@ async function failReplacement() {
 }
 
 describe('worker startup failure recovery through the hook', () => {
+    it('carries typed repeated-unit recovery only for the matching Check/run and retires it on Cancel, crash and replacement', async () => {
+        await initialize();
+        const recovery: RepeatedUnitsRecovery = { kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
+            detectedCopies: 8, configuredCopies: 0.5, units: [{ machine_ids: [1] }], conversion: { kind: 'available', multiplicity: 8, copies: 4 } };
+        const pending = Render().validate(config);
+        const requestId = workers[0].requests('validate').at(-1)!.requestId;
+        workers[0].send({ type: 'validation-failed', requestId, message: 'Actual Copies refusal', recovery });
+        expect(await pending).toEqual({ kind: 'invalid', message: 'Actual Copies refusal', recovery });
+        expect(Render().validation).toMatchObject({ status: 'invalid', recovery });
+        const replacement = Render().validate(config);
+        workers[0].send({ type: 'validation-failed', requestId, message: 'Old refusal', recovery });
+        expect(Render().validation.status).toBe('running');
+        Render().clearResults();
+        expect(await replacement).toEqual({ kind: 'dropped' });
+        Render().runSimulation(config, debug, false);
+        const firstRun = workers[0].requests('plan').at(-1)!.runId;
+        workers[0].send({ type: 'error', runId: firstRun, message: 'Actual generation Copies refusal', recovery });
+        expect(Render().errorRecovery).toEqual(recovery);
+        Render().cancel();
+        expect(Render().errorRecovery).toBeNull();
+        Render().runSimulation(config, debug, false);
+        workers[0].send({ type: 'error', runId: firstRun, message: 'Old generation', recovery });
+        expect(Render().errorRecovery).toBeNull();
+        workers[0].crash();
+        expect(Render().errorRecovery).toBeNull();
+        expect(Render().error).toBe(CHECK_TEXT.generationCrashed);
+    });
     it('keeps worker-owned assumptions with complete, cancelled and restored results instead of later config flags', async () => {
         await initialize();
         const candidate = {

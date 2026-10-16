@@ -197,13 +197,11 @@ function runStreaming(
         flushLogs();
         postResponse(response);
     } catch (error) {
+        const failure = failureOf(error, config, 'Simulation failed');
         postResponse({
             type: 'error',
             runId,
-            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
-                : error instanceof Error ? error.message : 'Simulation failed',
-            stack: error instanceof Error ? error.stack : undefined,
-            recovery: error instanceof clockGenerator.CopiesError ? repeatedUnitsRecoveryOf(error, config) : undefined,
+            ...failure,
         });
     }
 }
@@ -213,12 +211,12 @@ function handleValidate(requestId: number, config: Config): void {
         requireValidConfig(config);
         postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
     } catch (error) {
+        const { message, recovery } = failureOf(error, config, 'Validation failed');
         postResponse({
             type: 'validation-failed',
             requestId,
-            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
-                : error instanceof Error ? error.message : 'Validation failed',
-            recovery: error instanceof clockGenerator.CopiesError ? repeatedUnitsRecoveryOf(error, config) : undefined,
+            message,
+            recovery,
         });
     }
 }
@@ -257,6 +255,19 @@ function repeatedUnitsRecoveryOf(error: CopiesError, config: Config): RepeatedUn
             ? { kind: 'available', multiplicity: checked.plan.multiplicity, copies: checked.plan.copies }
             : { kind: 'unavailable', stage: checked.stage, code: checked.reason.code, message: checked.reason.message },
     };
+}
+
+/** A recovery-query failure must still settle the original Check/run, with its real error and no capability. */
+function failureOf(error: unknown, config: Config, fallback: string): { message: string; stack?: string; recovery?: RepeatedUnitsRecovery } {
+    if (error instanceof clockGenerator.CopiesError) {
+        try {
+            return { message: repeatedUnitsProblem(error), stack: error.stack, recovery: repeatedUnitsRecoveryOf(error, config) };
+        } catch (failure) {
+            return { message: failure instanceof Error ? failure.message : 'The engine could not check the repeated-unit conversion.',
+                stack: failure instanceof Error ? failure.stack : undefined };
+        }
+    }
+    return { message: error instanceof Error ? error.message : fallback, stack: error instanceof Error ? error.stack : undefined };
 }
 
 function lookups(): FactorioLookups {
