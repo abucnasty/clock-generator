@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
     DndContext,
     closestCenter,
-    KeyboardSensor,
     PointerSensor,
     useSensor,
     useSensors,
@@ -10,7 +9,6 @@ import {
 } from '@dnd-kit/core';
 import {
     SortableContext,
-    sortableKeyboardCoordinates,
     arrayMove,
     useSortable,
     verticalListSortingStrategy,
@@ -18,23 +16,24 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { DragIndicator } from '@mui/icons-material';
 import { Box, Chip } from '@mui/material';
-import { reorderAnnouncements, reorderName } from '../utils/a11yLabels';
+import type { Announcements } from '@dnd-kit/core';
+
+const SILENT: Announcements = {
+    onDragStart: () => undefined, onDragOver: () => undefined, onDragEnd: () => undefined, onDragCancel: () => undefined,
+};
 
 interface SortableListProps {
     /** Stable UUID keys for each item, in current order. */
     itemKeys: string[];
-    /** The name each row shows ("Inserter 3"), in the same order, so a drag is read out by it and not by the row's key. */
-    itemLabels: string[];
     /** Called with the old and new array indices after a drag. */
     onReorder: (fromIndex: number, toIndex: number) => void;
     children: React.ReactNode;
 }
 
 /** Wraps a list of SortableItem children with @dnd-kit context. */
-export function SortableList({ itemKeys, itemLabels, onReorder, children }: SortableListProps) {
+export function SortableList({ itemKeys, onReorder, children }: SortableListProps) {
     const sensors = useSensors(
         useSensor(PointerSensor),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     );
 
     // Local ordered copy — updated synchronously on drag end so dnd-kit can
@@ -42,15 +41,10 @@ export function SortableList({ itemKeys, itemLabels, onReorder, children }: Sort
     const [localItemKeys, setLocalItemKeys] = useState(itemKeys);
     const [prevItemKeys, setPrevItemKeys] = useState(itemKeys);
 
-    // Sync when items are added or removed (the UUID set changes), while rendering
-    // rather than in an effect, so the stale order is never committed.
-    // After a plain reorder the parent's UUID set is identical to our local
-    // set (stable keys move with their entities), so no spurious sync occurs.
+    // Moves and Undo also change the order from outside. Never commit stale sortable positions.
     if (itemKeys !== prevItemKeys) {
         setPrevItemKeys(itemKeys);
-        const localSet = new Set(localItemKeys);
-        const same = localItemKeys.length === itemKeys.length && itemKeys.every((k) => localSet.has(k));
-        if (!same) setLocalItemKeys(itemKeys);
+        if (itemKeys.length !== localItemKeys.length || itemKeys.some((key, i) => key !== localItemKeys[i])) setLocalItemKeys(itemKeys);
     }
 
     function handleDragEnd(event: DragEndEvent) {
@@ -69,7 +63,7 @@ export function SortableList({ itemKeys, itemLabels, onReorder, children }: Sort
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
-            accessibility={{ announcements: reorderAnnouncements(new Map(itemKeys.map((key, i) => [key, itemLabels[i]])), localItemKeys) }}
+            accessibility={{ announcements: SILENT }}
         >
             <SortableContext items={localItemKeys} strategy={verticalListSortingStrategy}>
                 {children}
@@ -118,8 +112,9 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
             <Box
                 {...attributes}
                 {...listeners}
-                // after the spread, which sets role="button" and nothing to call it
-                aria-label={reorderName(label)}
+                tabIndex={-1}
+                aria-hidden="true"
+                data-row-drag=""
                 sx={{
                     display: 'flex',
                     alignItems: 'center',

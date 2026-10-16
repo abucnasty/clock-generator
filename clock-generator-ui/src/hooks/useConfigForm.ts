@@ -13,6 +13,7 @@ import type {
     ChestFormData,
     ConfigFormData,
     DrillFormData,
+    EntityKind,
     InserterFormData,
     MachineFormData,
 } from '../utils/configForm/formData';
@@ -57,6 +58,9 @@ interface UseConfigFormResult {
     library: BuildLibrary;
     setConfig: React.Dispatch<React.SetStateAction<ConfigFormData>>;
     
+    duplicateEntity: (kind: EntityKind, index: number) => void;
+    updateInserters: (uuids: readonly string[], updates: Partial<InserterFormData>) => void;
+
     // Target output
     updateTargetOutput: (field: keyof ConfigFormData['target_output'], value: string | number) => void;
     
@@ -125,6 +129,8 @@ export function useConfigForm(): UseConfigFormResult {
         const edit = <A extends unknown[]>(fn: (prev: ConfigFormData, ...args: A) => ConfigFormData) =>
             (...args: A) => setConfig((prev) => fn(prev, ...args));
         return {
+            duplicateEntity: edit(formEdits.duplicateEntity),
+            updateInserters: edit(formEdits.updateInserters),
             updateTargetOutput: edit(formEdits.updateTargetOutput),
             addMachine: edit(formEdits.addMachine),
             updateMachine: edit(formEdits.updateMachine),

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import * as edits from './edits';
-import { createDefaultConfig, type ConfigFormData, type EnableControlOverride, type InserterFormData } from './formData';
+import { createDefaultConfig, type ConfigFormData, type EntityKind, type EnableControlOverride, type InserterFormData } from './formData';
 
 const ids = (items: { id: number }[]) => items.map((item) => item.id);
 
@@ -560,5 +560,70 @@ describe('switchedChest draft parity', () => {
         expect(switchChestType(config, 0, 'infinity-chest').chests[0]).toEqual(infinity);
         expect(infinity).toMatchObject({ id: 7, _uuid: 'chest-7', type: 'infinity-chest' });
         expect(switchedChest(infinity, 'buffer-chest')).toEqual(switchChestType({ ...config, chests: [infinity] }, 0, 'buffer-chest').chests[0]);
+    });
+});
+
+describe('duplicateEntity', () => {
+    it.each<EntityKind>(['machines', 'inserters', 'belts', 'chests', 'drills'])('appends a deep copy of %s without changing references', kind => {
+        const before = form();
+        before.inserters[0] = { ...before.inserters[0], prototype: 'bulk-inserter', quality: 'epic', overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true, filters: ['iron-plate'] };
+        delete before.inserters[0].stack_size;
+        const original = structuredClone(before);
+        const after = edits.duplicateEntity(before, kind, 0);
+        const oldRows = kind === 'drills' ? before.drills!.configs : before[kind];
+        const newRows = kind === 'drills' ? after.drills!.configs : after[kind];
+        const copy = newRows.at(-1)!;
+        expect(newRows).toHaveLength(oldRows.length + 1);
+        expect(copy.id).toBe(edits.nextId(before, kind));
+        expect(copy._uuid).not.toBe(oldRows[0]._uuid);
+        expect({ ...copy, id: oldRows[0].id, _uuid: oldRows[0]._uuid }).toEqual(oldRows[0]);
+        expect(newRows.slice(0, -1)).toEqual(oldRows);
+        expect(after.inserters.slice(0, before.inserters.length)).toEqual(before.inserters);
+        if (kind === 'belts') after.belts.at(-1)!.lanes[0].ingredient = 'changed';
+        if (kind === 'inserters') {
+            after.inserters.at(-1)!.filters!.push('changed');
+            after.inserters.at(-1)!.source.near_lane = 2;
+            expect(after.inserters.at(-1)).not.toHaveProperty('stack_size');
+        }
+        if (kind === 'chests') {
+            const infinity = edits.duplicateEntity(before, kind, 1).chests.at(-1)!;
+            if (infinity.type === ChestType.INFINITY_CHEST) infinity.item_filter[0].item_name = 'changed';
+        }
+        expect(before).toEqual(original);
+        expect(edits.duplicateEntity(before, kind, -1)).toBe(before);
+        expect(edits.duplicateEntity(before, kind, oldRows.length)).toBe(before);
+    });
+});
+
+describe('updateInserters', () => {
+    it('changes only selected rows and preserves untouched metadata and rules', () => {
+        const before = form();
+        before.inserters[0] = { ...before.inserters[0], overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true, prototype: 'fast-inserter', quality: 'legendary' };
+        const after = edits.updateInserters(before, [before.inserters[0]._uuid, before.inserters[2]._uuid], { stack_size: 12 });
+        expect(after.inserters.map(row => row.stack_size)).toEqual([12, 16, 12]);
+        expect(after.inserters[1]).toBe(before.inserters[1]);
+        expect(after.inserters[0].source).toBe(before.inserters[0].source);
+        expect(after.inserters[0]).toMatchObject({ prototype: 'fast-inserter', quality: 'legendary', _forced_always: true });
+        expect(after.inserters[0].overrides).toBe(before.inserters[0].overrides);
+        expect(edits.updateInserters(before, [], { stack_size: 3 })).toBe(before);
+    });
+    it('merges rules with each row’s own other overrides and removes the forced flag', () => {
+        const before = form();
+        before.inserters[0] = { ...before.inserters[0], overrides: { animation: { pickup_duration_ticks: 4 }, enable_control: { mode: 'ALWAYS' } }, _forced_always: true };
+        before.inserters[2] = { ...before.inserters[2], overrides: { animation: { pickup_duration_ticks: 8 } } };
+        const after = edits.updateInserters(before, before.inserters.map(row => row._uuid), { overrides: { enable_control: { mode: 'NEVER' } } });
+        expect(after.inserters[0].overrides).toEqual({ animation: { pickup_duration_ticks: 4 }, enable_control: { mode: 'NEVER' } });
+        expect(after.inserters[2].overrides).toEqual({ animation: { pickup_duration_ticks: 8 }, enable_control: { mode: 'NEVER' } });
+        expect(after.inserters[0]).not.toHaveProperty('_forced_always');
+        expect(before.inserters[0]._forced_always).toBe(true);
+    });
+    it('removes filter and stack keys for Automatic only on selected UUIDs', () => {
+        const before = form();
+        before.inserters[0].filters = ['iron-plate'];
+        before.inserters[1].filters = ['copper-plate'];
+        const after = edits.updateInserters(before, [before.inserters[0]._uuid], { filters: undefined, stack_size: undefined });
+        expect(after.inserters[0]).not.toHaveProperty('filters');
+        expect(after.inserters[0]).not.toHaveProperty('stack_size');
+        expect(after.inserters[1]).toBe(before.inserters[1]);
     });
 });

@@ -17,7 +17,7 @@ const ONE_LINE = '@media (min-width: 1600px)';
 const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start', [ONE_LINE]: { alignSelf: 'center' } };
 const ROW_REST_SX = {
     display: { xs: 'flex', sm: 'grid' }, gridColumn: '1 / -1',
-    gridTemplateColumns: { sm: '130px minmax(0, 1fr) 8.5rem 40px' },
+    gridTemplateColumns: { sm: '130px minmax(0, 1fr) 8.5rem 30px 40px' },
     flexWrap: 'wrap', alignItems: 'start', gap: 2,
     [ONE_LINE]: { display: 'contents', gridColumn: 'auto' },
 };

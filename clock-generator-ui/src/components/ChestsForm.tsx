@@ -15,7 +15,7 @@ import { memo } from 'react';
 import { ChestType } from 'clock-generator/light';
 import type { ChestFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
-import { useFocusAfterAdd, useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { CONTROL, SURFACE } from '../theme/tokens';
 import { AddRow } from './AddRow';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
@@ -23,6 +23,8 @@ import { HelpButton } from './HelpButton';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { SortableItem, SortableList } from './SortableList';
+import { RowActionsMenu } from './RowActionsMenu';
+import { useAnnounce } from '../hooks/useMessages';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { SELECT_NAMES } from '../utils/a11yLabels';
 
@@ -34,6 +36,7 @@ interface ChestsFormProps {
     onSwitchType: (index: number, newType: ChestType) => void;
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
+    onDuplicate: (index: number) => void;
 }
 
 function ChestsFormComponent({
@@ -44,6 +47,7 @@ function ChestsFormComponent({
     onSwitchType,
     onRemove,
     onReorder,
+    onDuplicate,
 }: ChestsFormProps) {
     // Convert infinity chest to filter slot format
     const getInfinityChestFilters = (chest: ChestFormData): ChestFilterSlot[] => {
@@ -97,9 +101,18 @@ function ChestsFormComponent({
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
-    const { cardRef, remove } = useFocusAfterRemove(chests.length, onRemove);
-    // the Add row goes with the first chest: the keyboard moves on to that chest's Type
-    const focusAdded = useFocusAfterAdd(chests.length, cardRef);
+    const { cardRef, remove, afterAdd } = useFocusAfterRemove(chests.length, onRemove);
+    const announce = useAnnounce();
+    const addedLabel = () => entityLabel('chest', Math.max(0, ...chests.map(row => row.id)) + 1);
+    const duplicate = (index: number) => {
+        afterAdd(() => onDuplicate(index));
+        announce(`Added ${addedLabel()}, a copy of ${entityLabel('chest', chests[index].id)}.`);
+    };
+
+    const add = (type: ChestType) => {
+        afterAdd(() => onAdd(type));
+        announce(`Added ${addedLabel()}.`);
+    };
 
     return (
         // the same element in both shapes, so that the focus finds the Add row in it once the last chest goes
@@ -109,8 +122,8 @@ function ChestsFormComponent({
                     label="Add chest"
                     data-row-add=""
                     menu={[
-                        { label: 'Buffer chest', onSelect: () => { focusAdded(); onAdd(ChestType.BUFFER_CHEST); } },
-                        { label: 'Infinity chest', onSelect: () => { focusAdded(); onAdd(ChestType.INFINITY_CHEST); } },
+                        { label: 'Buffer chest', onSelect: () => { add(ChestType.BUFFER_CHEST); } },
+                        { label: 'Infinity chest', onSelect: () => { add(ChestType.INFINITY_CHEST); } },
                     ]}
                 />
             ) : (
@@ -119,16 +132,16 @@ function ChestsFormComponent({
                     title={`Chests (${chests.length})`}
                     actions={(
                         <>
-                            <Button startIcon={<Add />} onClick={() => onAdd(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
+                            <Button startIcon={<Add />} onClick={() => add(ChestType.BUFFER_CHEST)} variant="text" size="small" data-row-add="">
                                 Buffer chest
                             </Button>
-                            <Button startIcon={<Add />} onClick={() => onAdd(ChestType.INFINITY_CHEST)} variant="text" size="small">
+                            <Button startIcon={<Add />} onClick={() => add(ChestType.INFINITY_CHEST)} variant="text" size="small">
                                 Infinity chest
                             </Button>
                         </>
                     )}
                 >
-                    <SortableList itemKeys={chests.map((c) => c._uuid)} itemLabels={chests.map((c) => entityLabel('chest', c.id))} onReorder={onReorder}>
+                    <SortableList itemKeys={chests.map((c) => c._uuid)} onReorder={onReorder}>
                     {chests.map((chest, index) => (
                         <SortableItem key={chest._uuid} stableKey={chest._uuid} label={entityLabel('chest', chest.id)}>
                             {(dragHandle) => (
@@ -146,7 +159,7 @@ function ChestsFormComponent({
                             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                                 {dragHandle}
 
-                                <FormControl size="small" sx={{ minWidth: 150 }}>
+                                <FormControl data-row-first="" size="small" sx={{ minWidth: 150 }}>
                                     <InputLabel>Type</InputLabel>
                                     <Select
                                         inputProps={{ 'aria-label': SELECT_NAMES.chestType }}
@@ -211,6 +224,9 @@ function ChestsFormComponent({
 
                                 <Box sx={{ flex: 1 }} />
 
+                                <RowActionsMenu label={entityLabel('chest', chest.id)} onDuplicate={() => duplicate(index)}
+                                    onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
+                                    onMoveDown={index < chests.length - 1 ? () => onReorder(index, index + 1) : undefined} />
                                 <IconButton onClick={() => remove(index)} color="error" aria-label={deleteButtonLabel('chest', chest.id)} data-row-delete="">
                                     <Delete />
                                 </IconButton>

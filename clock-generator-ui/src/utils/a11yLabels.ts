@@ -1,4 +1,3 @@
-import type { Announcements, UniqueIdentifier } from '@dnd-kit/core';
 
 /**
  * The accessible names that are not the text on screen, in one place so the wording can be read (and changed) together.
@@ -117,10 +116,9 @@ export const CHART_NAMES = {
     fuelClock: (inserterLabel: string) => `${inserterLabel} fuel clock wake windows and swings`,
 } as const;
 
-/** The name of a row's drag handle, "Reorder Inserter 2" */
-export function reorderName(rowLabel: string): string {
-    return `Reorder ${rowLabel}`;
-}
+/** Names of the row menu and selection checkbox. */
+export const rowActionsName = (label: string) => `More actions for ${label}`;
+export const selectRowName = (label: string) => `Select ${label}`;
 
 /** The name of a recipe field: "Recipe, Machine 2" (the owner is the row's name, or "Target Output") */
 export function recipeName(owner: string): string {
@@ -138,26 +136,4 @@ export function deleteLaneName(beltLabel: string, lane: number): string {
 /** The name of a filter slot's remove button, "Remove filter 1: iron-plate" (the slot is counted from 1) */
 export function removeFilterName(slot: number, item: string): string {
     return `Remove filter ${slot}: ${item}`;
-}
-
-/**
- * What dnd-kit reads out while a row is dragged. Its defaults say "Picked up draggable item" and the row's key, a UUID.
- * This names the row the way its chip does (the labels, by key) and gives positions: "Inserter 2 is over position 3".
- */
-export function reorderAnnouncements(labels: ReadonlyMap<string, string>, keys: readonly string[]): Announcements {
-    const positionOf = (id: UniqueIdentifier): number => keys.indexOf(String(id)) + 1;
-    const nameOf = (id: UniqueIdentifier): string => labels.get(String(id)) ?? 'The row';
-    return {
-        onDragStart: ({ active }) => `Picked up ${nameOf(active.id)}.`,
-        onDragOver: ({ active, over }) =>
-            over
-                ? `${nameOf(active.id)} is over position ${positionOf(over.id)}.`
-                : `${nameOf(active.id)} is not over a position.`,
-        onDragEnd: ({ active, over }) =>
-            over
-                ? `${nameOf(active.id)} was dropped at position ${positionOf(over.id)}.`
-                : `${nameOf(active.id)} was dropped where it was, at position ${positionOf(active.id)}.`,
-        onDragCancel: ({ active }) =>
-            `Reordering cancelled; ${nameOf(active.id)} is back at position ${positionOf(active.id)}.`,
-    };
 }
