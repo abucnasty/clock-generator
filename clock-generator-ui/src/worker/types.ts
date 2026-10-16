@@ -111,6 +111,8 @@ export interface ClockAlternativeView {
     rankingWindowCount: number;
     /** What the trial of the clock found: holds, survives backpressure loss, rate, wake-ups */
     assessment: ClockAssessment;
+    /** Facts captured by the worker for this candidate, never read from a later edited form. */
+    assumptions: ClockModelAssumptions;
     /** Copies of the build the target rate is shared over; the rate in the assessment is the total for all of them */
     copies: number;
     /** The one word for the clock: stable, no recovery, or unstable */
@@ -152,6 +154,19 @@ export interface ClockAlternativeView {
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     swingBackoffReport: SwingBackoffReport | null;
+}
+
+export interface ClockModelAssumptions {
+    loopSeeds: { machineId: string; item: string; items: number }[];
+    outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
+    overrides: Config['overrides'];
+    machineFuel: { machineId: number; fuel: string }[];
+}
+
+/** Requested checks and completion belong to the generation; actual outcomes remain on each assessment. */
+export interface GenerationAssumptions {
+    startDependenceRequested: boolean;
+    complete: boolean;
 }
 
 export type ClockAlternativeRunView = ClockAlternativeRun<ClockAlternativeView>;
@@ -249,6 +264,7 @@ export interface PlannedResponse {
     primary: ClockAlternativeRunView | null;
     context: ClockAlternativeContext;
     tasks: ClockAlternativeTask[];
+    assumptions: Pick<GenerationAssumptions, 'startDependenceRequested'>;
 }
 
 export interface TaskCompletedResponse {

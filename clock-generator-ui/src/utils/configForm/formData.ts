@@ -19,6 +19,7 @@ export interface MachineFormData {
     type?: 'machine' | 'furnace' | 'biochamber';
     /** Energy consumption effect in percent; only used by biochambers. */
     energy_consumption_bonus?: number;
+    fuel?: Config['machines'][number]['fuel'];
 }
 
 // Enable rule types come from the engine's config schema
@@ -38,8 +39,11 @@ export interface InserterFormData {
     /** Internal UUID — see MachineFormData._uuid. */
     _uuid: string;
     /** `near_lane`: of a belt, the lane nearest to the inserter (1 or 2, by its place in the belt's lanes), which it takes from first */
-    source: { type: 'machine' | 'belt' | 'chest'; id: number; near_lane?: 1 | 2 };
-    sink: { type: 'machine' | 'belt' | 'chest'; id: number };
+    source: { type: 'machine' | 'belt' | 'chest'; id: number;
+        near_lane?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['near_lane'];
+        drop?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['drop'] };
+    sink: { type: 'machine' | 'belt' | 'chest'; id: number;
+        drop?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop'] };
     prototype?: string;
     quality?: Config['inserters'][number]['quality'];
     /** Omitted means the prototype's fully researched capacity (Automatic). */
@@ -160,14 +164,7 @@ export interface ConfigFormData {
         mining_productivity_level: number;
         configs: DrillFormData[];
     };
-    overrides?: {
-        lcm?: number;
-        terminal_swing_count?: number;
-        use_fractional_swings?: boolean;
-        non_moving_belts?: boolean;
-        search_for_fewer_wake_ups?: boolean;
-        ignored_lcm_ingredients?: string[];
-    };
+    overrides?: Config['overrides'];
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({

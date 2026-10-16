@@ -30,6 +30,44 @@ function exportAndImport(form: ReturnType<typeof createDefaultConfig>) {
 }
 
 describe('parseFormConfig', () => {
+    it('preserves imported geometry, fuel and explicit overrides, refuses unsupported geometry edits, and keeps mixed-drop drafts recoverable', () => {
+        let form = edits.updateTargetOutput(createDefaultConfig(), 'recipe', 'rocket-fuel');
+        form.machines[0] = { ...form.machines[0], recipe: 'rocket-fuel-from-jelly', type: 'biochamber', fuel: 'nutrients' };
+        form = edits.addBelt(form);
+        form = edits.addBelt(form);
+        form = edits.addInserter(form);
+        form = edits.addInserter(form);
+        form.inserters[0].sink = { type: 'belt', id: 1, drop: { lane: 1, position: 0.125 } };
+        form.inserters[1].sink = { type: 'belt', id: 1, drop: { lane: 2, position: 0.5 } };
+        form.overrides = { check_start_dependence: false, loop_seed_items: 0, lcm: 3 };
+        const original = formDataToConfig(form);
+        const imported = exportAndImport(form);
+        expect(imported.success).toBe(true);
+        form = configToFormData(imported.data!);
+        const unchanged = edits.updateInserter(form, 0, { sink: { type: 'belt', id: 1 } });
+        expect(formDataToConfig(unchanged)).toEqual(original);
+        expect(formDataToConfig(edits.updateInserter(form, 0, { sink: { type: 'belt', id: 2 } }))).toEqual(original);
+        expect(edits.duplicateEntity(form, 'inserters', 0)).toBe(form);
+        expect(edits.updateBelt(form, 0, { type: 'fast-transport-belt' })).toBe(form);
+        const edited = edits.updateTargetOutput(edits.updateInserter(form, 0, { stack_size: 12 }), 'items_per_second', 2);
+        const reopened = configToFormData(exportAndImport(edited).data!);
+        expect(reopened.inserters.map(ins => ins.sink)).toEqual(form.inserters.map(ins => ins.sink));
+        expect(reopened.machines[0].fuel).toBe('nutrients');
+        expect(reopened.overrides).toEqual(original.overrides);
+        expect(readSavedConfig(serializeConfig(reopened))!.inserters.map(ins => ins.sink)).toEqual(form.inserters.map(ins => ins.sink));
+        // An accepted paste/new route can create an incomplete geometry set. It must remain a draft on reload,
+        // with the strict generator schema still rejecting it and a normal destination correction available.
+        const mixed = edits.addInserter(reopened);
+        const strict = ConfigSchema.safeParse(formDataToConfig(mixed));
+        expect(strict.success).toBe(false);
+        expect(strict.error!.issues).toEqual(expect.arrayContaining([expect.objectContaining({ path: ['inserters', 2, 'sink', 'drop'] })]));
+        const draft = exportAndImport(mixed);
+        expect(draft.success).toBe(true);
+        expect(readSavedConfig(serializeConfig(configToFormData(draft.data!)))).not.toBeNull();
+        const corrected = edits.updateInserter(mixed, 2, { sink: { type: 'belt', id: 2 } });
+        expect(ConfigSchema.safeParse(formDataToConfig(corrected)).success).toBe(true);
+        expect(corrected.inserters.slice(0, 2).map(ins => ins.sink)).toEqual(form.inserters.map(ins => ins.sink));
+    });
     it('imports an exported form with an unset inserter end and 0 items per second', () => {
         const form = formWithUnsetEnd();
         expect(form.inserters[0].source).toEqual({ type: 'machine', id: 0 });

@@ -13,6 +13,7 @@ import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, Back
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import { BlueprintGenerationResult, MAX_SIMULATION_TICKS, RunOptions, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, planRun, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
 import { windowsOfInsertersFeedingTheOutputMachine } from "./candidates/output-feeders";
+import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -31,7 +32,8 @@ export const FULL_CHECK_START_PHASES = 112;
 export interface ClockAssessment {
     /**
      * The clock-only check (the build driven only by the exported clock windows) reaches the expected output, from
-     * the start the generator gives a clock: the machines full of ingredients and emptied of products
+     * the modeled cold start: full input supplies, empty machines, buffers and hands, clock phase 0, and the configured
+     * one-time self-ingredient seed (default 200). Rates are assessed after model warm-up and checks.
      */
     holds: boolean;
     /**
@@ -49,17 +51,26 @@ export interface ClockAssessment {
      * fewest is selected.
      */
     wake_ups_per_minute: number | null;
+    /**
+     * Where the clock gets to from the starts of CLOCK_STARTS (see start-dependence.ts); null when the config did not ask
+     * for start dependence to be checked (`overrides.check_start_dependence`), and the clock was judged from the cold
+     * start alone, or when the requested start checks could not run. Actual samples are in `starts`.
+     */
+    start_dependence: StartDependence | null;
 }
 
 /**
  * The one word for a clock (GOALS.md, "Backpressure Loss"): stable when it holds its expected output and gets back to
- * it by itself after every backpressure loss of its build; no recovery when it holds and does not get back from some
- * loss; unstable when it does not hold. A clock the losses could not be tried on is taken by what it holds.
+ * it by itself after every backpressure loss of its build (and, when the start dependence was checked, reaches it from every
+ * start); no recovery when it holds and does not get back from some
+ * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on is taken by what it holds.
  */
 export type ClockVerdict = "stable" | "no recovery" | "unstable";
 
 export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
-    if (!assessment.holds) {
+    // a clock that reaches its target from some starts only is not one to rely on: it is listed as unstable here, and
+    // named start-dependent by `start_dependence`
+    if (!assessment.holds || (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable")) {
         return "unstable";
     }
     return assessment.backpressure_loss?.survives === false ? "no recovery" : "stable";
@@ -94,7 +105,8 @@ const quietLogger = (logger: Logger): Logger => ({ log: () => { }, warn: () => {
  * Runs a build on clock windows alone, as its blueprint runs it in the game: what has windows is enabled by them, a
  * tick of the circuit network later, a fuel inserter by its fuel clock, and everything else is always enabled (see
  * `buildAsBuiltConfig`). Such a run plans nothing and checks nothing of its own; `options` say what it records and
- * how long it runs.
+ * how long it runs. It starts as the staged scaffold does: the machines empty and the clock from tick 0 (`cold_start`),
+ * unless the options name a start of their own (`keep_output_buffers`, `start_stock`).
  */
 export function runClockOnBuild(
     config: Config,
@@ -105,7 +117,8 @@ export function runClockOnBuild(
     /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): TrialRun {
-    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks), { logger: quietLogger(logger), ...options }));
+    const named_start = options.keep_output_buffers === true || options.start_stock !== undefined;
+    return trialRunOf(runBuild(buildAsBuiltConfig(config, windows, period, fuel_clocks), { logger: quietLogger(logger), cold_start: !named_start, ...options }));
 }
 
 /** Ticks a clock is run on its own to see that the build keeps up: ten minutes of game time */
@@ -147,10 +160,12 @@ function longRunOfFreeRunningBuild(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
     period: number,
-    one_period: TrialRun,
+    expected_output_items: number,
     logger: Logger,
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
-): { keeps_up: boolean; output_items_per_period: number; stock: StockRecording } | null {
+    /** How the run starts; the cold start of the staged scaffold with the default order by default */
+    start: Pick<RunOptions, "competing_takers_order"> = {},
+): { keeps_up: boolean; output_items_per_period: number; /** Items the output inserters dropped in each judged bin */ judged: number[]; off_bins: number; span_items: number; stock: StockRecording } | null {
     // every build: a machine with spare speed over its plan can drift for dozens of periods before it shows
     const registry = createEntityRegistryFromConfig(config);
     // a fractional period repeats in whole ticks only every few periods, as its subtick clock counts them
@@ -160,7 +175,7 @@ function longRunOfFreeRunningBuild(
         return null;
     }
     // only its stock is read, which names the state of every inserter itself
-    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false });
+    const run = runClockOnBuild(config, decider_windows, period, logger, { simulate_periods: periods, machine_stock: true, factorio_states: false, ...start });
     const stock = run.machine_stock;
     if (!stock) {
         return null;
@@ -177,10 +192,10 @@ function longRunOfFreeRunningBuild(
     // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
     // to come out within a hand, and no bin further off than a hand
     const verdict = judgeLongRun(stock.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held),
-        stock.ticks, period, repeat, one_period.stability_check.expected_output_items, hand);
+        stock.ticks, period, repeat, expected_output_items, hand);
     const bins = verdict.bin_ticks === null ? "span(s)" : verdict.periods_per_bin === 1 ? "periods" : `repeats of ${verdict.periods_per_bin} periods (${verdict.bin_ticks} ticks)`;
     logger.log(`Free running build over ${verdict.judged.length} ${bins}: moved ${verdict.total} of ${verdict.expected_total}, ${verdict.off_bins.length} more than a hand off the expected ${verdict.expected_per_bin} (${verdict.off_bins.map(it => `${it.index}: ${it.items}`).join(", ") || "none"})`);
-    return { keeps_up: verdict.keeps_up, output_items_per_period: verdict.output_items_per_period, stock };
+    return { keeps_up: verdict.keeps_up, output_items_per_period: verdict.output_items_per_period, judged: verdict.judged, off_bins: verdict.off_bins.length, span_items: verdict.total - verdict.expected_total, stock };
 }
 
 /**
@@ -194,13 +209,14 @@ export function simulateClockOnly(
     periods: number,
     logger: Logger = defaultLogger,
     /**
-     * How the build is when the clock starts. `keep_output_buffers` leaves the machines the output is taken from as
-     * full as they get when nothing takes it; by default they are emptied first. Some clocks settle differently from
-     * the two, and neither is how a scaffold starts: that runs without a clock first, and then gets one. `start_stock`
-     * names what machines hold instead, to start in a state the game was recorded in: with `warmup_periods: 0` the
-     * first tick of the run is the first tick after that state.
+     * How the build is when the clock starts. By default as the staged scaffold starts: the machines, buffers and hands
+     * empty and the clock from tick 0 (`cold_start`), the inserters that compete for a product served in
+     * `competing_takers_order`. `keep_output_buffers` leaves the machines the output is taken from as full as they get
+     * when nothing takes it, and starts the clock at once. `start_stock` names what machines hold instead, to start in a
+     * state the game was recorded in: with `warmup_periods: 0` the first tick of the run is the first tick after that
+     * state.
      */
-    start: Pick<RunOptions, "keep_output_buffers" | "warmup_periods" | "start_stock"> = {},
+    start: Pick<RunOptions, "cold_start" | "competing_takers_order" | "keep_output_buffers" | "warmup_periods" | "start_stock"> = {},
 ): StockRecording {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -280,6 +296,56 @@ function inserterEnds(config: Config): InserterEnds[] {
 
 
 /**
+ * Where a clock gets to from the starts of CLOCK_STARTS: each is run as the long run of the clock is, from that start,
+ * and judged on what follows its first third. Every start is judged on the same checks (`startsReachingTarget`): the
+ * cold start on all the checks of the generator (`cold_holds`), the others on their long run, unless the cold start
+ * fails a check that is not about the start, which fails every start. A clock whose period is too long for
+ * a long run is judged on one period. `expected_output_items` is what a period has to move.
+ */
+export function startDependenceOf(
+    config: Config,
+    clock_windows: SerializableClockWindows,
+    period: number,
+    expected_output_items: number,
+    cold_holds: boolean,
+    logger: Logger,
+    starts: readonly ClockStart[] = CLOCK_STARTS,
+): StartDependence {
+    const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    // a clock stands at another place of a period of a whole number of ticks only; a fractional one is tried unshifted
+    const tried = starts.filter(start => start.clock_shift === 0 || Number.isInteger(period));
+    const runs = tried.map(start => {
+        const standing = new Map(Array.from(windows, ([key, ranges]) =>
+            [key, start.clock_shift === 0 ? ranges : rotateRanges(ranges, period - start.clock_shift % period, period)] as const));
+        const order = { competing_takers_order: start.competing_takers_order };
+        const long_run = longRunOfFreeRunningBuild(check_config, standing, period, expected_output_items, logger, FREE_RUNNING_CHECK_TICKS, order);
+        const keeps_up = long_run !== null
+            ? long_run.keeps_up
+            : runClockOnBuild(check_config, standing, period, logger, { factorio_states: false, ...order }).stability_check.holds;
+        return { long_run, keeps_up };
+    });
+    // the first start is the one the clock is judged on: all its checks decide, not the long run alone; a clock that
+    // fails one of the checks that are not about the start fails from every start
+    const reaching = startsReachingTarget(cold_holds, runs.map(it => it.keeps_up));
+    const outcomes: StartOutcome[] = tried.map((start, index) => {
+        const { long_run } = runs[index];
+        return {
+            id: start.id,
+            label: start.label,
+            reaches_target: reaching[index],
+            output_items_per_period: long_run?.output_items_per_period ?? null,
+            cycle: long_run === null ? null : cycleOf(long_run.judged),
+            off_bins: long_run === null ? null : { count: long_run.off_bins, of: long_run.judged.length },
+            span_items: long_run?.span_items ?? null,
+            long_run_keeps_up: long_run?.keeps_up ?? null,
+        };
+    });
+    return { verdict: startVerdictOf(outcomes), starts: outcomes, expected_output_items };
+}
+
+/**
  * The clock-only check of a clock: the build driven only by the decider windows, first with the clock as planned and
  * then with the whole clock shifted to other start offsets relative to the machines' initial state, and, when the
  * unshifted run holds, over a long run (`longRunOfFreeRunningBuild`), which counts the wake-ups. Stops at the first
@@ -308,7 +374,7 @@ export function runAsBuiltCheck(
     let stock: StockRecording | undefined;
     if (check.holds) {
         // no long run when none is asked for (a quick trial of a search)
-        const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result, logger, long_run_ticks) : null;
+        const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, period, result.stability_check.expected_output_items, logger, long_run_ticks) : null;
         stock = long_run?.stock;
         if (stock) {
             // judged as the long run is: what follows its start-up
@@ -481,6 +547,28 @@ function buildAsBuiltConfig(
             })),
         },
     };
+}
+
+/**
+ * Tries a clock from every start of CLOCK_STARTS (see `startDependenceOf`). Null when the runs cannot be made on it,
+ * which is logged. The config is the one the clock was planned on.
+ */
+export function startDependenceVerdictOf(
+    planned_on: Config,
+    result: BlueprintGenerationResult,
+    cold_holds: boolean,
+    logger: Logger,
+    report?: (detail: string) => void,
+): StartDependence | null {
+    const config = { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: result.used_terminal_swing_count } };
+    const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
+    try {
+        report?.("Trying other starts");
+        return startDependenceOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items, cold_holds, quiet);
+    } catch (error) {
+        logger.log(`Start dependence could not be tried: ${error instanceof Error ? error.message : error}`);
+        return null;
+    }
 }
 
 /**

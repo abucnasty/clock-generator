@@ -27,8 +27,10 @@ import { useGameNames } from '../hooks/useGameNames';
 import { BELT_TYPES, entityTypeLabel } from './entityTypes';
 import { BeltAssumption } from './BeltAssumption';
 import type { BeltAnswer, BeltQuestion } from '../utils/beltQuestion';
+import { DROP_BELT_READ_ONLY } from '../utils/inserterMetadata';
 
 interface BeltsFormProps {
+    geometryBeltIds?: number[];
     belts: BeltFormData[];
     itemNames: string[];
     onAdd: () => void;
@@ -42,6 +44,7 @@ interface BeltsFormProps {
 }
 
 function BeltsFormComponent({
+    geometryBeltIds = [],
     belts,
     itemNames,
     onAdd,
@@ -152,6 +155,7 @@ function BeltsFormComponent({
                         <FormControl data-row-first="" size="small" sx={{ minWidth: 180 }}>
                             <InputLabel>Belt Type</InputLabel>
                             <Select
+                                readOnly={geometryBeltIds.includes(belt.id)}
                                 inputProps={{ 'aria-label': SELECT_NAMES.beltType }}
                                 value={belt.type}
                                 label="Belt Type"
@@ -197,7 +201,7 @@ function BeltsFormComponent({
                             </Select>
                         </FormControl>
                         <Box sx={{ flex: 1 }} />
-                        {belt.lanes.length < 2 && (
+                        {!geometryBeltIds.includes(belt.id) && belt.lanes.length < 2 && (
                             <Button size="small" onClick={() => addLane(beltIndex)}>
                                 Add Lane
                             </Button>
@@ -210,6 +214,8 @@ function BeltsFormComponent({
                         </IconButton>
                     </Box>
 
+                    {geometryBeltIds.includes(belt.id) && <Typography variant="body2" sx={{ mb: 1 }}>{DROP_BELT_READ_ONLY}</Typography>}
+
                     {/* Lanes */}
                     <Box sx={{ pl: 2 }}>
                         {belt.lanes.map((lane, laneIndex) => (
@@ -220,6 +226,7 @@ function BeltsFormComponent({
                                 <Typography variant="body2" sx={{ width: 60, flexShrink: 0 }}>
                                     Lane {laneIndex + 1}:
                                 </Typography>
+                                {geometryBeltIds.includes(belt.id) ? <Typography variant="body2">Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
                                 <ItemSelector
                                     value={lane.ingredient || null}
                                     options={itemNames}
@@ -246,6 +253,7 @@ function BeltsFormComponent({
                                     sx={{ width: 100, minWidth: 100, flexShrink: 0 }}
                                     size="small"
                                 />
+                                </>}
                                 {belt.strategy === 'export' && (
                                 <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
                                     <Box sx={{ flexShrink: 0 }}>
@@ -262,7 +270,7 @@ function BeltsFormComponent({
                                     </Box>
                                 </Tooltip>
                                 )}
-                                {belt.lanes.length > 1 ? (
+                                {!geometryBeltIds.includes(belt.id) && belt.lanes.length > 1 ? (
                                     laneIndex === 1 ? (
                                         <IconButton
                                             size="small"

@@ -306,6 +306,39 @@ describe("transitions (belt to machine)", () => {
             takeProducts();
             expect(look()?.toMode).toBe(pickup_mode);
         })
+
+        // Recorded in Factorio 2.1.21 on the thaeln scaffold (clock-generator/.scratch/geppetto/apprentice-m4-decider-latency.md):
+        // a belt-fed inserter that is enabled while its machine is at its output block, and whose machine another
+        // inserter takes down from the block, grabs 2 ticks after its enable (waiting for space, waiting for items, then
+        // the hand grows); the simulator took 1.
+        test("takes its first items from a belt 2 ticks after its window opens on a machine at its output block, where a hand not started by a window takes 1", () => {
+            const belt = () => withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            /** Looks after the products are taken: the index of the first look that starts the pickup */
+            const firstPickupLook = (window_opens_at?: number) => {
+                const { look, endTickAtTheBlock, takeProducts, endTickUnderTheBlock, pickup_mode, disabled_mode } = setup(belt(), window_opens_at);
+                endTickAtTheBlock(false);
+                expect(look()?.toMode).toBe(window_opens_at === undefined ? undefined : disabled_mode);
+                takeProducts();
+                const picks_up: boolean[] = [];
+                for (let index = 0; index < 3; index++) {
+                    picks_up.push(look()?.toMode === pickup_mode);
+                    endTickUnderTheBlock();
+                }
+                return picks_up.indexOf(true);
+            };
+            expect(firstPickupLook(undefined)).toBe(0);
+            expect(firstPickupLook(2)).toBe(1);
+        })
+
+        test("takes its first items from a belt in the tick the products are taken when the window of the inserter that takes them opens in that tick too", () => {
+            const belt: BeltState = withSupplyGate(mock<BeltState>({ entity_id: EntityId.forBelt(-1) }));
+            const { sink, look, endTickAtTheBlock, takeProducts, pickup_mode, disabled_mode } = setup(belt, 2);
+            endTickAtTheBlock(false);
+            expect(look()?.toMode).toBe(disabled_mode);
+            takeProducts();
+            sink.productsTakenAsWindowOpened = true;
+            expect(look()?.toMode).toBe(pickup_mode);
+        })
     })
 
     describe("InserterPickupMode (belt to machine)", () => {

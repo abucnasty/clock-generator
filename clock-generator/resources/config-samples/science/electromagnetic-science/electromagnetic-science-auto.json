@@ -1,0 +1,93 @@
+{
+  "target_output": {
+    "recipe": "electromagnetic-science-pack",
+    "items_per_second": 330,
+    "copies": 11
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "electromagnetic-science-pack",
+      "productivity": 175,
+      "crafting_speed": 109.475
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "overrides": {
+        "enable_control": {
+          "mode": "AUTO"
+        }
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "chest",
+        "id": 1
+      },
+      "stack_size": 16,
+      "overrides": {
+        "enable_control": {
+          "mode": "AUTO"
+        }
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "supercapacitor",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "item_filter": [
+        {
+          "item_name": "electromagnetic-science-pack",
+          "request_count": 64
+        }
+      ]
+    }
+  ],
+  "overrides": {
+    "terminal_swing_count": 2,
+    "lcm": 11
+  }
+}

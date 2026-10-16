@@ -17,7 +17,7 @@ import {
     Icon,
 } from '@mui/material';
 import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
-import type { ChestType, Config, DebugSteps } from 'clock-generator/browser';
+import type { ChestType, Config, DebugSteps, InserterFixOption } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
 import type { ChestFormData, InserterFormData } from './hooks/useConfigForm';
@@ -80,6 +80,8 @@ import { describeChestSwitch, removalMessage, removedDeleteLabel, reorderMessage
 import { isBlankBuild } from './utils/introCard';
 import type { TargetValues } from './utils/pasteTarget';
 import { configToFormData } from './utils/configForm/configMapping';
+import { inserterFixProblem } from './utils/configForm/inserterFix';
+import { hasImportedBeltDrops } from './utils/inserterMetadata';
 import {
     buildTitles,
     CHANGED_ELSEWHERE_MESSAGE,
@@ -154,6 +156,7 @@ function App() {
         initialize,
         runSimulation,
         generatedFor,
+        generationAssumptions,
         clearResults,
         cancel,
         lastStop,
@@ -214,6 +217,7 @@ function App() {
     } = useConfigForm();
 
     const { offerUndo, withdrawUndo } = useUndo(config, setConfig, isConfigLoaded);
+    const fixUnavailable = useCallback((fix: InserterFixOption) => inserterFixProblem(config, fix), [config]);
 
     // nothing entered yet: the intro card shows above Target Output (its ways in are the app bar's), and the bar says
     // where to start instead of counting problems
@@ -1007,6 +1011,7 @@ function App() {
 
                                         <PanelSection level={3} title="Belts and chests">
                                             <BeltsForm
+                                                geometryBeltIds={config.belts.filter(belt => hasImportedBeltDrops(config.inserters, belt.id)).map(belt => belt.id)}
                                                 belts={config.belts}
                                                 itemNames={itemNamesComposite}
                                                 onAdd={addBelt}
@@ -1046,6 +1051,7 @@ function App() {
                                         <MissingInserterAlert
                                             issues={coverageIssues}
                                             onApplyFix={applyInserterFix}
+                                            fixUnavailable={fixUnavailable}
                                         />
                                     </>
                                 ) : (
@@ -1057,6 +1063,7 @@ function App() {
                                         <MissingInserterAlert
                                             issues={coverageIssues}
                                             onApplyFix={applyInserterFix}
+                                            fixUnavailable={fixUnavailable}
                                         />
                                         {/* the Belts section is not drawn here, so the belt question gets one of its own */}
                                         {beltQuestion.ask && (
@@ -1085,6 +1092,7 @@ function App() {
 
                             <Box sx={{ mb: 2 }}>
                                 <OverridesForm
+                                    importedChecks={config.overrides}
                                     lcm={config.overrides?.lcm}
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
@@ -1111,6 +1119,7 @@ function App() {
 
                         <Box sx={{ display: view === 'results' ? 'block' : 'none' }}>
                             <ResultsWorkspace
+                                generationAssumptions={generationAssumptions}
                                 isRunning={isRunning}
                                 error={error}
                                 alternatives={alternatives}
@@ -1272,7 +1281,7 @@ function App() {
                     {coverageIssues.length > 0 && (
                         <Box sx={{ flexShrink: 0, px: 2, pb: 1 }}>
                             {/* the page's own alert behind this dialog has the ids a problem's jump looks for */}
-                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} focusTargets={false} />
+                            <MissingInserterAlert issues={coverageIssues} onApplyFix={applyInserterFix} fixUnavailable={fixUnavailable} focusTargets={false} />
                         </Box>
                     )}
                 </Box>

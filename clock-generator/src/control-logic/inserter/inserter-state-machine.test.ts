@@ -6,7 +6,7 @@ import { InserterAnimation } from "../../entities/inserter/inserter-animation";
 import { BeltState, InserterState, MachineState } from "../../state";
 import { factorioInserterState, FactorioInserterState } from "../../state/factorio-entity-state";
 import { MutableTickProvider } from "../current-tick-provider";
-import { EnableControl } from "../enable-control";
+import { AlwaysEnabledControl, EnableControl } from "../enable-control";
 import { InserterStateMachine } from "./inserter-state-machine";
 
 /** An inserter that fills a hand of 16 iron plates from a belt, 4 a tick, on a clock of 40 ticks enabled in 10 to 13 */
@@ -71,5 +71,38 @@ describe("an inserter on a clock", () => {
         const { grabbed, not_disabled } = run(false);
         expect(grabbed).toEqual([11, 12, 13]);
         expect(not_disabled).toEqual([10, 11, 12]);
+    });
+});
+
+describe("an inserter taking the output of a machine that another inserter waits on", () => {
+    test("takes it in the tick its turn comes: the turn it was granted in idle holds for the pickup of that tick", () => {
+        const machine = Machine.createMachine(1, {
+            crafting_speed: 1,
+            productivity: 0,
+            recipe: RecipeMetadata.fromRecipeName("iron-gear-wheel"),
+            type: MachineType.MACHINE,
+        });
+        const belt = Belt.fromConfig({ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4 }, { ingredient: "iron-gear-wheel", stack_size: 4 }] });
+        const metadata = InserterMetadata.create("machine", "belt", InserterStackSize.SIZE_16, ["iron-gear-wheel"], {});
+        const inserter: Inserter = {
+            entity_id: EntityId.forInserter(1),
+            metadata,
+            animation: InserterAnimation.fromMetadata(metadata.animation),
+            source: { entity_id: machine.entity_id, item_names: new Set(["iron-gear-wheel"]) },
+            sink: { entity_id: belt.entity_id, item_names: new Set(["iron-gear-wheel"]) },
+            filtered_items: new Set(["iron-gear-wheel"]),
+        };
+        const inserter_state = InserterState.createIdle(inserter);
+        const source_state = MachineState.forMachine(machine);
+        // less than a hand, and inserter 2 asked for it the tick before
+        source_state.inventoryState.setQuantity("iron-gear-wheel", 3);
+        MachineState.waitsForOutput(source_state, "iron-gear-wheel", EntityId.forInserter(2).id, 4);
+        const tick_provider = MutableTickProvider.create(5);
+        const state_machine = InserterStateMachine.create({
+            inserter_state, source_state, sink_state: BeltState.create(belt), tick_provider, enable_control: AlwaysEnabledControl,
+        });
+        state_machine.executeForTick();
+        expect(inserter_state.held_item).toEqual({ item_name: "iron-gear-wheel", quantity: 3 });
+        expect(source_state.inventoryState.getQuantity("iron-gear-wheel")).toBe(0);
     });
 });

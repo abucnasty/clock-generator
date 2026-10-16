@@ -4,6 +4,7 @@ import * as edits from './configForm/edits';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { createDefaultConfig, type BeltFormData, type InserterFormData } from './configForm/formData';
 import { nearLaneItems, withNearLane } from './nearLane';
+import { endpointUpdate } from './inserterMetadata';
 
 const lane = (ingredient: string) => ({ ingredient, stack_size: 4 });
 
@@ -53,6 +54,9 @@ describe('withNearLane', () => {
         expect(exported.inserters[0].source).toEqual({ type: 'belt', id: config.belts[0].id, near_lane: 1 });
         const imported = configToFormData(JSON.parse(JSON.stringify(exported)) as Config);
         expect(imported.inserters[0].source.near_lane).toBe(1);
+
+        const reselected = edits.updateInserter(config, 0, endpointUpdate(config.inserters[0], 'source', { type: 'belt', id: config.belts[0].id }));
+        expect(reselected.inserters[0].source.near_lane).toBe(1);
 
         const cleared = formDataToConfig(edits.updateInserter(config, 0, { source: withNearLane(config.inserters[0].source, 0) }));
         expect(JSON.stringify(cleared.inserters[0])).not.toContain('near_lane');

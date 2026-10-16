@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClockAlternativeContext, ConfigValidation, DebugSteps } from 'clock-generator/browser';
-import type { WorkerRequest, WorkerResponse } from '../worker/types';
+import type { ClockAlternativeView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { afterCheck, CHECK_TEXT, decideGenerate, PendingChecks } from '../utils/checkThenGenerate';
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
@@ -83,7 +83,7 @@ function passCheck(worker: WorkerTransport) {
 }
 function plan(planner: WorkerTransport) {
     const { runId } = planner.requests('plan').at(-1)!;
-    planner.send({ type: 'planned', runId, primary: null, context: {} as ClockAlternativeContext,
+    planner.send({ type: 'planned', runId, primary: null, context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: false },
         tasks: [{ id: 'one', label: 'One', only_when_needed: false }, { id: 'two', label: 'Two', only_when_needed: false }] });
     return runId;
 }
@@ -122,6 +122,44 @@ async function failReplacement() {
 }
 
 describe('worker startup failure recovery through the hook', () => {
+    it('keeps worker-owned assumptions with complete, cancelled and restored results instead of later config flags', async () => {
+        await initialize();
+        const candidate = {
+            id: 'a', label: 'A', verdict: 'stable', ranking: { meets_target_rate: true, rate_off_target: 0,
+                holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: 1, window_count: 1 },
+            assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: 1,
+                backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 1 }, start_dependence: null },
+            deadlockRisk: null, beltLabel: '', assumptions: { loopSeeds: [], outputDrops: [], machineFuel: [], overrides: undefined },
+        } as unknown as ClockAlternativeView;
+        const sendPlan = (planner: WorkerTransport, requested: boolean, complete: boolean) => {
+            const request = planner.requests('plan').at(-1)!;
+            planner.send({ type: 'planned', runId: request.runId, primary: { signature: 'a', alternatives: [candidate] },
+                context: {} as ClockAlternativeContext, assumptions: { startDependenceRequested: requested },
+                tasks: complete ? [] : [{ id: 'remaining', label: 'Remaining', only_when_needed: false }] });
+        };
+        Render().runSimulation(config, debug, false);
+        sendPlan(workers[0], false, true);
+        expect(Render().generationAssumptions).toEqual({ startDependenceRequested: false, complete: true });
+        const requestedConfig = { ...config, overrides: { check_start_dependence: true } };
+        Render().runSimulation(requestedConfig, debug, false);
+        expect(Render().generationAssumptions).toBeNull();
+        Render().cancel();
+        expect(Render().generationAssumptions).toEqual({ startDependenceRequested: false, complete: true });
+        const planner = workers.at(-1)!;
+        planner.send({ type: 'initialized' });
+        Render().runSimulation(requestedConfig, debug, false);
+        sendPlan(planner, true, false);
+        expect(Render().generationAssumptions).toEqual({ startDependenceRequested: true, complete: false });
+        Render().cancel();
+        expect(Render().stoppedEarly).toBe(true);
+        expect(Render().generationAssumptions).toEqual({ startDependenceRequested: true, complete: false });
+        const key = Render().generatedFor!.key;
+        Render().clearResults({ formKey: key });
+        expect(Render().generationAssumptions).toBeNull();
+        expect(await Render().restoreResultsFor(key, 'replace')).toBe(true);
+        expect(Render().generationAssumptions).toEqual({ startDependenceRequested: true, complete: false });
+        expect(Render().alternatives[0].assessment.start_dependence).toBeNull();
+    });
     it('settles the first check, then repairs once for the next Check only and completes Generate', async () => {
         await initialize();
         const failed = await failReplacement();

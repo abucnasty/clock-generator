@@ -17,7 +17,9 @@ export const SUMMARY_COPY = {
     // plain names: what a clock is for, against the others of the same generation
     offTarget: (rate: string, target: string) => `Runs at ${rate}/s, not ${target}/s`,
     noRecovery: 'Does not recover when jammed or starved',
+    recoveryUnavailable: 'Recovery unavailable',
     unstable: 'Does not hold its rate',
+    startDependent: 'Depends on how it is started',
     stillBelts: 'For belts that stand still',
     fewestWakeUps: 'Fewest wake-ups',
     fewestWakeWindows: 'Fewest wake windows',
@@ -31,11 +33,13 @@ export const SUMMARY_COPY = {
     recoversYes: 'Yes',
     recoversNo: 'No',
     recoversNotTested: 'Not tested',
+    recoversUnavailable: 'Unavailable',
     recoversYesDetail: 'In the simulator, it gets back to its rate by itself after it is starved or jammed.',
     recoversNoDetail: (losses: string) => losses
         ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.`
         : 'In the simulator, after it is starved or jammed, it does not get back to its rate by itself.',
-    recoversNotTestedDetail: 'This clock does not hold its rate, so it was not starved or jammed.',
+    recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
+    recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
     beltMoving: 'Moving',
     beltStill: 'Standing still',
     beltNone: 'No belt',
@@ -58,7 +62,11 @@ export const SUMMARY_COPY = {
     worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
     worksNoRecovery: 'Does not recover',
     worksUnstable: 'Unstable',
+    worksStartDependent: 'Start-dependent',
 };
+
+export const isStartDependent = (clock: Pick<SummaryClock, 'assessment'>): boolean =>
+    clock.assessment.start_dependence?.verdict === 'start-dependent';
 
 /** A rate as the summary prints it: at most two decimals ("240", "12.5") */
 const rateText = (rate: number) => formatNumberText(rate);
@@ -88,13 +96,14 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
     if (!clock) {
         return '';
     }
+    if (isStartDependent(clock)) return SUMMARY_COPY.startDependent;
     if (isOffTarget(clock)) {
         return SUMMARY_COPY.offTarget(rateText(clock.assessment.items_per_second), rateText(targetOf(clock)));
     }
     // on a build with a deadlock risk the recovery trials do not decide, so a clock that holds the rate is named by its trade-off
     const verdictDecides = clock.deadlockRisk === null || !clock.ranking.meets_target_rate;
     if (verdictDecides && clock.verdict === 'no recovery') {
-        return SUMMARY_COPY.noRecovery;
+        return recoversOf(clock).kind === 'no' ? SUMMARY_COPY.noRecovery : SUMMARY_COPY.recoveryUnavailable;
     }
     if (clock.verdict === 'unstable') {
         return SUMMARY_COPY.unstable;
@@ -127,14 +136,12 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
     value: string;
     detail: string;
 } {
-    switch (clock.verdict) {
-        case 'stable':
-            return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
-        case 'no recovery':
-            return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock)) };
-        case 'unstable':
-            return { kind: 'not-tested', value: SUMMARY_COPY.recoversNotTested, detail: SUMMARY_COPY.recoversNotTestedDetail };
-    }
+    const loss = clock.assessment.backpressure_loss;
+    if (loss?.survives === true) return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
+    if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock)) };
+    if (loss?.survives === false) return { kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail };
+    return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,
+        detail: SUMMARY_COPY.recoversNotTestedDetail };
 }
 
 /** What the clock makes, for all the copies, and the line under it: "240/s", "all 11 copies" (nothing for one copy) */
@@ -190,6 +197,7 @@ export function beltLine(rule: PickRule | null, beltLabel: string): string {
  */
 export function differenceFromRecommended(selected: SummaryClock, recommended: SummaryClock): string {
     const sentences: string[] = [];
+    if (isStartDependent(selected)) sentences.push('It depends on how it is started.');
     if (isOffTarget(selected)) {
         sentences.push(SUMMARY_COPY.differsRate(rateText(selected.assessment.items_per_second), rateText(targetOf(selected))));
     }
@@ -206,9 +214,13 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
     if (!selected.ranking.matches_belt_choice && recommended.ranking.matches_belt_choice) {
         sentences.push(SUMMARY_COPY.differsBelt);
     }
-    if (selected.verdict === 'no recovery' && recommended.verdict !== 'no recovery') {
+    const selectedRecovery = recoversOf(selected);
+    const recommendedRecovery = recoversOf(recommended);
+    if (selectedRecovery.kind === 'no' && recommendedRecovery.kind !== 'no') {
         sentences.push(SUMMARY_COPY.differsNoRecovery);
-    } else if (selected.verdict === 'unstable' && recommended.verdict !== 'unstable') {
+    } else if (selectedRecovery.kind === 'not-tested' && selected.assessment.holds && recommendedRecovery.kind !== 'not-tested') {
+        sentences.push('Recovery results are unavailable for this clock.');
+    } else if (!selected.assessment.holds && recommended.assessment.holds) {
         sentences.push(SUMMARY_COPY.differsUnstable);
     }
     return sentences.length === 0 ? SUMMARY_COPY.differsNothing : sentences.slice(0, 2).join(' ');
@@ -236,6 +248,7 @@ export function foldedMakes(clocks: Pick<SummaryClock, 'assessment'>[]): string 
  * belts that stand still. `kind` picks the icon; the words say it without the colour.
  */
 export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment'>): { kind: 'yes' | 'caution' | 'no'; text: string } {
+    if (isStartDependent(clock)) return { kind: 'caution', text: SUMMARY_COPY.worksStartDependent };
     if (clock.verdict === 'unstable') {
         return { kind: 'no', text: SUMMARY_COPY.worksUnstable };
     }
@@ -243,10 +256,12 @@ export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'asses
         return { kind: 'no', text: SUMMARY_COPY.worksOffTarget(rateText(clock.assessment.items_per_second)) };
     }
     if (clock.verdict === 'no recovery') {
-        return { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery };
+        return { kind: 'caution', text: recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable };
     }
     if (!clock.ranking.matches_belt_choice) {
         return { kind: 'caution', text: SUMMARY_COPY.worksStillBelts };
     }
-    return { kind: 'yes', text: SUMMARY_COPY.worksYes };
+    return recoversOf(clock).kind === 'not-tested'
+        ? { kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable }
+        : { kind: 'yes', text: SUMMARY_COPY.worksYes };
 }

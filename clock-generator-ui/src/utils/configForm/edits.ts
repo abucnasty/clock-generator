@@ -1,5 +1,6 @@
 import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
+import { beltGeometryEditProblem, endpointEditProblem } from '../inserterMetadata';
 import {
     BELT_FORM_DEFAULT_STACK_SIZE,
     BELT_FORM_DEFAULT_TYPE,
@@ -26,6 +27,8 @@ export function duplicateEntity(prev: ConfigFormData, kind: EntityKind, index: n
     const list = kind === 'drills' ? prev.drills?.configs ?? [] : prev[kind];
     const item = list[index];
     if (!item) return prev;
+    // A second inserter needs its own physical drop position; copying that position would invent geometry.
+    if (kind === 'inserters' && (item as InserterFormData).sink.drop !== undefined) return prev;
     const copy = { ...structuredClone(item), id: nextId(prev, kind), _uuid: crypto.randomUUID() };
     if (kind === 'drills') {
         return { ...prev, drills: { ...prev.drills!, configs: [...prev.drills!.configs, copy as DrillFormData] } };
@@ -180,16 +183,29 @@ export function addInserter(prev: ConfigFormData): ConfigFormData {
     };
 }
 
-/** An update with `overrides` replaces the rule, so the inserter's rule is no longer one forced by Exclude from LCM */
+/** Keep no-op endpoint metadata and refuse moving a physical drop position onto another route. */
+function withPreservedEndpoints(ins: InserterFormData, updates: Partial<InserterFormData>): InserterFormData {
+    const endpoint = <E extends { type: InserterFormData['source']['type']; id: number }>(before: E, after: E | undefined, side: 'source' | 'sink'): E => {
+        if (after === undefined) return before;
+        // Source updates are complete endpoints: withNearLane deliberately removes the optional key for Not set.
+        // No-op pickers/connections use endpointUpdate and send no replacement at all.
+        if (before.type === after.type && before.id === after.id) return after;
+        return endpointEditProblem(ins, side, after) === null ? after : before;
+    };
+    return { ...ins, ...updates, source: endpoint(ins.source, updates.source, 'source'),
+        // Imported drop geometry is read-only, including attempts to clear it on the same route.
+        sink: ins.sink.drop !== undefined ? ins.sink : endpoint(ins.sink, updates.sink, 'sink') };
+}
+
+/** An update with `overrides` replaces the rule, so it is no longer one forced by Exclude from LCM. */
 export function updateInserter(prev: ConfigFormData, index: number, updates: Partial<InserterFormData>): ConfigFormData {
     return {
         ...prev,
         inserters: prev.inserters.map((ins, i) => {
             if (i !== index) return ins;
-            if (!('overrides' in updates)) return { ...ins, ...updates };
-            const { _forced_always: _f, ...rest } = ins;
-            void _f;
-            return { ...rest, ...updates };
+            const next = withPreservedEndpoints(ins, updates);
+            if ('overrides' in updates) delete next._forced_always;
+            return next;
         }),
     };
 }
@@ -202,7 +218,7 @@ export function updateInserters(prev: ConfigFormData, uuids: readonly string[], 
         ...prev,
         inserters: prev.inserters.map(ins => {
             if (!selected.has(ins._uuid)) return ins;
-            const next = { ...ins, ...updates };
+            const next = withPreservedEndpoints(ins, updates);
             if ('overrides' in updates) {
                 delete next._forced_always;
                 next.overrides = { ...ins.overrides, ...updates.overrides };
@@ -244,6 +260,8 @@ export function addBelt(prev: ConfigFormData): ConfigFormData {
 }
 
 export function updateBelt(prev: ConfigFormData, index: number, updates: Partial<BeltFormData>): ConfigFormData {
+    const belt = prev.belts[index];
+    if (belt && beltGeometryEditProblem(prev.inserters, belt, updates)) return prev;
     return {
         ...prev,
         belts: prev.belts.map((b, i) =>

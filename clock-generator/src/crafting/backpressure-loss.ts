@@ -280,7 +280,7 @@ export function runLossTrials(
     const control_logic = new CompositeControlLogic([
         new TickControlLogic(context.tick_provider),
         ...context.drills,
-        ...context.inserters,
+        context.inserterUpdates(),
         ...context.machines,
     ]);
     const now = () => context.tick_provider.getCurrentTick();

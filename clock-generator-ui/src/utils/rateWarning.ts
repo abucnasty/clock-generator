@@ -42,18 +42,28 @@ export function rateWarningOf(
 function clockWarningOf(
     alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking'>,
 ): string | null {
-    if (alternative.verdict === 'no recovery') {
-        const losses = lossesOf(alternative);
-        return 'This clock does not recover: '
-            + (losses ? `after ${losses} for a while, the build does not get back to its rate by itself` : 'the build was off its rate in the run that starves and jams it')
-            + ' in the simulator, and has to be restarted.';
+    const warnings: string[] = [];
+    if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
+        warnings.push('This clock depends on how it is started: it reaches the target from some sampled starts and settles differently from others. See Model and tested starts.');
+    } else if (alternative.assessment.start_dependence?.verdict === 'unstable') {
+        warnings.push('This clock did not reach the target from any sampled start.');
     }
-    if (alternative.ranking.meets_target_rate) {
-        return null;
+    if (alternative.assessment.backpressure_loss?.survives === false || alternative.verdict === 'no recovery') {
+        const losses = lossesOf(alternative);
+        warnings.push(losses
+            ? `This clock does not recover: after ${losses} for a while, the build does not get back to its rate by itself in the simulator.`
+            : alternative.assessment.backpressure_loss === null
+                ? 'No usable recovery result is available for this clock.'
+                : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');
     }
     const { items_per_second } = alternative.assessment;
-    return `This clock does not hold the target rate: it runs at ${figure(items_per_second)} of `
-        + `${figure(items_per_second - alternative.ranking.rate_off_target)} a second in the simulator.`;
+    if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
+        warnings.push(`This clock does not hold the target rate: it runs at ${figure(items_per_second)} of `
+            + `${figure(items_per_second - alternative.ranking.rate_off_target)} a second in the simulator.`);
+    } else if (alternative.assessment.holds === false) {
+        warnings.push('This clock does not hold its expected output in the modeled clock checks.');
+    }
+    return warnings.join(' ') || null;
 }
 
 /** Whether a clock runs short of the target rate by enough to say so on the Copy button */

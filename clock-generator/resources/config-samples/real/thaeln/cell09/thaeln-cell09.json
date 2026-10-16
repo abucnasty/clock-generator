@@ -139,7 +139,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 3
+    "id": 3,
+    "drop": {
+     "lane": 1,
+     "position": -94
+    }
    },
    "stack_size": 16,
    "filters": [
@@ -154,7 +158,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 4
+    "id": 4,
+    "drop": {
+     "lane": 1,
+     "position": -94
+    }
    },
    "stack_size": 16,
    "filters": [
@@ -229,7 +237,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 3
+    "id": 3,
+    "drop": {
+     "lane": 1,
+     "position": -88
+    }
    },
    "stack_size": 16,
    "filters": [
@@ -289,7 +301,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 4
+    "id": 4,
+    "drop": {
+     "lane": 1,
+     "position": -88
+    }
    },
    "stack_size": 16,
    "filters": [
@@ -370,7 +386,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 3
+    "id": 3,
+    "drop": {
+     "lane": 1,
+     "position": -82
+    }
    },
    "stack_size": 16,
    "filters": [
@@ -415,7 +435,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 4
+    "id": 4,
+    "drop": {
+     "lane": 1,
+     "position": -82
+    }
    },
    "stack_size": 16,
    "filters": [
@@ -460,7 +484,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 3
+    "id": 3,
+    "drop": {
+     "lane": 1,
+     "position": -77
+    }
    },
    "stack_size": 16,
    "filters": [
@@ -505,7 +533,11 @@
    },
    "sink": {
     "type": "belt",
-    "id": 4
+    "id": 4,
+    "drop": {
+     "lane": 1,
+     "position": -77
+    }
    },
    "stack_size": 16,
    "filters": [

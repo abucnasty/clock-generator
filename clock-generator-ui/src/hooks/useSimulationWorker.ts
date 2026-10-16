@@ -13,6 +13,7 @@ import { plainClockName } from '../utils/clockSummary';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
 import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
 import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
+import type { GenerationAssumptions } from '../worker/types';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
@@ -28,6 +29,7 @@ export type ValidationState =
     | { status: 'invalid'; config: Config; message: string; crashed?: boolean };
 
 interface UseSimulationWorkerResult {
+    generationAssumptions: GenerationAssumptions | null;
     isInitialized: boolean;
     isRunning: boolean;
     /** Progress lives outside React state so its frequent updates only re-render what reads it */
@@ -155,6 +157,7 @@ function workerPoolSize(): number {
  * wait for the other tasks, and are then queued or left out.
  */
 interface Generation {
+    assumptions: GenerationAssumptions | null;
     runId: number;
     config: Config;
     debugSteps: DebugSteps;
@@ -185,6 +188,7 @@ let sharedResultsStore: Promise<ResultsStore> | null = null;
 const resultsStore = () => (sharedResultsStore ??= openResultsStore());
 
 export function useSimulationWorker(): UseSimulationWorkerResult {
+    const [generationAssumptions, setGenerationAssumptions] = useState<GenerationAssumptions | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
     const [progressStore] = useState(createProgressStore);
@@ -303,6 +307,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [progressStore]);
 
     const publishAlternatives = useCallback((generation: Generation) => {
+        setGenerationAssumptions(generation.assumptions);
         const combined = combineClockAlternativeRuns(generation.runs, it => it.ranking);
         const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current?.id);
         alternativesRef.current = combined.alternatives;
@@ -316,6 +321,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     /** The generation's clocks so far, as they are kept */
     const keptResultsOf = useCallback((generation: Generation, stopped: boolean): KeptResults => ({
         generatedFor: generation.generatedFor,
+        generationAssumptions: generation.assumptions === null ? null : { ...generation.assumptions, complete: !stopped },
         alternatives: alternativesRef.current,
         pickRule: generation.pickRule,
         skippedSearches: generation.skipped.map(task => task.label),
@@ -347,6 +353,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setSearchedDeeper(results.searchedDeeper);
         setPickRule(results.pickRule);
         setGeneratedFor(results.generatedFor);
+        setGenerationAssumptions(results.generationAssumptions);
         setStoppedEarly(results.stopped);
         setPickGone(null);
         setLogs([]);
@@ -364,6 +371,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setSearchedDeeper(false);
         setPickRule(null);
         setGeneratedFor(null);
+        setGenerationAssumptions(null);
         setStoppedEarly(false);
         setPickGone(null);
     }, [setShown]);
@@ -440,6 +448,10 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         generationRef.current = null;
         progressStore.set(null);
         setIsRunning(false);
+        if (generation.assumptions) {
+            generation.assumptions = { ...generation.assumptions, complete: true };
+            setGenerationAssumptions(generation.assumptions);
+        }
         // the pick is selected when the run made it again; otherwise the recommended clock, and the player is told
         const made = alternativesRef.current;
         const pick = userSelectionRef.current;
@@ -488,6 +500,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 break;
             }
             case 'planned':
+                generation.assumptions = { ...response.assumptions, complete: false };
                 generation.context = response.context;
                 generation.tasks = response.tasks;
                 generation.runs = [response.primary, ...response.tasks.map(() => null)];
@@ -643,6 +656,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         // the build is accepted: an Undo of a replace is not offered any more, so what it set aside goes
         droppedRef.current = null;
         setGeneratedFor(run.generatedFor);
+        setGenerationAssumptions(null);
         setSearchedDeeper(run.searchedDeeper);
         setIsRunning(true);
         progressStore.set(null);
@@ -659,7 +673,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [],
+            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [], assumptions: null,
             running: new Map(), done: new Set(), idle: [], completed: 0,
             previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };
@@ -798,6 +812,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const selected: ClockAlternativeView | undefined = alternatives[selectedAlternativeIndex];
 
     return {
+        generationAssumptions,
         isInitialized,
         isRunning,
         progressStore,

@@ -52,6 +52,7 @@ export function configToFormData(imported: Config): ConfigFormData {
             crafting_speed: m.crafting_speed,
             type: m.type,
             energy_consumption_bonus: m.energy_consumption_bonus,
+            ...(m.fuel !== undefined && { fuel: m.fuel }),
         })),
         inserters: imported.inserters.map((ins, index) => ({
             id: ins.id ?? (index + 1),
@@ -73,7 +74,7 @@ export function configToFormData(imported: Config): ConfigFormData {
             id: b.id,
             _uuid: crypto.randomUUID(),
             type: b.type,
-            ...(b.strategy === 'export' && { strategy: b.strategy }),
+            ...(b.strategy !== undefined && { strategy: b.strategy }),
             lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
         })),
         chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {

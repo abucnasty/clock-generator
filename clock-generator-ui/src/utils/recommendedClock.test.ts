@@ -192,7 +192,7 @@ describe('recommendationReason', () => {
         it('says the pick holds its output when an equally near clock does not', () => {
             expect(reason([short('drifts', -0.5, false), short('holds', 0.5)]))
                 .toBe('No clock holds 240/s and recovers. This one runs nearest to it, at 240.5/s. Of the equally near '
-                    + 'clocks, it is the one that holds its output from a clean start.');
+                    + 'clocks, it is the one that holds its output from the modeled cold start.');
         });
 
         it('does not say so when no other clock is equally near', () => {
@@ -202,14 +202,14 @@ describe('recommendationReason', () => {
 
         it('does not call a clock at the target rate the nearest: it holds the rate from a clean start', () => {
             const atRate = [short('more', 0, true, { wake_ups_per_minute: 30 }), short('fewer', 0), short('far', -2)];
-            expect(reason(atRate)).toBe('No clock holds 240/s and recovers. This one holds 240/s from a clean start with '
+            expect(reason(atRate)).toBe('No clock holds 240/s and recovers. This one holds 240/s from the modeled cold start with '
                 + 'the fewest wake-ups.');
         });
 
         it('says a clock at the rate that does not hold its output only runs at it', () => {
             expect(reason([short('drifts', 0, false)])).toBe('No clock holds 240/s and recovers. This one runs at 240/s with the fewest wake-ups.');
             expect(reason([short('uncounted', 0, true, { wake_ups_per_minute: null })]))
-                .toBe('No clock holds 240/s and recovers. This one holds 240/s from a clean start.');
+                .toBe('No clock holds 240/s and recovers. This one holds 240/s from the modeled cold start.');
         });
 
         it('does not print the same rate twice when the pick is off by less than the printed figure', () => {

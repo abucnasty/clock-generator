@@ -16,6 +16,9 @@ export interface MachineStockSeries {
     products_finished: number[];
     /** Crafts started so far, per tick: the times the machine took the ingredients of a craft (the simulator's true starts) */
     crafts_started: number[];
+    /** The crafting bar and the bonus (productivity) bar of the machine per tick, in 0 to 1 and to four decimals as the recorder writes them */
+    crafting_progress: number[];
+    bonus_progress: number[];
 }
 
 /** What one inserter held in its hand after each tick of a run */
@@ -34,6 +37,11 @@ export interface StockRecording {
     ticks: number;
     machines: MachineStockSeries[];
     inserters: InserterHandSeries[];
+}
+
+/** A bar as the recorder writes it: rounded to four decimals, within the 0 to 1 the game's bars stay in */
+function barOf(progress: number): number {
+    return Math.min(1, Math.max(0, Math.floor(progress * 10000 + 0.5) / 10000));
 }
 
 /** Samples what the machines and inserters hold after each tick of a run */
@@ -55,6 +63,8 @@ export class StockRecorder {
                 status: [],
                 products_finished: [],
                 crafts_started: [],
+                crafting_progress: [],
+                bonus_progress: [],
             },
         }));
         this.inserters = inserters.map(({ state, sink }) => ({ state, sink, series: { inserter_id: state.entity_id.id, held: [], held_item: [], status: [], factorio_state: [] } }));
@@ -73,6 +83,8 @@ export class StockRecorder {
             series.status.push(state.status);
             series.products_finished.push(state.productsFinished);
             series.crafts_started.push(state.craftsStarted);
+            series.crafting_progress.push(barOf(state.craftingProgress.progress));
+            series.bonus_progress.push(barOf(state.bonusProgress.progress));
         }
         for (const { state, sink, series } of this.inserters) {
             series.held.push(state.held_item?.quantity ?? 0);

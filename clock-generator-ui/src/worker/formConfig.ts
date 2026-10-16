@@ -12,7 +12,12 @@ export function parseFormConfig<T>(schema: z.ZodType<T>, config: unknown): z.Zod
     const result = schema.safeParse(config);
     if (result.success || !result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big'
         || (issue.code === 'custom' && issue.path.length === 2 && issue.path[0] === 'target_output'
-            && issue.path[1] === 'copies' && issue.message === COPIES_DECIMAL_ERROR))) {
+            && issue.path[1] === 'copies' && issue.message === COPIES_DECIMAL_ERROR)
+        // Spatial cross-field issues are editable drafts, not broken saved structures. Check/Generate still parse
+        // the strict schema. A bad drop shape/type is not a custom refinement and remains rejected here.
+        || (issue.code === 'custom' && issue.path.length === 4 && issue.path[0] === 'inserters'
+            && typeof issue.path[1] === 'number' && (issue.path[2] === 'source' || issue.path[2] === 'sink')
+            && issue.path[3] === 'drop'))) {
         return result;
     }
     return { success: true, data: config as T };

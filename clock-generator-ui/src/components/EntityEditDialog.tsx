@@ -1,5 +1,6 @@
 import { Close, DeleteOutline } from '@mui/icons-material';
 import {
+    Alert,
     Box,
     Button,
     Dialog,
@@ -14,7 +15,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useGameNames } from '../hooks/useGameNames';
 import { useMachineFacts } from '../hooks/useMachineFacts';
@@ -52,6 +53,7 @@ import { NumberField } from './NumberField';
 import { InserterConfigPanel } from './InserterConfigPanel';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { BELT_TYPES, DRILL_TYPES, MACHINE_TYPE_LABELS, entityTypeLabel } from './entityTypes';
+import { DROP_BELT_READ_ONLY, beltGeometryEditProblem, hasImportedBeltDrops } from '../utils/inserterMetadata';
 
 // ---- Props ----
 
@@ -148,16 +150,19 @@ function MachineEditSection({
 
 function BeltEditSection({
     belt,
+    geometryReadOnly,
     entityIndex,
     itemNames,
     onUpdate,
 }: {
     belt: BeltFormData;
+    geometryReadOnly: boolean;
     entityIndex: number;
     itemNames: string[];
     onUpdate: (index: number, updates: Partial<BeltFormData>) => void;
 }) {
     const { itemLabel } = useGameNames();
+    const geometryHelpId = useId();
     const updateLane = (laneIndex: number, field: keyof BeltLaneFormData, value: string | number | undefined) => {
         const newLanes = [...belt.lanes] as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
         newLanes[laneIndex] = { ...newLanes[laneIndex], [field]: value };
@@ -181,10 +186,12 @@ function BeltEditSection({
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {geometryReadOnly && <Typography id={geometryHelpId} variant="body2">{DROP_BELT_READ_ONLY}</Typography>}
             <FormControl size="small" fullWidth>
                 <InputLabel>Belt Type</InputLabel>
                 <Select
-                    inputProps={{ 'aria-label': SELECT_NAMES.beltType }}
+                    readOnly={geometryReadOnly}
+                    inputProps={{ 'aria-label': SELECT_NAMES.beltType, 'aria-describedby': geometryReadOnly ? geometryHelpId : undefined }}
                     value={belt.type}
                     label="Belt Type"
                     onChange={(e) => onUpdate(entityIndex, { type: e.target.value as BeltFormData['type'] })}
@@ -231,6 +238,7 @@ function BeltEditSection({
                     <Typography variant="body2" sx={{ width: 56, flexShrink: 0 }}>
                         Lane {laneIndex + 1}:
                     </Typography>
+                    {geometryReadOnly ? <Typography variant="body2">Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
                     <ItemSelector
                         value={lane.ingredient || null}
                         options={itemNames}
@@ -247,6 +255,7 @@ function BeltEditSection({
                         sx={{ width: 110, maxWidth: '100%', flexShrink: 0 }}
                         size="small"
                     />
+                    </>}
                     {belt.strategy === 'export' && (
                     <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
                         <Box>
@@ -261,7 +270,7 @@ function BeltEditSection({
                         </Box>
                     </Tooltip>
                     )}
-                    {belt.lanes.length > 1 && laneIndex === 1 ? (
+                    {!geometryReadOnly && belt.lanes.length > 1 && laneIndex === 1 ? (
                         <IconButton size="small" onClick={removeLane} color="error" aria-label="Remove lane">
                             <Close fontSize="small" />
                         </IconButton>
@@ -271,7 +280,7 @@ function BeltEditSection({
                 </Box>
             ))}
 
-            {belt.lanes.length < 2 && (
+            {!geometryReadOnly && belt.lanes.length < 2 && (
                 <Button size="small" onClick={addLane} sx={{ alignSelf: 'flex-start' }}>
                     Add Second Lane
                 </Button>
@@ -558,6 +567,7 @@ export function EntityEditDialog({
     const [inserterDirty, setInserterDirty] = useState(false);
     const [draft, setDraft] = useState(entity);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [saveProblem, setSaveProblem] = useState<string | null>(null);
     // each opening gets a fresh panel: one reopened while the last closing fades out must not keep that draft
     const [openCount, setOpenCount] = useState(0);
     const [wasOpen, setWasOpen] = useState(open);
@@ -568,6 +578,7 @@ export function EntityEditDialog({
             setDraft(entity);
             setInserterDirty(false);
             setConfirmOpen(false);
+            setSaveProblem(null);
         }
     }
     const requestClose = () => {
@@ -594,9 +605,19 @@ export function EntityEditDialog({
         }
     }, [draft, entity, entityType]);
     const dirty = entityType === 'inserter' ? inserterDirty : Object.keys(edits).length > 0;
-    const updateDraft = (_index: number, updates: object) => setDraft(d => d ? { ...d, ...updates } : d);
+    const updateDraft = (_index: number, updates: object) => {
+        setSaveProblem(null);
+        setDraft(d => d ? { ...d, ...updates } : d);
+    };
     const saveDraft = () => {
         if (!draft || !entity) return;
+        if (entityType === 'belt') {
+            const problem = beltGeometryEditProblem(inserters, entity as BeltFormData, edits as Partial<BeltFormData>);
+            if (problem) {
+                setSaveProblem(`${title}: ${problem}`);
+                return;
+            }
+        }
         switch (entityType) {
             case 'machine':
                 for (const field of MACHINE_FIELDS) {
@@ -671,6 +692,7 @@ export function EntityEditDialog({
                     {draft && entityType === 'belt' && (
                         <Box sx={{ p: 2 }}><BeltEditSection
                             belt={draft as BeltFormData}
+                            geometryReadOnly={hasImportedBeltDrops(inserters, (draft as BeltFormData).id)}
                             entityIndex={entityIndex}
                             itemNames={itemNames}
                             onUpdate={updateDraft}
@@ -711,6 +733,7 @@ export function EntityEditDialog({
                             onUpdate={updateDraft}
                         /></Box>
                     )}
+                    {saveProblem && <Alert role="alert" severity="warning" sx={{ mx: 2 }} data-geometry-save-problem>{saveProblem}</Alert>}
                     {entity && entityType !== 'inserter' && <DraftFooter dirty={dirty} onCancel={requestClose} onSave={saveDraft} />}
                     {!entity && (
                         <Typography color="text.secondary" variant="body2">Entity not found.</Typography>

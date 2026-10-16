@@ -3,7 +3,7 @@ import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/b
 import { ChestType } from 'clock-generator/light';
 import * as edits from './edits';
 import { createDefaultConfig, type ConfigFormData } from './formData';
-import { applyInserterFix } from './inserterFix';
+import { applyInserterFix, inserterFixProblem } from './inserterFix';
 
 const issue = (kind: InserterCoverageIssue['kind'], machine_id = 2): InserterCoverageIssue =>
     ({ kind, machine_id, recipe: 'electronic-circuit', item_name: 'copper-cable', fix_options: [] });
@@ -40,6 +40,17 @@ describe('applyInserterFix', () => {
         expect(applyInserterFix(before, issue('missing_input_inserter'), { type: 'add_lane_to_existing_belt', belt_id: 9, item_name: 'x' })).toBe(before);
         const full = edits.updateBelt(before, 0, { lanes: [{ ingredient: 'a', stack_size: 4 }, { ingredient: 'b', stack_size: 4 }] });
         expect(applyInserterFix(full, issue('missing_input_inserter'), { type: 'add_lane_to_existing_belt', belt_id: 1, item_name: 'x' })).toBe(full);
+        const protectedForm = form();
+        protectedForm.inserters[0].sink = { type: 'belt', id: 2, drop: { lane: 1, position: 0.5 } };
+        const addLane: InserterFixOption = { type: 'add_lane_to_existing_belt', belt_id: 2, item_name: 'copper-cable' };
+        expect(inserterFixProblem(protectedForm, addLane)).toContain('Belt 2: Imported drop positions');
+        expect(applyInserterFix(protectedForm, issue('missing_input_inserter'), addLane)).toBe(protectedForm);
+        const newBelt = applyInserterFix(protectedForm, issue('missing_input_inserter'), { type: 'new_belt', item_name: 'copper-cable' });
+        const newChest = applyInserterFix(protectedForm, issue('missing_input_inserter'), { type: 'infinity_chest', item_name: 'copper-cable' });
+        expect(newBelt.belts).toHaveLength(protectedForm.belts.length + 1);
+        expect(newChest.chests).toHaveLength(1);
+        expect(newBelt.inserters[0]).toEqual(protectedForm.inserters[0]);
+        expect(newChest.inserters[0]).toEqual(protectedForm.inserters[0]);
     });
 
     it('adds a belt of the most common type and an inserter from it for a missing input', () => {

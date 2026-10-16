@@ -20,6 +20,10 @@ import { InstallSteps } from './InstallSteps';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { CopyLabel } from './WorkflowBar';
+import type { GenerationAssumptions } from '../worker/types';
+import { MODELED_START, PLANNING_START, modeledDetails, startCheckSummary } from '../utils/modelAssumptions';
+import { formatNumberText } from '../utils/numberText';
+import { useGameNames } from '../hooks/useGameNames';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -34,6 +38,7 @@ const CARD_COPY = {
 };
 
 interface ResultSummaryCardProps {
+    generationAssumptions?: GenerationAssumptions | null;
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     /** The clock the selection rule picks; null while there are none */
@@ -91,6 +96,7 @@ type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView }
 
 /** The selected clock's name, why it is the one, and its four facts */
 function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingElement | null> }) {
+    const { itemLabel } = useGameNames();
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected, nameRef } = props;
     const isRecommended = selectedIndex === recommendedIndex;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
@@ -121,6 +127,27 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
             <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-engine-name>
                 {clockTechnicalName(selected)}
             </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }} data-start-assumption>
+                Modeled cold start. {startCheckSummary(alternatives, props.generationAssumptions ?? null)}
+            </Typography>
+            <Box component="details" sx={{ mt: 1, maxWidth: '80ch', overflowWrap: 'anywhere' }} data-model-assumptions>
+                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>Model and tested starts</Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START} {PLANNING_START}</Typography>
+                {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                    Existing clock-phase checks: {selected.asBuilt?.start_phases_checked ?? 'unavailable'}. Extended sampled starts are a separate check.
+                </Typography>
+                {(selected.assessment.start_dependence?.starts.length ?? 0) === 0 && <Typography variant="body2" sx={{ mt: 1 }}>
+                    {props.generationAssumptions?.startDependenceRequested === false ? 'This clock: other starts were not checked.' : 'This clock: other-start results are unavailable.'}
+                </Typography>}
+                {selected.assessment.start_dependence?.starts.map(start => (
+                    <Typography key={start.id} variant="body2" sx={{ mt: 0.5 }}>
+                        {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}
+                        {start.output_items_per_period === null ? '; settled rate unavailable' : `; ${formatNumberText(start.output_items_per_period)} items per period`}.
+                    </Typography>
+                ))}
+                <Typography variant="body2" sx={{ mt: 1 }}>These samples do not cover every running inventory, build order, physical belt throughput or in-game recovery.</Typography>
+            </Box>
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1, mt: 1, maxWidth: '80ch' }}>
                 {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}

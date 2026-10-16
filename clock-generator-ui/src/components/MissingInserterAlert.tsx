@@ -1,4 +1,5 @@
 import { Alert, AlertTitle, Box, Button, Stack, Typography } from '@mui/material';
+import { useId } from 'react';
 import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { entityLabel } from '../utils/entityLabel';
 import { coverageIssueElementId } from '../utils/firstProblem';
@@ -8,6 +9,7 @@ import { GameName } from './GameName';
 interface Props {
     issues: InserterCoverageIssue[];
     onApplyFix: (issue: InserterCoverageIssue, fix: InserterFixOption) => void;
+    fixUnavailable?: (fix: InserterFixOption) => string | null;
     /** The rows take the ids a problem in the workflow bar focuses; off for a second copy of the alert, so ids stay unique */
     focusTargets?: boolean;
 }
@@ -25,7 +27,8 @@ function fixLabel(fix: InserterFixOption): string {
     }
 }
 
-export function MissingInserterAlert({ issues, onApplyFix, focusTargets = true }: Props) {
+export function MissingInserterAlert({ issues, onApplyFix, fixUnavailable, focusTargets = true }: Props) {
+    const reasonPrefix = useId();
     if (issues.length === 0) return null;
 
     return (
@@ -55,19 +58,28 @@ export function MissingInserterAlert({ issues, onApplyFix, focusTargets = true }
                             inserter for <strong><GameName id={issue.item_name} /></strong>
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {issue.fix_options.map((fix, j) => (
-                                <Button
-                                    key={j}
-                                    size="small"
-                                    variant="outlined"
-                                    // in the alert's own text colour: red text is for a card or the bar, not the alert's red tint
-                                    color="inherit"
-                                    onClick={() => onApplyFix(issue, fix)}
-                                    sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
-                                >
-                                    {fixLabel(fix)}
-                                </Button>
-                            ))}
+                            {issue.fix_options.map((fix, j) => {
+                                const problem = fixUnavailable?.(fix);
+                                const reasonId = `${reasonPrefix}-${i}-${j}`;
+                                return <Box key={j} sx={{ maxWidth: '100%' }}>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        // in the alert's own text colour: red text is for a card or the bar, not the alert's red tint
+                                        color="inherit"
+                                        aria-disabled={problem ? true : undefined}
+                                        aria-describedby={problem ? reasonId : undefined}
+                                        onClick={() => { if (!fixUnavailable?.(fix)) onApplyFix(issue, fix); }}
+                                        onKeyDown={event => {
+                                            if (problem && (event.key === 'Enter' || event.key === ' ')) event.preventDefault();
+                                        }}
+                                        sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
+                                    >
+                                        {fixLabel(fix)}{problem ? ' (unavailable)' : ''}
+                                    </Button>
+                                    {problem && <Typography id={reasonId} variant="body2" sx={{ maxWidth: '65ch' }}>{problem}</Typography>}
+                                </Box>;
+                            })}
                         </Box>
                     </Box>
                 ))}

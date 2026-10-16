@@ -15,7 +15,7 @@ import {
     type Edge,
     type EdgeChange,
 } from '@xyflow/react';
-import { Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
+import { Alert, Box, Button, IconButton, Menu, MenuItem, ToggleButton, Typography } from '@mui/material';
 import { Add, Fullscreen } from '@mui/icons-material';
 import { SURFACE } from '../theme/tokens';
 import { useGameNames } from '../hooks/useGameNames';
@@ -28,6 +28,8 @@ import type { FlowNodeEntity } from '../utils/buildFlowGraph';
 import { EntityEditDialog } from './EntityEditDialog';
 import type { EntityEditDialogProps } from './EntityEditDialog';
 import { FLOW_NODE_BOX_CLASS } from './flowNodeStyle';
+import { endpointEditProblem, endpointUpdate } from '../utils/inserterMetadata';
+import { entityLabel } from '../utils/entityLabel';
 
 const nodeTypes: NodeTypes = {
     entityNode: EntityFlowNode,
@@ -143,6 +145,7 @@ function FlowContent({
     const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(new Set());
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+    const [connectionProblem, setConnectionProblem] = useState<string | null>(null);
     const { fitView } = useReactFlow();
     const fitViewOptions = FIT_VIEW_OPTIONS;
 
@@ -246,16 +249,28 @@ function FlowContent({
         const src = entityOf(source);
         const tgt = entityOf(target);
         if (!src || !tgt) return;
+        const updateEndpoint = (index: number, side: 'source' | 'sink', endpoint: { type: InserterFormData['source']['type']; id: number }) => {
+            const inserter = inserters[index];
+            const problem = endpointEditProblem(inserter, side, endpoint);
+            if (problem) {
+                setConnectionProblem(`${entityLabel('inserter', inserter.id)}: ${problem}`);
+                return;
+            }
+            setConnectionProblem(null);
+            const updates = endpointUpdate(inserter, side, endpoint);
+            if (Object.keys(updates).length > 0) onUpdateInserter?.(index, updates);
+        };
         if (tgt.type === 'inserter' && ENTITY_TYPES.has(src.type)) {
             if (!onUpdateInserter) return;
             const idx = inserters.findIndex(i => i.id === tgt.id);
-            if (idx !== -1) onUpdateInserter(idx, { source: { type: src.type as 'machine' | 'belt' | 'chest', id: src.id } });
+            if (idx !== -1) updateEndpoint(idx, 'source', { type: src.type as 'machine' | 'belt' | 'chest', id: src.id });
         } else if (src.type === 'inserter' && ENTITY_TYPES.has(tgt.type)) {
             if (!onUpdateInserter) return;
             const idx = inserters.findIndex(i => i.id === src.id);
-            if (idx !== -1) onUpdateInserter(idx, { sink: { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.id } });
+            if (idx !== -1) updateEndpoint(idx, 'sink', { type: tgt.type as 'machine' | 'belt' | 'chest', id: tgt.id });
         } else if (ENTITY_TYPES.has(src.type) && ENTITY_TYPES.has(tgt.type)) {
             if (!onAddInserter || !onUpdateInserter) return;
+            setConnectionProblem(null);
             const newIndex = inserters.length;
             onAddInserter();
             onUpdateInserter(newIndex, {
@@ -367,6 +382,9 @@ function FlowContent({
         >
             <Background color="#333" variant={BackgroundVariant.Dots} gap={20} size={1} />
             <Controls showInteractive={false} fitViewOptions={fitViewOptions} />
+            {connectionProblem && <Panel position="bottom-center" style={{ width: 'max-content', maxWidth: 'calc(100% - 24px)' }}>
+                <Alert role="alert" severity="warning" sx={{ overflowWrap: 'anywhere' }} data-geometry-connection-problem>{connectionProblem}</Alert>
+            </Panel>}
             <Panel position="top-left">
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
                     {/* a toggle with its words, not an (i): it shows the machines' rates on the nodes, it is not help */}

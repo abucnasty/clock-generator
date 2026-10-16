@@ -1,6 +1,7 @@
 import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
-import { effectiveInserterStackSize } from '../inserterMetadata';
+import { DROP_BELT_READ_ONLY, effectiveInserterStackSize, hasImportedBeltDrops } from '../inserterMetadata';
+import { entityLabel } from '../entityLabel';
 import { nextId } from './edits';
 import {
     BELT_FORM_DEFAULT_STACK_SIZE,
@@ -43,12 +44,20 @@ function inferStackSize(prev: ConfigFormData): number {
     return best;
 }
 
-/** Adds the inserter, belt lane, belt or chest that the chosen fix of an inserter coverage issue calls for */
+/** Why an offered repair cannot change this build's imported geometry. */
+export function inserterFixProblem(config: Pick<ConfigFormData, 'inserters' | 'belts'>, fix: InserterFixOption): string | null {
+    return fix.type === 'add_lane_to_existing_belt' && config.belts.some(belt => belt.id === fix.belt_id)
+        && hasImportedBeltDrops(config.inserters, fix.belt_id)
+        ? `${entityLabel('belt', fix.belt_id)}: ${DROP_BELT_READ_ONLY}` : null;
+}
+
+/** Adds the inserter, belt lane, belt or chest that the chosen fix calls for. */
 export function applyInserterFix(
     prev: ConfigFormData,
     issue: InserterCoverageIssue,
     fix: InserterFixOption,
 ): ConfigFormData {
+    if (inserterFixProblem(prev, fix)) return prev;
     // ── machine → machine inserter (highest priority, no new belt/chest) ─
     if (fix.type === 'machine_to_machine') {
         const stackSize = inferStackSize(prev);

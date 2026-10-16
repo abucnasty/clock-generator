@@ -1462,6 +1462,35 @@ const btn = (page, name, exact = true) => page.getByRole('button', { name, exact
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
 
 export const ui = {
+    endInstall: p => p.locator('[data-install-steps]'),
+    endInstallToggle: p => ui.endInstall(p).getByRole('button', { name: 'Put it in your game', exact: true }),
+    endWakeTableSwitch: p => ui.copyWakeView(p).getByRole('switch', { name: 'Show as table', exact: true }),
+    endClockRadios: p => ui.clockTable(p).getByRole('radio'),
+    endSharedCancel: p => ui.compatShareConfirm(p).getByRole('button', { name: 'Cancel', exact: true }),
+    // 0.16 compatibility; additive. Read-only observations and actions use these aliases only.
+    // Geometry observation only: modal aria-hiding must not remove the physical header from readback. Never use for actions/focus gates.
+    c016HeaderGeometry: p => p.locator('header').first(),
+    c016AssumptionLine: p => ui.resultsCard(p).locator('[data-start-assumption]'),
+    c016Details: p => ui.resultsCard(p).locator('[data-model-assumptions]'),
+    c016Summary: p => ui.c016Details(p).locator('summary'),
+    c016Name: p => ui.resultsCard(p).locator('[data-clock-name]'),
+    c016EngineName: p => ui.resultsCard(p).locator('[data-engine-name]'),
+    c016Warnings: p => ui.resultsCard(p).getByRole('alert'),
+    c016CheckedRadio: p => ui.clockTable(p).locator('input[type=radio]:checked'),
+    c016Radio: (p,index) => ui.clockTable(p).locator('input[type=radio][value="'+index+'"]'),
+    c016ClockRow: (p,label) => ui.clockRows(p).filter({has: p.getByText(label,{exact:true})}),
+    c016ClockHelp: (p,label) => ui.c016ClockRow(p,label).getByRole('button',{name:/^About /}),
+    c016ClockHelpDialog: p => ui.followDialogs(p).filter({hasText:'How it is made'}),
+    c016RouteReason: (p,id) => ui.compatInserterRow(p,id).getByText(/Imported geometry: route read-only\. Edit and reopen the build file to change it\./),
+    c016BeltType: (p,id) => ui.editingRow(p,'belts',id).getByRole('combobox',{name:'Belt type',exact:true}),
+    c016BeltReason: (p,id) => ui.editingRow(p,'belts',id).getByText(/Imported drop positions: belt type and lane layout are read-only\. Edit and reopen the build file to change them\./),
+    c016AddLane: (p,id) => ui.editingRow(p,'belts',id).getByRole('button',{name:'Add Lane',exact:true}),
+    c016RemoveLanes: (p,id) => ui.editingRow(p,'belts',id).getByRole('button',{name:/^Remove lane/}),
+    c016NonGeometryDestination: (p,id) => ui.compatDestination(p,id),
+    c016RecoveryText: p => ui.copyTile(p,'Recovers'),
+    c016NoClockText: p => ui.followMain(p).getByText(/No clocks were available to check/),
+    c016PasteGeometryProblem: p => ui.followPasteConfirm(p).getByRole('alert').filter({hasText:'has an imported drop position tied to its route'}),
+
     // 3.F additive bindings. Existing aliases and all helper defaults are preserved.
     followBeltExportOption: p => p.getByRole('option', { name: /^Export\b/ }),
     followBeltConsumed: scope => scope.getByLabel('Consumed /s', { exact: true }),
@@ -1879,6 +1908,34 @@ export const ui = {
     generateAgain: (page) => page.getByRole('main').locator('[data-stale-banner]').getByRole('button', { name: 'Generate again', exact: true }),
     /** The notes under the stale banner: a stopped run, a pick the run did not make (owner: 3.3 cancel) */
     runNote: (page) => page.getByRole('main').locator('[data-run-notes]'),
+    // Formal round1 metadata review consumers. Graph actions always target the exposed fullscreen subtree.
+    c016ReviewGraphDialog: p => p.getByRole('dialog').filter({has:p.locator('.react-flow')}),
+    c016ReviewGraph: p => ui.c016ReviewGraphDialog(p).locator('.react-flow'),
+    c016ReviewNodes: graph => graph.locator('.react-flow__node'),
+    c016ReviewNode: (graph,id) => graph.locator('.react-flow__node[data-id='+JSON.stringify(id)+']'),
+    c016ReviewHandle: (graph,id,kind) => ui.c016ReviewNode(graph,id).locator('.react-flow__handle.'+kind).first(),
+    c016ReviewConnection: graph => graph.locator('.react-flow__connection'),
+    c016ReviewEdge: (graph,id) => graph.locator('.react-flow__edge[data-id='+JSON.stringify(id)+']'),
+    c016ReviewReconnect: (edge,side) => edge.locator('.react-flow__edgeupdater-'+side),
+    c016ReviewGraphRefusal: graph => graph.locator('[data-geometry-connection-problem]'),
+    c016ReviewBeltReason: dialog => dialog.getByText('Imported drop positions: belt type and lane layout are read-only. Edit and reopen the build file to change them.',{exact:true}),
+    c016ReviewBeltType: dialog => dialog.getByRole('combobox',{name:'Belt type',exact:true}),
+    c016ReviewBeltStrategy: dialog => dialog.getByRole('combobox',{name:'Belt strategy',exact:true}),
+    c016ReviewConsumption: dialog => dialog.getByRole('textbox',{name:'Consumed /s',exact:true}),
+    c016ReviewLaneEditors: dialog => dialog.getByRole('combobox',{name:'Ingredient',exact:true}).or(dialog.getByRole('textbox',{name:'Stack size',exact:true})),
+    c016ReviewLaneButtons: dialog => dialog.getByRole('button',{name:/^(Add Second Lane|Remove lane)$/}),
+    c016ReviewCoverage: (p,machine,item) => p.locator('[id='+JSON.stringify('coverage-issue-missing_input_inserter-'+machine+'-'+item)+']'),
+    c016ReviewUnavailable: (row,belt) => row.getByRole('button',{name:'Add to Belt '+belt+' (unavailable)',exact:true}),
+    c016ReviewCoverageReason: (row,belt) => row.getByText('Belt '+belt+': Imported drop positions: belt type and lane layout are read-only. Edit and reopen the build file to change them.',{exact:true}),
+    c016ReviewCoverageAlternative: (row,name) => row.getByRole('button',{name,exact:true}),
+    c016ReviewFuel: (p,machine,name) => ui.compatMachineRow(p,machine).getByText('Imported fuel (read-only): '+name+'.',{exact:true}),
+    c016ReviewPasteFuel: (p,machine,name) => ui.followPasteConfirm(p).getByText('Machine '+machine+': imported fuel '+name+' (read-only).',{exact:true}),
+    // Additional new graph-alert axe pass keeps only visual data/background out; the local alert and controls are included.
+    c016ReviewAxeExclusions: () => ['canvas','.react-flow__viewport','.react-flow__background'],
+    // Read-only lookup-failure diagnostics only; hidden graphs/dialogs are never action or focus targets.
+    c016ReviewPhysicalGraphs: p => p.locator('.react-flow'),
+    c016ReviewPhysicalDialogs: p => p.locator('[role=dialog]'),
+
 };
 
 let namesCache;

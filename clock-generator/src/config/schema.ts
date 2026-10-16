@@ -281,7 +281,25 @@ export const DrillsConfigSchema = z.object({
 // Inserter Configuration
 // ============================================================================
 
-const InserterBeltConfigSchema = z.object({
+/**
+ * Where an inserter drops on a belt that moves, for the simulator to time the drop by the stacks that are on the lane
+ * (clock-generator/docs/simulator.md, "A stack inserter on a moving lane").
+ */
+const InserterBeltDropConfigSchema = z.object({
+    /**
+     * The lane the inserter drops on, by its place in the belt's `lanes`, 1 or 2 (the left lane in the direction of
+     * travel first). It is 1 when the belt lists one lane, even when the inserter drops on the right lane of the belt.
+     */
+    lane: z.union([z.literal(1), z.literal(2)]),
+    /**
+     * Tiles along the belt's path, increasing in the direction the belt runs. The origin is free but the same for
+     * every inserter that drops on the belt, and a position may be negative or a fraction: only the distances
+     * between them count.
+     */
+    position: z.number()
+});
+
+const InserterBeltSourceConfigSchema = z.object({
     type: z.literal(TargetType.BELT),
     id: z.number().int().positive(),
     /**
@@ -290,7 +308,19 @@ const InserterBeltConfigSchema = z.object({
      * first when its sink takes the items of both, as in the game. Without it the inserter takes its items in the
      * order of its `filters`, or of the sink's ingredients when it has none, which may not be what the build does.
      */
-    near_lane: z.union([z.literal(1), z.literal(2)]).optional()
+    near_lane: z.union([z.literal(1), z.literal(2)]).optional(),
+    /** Refused: only an inserter's sink has a drop spot (see the checks of ConfigSchema) */
+    drop: InserterBeltDropConfigSchema.optional()
+});
+
+const InserterBeltSinkConfigSchema = z.object({
+    type: z.literal(TargetType.BELT),
+    id: z.number().int().positive(),
+    /**
+     * Where the inserter drops on the belt. Without it the drop takes the same ticks wherever the belt carries
+     * stacks. It is all or none per belt: when any inserter that drops on a belt has it, every one must.
+     */
+    drop: InserterBeltDropConfigSchema.optional()
 });
 
 const InserterMachineConfigSchema = z.object({
@@ -323,12 +353,12 @@ const InserterOverridesConfigSchema = z.object({
 export const InserterConfigSchema = z.object({
     id: z.number().int().positive().optional(),
     source: z.discriminatedUnion("type", [
-        InserterBeltConfigSchema,
+        InserterBeltSourceConfigSchema,
         InserterMachineConfigSchema,
         InserterChestConfigSchema
     ]),
     sink: z.discriminatedUnion("type", [
-        InserterBeltConfigSchema,
+        InserterBeltSinkConfigSchema,
         InserterMachineConfigSchema,
         InserterChestConfigSchema
     ]),
@@ -496,6 +526,26 @@ export const ConfigOverridesSchema = z.object({
      */
     search_for_fewer_wake_ups: z.boolean().optional(),
     /**
+     * Try every clock from other starts than the plain cold start of the staged scaffold too: with the clock standing 30,
+     * 300, 700 and 1000 ticks into its period at the first tick, and with the inserters that compete for one machine's
+     * product served in ascending config ids and in two random orders. The clock is stable when it reaches its target
+     * from every start, start-dependent when it does from some, unstable when it does from none; a start-dependent
+     * clock is listed with where it reaches its target and where it settles elsewhere.
+     *
+     * By default every clock is judged from the cold start alone, and the generator says that start dependence was
+     * not checked. Takes a few more long runs of every clock.
+     *
+     * @default false
+     */
+    check_start_dependence: z.boolean().optional(),
+    /**
+     * Items of its own product a machine whose recipe makes its own ingredient (pentapod eggs) is given once when a clock
+     * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines are seeded by hand.
+     *
+     * @default 200
+     */
+    loop_seed_items: z.number().int().nonnegative().optional(),
+    /**
      * @deprecated Ignored. Set terminal_swing_count to force an output swing count instead; other counts are
      * offered as potential clocks.
      */
@@ -533,6 +583,33 @@ export const ConfigSchema = z.object({
     belts: z.array(BeltConfigSchema),
     chests: z.array(ChestConfigSchema).optional(),
     overrides: ConfigOverridesSchema.optional()
+}).superRefine((config, context) => {
+    config.inserters.forEach((inserter, index) => {
+        if (inserter.source.type === TargetType.BELT && inserter.source.drop !== undefined) {
+            context.addIssue({
+                code: "custom",
+                path: ["inserters", index, "source", "drop"],
+                message: "`drop` is the spot an inserter drops on a belt: it belongs on the sink, not on the source"
+            });
+        }
+    });
+    // a drop spot is all or none per belt: the lane rule needs every stack on it
+    const dropping = config.inserters.flatMap((inserter, index) =>
+        inserter.sink.type === TargetType.BELT ? [{ inserter, index, sink: inserter.sink }] : []);
+    for (const belt_id of new Set(dropping.map(it => it.sink.id))) {
+        const on_belt = dropping.filter(it => it.sink.id === belt_id);
+        const without = on_belt.filter(it => it.sink.drop === undefined);
+        if (without.length === on_belt.length || without.length === 0) {
+            continue;
+        }
+        const names = without.map(it => it.inserter.id !== undefined ? String(it.inserter.id) : `at index ${it.index}`);
+        context.addIssue({
+            code: "custom",
+            path: ["inserters", without[0].index, "sink", "drop"],
+            message: `Belt ${belt_id}: inserter ${names.join(", ")} drop(s) on it without \`drop\`, while others have it; ` +
+                "give every inserter that drops on a belt a `drop` (lane and position), or none"
+        });
+    }
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
