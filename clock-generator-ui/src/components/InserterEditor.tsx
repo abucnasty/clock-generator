@@ -80,7 +80,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
         } }} />
     );
     const picker = (side: 'source' | 'sink', name: string) => (
-        <Autocomplete size="small" sx={{ flex: '1 1 160px', minWidth: 0 }} options={ownOptions}
+        <Autocomplete size="small" sx={row ? { flex: '1 1 160px', minWidth: 0 } : { width: '100%' }} options={ownOptions}
             value={findOption(ownOptions, value[side].type, value[side].id)}
             onChange={(_, option) => { if (option) onChange({ [side]: { type: option.type, id: option.id } }); }}
             getOptionLabel={option => option.sublabel ? `${option.label} - ${option.sublabel}` : option.label}

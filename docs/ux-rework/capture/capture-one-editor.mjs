@@ -290,10 +290,10 @@ async function readGroups(page) {
 // The five dialogs: sample, node label, the dialog's own title, one field to change and what to look for in the stored form
 const KINDS = [
     { key: 'machine', file: LDS, node: /^Machine 1$/, title: 'Machine 1', field: 'Productivity (%)', bump: 1 },
-    { key: 'belt', file: LDS, node: /^Belt 1/, title: 'Belt 1', field: 'Stack Size', bump: 1 }, // SELECTOR: confirm (first lane's Stack Size)
+    { key: 'belt', file: LDS, node: /^Belt 1/, title: 'Belt 1', field: 'Stack size', bump: 1 }, // SELECTOR: confirm (first lane's Stack Size)
     { key: 'chest', file: LDS, node: /^Chest 1$/, title: 'Chest 1', field: 'Storage Size', bump: 1 },
     { key: 'drill', file: SHARED, node: /^Drill 1$/, title: 'Drill 1', field: 'Speed Bonus', bump: 1 },
-    { key: 'inserter', file: LDS, node: /^Inserter 3$/, title: 'Inserter 3', field: 'Stack Size', bump: -1 },
+    { key: 'inserter', file: LDS, node: /^Inserter 3$/, title: 'Inserter 3', field: 'Stack size', bump: -1 },
 ];
 /** Changes the kind's field in the open dialog by `bump`; returns the new text */
 async function editField(page, kind, rec) {

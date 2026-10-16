@@ -1425,7 +1425,7 @@ export const ui = {
         oneEditorKeepEditing: p => p.getByRole('button', { name: 'Keep editing', exact: true }),
         oneEditorDiscard: p => p.getByRole('button', { name: 'Discard', exact: true }),
         // Config's panel (not the tab button) and both controlled layouts; labels must match.
-        oneEditorConfig: p => ui.compatRuleEditor(p, 1).getByRole('tabpanel', { name: /^Config$/i }),
+        oneEditorConfig: p => ui.compatRuleEditor(p, 1).getByRole('tabpanel', { name: /^Config(?:, unsaved changes)?$/i }),
         oneEditorSource: scope => scope.getByRole('combobox', { name: /^Source$/ }),
         oneEditorDestination: scope => scope.getByRole('combobox', { name: /^Destination$/ }),
         oneEditorStack: scope => scope.getByRole('textbox', { name: /^Stack size$/i }),
