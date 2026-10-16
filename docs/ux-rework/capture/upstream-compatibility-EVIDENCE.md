@@ -1,6 +1,6 @@
 # Upstream 0.15 compatibility evidence
 
-Checkpoint: 2026-10-16. **Fix round 1: all final evidence gates passed; re-reviews pending.**
+Checkpoint: 2026-10-16. **Fix round 1: all final evidence gates passed; code and UX re-reviews PASS.**
 Round 0 code review returned FIX for exact-rate transport and unsafe synchronous rational arithmetic.
 Round 0 UX review returned PASS with an invalid-Copies blurred-display minor. All three findings were batched
 into round 1. Design reviews approved the implemented mechanisms; they are not final acceptance.
@@ -125,4 +125,5 @@ The minimal shared InsertersForm subgrid retains p2 Paper/filter behavior,130px 
 and full-row metadata. Diagram's visible/accessibility name includes beta. Full Build card/Panel/filter-slot features
 and their final geometry remain2.7B. Phase3 library/share/rule timing/cache acceptance belongs to the adjunct and3.3.
 No sidecar metadata extension, automatic repeated-unit converter, simulation/ranking change, dependency, settings,
-CI or release change is included. Independent code/UX re-reviews and all owner checkpoints remain open.
+CI or release change is included. Independent code and UX re-reviews PASS at `7454433` after one fix round; no remaining findings.
+Reports: `/tmp/ux-upstream-review/CODE-ROUND1.md` and `UX-ROUND1.md`. All owner checkpoints remain open.
