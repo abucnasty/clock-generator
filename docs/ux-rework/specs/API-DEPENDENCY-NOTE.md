@@ -70,7 +70,7 @@ export function writeDisplayPreferences(
 `hooks/useDisplayPreferences.tsx` exports exactly:
 
 ```ts
-export interface DisplayPreferencesContextValue {
+interface DisplayPreferencesContextValue {
   density: DisplayDensity;
   scheme: DisplayScheme;
   setDensity(density: DisplayDensity): void;
@@ -119,3 +119,5 @@ The existing private ClockRow has this shape; export it once. Group already elig
 Root finalization checks: accepted compatibility source/hash and exact exports; sampled counts from actual starts; candidate-local versus generation-config override meaning; geometry policy unchanged for ordinary edits; one preference API copied to every provider/consumer spec; D3 baseline receipts; minimum meaningful tests reused; common independent reviews/full gates/native widths/personas retained. These are source/API reconciliation steps within existing approvals, not additional owner requirements.
 
 Root reconciled036b4d6 API: modeledDetails receives existing useGameNames itemLabel for new player-facing names; raw saved IDs remain unchanged. D6 scope needs saved browser-wide preferences on reload, no new live storage-event synchronization project. Exact accepted source/evidence pin remains pending compatibility acceptance.
+
+Root authoring reconciliation: DisplayPreferencesContextValue is module-private because no external consumer needs that named interface. The provider/hook runtime exports and structural return contract remain unchanged. ClockRow and BeltClockGroups remain exported and type the real table grouping/renderer consumers. Default knip remains required and unchanged.
