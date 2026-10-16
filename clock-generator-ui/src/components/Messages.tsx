@@ -19,7 +19,9 @@ export function MessageProvider({ children }: { children: ReactNode }) {
     }, []);
     const dismiss = useCallback((id: number) => dispatch({ type: 'dismiss', id }), []);
     const announce = useCallback((text: string) => dispatch({ type: 'announce', id: ++nextId.current, text }), []);
-    const actions = useMemo(() => ({ notify, dismiss, announce }), [notify, dismiss, announce]);
+    const announceMessage = useCallback((messageId: number, suffix?: string) =>
+        dispatch({ type: 'announce-message', id: ++nextId.current, messageId, suffix }), []);
+    const actions = useMemo(() => ({ notify, dismiss, announce, announceMessage }), [notify, dismiss, announce, announceMessage]);
 
     // a message that goes, however it goes (closed, timed out, replaced), is told so once
     const shown = useRef<Message | null>(null);

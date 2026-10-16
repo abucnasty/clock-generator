@@ -99,3 +99,43 @@ describe('the live region', () => {
         expect(messagesReducer(announced, { type: 'dismiss', id: 1 }).announcement).toBe(announced.announcement);
     });
 });
+
+
+describe('a shared build waiting for its kept clocks', () => {
+    const message: MessageInput = {
+        text: 'Shared build opened: Science.',
+        hint: 'Or press Cmd+Z to undo.',
+        action: { label: 'Undo', onClick: () => {} },
+        durationMs: null,
+        deferAnnouncement: true,
+    };
+    const complete = (state: MessageState, id = 2) => messagesReducer(state, {
+        type: 'announce-message', id, messageId: 1, suffix: 'Its clocks are back.',
+    });
+
+    it('offers Undo immediately, then announces the opening, shortcut and restored clocks together once', () => {
+        const waiting = notify(NO_MESSAGE, 1, message);
+        expect(waiting.current).toMatchObject({ text: message.text, action: message.action, durationMs: null });
+        expect(waiting.announcement).toBeNull();
+        const completed = complete(waiting);
+        expect(completed.current).toBe(waiting.current);
+        expect(completed.announcement?.text).toBe('Shared build opened: Science. Or press Cmd+Z to undo. Its clocks are back.');
+        expect(complete(completed, 3)).toBe(completed);
+    });
+
+    it('does not interrupt a newer workflow action with an obsolete completion', () => {
+        const waiting = notify(NO_MESSAGE, 1, message);
+        const checking = messagesReducer(waiting, { type: 'announce', id: 2, text: 'Checking the build.' });
+        // The offer may still be drawn while the Check action's withdrawal is being applied.
+        expect(checking.current).toBe(waiting.current);
+        expect(complete(checking, 3)).toBe(checking);
+    });
+
+    it('does not announce an offer that was closed or replaced while its clocks were loading', () => {
+        const waiting = notify(NO_MESSAGE, 1, message);
+        const closed = messagesReducer(waiting, { type: 'dismiss', id: 1 });
+        expect(complete(closed)).toBe(closed);
+        const newer = notify(waiting, 2, { text: 'Build reset.' });
+        expect(complete(newer, 3)).toBe(newer);
+    });
+});

@@ -6,6 +6,8 @@ interface MessageActions {
     notify: (input: MessageInput) => number;
     /** Closes the message with this id, if it is still the one shown */
     dismiss: (id: number) => void;
+    /** Announces a deferred message with its hint and outcome, only while it is current and no newer news was said */
+    announceMessage: (id: number, suffix?: string) => void;
     /**
      * Reads text out in the page's one polite live region, the messages', without showing anything: for news shown
      * elsewhere on the page, such as "Generating clocks". The same text twice is read out twice.
@@ -17,6 +19,7 @@ interface MessageActions {
 export const MessageActionsContext = createContext<MessageActions>({
     notify: () => 0,
     dismiss: () => {},
+    announceMessage: () => {},
     announce: () => {},
 });
 
@@ -34,6 +37,10 @@ export function useDismissMessage(): (id: number) => void {
 /** Reads text out to screen reader users without showing a message: for news that shows elsewhere, or nowhere */
 export function useAnnounce(): (text: string) => void {
     return useContext(MessageActionsContext).announce;
+}
+
+export function useAnnounceMessage(): MessageActions['announceMessage'] {
+    return useContext(MessageActionsContext).announceMessage;
 }
 
 export function useMessageState(): MessageState {
