@@ -1,134 +1,128 @@
 # Upstream 0.15 compatibility evidence
 
-Checkpoint: 2026-10-16. **Phase 2 compatibility evidence gate complete; independent code/UX reviews pending.**
-No review verdict, PR, Phase 3 PASS, or 2.7B PASS is claimed.
+Checkpoint: 2026-10-16. **Fix round 1: all final evidence gates passed; re-reviews pending.**
+Round 0 code review returned FIX for exact-rate transport and unsafe synchronous rational arithmetic.
+Round 0 UX review returned PASS with an invalid-Copies blurred-display minor. All three findings were batched
+into round 1. Design reviews approved the implemented mechanisms; they are not final acceptance.
+Phase 3, 2.7B, 3.3 and owner install/phase/final checkpoints remain separate.
 
-## Pinned source
+## Pinned source and scope
 
-- Frozen upstream: `1d27cde` (do not chase master during this evidence cycle).
-- Compatibility implementation and exact-rate tests: `fe18341`, including tested p2 `cf7a8c7`.
-- Latest product fix: `ded521b45bf109ed3d96a27bfbb40cc49634f86e`.
-- Capture-only repairs: `d2d6a44756b917625526c5f080618a03b27bc64f` (menu transition wait and serialized clipboard checks).
-- Current merge checkpoint: `477884a95b485108b65acb92ecaf7cceaa6f492b`, merging p2 `5a5693f` documentation only.
-  Its product files are identical to `ded521b`.
-- Worktree `/tmp/ux-upstream-compatibility`; production `vite preview` at `http://127.0.0.1:5272`.
-- Runtime scripts `/tmp/ux-upstream-capture`; external Playwright/axe dependencies via `/tmp/ux-capture/node_modules`.
-  All commands set `UI_DIR=/tmp/ux-upstream-compatibility/clock-generator-ui` and
-  `SAMPLES_DIR=/tmp/ux-upstream-compatibility/clock-generator/resources/config-samples`.
+- Frozen upstream: `1d27cde`; no newer master changes in this evidence cycle.
+- Reviewed round 0: `bcc6db7`, product `ded521b`, phase base `5a5693f`.
+- Round 1 product: `aebaf9b` (exact ratio, guarded arithmetic, invalid Copies display), followed by
+  `4c8a6b9fbeb4355cef80bb2f3ed44fdeb8b0a8b1` (untouched tiny values survive focus/blur).
+- Final capture source: `eb686919899b5b45c223aba970628f7469c43719`.
+- Current phase head `f43ed4a` differs from `5a5693f` only in PROGRESS.md; no product baseline change.
+- Worktree `/tmp/ux-upstream-compatibility`; built production preview `http://127.0.0.1:5272`.
+- Runtime `/tmp/ux-upstream-capture`; scripts/fixtures byte-matched to committed provider source before final runs.
+  External Playwright/axe dependencies are supplied by `/tmp/ux-capture/node_modules`.
 
-## Local checks
+The hook now preserves exact worker ratios and their memo identity. Unsupported fraction sum/product/target
+normalization returns unknown capacity and defers to existing worker validation instead of throwing during render.
+Both formatting consumers handle unknown capacity. Supported comparisons retain the engine's normalization:
+1.35 and its next JS double pass at Copies2.25/crafting speed0.3; 1.351 fails. Copies0.5 accepts0.3 and its next double,
+and rejects0.301. These are genuine file/worker/App cases, not mocked facts.
 
-Engine unchanged since `fe18341`. Completed original logs remain in `/tmp/ux-upstream-evidence/compat-final`:
+Invalid Copies retains its full input text on blur. The shared default input format retains20 fraction digits for
+Base UI validation and21 significant digits for controlled-value text. A bounded guard cancels only untouched,
+default-format, in-bounds input-blur quantization. Actual edits, steps, clear, custom formats and bounds clamping
+remain outside that guard. Tiny1e-23 import, repeated focus/Tab, reload, export, worker refusal, and correction to1/s
+are exercised in the real production page; the build remains intact.
 
-| Command (in clock-generator) | Result | Log |
+## Local and independent checks
+
+Engine source is unchanged since `fe18341`; original logs remain under `/tmp/ux-upstream-evidence/compat-final`:
+
+| Engine command | Result | Log |
 |---|---|---|
-| `npm run build` | PASS (`tsc`) | engine-build.log |
-| `npm test` | 76 files, 1008 tests passed | engine-test.log |
-| `npm run test:generation` | 11 files, 142 tests passed | engine-generation.log |
-| `npm run lint` | PASS | engine-lint.log |
-| `npm run knip` | PASS; 3 redundant-entry configuration hints | engine-knip.log |
+| `npm run build` | PASS | engine-build.log |
+| `npm test` | 1008 tests /76 files | engine-test.log |
+| `npm run test:generation` | 142 tests /11 files | engine-generation.log |
+| `npm run lint`, `npm run knip` | PASS; three existing knip configuration hints | engine-lint.log, engine-knip.log |
 
-Full UI gate rerun after `ded521b`; each command exited 0. Logs `/tmp/ux-upstream-evidence/compat-layout`:
+Fresh full UI gate at `4c8a6b9`; all commands exit0. Logs `/tmp/ux-upstream-evidence/compat-fixround1-format`:
 
-| Command (in clock-generator-ui) | Result | Log |
+| UI command | Result | Log |
 |---|---|---|
-| `node scripts/copy-factorio-data.mjs` | PASS (manual step required with ignore-scripts) | copy.log |
+| `node scripts/copy-factorio-data.mjs` | PASS | copy.log |
 | `npx tsc -b` | PASS | tsc.log |
-| `npm test` | 54 files, 926 tests passed | test.log |
-| `npm run lint` | PASS | lint.log |
-| `npm run knip` | PASS | knip.log |
-| `npm run check:icons` | 53 always-drawn icons, 378/737 optional names available | icons.log |
-| `npm run build` | PASS, includes engine dependency rebuild; existing >500kB chunk advisory | build.log |
+| `npm test` | 948 tests /54 files | test.log |
+| `npm run lint`, `npm run knip` | PASS | lint.log, knip.log |
+| `npm run check:icons` | 53 always-drawn icons present;378/737 optional names available | icons.log |
+| `npm run build` | PASS; existing >500kB chunk advisory | build.log |
 
-Root's independent runner separately reran UI tests/build at `ded521b`; root owns that evidence decision.
+Luna independently repeated UI test/build on exact `4c8a6b9` in a detached tree with its own engine/UI dependencies:
+`/tmp/ux-upstream-194-evidence/round1-4c8a6b9/RESULTS.md`. Root read actual948-test totals, build completion,
+package-resolution identity and exit0 lines. Earlier926/939-test gates are historical, not the current gate.
 
-## Completed production browser captures
+## Final production browser evidence
 
-Use `BASE_URL=http://127.0.0.1:5272` plus the UI_DIR/SAMPLES_DIR above. Default widths are intentional:
+Final root: `/tmp/ux-upstream-evidence/compat-round1-final`. Commands and exit codes are in CHECKPOINT.md;
+complete assertion logs in `logs/`, indexes/screenshots under each named stage. All final commands are unfiltered.
+Set `BASE_URL=http://127.0.0.1:5272`, `UI_DIR=/tmp/ux-upstream-compatibility/clock-generator-ui`, and
+`SAMPLES_DIR=/tmp/ux-upstream-compatibility/clock-generator/resources/config-samples`.
 
-| Command | Result | Output / log |
-|---|---|---|
-| `node /tmp/ux-upstream-capture/capture-upstream-compatibility.mjs /tmp/ux-upstream-evidence/compat-core-final` | **3088 PASS, 0 FAIL, 0 failed steps** | compat-core-final/INDEX.md; compat-final/core-final-capture.log |
-| `node /tmp/ux-upstream-capture/capture-rate-limit.mjs /tmp/ux-upstream-evidence/compat-rate-final` | **156 PASS, 0 FAIL, 0 failed steps** | compat-rate-final/INDEX.md; compat-final/rate-final-capture.log |
-| `STEPS=G1 node /tmp/ux-upstream-capture/capture-upstream-compatibility.mjs /tmp/ux-upstream-evidence/compat-geometry3` | 513 PASS, 0 FAIL, 0 failed steps; superseded by full core | compat-geometry3/INDEX.md; compat-final/geometry3-capture.log |
-| `node /tmp/ux-upstream-capture/selftest.mjs` | ALL PASSED; includes menu-layer empty/open/exited assertions; p3 explicitly NOT RUN | compat-final/selftest-repaired.log; independent repeat selftest-repaired-final.log exit0 |
-| `node /tmp/ux-upstream-capture/capture-first-visit.mjs /tmp/ux-upstream-evidence/compat-first-visit-repaired-final` | **1090 PASS, 0 FAIL, 0 failed steps; exit0** | compat-first-visit-repaired-final/INDEX.md; compat-final/first-visit-repaired-final-capture.log |
-| `node /tmp/ux-upstream-capture/capture-results-answer.mjs /tmp/ux-upstream-evidence/compat-results-repaired-final` | **790 PASS, 0 FAIL, 0 failed steps; exit0** | compat-results-repaired-final/INDEX.md; compat-final/results-repaired-final-capture.log |
+| Script | Widths | Result | Output / log |
+|---|---|---|---|
+| `capture-upstream-compatibility.mjs` |1440/960/800/720/390|5078 PASS,0 FAIL,0 failed steps; exit0|core/INDEX.md; logs/core.log|
+| `capture-rate-limit.mjs` |1440/720/390|156 PASS,0 FAIL,0 failed steps; exit0|rate/INDEX.md; logs/rate.log|
+| `capture-first-visit.mjs` (`GEN_EACH` unset) |1440/720/390|1090 PASS,0 FAIL,0 failed steps; exit0|first-visit/INDEX.md; logs/first-visit.log|
+| `capture-results-answer.mjs` |1440/720/390|790 PASS,0 FAIL,0 failed steps; exit0|results/INDEX.md; logs/results.log|
 
-All nine example generations at1440 passed the <=60s requirement: logistic0.5s, automation0.9s,
-utility0.5s, chemical(shared-foundry)2.7s, electromagnetic1.9s, military2.6s, production1.8s,
-metallurgic10.8s, agriculture13.4s. Root inspected all nine result lines and complete firstvisit totals.
+Updated selector selftest ALL PASSED on the same scripts, including new numeric/tooltip selectors:
+`/tmp/ux-upstream-evidence/compat-fixround1-format/author-selftest.log`. Source identity was independently checked;
+no redundant repeat was needed. Phase3-only stages explicitly report NOT RUN, never PASS.
 
-Core widths 1440/960/800/720 each: 622 PASS. Width390:600 PASS. At390 only row geometry is observational;
-reachability, keyboard/focus, actions, accessible names and axe remain required. Rate widths1440/720/390:52 PASS each.
-Core scans include every captured state, actual keyboard stops, short-height editor/dialog checks, static error descriptions,
-real error/import announcements where exposed, input/export/reload, metadata/Paste, List live clear and Diagram draft/Save,
-repeated-unit Check and fresh Generate refusal, real examples/manifest and all metadata row geometry.
+Core totals:1020 each at1440/960/800/720;998 at390. At390 row geometry is observational; reachability, keyboard/focus,
+actions, names and axe remain required. The expanded author run preceding the final core was2079/0/0 at three widths.
+Core includes real fractional input and persistence, invalid blur, exact decimal equality/excess, tiny-rate recovery,
+ordinary numeric no-drift/keyboard selection/steppers/typing, metadata and Automatic, Diagram Cancel/reopen/Save,
+repeated-unit Check announcement and Generate error-note focus/name/description, examples and shared row geometry.
 
-Measured text contrasts: Copies help8.37:1; invalid Copies/target errors7.42:1; List metadata/Automatic7.00:1;
-Diagram metadata/Automatic7.00:1; repeated-unit guide14.06:1. Complete control ratios and aria snapshots are in each INDEX.
+All nine example generations passed <=60s: logistic0.5s, automation0.9s, utility0.5s, chemical(shared-foundry)2.7s,
+electromagnetic1.9s, military2.6s, production1.8s, metallurgic11.0s, agriculture13.4s. Root read all nine lines.
 
-Core screenshots (each filename ends `-<width>.png`, with corresponding `.aria.yml`, under `w1440`, `w960`, `w800`, `w720`, `w390`):
-`01-f1-fractional-copies`, `02-f2-invalid-0`, `03-f2-invalid--1`, `04-f2-invalid-0.0001`,
-`05-f2-invalid-0.3333333333333333`, `06-f3-invalid-draft-reload`, `07-r1-half-copy-target-limit`,
-`08-m1-readonly-automatic`, `09-m2-list-cleared`, `10-m2-diagram-uncommitted`, `11-m2-diagram-saved`,
-`12-m3-metadata-paste-confirm`, `13-m3-pasted-metadata`, `14-u1-repeated-unit-guide`,
-`15-x1-fractional-examples`, `16-g1-metadata-geometry`. INDEX files list all exact screenshot paths.
+Measured original/new text contrasts remain in the per-width indexes: Copies helper8.37:1; inline errors7.42:1;
+List metadata/Automatic7.00:1; Diagram metadata/Automatic8.37:1/7.00:1; repeated-unit guide14.06:1.
+Shared axe runs15 selected rules and excludes canvas/React Flow by default; this is not exhaustive WCAG certification.
 
-## Scoped fixes and 2.7B reconciliation
+Root independently opened these final core shots:
+- w720/05-f2-invalid-third-blurred-720.png
+- w1440/09-r2-exact-capacity-2.25-1440.png
+- w390/16-r3-tiny-rate-reload-visible-390.png
+- w390/18-r3-tiny-rate-checked-visible-390.png
+- w390/19-r3-worker-failure-visible-390.png
 
-`ded521b` borrows ce131ae's existing shared InsertersForm subgrid: LIST_GRID_SX, ROW_GRID_SX,
-DESTINATION_CELL_SX, ROW_REST_SX, source/lane grouping and rule/delete cell wrappers. It preserves the p2 Paper,
-existing filter editing, metadata and Automatic semantics; it does not adopt PanelSection/filter-slot features.
-The Stack column is130px to fit Automatic, with the same grid's one-row breakpoint raised to1600px to retain readable
-Source/Destination names with the wider field. Metadata spans all columns. 2.7B must reconcile these same layout hunks
-when it inherits compatibility, retaining its own broader features and final capture. Diagram visible text now has a space
-before beta; its accessible name is `Diagram beta view`, centralized in `ui.diagramView`.
+Visible-rate/error/corrected shots are separate from completed keyboard audits. Repositioning for a screenshot earns
+no keyboard PASS. Full paths and accessible-name snapshots for every state are listed by the stage indexes.
 
-Capture repairs preserve assertions: focus before inspecting full NumberField values; firstProblem starts from another
-field; actual accessible group names identify Diagram nodes; fresh import separates Check failure from Generate failure;
-only aria-hidden native form backing inputs are excluded from visual geometry. Axe scans start at page top so a preceding
-Tab walk cannot leave a target partially under the sticky header; actual per-stop focus checks remain.
-Rate-limit exact copy now describes one unit and raising Copies, matching intended source; palette expectation is actual
-error.light `#ff9493`, retaining measured AA thresholds. Firstvisit expects existing Sidecar0.7.1 and Terms menu order;
-menu closure is awaited before the start-note click. Selector selftest waits for asynchronously loaded example rows.
-The infinity-chest fixture explicitly says `type: infinity-chest`, matching current engine schema.
+## Capture diagnostics and historical evidence
 
-## Reproduction commands
+All failed runs remain on disk, with exact runtime source archives. No failure was relabeled PASS and no original
+assertion was dropped. The new core retains all69 original assertion lines.
 
-Run sequentially (clipboard is shared), copying the committed scripts and fixtures into the external runtime first:
+- Initial round1 author run exposed real tiny-rate data loss after focus/blur. Sol's isolated log proved import1e-23,
+  focus text0, blur storage0, reload0. Product4c8a6b9 fixes this; see compat-fixround1/tiny-focus-isolated.log.
+- The first significant-digits-only proposal was rejected before implementation: installed Base UI would validate
+  typed values at three fractional digits. The approved design preserves its original20-digit validation precision.
+- R2 fixture comparison now projects target fields in a stable order; JSON key ordering is not a value difference.
+- R2's transient axe region failure was the dismissed Facts tooltip still mounted with child opacity0. The capture
+  waits for that tooltip to detach before Check/audit; no axe exclusion or product change. Exact DOM evidence:
+  compat-fixround1-format/r2-tooltip-diagnosis.log.
+- Save-file capture handles its pending download rejection, closes only an older Save notice and waits for the real
+  menu layer to exit. This repairs capture focus sequencing without dropping keyboard assertions.
+- N1 pointer traces showed a12ms press/release landing on different controls after focus-induced scrolling at narrow
+  widths. The capture centers the field after its keyboard assertions, then performs a genuine mouse click and
+  retains exact+0.1/restoration checks. See author-affected3.log and n1-pointer-summary.log; no precision relaxation.
+- Previous round0 final runs remain at compat-core-final, compat-rate-final, compat-first-visit-repaired-final and
+  compat-results-repaired-final. Their3088/156/1090/790 counts are historical; fresh shared-format regressions above
+  supersede them. Earlier menu/clipboard/selector failures and interrupted runs are likewise retained.
 
-```sh
-export BASE_URL=http://127.0.0.1:5272
-export UI_DIR=/tmp/ux-upstream-compatibility/clock-generator-ui
-export SAMPLES_DIR=/tmp/ux-upstream-compatibility/clock-generator/resources/config-samples
-node /tmp/ux-upstream-capture/selftest.mjs
-node /tmp/ux-upstream-capture/capture-first-visit.mjs /tmp/fresh-first-visit-evidence
-node /tmp/ux-upstream-capture/capture-results-answer.mjs /tmp/fresh-results-evidence
-```
+## Scope boundaries
 
-Leave GEN_EACH unset (or1) for firstvisit: S6 at1440 generates all nine examples, records seconds and requires <=60s.
-The current-tree core Check already accepts the unchanged shared-foundry chemical sample with Copies5.5. Final generation
-timing is now complete in the repaired firstvisit run above; do not repeat passed runs without a change. Current results-answer card is the relevant existing card; unmerged2.7B's new build-card script
-cannot establish PASS here. P3 library/share/rules/cache are separate adjunct evidence, never inferred from these captures.
-
-Prior runs retained honestly: core-capture.log1954PASS24FAIL20failedsteps (superseded); core-debug2 M2/U1 at720113PASS;
-first-visit-capture.log1063PASS16FAIL (stale version/menu expectations and390 open-menu setup); rate-capture.log141PASS15FAIL
-(stale exact copy/palette, superseded); selftest.log5 failures (example row render race, repaired but final rerun pending).
-No historical failure has been relabeled PASS. Root inspected the final result lines, all nine generation timings,
-independent test/build logs and screenshots before declaring this evidence ready for review.
-
-The first final historical runs were interrupted after assertions, exit130. Their later browser-closed errors are
-interruption artifacts. Sol reproduced the firstvisit focus failure at all three widths: an exiting More-options
-backdrop intercepted the click after its menu left the accessibility tree. The shared wait now requires that layer
-to detach, preserving the real mouse/focus assertion (targeted229PASS0FAIL, then full1090PASS above).
-The Results run read the8-character sentinel instead of a1873-character blueprint. The unlocked bounded diagnostic
-did not reproduce that exact nondeterministic failure (536PASS), but traced overlapping cross-width clipboard writes.
-The shared lock now serializes each entire card/bar/tab reset/click/read sequence without relaxing equality/decode
-assertions; targeted copy63PASS0FAIL. Complete repaired Results now790PASS0FAIL, including the previous
-drills/ALWAYS equality assertion at all widths (1873 characters on both card and bar).
-
-Independent final product tests/build: `/tmp/ux-upstream-194-evidence/final-ded521b/RESULTS.md` and logs,
-926UItests/build exit0 with each scratch's own built engine. Root opened final core screenshots
-1440 repeated-unit guide,720 Diagram unsaved draft,390 half-copy target limit, plus1440/720 geometry.
-No Phase3 library/rule/cache evidence, 2.7B final evidence, review verdict or owner checkpoint is implied.
+The minimal shared InsertersForm subgrid retains p2 Paper/filter behavior,130px Stack width,1600px one-row breakpoint
+and full-row metadata. Diagram's visible/accessibility name includes beta. Full Build card/Panel/filter-slot features
+and their final geometry remain2.7B. Phase3 library/share/rule timing/cache acceptance belongs to the adjunct and3.3.
+No sidecar metadata extension, automatic repeated-unit converter, simulation/ranking change, dependency, settings,
+CI or release change is included. Independent code/UX re-reviews and all owner checkpoints remain open.
