@@ -33,7 +33,7 @@ import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_PERIOD_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
-import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type PickRule } from '../utils/recommendedClock';
+import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) periods are shown to 3 decimals
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
@@ -184,8 +184,8 @@ export function ClockAlternativesPanel({
         // under the pointer
         { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
-    const stableBelts = groupClockRowsByBelt(stable);
-    const otherBelts = groupClockRowsByBelt(unstable);
+    const stableBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(stable);
+    const otherBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(unstable);
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
@@ -195,7 +195,7 @@ export function ClockAlternativesPanel({
     const columnCount = allColumns ? 10 : fold === null ? 5 : 4;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
-    const renderRow = ({ alternative, index }: { alternative: ClockAlternativeView; index: number }) => {
+    const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
         const works = worksOf(alternative);
         const recovery = recoversOf(alternative);
         return (

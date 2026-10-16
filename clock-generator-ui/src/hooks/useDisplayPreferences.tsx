@@ -4,7 +4,7 @@ import {
     type DisplayDensity, type DisplayPreferences, type DisplayScheme,
 } from '../utils/displayPreferences';
 
-export interface DisplayPreferencesContextValue {
+interface DisplayPreferencesContextValue {
     density: DisplayDensity;
     scheme: DisplayScheme;
     setDensity(density: DisplayDensity): void;
