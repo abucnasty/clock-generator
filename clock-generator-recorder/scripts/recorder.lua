@@ -159,6 +159,44 @@ local function fuel_item_names(burner)
     return names
 end
 
+---The transport line of a belt that is nearest to a map position, and the linear position in the middle of its piece of
+---belt, where a drop is made. nil where the entity has no transport lines
+---@param belt LuaEntity|nil
+---@param position MapPosition
+---@return { index: number, line: LuaTransportLine, at: number }|nil
+local function nearest_line(belt, position)
+    if not belt or not belt.valid then
+        return nil
+    end
+    local ok, count = pcall(function() return belt.get_max_transport_line_index() end)
+    if not ok or type(count) ~= "number" then
+        return nil
+    end
+    local best, best_distance = nil, nil
+    for index = 1, count do
+        local line = belt.get_transport_line(index)
+        local at = line.line_length / 2
+        local where = line.get_line_item_position(at)
+        local distance = (where.x - position.x) ^ 2 + (where.y - position.y) ^ 2
+        if best_distance == nil or distance < best_distance then
+            best, best_distance = { index = index, line = line, at = at }, distance
+        end
+    end
+    return best
+end
+
+---Items and stacks on a transport line
+---@param line LuaTransportLine
+---@return number items, number stacks
+local function line_load(line)
+    local items, stacks = 0, 0
+    for _, detailed in pairs(line.get_detailed_contents()) do
+        stacks = stacks + 1
+        items = items + ((detailed.stack and detailed.stack.valid_for_read) and detailed.stack.count or 1)
+    end
+    return items, stacks
+end
+
 ---@param result ExtractionResult
 ---@return table[] inserters, table[] machines, table[] drills
 local function build_tracks(result)
@@ -177,6 +215,30 @@ local function build_tracks(result)
             },
             samples = { held_count = {}, held_item = {}, status = {} },
         })
+        -- An inserter that drops on a belt: the lane it drops on (the nearest line to its drop position) and what is on
+        -- that lane's piece of belt each tick. One that picks up from a belt: what is on each lane of that piece.
+        local track = inserters[#inserters]
+        if exported.sink.type == "belt" and entity.valid then
+            local drop = nearest_line(entity.drop_target, entity.drop_position)
+            if drop then
+                track.drop_line = drop
+                track.info.drop_lane = { index = drop.index, length = drop.line.line_length }
+                track.samples.drop_lane_items = {}
+                track.samples.drop_lane_stacks = {}
+                track.samples.drop_lane_room = {}
+            end
+        end
+        if exported.source.type == "belt" and entity.valid and entity.pickup_target and entity.pickup_target.valid then
+            local ok, count = pcall(function() return entity.pickup_target.get_max_transport_line_index() end)
+            if ok and type(count) == "number" then
+                track.pickup_lines = {}
+                track.samples.pickup_lane_items = {}
+                for index = 1, count do
+                    track.pickup_lines[index] = entity.pickup_target.get_transport_line(index)
+                    track.samples.pickup_lane_items[tostring(index)] = {}
+                end
+            end
+        end
     end
 
     local machines = {}
@@ -242,6 +304,30 @@ local function number_or_zero(entity, attribute)
     return ok and type(value) == "number" and value or 0
 end
 
+---The belt lanes of an inserter that drops on or picks up from a belt, as they are this tick
+---@param track table
+local function sample_lanes(track)
+    local s = track.samples
+    local drop = track.drop_line
+    if drop then
+        if drop.line.valid then
+            local items, stacks = line_load(drop.line)
+            table.insert(s.drop_lane_items, items)
+            table.insert(s.drop_lane_stacks, stacks)
+            table.insert(s.drop_lane_room, drop.line.can_insert_at(drop.at) and 1 or 0)
+        else
+            table.insert(s.drop_lane_items, 0)
+            table.insert(s.drop_lane_stacks, 0)
+            table.insert(s.drop_lane_room, 0)
+        end
+    end
+    if track.pickup_lines then
+        for index, line in pairs(track.pickup_lines) do
+            table.insert(s.pickup_lane_items[tostring(index)], line.valid and (line_load(line)) or 0)
+        end
+    end
+end
+
 ---@param recording table
 local function sample(recording)
     local index = recording.sample_count
@@ -263,6 +349,7 @@ local function sample(recording)
             table.insert(s.held_count, 0)
             record_change(s.status, index, "invalid")
         end
+        sample_lanes(track)
     end
 
     for _, track in ipairs(recording.machines) do
