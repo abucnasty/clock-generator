@@ -305,6 +305,7 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
   PR's version bump starts from 0.11.0.
 
 - 2026-10-15: The owner paused work. All in-flight branches were committed and pushed.
+- 2026-10-16: Owner approved three token-saving process changes: coach only at phase ends or on request; background commands instead of command-only agents; detailed evidence stored once with compact reports and changed-field handoffs. Updated ORCHESTRATOR.md. All three phase-end reviewers, independent reruns, full evidence gates, model rules and owner checkpoints remain required.
 - 2026-10-16: The owner resumed from the local handover. Model mapping: gpt-6-astra with high reasoning for orchestration, cross-cutting implementation and every review; gpt-6.1-sol for scouts/capture writers; gpt-6-luna for mechanical runners. Fast mode prohibited. This chat cannot change its own model through available controls; delegated roles explicitly set their models.
 - 2026-10-16: master advanced from 0.11.0 to 0.15.1 (a67d5a2). Authorized down-merge: master → feat/ux-rework → p2 → p3, with semantic checks for fractional Copies, target-rate limits, library/share validation and optional stack_size, generation tests and full gates. No new version bump in the phases; the final PR starts from master’s then-current version.
 
