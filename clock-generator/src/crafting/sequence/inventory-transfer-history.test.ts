@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { fraction } from "fractionability";
+import { fraction } from "../../data-types/fraction";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { FactorioDataService } from "../../data";

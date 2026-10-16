@@ -5,7 +5,7 @@ import { Entity } from "../entity";
 import { EntityId } from "../entity-id";
 import { CraftingRate } from "../machine/traits";
 import { MiningProductivity } from "./mining-productivity";
-import { fraction } from "fractionability";
+import { fraction } from "../../data-types/fraction";
 import { ProductionRate } from "../machine";
 
 // Re-export for backwards compatibility

@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Screenshots + page checks for item 1.12 "Glossary and copy pass", Part A and Part B (spec: docs/ux-rework/specs/1.12-glossary-copy.md).
 // Usage: node capture-copy.mjs <out dir>
 //   BASE_URL     an app that is already running; without it the script serves the production build with `vite preview`
@@ -34,7 +35,7 @@ const STORAGE_KEY = 'clock-generator-config'; // hooks/usePersistedConfigForm.ts
 const FUEL_SAMPLE = sample('gleba/biochamber-fuel/nutrients-from-yumako-mash-fuel-bonus.json');
 const SHIFT_CANDIDATES = ['science/chemical-science/chemical-science.json', 'science/chemical-science/chemical-science-engines.json', 'science/utility-science/utility-science.json'].map(sample);
 const NO_RECOVERY_SAMPLE = sample('science/metallurgic-science/metallurgic-science.json'); // its only holding clock has no recovery
-const BELOW_RATE_SAMPLE = sample('science/utility-science/utility-science-direct-insert-lds.json'); // a clock below the target rate
+const BELOW_RATE_SAMPLE = BELOW_TARGET_SAMPLE; // a clock below the target rate
 
 /** Case-insensitive. Part A words, then the glossary of Part B (owner's decisions 2026-10-14). */
 const BANNED_PARTS = [

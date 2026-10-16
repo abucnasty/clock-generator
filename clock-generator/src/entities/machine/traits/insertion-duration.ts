@@ -1,4 +1,4 @@
-import Fraction, { fraction } from "fractionability";
+import Fraction, { fraction } from "../../../data-types/fraction";
 import { OverloadMultiplier, ProductionRate } from "../output";
 
 /**

@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Screenshots + page checks for the bundle of items 1.5 (messages above the footer, a quieter Ko-fi) and 1.3 (an Undo message on
 // every destructive action) of the UX rework. Written from docs/ux-rework/specs/1.5-messages-footer.md and 1.3-undo.md ("Acceptance
 // criteria", "Screens to capture", "Orchestrator notes (final)"), not from the new code. Every check prints PASS or FAIL.
@@ -48,7 +49,7 @@ const PROD = sample('science/production-science/production-science.json'); // 4 
 const PU = sample('intermediates/processing-units/processing-units.json'); // 2 chests
 const BAD = sample('intermediates/accumulator/accumulator-bad-config.json');
 /** A build whose best clock runs below the target, so Copy has a rate warning to show (capture-header.mjs uses it) */
-const BELOW_TARGET = sample('science/utility-science/utility-science-direct-insert-lds.json');
+const BELOW_TARGET = BELOW_TARGET_SAMPLE;
 
 const TMP = join(tmpdir(), 'ux-messages-undo');
 mkdirSync(TMP, { recursive: true });

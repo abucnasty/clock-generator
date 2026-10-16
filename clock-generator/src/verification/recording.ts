@@ -28,10 +28,20 @@ const RecordedInserterSchema = z.object({
     source: TargetRefSchema,
     sink: TargetRefSchema,
     stack_size: z.number(),
+    /** Of an inserter that drops on a belt: the transport line it drops on and the length of that line. Absent in older recordings */
+    drop_lane: z.object({ index: z.number().int(), length: z.number() }).optional(),
     samples: z.object({
         held_count: luaArray(z.number()),
         held_item: changeList(z.string()),
         status: changeList(z.string()),
+        /** Of an inserter that drops on a belt: items on the lane it drops on, in the belt piece it drops on, per sample. Absent in older recordings */
+        drop_lane_items: luaArray(z.number().int().nonnegative()).optional(),
+        /** The same lane's stacks per sample (a stack is up to 4 items on a belt) */
+        drop_lane_stacks: luaArray(z.number().int().nonnegative()).optional(),
+        /** Whether an item fits at the drop position of that lane per sample, 1 or 0 */
+        drop_lane_room: luaArray(z.union([z.literal(0), z.literal(1)])).optional(),
+        /** Of an inserter that picks up from a belt: items on each lane of the belt piece it picks up from per sample, by lane number */
+        pickup_lane_items: luaRecord(luaArray(z.number().int().nonnegative())).optional(),
     }),
 });
 
@@ -45,6 +55,8 @@ const RecordedMachineSchema = z.object({
         crafting_progress: luaArray(z.number()),
         bonus_progress: luaArray(z.number()),
         products_finished: luaArray(z.number()),
+        /** Simulated recordings only: crafts started so far, the simulator's own count, per sample */
+        crafts_started: luaArray(z.number()).optional(),
         inputs: luaRecord(luaArray(z.number())),
         outputs: luaRecord(luaArray(z.number())),
         /** Burner machines only: items in the fuel slot per sample, by fuel item */

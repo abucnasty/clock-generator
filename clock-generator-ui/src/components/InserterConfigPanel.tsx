@@ -1,3 +1,4 @@
+import { INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import {
     Autocomplete,
     Box,
@@ -163,19 +164,26 @@ function InserterEditSection({
             />
 
             <NearLaneSelect source={inserter.source} belts={belts} onChange={(source) => onUpdate(entityIndex, { source })} />
+            <Typography variant="body2" color="text.secondary">{inserterMetadataText(inserter)}</Typography>
+            {(!inserter.prototype || !inserter.quality) && (
+                <Typography variant="body2" color="text.secondary">{INSERTER_TIMING_ASSUMPTION}</Typography>
+            )}
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <FactorioIcon name="stack-inserter" size={22} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                <FactorioIcon name={inserter.prototype ?? 'stack-inserter'} size={22} alt="" />
                 <Typography variant="body2" color="text.secondary">
                     {entityLabel('inserter', inserter.id)} — Tile 2
                 </Typography>
                 <Box sx={{ flex: 1 }} />
                 <NumberField
+                    id={`diagram-inserter-stack-size-${inserter.id}`}
                     label="Stack size"
-                    value={inserter.stack_size}
-                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 16 })}
+                    value={inserter.stack_size ?? null}
+                    placeholder="Automatic"
+                    helperText={inserterStackSizeHelp(inserter)}
+                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: val === null ? undefined : Math.trunc(val) })}
                     min={1}
-                    sx={{ width: 130 }}
+                    sx={{ width: 180, maxWidth: '100%' }}
                     size="small"
                 />
             </Box>

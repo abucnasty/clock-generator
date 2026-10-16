@@ -81,8 +81,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'wake-up',
         term: 'wake-up',
         // provisional: the owner writes the strict definition after an experiment; edit it here, and only here
-        definition: 'One time the game wakes an inserter that is switched on and waiting, because a machine finished a '
-            + 'craft. Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS.',
+        definition: 'One time the game wakes an inserter that is switched on and waiting, because a machine started a '
+            + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS.',
         insteadOf: '"one start of a wake window"',
         provisional: true,
     },
@@ -95,7 +95,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'copies',
         term: 'copies',
-        definition: 'How many identical copies of your build you will place.',
+        definition: 'How many identical units of your build you will place, including partial units such as 0.5 or 2.25. Describe one unit in the build.',
         insteadOf: 'copy as any other noun ("Copy" stays a verb: "Copy blueprint")',
     },
     {

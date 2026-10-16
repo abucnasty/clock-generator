@@ -129,34 +129,34 @@ describe("generateClockForConfig", () => {
         });
     });
 
-    describe("CHEMICAL_SCIENCE_ENGINES config (multi-output machine)", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_ENGINES);
+    describe("LOGISTIC_SCIENCE_DI config (two machines making the output)", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_DI);
         let result: BlueprintGenerationResult;
 
         beforeAll(() => {
             result = generateClockForConfig(config);
         });
 
-        it("plans engine units in a cycle of 160 ticks (80 ticks per swing × 2 swings), with 2 transfers for each output inserter", () => {
-            expect(result.crafting_cycle_plan.production_rate.machine_production_rate.item).toBe("engine-unit");
-            // With 2 output machines and target rate of 24 items/sec,
-            // each machine produces at 0.2 items/tick (24/60/2).
-            // A stack of 16 items takes 80 ticks per machine.
-            // With 2 swings per cycle, total duration = 160 ticks.
-            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(160);
+        it("plans logistic science packs in a cycle of 96 ticks (48 ticks per swing × 2 swings), with 2 transfers for each output inserter", () => {
+            expect(result.crafting_cycle_plan.production_rate.machine_production_rate.item).toBe("logistic-science-pack");
+            // With 2 output machines and a target rate of 120 items/sec over 3 copies,
+            // each machine produces at 1/3 items/tick (120/3/60/2).
+            // A stack of 16 items takes 48 ticks per machine.
+            // With 2 swings per cycle, total duration = 96 ticks.
+            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(96);
             const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
-            for (const inserter of [1, 2]) {
+            for (const inserter of [1, 6]) {
                 const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(keys.find(k => k.id === EntityId.forInserter(inserter).id)!);
                 expect(transferCounts.total_transfer_count.toDecimal()).toBe(2);
             }
         });
 
-        it("plans the same cycle duration for a doubled target rate over copies=2", () => {
-            // - Original: 24 items/sec, 1 copy → per-machine rate = 24/60/2 = 0.2 items/tick
-            // - Modified: 48 items/sec, 2 copies → per-machine rate = 48/60/2/2 = 0.2 items/tick
+        it("plans the same cycle duration for a doubled target rate over doubled copies", () => {
+            // - Original: 120 items/sec, 3 copies → per-machine rate = 120/3/60/2 = 1/3 items/tick
+            // - Modified: 240 items/sec, 6 copies → per-machine rate = 240/6/60/2 = 1/3 items/tick
             const modifiedResult = generateClockForConfig({
                 ...config,
-                target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 2, copies: 2 },
+                target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 2, copies: config.target_output.copies * 2 },
             });
             expect(modifiedResult.crafting_cycle_plan.total_duration.ticks).toBe(result.crafting_cycle_plan.total_duration.ticks);
         });

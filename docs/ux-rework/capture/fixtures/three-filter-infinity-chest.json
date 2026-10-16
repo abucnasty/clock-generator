@@ -1,0 +1,82 @@
+{
+  "target_output": {
+    "recipe": "logistic-science-pack",
+    "items_per_second": 240,
+    "copies": 11
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "logistic-science-pack",
+      "productivity": 100,
+      "crafting_speed": 68.906247615814
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "transport-belt",
+        "inserter"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "logistic-science-pack"
+      ]
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "transport-belt",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "inserter",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": [
+    {
+      "id": 1,
+      "item_filter": [
+        {
+          "item_name": "utility-science-pack",
+          "request_count": 1
+        },
+        {
+          "item_name": "low-density-structure",
+          "request_count": 2
+        },
+        {
+          "item_name": "processing-unit",
+          "request_count": 3
+        }
+      ],
+      "type": "infinity-chest"
+    }
+  ]
+}

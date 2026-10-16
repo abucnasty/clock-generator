@@ -66,7 +66,7 @@ describe('problemsOf', () => {
             expect(problemsOf(input)).toEqual([expected]);
         }
         expect(PROBLEM_TEXT.noRate).toBe('Set Items per Second in Target Output to more than 0');
-        expect(PROBLEM_TEXT.noCopies).toBe('Set Copies in Target Output to 1 or more');
+        expect(PROBLEM_TEXT.noCopies).toBe('Set Copies to more than 0.');
     });
 
     it('names each machine without a recipe, in machine order', () => {

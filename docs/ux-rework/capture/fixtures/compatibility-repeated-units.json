@@ -1,13 +1,19 @@
 {
   "target_output": {
-    "recipe": "chemical-science-pack",
-    "items_per_second": 120,
-    "copies": 11
+    "recipe": "logistic-science-pack",
+    "items_per_second": 1,
+    "copies": 3
   },
   "machines": [
     {
       "id": 1,
-      "recipe": "chemical-science-pack",
+      "recipe": "logistic-science-pack",
+      "productivity": 100,
+      "crafting_speed": 68.906247615814
+    },
+    {
+      "id": 2,
+      "recipe": "logistic-science-pack",
       "productivity": 100,
       "crafting_speed": 68.906247615814
     }
@@ -15,20 +21,6 @@
   "inserters": [
     {
       "source": {
-        "type": "machine",
-        "id": 1
-      },
-      "sink": {
-        "type": "belt",
-        "id": 3
-      },
-      "stack_size": 16,
-      "filters": [
-        "chemical-science-pack"
-      ]
-    },
-    {
-      "source": {
         "type": "belt",
         "id": 1
       },
@@ -38,22 +30,51 @@
       },
       "stack_size": 16,
       "filters": [
-        "advanced-circuit"
+        "transport-belt",
+        "inserter"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "logistic-science-pack"
       ]
     },
     {
       "source": {
         "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "transport-belt",
+        "inserter"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
         "id": 2
       },
       "sink": {
-        "type": "machine",
+        "type": "belt",
         "id": 1
       },
       "stack_size": 16,
       "filters": [
-        "sulfur",
-        "engine-unit"
+        "logistic-science-pack"
       ]
     }
   ],
@@ -63,31 +84,11 @@
       "type": "turbo-transport-belt",
       "lanes": [
         {
-          "ingredient": "advanced-circuit",
-          "stack_size": 4
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "type": "turbo-transport-belt",
-      "lanes": [
-        {
-          "ingredient": "sulfur",
+          "ingredient": "transport-belt",
           "stack_size": 4
         },
         {
-          "ingredient": "engine-unit",
-          "stack_size": 4
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "type": "turbo-transport-belt",
-      "lanes": [
-        {
-          "ingredient": "chemical-science-pack",
+          "ingredient": "inserter",
           "stack_size": 4
         }
       ]

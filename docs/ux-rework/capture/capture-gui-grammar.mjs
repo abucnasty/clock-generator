@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Item 2.7 PR A "GUI grammar: tokens and components": screenshots and PASS/FAIL checks from the spec
 // `docs/ux-rework/specs/2.7-gui-grammar.md` ("The grammar", "Tokens and contrast", PR A's "Acceptance criteria" and
 // "Screens to capture" for `capture-gui-grammar.mjs`, rows 1 to 17). PR B (Build card, AddRows, row grid) is NOT tested here;
@@ -49,7 +50,7 @@ const STEPS = new Set((process.env.STEPS ?? ALL_STEPS.join(',')).split(',').map(
 const on = (name) => STEPS.has(name);
 
 const FUEL = sample('gleba/biochamber-fuel/nutrients-from-yumako-mash-fuel-bonus.json');
-const BELOW = sample('science/utility-science/utility-science-direct-insert-lds.json');
+const BELOW = BELOW_TARGET_SAMPLE;
 const BAD = sample('intermediates/accumulator/accumulator-bad-config.json');
 const SHARED = sample('science/production-science/production-science-shared.json'); // chests, drills, many enable rules
 /** A Sidecar export of the logistic build (2.1: Paste from Factorio takes the mod's export, not a build file), as capture-first-visit builds it */

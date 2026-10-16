@@ -1,4 +1,19 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.8.0
+Date: 2026-10-16
+  Features:
+    - An inserter that drops on a belt records, every tick, the items and stacks on the lane it drops on in the belt piece it drops on and whether an item fits at the drop position (drop_lane_items, drop_lane_stacks, drop_lane_room), and one that picks up from a belt records the items on each lane of that piece (pickup_lane_items)
+---------------------------------------------------------------------------------------------------
+Version: 0.7.1
+Date: 2026-10-16
+  Bugfixes:
+    - Two belts that carry the same items on opposite lanes are described as two belts, so near_lane of an inserter names the item that is nearest to it (needs the sidecar 0.7.1)
+---------------------------------------------------------------------------------------------------
+Version: 0.7.0
+Date: 2026-10-16
+  Bugfixes:
+    - An inserter the clock is wired to is enabled by the clock alone: a circuit condition left on it from the base it was cut from, on a signal the clock never sends, used to keep it disabled for the whole recording
+---------------------------------------------------------------------------------------------------
 Version: 0.6.0
 Date: 2026-10-08
   Features:

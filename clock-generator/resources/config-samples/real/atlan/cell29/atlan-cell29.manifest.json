@@ -1,0 +1,519 @@
+{
+  "schema": 1,
+  "save": "atlan-cell29.manifest.json",
+  "steps": [
+    {
+      "step": "extract-cell",
+      "ok": true,
+      "tool": {
+        "tag": null,
+        "commit": "ead5a6f",
+        "dirty": true
+      },
+      "args": {
+        "cell": "603113",
+        "box": null,
+        "name": "atlan-cell29",
+        "version": "2.1.21",
+        "sample_ticks": 36000,
+        "warmup": 1800,
+        "check_ticks": 36000,
+        "tolerance": 0.01,
+        "strict": false
+      },
+      "game_version": "2.1.21",
+      "input": {
+        "file": "../../atlan_q2q3_mixed_LDS_DI_m2121/atlan_q2q3_mixed_LDS_DI_m2121.zip",
+        "sha256": "7ccd991112fa72da1ac18c8c4fe51f454a4422d0bf38023e8ad6d958eb4e336a"
+      },
+      "output": {
+        "file": "atlan-cell29-scaffold.txt",
+        "sha256": "3adc1ba2cc5c649c183102bf980e28e3dca73e74e5021e44b3684ff091691518"
+      },
+      "tick_before": 18388412,
+      "tick_after": null,
+      "entities_player": 38,
+      "files": [
+        {
+          "file": "atlan-cell29.json",
+          "sha256": "41909b80f7fa254c9ab7f830cce35b28d3496545e28832c08600fb96d517b6a1"
+        },
+        {
+          "file": "atlan-cell29.expected.json",
+          "sha256": "26e89ec95aafb8be8692a8909298fd08039c3d52c1db82c916dbd2a0b781ba19"
+        }
+      ],
+      "checks": [
+        {
+          "name": "scaffold rate against the target",
+          "pass": true,
+          "figures": {
+            "rule": "the scaffold's rate must be at least 99% of the target and at most 101% of the machines' capacity (a free scaffold runs at capacity whatever limited the source)",
+            "target_items_per_second": 9.97,
+            "target_crafts_per_second": 9.97,
+            "machine_capacity_per_second": 115.485,
+            "scaffold_crafts_per_second": 37.52104225117364,
+            "ratio_to_target": 3.763394408342391,
+            "source_crafts_per_second": 9.973610378066057,
+            "ratio_to_source": 3.762032085561497,
+            "source_items_per_second": 9.97361,
+            "scaffold_items_per_second": 37.52104225117364,
+            "source_limit": {
+              "limit": "downstream: output waiting for space",
+              "output_waiting_share": 0.9584,
+              "ingredient_shortage_share": 0.0474
+            },
+            "head_stacks": [
+              {
+                "supplied": true,
+                "item": "iron-ore",
+                "stack_wanted": 4,
+                "stack_found_max": 4,
+                "stack_found_min": 4,
+                "lanes_seen": 2
+              }
+            ],
+            "warmup_ticks": 1800,
+            "ticks": 36000,
+            "machines": [
+              {
+                "recipe": "iron-gear-wheel",
+                "source_at": [
+                  88.5,
+                  -6022.5
+                ],
+                "scaffold_at": [
+                  -3.5,
+                  0.5
+                ],
+                "source_crafts_per_second": 9.973610378066057,
+                "scaffold_crafts_per_second": 37.52104225117364,
+                "ratio": 3.762032085561497,
+                "scaffold_status": {
+                  "item_ingredient_shortage": 0.6873,
+                  "working": 0.3127
+                },
+                "source_crafting_speed": 28.87125,
+                "scaffold_crafting_speed": 28.87125,
+                "source_effects": {
+                  "consumption": 8.1497,
+                  "speed": 8.2388,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "scaffold_effects": {
+                  "consumption": 8.1497,
+                  "speed": 8.2388,
+                  "productivity": 1,
+                  "pollution": 0.4
+                },
+                "source_beacons": 2,
+                "scaffold_beacons": 2
+              },
+              {
+                "recipe": "iron-plate",
+                "source_at": [
+                  92.5,
+                  -6022.5
+                ],
+                "scaffold_at": [
+                  0.5,
+                  0.5
+                ],
+                "source_crafts_per_second": 10.000277785494042,
+                "scaffold_crafts_per_second": 37.51604211228089,
+                "ratio": 3.7514999999999996,
+                "scaffold_status": {
+                  "working": 1
+                },
+                "source_crafting_speed": 80.0375,
+                "scaffold_crafting_speed": 80.0375,
+                "source_effects": {
+                  "consumption": 10.1722,
+                  "speed": 15.0075,
+                  "productivity": 0.5,
+                  "pollution": 0.2
+                },
+                "scaffold_effects": {
+                  "consumption": 10.1722,
+                  "speed": 15.0075,
+                  "productivity": 0.5,
+                  "pollution": 0.2
+                },
+                "source_beacons": 6,
+                "scaffold_beacons": 6
+              }
+            ],
+            "harness_problems": []
+          }
+        },
+        {
+          "name": "config validates against the clock generator's loader",
+          "pass": true,
+          "figures": {
+            "pass": true,
+            "generator": "/home/abucnasty/dev/factorio-scripts/clock-generator",
+            "version": "0.14.0",
+            "commit": "b29e79e",
+            "tag": "v0.14.0",
+            "dirty": false
+          }
+        }
+      ],
+      "started": "2026-10-15T23:32:41.682Z",
+      "seconds": 159.4,
+      "cell": {
+        "id": 603113,
+        "anchor": [
+          88.5,
+          -6022.5
+        ],
+        "recipes": [
+          "iron-gear-wheel",
+          "iron-plate"
+        ],
+        "machines": 2,
+        "inserters": 4,
+        "copies": 1,
+        "identical_in_save": 105
+      },
+      "box": null,
+      "cut": {
+        "entities": 38,
+        "source_entities": 18
+      },
+      "removed": [],
+      "inserters_unwired": [
+        {
+          "u": 603300,
+          "x": 91.5,
+          "y": -6020.5,
+          "was_switched": true
+        }
+      ],
+      "wires_cut": 0,
+      "replaced": [],
+      "skipped": [],
+      "environment": [],
+      "dead_ends": [],
+      "scaffold_supplied": {
+        "file": "atlan-cell29-owner.txt",
+        "sha256": "3adc1ba2cc5c649c183102bf980e28e3dca73e74e5021e44b3684ff091691518",
+        "entities": 38
+      },
+      "extended": [
+        {
+          "kind": "head",
+          "from": [
+            91.5,
+            -6019.5
+          ],
+          "to": [
+            86.5,
+            -6019.5
+          ],
+          "belts": 3
+        }
+      ],
+      "bridged": [],
+      "power": {
+        "substations": 0,
+        "eei": null,
+        "note": "no power entities: the harness powers its whole surface with one electric energy interface (the benchmark template's way)"
+      },
+      "scaffold_notes": [],
+      "config_notes": [],
+      "expected": {
+        "name": "atlan-cell29",
+        "product": "iron-gear-wheel",
+        "recipe": "iron-gear-wheel",
+        "copies": 1,
+        "items_per_second": 9.97,
+        "target": {
+          "items_per_second": {
+            "fraction": "997/100",
+            "decimal": 9.97
+          },
+          "source": "measured",
+          "capacity": {
+            "fraction": "23097/200",
+            "decimal": 115.485
+          },
+          "measured": 9.97361,
+          "demand": {
+            "items_per_second": {
+              "fraction": "723/64",
+              "decimal": 11.296875
+            },
+            "source": "demand (consumers)",
+            "producers_sharing": 1,
+            "consumers": 2,
+            "consumers_demand": {
+              "fraction": "723/64",
+              "decimal": 11.296875
+            },
+            "consumers_demand_per_producer": {
+              "fraction": "723/64",
+              "decimal": 11.296875
+            },
+            "lane_limit": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "lanes": [
+              {
+                "lane": "right",
+                "belts": 8,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              },
+              {
+                "lane": "right",
+                "belts": 12,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              }
+            ]
+          },
+          "fallback_reason": "flag: output blocked and measurement off the target",
+          "flagged": {
+            "items_per_second": {
+              "fraction": "723/64",
+              "decimal": 11.296875
+            },
+            "source": "demand (consumers)",
+            "demand": {
+              "items_per_second": {
+                "fraction": "723/64",
+                "decimal": 11.296875
+              },
+              "source": "demand (consumers)",
+              "producers_sharing": 1,
+              "consumers": 2,
+              "consumers_demand": {
+                "fraction": "723/64",
+                "decimal": 11.296875
+              },
+              "consumers_demand_per_producer": {
+                "fraction": "723/64",
+                "decimal": 11.296875
+              },
+              "lane_limit": {
+                "fraction": "240",
+                "decimal": 240
+              },
+              "lanes": [
+                {
+                  "lane": "right",
+                  "belts": 8,
+                  "speed": 0.125,
+                  "stack": 4,
+                  "lane_limit": {
+                    "fraction": "120",
+                    "decimal": 120
+                  },
+                  "cells_on_lane": 1
+                },
+                {
+                  "lane": "right",
+                  "belts": 12,
+                  "speed": 0.125,
+                  "stack": 4,
+                  "lane_limit": {
+                    "fraction": "120",
+                    "decimal": 120
+                  },
+                  "cells_on_lane": 1
+                }
+              ]
+            },
+            "flags": [
+              "output blocked and measurement off the target"
+            ]
+          }
+        },
+        "measured_items_per_second": 9.97361,
+        "rate_source": "products finished by the iron-gear-wheel machines over 36000 sampled ticks",
+        "source": {
+          "crafts_per_second": 9.973610378066057,
+          "items_per_second": 9.973610378066057,
+          "sampled_ticks": 36000,
+          "start_tick": 18388412,
+          "per_machine": [
+            {
+              "u": 603113,
+              "recipe": "iron-gear-wheel",
+              "x": 88.5,
+              "y": -6022.5,
+              "crafts_per_second": 9.973610378066057,
+              "status": {
+                "full_output": 0.8695,
+                "item_ingredient_shortage": 0.0474,
+                "working": 0.0831
+              }
+            },
+            {
+              "u": 603115,
+              "recipe": "iron-plate",
+              "x": 92.5,
+              "y": -6022.5,
+              "crafts_per_second": 10.000277785494042,
+              "status": {
+                "no_ingredients": 0.3593,
+                "working": 0.2599,
+                "full_output": 0.3808
+              }
+            }
+          ],
+          "output_inserter_waiting": {
+            "unit": 602984,
+            "share": 0.9584
+          }
+        }
+      },
+      "target": {
+        "items_per_second": {
+          "fraction": "997/100",
+          "decimal": 9.97
+        },
+        "source": "measured",
+        "capacity": {
+          "fraction": "23097/200",
+          "decimal": 115.485
+        },
+        "measured": 9.97361,
+        "demand": {
+          "items_per_second": {
+            "fraction": "723/64",
+            "decimal": 11.296875
+          },
+          "source": "demand (consumers)",
+          "producers_sharing": 1,
+          "consumers": 2,
+          "consumers_demand": {
+            "fraction": "723/64",
+            "decimal": 11.296875
+          },
+          "consumers_demand_per_producer": {
+            "fraction": "723/64",
+            "decimal": 11.296875
+          },
+          "lane_limit": {
+            "fraction": "240",
+            "decimal": 240
+          },
+          "lanes": [
+            {
+              "lane": "right",
+              "belts": 8,
+              "speed": 0.125,
+              "stack": 4,
+              "lane_limit": {
+                "fraction": "120",
+                "decimal": 120
+              },
+              "cells_on_lane": 1
+            },
+            {
+              "lane": "right",
+              "belts": 12,
+              "speed": 0.125,
+              "stack": 4,
+              "lane_limit": {
+                "fraction": "120",
+                "decimal": 120
+              },
+              "cells_on_lane": 1
+            }
+          ]
+        },
+        "fallback_reason": "flag: output blocked and measurement off the target",
+        "flagged": {
+          "items_per_second": {
+            "fraction": "723/64",
+            "decimal": 11.296875
+          },
+          "source": "demand (consumers)",
+          "demand": {
+            "items_per_second": {
+              "fraction": "723/64",
+              "decimal": 11.296875
+            },
+            "source": "demand (consumers)",
+            "producers_sharing": 1,
+            "consumers": 2,
+            "consumers_demand": {
+              "fraction": "723/64",
+              "decimal": 11.296875
+            },
+            "consumers_demand_per_producer": {
+              "fraction": "723/64",
+              "decimal": 11.296875
+            },
+            "lane_limit": {
+              "fraction": "240",
+              "decimal": 240
+            },
+            "lanes": [
+              {
+                "lane": "right",
+                "belts": 8,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              },
+              {
+                "lane": "right",
+                "belts": 12,
+                "speed": 0.125,
+                "stack": 4,
+                "lane_limit": {
+                  "fraction": "120",
+                  "decimal": 120
+                },
+                "cells_on_lane": 1
+              }
+            ]
+          },
+          "flags": [
+            "output blocked and measurement off the target"
+          ]
+        }
+      },
+      "source_limit": {
+        "limit": "downstream: output waiting for space",
+        "output_waiting_share": 0.9584,
+        "ingredient_shortage_share": 0.0474
+      },
+      "flags": [
+        "output blocked and measurement off the target"
+      ],
+      "source_dump": {
+        "mods": {
+          "base": "2.1.21",
+          "design-extractor": "0.1.0",
+          "elevated-rails": "2.1.21",
+          "recycler": "2.1.21",
+          "quality": "2.1.21",
+          "space-age": "2.1.21"
+        },
+        "tick": 18388412
+      },
+      "n": 1
+    }
+  ]
+}

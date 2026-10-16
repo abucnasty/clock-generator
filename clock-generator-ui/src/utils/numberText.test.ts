@@ -93,6 +93,7 @@ describe('maxRateLabel', () => {
 describe('itemsPerSecondHelper', () => {
     it('gives the total and the share of each copy', () => {
         expect(itemsPerSecondHelper(240, 11, locale)).toBe('Total for all 11 copies (21.82/s each)');
+        expect(itemsPerSecondHelper(5, 0.5, locale)).toBe('Total for all 0.5 copies (10/s each)');
     });
 
     it('says the total is for the build with one copy or numbers that cannot be shared', () => {
@@ -107,6 +108,7 @@ describe('rateHeader', () => {
     it('names the copies the rate is the total of', () => {
         expect(rateHeader(11)).toBe('Rate (items/s,\u00a0all\u00a011\u00a0copies)');
         expect(rateHeader(1)).toBe('Rate (items/s)');
+        expect(rateHeader(0.5)).toBe('Rate (items/s, all 0.5 copies)');
     });
 });
 
@@ -114,6 +116,7 @@ describe('makesHeader', () => {
     it('says what the clock makes, for every copy', () => {
         expect(makesHeader(11)).toBe('Makes (items/s, all 11 copies)');
         expect(makesHeader(1)).toBe('Makes (items/s)');
+        expect(makesHeader(0.5)).toBe('Makes (items/s, all 0.5 copies)');
     });
 });
 
@@ -146,6 +149,6 @@ describe('the clocks table headers', () => {
 
 describe('COPIES_HELPER', () => {
     it('says what a copy is and what the clock is made for', () => {
-        expect(COPIES_HELPER).toBe("Identical copies of this build you'll place. The clock is made for one copy.");
+        expect(COPIES_HELPER).toBe("Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.");
     });
 });

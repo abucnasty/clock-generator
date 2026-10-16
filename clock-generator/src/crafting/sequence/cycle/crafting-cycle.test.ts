@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fraction } from "fractionability";
+import { fraction } from "../../../data-types/fraction";
 import { CraftingCyclePlan } from "./crafting-cycle";
 
 describe("the ticks of a whole number of crafting cycles", () => {

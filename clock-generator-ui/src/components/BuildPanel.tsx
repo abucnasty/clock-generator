@@ -32,7 +32,7 @@ export function BuildPanel({ view, onViewChange, children }: BuildPanelProps) {
                         <List fontSize="small" sx={{ mr: 0.5 }} />
                         List
                     </ToggleButton>
-                    <ToggleButton value="diagram" aria-label="Diagram view">
+                    <ToggleButton value="diagram" aria-label="Diagram beta view">
                         <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
                         Diagram
                         {/* in the button's own colour, which is black on the selected orange */}

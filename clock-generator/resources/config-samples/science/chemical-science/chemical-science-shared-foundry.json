@@ -1,0 +1,392 @@
+{
+  "target_output": {
+    "recipe": "chemical-science-pack",
+    "items_per_second": 240,
+    "copies": 5.5
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "chemical-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125,
+      "type": "machine"
+    },
+    {
+      "id": 2,
+      "recipe": "chemical-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125,
+      "type": "machine"
+    },
+    {
+      "id": 3,
+      "recipe": "chemical-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125,
+      "type": "machine"
+    },
+    {
+      "id": 4,
+      "recipe": "chemical-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125,
+      "type": "machine"
+    },
+    {
+      "id": 5,
+      "recipe": "engine-unit",
+      "productivity": 100,
+      "crafting_speed": 49.0859375,
+      "type": "machine"
+    },
+    {
+      "id": 6,
+      "recipe": "engine-unit",
+      "productivity": 100,
+      "crafting_speed": 49.0859375,
+      "type": "machine"
+    },
+    {
+      "id": 7,
+      "recipe": "engine-unit",
+      "productivity": 100,
+      "crafting_speed": 49.0859375,
+      "type": "machine"
+    },
+    {
+      "id": 8,
+      "recipe": "engine-unit",
+      "productivity": 100,
+      "crafting_speed": 49.0859375,
+      "type": "machine"
+    },
+    {
+      "id": 9,
+      "recipe": "casting-pipe",
+      "productivity": 50,
+      "crafting_speed": 236.75,
+      "type": "machine"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 5
+      },
+      "stack_size": 16,
+      "filters": [
+        "chemical-science-pack"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 5
+      },
+      "stack_size": 16,
+      "filters": [
+        "chemical-science-pack"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "belt",
+        "id": 6
+      },
+      "stack_size": 16,
+      "filters": [
+        "chemical-science-pack"
+      ]
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "belt",
+        "id": 6
+      },
+      "stack_size": 16,
+      "filters": [
+        "chemical-science-pack"
+      ]
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 7
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 8
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 4,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 7
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 4,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 8
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 9
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 9
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 9
+      },
+      "sink": {
+        "type": "machine",
+        "id": 7
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 9
+      },
+      "sink": {
+        "type": "machine",
+        "id": 8
+      },
+      "stack_size": 16
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "advanced-circuit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "sulfur",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "sulfur",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "advanced-circuit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "iron-gear-wheel",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-gear-wheel",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "chemical-science-pack",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "chemical-science-pack",
+          "stack_size": 4
+        }
+      ]
+    }
+  ]
+}

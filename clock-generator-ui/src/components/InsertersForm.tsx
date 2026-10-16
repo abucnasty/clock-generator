@@ -1,3 +1,4 @@
+import { INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import { Add, Delete } from '@mui/icons-material';
 import {
     Autocomplete,
@@ -33,15 +34,15 @@ const MAX_FILTERS = 5;
 /** The enable rule's column when the row wraps: "Enable: Clocked" and the like; a longer rule ends in "…" (its full words in the tooltip and name) */
 const RULE_COLUMN = '8.5rem';
 /** Stack Size's field, and its column when the row wraps */
-const STACK_COLUMN = '100px';
+const STACK_COLUMN = '130px';
 /** Where an inserter row fits on one line with its names in full */
-const ONE_LINE = '@media (min-width: 1400px)';
+const ONE_LINE = '@media (min-width: 1600px)';
 
 /**
  * The inserter rows are one grid, and each row a subgrid of it, so every column starts at the same x on every row,
  * whatever the row holds (a belt source's lane select, set or auto filters, a long rule): the handle and number,
  * Source, Destination, then Stack Size, the filters, the enable rule and delete. Source and Destination take the room
- * the others leave, so their names show in full where they fit. From 1400px a row is one line (narrower, the names
+ * the others leave, so their names show in full where they fit. From 1600px a row is one line (narrower, the names
  * would be cut off); from md, two lines, Source and Destination on the first; from sm, Source and Destination each have
  * a line beside the handle; below sm everything has a line of its own.
  */
@@ -73,7 +74,7 @@ const ROW_GRID_SX = {
 /** Under Source, in its column, until md puts the two side by side */
 const DESTINATION_CELL_SX = { gridColumn: { sm: 2, md: 'auto' } };
 /**
- * Stack Size, the filters, the rule and delete: cells of the rows' grid on one line; below 1400px a line of their own, in
+ * Stack Size, the filters, the rule and delete: cells of the rows' grid on one line; below 1600px a line of their own, in
  * columns of a fixed width (the filters take the rest), so they line up from row to row too
  */
 const ROW_REST_SX = {
@@ -282,6 +283,9 @@ function InsertersFormComponent({
             )}
         >
 
+            {inserters.some(inserter => !inserter.prototype || !inserter.quality) && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{INSERTER_TIMING_ASSUMPTION}</Typography>
+            )}
             <Box sx={LIST_GRID_SX}>
             <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
@@ -293,6 +297,9 @@ function InsertersFormComponent({
                     aria-label={entityLabel('inserter', inserter.id)}
                     sx={ROW_GRID_SX}
                 >
+                    <Typography variant="body2" color="text.secondary" sx={{ gridColumn: '1 / -1' }}>
+                        {inserterMetadataText(inserter)}
+                    </Typography>
                     {dragHandle}
                     {/* Source, and the lane of its belt */}
                     <Box sx={SOURCE_GROUP_SX}>
@@ -480,13 +487,16 @@ function InsertersFormComponent({
 
                     <Box sx={ROW_REST_SX}>
                     <NumberField
+                        id={`inserter-stack-size-${inserter.id}`}
                         label="Stack size"
-                        value={inserter.stack_size}
+                        value={inserter.stack_size ?? null}
+                        placeholder="Automatic"
+                        helperText={inserterStackSizeHelp(inserter)}
                         onValueChange={(val) =>
-                            onUpdate(index, { stack_size: parseInt(val?.toString() || '') || 16 })
+                            onUpdate(index, { stack_size: val === null ? undefined : Math.trunc(val) })
                         }
                         min={1}
-                        sx={{ width: STACK_COLUMN }}
+                        sx={{ width: STACK_COLUMN, maxWidth: '100%' }}
                         size="small"
                     />
 

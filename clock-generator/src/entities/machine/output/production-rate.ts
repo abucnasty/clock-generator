@@ -1,4 +1,4 @@
-import Fraction, { fraction } from "fractionability";
+import Fraction, { fraction } from "../../../data-types/fraction";
 import { TICKS_PER_SECOND, Percentage } from "../../../data-types";
 import { CraftingRate } from "../traits";
 import { ItemName } from "../../../data";

@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Screenshots + page checks for items 1.4 (disabled actions say what is missing; focus the first problem) and 1.14 (a warning
 // colour that is not the brand orange) of the UX rework. Written from docs/ux-rework/specs/1.4-first-problem.md and
 // 1.14-warning-colour.md ("Acceptance criteria", "Screens to capture", "Orchestrator notes (final)"), not from the code.
@@ -58,8 +59,8 @@ const WIDTHS = (process.env.WIDTHS ?? '1440,720,390').split(',').map(Number);
 const STEPS = process.env.STEPS ? new RegExp(process.env.STEPS) : null;
 
 const BAD = sample('intermediates/accumulator/accumulator-bad-config.json'); // one machine, missing inserters
-/** A build whose best clock runs below the target (200 of 240 a second), so Copy has a rate warning with a rate */
-const BELOW = sample('science/utility-science/utility-science-direct-insert-lds.json');
+/** A build whose best clock runs below the target (120 of 240 a second), so Copy has a rate warning with a rate */
+const BELOW = BELOW_TARGET_SAMPLE;
 const BELOW_TARGET_RATE = JSON.parse(readFileSync(BELOW, 'utf8')).target_output.items_per_second;
 /** A deadlock-risk build whose clock meets the rate */
 const UTILITY = sample('science/utility-science/utility-science.json');

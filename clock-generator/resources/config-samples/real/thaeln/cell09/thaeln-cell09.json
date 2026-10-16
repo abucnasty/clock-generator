@@ -1,0 +1,609 @@
+{
+ "target_output": {
+  "recipe": "utility-science-pack",
+  "items_per_second": 480,
+  "copies": 3.5
+ },
+ "machines": [
+  {
+   "id": 1,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  },
+  {
+   "id": 2,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  },
+  {
+   "id": 3,
+   "recipe": "casting-low-density-structure",
+   "productivity": 300,
+   "crafting_speed": 199.75,
+   "type": "machine"
+  },
+  {
+   "id": 4,
+   "recipe": "casting-low-density-structure",
+   "productivity": 300,
+   "crafting_speed": 199.75,
+   "type": "machine"
+  },
+  {
+   "id": 5,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  },
+  {
+   "id": 6,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  },
+  {
+   "id": 7,
+   "recipe": "plastic-bar",
+   "productivity": 300,
+   "crafting_speed": 117.5,
+   "type": "machine"
+  },
+  {
+   "id": 8,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  },
+  {
+   "id": 9,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  },
+  {
+   "id": 10,
+   "recipe": "casting-low-density-structure",
+   "productivity": 300,
+   "crafting_speed": 199.75,
+   "type": "machine"
+  },
+  {
+   "id": 11,
+   "recipe": "casting-low-density-structure",
+   "productivity": 300,
+   "crafting_speed": 199.75,
+   "type": "machine"
+  },
+  {
+   "id": 12,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  },
+  {
+   "id": 13,
+   "recipe": "utility-science-pack",
+   "productivity": 100,
+   "crafting_speed": 63.007813,
+   "type": "machine"
+  }
+ ],
+ "inserters": [
+  {
+   "id": 1,
+   "source": {
+    "type": "belt",
+    "id": 1
+   },
+   "sink": {
+    "type": "machine",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  },
+  {
+   "id": 2,
+   "source": {
+    "type": "belt",
+    "id": 2,
+    "near_lane": 2
+   },
+   "sink": {
+    "type": "machine",
+    "id": 2
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  },
+  {
+   "id": 3,
+   "source": {
+    "type": "machine",
+    "id": 1
+   },
+   "sink": {
+    "type": "belt",
+    "id": 3
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 4,
+   "source": {
+    "type": "machine",
+    "id": 2
+   },
+   "sink": {
+    "type": "belt",
+    "id": 4
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 5,
+   "source": {
+    "type": "machine",
+    "id": 3
+   },
+   "sink": {
+    "type": "machine",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 6,
+   "source": {
+    "type": "machine",
+    "id": 4
+   },
+   "sink": {
+    "type": "machine",
+    "id": 2
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 7,
+   "source": {
+    "type": "machine",
+    "id": 3
+   },
+   "sink": {
+    "type": "machine",
+    "id": 5
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 8,
+   "source": {
+    "type": "machine",
+    "id": 4
+   },
+   "sink": {
+    "type": "machine",
+    "id": 6
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 9,
+   "source": {
+    "type": "machine",
+    "id": 5
+   },
+   "sink": {
+    "type": "belt",
+    "id": 3
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 10,
+   "source": {
+    "type": "machine",
+    "id": 7
+   },
+   "sink": {
+    "type": "machine",
+    "id": 3
+   },
+   "stack_size": 15,
+   "filters": [
+    "plastic-bar"
+   ]
+  },
+  {
+   "id": 11,
+   "source": {
+    "type": "belt",
+    "id": 5
+   },
+   "sink": {
+    "type": "machine",
+    "id": 7
+   },
+   "stack_size": 16,
+   "filters": [
+    "coal"
+   ]
+  },
+  {
+   "id": 12,
+   "source": {
+    "type": "machine",
+    "id": 7
+   },
+   "sink": {
+    "type": "machine",
+    "id": 4
+   },
+   "stack_size": 15,
+   "filters": [
+    "plastic-bar"
+   ]
+  },
+  {
+   "id": 13,
+   "source": {
+    "type": "machine",
+    "id": 6
+   },
+   "sink": {
+    "type": "belt",
+    "id": 4
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 14,
+   "source": {
+    "type": "belt",
+    "id": 1
+   },
+   "sink": {
+    "type": "machine",
+    "id": 5
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  },
+  {
+   "id": 15,
+   "source": {
+    "type": "belt",
+    "id": 2,
+    "near_lane": 2
+   },
+   "sink": {
+    "type": "machine",
+    "id": 6
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  },
+  {
+   "id": 16,
+   "source": {
+    "type": "belt",
+    "id": 1
+   },
+   "sink": {
+    "type": "machine",
+    "id": 8
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  },
+  {
+   "id": 17,
+   "source": {
+    "type": "belt",
+    "id": 2,
+    "near_lane": 2
+   },
+   "sink": {
+    "type": "machine",
+    "id": 9
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  },
+  {
+   "id": 18,
+   "source": {
+    "type": "machine",
+    "id": 8
+   },
+   "sink": {
+    "type": "belt",
+    "id": 3
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 19,
+   "source": {
+    "type": "machine",
+    "id": 7
+   },
+   "sink": {
+    "type": "machine",
+    "id": 10
+   },
+   "stack_size": 15,
+   "filters": [
+    "plastic-bar"
+   ]
+  },
+  {
+   "id": 20,
+   "source": {
+    "type": "machine",
+    "id": 7
+   },
+   "sink": {
+    "type": "machine",
+    "id": 11
+   },
+   "stack_size": 15,
+   "filters": [
+    "plastic-bar"
+   ]
+  },
+  {
+   "id": 21,
+   "source": {
+    "type": "machine",
+    "id": 9
+   },
+   "sink": {
+    "type": "belt",
+    "id": 4
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 22,
+   "source": {
+    "type": "machine",
+    "id": 10
+   },
+   "sink": {
+    "type": "machine",
+    "id": 8
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 23,
+   "source": {
+    "type": "machine",
+    "id": 11
+   },
+   "sink": {
+    "type": "machine",
+    "id": 9
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 24,
+   "source": {
+    "type": "machine",
+    "id": 12
+   },
+   "sink": {
+    "type": "belt",
+    "id": 3
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 25,
+   "source": {
+    "type": "machine",
+    "id": 10
+   },
+   "sink": {
+    "type": "machine",
+    "id": 12
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 26,
+   "source": {
+    "type": "machine",
+    "id": 11
+   },
+   "sink": {
+    "type": "machine",
+    "id": 13
+   },
+   "stack_size": 16,
+   "filters": [
+    "low-density-structure"
+   ]
+  },
+  {
+   "id": 27,
+   "source": {
+    "type": "machine",
+    "id": 13
+   },
+   "sink": {
+    "type": "belt",
+    "id": 4
+   },
+   "stack_size": 16,
+   "filters": [
+    "utility-science-pack"
+   ]
+  },
+  {
+   "id": 28,
+   "source": {
+    "type": "belt",
+    "id": 1
+   },
+   "sink": {
+    "type": "machine",
+    "id": 12
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  },
+  {
+   "id": 29,
+   "source": {
+    "type": "belt",
+    "id": 2,
+    "near_lane": 2
+   },
+   "sink": {
+    "type": "machine",
+    "id": 13
+   },
+   "stack_size": 16,
+   "filters": [
+    "processing-unit",
+    "flying-robot-frame"
+   ]
+  }
+ ],
+ "belts": [
+  {
+   "id": 1,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "processing-unit",
+     "stack_size": 4
+    },
+    {
+     "ingredient": "flying-robot-frame",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "flying-robot-frame",
+     "stack_size": 4
+    },
+    {
+     "ingredient": "processing-unit",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "utility-science-pack",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "utility-science-pack",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "coal",
+     "stack_size": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,3 +1,4 @@
+import { COPIES_DECIMAL_ERROR } from 'clock-generator/light';
 import type { z } from 'zod';
 
 /**
@@ -9,7 +10,9 @@ import type { z } from 'zod';
  */
 export function parseFormConfig<T>(schema: z.ZodType<T>, config: unknown): z.ZodSafeParseResult<T> {
     const result = schema.safeParse(config);
-    if (result.success || !result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big')) {
+    if (result.success || !result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big'
+        || (issue.code === 'custom' && issue.path.length === 2 && issue.path[0] === 'target_output'
+            && issue.path[1] === 'copies' && issue.message === COPIES_DECIMAL_ERROR))) {
         return result;
     }
     return { success: true, data: config as T };
