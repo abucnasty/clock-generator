@@ -14,6 +14,11 @@ export async function captureP3Compatibility(h) {
         'compatRuleTemplateAmount','compatRenameDialog','compatRenameName','compatRenameSave','compatFileOpenedMessage','messageClose'];
     for (const key of required) if (typeof ui[key] !== 'function') throw new Error(`PHASE3 adjunct requires lib.ui.${key}; missing feature is FAIL`);
     for (const [key, fn] of Object.entries({ openBuildSwitcher, generate })) if (typeof fn !== 'function') throw new Error(`PHASE3 adjunct requires shared ${key}`);
+    async function clickVisible(locator, label) {
+        // The shared assertion clicks viewport coordinates; bring a lower List row into view first.
+        await locator.scrollIntoViewIfNeeded();
+        return checkMouseActivationVisible(rec,p,locator,label);
+    }
     const clone = x => structuredClone(x);
     const text = async loc => (await loc.textContent()).replace(/\s+/g, ' ').trim();
     const id = page => page.evaluate(() => sessionStorage.getItem('clock-generator-tab-build'));
@@ -72,19 +77,19 @@ export async function captureP3Compatibility(h) {
     async function openRule(surface) {
         await list(p);
         if (surface === 'List') {
-            await checkMouseActivationVisible(rec,p,ui.enableChip(p,'Inserter 1'),'P3 List open actual rule modal');
+            await clickVisible(ui.enableChip(p,'Inserter 1'),'P3 List open actual rule modal');
             await ui.ruleDialog(p).waitFor({ state: 'visible' });
             return ui.ruleDialog(p);
         }
         await ui.diagramView(p).click();
-        await checkMouseActivationVisible(rec,p,ui.compatInserterNode(p,1),'P3 Diagram open actual inserter editor');
+        await clickVisible(ui.compatInserterNode(p,1),'P3 Diagram open actual inserter editor');
         await ui.compatRuleEditor(p,1).waitFor({ state: 'visible' });
         await ui.compatRuleEditorTab(p,1,'Enable rule').click();
         return ui.compatRuleEditor(p,1);
     }
     async function template(scope, amount, label) {
         await ui.ruleTemplates(scope).click();
-        await checkMouseActivationVisible(rec,p,ui.compatRuleTemplateOption(p),`${label}: choose Latched output drain`);
+        await clickVisible(ui.compatRuleTemplateOption(p),`${label}: choose Latched output drain`);
         await ui.ruleTemplateStep(scope).waitFor({ state: 'visible' });
         rec.check(`${label}: template starts at ${amount}`, Number(await ui.compatRuleTemplateAmount(scope).inputValue()) === amount);
         await audit(p,rec,`${label}-template-confirm`,[
@@ -98,7 +103,7 @@ export async function captureP3Compatibility(h) {
         await (surface === 'List' ? ui.ruleDialog(p) : ui.compatRuleEditor(p,1)).waitFor({ state: 'hidden' });
     }
     async function saveRule(surface) {
-        await checkMouseActivationVisible(rec,p,surface === 'List' ? ui.ruleSave(p) : ui.compatRuleEditorSave(p,1),`P3 ${surface}: Save rule`);
+        await clickVisible(surface === 'List' ? ui.ruleSave(p) : ui.compatRuleEditorSave(p,1),`P3 ${surface}: Save rule`);
         await (surface === 'List' ? ui.ruleDialog(p) : ui.compatRuleEditor(p,1)).waitFor({ state: 'hidden' });
     }
 
@@ -122,7 +127,7 @@ export async function captureP3Compatibility(h) {
             await ui.ruleTemplateCancel(scope).click();
             rec.check(`${label}: template Cancel preserves rule`,JSON.stringify(ruleOf(await stored(p))) === initial);
             await template(scope,c.expected,`${label}-again`);
-            await checkMouseActivationVisible(rec,p,ui.ruleTemplateReplace(scope),`${label}: apply confirmed template`);
+            await clickVisible(ui.ruleTemplateReplace(scope),`${label}: apply confirmed template`);
             await checkAnnounced(rec,p,/(Template Latched output drain applied|Conditions replaced with the template Latched output drain)\./,`${label}: dialog announcement`);
             rec.check(`${label}: applied draft is uncommitted before Save`,JSON.stringify(ruleOf(await stored(p))) === initial);
             await audit(p,rec,`${label}-applied-draft`,[['Save',surface === 'List' ? ui.ruleSave(p) : ui.compatRuleEditorSave(p,1)]]);
@@ -191,7 +196,7 @@ export async function captureP3Compatibility(h) {
             await p.goto(link,{ waitUntil:'commit' }); await ui.compatShareConfirm(p).waitFor({ state:'visible' });
             rec.check(`P3C share summary includes fractional ${n}`, (await text(ui.compatShareConfirm(p))).includes(String(n)));
             await audit(p,rec,`p3c-share-confirm-${n}`,[['Open build',ui.compatOpenShared(p)]]);
-            await checkMouseActivationVisible(rec,p,ui.compatOpenShared(p),`P3C ${n}: Open shared build`);
+            await clickVisible(ui.compatOpenShared(p),`P3C ${n}: Open shared build`);
             await ui.compatShareConfirm(p).waitFor({ state:'hidden' }); await configure(p); await metadata(p,`P3C genuine shared open ${n}`,n);
             rec.check(`P3C populated shared open ${n} creates separate build`,await id(p) !== beforeId);
             rec.check(`P3C shared open leaves prior ${n} document intact`,await buildText(p,beforeId) === before);
