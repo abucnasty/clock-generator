@@ -1,6 +1,6 @@
 # Phase 3 end — independent review synthesis
 
-Status: all three NEW independent personas PASS with minor carries on product21261c5 (phaseb3e1480 is documentation-only-equivalent). This is the phase UX verdict, not the owner merge approval, release authorization, human usability proof or blanket AA certification. Bounded3.J copy fixes are in verification; the original reports stay unchanged.
+Status: all three NEW independent personas PASS with minor carries on product21261c5 (phaseb3e1480 is documentation-only-equivalent). This is the phase UX verdict, not the owner merge approval, release authorization, human usability proof or blanket AA certification. Bounded3.J copy fixes are accepted in [#208](https://github.com/abucnasty/clock-generator/pull/208), merge12ad63c, after all checks, independent CODE+UX and all three affected persona rechecks PASS; the original reports stay unchanged.
 
 ## Provenance
 - Newcomer A: [full report](A-round0.md), SHA25657ce4e1eb9a81662e003418bfdab5a23f5095340d61c7b60b2ee65213fdc2d11.
@@ -13,8 +13,8 @@ Status: all three NEW independent personas PASS with minor carries on product212
 
 | Finding and source IDs | Severity and disposition | Why / remaining work |
 |---|---|---|
-| Saved-run belt prose conflicts with a selected standing-only alternative; A-P3-01 | Minor, fix now in3.J; pending acceptance | Label the saved run setting; retain independent selected-clock condition/ranking/actions. Root inspected actual720 Cancel output and utility call path. |
-| Fuel prose shows82.09359999999995; A-P3-04/B3E-4/C3E-1 | Minor, fix now in3.J; pending acceptance | Reuse established display formatter; retain raw data, precise event rows/ticks and sampled-boundary qualification. Root inspected utility and screenshot. |
+| Saved-run belt prose conflicts with a selected standing-only alternative; A-P3-01 | Minor, fixed in3.J/#208 | Label the saved run setting; retain independent selected-clock condition/ranking/actions. Root inspected actual720 Cancel output and utility call path. |
+| Fuel prose shows82.09359999999995; A-P3-04/B3E-4/C3E-1 | Minor, fixed in3.J/#208 | Reuse established display formatter; retain raw data, precise event rows/ticks and sampled-boundary qualification. Root inspected utility and screenshot. |
 | Long Results comparison travel, repeated helpers/row metadata; A-P3-02/B3E-1/C3E-5 | Current minor, mapped to approved FUTURE D1/D5 | These features are not implemented. Deliver wide comparison/context composition and Compact without hiding consequential facts. This is approved product work, not a postrelease issue substitution. |
 | Repeated standing-belt alternative names; C3E-6/A21 | Current minor, approved FUTURE D4 | Group conditions and differentiate with existing metrics; preserve ranking/selection. |
 | Recipe instruction before choosing import/manual route; A-P3-03/C3E-4 | Current minor, approved FUTURE first-visit refinement | Route-first presentation and route-specific hint; full mod/Sidecar/manual recovery preserved. |
@@ -33,4 +33,6 @@ The full reports preserve every original-persona disposition and Phase2 carry. P
 D1–D9 and first visit are approved future Phase4 scope, not current fixes. D8 authorizes investigation only. D9 requires an independent audit AND actual justified removal/consolidation only of UX-added UI tests/new cases, including later additions, BEFORE feature→master. No coverage target or new arbitrary tests. Owner Sidecar and all installation cases passed; do not reopen those checks.
 
 ## Remaining closeout
-Accept3.J checks, exact-source targeted images, independent CODE+UX and affected persona rechecks; preserve their additive records. Complete issue-draft refresh and retro, then open Phase3→feat/ux-rework PR with exact-head CI and ask the owner to approve that concrete merge. Phase4 implementation and final owner-only master merge remain ahead.
+3.J acceptance, full additive rechecks, issue-draft refresh and retro are complete. Open Phase3→feat/ux-rework PR, verify exact-head CI and ask the owner to approve that concrete merge. Phase4 implementation and final owner-only master merge remain ahead.
+
+Accepted3.J sourcebca47c8/UI74bcbf9db4ea3f90f84a1867f061fb831edfbfca, unchangedengine81e2f2279361387d3141a14e53e147d37288c3d4. Current affected Fuel108/0/0, Cancel61/0/0 and dedicated standing-selection23/0/0. Full [CODE/UX/persona rechecks](../3.J/) and [evidence](../../capture/result-copy-EVIDENCE.md) remain additive. The root-adopted issue draft `/tmp/ux-phase3-issues-draft-r16` now has15 editorial bodies (11 retained minor/nit,4 approved future carries),0 pending3.J;42 original IDs+6mappings are NOT48confirmedissues.24 inventory verification/maintenance holds remain unconfirmed and must not be batch-filed as bugs. No GitHub issue is filed or owner issue-draft approval inferred.
