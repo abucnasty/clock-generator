@@ -1,6 +1,6 @@
 # Phase 3 compatibility adjunct evidence
 
-2026-10-16. Round0 code FIX for missing actual-engine fractional-period refusal evidence; scoped UX PASS. Fix round1 affected capture now passes1140/0/0 at all five widths; code re-review pending. No product defect identified.
+2026-10-16. Round0 code FIX for missing actual-engine fractional-period refusal evidence; scoped UX PASS. Fix round1 affected capture passes1140/0/0 at all five widths; independent code round1 and scoped UX reviews PASS. No product defect identified.
 Provider #195 is already reviewed/merged; this is the separate Phase3 adjunct. Owner install/phase/final checkpoints remain open.
 
 ## Source and scope
@@ -55,4 +55,6 @@ The first fix1 affected run remains FAILED:1106 PASS/0 FAIL/1 failed step, at `f
 
 ## Review and limits
 
-Independent code and UX reviewers use GPT-6.1 Sol/high/fast off under the owner's temporary model override; same role independence and gates remain. Reports: `/tmp/ux-p3-compatibility-review/{CODE,UX}-ROUND0.md`. Code C1 records that P3E1920/240 are integer periods and literal550.957 unit tests do not prove the required genuine fractional-period refusal branch. Scoped UX PASS does not close C1. P3F now supplies that real-engine case and its independent five-width affected gate; code round1 acceptance remains pending. Review/fix counters remain explicit. Selected axe rules/canvas exclusions are inherited, not exhaustive WCAG certification or assistive-technology speech testing. Pending2.7B full layout,3.3 cache/chosen-pick/cancel-keep and3.2 editing work remain separately owned with their existing counters. No new dependency/schema/release/CI/settings/sidecar feature or master merge is included.
+Independent code and UX reviewers use GPT-6.1 Sol/high/fast off under the owner's temporary model override; same role independence and gates remain. Reports: `/tmp/ux-p3-compatibility-review/{CODE,UX}-ROUND0.md`. Code C1 records that P3E1920/240 are integer periods and literal550.957 unit tests do not prove the required genuine fractional-period refusal branch. Scoped UX PASS does not close C1. P3F now supplies that real-engine case and its independent five-width affected gate; code round1 PASS closes C1; the UX closure supplement also verifies all five widths and final390 reopen. Review/fix counters remain explicit. Selected axe rules/canvas exclusions are inherited, not exhaustive WCAG certification or assistive-technology speech testing. Pending2.7B full layout,3.3 cache/chosen-pick/cancel-keep and3.2 editing work remain separately owned with their existing counters. No new dependency/schema/release/CI/settings/sidecar feature or master merge is included.
+
+Final review records: `/tmp/ux-p3-compatibility-review/CODE-ROUND1.md` and `UX-ROUND0.md` (including closure supplements), exact reviewed head `cb2b6e4`. One fix round; no remaining blocker/major or scoped UX finding. Subsequent evidence-only verdict recording does not change product/capture source.
