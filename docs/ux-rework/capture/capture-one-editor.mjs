@@ -24,6 +24,7 @@
 //              no group headers when the source has no items
 //   byhand     B26: removing an automatic filter -> explicit, "Set by hand" + "Use automatic filters", announced once; Use automatic
 //              filters removes the `filters` key and is announced; the same in the dialog draft
+//   automatic-focus  keyboard Enter on Use automatic filters keeps visible focus on the surviving first slot, List and Diagram
 //   noholes    B26: choosing an item in the second automatic slot stores a list with no null
 //   tabstops   a filter's remove button is not a Tab stop; Delete on a focused slot removes it and focus stays on the slot;
 //              aria-keyshortcuts="Delete"; the row's Tab stops are recorded (INFO)
@@ -758,7 +759,7 @@ const run = await forWidths(
             await rec.step('byhand', async () => {
                 const page = await freshPage(ctx, rec, automaticFixture());
                 // Inserter 1 on automatic filters: no stored `filters`, so both belt items (the machine's ingredients) show as AUTO
-                
+
                 const row = await rowOf(page, 1);
                 const slotNames = await ui.oneEditorFilledSlots(row).evaluateAll((e) => e.map((x) => x.getAttribute('aria-label')));
                 rec.check('Inserter 1 shows two automatic filters', slotNames.length === 2 && slotNames.every((n) => /\(auto\)/.test(n)), JSON.stringify(slotNames));
@@ -805,11 +806,43 @@ const run = await forWidths(
                 await page.close();
             });
 
+        // Minor review: the focused Automatic-return button disappears, so its surviving first slot takes focus.
+        if (want('automatic-focus'))
+            for (const surface of ['List', 'Diagram'])
+                await rec.step(`automatic-return keyboard focus ${surface}`, async () => {
+                    const page = await freshPage(ctx, rec, automaticFixture());
+                    const savedBefore = await stored(page);
+                    let scope = await rowOf(page, 1);
+                    if (surface === 'Diagram') {
+                        await toDiagram(page);
+                        if (!rec.check('Diagram Automatic focus: genuine node opens editor', Boolean(await openDialog(page, /^Inserter 1$/)))) { await page.close(); return; }
+                        scope = U.dialog(page);
+                    }
+                    await U.removeBtn(scope, 1).click();
+                    if (surface === 'List') await storedUntil(page, c => c.inserters[0].filters?.length === 1, 'List manual filter before keyboard return');
+                    else rec.check('Diagram manual filter remains a draft', await stored(page) === savedBefore);
+                    const slotBefore = await U.slot(scope, 1).elementHandle();
+                    await checkTabTo(rec, page, U.autoBtn(scope), `${surface} Use automatic filters keyboard reach`);
+                    await checkFocusNotObscured(rec, page, `${surface} before Automatic return`);
+                    await page.keyboard.press('Enter');
+                    await wait(page, 400);
+                    rec.check(`${surface}: Enter removes the Automatic-return action`, await U.autoBtn(scope).count() === 0);
+                    rec.check(`${surface}: Enter leaves focus on the same actual first filter slot`, await page.evaluate(slot => slot === document.activeElement && slot.isConnected, slotBefore));
+                    rec.check(`${surface}: first filter slot has visible keyboard focus`, await U.slot(scope, 1).evaluate(slot => slot.matches(':focus-visible') && getComputedStyle(slot).outlineStyle !== 'none'));
+                    await checkFocusNotObscured(rec, page, `${surface} after Automatic return Enter`);
+                    if (surface === 'List') await storedUntil(page, c => !Object.hasOwn(c.inserters[0], 'filters'), 'List Enter commits Automatic omission');
+                    rec.check(`${surface}: Automatic return preserves exact ${surface === 'List' ? 'live saved form' : 'uncommitted saved form'}`, await stored(page) === savedBefore);
+                    await announcedOnce(rec, page, new RegExp(esc(autoAnnounce('Inserter 1'))), `${surface} Automatic return single announcement`);
+                    await auditedShot(rec, page, `${surface.toLowerCase()}-automatic-return-keyboard-focus`, { aria: true, desc: `${surface}: Enter on Use automatic filters, surviving first slot visibly focused` });
+                    await slotBefore.dispose();
+                    await page.close();
+                });
+
         // ---------------------------------------------------------------------------------------------------- noholes (B26)
         if (want('noholes'))
             await rec.step('noholes', async () => {
                 const page = await freshPage(ctx, rec, automaticFixture());
-                
+
                 const row = await rowOf(page, 1);
                 const first = (await U.slot(row, 1).getAttribute('aria-label'))?.replace(/^Filter 1: /, '').replace(/ \(auto\)$/, '');
                 await U.slot(row, 2).click();

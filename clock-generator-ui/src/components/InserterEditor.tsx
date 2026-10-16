@@ -1,5 +1,5 @@
 import { Autocomplete, Box, Button, TextField, Typography, type AutocompleteRenderInputParams } from '@mui/material';
-import { memo, useMemo, type HTMLAttributes, type ReactNode } from 'react';
+import { memo, useMemo, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useGameNames } from '../hooks/useGameNames';
@@ -60,6 +60,7 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     const row = layout === 'row';
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
+    const filtersRef = useRef<HTMLDivElement>(null);
     const ownOptions = useMemo(() => options ?? entityOptionsOf(machines, belts, chests, { item: itemLabel, recipe: recipeLabel }), [options, machines, belts, chests, itemLabel, recipeLabel]);
     const inferred = useMemo(() => inferInserterItems(value, machines, belts, chests, getRecipeInfo), [value, machines, belts, chests, getRecipeInfo]);
     const priority = useMemo(() => ({ label: `From ${findOption(ownOptions, value.source.type, value.source.id)?.label ?? 'source'}`, ids: sourceItemsOf(value.source, machines, belts, chests, getRecipeInfo) }), [ownOptions, value.source, machines, belts, chests, getRecipeInfo]);
@@ -108,13 +109,18 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
             <NumberField id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`} label="Stack size" value={value.stack_size ?? null}
                 placeholder="Automatic" helperText={inserterStackSizeHelp(value)} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
                 min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
-            <Box sx={row ? { alignSelf: 'start', pt: '4px', minWidth: 0 } : { mt: 2 }}>
+            <Box ref={filtersRef} sx={row ? { alignSelf: 'start', pt: '4px', minWidth: 0 } : { mt: 2 }}>
                 <FilterSlotSelector filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
                 {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">Set by hand</Typography>
-                    <Button size="small" color="inherit" onClick={() => { onChange({ filters: undefined }); announce(`${label}'s filters follow its source and destination again.`); }}>Use automatic filters</Button>
+                    <Button size="small" color="inherit" onClick={() => {
+                        // The return action disappears; slot zero survives the switch back to Automatic.
+                        filtersRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
+                        onChange({ filters: undefined });
+                        announce(`${label}'s filters follow its source and destination again.`);
+                    }}>Use automatic filters</Button>
                 </Box>}
             </Box>
             {row && rowActions}
