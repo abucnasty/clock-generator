@@ -1414,6 +1414,24 @@ const btn = (page, name, exact = true) => page.getByRole('button', { name, exact
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
 
 export const ui = {
+    // ---- 2.F factual copy capture (additive; existing aliases remain)
+    copyIntroSentence: p => ui.introCard(p).locator('p').first(),
+    copyIntroAction: (p, name) => ui.introCard(p).getByRole('button', { name, exact: true }),
+    copyWakeView: p => p.locator('[data-wake-view]'),
+    copyWakeDefinition: (p, term) => ui.copyWakeView(p).locator('dt').filter({ hasText: new RegExp(`^${term}$`) }).locator('xpath=following-sibling::dd[1]'),
+    copyWakeSummary: p => ui.copyWakeView(p).locator('[data-wake-summary]'),
+    copyTermsEntry: (p, term) => ui.termsPopover(p).locator('dt').filter({ hasText: new RegExp(`^${term}(?: \\(provisional\\))?$`) }).locator('xpath=following-sibling::dd[1]'),
+    copyTermsTerm: (p, term) => ui.termsPopover(p).locator('dt').filter({ hasText: new RegExp(`^${term}(?: \\(provisional\\))?$`) }),
+    copyTermsClose: p => ui.termsPopover(p).getByRole('button', { name: 'Close terms', exact: true }),
+    copyWakeHeaderHelp: p => ui.clockTable(p).getByRole('button', { name: /^About Wake-ups\/min \(1\s+copy\)$/ }),
+    copyWakeHelpDialog: p => p.getByRole('dialog', { name: /^About Wake-ups\/min \(1\s+copy\)$/ }),
+    copyWakeHelpText: p => ui.copyWakeHelpDialog(p).locator('p'),
+    copyWakeHelpClose: p => ui.copyWakeHelpDialog(p).getByRole('button', { name: 'Close', exact: true }),
+    copyTile: (p, label) => ui.resultsCard(p).locator(`[data-summary-tile="${label}"]`),
+    copyTileValue: (p, label) => ui.copyTile(p, label).locator('[data-tile-value]'),
+    copyTileSub: (p, label) => ui.copyTile(p, label).locator('[data-tile-sub]'),
+    copyFinishedRecommendation: p => ui.resultsCard(p).locator('[data-card-chip]').getByText('Recommended', { exact: true }),
+
     // ---- Upstream 0.15 compatibility (owner: upstream compatibility)
 
     compatFile: p => p.locator('input[type=file]'),

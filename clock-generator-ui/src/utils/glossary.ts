@@ -44,6 +44,10 @@ export type GlossaryId =
     | 'hand'
     | 'lcm';
 
+/** Provisional: the owner writes the strict definition after an experiment; edit it here, and only here. */
+export const PROVISIONAL_WAKE_UP_DEFINITION: string = 'One time the game wakes an inserter that is switched on and waiting, because a machine started a '
+    + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS.';
+
 /** In the order the popover lists them; the expert terms last */
 export const GLOSSARY: readonly GlossaryEntry[] = [
     {
@@ -80,9 +84,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'wake-up',
         term: 'wake-up',
-        // provisional: the owner writes the strict definition after an experiment; edit it here, and only here
-        definition: 'One time the game wakes an inserter that is switched on and waiting, because a machine started a '
-            + 'craft (inputs), or finished a craft or paid out productivity (outputs). Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS.',
+        definition: PROVISIONAL_WAKE_UP_DEFINITION,
         insteadOf: '"one start of a wake window"',
         provisional: true,
     },

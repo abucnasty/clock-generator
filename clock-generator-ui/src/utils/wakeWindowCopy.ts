@@ -1,9 +1,8 @@
 /**
- * Every string the Wake windows view shows, in the glossary's terms (1.12). A wake-up is defined only provisionally:
- * the owner will write a strict definition after an experiment. So the three definitions below, and only they, say
- * how a wake-up is counted, and the one sentence of the "mostly on" note that leans on it is marked; changing the
- * definition is an edit to this file alone.
+ * Every string the Wake windows view shows, in the glossary's terms (1.12). The provisional wake-up definition
+ * lives in glossary.ts, where the owner can update it after the strict-definition experiment.
  */
+import { PROVISIONAL_WAKE_UP_DEFINITION } from './glossary';
 import { formatNumberText } from './numberText';
 import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 
@@ -14,9 +13,7 @@ export const WAKE_WINDOW_DEFINITION = 'A stretch of ticks during which the clock
     + 'Between its wake windows it is off, so the game has nothing to wake.';
 
 /** Glossary, "wake-up" (option (b), approved provisionally on 2026-10-14) */
-export const WAKE_UP_DEFINITION =
-    'One time the game wakes an inserter that is switched on and waiting, because a machine finished a craft. '
-    + 'Each is a small check that moves little or nothing, so fewer wake-ups cost less UPS.';
+export const WAKE_UP_DEFINITION = PROVISIONAL_WAKE_UP_DEFINITION;
 
 /** What the per-row figure is */
 export const WAKE_UPS_COLUMN_HELP =

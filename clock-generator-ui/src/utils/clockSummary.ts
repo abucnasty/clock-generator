@@ -141,7 +141,7 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
 export function makesText(clock: Pick<SummaryClock, 'assessment'>, copies: number): { value: string; sub: string } {
     return {
         value: SUMMARY_COPY.makes(rateText(clock.assessment.items_per_second)),
-        sub: copies > 1 ? SUMMARY_COPY.allCopies(copies) : '',
+        sub: copies !== 1 ? SUMMARY_COPY.allCopies(copies) : '',
     };
 }
 
