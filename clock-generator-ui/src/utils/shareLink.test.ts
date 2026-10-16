@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Config } from 'clock-generator/browser';
+import { ConfigSchema, type Config } from 'clock-generator/browser';
+import { readConfigFile } from '../hooks/usePersistedConfigForm';
+import { parseFormConfig } from '../worker/formConfig';
+import { configToFormData, formDataToConfig } from './configForm/configMapping';
+import { copiesProblem } from './copiesProblem';
 import {
     canShare,
     decodeShareLink,
@@ -213,5 +217,48 @@ describe('sharedBuildSummary', () => {
         expect(sharedBuildSummary(smallBuild(), label)).toBe('Iron gear wheel at 2.5/s · 1 copy · 1 machine, 1 inserter, 1 chest');
         expect(sharedBuildSummary(bigBuild(), (id) => id)).toBe('Electronic circuit at 30/s · 4 copies · 2 machines, 1 drill, 2 inserters, 1 belt, 2 chests');
         expect(sharedBuildSummary(smallBuild(), label, { withRecipe: false })).toBe('2.5/s · 1 copy · 1 machine, 1 inserter, 1 chest');
+    });
+});
+
+
+describe('shared builds through the real file and worker boundary', () => {
+    it.each([5.5, 2.25, 0.5, 0.001, 0.0625, 0.0001, 1 / 3])('preserves Copies %s and inserter metadata', async copies => {
+        const config = smallBuild();
+        config.target_output.copies = copies;
+        config.inserters = [
+            { prototype: 'bulk-inserter', quality: 'normal' },
+            { prototype: 'fast-inserter', quality: 'normal' },
+            { prototype: 'bulk-inserter', quality: 'normal', stack_size: 8 },
+            { prototype: 'bulk-inserter', quality: 'normal', stack_size: 16 },
+            { stack_size: 16 },
+            {},
+        ].map(metadata => ({ ...config.inserters[0], stack_size: undefined, ...metadata })) as Config['inserters'];
+        const original = JSON.stringify(config);
+        const decoded = await decodeShareLink(partsOf(await encodeShareLink({ name: 'Fractional build', config }, BASE)));
+        expect(decoded.kind).toBe('build');
+        if (decoded.kind !== 'build') throw new Error('Expected a decoded build');
+        const file = readConfigFile(JSON.stringify(decoded.config));
+        const parsed = parseFormConfig(ConfigSchema, file);
+        expect(parsed.success).toBe(true);
+        expect(ConfigSchema.safeParse(file).success).toBe(copiesProblem(copies) === null);
+        const exported = JSON.parse(JSON.stringify(formDataToConfig(configToFormData(parsed.data!))));
+        expect(exported.target_output.copies).toBe(copies);
+        const before = JSON.parse(original);
+        for (let i = 0; i < before.inserters.length; i++) {
+            for (const field of ['prototype', 'quality', 'stack_size']) {
+                expect(Object.hasOwn(exported.inserters[i], field)).toBe(Object.hasOwn(before.inserters[i], field));
+                expect(exported.inserters[i][field]).toEqual(before.inserters[i][field]);
+            }
+        }
+        expect(JSON.stringify(config)).toBe(original);
+    });
+
+    it('rejects malformed decoded config at the worker boundary even with editable Copies', async () => {
+        const config = { ...smallBuild(), machines: 'broken', target_output: { ...smallBuild().target_output, copies: 0.0001 } };
+        const data = await deflatedBase64Url(JSON.stringify({ name: 'Broken', config }));
+        const decoded = await decodeShareLink({ version: '1', data });
+        expect(decoded.kind).toBe('build');
+        if (decoded.kind !== 'build') throw new Error('Expected unknown decoded config');
+        expect(parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(decoded.config))).success).toBe(false);
     });
 });

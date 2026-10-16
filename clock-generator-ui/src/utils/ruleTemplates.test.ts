@@ -1,6 +1,7 @@
 import { InserterConfigSchema } from 'clock-generator/browser';
 import { describe, expect, it } from 'vitest';
 import { createDefaultRuleSet, createDefaultStatusCondition } from '../components/ruleSetUtils';
+import { effectiveInserterStackSize } from './inserterMetadata';
 import type { RuleSet } from './configForm/formData';
 import { defaultAmount, isDefaultRuleSet, replacedCount, templateRule, templatesFor, type RuleTemplateId } from './ruleTemplates';
 
@@ -62,6 +63,18 @@ describe('templateRule', () => {
 });
 
 describe('defaultAmount', () => {
+    it.each([
+        [{ prototype: 'bulk-inserter', quality: 'normal' }, 24],
+        [{ prototype: 'fast-inserter', quality: 'normal' }, 8],
+        [{ prototype: 'bulk-inserter', quality: 'legendary' }, 24],
+        [{}, 32],
+        [{ prototype: 'bulk-inserter', stack_size: 8 }, 16],
+        [{ prototype: 'fast-inserter', stack_size: 16 }, 32],
+        [{ stack_size: 16 }, 32],
+    ] as const)('uses two effective hands for %j', (inserter, expected) => {
+        expect(defaultAmount(effectiveInserterStackSize(inserter))).toBe(expected);
+    });
+
     it('is two hands of the inserter', () => {
         expect(defaultAmount(16)).toBe(32);
         expect(defaultAmount(12)).toBe(24);

@@ -111,3 +111,21 @@ describe('configKeyOf', () => {
         expect(configKeyOf(formDataToConfig(configToFormData(formDataToConfig(form()))))).toBe(key);
     });
 });
+
+
+describe('fractional and metadata identity', () => {
+    it('keeps omitted and explicit stack, type, quality and Copies distinct', () => {
+        let original = edits.updateTargetOutput(form(), 'copies', 0.0625);
+        original = edits.updateInserter(original, 0, { prototype: 'stack-inserter', quality: 'normal', stack_size: undefined });
+        const generated = generatedForOf(formDataToConfig(original));
+        const variants = [
+            edits.updateTargetOutput(original, 'copies', 0.5),
+            edits.updateInserter(original, 0, { prototype: 'fast-inserter' }),
+            edits.updateInserter(original, 0, { quality: 'legendary' }),
+            edits.updateInserter(original, 0, { stack_size: 16 }),
+        ];
+        expect(new Set([keyOf(original), ...variants.map(keyOf)]).size).toBe(5);
+        for (const variant of variants) expect(isStale(generated, keyOf(variant))).toBe(true);
+        expect(keyOf(configToFormData(formDataToConfig(original)))).toBe(keyOf(original));
+    });
+});

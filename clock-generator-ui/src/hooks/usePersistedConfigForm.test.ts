@@ -93,3 +93,36 @@ describe('backUpSavedConfig', () => {
         expect(warn).toHaveBeenCalledWith(expect.any(String), '{"broken": true}', expect.any(Error));
     });
 });
+
+
+describe('fractional library document serialization', () => {
+    it.each([5.5, 2.25, 0.5, 0.001, 0.0625, 0.0001, 1 / 3])('retains Copies %s and all metadata distinctions', copies => {
+        const form = createDefaultConfig();
+        form.target_output.copies = copies;
+        form.inserters = ([
+            { prototype: 'bulk-inserter', quality: 'normal' },
+            { prototype: 'fast-inserter', quality: 'normal' },
+            { prototype: 'bulk-inserter', quality: 'normal', stack_size: 8 },
+            { prototype: 'bulk-inserter', quality: 'normal', stack_size: 16 },
+            { stack_size: 16 },
+            {},
+        ] as const).map((metadata, i) => ({ ...metadata, id: i + 1, _uuid: `original-${i}`,
+            source: { type: 'machine' as const, id: 1 }, sink: { type: 'belt' as const, id: 1 } }));
+        const text = serializeConfig(form);
+        const saved = JSON.parse(text);
+        const reopened = readSavedConfig(text)!;
+        const exported = JSON.parse(JSON.stringify(formDataToConfig(reopened)));
+        expect(reopened.target_output.copies).toBe(copies);
+        expect(exported.target_output.copies).toBe(copies);
+        expect(serializeConfig(reopened)).toBe(text);
+        for (let i = 0; i < saved.inserters.length; i++) {
+            for (const field of ['prototype', 'quality', 'stack_size']) {
+                expect(Object.hasOwn(exported.inserters[i], field)).toBe(Object.hasOwn(saved.inserters[i], field));
+                expect(exported.inserters[i][field]).toEqual(saved.inserters[i][field]);
+            }
+            expect(reopened.inserters[i]._uuid).not.toBe(form.inserters[i]._uuid);
+        }
+        // This reader preserves editable data; the real worker/schema boundary is tested separately.
+        expect(serializeConfig(form)).toBe(text);
+    });
+});
