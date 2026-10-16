@@ -1,7 +1,7 @@
 // Local 3.F capture functions only; no changes to shared lib behavior.
 import {writeFileSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
-export async function rest(p){await p.mouse.move(0,0);await p.waitForFunction(()=>![...document.querySelectorAll('[role=tooltip]')].some(e=>getComputedStyle(e).visibility!=='hidden'&&e.getBoundingClientRect().height>0),null,{timeout:8000});await p.waitForFunction(()=>document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).every(a=>a.playState!=='running'),null,{timeout:8000});await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));}
+export async function rest(p){await p.mouse.move(0,0);await p.waitForFunction(()=>document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).every(a=>a.playState!=='running'),null,{timeout:8000});await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));}
 export async function geometryOf(p){return p.evaluate(()=>{
  const vw=innerWidth;const name=e=>(e.getAttribute('aria-label')||e.getAttribute('aria-labelledby')?.split(' ').map(id=>document.getElementById(id)?.textContent??'').join(' ')||'').trim();
  const path=e=>{let a=e,s=[];for(let n=0;a&&n<5;n++,a=a.parentElement)s.unshift(a.tagName.toLowerCase()+(a.id?'#'+a.id:'')+(a.classList.length?'.'+[...a.classList].slice(0,2).join('.'):''));return s.join(' > ');};
