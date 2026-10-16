@@ -34,7 +34,7 @@ export function BuildPanel({ view, onViewChange, children }: BuildPanelProps) {
                     </ToggleButton>
                     <ToggleButton value="diagram" aria-label="Diagram beta view">
                         <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
-                        Diagram
+                        Diagram{' '}
                         {/* in the button's own colour, which is black on the selected orange */}
                         <Chip label="beta" size="small" variant="outlined" sx={{ ml: 0.75, color: 'inherit', borderColor: 'currentColor' }} />
                     </ToggleButton>
