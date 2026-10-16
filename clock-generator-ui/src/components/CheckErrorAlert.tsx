@@ -51,7 +51,8 @@ export function CheckErrorAlert({ message, crashed = false, recovery, conversion
             <AlertTitle id={titleId}>{crashed ? CHECK_TEXT.crashTitle : CHECK_TEXT.errorTitle}</AlertTitle>
             <span id={messageId}>{crashed ? CHECK_TEXT.crashText : recovery ? recoveryText(recovery) : checkErrorText(message)}</span>
             {!crashed && recovery?.conversion.kind === 'available' && onConvert && (
-                <Box sx={{ mt: 1 }}>
+                {/* MUI's message scroll container clips outside focus rings; reserve paint space on every side. */}
+                <Box sx={{ mt: 1, p: '6px' }}>
                     <Button variant="contained" color="success" onClick={onConvert} disabled={conversionPending}>
                         {conversionPending ? 'Checking one unit…' : `Use one unit · ${recovery.conversion.copies} copies`}
                     </Button>
