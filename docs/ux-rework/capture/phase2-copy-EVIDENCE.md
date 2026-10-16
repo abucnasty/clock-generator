@@ -3,7 +3,7 @@
 Implementer: GPT-6.1 Sol, high reasoning, fast mode off. First recorded UTC: 2026-10-16 10:22:41.
 Product head: `8e0b53dc45fc238caedde71a449b8c010574a7af`, from P2 `d90c9c4`; reviewed prior product
 `3115caf106f0c0c0894ca448700553325413217b`. Later capture/evidence commits do not change that product.
-Independent code/UX reviews and all three affected phase-persona rechecks remain the orchestrator's next steps.
+Independent code/UX reviews and all three affected phase-persona rechecks PASS; exact reports and root verification are linked below.
 This note does not approve installation, a phase merge, or any deferred work.
 
 ## Product and tests
@@ -110,3 +110,9 @@ Review images: full after `w{width}/01-first-visit-{width}.png`, `02-answer-copi
 `05-expanded-table-wake-up-help-{width}.png`, `06-expanded-help-short-{width}.png`.
 The implementer opened the actual390 fractional answer and720 expanded-help PNGs. Root separately verifies images,
 UI tests/build and independent reviews. Historical phase390 limitations and explicit3.F/D1–D8 carries are unaffected.
+
+## Independent root verification and review closure
+
+Root repeated UI tests/build on the immutable product: **967 tests/57 files and build PASS**; `/tmp/ux-phase2-copy-root-repeat/{results,PROOF}.json` records the actual exits, clean source, own engine resolution and412/412 matching asset hashes. Root verified both final executed runtime files exactly match committed capture source (`RUNTIME-PROOF.json`), read the actual failed/corrected logs and opened the before390 caption, after720 fractional result,1440 expanded help and390 intro PNGs. The capture-only final head preserves the product tree.
+
+Independent [CODE PASS](../review/phase2-end/2.F/CODE.md) and [UX PASS](../review/phase2-end/2.F/UX.md), round0/no fix round, are preserved exactly. CODE additionally ran55 focused tests; UX opened10 actual PNGs. All three original phase personas independently rechecked their assigned findings: [A PASS](../review/phase2-end/2.F/A.md), [B PASS](../review/phase2-end/2.F/B.md), [C PASS](../review/phase2-end/2.F/C.md). Their original full reports and other dispositions remain unchanged. Explicit3.F carries, historical narrow-width limitations and D1–D8 drafts remain open as recorded; owner2.5 A installation and phase approval remain separate checkpoints.
