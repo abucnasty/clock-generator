@@ -1,6 +1,7 @@
 // Additive state probes for lib.ui compatibility selectors; called by selftest.mjs.
 // Counts are selector checks, not substitutes for the behavioral/AA compatibility capture.
 import { readFileSync } from 'node:fs';
+import { selftestP3CompatibilityEmpty, selftestP3CompatibilityPopulated } from './selftest-p3-compatibility-ui.mjs';
 import { fileURLToPath } from 'node:url';
 import { ui, SMALL_SAMPLE, itemLabel, openTooltip, chooseMenuItem, validate } from './lib.mjs';
 const fixture = name => fileURLToPath(new URL(`./fixtures/${name}.json`,import.meta.url));
@@ -19,6 +20,7 @@ export async function selftestCompatibilityEmpty(page,E) {
         compatShareConfirm:[],compatOpenShared:[],compatTooltips:[],
     };
     for(const [key,args] of Object.entries(absent)) await E('empty compatibility',key,ui[key](page,...args),0);
+    await selftestP3CompatibilityEmpty(page,E);
 }
 
 export async function selftestCompatibilityPopulated(page,E,log) {
@@ -105,5 +107,6 @@ export async function selftestCompatibilityPopulated(page,E,log) {
             await E('P3 shared URL','compatOpenShared',ui.compatOpenShared(other));
         } finally { await other.close(); }
     } else console.log('NOT RUN (not PASS): populated P3 share-confirmation selectors; rerun selftest with PHASE3=1 against p3.');
+    await selftestP3CompatibilityPopulated(page,E,log);
     log(true,'compatibility populated selector matrix completed');
 }

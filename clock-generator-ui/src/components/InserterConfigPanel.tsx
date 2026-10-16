@@ -1,4 +1,4 @@
-import { INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
+import { INSERTER_TIMING_ASSUMPTION, effectiveInserterStackSize, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import {
     Autocomplete,
     Box,
@@ -431,7 +431,7 @@ export function InserterConfigPanel({
                 <EnableControlFormContent
                     entityType="inserter"
                     entityId={inserter.id}
-                    stackSize={draft.stack_size}
+                    stackSize={effectiveInserterStackSize(draft)}
                     movedItems={movedItems}
                     currentOverride={currentOverride}
                     onDraftChange={setRule}

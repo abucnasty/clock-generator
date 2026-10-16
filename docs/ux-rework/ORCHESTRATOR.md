@@ -196,6 +196,13 @@ Delegate only when it frees the orchestrator. A one-line `gh` or `git` call is q
 
 ## Choosing the model
 
+**Temporary owner override (2026-10-16, active until revoked): every worker uses `gpt-6.1-sol`,
+`reasoning_effort: "high"`, fast mode off. This includes implementers, code reviewers, UX auditors, all three
+phase-end reviewers and the coach. Spawn replacement Sol workers instead of resuming an Astra worker.
+Preserve review independence, all three phase-end reviewers and every verification requirement.
+The owner changes the parent chat model through the app. This override supersedes model names in the table,
+specs and role briefs below; it does not alter any quality gate.**
+
 Use the Codex model mapping below (owner, 2026-10-16). Accuracy takes priority over speed or cost.
 **Never use fast mode.**
 
