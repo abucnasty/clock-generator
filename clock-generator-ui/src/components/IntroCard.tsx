@@ -1,5 +1,5 @@
 import { Close, ContentPaste } from '@mui/icons-material';
-import { Box, Button, IconButton, Link, Paper, Typography } from '@mui/material';
+import { Box, Button, IconButton, Link, Typography } from '@mui/material';
 import { useLayoutEffect, useRef } from 'react';
 import { focusTargetOutputHeading } from '../utils/introCard';
 import {
@@ -13,8 +13,7 @@ import {
     SIDECAR_MOD_URL,
     SIDECAR_NEEDS,
 } from '../utils/sidecarGuide';
-
-const HEADING_ID = 'intro-card-heading';
+import { Panel } from './Panel';
 
 /** The link to the Sidecar mod's page, which opens in a new tab and says so */
 export function SidecarModLink() {
@@ -62,15 +61,16 @@ export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: I
     }, []);
 
     return (
-        <Paper ref={rootRef} component="section" aria-labelledby={HEADING_ID} sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Typography id={HEADING_ID} variant="h6" component="h2" sx={{ flex: 1 }}>
-                    {INTRO_HEADING}
-                </Typography>
+        <Panel
+            ref={rootRef}
+            id="intro-card"
+            title={INTRO_HEADING}
+            actions={(
                 <IconButton size="small" onClick={onDismiss} aria-label={INTRO_BUTTONS.hide} sx={{ minWidth: 32, minHeight: 32 }}>
                     <Close fontSize="small" />
                 </IconButton>
-            </Box>
+            )}
+        >
             <Typography variant="body2" sx={{ mb: 1 }}>
                 {INTRO_SENTENCE}
             </Typography>
@@ -95,6 +95,6 @@ export function IntroCard({ onPaste, onTryExample, onBuildByHand, onDismiss }: I
                     {INTRO_BUTTONS.byHand}
                 </Button>
             </Box>
-        </Paper>
+        </Panel>
     );
 }

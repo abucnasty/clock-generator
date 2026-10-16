@@ -1,10 +1,11 @@
-import { Add, Close } from '@mui/icons-material';
-import { Box, IconButton, Typography, Popover } from '@mui/material';
+import { Add } from '@mui/icons-material';
+import { Box, Typography, Popover } from '@mui/material';
 import { useRef, useState } from 'react';
 import { useGameNames } from '../hooks/useGameNames';
-import { removeFilterName } from '../utils/a11yLabels';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
+import { AUTO_BADGE_SX, insetSlotSx } from './insetSlot';
+import { SlotRemoveButton } from './SlotRemoveButton';
 
 interface FilterSlotSelectorProps {
     /** Explicit filters set by the user */
@@ -17,7 +18,7 @@ interface FilterSlotSelectorProps {
     onFilterChange: (slotIndex: number, item: string) => void;
     /** Callback when a filter is removed */
     onRemoveFilter: (slotIndex: number) => void;
-    /** Number of filter slots to display */
+    /** The most filters an inserter takes */
     maxSlots?: number;
 }
 
@@ -35,6 +36,10 @@ export function FilterSlotSelector({
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
     const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    // the set slots (the player's, else the auto ones), then one "+" while there is room for another
+    const setCount = Math.min(maxSlots, hasExplicitFilters ? filters.length : shouldShowInferred ? inferredFilters.length : 0);
+    const slotCount = Math.min(maxSlots, setCount + 1);
 
     const handleSlotClick = (slotIndex: number, element: HTMLElement) => {
         setAnchorEl(element);
@@ -60,19 +65,27 @@ export function FilterSlotSelector({
 
     const removeFilter = (slotIndex: number) => {
         onRemoveFilter(slotIndex);
-        // the remove button goes with the filter; the slot stays, so the keyboard focus goes back to it
+        // the remove button goes with the filter, and the slots after it move up: the focus goes to the slot in its
+        // place, which is the "+" when it was the last
         slotRefs.current[slotIndex]?.focus();
     };
 
     return (
-        // the gap leaves room for a remove button between two slots, clear of the next one
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-                Filters:
+        // the slots alone set the height, so they sit on the line of the row's fields; the label hangs above them, as a
+        // field's label sits on its border, clear of a slot's ×
+        <Box sx={{ position: 'relative' }}>
+            {/* above the slots, so the row's room goes to Source and Destination */}
+            <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ position: 'absolute', bottom: '100%', left: 0, mb: 1.25, lineHeight: 1, whiteSpace: 'nowrap' }}
+            >
+                Filters
             </Typography>
+        {/* the gap leaves room for a remove button between two slots, clear of the next one */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2.5, rowGap: 1.5, alignItems: 'center' }}>
 
-            {/* Render filter slots */}
-            {Array.from({ length: maxSlots }).map((_, slotIndex) => {
+            {Array.from({ length: slotCount }).map((_, slotIndex) => {
                 // Determine what to display in this slot
                 const explicitFilter = filters[slotIndex];
                 const inferredFilter = shouldShowInferred ? inferredFilters[slotIndex] : undefined;
@@ -81,7 +94,7 @@ export function FilterSlotSelector({
 
                 return (
                     // the slot and its remove button are siblings: a button inside a button cannot be reached or named
-                    <Box key={slotIndex} sx={{ position: 'relative', m: 0.3 }}>
+                    <Box key={slotIndex} sx={{ position: 'relative' }}>
                         <Box
                             ref={(element: HTMLDivElement | null) => { slotRefs.current[slotIndex] = element; }}
                             tabIndex={0}
@@ -96,94 +109,25 @@ export function FilterSlotSelector({
                                 if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
                                     handleSlotClick(slotIndex, e.currentTarget);
-                                } else if (e.key === 'Delete' && displayFilter) {
+                                } else if ((e.key === 'Delete' || e.key === 'Backspace') && displayFilter) {
                                     e.preventDefault();
-                                    onRemoveFilter(slotIndex);
+                                    removeFilter(slotIndex);
                                 }
                             }}
-                            sx={{
-                                width: 30,
-                                height: 30,
-                                border: '2px solid',
-                                // dashed, so an auto filter is told apart by more than its colour
-                                borderStyle: isAutoAssigned ? 'dashed' : 'solid',
-                                borderColor: displayFilter
-                                    ? isAutoAssigned
-                                        ? 'secondary.main'
-                                        : 'primary.main'
-                                    : 'divider',
-                                borderRadius: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                bgcolor: 'background.paper',
-                                position: 'relative',
-                                opacity: isAutoAssigned ? 0.85 : 1,
-                                // not the outline: the focus ring appears at once, in its place
-                                transition: 'border-color 0.2s, background-color 0.2s, opacity 0.2s, transform 0.2s',
-                                // the pointer tints the slot; focus is the theme's ring alone, so an empty slot does
-                                // not take a filled slot's orange border when focused
-                                '&:hover': {
-                                    borderColor: displayFilter
-                                        ? isAutoAssigned
-                                            ? 'secondary.dark'
-                                            : 'primary.light'
-                                        : 'primary.light',
-                                    bgcolor: 'action.hover',
-                                    opacity: 1,
-                                    transform: 'scale(1.05)',
-                                },
-                            }}
+                            sx={insetSlotSx({ auto: isAutoAssigned, open: activeSlotIndex === slotIndex })}
                         >
                             {displayFilter ? (
                                 <>
-                                    <FactorioIcon name={displayFilter} size={22} alt="" titled />
-                                    {/* Show auto badge for inferred filters */}
-                                    {isAutoAssigned && (
-                                        <Box
-                                            sx={{
-                                                position: 'absolute',
-                                                bottom: -8,
-                                                left: '50%',
-                                                transform: 'translateX(-50%)',
-                                                bgcolor: 'common.black',
-                                                color: 'secondary.light',
-                                                fontSize: '0.7rem',
-                                                fontWeight: 'bold',
-                                                px: 0.5,
-                                                py: 0.25,
-                                                borderRadius: 0.5,
-                                                lineHeight: 1,
-                                            }}
-                                        >
-                                            AUTO
-                                        </Box>
-                                    )}
+                                    <FactorioIcon name={displayFilter} size={24} alt="" titled />
+                                    {/* the word too, so an auto filter is told apart by more than its dashed border */}
+                                    {isAutoAssigned && <Box aria-hidden sx={AUTO_BADGE_SX}>AUTO</Box>}
                                 </>
                             ) : (
-                                <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                <Add sx={{ fontSize: 16, color: 'text.secondary' }} />
                             )}
                         </Box>
-                        {/* Show remove button for all filters (explicit and auto-assigned) */}
                         {displayFilter && (
-                            <IconButton
-                                size="small"
-                                aria-label={removeFilterName(slotIndex + 1, itemLabel(displayFilter))}
-                                onClick={() => removeFilter(slotIndex)}
-                                sx={{
-                                    position: 'absolute',
-                                    // over the slot's corner by 6px at most, so 24x24 of the 30px slot stays its own to click
-                                    top: -10,
-                                    right: -18,
-                                    width: 24,
-                                    height: 24,
-                                    bgcolor: 'error.main',
-                                    '&:hover': { bgcolor: 'error.dark' },
-                                }}
-                            >
-                                <Close sx={{ fontSize: 14, color: 'white' }} />
-                            </IconButton>
+                            <SlotRemoveButton slotNumber={slotIndex + 1} itemName={itemLabel(displayFilter)} onClick={() => removeFilter(slotIndex)} />
                         )}
                     </Box>
                 );
@@ -191,10 +135,12 @@ export function FilterSlotSelector({
 
             {/* Show count if there are more inferred items than slots */}
             {shouldShowInferred && inferredFilters.length > maxSlots && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
                     +{inferredFilters.length - maxSlots} more
                 </Typography>
             )}
+
+        </Box>
 
             {/* Item selector popover */}
             <Popover

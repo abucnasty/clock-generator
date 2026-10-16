@@ -79,7 +79,7 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                                 rate, and no swing count that holds it was found during backoff. The result from{' '}
                                 <strong>{report.initial_terminal_swing_count}</strong> swings was used.
                                 Consider adjusting your build or disabling swing backoff in
-                                Advanced Overrides.
+                                Advanced.
                             </>
                         )}
                     </Typography>

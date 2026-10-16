@@ -88,13 +88,13 @@ async function goConfigure() {
     await page.evaluate(() => window.scrollTo(0, 0));
 }
 
-/** The card (nearest MuiPaper-root ancestor) of the heading that reads e.g. "Inserters (5)" */
+/** The Build card's section (2.7 B) named by the heading that reads e.g. "Inserters (5)" */
 function card(headingPattern) {
-    return page.getByText(headingPattern).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
+    return page.getByRole('main').getByRole('region', { name: headingPattern });
 }
 
 const inserterCard = () => card(/^Inserters \(\d+\)$/);
-const drillCard = () => card(/^Mining Drills \(\d+\)$/);
+const drillCard = () => card(/^Mining drills \(\d+\)$/);
 
 /** The enable controls of a card: chips after the change, gear buttons before it */
 const enableControls = (c) => c.getByRole('button', { name: AFTER ? /\. Edit rule$/ : 'Configure Enable Control' });
@@ -211,7 +211,7 @@ async function runAt(w) {
         check('exactly one button is named "..., Inserter 3. Edit rule"', aria3 === 1, `${aria3} found`);
         const names = await enableControls(c).evaluateAll((els) => els.map((el) => [el.getAttribute('aria-label') ?? '', el.querySelector('.MuiChip-label')?.textContent ?? '']));
         check('every chip\'s accessible name starts with its visible text (WCAG 2.5.3)', names.every(([name, text]) => text !== '' && name.startsWith(text)), names.map(([name]) => name).join(' | '));
-        const deleteRights = await c.locator('[data-testid="DeleteIcon"]').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().right)));
+        const deleteRights = await c.locator('button[data-row-delete]') /* icons have no data-testid in a production build */.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().right)));
         check('the Delete buttons line up in one column', new Set(deleteRights).size === 1, deleteRights.join(', '));
         const quiet = await measureChip(enableControls(c).nth(0));
         const orange = await measureChip(enableControls(c).nth(3));
@@ -237,16 +237,15 @@ async function runAt(w) {
     // ------------------------------------------------------------ 2. drills card
     await step('2 drills card', async () => {
         const c = drillCard();
+        // the sample has its drills listed; 2.7 B removed the Enabled switch
         await c.scrollIntoViewIfNeeded();
-        const sw = c.locator('input[type=checkbox]').first();
-        if (!(await sw.isChecked())) await sw.check();
         await page.waitForTimeout(400);
         await shot('2-drills-card', AFTER ? 'Mining Drills card: the drill\'s enable chip' : 'Mining Drills card: the drill\'s gear icon', c);
         if (!AFTER) {
             note('no chip (before): drill chip text check');
             return;
         }
-        const count = await headingCount(/^Mining Drills \(\d+\)$/);
+        const count = await headingCount(/^Mining drills \(\d+\)$/);
         check('one enable chip per drill', (await enableControls(c).count()) === count, `${await enableControls(c).count()} chips, ${count} drills`);
         const texts = await chipTexts(c);
         check('the drill reads Clocked 1–2 of 168', texts[0] === 'Clocked 1–2 of 168', texts[0]);

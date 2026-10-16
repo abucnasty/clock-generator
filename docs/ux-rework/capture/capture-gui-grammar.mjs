@@ -596,7 +596,7 @@ async function narrowBarChecks(page, rec, width, label, { copy = false } = {}) {
     await chk(rec, `${label}: bar items do not overlap and nothing scrolls sideways`, async () => {
         const s = await noSideScroll(page);
         const overlap = await page.evaluate(() => {
-            const bs = [...document.querySelectorAll('header button, header .MuiChip-root')].filter((b) => b.getBoundingClientRect().width > 0).map((b) => b.getBoundingClientRect());
+            const bs = [...document.querySelectorAll('header.MuiAppBar-root button, header.MuiAppBar-root .MuiChip-root') /* the app bar: a card's title bar is a <header> too (2.7 B) */].filter((b) => b.getBoundingClientRect().width > 0).map((b) => b.getBoundingClientRect());
             let n = 0;
             for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
                 const a = bs[i], b = bs[j];
@@ -852,16 +852,33 @@ async function stepFresh({ page, rec, width }) {
     const recChip = page.locator('.MuiChip-root').filter({ hasText: /^Recommended$/ }).first().locator('.MuiChip-label');
     if (await count(recChip)) await contrastPairs(page, [{ name: `${label}: Recommended chip`, locator: recChip }], rec);
     else rec.info(`contrast ${label}: Recommended chip`, 'not on the page');
-    await rec.step(`${label}: Status chip on the selected row, hovered`, async () => {
-        // the selected row is tinted orange, and more so hovered: the chip's words must stay at 4.5:1 (2.7 A review, 1.4.3)
-        const row = page.locator('table tbody tr.Mui-selected').first(); // SELECTOR: confirm (MUI's selected row)
-        const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Stable|Unstable|No recovery)$/ }).first();
-        if (!(await count(chip))) return rec.check(`contrast ${label}: Status chip on the selected row`, false, 'no Status chip in the selected row');
-        await row.scrollIntoViewIfNeeded();
-        await contrastPairs(page, [{ name: `${label}: Status chip on the selected row (rest)`, locator: chip.locator('.MuiChip-label') }], rec);
-        await row.locator('td').nth(3).hover();
-        await page.waitForTimeout(300);
-        await contrastPairs(page, [{ name: `${label}: Status chip on the selected row (row hovered)`, locator: chip.locator('.MuiChip-label') }], rec);
+    await rec.step(`${label}: Works? and Status on the selected row, rest and hovered`, async () => {
+        // Compact Works? words and icon, and expanded Status chips, must remain legible on the selected/hovered row.
+        const row = page.locator('table tbody tr.Mui-selected').first();
+        const toggle = page.getByRole('button', { name: 'Show all columns', exact: true });
+        for (const expanded of [false, true]) {
+            if (expanded) await toggle.click();
+            const chip = row.locator('.MuiChip-root').filter({ hasText: /^(Recovers|Does not recover|Unstable)$/ }).first();
+            const works = row.locator('td').last().locator('span').first();
+            const target = expanded ? chip : works;
+            rec.check(`${label}: ${expanded ? 'Status chip is' : 'Works? words and icon are'} present`,
+                await count(target) > 0 && (expanded || await count(works.locator('svg')) > 0));
+            if (!(await count(target))) continue;
+            const pairs = (state) => expanded
+                ? [{ name: `${label}: Status chip on the selected row (${state})`, locator: chip.locator('.MuiChip-label') }]
+                : [
+                    { name: `${label}: Works? words on the selected row (${state})`, locator: works },
+                    { name: `${label}: Works? icon on the selected row (${state}, non-text 3:1)`, locator: works.locator('svg').first(), required: 3 },
+                ];
+            await row.scrollIntoViewIfNeeded();
+            await page.mouse.move(1, 899);
+            await page.waitForTimeout(300);
+            await contrastPairs(page, pairs('rest'), rec);
+            await row.locator('td').nth(3).hover();
+            await page.waitForTimeout(300);
+            await contrastPairs(page, pairs('row hovered'), rec);
+        }
+        await toggle.click();
         await page.mouse.move(1, 899);
     }, page);
     await commonChecks(page, rec, label);
@@ -973,7 +990,7 @@ async function stepFailed({ page, rec, width }) {
 
 async function stepDetails({ page, rec, width }) {
     await build(page, FUEL);
-    for (const [tabName, shotName] of [['Insights', 'details-insights'], ['Fuel', 'details-fuel'], ['Blueprint', 'details-blueprint']]) {
+    for (const [tabName, shotName] of [['Insights', 'details-insights'], ['Fuel', 'details-fuel'], ['Blueprint string', 'details-blueprint']]) {
         await rec.step(`details tab ${tabName}`, async () => {
             const tab = page.getByRole('tab', { name: new RegExp(`^${tabName}`) }).first();
             if (!(await count(tab))) return rec.check(`details: the ${tabName} tab exists`, false, 'no such tab');
@@ -981,7 +998,19 @@ async function stepDetails({ page, rec, width }) {
             await page.waitForTimeout(500);
             await rec.shot(page, shotName, { fullPage: true, aria: true, desc: `Details: ${tabName}` });
             const label = `details, ${tabName}`;
-            await titleBarChecks(page, rec, label, '[role=tabpanel]:not([hidden]) h2, [role=tabpanel]:not([hidden]) h3'); // SELECTOR: confirm (the open tab panel)
+            // BlueprintOutput has no nested card: its tab names the content inside the titled Details panel (2.5 B).
+            // Measure that containing card's band and body, and assert the tab's actual content instead of skipping it.
+            if (tabName === 'Blueprint string') {
+                await titleBarChecks(page, rec, label, '[data-details] > header h2');
+                const panel = page.getByRole('tabpanel', { name: 'Blueprint string', exact: true });
+                const field = panel.getByRole('textbox', { name: 'Blueprint string', exact: true });
+                rec.check(`${label}: the tab names the panel without a duplicate heading`,
+                    await panel.count() === 1 && await panel.getByRole('heading').count() === 0);
+                rec.check(`${label}: the read-only blueprint string is present`, await field.count() === 1
+                    && await field.evaluate((el) => el.readOnly && el.value.startsWith('0') && el.value.length > 20));
+            } else {
+                await titleBarChecks(page, rec, label, '[role=tabpanel]:not([hidden]) h2, [role=tabpanel]:not([hidden]) h3');
+            }
             await commonChecks(page, rec, label);
             await finalChecks(page, rec, width, label);
         }, page);
@@ -1006,9 +1035,16 @@ async function stepDialogs({ page, rec, width }) {
     await rec.step('rule modal and discard prompt', async () => {
         const chips = enableChips(page);
         if (!(await count(chips))) return rec.check('rule modal: an inserter chip opens it', false, 'no chip named "..., Inserter N. Edit rule"');
-        // a chip that holds a rule (so the dialog has Clear rule), else the first
+        // Prefer an existing rule, then explicitly save one: the current SHARED sample has only Auto inserters.
         const ruled = chips.filter({ hasNotText: /^Enable: Auto/ });
         const chip = (await count(ruled)) ? ruled.first() : chips.first();
+        await chip.scrollIntoViewIfNeeded();
+        await chip.click();
+        await page.getByRole('dialog').first().waitFor({ timeout: 4000 });
+        const ruleDialog = page.getByRole('dialog').first();
+        await ruleDialog.getByRole('radio', { name: /^Always on\b/ }).check();
+        await ruleDialog.getByRole('button', { name: 'Save', exact: true }).click();
+        await ruleDialog.waitFor({ state: 'hidden' });
         await chip.scrollIntoViewIfNeeded();
         await chip.click();
         await page.getByRole('dialog').first().waitFor({ timeout: 4000 });
@@ -1038,16 +1074,37 @@ async function stepDialogs({ page, rec, width }) {
     await rec.step('diagram inserter dialog', async () => {
         await closeAll(page);
         await goConfigure(page);
-        await page.getByRole('button', { name: 'Diagram view' }).click();
+        await ui.diagramView(page).click();
         await page.waitForTimeout(1200);
-        const node = page.locator('.react-flow__node').filter({ hasText: /Inserter \d/ }).first(); // SELECTOR: confirm (a diagram inserter node)
+        const node = ui.compatInserterNode(page, 1);
         if (!(await count(node))) return rec.check('diagram inserter dialog: an inserter node exists', false, 'no .react-flow__node with "Inserter N"');
-        await node.click({ force: true });
-        await page.keyboard.press('Enter');
+        await node.scrollIntoViewIfNeeded();
+        await node.click();
         await page.getByRole('dialog').first().waitFor({ timeout: 4000 });
         await page.waitForTimeout(600);
         await rec.shot(page, 'dialog-diagram-inserter', { aria: true, desc: 'The diagram inserter dialog' });
+        const save = ui.compatSave(page), stack = ui.compatEditorStack(page);
+        const storedBefore = await page.evaluate(() => localStorage.getItem('clock-generator-config'));
+        if (storedBefore === null) throw new Error('Diagram draft checks require the genuinely imported persisted build');
+        rec.check('diagram inserter dialog: untouched Save is disabled', await save.isDisabled());
+        await save.scrollIntoViewIfNeeded();
+        const saveBox = await save.boundingBox();
+        if (!saveBox) throw new Error('The untouched Diagram Save button has no visible rectangle');
+        await page.mouse.click(saveBox.x + saveBox.width / 2, saveBox.y + saveBox.height / 2);
+        rec.check('diagram inserter dialog: untouched disabled Save is inert', await ui.compatEditor(page).isVisible()
+            && await save.isDisabled() && await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
+        // Make only an unsaved local draft change before measuring the enabled confirm button.
+        await stack.focus(); await stack.press('ControlOrMeta+A'); await page.keyboard.type('15'); await stack.press('Tab');
+        rec.check('diagram inserter dialog: Stack size15 draft enables Save without committing', await save.isEnabled()
+            && await stack.inputValue() === '15' && await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
+        // The disabled-click left the pointer over Save. Measure its rest state after native finite transitions finish.
+        await page.mouse.move(0, 0);
+        await page.waitForFunction((button) => !button.getAnimations().some((animation) =>
+            animation.playState !== 'finished' && animation.playState !== 'idle'
+            && Number.isFinite(animation.effect?.getComputedTiming().endTime)), await save.elementHandle());
+        await rec.shot(page, 'dialog-diagram-inserter-edited', { aria: true, desc: 'Unsaved Stack size15 draft: Save enabled for its existing contrast/grammar checks' });
         await dialogChecks(page, rec, width, 'diagram inserter dialog', { cancel: /^Cancel$/, confirm: /^Save$/ });
+        rec.check('diagram inserter dialog: Cancel discards the draft without changing the build', await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
         await closeAll(page);
         await page.getByRole('button', { name: 'List view' }).click().catch(() => {});
         await closeAll(page);

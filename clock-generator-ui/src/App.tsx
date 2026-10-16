@@ -15,11 +15,8 @@ import {
     Typography,
     Alert,
     Icon,
-    Paper,
-    ToggleButton,
-    ToggleButtonGroup,
 } from '@mui/material';
-import { Abc, AccountTree, Code, FullscreenExit, List, LocalCafe } from '@mui/icons-material';
+import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useConfigForm } from './hooks/useConfigForm';
@@ -47,6 +44,9 @@ import { RenameBuildDialog } from './components/RenameBuildDialog';
 import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { MissingInserterAlert } from './components/MissingInserterAlert';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
+import { BuildPanel, type BuildView } from './components/BuildPanel';
+import { PanelSection } from './components/Panel';
+import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
 import { MessageHost, MessageSlot } from './components/Messages';
 import { ResultsWorkspace } from './components/ResultsWorkspace';
@@ -75,7 +75,7 @@ import { GameNamesContext, SearchOnlyRecipesContext } from './hooks/useGameNames
 import { RuleTimingContext } from './components/RuleTimingContext';
 import { ruleTimingOf, type RuleTiming } from './utils/ruleTiming';
 import type { EntityKind } from './utils/configForm/formData';
-import { describeChestSwitch, describeDrillsOff, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
+import { describeChestSwitch, removalMessage, removedDeleteLabel } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
 import type { TargetValues } from './utils/pasteTarget';
 import { configToFormData } from './utils/configForm/configMapping';
@@ -190,8 +190,6 @@ function App() {
         switchChestType,
         removeChest,
         replaceChests,
-        enableDrills,
-        disableDrills,
         updateDrillsConfig,
         addDrill,
         updateDrill,
@@ -256,7 +254,9 @@ function App() {
     // ⋮ > Terms: the popover hangs from the ⋮ button
     const [termsAnchor, setTermsAnchor] = useState<HTMLElement | null>(null);
 
-    const [configView, setConfigView] = useState<'list' | 'diagram'>('list');
+    const [configView, setConfigView] = useState<BuildView>('list');
+    // Advanced is closed until opened, and again whenever the build is replaced
+    const [advancedOpen, setAdvancedOpen] = useState(false);
     const [diagramFullscreen, setDiagramFullscreen] = useState(false);
     const [changelogOpen, setChangelogOpen] = useState(false);
     const [view, setView] = useState<WorkflowView>('configure');
@@ -587,9 +587,8 @@ function App() {
             removeChest: removal('chests', removeChest),
             removeDrill: removal('drills', removeDrill),
             switchChestType: (index: number, type: ChestType) => { offerUndo((form) => describeChestSwitch(form, index, type)); switchChestType(index, type); },
-            disableDrills: () => { offerUndo(describeDrillsOff); disableDrills(); },
         };
-    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType, disableDrills]);
+    }, [offerUndo, removeMachine, removeInserter, removeBelt, removeChest, removeDrill, switchChestType]);
     // the key of the build an action with Undo is about to replace as a whole (Import, Paste, Reset, an example, Delete
     // build, a share link, another tab's version): its clocks are set aside under it, and its Undo brings them back
     const replacedKeyRef = useRef<string | null>(null);
@@ -654,6 +653,7 @@ function App() {
         clearResults({ formKey });
         setReplacedCount((count) => count + 1);
         setView('configure');
+        setAdvancedOpen(false);
     }, [clearResults, setReplacedCount]);
     // the same for a switch to another build, which says `message` once it is known whether its clocks come back
     const handleBuildSwitched = useCallback((message: string) => {
@@ -938,115 +938,91 @@ function App() {
                                 onCopiesChange={(value) => updateTargetOutput('copies', value)}
                             />
 
-                            {/* View toggle */}
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <ToggleButtonGroup
-                                    value={configView}
-                                    exclusive
-                                    onChange={(_, value) => { if (value) setConfigView(value); }}
-                                    size="small"
-                                >
-                                    <ToggleButton value="list" aria-label="List view">
-                                        <List fontSize="small" sx={{ mr: 0.5 }} />
-                                        List
-                                    </ToggleButton>
-                                    <ToggleButton value="diagram" aria-label="Diagram beta view">
-                                        <AccountTree fontSize="small" sx={{ mr: 0.5 }} />
-                                        Diagram{' '}
-                                        {/* in the button's own colour, which is black on the selected orange */}
-                                        <Chip label="beta" size="small" variant="outlined" sx={{ ml: 0.75, height: 16, fontSize: '0.6rem', color: 'inherit', borderColor: 'currentColor', '& .MuiChip-label': { px: 0.5 } }} />
-                                    </ToggleButton>
-                                </ToggleButtonGroup>
-                            </Box>
+                            <BuildPanel view={configView} onViewChange={setConfigView}>
+                                {/* in the order a row's sources are made in: an inserter's machines, belts and chests are above it */}
+                                {configView === 'list' ? (
+                                    <>
+                                        <MachinesForm
+                                            machines={config.machines}
+                                            recipeNames={recipeNames}
+                                            onAdd={addMachine}
+                                            onUpdate={updateMachine}
+                                            onRemove={undoable.removeMachine}
+                                            onReorder={reorderMachines}
+                                        />
 
-                            {configView === 'list' ? (
-                                <>
-                                    <MachinesForm
-                                        machines={config.machines}
-                                        recipeNames={recipeNames}
-                                        onAdd={addMachine}
-                                        onUpdate={updateMachine}
-                                        onRemove={undoable.removeMachine}
-                                        onReorder={reorderMachines}
-                                    />
+                                        <PanelSection level={3} title="Belts and chests">
+                                            <BeltsForm
+                                                belts={config.belts}
+                                                itemNames={itemNamesComposite}
+                                                onAdd={addBelt}
+                                                onUpdate={updateBelt}
+                                                onRemove={undoable.removeBelt}
+                                                onReorder={reorderBelts}
+                                                beltQuestion={beltQuestion}
+                                                onBeltAnswer={handleBeltAnswer}
+                                            />
+                                            <ChestsForm
+                                                chests={config.chests}
+                                                itemNames={itemNamesComposite}
+                                                onAdd={addChest}
+                                                onUpdate={updateChest}
+                                                onSwitchType={undoable.switchChestType}
+                                                onRemove={undoable.removeChest}
+                                                onReorder={reorderChests}
+                                            />
+                                        </PanelSection>
 
-                                    <InsertersForm
-                                        inserters={config.inserters}
-                                        machines={config.machines}
-                                        belts={config.belts}
-                                        chests={config.chests}
-                                        itemNames={itemNamesComposite}
-                                        getRecipeInfo={getRecipeInfo}
-                                        onAdd={addInserter}
-                                        onUpdate={updateInserter}
-                                        onRemove={undoable.removeInserter}
-                                        onReorder={reorderInserters}
-                                    />
+                                        <InsertersForm
+                                            inserters={config.inserters}
+                                            machines={config.machines}
+                                            belts={config.belts}
+                                            chests={config.chests}
+                                            itemNames={itemNamesComposite}
+                                            getRecipeInfo={getRecipeInfo}
+                                            onAdd={addInserter}
+                                            onUpdate={updateInserter}
+                                            onRemove={undoable.removeInserter}
+                                            onReorder={reorderInserters}
+                                        />
+                                        <MissingInserterAlert
+                                            issues={coverageIssues}
+                                            onApplyFix={applyInserterFix}
+                                        />
+                                    </>
+                                ) : (
+                                    <Box sx={{ mb: 3 }}>
+                                        <ConfigFlowDiagram
+                                            {...flowDiagramProps}
+                                            onRequestFullscreen={openDiagramFullscreen}
+                                        />
+                                        <MissingInserterAlert
+                                            issues={coverageIssues}
+                                            onApplyFix={applyInserterFix}
+                                        />
+                                        {/* the Belts section is not drawn here, so the belt question gets one of its own */}
+                                        {beltQuestion.ask && (
+                                            <PanelSection level={3} title={BELT_COPY.diagramHeading} sx={{ mt: 2 }} data-belt-question-diagram="">
+                                                <BeltAssumption answer={beltQuestion.answer} onChange={handleBeltAnswer} />
+                                            </PanelSection>
+                                        )}
+                                    </Box>
+                                )}
 
-                                    <MissingInserterAlert
-                                        issues={coverageIssues}
-                                        onApplyFix={applyInserterFix}
-                                    />
-
-                                    <BeltsForm
-                                        belts={config.belts}
-                                        itemNames={itemNamesComposite}
-                                        onAdd={addBelt}
-                                        onUpdate={updateBelt}
-                                        onRemove={undoable.removeBelt}
-                                        onReorder={reorderBelts}
-                                        beltQuestion={beltQuestion}
-                                        onBeltAnswer={handleBeltAnswer}
-                                    />
-
-                                    <ChestsForm
-                                        chests={config.chests}
-                                        itemNames={itemNamesComposite}
-                                        onAdd={addChest}
-                                        onUpdate={updateChest}
-                                        onSwitchType={undoable.switchChestType}
-                                        onRemove={undoable.removeChest}
-                                        onReorder={reorderChests}
-                                    />
-                                </>
-                            ) : (
-                                <Box sx={{ mb: 2 }}>
-                                    <ConfigFlowDiagram
-                                        {...flowDiagramProps}
-                                        onRequestFullscreen={openDiagramFullscreen}
-                                    />
-                                    <MissingInserterAlert
-                                        issues={coverageIssues}
-                                        onApplyFix={applyInserterFix}
-                                    />
-                                    {/* the Belts card is not drawn here, so the belt question gets a card of its own */}
-                                    {beltQuestion.ask && (
-                                        <Paper sx={{ p: 2, mt: 2 }} data-belt-question-diagram="">
-                                            <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-                                                {BELT_COPY.diagramHeading}
-                                            </Typography>
-                                            <BeltAssumption answer={beltQuestion.answer} onChange={handleBeltAnswer} />
-                                        </Paper>
-                                    )}
-                                </Box>
-                            )}
-
-                            <Box sx={{ mb: 2 }}>
+                                {/* outside the toggle: the diagram does not show the drills' settings */}
                                 <DrillsForm
-                                    enabled={!!config.drills}
                                     miningProductivityLevel={config.drills?.mining_productivity_level ?? 0}
                                     drills={drillConfigs}
                                     resourceNames={resourceNames}
                                     machineIds={machineIds}
-                                    onEnable={enableDrills}
-                                    onDisable={undoable.disableDrills}
                                     onUpdateProductivityLevel={updateMiningProductivityLevel}
                                     onAdd={addDrill}
                                     onUpdate={updateDrill}
                                     onRemove={undoable.removeDrill}
                                     onReorder={reorderDrills}
                                 />
-                            </Box>
+                            </BuildPanel>
+
 
                             <Box sx={{ mb: 2 }}>
                                 <OverridesForm
@@ -1055,6 +1031,9 @@ function App() {
                                     useFractionalSwings={config.overrides?.use_fractional_swings}
                                     searchForFewerWakeUps={config.overrides?.search_for_fewer_wake_ups}
                                     onUpdate={updateOverrides}
+                                    expanded={advancedOpen}
+                                    onExpandedChange={setAdvancedOpen}
+                                    setCount={advancedSetCount(config.overrides)}
                                     planSlot={(
                                         <CheckPlanSection
                                             validation={validation}

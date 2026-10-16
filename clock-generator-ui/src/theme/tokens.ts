@@ -68,6 +68,12 @@ export const CONTROL = {
     focusOnFill: '#000000',
 } as const;
 
+/** Depth, not colour: no text or edge sits on a shadow, so none is in `TOKEN_PAIRS` */
+export const SHADOW = {
+    /** An item or filter slot sunk into its row */
+    inset: 'inset 0 1px 3px rgba(0, 0, 0, 0.6)',
+} as const;
+
 interface TokenPair {
     name: string;
     fg: string;

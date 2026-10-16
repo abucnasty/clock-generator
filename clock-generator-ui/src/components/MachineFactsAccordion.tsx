@@ -35,6 +35,8 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
 
     return (
         <Accordion
+            // under the Machines section's h3
+            slotProps={{ heading: { component: 'h4' } }}
             sx={{
                 mt: 1,
                 bgcolor: 'background.paper',
@@ -62,7 +64,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                         size="small"
                         label={maxRateLabel(facts.output_rate_per_second)}
                         variant="outlined"
-                        sx={{ height: 20, fontSize: '0.7rem' }}
+                        sx={{ fontSize: '0.7rem' }}
                     />
                 </Tooltip>
             </AccordionSummary>
@@ -185,7 +187,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                     size="small"
                                                     label={`${formatNumberText(input.consumption_rate_per_second)}/s`}
                                                     variant="outlined"
-                                                    sx={{ height: 20, fontSize: '0.7rem' }}
+                                                    sx={{ fontSize: '0.7rem' }}
                                                 />
                                             </span>
                                         </Tooltip>
@@ -195,7 +197,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                     size="small"
                                                     label={`${input.amount_per_craft}/craft`}
                                                     variant="outlined"
-                                                    sx={{ height: 20, fontSize: '0.7rem' }}
+                                                    sx={{ fontSize: '0.7rem' }}
                                                 />
                                             </span>
                                         </Tooltip>
@@ -205,7 +207,7 @@ export function MachineFactsAccordion({ facts, error }: MachineFactsAccordionPro
                                                     size="small"
                                                     label={`limit: ${input.automated_insertion_limit}`}
                                                     variant="outlined"
-                                                    sx={{ height: 20, fontSize: '0.7rem' }}
+                                                    sx={{ fontSize: '0.7rem' }}
                                                 />
                                             </span>
                                         </Tooltip>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { focusTargetIndex } from '../utils/rowFocus';
 
 /**
@@ -9,7 +9,7 @@ import { focusTargetIndex } from '../utils/rowFocus';
  * `count` is its number of rows. `remove` deletes the row at an index with `onRemove`, and moves focus after it.
  */
 export function useFocusAfterRemove(count: number, onRemove: (index: number) => void) {
-    const cardRef = useRef<HTMLDivElement>(null);
+    const cardRef = useRef<HTMLElement>(null);
     const pending = useRef<{ index: number; count: number } | null>(null);
 
     useEffect(() => {
@@ -31,4 +31,31 @@ export function useFocusAfterRemove(count: number, onRemove: (index: number) => 
     }, [count, onRemove]);
 
     return { cardRef, remove };
+}
+
+/**
+ * The other way: when an "Add …" row is replaced by the row it added, the keyboard goes to that row's first select (its
+ * Type), where the Add row's button went. Call the returned function as the row is added; once the card (`cardRef`)
+ * has more rows (`count`), the last of its rows (`role="group"`) takes the focus.
+ */
+export function useFocusAfterAdd(count: number, cardRef: RefObject<HTMLElement | null>) {
+    const countBefore = useRef<number | null>(null);
+
+    // after every render, and once only: the render the add caused. Were the add to come to nothing, a later growth
+    // (a Paste) must not take the focus
+    useEffect(() => {
+        const before = countBefore.current;
+        if (before === null) {
+            return;
+        }
+        countBefore.current = null;
+        if (count > before) {
+            const rows = cardRef.current?.querySelectorAll<HTMLElement>('[role="group"]');
+            rows?.[rows.length - 1]?.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+        }
+    });
+
+    return useCallback(() => {
+        countBefore.current = count;
+    }, [count]);
 }

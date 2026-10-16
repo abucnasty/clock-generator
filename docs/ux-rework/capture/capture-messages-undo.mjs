@@ -19,7 +19,7 @@ import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 //   C  footer on a long page (not on screen at scroll 0, wraps at 390), forward Tab: no focus stop under the footer
 //   D  1.3 Undo: Reset menu (divider, error colour, contrast), Reset + Undo (+ reload), row deletes of every kind + Undo, two
 //      deletes (one slot), withdrawn on edit and by an editing dialog, no timer (the owner, 2026-10-14), focus after Undo and
-//      Close, Import + Undo, Paste + Undo, diagram delete (+ fullscreen, and focus after), Drills off, chest type switch, no false
+//      Close, Import + Undo, Paste + Undo, diagram delete (+ fullscreen, and focus after), chest type switch (Drills off went in 2.7 B), no false
 //      offers, Ctrl/Cmd+Z (not in a text input), the "Build restored..." notice (1440 only: one Generate)
 //   E  1.5 "Copied. {warning}" for a below-target clock (one Generate per width)
 //
@@ -145,7 +145,7 @@ function counts(saved) {
 
 /** A form section by its heading ("Machines (4)"), the innermost Paper holding it. SELECTOR: confirm (headings may change in 1.9/1.11) */
 const section = (page, title) =>
-    page.locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: new RegExp(`^${title} \\(`) }) }).last();
+    page.getByRole('main').getByRole('region', { name: new RegExp(`^${title} \\(`) }); // a section of the Build card (2.7 B)
 /** Trash buttons of a section's rows (not a belt lane's small one): marked data-row-delete; icons have no data-testid in a production build */
 const trash = (page, title) => section(page, title).locator('button[data-row-delete]');
 
@@ -154,7 +154,7 @@ const KINDS = {
     inserter: { title: 'Inserters', key: 'inserters', re: /^Deleted Inserter \d+\./ },
     belt: { title: 'Belts', key: 'belts', re: /^Deleted Belt \d+\./ },
     chest: { title: 'Chests', key: 'chests', re: /^Deleted Chest \d+\./ },
-    drill: { title: 'Mining Drills', key: 'drills', re: /^Deleted Drill \d+\./ },
+    drill: { title: 'Mining drills', key: 'drills', re: /^Deleted Drill \d+\./ },
 };
 
 async function exportConfig(page) {
@@ -1154,21 +1154,14 @@ try {
             await dismissMessage(page);
         }, page);
 
-        await rec.step('D Drills off and a chest type switch', async () => {
-            await fresh(page, PROD);
-            const before = await readState(page);
-            const sw = section(page, 'Mining Drills').locator('.MuiSwitch-input').first(); // SELECTOR: confirm
-            await sw.click({ force: true });
-            await undoMessage(page, rec, 'undo-drills-off', /Mining drills turned off/, 'drills off', { desc: 'Mining Drills switched off: "Mining drills turned off" with Undo' });
-            const after = await readState(page);
-            rec.check('drills off: the drills are gone from the build', counts(after.saved)?.drills === 0, `drills ${counts(before.saved)?.drills} -> ${counts(after.saved)?.drills}`);
-            if (await clickUndo(page, rec, 'drills off')) await expectRestored(page, rec, 'drills off (drills and productivity level)', before);
-
+        // 2.7 B removed the drills' Enabled switch (no drills and drills off are the same build), and with it "Drills off";
+        // deleting a drill keeps its Undo (the delete steps above)
+        await rec.step('D a chest type switch', async () => {
             await fresh(page, PU);
             const beforeChest = await readState(page);
             const select = section(page, 'Chests').locator('.MuiSelect-select').first();
             const current = ((await select.textContent()) ?? '').trim();
-            const target = /Buffer/.test(current) ? 'Infinity Chest' : 'Buffer Chest';
+            const target = /Buffer/.test(current) ? 'Infinity chest' : 'Buffer chest';
             await select.click();
             await page.getByRole('option', { name: target }).click();
             await undoMessage(page, rec, 'undo-chest-switch', new RegExp(`^Chest \\d+ changed to ${target}`), 'chest type switch', { desc: `A chest switched from ${current} to ${target}: message with Undo` });

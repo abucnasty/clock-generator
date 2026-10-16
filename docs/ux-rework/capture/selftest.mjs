@@ -32,11 +32,15 @@ for (const w of [1440, 720, 390]) {
     await E(s, 'pasteFromFactorio', ui.pasteFromFactorio(page));
     await E(s, 'introCard', ui.introCard(page));
     await E(s, 'advancedOverrides', ui.advancedOverrides(page));
-    for (const k of ['target', 'machines', 'inserters', 'belts', 'chests', 'drills']) await E(s, `card(${k})`, ui.card(page, k));
+    for (const k of ['target', 'build', 'machines', 'inserters', 'belts', 'drills']) await E(s, `card(${k})`, ui.card(page, k));
+    // an empty build has no chests and no drills: each is an Add row (the drills' inside their section)
+    await E(s, 'card(chests)', ui.card(page, 'chests'), 0);
     await E(s, 'add(target)', ui.add(page, 'target'), 0);
-    for (const k of ['machines', 'inserters', 'belts', 'drills']) await E(s, `add(${k})`, ui.add(page, k));
-    await E(s, 'addChest(buffer)', ui.addChest(page));
-    await E(s, 'addChest(infinity)', ui.addChest(page, 'infinity'));
+    for (const k of ['machines', 'inserters', 'belts']) await E(s, `add(${k})`, ui.add(page, k));
+    await E(s, 'addDrillRow', ui.addDrillRow(page));
+    await E(s, 'addChest(buffer)', ui.addChest(page), 0);
+    await E(s, 'addChestRow', ui.addChestRow(page));
+    await E(s, 'addChestMenuItem (closed)', ui.addChestMenuItem(page), 0);
     await E(s, 'listView', ui.listView(page));
     await E(s, 'diagramView', ui.diagramView(page));
     await E(s, 'diagram', ui.diagram(page), 0);

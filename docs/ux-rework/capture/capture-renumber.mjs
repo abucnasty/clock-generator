@@ -50,7 +50,7 @@ async function readList(page) {
             inserters: cardOf(/^Inserters \(\d+\)$/),
             belts: cardOf(/^Belts \(\d+\)$/),
             chests: cardOf(/^Chests \(\d+\)$/),
-            drills: cardOf(/^Mining Drills \(\d+\)$/),
+            drills: cardOf(/^Mining drills \(\d+\)$/),
         };
         const chips = (card) => (card ? [...card.querySelectorAll('.MuiChip-label')].map((l) => l.textContent.trim()).filter((t) => CHIP.test(t)) : []);
         const pick = (v) => v.split(' - ')[0].trim();
@@ -144,7 +144,7 @@ const planAccordion = (page) => page.locator('.MuiAccordion-root').filter({ hasT
 
 /** The card (nearest Paper above the heading) of a kind */
 const cardOf = (page, kind) => {
-    const heading = { machines: /^Machines \(\d+\)$/, inserters: /^Inserters \(\d+\)$/, belts: /^Belts \(\d+\)$/, chests: /^Chests \(\d+\)$/, drills: /^Mining Drills \(\d+\)$/ }[kind];
+    const heading = { machines: /^Machines \(\d+\)$/, inserters: /^Inserters \(\d+\)$/, belts: /^Belts \(\d+\)$/, chests: /^Chests \(\d+\)$/, drills: /^Mining drills \(\d+\)$/ }[kind];
     return page.locator('h6').filter({ hasText: heading }).first().locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]');
 };
 const rowsOf = (page, kind) => page.locator(`[id^="entity-${kind}-"]`);

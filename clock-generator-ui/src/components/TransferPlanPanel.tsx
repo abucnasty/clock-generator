@@ -137,7 +137,7 @@ function TransferPlanPanelComponent({
                                                         label={sentenceCase(entity.entity_type)}
                                                         size="small"
                                                         variant="outlined"
-                                                        sx={{ fontSize: '0.65rem', height: 18 }}
+                                                        sx={{ fontSize: '0.7rem' }}
                                                     />
                                                     <Typography variant="body2">
                                                         {entityLabel(entity.entity_type, entity.entity_number)}
