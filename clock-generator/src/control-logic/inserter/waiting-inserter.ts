@@ -12,7 +12,9 @@
  * in the same tick in 3,756 of 3,756 where one was. A hand from a belt that stopped part way at the output block goes
  * by the same rule: 248 hands of 248 went on in that tick, and 843 of 843 a tick later where no craft was finished the
  * tick before. A hand from a belt that had not started lands its first stack a tick after the products are taken
- * either way, which the pickup mode has (`belt_grab_decided`).
+ * either way, which the pickup mode has (`belt_grab_decided`). A hand from a belt whose window opens on a machine at
+ * its output block is the exception: it comes from the disabled mode, has no such tick, and waits like the hand from
+ * a machine does (2 ticks from the enable to the first stack).
  *
  * `sink` is the machine as its last tick left it: `MachineStatusPlugin` records after every tick of a machine whether
  * it was at its output block and whether it finished a craft, and the inserters read them in the next tick. Inserters

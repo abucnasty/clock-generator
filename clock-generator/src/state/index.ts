@@ -7,6 +7,7 @@ export * from "./entity-state-registry";
 export * from "./entity-state-factory";
 export * from "./infinity-chest-state";
 export * from "./inserter-state";
+export * from "./lane-traffic";
 export * from "./inventory-state";
 export * from "./machine-state";
 export * from "./progress-state";

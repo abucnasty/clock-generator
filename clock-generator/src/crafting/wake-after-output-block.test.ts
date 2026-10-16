@@ -135,13 +135,14 @@ describe("the advanced circuit build under evenly spaced windows of one hand", (
         expect(sorted(finished(3, 4))).toEqual([216, 216, 232, 232]);
     });
 
-    // Where the generator starts the clock, with the plants emptied of advanced circuits and filled with ingredients,
-    // both plants hold 352: the simulator has both states, as the game has (its two plants were in one each), and
-    // which one a plant ends up in is decided by what it holds when the clock starts. The as-built check does not
-    // start a clock where the game's plant was, so it still passes this clock.
-    it("holds 704 a period from the start the generator checks a clock from", () => {
+    // From the staged start of the scaffold (every machine empty, the clock at its tick 0) the as-built check no longer
+    // passes this clock: it falls short from some of its start phases, as the game's plant fell to 608 and 624.
+    // Before that start (the build filled with ingredients, the plants emptied of advanced circuits) both plants
+    // held 352 and the check passed it.
+    it("falls short of 704 a period from some of the start phases the generator checks a clock from", () => {
         const made = clockFromWindows(config, evenly_spaced, PERIOD, quiet);
-        expect(made.stability_check.as_built!.holds).toBe(true);
-        expect(made.stability_check.as_built!.actual_output_items).toBe(704);
+        expect(made.stability_check.as_built!.holds).toBe(false);
+        expect(made.stability_check.as_built!.actual_output_items).toBe(544);
+        expect(made.stability_check.as_built!.failed_start_offset).toBe(88);
     });
 });

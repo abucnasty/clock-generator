@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.16.0] - 2026-10-16
+
+### Added
+- Where one ingredient alone lengthens the period, clocks with a shorter period are offered too, with that ingredient's inserters still clocked; Thaeln's cell now has a working clock at 480/s.
+- `check_start_dependence` override (config only): tries every clock from other starts and names the ones that reach the target from some starts only.
+- A belt sink may name the lane and position an inserter drops onto (`drop`), for a moving lane shared with other inserters.
+
+### Changed
+- Clocks are judged from the start the game build has (belts full, machines empty), so some verdicts and selections change.
+
+### Fixed
+- A belt-fed inserter whose window opens while its machine is full starts a tick later, a machine puts out held products as soon as there is room, and inserters taking from one machine take turns, as in the game; some results change.
+
 ## [0.15.2] - 2026-10-16
 
 ### Fixed

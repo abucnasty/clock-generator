@@ -431,6 +431,8 @@ Both overrides are optional; `period_duration_ticks` defaults to the crafting cy
 - `lcm`: override the LCM calculation for the cycle length
 - `non_moving_belts`: the belts the inserters pick up from do not move (default false)
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
+- `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
+- `loop_seed_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, as the harness seeds)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others.
 

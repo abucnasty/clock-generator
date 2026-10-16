@@ -205,6 +205,44 @@ function mostCommon(counts: Map<string, number>): string {
     return best;
 }
 
+/** How many times a bar starts over at each clock position, over the periods of a side: it falls where a craft finishes */
+function barResets(bar: number[], side: Side, clock_ticks: number): number[] {
+    const resets = new Array<number>(clock_ticks).fill(0);
+    for (const period of side.periods) {
+        for (let i = Math.max(period.start, 1); i < period.end; i++) {
+            if (bar[i] < bar[i - 1] && side.positions[i] < clock_ticks) {
+                resets[side.positions[i]]++;
+            }
+        }
+    }
+    return resets;
+}
+
+/**
+ * Ticks by which the crafting bar of the simulator starts over before (negative) or after (positive) the game's: the
+ * shift around the period that lays most of the game's resets on the simulator's, the smaller shift where two do
+ * equally well. Null when either side shows no reset.
+ */
+function barOffset(game_bar: number[], game: Side, sim_bar: number[], sim: Side, clock_ticks: number): number | null {
+    const [game_resets, sim_resets] = [barResets(game_bar, game, clock_ticks), barResets(sim_bar, sim, clock_ticks)];
+    if (!game_resets.some(count => count > 0) || !sim_resets.some(count => count > 0)) {
+        return null;
+    }
+    const half = Math.floor(clock_ticks / 2);
+    let best = { shift: 0, matched: -1 };
+    for (let shift = -half; shift <= half; shift++) {
+        let matched = 0;
+        game_resets.forEach((count, position) => {
+            // a reset of both at one place counts as many times as the fewer of the two shows it
+            matched += Math.min(count / game.periods.length, sim_resets[(position + shift + clock_ticks) % clock_ticks] / sim.periods.length);
+        });
+        if (matched > best.matched + 1e-9 || Math.abs(matched - best.matched) <= 1e-9 && Math.abs(shift) < Math.abs(best.shift)) {
+            best = { shift, matched };
+        }
+    }
+    return best.shift;
+}
+
 /** A clock position is one where the two differ when they show the same state there less than this much of the time */
 const DIFFERENT_BELOW = 0.5;
 
@@ -383,6 +421,15 @@ export function compareRecordings(
             states: compareStates(statesOf(game, game_machine.samples.status), game, statesOf(sim, sim_machine.samples.status), sim, clock_ticks, true),
         };
         machines.push(comparison);
+        // the bars, when both sides recorded them: a note, as the bar is not what the clock or the output are judged by
+        const [game_bar, sim_bar] = [game_machine.samples.crafting_progress, sim_machine.samples.crafting_progress];
+        if (game_bar.length === game.recording.sample_count && sim_bar.length === sim.recording.sample_count) {
+            const offset = barOffset(game_bar, game, sim_bar, sim, clock_ticks);
+            if (offset !== null && offset !== 0) {
+                notes.push(`Machine ${config_id}'s crafting bar runs ${Math.abs(offset)} ticks out of step with the game's: `
+                    + `the simulator's crafts finish ${Math.abs(offset)} ticks ${offset < 0 ? "before" : "after"} the game's, most often.`);
+            }
+        }
         const spread = Math.max(comparison.game_finished.max - comparison.game_finished.min, comparison.sim_finished.max - comparison.sim_finished.min);
         if (Math.abs(comparison.game_finished.mean - comparison.sim_finished.mean) > items_tolerance + spread / periods_compared) {
             issues.push(`Machine ${config_id} (${comparison.recipe}) finishes ${comparison.game_finished.mean.toFixed(2)} crafts and productivity bars a period `

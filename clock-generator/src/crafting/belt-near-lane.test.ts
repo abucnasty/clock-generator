@@ -77,8 +77,9 @@ describe("an inserter that picks up from a belt with two items", () => {
 });
 
 // Batched swings with belt pickup slack on the utility science sample, the clock selected for it. Recorded in
-// Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 periods at 26.8 wake-ups a minute, where the long run of
-// the generator, which starts the clock at its beginning, counts 10.7.
+// Factorio 2.1.21 on 2026-10-10: 192 packs in each of 53 periods at 26.8 wake-ups a minute. The generator's long run,
+// which starts the clock at its beginning on the empty build of the scaffold's staged start, counts the game's 26.8
+// too (from the prepared build it counted 10.7).
 describe("a clock with more than one steady state", () => {
     const windows: SerializableClockWindows = {
         "inserter:3": [{ start: 1, end: 49 }, { start: 169, end: 193 }, { start: 337, end: 385 }, { start: 505, end: 529 }],
@@ -89,8 +90,10 @@ describe("a clock with more than one steady state", () => {
     it("counts the wake-ups of each, by where in its period the clock starts", async () => {
         const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE);
         const figures = simulatedWakeUpsByStart(config, windows, 672, 24).map(figure => figure.toFixed(1));
-        expect(figures[0]).toBe("10.7");
-        expect(Array.from(new Set(figures)).sort()).toEqual(["10.7", "26.8", "32.1"]);
+        // from the staged start; the prepared build gave 10.7 here
+        expect(figures[0]).toBe("26.8");
+        // of the starts tried, 32.1 is no longer reached from the staged start; the prepared build reached 10.7, 26.8 and 32.1
+        expect(Array.from(new Set(figures)).sort()).toEqual(["10.7", "26.8"]);
     });
 
     it("has none for a period that is not a whole number of ticks", async () => {

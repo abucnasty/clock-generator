@@ -181,11 +181,13 @@ describe("generateClockForConfig", () => {
                     });
                 });
 
+                // the windows follow the settled state of the run from the staged start (empty machines): one window
+                // for inserter 1 and two for inserter 3; the prepared build gave 53-69 and four windows
                 it("observed windows follow each inserter's activity", () => {
                     expect(windowsOf("derived")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:1": [{ start: 53, end: 69 }],
-                        "inserter:3": [{ start: 25, end: 41 }, { start: 53, end: 80 }, { start: 193, end: 209 }, { start: 213, end: 229 }],
+                        "inserter:1": [{ start: 193, end: 209 }],
+                        "inserter:3": [{ start: 25, end: 63 }, { start: 193, end: 220 }],
                     });
                 });
             });
@@ -240,7 +242,8 @@ describe("generateClockForConfig", () => {
                     .map(transition => transition.tick);
 
                 expect(dropsOf(planned.result.serializable_state_transition_history)).toEqual([5, 149]);
-                expect(dropsOf(planned.result.clock_only_run!.state_transition_history)).toEqual([7, 19]);
+                // from the staged start (empty machines) the hands drop at 7 and 151; the prepared build dropped at 7 and 19
+                expect(dropsOf(planned.result.clock_only_run!.state_transition_history)).toEqual([7, 151]);
                 expect(planned.result.clock_only_run!.transfer_history.total_duration_ticks).toBe(288);
             });
         });
@@ -271,9 +274,10 @@ describe("generateClockForConfig", () => {
                 expect(insight("planned", "output-hand")?.title).toBe("A full hand of flying-robot-frame takes 139.4 ticks to make");
             });
 
-            it("points out where the exported clock swings differently than the plan", () => {
-                expect(insight("planned", "plan-versus-clock")?.what)
-                    .toContain("Inserter 1 drops at ticks 7, 19 where the plan had 5, 149");
+            // the clock-only run from the staged start drops at 7, 151 where the plan had 5, 149: within the 4 ticks the
+            // insight allows, so there is nothing to point out (the prepared build dropped at 7, 19)
+            it("points out nothing where the exported clock swings as the plan does", () => {
+                expect(insight("planned", "plan-versus-clock")).toBeUndefined();
             });
 
             it("does not compare shifted swings with the plan they were moved off", () => {
@@ -320,7 +324,8 @@ describe("generateClockForConfig", () => {
 
             it("observes the input windows again for the moved swing", () => {
                 expect(uneven.result.clock_windows["inserter:3"]).toEqual([
-                    { start: 13, end: 51 }, { start: 128, end: 144 }, { start: 161, end: 177 },
+                    // from the staged start; the prepared build gave 128-144 and 161-177 after the first window
+                    { start: 13, end: 51 }, { start: 140, end: 167 },
                 ]);
             });
         });
@@ -363,8 +368,8 @@ describe("generateClockForConfig", () => {
                 const candidates = shifted.result.search!.candidates;
                 expect(new Set(candidates.map(it => it.row))).toEqual(new Set([2]));
                 const stable = candidates.filter(it => it.holds).map(it => it.setting);
-                // one unbroken range, checked every 5 ticks
-                expect(stable).toEqual(Array.from({ length: 23 }, (_, n) => -65 + 5 * n));
+                // one unbroken range, checked every 5 ticks; from the staged start it reaches 60 (45 from the prepared build)
+                expect(stable).toEqual(Array.from({ length: 26 }, (_, n) => -65 + 5 * n));
                 expect(candidates.some(it => !it.holds)).toBe(true);
             });
 
@@ -372,10 +377,11 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.search!.earliest).toEqual({
                     setting: -65,
                     is_search_limit: false,
-                    notes: ["Inserter 3 waits 9 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
+                    // 9 ticks before the belt wake rule (docs/simulator.md): the belt-fed inserter 3 starts a tick later
+                    notes: ["Inserter 3 waits 10 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
                 });
                 expect(shifted.result.search!.latest).toEqual({
-                    setting: 45,
+                    setting: 60, // 45 from the prepared build
                     is_search_limit: false,
                     // full output while its output is at the block, then short of ingredients: one 9 tick stop
                     notes: ["Machine 1 (flying-robot-frame) is out of ingredients for 9 ticks until these swings arrive"],

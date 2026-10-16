@@ -92,7 +92,7 @@ function createInserterStateMachine(args: {
         tick_provider,
     })
     const swing_mode = new InserterSwingMode();
-    const drop_mode = new InserterDropMode(inserter_state, sink_state);
+    const drop_mode = new InserterDropMode(inserter_state, sink_state, tick_provider);
     const disabled_mode = new InserterDisabledMode();
     const target_full_mode = new InserterTargetFullMode(drop_mode);
     const wait_for_sink_mode = new InserterWaitForSinkMode();

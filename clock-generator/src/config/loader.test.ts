@@ -977,3 +977,65 @@ describe("ConfigValidationError", () => {
         }
     });
 });
+
+describe("a drop spot on a belt", () => {
+    const inserter = (id: number, sink: object, source: object = { type: "machine", id: 1 }) =>
+        ({ id, source, sink });
+    const config = (inserters: object[]) => JSON.stringify({
+        belts: [{ id: 3, type: "turbo-transport-belt", lanes: [{ ingredient: "utility-science-pack", stack_size: 4 }] }],
+        inserters,
+        machines: [],
+        target_output: { copies: 1, items_per_second: 1, recipe: "utility-science-pack" }
+    });
+    const drop = (position: number) => ({ type: "belt", id: 3, drop: { lane: 1, position } });
+
+    it("parses on the sink of every inserter that drops on the belt", async () => {
+        const parsed = await parseConfig(config([inserter(1, drop(0.5)), inserter(2, drop(6.5))]));
+
+        expect(parsed.inserters.map(it => it.sink)).toEqual([drop(0.5), drop(6.5)]);
+    });
+
+    it("takes a negative or fractional position, as only the distances between the positions count", async () => {
+        const parsed = await parseConfig(config([inserter(1, drop(-94)), inserter(2, drop(-87.5))]));
+
+        expect(parsed.inserters.map(it => it.sink)).toEqual([drop(-94), drop(-87.5)]);
+    });
+
+    it("is not needed: a config without it parses as before", async () => {
+        const parsed = await parseConfig(config([inserter(1, { type: "belt", id: 3 })]));
+
+        expect(parsed.inserters[0].sink).toEqual({ type: "belt", id: 3 });
+    });
+
+    it("is refused when some inserters that drop on the belt have it and others do not, naming the others", async () => {
+        const result = await parseConfigSafe(config([
+            inserter(1, drop(0.5)),
+            inserter(2, { type: "belt", id: 3 }),
+            inserter(5, { type: "belt", id: 3 })
+        ]));
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            const message = result.error.getFormattedIssues();
+            expect(message).toContain("Belt 3: inserter 2, 5");
+            expect(message).toContain("without `drop`");
+        }
+    });
+
+    it("is refused on a lane that is not 1 or 2", async () => {
+        const result = await parseConfigSafe(config([inserter(1, { type: "belt", id: 3, drop: { lane: 3, position: 1 } })]));
+
+        expect(result.success).toBe(false);
+    });
+
+    it("is refused on the source of an inserter", async () => {
+        const result = await parseConfigSafe(config([
+            inserter(1, { type: "machine", id: 2 }, { type: "belt", id: 3, drop: { lane: 1, position: 1 } })
+        ]));
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.getFormattedIssues()).toContain("belongs on the sink, not on the source");
+        }
+    });
+});

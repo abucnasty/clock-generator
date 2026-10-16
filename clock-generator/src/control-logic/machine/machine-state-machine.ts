@@ -18,9 +18,16 @@ export class MachineStateMachine extends ModeStateMachine<MachineMode> {
         public readonly machine_state: MachineState,
         initialMode: MachineMode,
         graph: Map<MachineMode, ModeTransitionEvaluator<MachineMode>>,
-        plugins: ModePlugin<MachineMode>[] = [],
+        plugins: ModePlugin<MachineMode>[],
+        private readonly working_mode: MachineWorkingMode,
     ) {
         super(initialMode, graph, plugins);
+    }
+
+    /** Products the machine holds go to its output in the tick there is room for them, whatever mode it is in */
+    public override executeForTick(): void {
+        this.working_mode.putHeldProductsInOutput();
+        super.executeForTick();
     }
 }
 
@@ -73,6 +80,7 @@ function create(args: {
         initial_mode,
         graph,
         plugins.concat(new MachineStatusPlugin(machine_state)),
+        working_mode,
     );
 }
 

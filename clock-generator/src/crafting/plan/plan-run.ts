@@ -25,6 +25,8 @@ import { EnableControlFactory } from "../sequence/interceptors/inserter-enable-c
 import { ConfigurableEnableControlFactory, EntityEnableControlOverrideMap } from "../sequence/interceptors/configurable-enable-control-factory";
 import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
+import { DEFAULT_LOOP_SEED_ITEMS, seedLoopingRecipes } from "../runner/cold-start";
+import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../control-logic/inserter/competing-takers";
 import { WarmupStep } from "../runner/steps/warmup-step";
 import { simulationStateKey } from "../runner/steady-state";
 import { SimulateStep } from "../runner/steps/simulate-step";
@@ -315,6 +317,15 @@ export interface RunOptions {
     debug_steps?: DebugSteps;
     /** Logger for output messages (defaults to console) */
     logger?: Logger;
+    /**
+     * Start as the staged scaffold of the game does: the belts are full (they always are), and the machines, the
+     * buffers and the hands are empty when the clock starts at its tick 0, with no free run before it. A build that
+     * makes its own ingredient is given `overrides.loop_seed_items` of it, once. For a run on clock windows (default
+     * false: the planning run is not on a clock, and starts from the build filled until its output is blocked).
+     */
+    cold_start?: boolean;
+    /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide (default descending config ids) */
+    competing_takers_order?: TakerOrder;
     /** Start warmup with the output machines still output blocked, so the clock has to drain the surplus */
     keep_output_buffers?: boolean;
     /**
@@ -376,9 +387,10 @@ interface BuildRun extends PlannedCraftingCycle, TransferPlan {
 
 /**
  * Runs a build: the machines are filled until their output is blocked (the prepare step), the crafting cycle is
- * planned on what they made, the output machines are emptied, the build is warmed up and then run for the period of
- * the plan with every transfer and state recorded, its output is counted against the plan's, and, when asked, the
- * backpressure losses are tried from where it ended. Every inserter runs as its enable control says: the plan's
+ * planned on what they made, the output machines are emptied (or, for a cold start, the build is made anew with
+ * nothing in it), the build is warmed up and then run for the period of the plan with every transfer and state
+ * recorded, its output is counted against the plan's, and, when asked, the backpressure losses are tried from where
+ * it ended. Every inserter runs as its enable control says: the plan's
  * controls in a planning run, the clock windows alone in a trial (see `runClockOnBuild`).
  */
 export function runBuild(config: Config, options: RunOptions): BuildRun {
@@ -386,9 +398,9 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
     const debug_steps = options.debug_steps ?? {};
     const logger = options.logger ?? defaultLogger;
 
-    const build = recordedBuildOf(config, options, debug, logger);
-    const { simulation_context, state_transition_history } = build;
-    prepareBuild(build, debug, debug_steps, logger);
+    const planned_build = recordedBuildOf(config, options, debug, logger);
+    const { simulation_context } = planned_build;
+    prepareBuild(planned_build, debug, debug_steps, logger);
 
     const planned_cycle = planCraftingCycle(config, simulation_context, logger);
     const { crafting_cycle_plan, all_output_inserters } = planned_cycle;
@@ -396,6 +408,9 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
 
     const swing_counts = crafting_cycle_plan.entity_transfer_map;
     const transfer_plan = planTransfers(config, crafting_cycle_plan, simulation_context, logger);
+    // a staged scaffold starts with nothing in its machines: the plan stands, the build is made anew and seeded
+    const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
+    const { state_transition_history } = build;
     const controlled = withEnableControls(config, build, crafting_cycle_plan, transfer_plan.recipe_lcm, logger);
     const { duration, warmup_period } = runPeriodsOf(crafting_cycle_plan, transfer_plan.recipe_lcm, options, logger);
 
@@ -406,7 +421,7 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
     const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger);
 
     return {
-        simulation_context,
+        simulation_context: build.simulation_context,
         new_simulation_context: controlled.new_simulation_context,
         target_production_rate: planned_cycle.target_production_rate,
         output_machine_state_machines: planned_cycle.output_machine_state_machines,
@@ -456,6 +471,7 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
 
     // Initialize simulation context
     const simulation_context = SimulationContext.fromConfig(config);
+    simulation_context.competing_takers_order = options.competing_takers_order ?? DEFAULT_TAKER_ORDER;
 
     simulation_context.machines
         .map(it => it.machine_state.machine)
@@ -478,6 +494,17 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     logger.log(`Created simulation context with ${simulation_context.machines.length} machines and ${simulation_context.inserters.length} inserters.`);
 
     return { simulation_context, relative_tick, relative_tick_provider, inventory_transfer_history, state_transition_history };
+}
+
+/**
+ * The same build with nothing in it, as a staged scaffold is when its clock starts: no ingredient, product or fuel in a
+ * machine, every bar and hand empty, and the chests and belts that feed it the supplies they always are. A recipe that
+ * makes its own ingredient is given `overrides.loop_seed_items` of it once (see `seedLoopingRecipes`).
+ */
+function coldBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
+    const build = recordedBuildOf(config, options, debug, logger);
+    seedLoopingRecipes(build.simulation_context, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS);
+    return build;
 }
 
 /** Runs a step with debugging on when `debug_steps` asks for it for that step, and turns it off after */

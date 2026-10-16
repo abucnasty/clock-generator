@@ -42,7 +42,7 @@ export class SimulateStep implements RunnerStep {
             [
                 tick_control_logic,
                 ...context.drills,
-                ...context.inserters,
+                context.inserterUpdates(),
                 ...context.machines,
             ]
         )
