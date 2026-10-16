@@ -59,12 +59,40 @@ export const rows=(c,k)=>k==='drills'?c.drills?.configs??[]:c[k]??[];
 export async function stored(p){return p.evaluate(()=>{const index=JSON.parse(localStorage.getItem('clock-generator-builds')??'null');const id=sessionStorage.getItem('clock-generator-tab-build');const row=index?.builds?.find(b=>b.id===id)??[...(index?.builds??[])].sort((a,b)=>b.openedAt-a.openedAt)[0];const key=!row||row.id==='default'?'clock-generator-config':`clock-generator-build:${row.id}`;const raw=localStorage.getItem(key);if(typeof raw!=='string')throw Error(`No saved form at ${key}`);return raw;});}
 export async function storedUntil(p,predicate,description){await p.waitForFunction(({source})=>{const index=JSON.parse(localStorage.getItem('clock-generator-builds')??'null'),id=sessionStorage.getItem('clock-generator-tab-build');const row=index?.builds?.find(b=>b.id===id)??[...(index?.builds??[])].sort((a,b)=>b.openedAt-a.openedAt)[0];const key=!row||row.id==='default'?'clock-generator-config':`clock-generator-build:${row.id}`;const c=JSON.parse(localStorage.getItem(key)??'null');return c&&new Function('c',`return (${source})(c)`)(c);},{source:predicate.toString()},{timeout:10000}).catch(e=>{throw Error(`${description}: ${e.message}`);});}
 export async function rawUntil(p,expected,description){await p.waitForFunction(expected=>{const index=JSON.parse(localStorage.getItem('clock-generator-builds')??'null'),id=sessionStorage.getItem('clock-generator-tab-build');const row=index?.builds?.find(b=>b.id===id)??[...(index?.builds??[])].sort((a,b)=>b.openedAt-a.openedAt)[0];const key=!row||row.id==='default'?'clock-generator-config':`clock-generator-build:${row.id}`;return localStorage.getItem(key)===expected;},expected,{timeout:10000}).catch(e=>{throw Error(`${description}: exact raw serialization did not restore: ${e.message}`);});}
-export function createHarness(L,OUT){const {ui,waitReady,checkAxe,noSideScroll,contrast,checkLabelInName,checkTabTo,checkFocusNotObscured,checkMouseActivationVisible,checkFocusNotObscuredAtHeight,checkAnnounced}=L;const geometry=[];
+// Actual non-text paint on changed controls. This is local evidence code, never a shared-helper override.
+async function controlPairs(locator) {
+ return locator.evaluate(element => {
+  const parse = text => {
+   const m = /rgba?\(([^)]+)\)/.exec(text);
+   if (!m) return null;
+   const [r,g,b,a=1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return {r,g,b,a};
+  };
+  const over = (a,b) => ({r:a.r*a.a+b.r*(1-a.a),g:a.g*a.a+b.g*(1-a.a),b:a.b*a.a+b.b*(1-a.a),a:1});
+  const bg = element => {
+   const layers=[]; for(let e=element;e;e=e.parentElement){const c=parse(getComputedStyle(e).backgroundColor);if(c&&c.a>0){layers.push(c);if(c.a===1)break;}}
+   return layers.reverse().reduce((under,top)=>over(top,under),{r:255,g:255,b:255,a:1});
+  };
+  const lum = c => {const f=v=>{const n=v/255;return n<=0.04045?n/12.92:((n+0.055)/1.055)**2.4;};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
+  const pairs=[];
+  const add=(kind,foreground,background)=>{const color=parse(foreground);if(!color||color.a===0)return;const rendered=over(color,background),a=lum(rendered),b=lum(background);pairs.push({kind,foreground,background,ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),required:3});};
+  const root=element.closest('.MuiCheckbox-root,.MuiSwitch-root,.MuiOutlinedInput-root')??element;
+  if(element.matches('button,input,summary,[role=button]')){
+   for(const svg of root.querySelectorAll('svg'))add('control glyph',getComputedStyle(svg).fill,bg(svg));
+   for(const fieldset of root.querySelectorAll('fieldset')){const c=getComputedStyle(fieldset);if(parseFloat(c.borderTopWidth)>0)add('field boundary',c.borderTopColor,bg(fieldset));}
+   const css=getComputedStyle(element);if(css.outlineStyle!=='none'&&parseFloat(css.outlineWidth)>0)add('focus outline',css.outlineColor,bg(element.parentElement??element));
+   if(element.tagName==='SUMMARY')add('disclosure marker',getComputedStyle(element,'::marker').color,bg(element));
+  }
+  return pairs;
+ });
+}
+
+export function createHarness(L,OUT){const {ui,waitReady,checkAxe,noSideScroll,contrast,checkLabelInName,checkTabTo,checkFocusNotObscured,checkMouseActivationVisible,checkFocusNotObscuredAtHeight,checkAnnounced}=L;const geometry=[],paints=[];
  async function shot(p,rec,name,{short=false,scope}={}){await rest(p);for(const d of await ui.followDialogs(p).all())await restDialog(p,d);const g=await geometryOf(p);geometry.push({width:p.viewportSize().width,name,...g});writeFileSync(join(OUT,'geometry.json'),JSON.stringify(geometry,null,2));rec.info(`${name} actual geometry`,JSON.stringify(g));const a=await noSideScroll(p);rec.check(`${name}: ordinary page reflows`,a.pass,a.detail);await rec.shot(p,name,{aria:true});const axe=await checkAxe(rec,p,name);rec.check(`${name}: axe executes (zero skips)`,Array.isArray(axe));if(short)await checkFocusNotObscuredAtHeight(rec,p,{height:560,walk:scope,max:150});}
  async function load(p,file){const c=typeof file==='string'?JSON.parse(readFileSync(file,'utf8')):file;await ui.compatFile(p).setInputFiles({name:'3F-UI-test-config.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(c))});await ui.compatFileOpenedMessage(p).waitFor();const projection=c=>({target:{...c.target_output,copies:c.target_output.copies??1},machines:c.machines.map(x=>[x.recipe,x.crafting_speed,x.productivity]),inserters:c.inserters.map(x=>[x.source,x.sink,x.stack_size??null,x.filters??null,x.prototype??null,x.quality??null]),belts:c.belts.map(x=>[x.type,x.lanes]),chests:(c.chests??[]).length,drills:(c.drills?.configs??[]).length});const expected=JSON.stringify(projection(c));await storedUntil(p,new Function('c',`return JSON.stringify((${projection.toString()})(c))===${JSON.stringify(expected)}`),'exact imported fixture projection');await ui.viewToggle(p,'Configure').click();await ui.listView(p).click();await rest(p);}
- async function reach(p,rec,loc,name){await checkTabTo(rec,p,loc,name,{max:1000});await checkFocusNotObscured(rec,p,name,{strict:true});}
+ async function paint(p,rec,loc,name){const pairs=await controlPairs(loc);paints.push({width:p.viewportSize().width,name,pairs});writeFileSync(join(OUT,'PAINT.json'),JSON.stringify(paints,null,2));for(const pair of pairs)rec.check(`${name}: actual ${pair.kind} contrast`,pair.ratio>=pair.required,JSON.stringify(pair));}
+ async function reach(p,rec,loc,name){await checkTabTo(rec,p,loc,name,{max:1000});await checkFocusNotObscured(rec,p,name,{strict:true});await paint(p,rec,loc,name);}
  async function mouse(p,rec,loc,name,options){if(await loc.count()!==1)throw Error(`${name}: expected one actual control, found ${await loc.count()}`);await loc.scrollIntoViewIfNeeded();await rest(p);await checkMouseActivationVisible(rec,p,loc,name,options);await rest(p);}
- async function appearance(p,rec,loc,name,{nameCheck=true,required}={}){if(await loc.count()!==1)throw Error(`${name}: target missing/nonunique`);await loc.scrollIntoViewIfNeeded();await rest(p);if(nameCheck)await checkLabelInName(rec,p,loc,name);const c=await contrast(p,loc);rec.check(`${name}: measured text contrast`,c.ratio>=(required??c.required),JSON.stringify(c));}
+ async function appearance(p,rec,loc,name,{nameCheck=true,required}={}){if(await loc.count()!==1)throw Error(`${name}: target missing/nonunique`);await loc.scrollIntoViewIfNeeded();await rest(p);if(nameCheck)await checkLabelInName(rec,p,loc,name);const c=await contrast(p,loc);rec.check(`${name}: measured text contrast`,c.ratio>=(required??c.required),JSON.stringify(c));if(nameCheck)await paint(p,rec,loc,name);}
  async function announcements(p,rec,text,name){await checkAnnounced(rec,p,text,name);const usable=await ui.followLive(p).evaluateAll((els,source)=>els.filter(e=>!e.closest('[aria-hidden=true],[inert]')&&e.getAttribute('aria-live')!=='off'&&e.textContent?.includes(source)).map(e=>({role:e.getAttribute('role'),live:e.getAttribute('aria-live'),text:e.textContent})),typeof text==='string'?text:text.source);if(typeof text==='string')rec.check(`${name}: exactly one unhidden live message`,usable.length===1,JSON.stringify(usable));}
  async function complete(p,rec,name){await ui.resultsCard(p).waitFor({timeout:60000});await ui.cancel(p).waitFor({state:'hidden',timeout:60000});await p.waitForFunction(()=>[...document.querySelectorAll('header button')].some(b=>b.textContent?.trim()==='Generate'&&!b.disabled),null,{timeout:60000});rec.check(`${name}: completed real recommendation and idle`,await ui.resultsCard(p).count()===1&&await ui.cancel(p).count()===0);rec.check(`${name}: no validation error`,await ui.followError(p).count()===0);await rest(p);}
  
