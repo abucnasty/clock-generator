@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.15.2] - 2026-10-16
+
+### Fixed
+- Belts carrying the same items on opposite lanes are exported as two belts (sidecar 0.7.1), so an inserter's nearest lane is read from its own belt; the generator asks for sidecar 0.7.1.
+
 ## [0.15.1] - 2026-10-16
 
 ### Fixed
