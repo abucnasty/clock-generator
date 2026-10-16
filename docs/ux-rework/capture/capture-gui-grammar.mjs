@@ -1083,7 +1083,23 @@ async function stepDialogs({ page, rec, width }) {
         await page.getByRole('dialog').first().waitFor({ timeout: 4000 });
         await page.waitForTimeout(600);
         await rec.shot(page, 'dialog-diagram-inserter', { aria: true, desc: 'The diagram inserter dialog' });
+        const save = ui.compatSave(page), stack = ui.compatEditorStack(page);
+        const storedBefore = await page.evaluate(() => localStorage.getItem('clock-generator-config'));
+        if (storedBefore === null) throw new Error('Diagram draft checks require the genuinely imported persisted build');
+        rec.check('diagram inserter dialog: untouched Save is disabled', await save.isDisabled());
+        await save.scrollIntoViewIfNeeded();
+        const saveBox = await save.boundingBox();
+        if (!saveBox) throw new Error('The untouched Diagram Save button has no visible rectangle');
+        await page.mouse.click(saveBox.x + saveBox.width / 2, saveBox.y + saveBox.height / 2);
+        rec.check('diagram inserter dialog: untouched disabled Save is inert', await ui.compatEditor(page).isVisible()
+            && await save.isDisabled() && await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
+        // Make only an unsaved local draft change before measuring the enabled confirm button.
+        await stack.focus(); await stack.press('ControlOrMeta+A'); await page.keyboard.type('15'); await stack.press('Tab');
+        rec.check('diagram inserter dialog: Stack size15 draft enables Save without committing', await save.isEnabled()
+            && await stack.inputValue() === '15' && await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
+        await rec.shot(page, 'dialog-diagram-inserter-edited', { aria: true, desc: 'Unsaved Stack size15 draft: Save enabled for its existing contrast/grammar checks' });
         await dialogChecks(page, rec, width, 'diagram inserter dialog', { cancel: /^Cancel$/, confirm: /^Save$/ });
+        rec.check('diagram inserter dialog: Cancel discards the draft without changing the build', await page.evaluate(() => localStorage.getItem('clock-generator-config')) === storedBefore);
         await closeAll(page);
         await page.getByRole('button', { name: 'List view' }).click().catch(() => {});
         await closeAll(page);

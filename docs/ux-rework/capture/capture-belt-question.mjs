@@ -30,7 +30,7 @@ import {
     forWidths, previewServer, sample, LOGISTIC, waitReady,
     goConfigure, goResults, noSideScroll, isClickable,
     contrastPairs, accessibleName, checkLabelInName,
-    checkTabTo, tabTo, checkFocusNotObscured, checkAnnounced,
+    checkTabTo, tabTo, checkFocusNotObscured, checkAnnounced, ui,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
