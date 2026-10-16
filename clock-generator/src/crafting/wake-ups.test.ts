@@ -7,15 +7,19 @@ const SPACE = "waiting_for_space_in_destination";
 const MORE = "waiting_for_more_items";
 const OFF = "disabled_by_control_behavior";
 
-/** A machine that finishes a craft in each of the given ticks */
-function machine(machine_id: string, ticks: number, crafts_at: number[]): WatchedMachine {
+/**
+ * A machine that finishes a craft (or pays out a bar) in each of `crafts_at`, and, when `starts_at` is given, truly
+ * starts a craft in each of those ticks; without it its true starts are not known
+ */
+function machine(machine_id: string, ticks: number, crafts_at: number[], starts_at?: number[]): WatchedMachine {
     const products_finished: number[] = [];
     let finished = 0;
     for (let tick = 0; tick < ticks; tick++) {
         finished += crafts_at.filter(it => it === tick).length;
         products_finished.push(finished);
     }
-    return { machine_id, products_finished };
+    const true_starts = starts_at === undefined ? undefined : Array.from({ length: ticks }, (_, tick) => starts_at.includes(tick));
+    return { machine_id, products_finished, true_starts };
 }
 
 function inserter(states: string[], ends: Partial<WatchingInserter> = {}): WatchingInserter {
@@ -78,5 +82,31 @@ describe("wakeUps", () => {
         const result = wakeUps([inserter(states)], [machine("machine:1", 6, [1, 2, 4, 5])], 4, 6);
         expect(result.ticks).toBe(2);
         expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 2);
+    });
+
+    describe("the sink list, since 0.13.0", () => {
+        const into = (states: string[]) => inserter(states, { source_machine_id: null, sink_machine_id: "machine:2" });
+
+        it("wakes an inserter waiting for space when the machine truly starts a craft, and not when it pays out", () => {
+            // asleep on the sink from tick 1; the machine pays out at 2 (a rise with no start) and starts at 4
+            const states = [WORKING, SPACE, SPACE, SPACE, SPACE, SPACE];
+            const result = wakeUps([into(states)], [machine("machine:2", 6, [2, 4], [4])], 0, 6);
+            expect(result.inserters[0].wake_ups_per_minute).toBe(1 * 3600 / 5);
+            expect(result.true_starts_unknown).toEqual([]);
+        });
+
+        it("lets finishes and payouts stand in where the true starts are not known, and names the machine", () => {
+            const states = [WORKING, SPACE, SPACE, SPACE, SPACE, SPACE];
+            const result = wakeUps([into(states)], [machine("machine:2", 6, [2, 4])], 0, 6);
+            expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 5);
+            expect(result.true_starts_unknown).toEqual(["machine:2"]);
+        });
+
+        it("keeps waking the source list on finishes and payouts", () => {
+            // asleep on the source from tick 1; the source pays out at 2 and finishes at 4, and truly starts only at 4
+            const states = [WORKING, SOURCE, SOURCE, SOURCE, SOURCE, SOURCE];
+            const result = wakeUps([inserter(states)], [machine("machine:1", 6, [2, 4], [4])], 0, 6);
+            expect(result.inserters[0].wake_ups_per_minute).toBe(2 * 3600 / 5);
+        });
     });
 });

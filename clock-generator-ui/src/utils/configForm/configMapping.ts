@@ -58,7 +58,9 @@ export function configToFormData(imported: Config): ConfigFormData {
             _uuid: crypto.randomUUID(),
             source: ins.source,
             sink: ins.sink,
-            stack_size: ins.stack_size,
+            // a config may leave the hand to the inserter's prototype since 0.14.0; the form has no prototype field yet,
+            // so it shows the default prototype's full-research hand, the stack inserter's 16
+            stack_size: ins.stack_size ?? 16,
             filters: ins.filters,
             overrides: ins.overrides ? {
                 animation: ins.overrides.animation,

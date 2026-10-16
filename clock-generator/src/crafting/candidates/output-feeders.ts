@@ -80,7 +80,7 @@ export function windowsOfInsertersFeedingTheOutputMachine(
         if (output === undefined) {
             continue;
         }
-        const feeder_windows = outputFeederWindows(output, sink.output.outputBlock.quantity, ranges, period, min_disabled_ticks);
+        const feeder_windows = outputFeederWindows(output, sink.output.outputBlock.ingredients_blocked_at, ranges, period, min_disabled_ticks);
         logger.log(feeder_windows === null
             ? `Output feeders of ${sink_id}: kept always enabled`
             : `Output feeders of ${sink_id}: output back at its block up to ${feeder_windows.latest_back_at_block_ticks} ticks after an output window, `

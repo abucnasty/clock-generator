@@ -45,6 +45,8 @@ const RecordedMachineSchema = z.object({
         crafting_progress: luaArray(z.number()),
         bonus_progress: luaArray(z.number()),
         products_finished: luaArray(z.number()),
+        /** Simulated recordings only: crafts started so far, the simulator's own count, per sample */
+        crafts_started: luaArray(z.number()).optional(),
         inputs: luaRecord(luaArray(z.number())),
         outputs: luaRecord(luaArray(z.number())),
         /** Burner machines only: items in the fuel slot per sample, by fuel item */

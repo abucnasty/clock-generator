@@ -55,6 +55,25 @@ The package has three entries (`exports` in `package.json`):
 A file of your own under `src/` that imports modules directly, not through `index.ts`, imports
 `./data/factorio-data-file` itself, as `verify-recording.ts` and `record-in-factorio.ts` do.
 
+### Refreshing the game data
+
+`resources/data-filtered.json` is cut from a data dump of the game by `resources/filter-raw.js`, and
+`resources/data-version.json` beside it says which game made the dump (since 0.14.0: Factorio 2.1.21, build 87673; the
+`npm run calls` header repeats it). To follow a new version of the game, with a locked install of that version (never
+the one that is played; the install is not written to):
+
+```bash
+factorio --version                                        # the version line
+factorio --config config.ini --mod-directory mods --dump-data
+node resources/filter-raw.js --dump=<write-data>/script-output/data-raw-dump.json --version="Version: 2.1.21 (build 87673, linux64, full)"
+```
+
+`config.ini` names the install's `data` folder as `read-data` and a scratch folder as `write-data`, and `mods/mod-list.json`
+enables the mods that ship with the game (every folder beside `base` in `data`: space-age, quality, elevated-rails,
+recycler), the way the harness sets a game up (`src/harness/factorio-harness.ts`). The dump itself is not committed.
+Factorio 2.1 renamed the ore melting recipes (`iron-ore-melting`, `copper-ore-melting`) and gives a recipe a list of
+crafting categories; the filter writes that list for any version of the dump.
+
 ## Usage
 
 ### Basic Usage
@@ -98,6 +117,17 @@ build without a clock, for recording it in the game.
 - `smelting/`: stone bricks, electric furnace
 
 `src/config/config-paths.ts` names every sample.
+
+A config describes one copy of a build, and `target_output.copies` says how many identical copies stand side by side:
+the generator plans one and multiplies its rate. The copies are assumed identical, with no inserter from one to another,
+and the belts shared between them. A config that itself holds several identical copies (the same machines and
+inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
+(`src/config/copies-validator.ts`). Describe the smallest repeating unit of a build, not a whole block of it.
+`copies` may be fractional, such as 5.5: the build then holds a partial block, and its rate is planned as that fraction of
+one block's (5.5 copies of a block of 4 assemblers making 240 a second means one block makes 480/11 a second). The unit
+itself is still whole, with identical units, no inserter between them and shared belts. The number is read as an exact
+fraction, so it must be a whole number or a short decimal (a reduced denominator of at most 1000); 0.3333333333333333 is
+refused.
 
 ### Configuration Example (JSON)
 
@@ -225,6 +255,36 @@ The tool generates a Factorio blueprint containing:
 - **Timing ranges** for each inserter (when they should be enabled)
 
 ## Advanced Configuration
+
+### Inserter Prototype, Quality and Hand
+
+An inserter is a legendary stack inserter with a hand of 16 unless its config says otherwise. Three optional fields
+change that:
+
+- `prototype`: the inserter's name in the game data, `"inserter"`, `"fast-inserter"`, `"long-handed-inserter"`,
+  `"bulk-inserter"` or `"stack-inserter"` (the default). The burner inserter needs fuel and is refused, as is a name
+  that is not an inserter of the game data.
+- `quality`: `"normal"`, `"uncommon"`, `"rare"`, `"epic"` or `"legendary"` (the default). A better quality turns the arm
+  faster; it does not change the hand.
+- `stack_size`: the items in the hand. Without it the hand is what all the research gives the prototype: 16 for a stack
+  inserter, 12 for a bulk inserter, 4 for the others. With it, it overrides that, as when a technology is not researched.
+
+The swing comes from the game data (`inserter` and `quality` in `data-filtered.json`): the arm turns each way for
+`ceil(0.5 / ω) - 2` ticks, where ω is the prototype's `rotation_speed` times 1 + 0.3 times the quality's level (normal
+0, uncommon 1, rare 2, epic 3, legendary 5), and picking up from or dropping into a machine or chest takes 1 tick. The
+swing from machine to machine is 8 ticks for a legendary stack inserter, 24 for a normal fast inserter and 70 for a
+normal inserter. Picking up from a belt (4 ticks) and dropping onto one are still the timings of the legendary stack
+inserter, which are not checked for any other prototype or quality. The simulator also gives every inserter the stack
+inserter's wait for a full hand, which the other prototypes do not have in the game.
+
+```json
+{
+  "source": { "id": 1, "type": "machine" },
+  "sink": { "id": 2, "type": "machine" },
+  "prototype": "fast-inserter",
+  "quality": "normal"
+}
+```
 
 ### Mining Drill Support
 
@@ -415,6 +475,13 @@ A search can still find a stable clock with fewer wake-ups than the one selected
 - Reduce the number of machines in your configuration
 - Check for configuration errors causing infinite loops
 - Ensure ingredients are available on belts
+
+**Issue**: Node runs out of memory ("JavaScript heap out of memory") on a large build
+- Describe the smallest repeating unit of the build and set `copies`, as above; a whole block of hundreds of inserters
+  needs memory for every one of them
+- A chain with no repeating unit can be given a larger heap: `NODE_OPTIONS=--max-old-space-size=8192 npm run calls -- --sample=...`
+  (8 GB; the same variable works for any `node dist/...` script and the tests). The largest sample, low density
+  structure with 15 inserters, peaks at the figure in the 0.14.0 pull request on the default heap
 
 **Issue**: Unstable production in-game
 - Review console output for stability warnings

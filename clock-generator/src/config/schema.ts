@@ -10,6 +10,7 @@ import {
 } from "../common/enable-control-types";
 import { MachineStatus } from "../state/entity-status";
 import { MachineType } from "../entities";
+import { fraction } from "../data-types/fraction";
 
 // ============================================================================
 // Machine Configuration
@@ -31,17 +32,43 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 // Target Production Rate Configuration
 // ============================================================================
 
+/** The most the denominator of `copies` may be once it is read as a reduced fraction: 5.5 is 11/2, 2.25 is 9/4 */
+const MAX_COPIES_DENOMINATOR = 1000;
+
+/** Whether a number reads as an exact fraction with a small denominator, as a whole number or a short decimal does */
+function isShortDecimal(value: number): boolean {
+    try {
+        return fraction(value).getDenominator <= MAX_COPIES_DENOMINATOR;
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Schema for target production rate configuration.
  * 
  * @property recipe - The recipe name to produce
  * @property items_per_second - Target production rate in items per second
- * @property copies - Number of duplicate setups being modeled (multiplier for ratio calculations)
+ * @property copies - How many identical units the build holds side by side. The config describes ONE unit, and the
+ *   generator plans that unit and multiplies the output rate by `copies`. It is a positive number and may be
+ *   fractional, such as 5.5: the build then holds a partial block, and its rate is planned as that fraction of one
+ *   block's (5.5 copies of a block of 4 machines that make 240 a second make 480/11 a second per block). The unit
+ *   itself is still whole. The number is read as an exact fraction, so it must be a whole number or a short decimal
+ *   (a denominator of at most 1000 once reduced); 1/3 written as 0.3333333333333333 is refused. This assumes:
+ *   - the units are identical: the same machines, recipes, crafting speeds, productivity, inserters, filters, stack
+ *     sizes and chests;
+ *   - no inserter joins one unit to another: machine-to-machine and machine-to-chest-to-machine inserters stay
+ *     inside a unit;
+ *   - the belts are shared between the units: every unit takes from and drops onto the same belt lanes.
+ *   A config that itself holds several identical units (copies of one unit side by side, each with its own inserters)
+ *   is refused with a CopiesError: describe one unit and set `copies` to the number of units instead.
  */
 export const TargetProductionRateConfigSchema = z.object({
     recipe: z.string(),
     items_per_second: z.number().positive(),
-    copies: z.number().int().positive()
+    copies: z.number().positive().refine(isShortDecimal, {
+        message: "copies must be a whole number or a short decimal such as 5.5",
+    })
 });
 
 export type TargetProductionRateConfig = z.infer<typeof TargetProductionRateConfigSchema>;
@@ -317,7 +344,19 @@ export const InserterConfigSchema = z.object({
         InserterMachineConfigSchema,
         InserterChestConfigSchema
     ]),
-    stack_size: z.number().int().positive(),
+    /**
+     * The inserter's prototype name in the game data: "inserter", "fast-inserter", "long-handed-inserter",
+     * "bulk-inserter" or "stack-inserter" (default). The burner inserter needs fuel and is refused. The prototype sets
+     * how long a swing takes, with the quality, and how many items the hand holds, with the research.
+     */
+    prototype: z.string().optional(),
+    /** The inserter's quality (default "legendary"); the higher it is, the faster the arm turns. It does not change the hand. */
+    quality: z.enum(["normal", "uncommon", "rare", "epic", "legendary"]).optional(),
+    /**
+     * Items in the hand. Without it the hand is what all the research gives the prototype (16 for a stack inserter, 12
+     * for a bulk inserter, 4 for the others); with it, it overrides that, as when a technology is not researched.
+     */
+    stack_size: z.number().int().positive().optional(),
     filters: z.array(z.string()).optional(),
     overrides: InserterOverridesConfigSchema.optional()
 });

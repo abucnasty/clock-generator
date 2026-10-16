@@ -1,0 +1,70 @@
+{
+ "target_output": {
+  "recipe": "steel-plate",
+  "items_per_second": 24.9,
+  "copies": 1
+ },
+ "machines": [
+  {
+   "id": 1,
+   "recipe": "casting-steel",
+   "productivity": 300,
+   "crafting_speed": 185,
+   "type": "machine"
+  }
+ ],
+ "inserters": [
+  {
+   "id": 1,
+   "source": {
+    "type": "machine",
+    "id": 1
+   },
+   "sink": {
+    "type": "belt",
+    "id": 1
+   },
+   "stack_size": 16,
+   "filters": [
+    "steel-plate"
+   ]
+  },
+  {
+   "id": 2,
+   "source": {
+    "type": "machine",
+    "id": 1
+   },
+   "sink": {
+    "type": "belt",
+    "id": 2
+   },
+   "stack_size": 16,
+   "filters": [
+    "steel-plate"
+   ]
+  }
+ ],
+ "belts": [
+  {
+   "id": 1,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "steel-plate",
+     "stack_size": 4
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "type": "turbo-transport-belt",
+   "lanes": [
+    {
+     "ingredient": "steel-plate",
+     "stack_size": 4
+    }
+   ]
+  }
+ ]
+}

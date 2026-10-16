@@ -1,5 +1,5 @@
 import assert from "../../common/assert";
-import { handSizeFor, Inserter, InserterStackSize, Machine } from "../../entities";
+import { fullResearchHandSize, handSizeFor, Inserter, Machine } from "../../entities";
 import { EntityTransferCount } from "./cycle/swing-counts";
 
 export const SimulationMode = {
@@ -22,7 +22,7 @@ export function simulationModeForInput(
 
     const any_filtered_item_has_low_insertion_limit = machine_inputs
         .filter(it => filtered_items.has(it.item_name))
-        .some(it => it.automated_insertion_limit.quantity < InserterStackSize.SIZE_16)
+        .some(it => it.automated_insertion_limit.quantity < fullResearchHandSize(inserter.metadata.type))
 
     if (any_filtered_item_has_low_insertion_limit) {
         return SimulationMode.LOW_INSERTION_LIMITS;
@@ -49,7 +49,8 @@ function simulationModeForOutput(
     const expected_transfer_amount = expected_transfer_count.multiply(handSizeFor(inserter, source_machine.output.item_name)).toDecimal();
 
 
-    if (expected_transfer_amount > output_block.quantity) {
+    // more than the machine gathers before it stops taking ingredients or crafting
+    if (expected_transfer_amount > output_block.held_limit) {
         // FIXME: more nuanced logic here to determine if we need to prevent desyncs
         // for example, in the electric furnace sample config, this could be just the normal mode and does not need desync prevention
         // as the inserter being clocked to be enabled for just 1 tick is enough for it to work
@@ -68,7 +69,7 @@ function simulationModeForOutput(
 
     // if the output block condition is less than the max stack size for the ingredient, need to prevent
     // desyncs and add a buffer of a pickup to use the inserter as the inventory holder
-    if (output_block.quantity < output_block.max_stack_size) {
+    if (output_block.ingredients_blocked_at < output_block.max_stack_size) {
         return SimulationMode.PREVENT_DESYNCS;
     }
     return SimulationMode.NORMAL;

@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest"
 import { Belt, BeltSpeed } from "./belt"
-import { fraction } from "fractionability"
+import { fraction } from "../../data-types/fraction"
 import { BeltStackSize } from "./belt-stack-size"
 
 describe("Belt", () => {

@@ -8,7 +8,7 @@ import { ELEMENT_IDS } from '../utils/firstProblem';
 interface TargetOutputFormProps {
     recipe: string;
     itemsPerSecond: number;
-    /** Number of duplicate setups being modeled */
+    /** Number of duplicate setups being modeled; may be fractional, such as 5.5, for a partial block */
     copies: number;
     recipeNames: string[];
     onRecipeChange: (recipe: string) => void;
@@ -85,12 +85,13 @@ export function TargetOutputForm({
                     id={ELEMENT_IDS.targetCopies}
                     label="Copies"
                     value={copies}
-                    onValueChange={(val) => onCopiesChange(parseInt(val?.toString() || '') || 1)}
-                    min={1}
-                    step={1}
+                    onValueChange={(val) => onCopiesChange(val ?? 0)}
+                    min={0}
+                    step={0.5}
                     sx={{ width: 200 }}
                     required
-                    helperText={COPIES_HELPER}
+                    error={copies <= 0}
+                    helperText={copies <= 0 ? 'Must be more than 0' : COPIES_HELPER}
                 />
             </Box>
         </Paper>
