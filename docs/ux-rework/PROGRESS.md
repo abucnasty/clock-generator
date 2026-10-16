@@ -39,6 +39,8 @@ come from here.
 - **Phase 2 remaining:** only 2.7 B, then the phase-end captures, reviews and owner checkpoints. 3.3 is in fix round 1 on p3.
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
+- **Upstream compatibility:** spec finalized after owner answers; integration/gates next, before final 2.7 B and 3.3 evidence.
+
 ## Phase 1: stop the harm, quick wins
 
 | Item (spec) | Title | Implementer | Status | PR | Rounds | Notes |
@@ -243,6 +245,12 @@ Owner decisions made after the plan was written, and every change to [PLAN.md](P
 - 2026-10-15: The owner paused work. All in-flight branches were committed and pushed.
 - 2026-10-16: The owner resumed from the local handover. Model mapping: gpt-6-astra with high reasoning for orchestration, cross-cutting implementation and every review; gpt-6.1-sol for scouts/capture writers; gpt-6-luna for mechanical runners. Fast mode prohibited. This chat cannot change its own model through available controls; delegated roles explicitly set their models.
 - 2026-10-16: master advanced from 0.11.0 to 0.15.1 (a67d5a2). Authorized down-merge: master → feat/ux-rework → p2 → p3, with semantic checks for fractional Copies, target-rate limits, library/share validation and optional stack_size, generation tests and full gates. No new version bump in the phases; the final PR starts from master’s then-current version.
+
+- 2026-10-16: Upstream plan resolution complete (owner): preserve/display imported inserter type/quality, no selectors;
+  clearing Stack size restores Automatic; **no sidecar metadata export extension** (focus on UX); repeated units get
+  explanation/manual correction, no converter. PLAN and specs 2.1, 2.2, 2.7, 3.1–3.4 reconciled, with a bounded upstream
+  compatibility spec. The old 2.1 warn-only addendum is superseded, and release baseline follows current master.
+  Scope excludes new engine behavior/mod features. Audits are source-only; no merged-tree check claimed yet.
 
 ## Open questions
 
@@ -462,6 +470,8 @@ GitHub issue in one reviewed pass before the final PR ([PLAN.md](PLAN.md) "The f
 - 2.5 B (#182): engine text still uses old terms (Even hands, Observed windows, Full-hand output swings and Insights prose); Works? is off the right edge at 390; glossary definitions for hand and assembling machine read as notes to copywriters (owner).
 - 2.9 (#184): below 720, the compact table overflows by 174px and Check passed wraps; Fuel clocks is 5px over at 960; front-load the key fact in the two longest problem notes; macOS Chrome uses overlay scrollbars; a focused scroll box loses focus when it stops overflowing.
 - 3.3: a stopped run keeps a pick even when that clock was not made yet. Check the spec’s PLAN-note against current PLAN (Undo restores clocks and stale changes are already present) before adding duplicate bullets.
+
+- Deferred by owner (2026-10-16): sidecar type/quality export; current exports omit metadata and retain the legendary stack timing assumption. No mod change in this UX rework.
 
 ## Retros
 

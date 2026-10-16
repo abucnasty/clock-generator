@@ -82,8 +82,9 @@ master
 
 ### Releases (only in the final PR)
 
-- Bump `clock-generator` and `clock-generator-ui` together from 0.9.0 to **0.10.0**, with a `CHANGELOG.md` section that
-  lists the changes players will notice.
+- Bump `clock-generator` and `clock-generator-ui` together from the then-current master version (currently **0.15.1**)
+  to the next release, with a `CHANGELOG.md` section listing the changes players will notice. Choose the final number
+  in the final PR; taking upstream version changes during integration is not a new phase release.
 - Bump `clock-generator-sidecar` from 0.7.0 to **0.8.0**: `info.json`, `changelog.txt`, and `LATEST_SIDECAR_VERSION` in
   `clock-generator/src/config/sidecar-version.ts`. A test fails if those three drift apart.
 - Merging to `master` releases the site, and publishes the mod because its folder changed (see the root `README.md`).
@@ -100,6 +101,26 @@ master
   "Stop the sidecar crashing on an assembler without a recipe or a lab"). Code reads like the surrounding code.
 - **Write copy in plain words** from the player's side, using the glossary terms (1.12) once the owner has approved
   them.
+
+## Upstream compatibility (owner decisions, 2026-10-16)
+
+Master advanced from 0.11.0 to 0.15.1. Integrate it into `feat/ux-rework`, then p2, then p3, preserving the UX work.
+The integration acceptance criteria are in [specs/upstream-0.15-compatibility.md](specs/upstream-0.15-compatibility.md).
+
+- **Keep this a UX rework.** Preserve imported inserter type and quality and show them read-only; no selectors.
+- **Clearing Stack size restores Automatic**, using that type’s fully researched capacity (4, 12 or 16). Preserve
+  omitted values and existing explicit overrides; show the effective value and the full-research assumption.
+- **Do not extend the sidecar to export type/quality in this rework.** Its existing 2.2 scope and 0.8.0 release plan
+  stand. Explain the default timing assumption where the UX needs it; no new sidecar in-game checkpoint for metadata.
+- **Repeated identical units:** explain the engine refusal and guide the player to select one unit and set Copies.
+  No conversion, automatic reduction, validation bypass or new engine behavior.
+- **Fractional Copies:** follow the engine’s positive short-decimal rule throughout fields, target limits, examples,
+  saved builds and share links. Values below one are supported. Editable invalid drafts remain recoverable.
+- Preserve locale-derived game names when merging the new data pipeline; repair removed example/capture paths,
+  refresh results-sensitive evidence, and keep all existing gates and owner phase/install checkpoints.
+
+The compatibility pass precedes final evidence/review for 2.7 B and 3.3. The shared editor in 3.2 A reuses the agreed
+metadata and Automatic behavior; 3.2 B preserves both on duplicate/bulk operations. No broader engine or mod work.
 
 ## Phase 1: stop the harm, quick wins
 
@@ -223,7 +244,9 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
   - **crafting cycle**
   - **clock period:** how long until the clock repeats; LCM stays in the expert area only.
   - **wake window:** a stretch of ticks during which the clock switches an inserter on.
-  - **wake-up:** one start of a wake window.
+  - **wake-up:** use the engine’s count, distinct from a wake-window start. Inputs waiting on a machine wake on
+    true craft starts; outputs wake on finished crafts and productivity payouts. This corrects stale wording only;
+    the owner’s pending strict definition remains separate.
   - **copies**
 - **Fixes:**
   - "devided" (`OverridesForm.tsx:151`)
@@ -405,7 +428,7 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - **What:**
   - A live one-line preview of the rule.
   - CLOCKED ranges shown against the clock period, defaulting to the planned window.
-  - Inline checks that block Save: the end must be after the start, and the range must fit in the period.
+  - Inline checks that block Save: the end must not precede the start, and the range must fit in the period.
   - Templates ask for the item and confirm before replacing the current rule; the hard-coded 32 goes.
   - The editor says whether rules reach the blueprint or only shape the planning simulation. Find out which from the
     engine.
@@ -415,7 +438,8 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 **3.2 Editing at scale** (B17, B22, B26)
 - **What:**
   - One inserter editor component, shared by the List rows and the Diagram dialog, with the same fields, labels and
-    fallbacks.
+    fallbacks. Show imported inserter type/quality read-only; clearing Stack size restores Automatic (owner,
+    2026-10-16; see Upstream compatibility).
   - Duplicate a row.
   - Multi-select with a bulk-edit bar for stack size, filters and enable mode.
   - New rows scroll into view and get focus.
