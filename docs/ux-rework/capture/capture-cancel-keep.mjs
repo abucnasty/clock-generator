@@ -88,7 +88,7 @@ const WORDS = {
 
 /** Runs in every page before the app (context.addInitScript). Must not use anything from the module. */
 function INIT() {
-    const R = (window.__ux = { ann: [], generating: false, checkSeen: false, checkSnaps: [], hold: {}, crashNext: 0, failStartupNext: 0, startupFailures: [], workersCreated: 0, autoCancel: false, autoCancelled: false });
+    const R = (window.__ux = { ann: [], generating: false, checkSeen: false, checkSnaps: [], hold: {}, crashNext: 0, failStartupNext: 0, startupFailures: [], workersCreated: 0, checkRequests: [], checkResponses: [], cancelAtActivation: null, autoCancel: false, autoCancelled: false });
     const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
     const regionOf = (n) => {
         const el = n && n.nodeType === 1 ? n : n && n.parentElement;
@@ -129,7 +129,12 @@ function INIT() {
                 'throw new Error("capture: replacement module startup failed");',
             ], { type: 'text/javascript' })) : null;
             super(failingUrl ?? url, options);
-            R.workersCreated++;
+            this.__uxWorkerId = ++R.workersCreated;
+            this.addEventListener('message', ({ data }) => {
+                if (data?.type === 'validated' || data?.type === 'validation-failed') {
+                    R.checkResponses.push({ workerId: this.__uxWorkerId, type: data.type, requestId: data.requestId });
+                }
+            });
             if (failingUrl) {
                 let initialized = false;
                 this.addEventListener('message', (event) => { if (event.data?.type === 'initialized') initialized = true; });
@@ -145,6 +150,7 @@ function INIT() {
     const original = Worker.prototype.postMessage;
     Worker.prototype.postMessage = function (message, ...rest) {
         const type = message && message.type;
+        if (type === 'validate') R.checkRequests.push({ workerId: this.__uxWorkerId, requestId: message.requestId });
         if (type === 'validate' && R.crashNext > 0) {
             R.crashNext--;
             setTimeout(() => this.dispatchEvent(new ErrorEvent('error', { message: 'simulated worker crash' })), 30);
@@ -455,7 +461,6 @@ const run = await forWidths(
         }
 
         // ============================================================ cancel: by keyboard, partial results, reload of a stopped run
-        let nStopped = 0;
         if (want('cancel')) {
             await step('Cancel by keyboard during a run: focus, partial results, one announcement', async () => {
                 await importFile(page, SLOW_SAMPLE);
@@ -473,10 +478,16 @@ const run = await forWidths(
                 // wait for at least one clock, while the run still goes
                 const some = await until(async () => (await clocksMade(page)) >= 1 && (await cancelBtn(page).count()) > 0, 4000, 25);
                 rec.check('a clock arrived while Cancel was on screen', !!some);
-                nStopped = await clocksMade(page);
                 await rec.shot(page, 'running-with-clocks', { desc: 'Running: clocks arriving, Cancel in the header' });
-                // the clocks on screen when Cancel is pressed (a later clock can replace earlier ones while the run goes)
-                nStopped = await clocksMade(page);
+                // Read the displayed rows in Cancel's actual click event, before React handles it. A later task can
+                // replace earlier alternatives between separate automation calls, even after the screenshot above.
+                const tableAtCancel = await ui.clockTable(page).elementHandle();
+                await cancelBtn(page).first().evaluate((button, table) => {
+                    window.__ux.cancelAtActivation = null;
+                    button.addEventListener('click', () => {
+                        window.__ux.cancelAtActivation = [...table.querySelectorAll('input[type=radio]')].map(el => el.getAttribute('aria-label'));
+                    }, { capture: true, once: true });
+                }, tableAtCancel);
                 const stillOnCancel = await onCancel(page);
                 const markCancel = await annMark(page);
                 let pressed = false;
@@ -489,9 +500,13 @@ const run = await forWidths(
                 rec.check('after Cancel the focus is on Generate', await generateFocused(page), `focus: ${await activeDesc(page)}`);
                 if (pressed && (await generateFocused(page))) await checkFocusNotObscured(rec, page, 'Generate after Cancel');
                 else rec.check('focus not obscured: Generate after Cancel', false, 'Generate does not have the focus');
+                const atActivation = await page.evaluate(() => window.__ux.cancelAtActivation);
+                const stoppedRows = await labelsOf(page);
+                const exactRows = rows => atActivation !== null && atActivation.length >= 1 && JSON.stringify(rows) === JSON.stringify(atActivation);
+                rec.check('after Cancel the exact rows displayed at activation are kept', pressed && !!gone && exactRows(stoppedRows), JSON.stringify({ atActivation, stoppedRows }));
                 await sleep(1500);
-                const after = await clocksMade(page);
-                rec.check('after Cancel the clocks made so far are kept (rows stay, none are added later)', pressed && after >= 1 && after === nStopped, `${nStopped} before, ${after} after`);
+                const laterRows = await labelsOf(page);
+                rec.check('after Cancel the clocks made so far are kept (rows stay, none are added later)', pressed && exactRows(laterRows) && JSON.stringify(laterRows) === JSON.stringify(stoppedRows), JSON.stringify({ atActivation, laterRows }));
                 rec.check('after Cancel Results shows the stopped note', (await runNote(page).count()) > 0);
                 rec.check('after Cancel there is no "Best so far" chip or lead (the run is over)', pressed && (await page.getByText(/Best so far/).count()) === 0);
                 // the card does not make a final claim from a run cut short
@@ -930,8 +945,20 @@ const run = await forWidths(
                     await sleep(350);
                     rec.check(`${nextAction}: startup failure does not automatically restart`, await page.evaluate((count) => window.__ux.workersCreated === count, created));
                     if (nextAction === 'Check only') {
+                        const retryMark = await page.evaluate(() => ({ ann: window.__ux.ann.length, requests: window.__ux.checkRequests.length, responses: window.__ux.checkResponses.length }));
                         await ui.checkOnly(page).click();
-                        rec.check('next Check only succeeds on a fresh worker', !!await until(async () => (await chipsOf(page)).includes('Check passed'), 6000));
+                        // Fresh cached clocks intentionally hide the passed chip. Bind success to this request's real
+                        // worker response, a NEW exact passed announcement, and the hook's settled UI state instead.
+                        const passed = await until(() => page.evaluate((mark) => {
+                            const requests = window.__ux.checkRequests.slice(mark.requests);
+                            const answers = window.__ux.checkResponses.slice(mark.responses);
+                            return requests.length === 1 && answers.filter(answer => answer.type === 'validated'
+                                && answer.workerId === requests[0].workerId && answer.requestId === requests[0].requestId).length === 1
+                                && window.__ux.ann.slice(mark.ann).filter(a => a.text === 'Check passed.').length === 1;
+                        }, retryMark), 6000);
+                        rec.check('next Check only succeeds on a fresh worker', !!passed && await ui.checkOnly(page).isEnabled()
+                            && (await page.getByRole('note', { name: 'The check stopped unexpectedly', exact: true }).count()) === 0 && !(await isRunning(page)));
+                        await checkAnnounced(rec, page, 'Check passed.', 'next Check only after replacement startup failure');
                         rec.check('Check only creates one replacement', await page.evaluate((count) => window.__ux.workersCreated === count + 1, created));
                     }
                     await ui.generate(page).click({ timeout: 3000 });
