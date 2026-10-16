@@ -161,7 +161,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                 <ItemSelector
                     kind="recipe"
                     inputId={machineRecipeElementId(machine.id)}
-                    sx={{ flex: 1 }}
+                    sx={{ flex: 1, minWidth: 'min(250px, 100%)' }}
                     minWidth={250}
                     options={recipeNames}
                     value={machine.recipe || null}

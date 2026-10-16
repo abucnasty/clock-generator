@@ -847,10 +847,10 @@ function App() {
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="sticky" ref={headerRef}>
                     <Toolbar>
-                        <Icon sx={{ mr: 3 }}>
+                        <Icon sx={{ mr: { xs: 1, sm: 3 }, flexShrink: 0 }}>
                             <img src="/big_biter_q5_right.png" alt="" style={{ width: 26, height: 26 }} />
                         </Icon>
-                        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0, flexShrink: 0 }}>
+                        <Typography variant="h6" component="h1" noWrap sx={{ minWidth: 0, flexShrink: 1 }}>
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Factorio </Box>Clock Generator
                         </Typography>
                         {isInitialized && (

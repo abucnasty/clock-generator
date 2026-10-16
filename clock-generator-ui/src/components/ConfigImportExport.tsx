@@ -412,12 +412,6 @@ export function ConfigImportExport({
 
         setPendingImport(null);
 
-        if (parts.length === 0) {
-            // not a failure: nothing was ticked
-            notify({ severity: 'warning', text: 'Nothing was imported: no box was ticked.' });
-            return;
-        }
-
         // one Undo for the whole paste, taken before any of it is applied; its message says what was imported
         onUndoable(describePaste(parts));
         if (fill !== null) {
@@ -443,7 +437,7 @@ export function ConfigImportExport({
             onReplaceChests(pendingImport.chests);
         }
         onBuildReplaced();
-    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable, notify]);
+    }, [pendingImport, importSelections, currentForm, acknowledgedCurrent, onReplaceTarget, onReplaceMachines, onReplaceDrills, onReplaceInserters, onReplaceBelts, onReplaceChests, onUpdateMiningProductivityLevel, onBuildReplaced, onUndoable]);
 
     const handleCancelImport = useCallback(() => {
         setPendingImport(null);

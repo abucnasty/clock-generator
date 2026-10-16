@@ -39,7 +39,7 @@ export function TargetOutputForm({
                 <ItemSelector
                     kind="recipe"
                     inputId={ELEMENT_IDS.targetRecipe}
-                    sx={{ flex: 1 }}
+                    sx={{ flex: 1, minWidth: 'min(300px, 100%)' }}
                     minWidth={300}
                     size="medium"
                     options={recipeNames}

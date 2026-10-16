@@ -98,6 +98,12 @@ describe('shared blueprint copy lifecycle', () => {
         expect(Render().confirmingStale).toBe(false); oldConfirm(); Render().confirm(); await flush();
         expect(write).not.toHaveBeenCalled(); expect(options.onCopyFailed).not.toHaveBeenCalled();
     });
+    it('cannot confirm a canceled question or write twice through a retained confirm callback', async () => {
+        options.staleFor = oldBuild; Render().request(); const confirm = Render().confirm;
+        Render().cancel(); confirm(); await flush(); expect(write).not.toHaveBeenCalled();
+        Render().request(); const nextConfirm = Render().confirm; nextConfirm(); nextConfirm(); await flush();
+        expect(write).toHaveBeenCalledOnce(); expect(options.onCopied).toHaveBeenCalledOnce();
+    });
     it('reports the stale snapshot only after confirmation', async () => {
         options.staleFor = oldBuild; write.mockRejectedValue(new Error('denied'));
         Render().request(); expect(options.onCopyFailed).not.toHaveBeenCalled(); Render().confirm(); await flush();

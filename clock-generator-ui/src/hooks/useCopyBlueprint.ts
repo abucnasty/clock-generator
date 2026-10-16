@@ -45,6 +45,7 @@ export function useCopyBlueprint(options: CopyBlueprintOptions): CopyBlueprint {
     const latest = useRef(options);
     useLayoutEffect(() => { latest.current = options; });
     const sequence = useRef(0);
+    const confirmation = useRef<Attempt | null>(null);
     const mounted = useRef(true);
     const [copiedFor, setCopiedFor] = useState<Attempt | null>(null);
     const [confirmingFor, setConfirmingFor] = useState<Attempt | null>(null);
@@ -93,17 +94,26 @@ export function useCopyBlueprint(options: CopyBlueprintOptions): CopyBlueprint {
         clearTimeout(timer.current);
         setCopiedFor(null);
         setConfirmingFor(null);
+        confirmation.current = null;
         current.onCopyAttempt?.();
-        if (attempt.snapshot.staleFor) setConfirmingFor(attempt);
+        if (attempt.snapshot.staleFor) {
+            confirmation.current = attempt;
+            setConfirmingFor(attempt);
+        }
         else void copy(attempt);
     }, [copy]);
     const confirm = useCallback(() => {
+        const attempt = confirmation.current;
+        confirmation.current = null;
         setConfirmingFor(null);
-        if (confirmingFor && confirmingFor.sequence === sequence.current && confirmingFor.identity === latest.current.copyIdentity) {
-            void copy(confirmingFor);
+        if (attempt && attempt.sequence === sequence.current && attempt.identity === latest.current.copyIdentity) {
+            void copy(attempt);
         }
-    }, [confirmingFor, copy]);
-    const cancel = useCallback(() => setConfirmingFor(null), []);
+    }, [copy]);
+    const cancel = useCallback(() => {
+        confirmation.current = null;
+        setConfirmingFor(null);
+    }, []);
 
     return {
         copied: copiedFor !== null && copiedFor.identity === options.copyIdentity,
