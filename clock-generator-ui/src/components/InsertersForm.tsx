@@ -27,9 +27,69 @@ import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
-/** Below md the source and destination share the row's first line, each at least 220px wide */
-const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', flex: { xs: '1 1 220px', md: '0 0 auto' } };
-const PICKER_SX = { flex: 1, minWidth: { md: 250 } };
+/** The enable rule's column when the row wraps: "Enable: Clocked" and the like; a longer rule ends in "…" (its full words in the tooltip and name) */
+const RULE_COLUMN = '8.5rem';
+/** Stack Size's field, and its column when the row wraps */
+const STACK_COLUMN = '130px';
+/** Where an inserter row fits on one line with its names in full */
+const ONE_LINE = '@media (min-width: 1600px)';
+
+/**
+ * The inserter rows are one grid, and each row a subgrid of it, so every column starts at the same x on every row,
+ * whatever the row holds (a belt source's lane select, set or auto filters, a long rule): the handle and number,
+ * Source, Destination, then Stack Size, the filters, the enable rule and delete. Source and Destination take the room
+ * the others leave, so their names show in full where they fit. From 1600px a row is one line (narrower, the names
+ * would be cut off); from md, two lines, Source and Destination on the first; from sm, Source and Destination each have
+ * a line beside the handle; below sm everything has a line of its own.
+ */
+const LIST_GRID_SX = {
+    display: 'grid',
+    columnGap: 2,
+    rowGap: 2,
+    gridTemplateColumns: {
+        xs: 'minmax(0, 1fr)',
+        sm: 'auto minmax(0, 1fr)',
+        md: 'auto minmax(0, 1fr) minmax(0, 1fr)',
+    },
+    [ONE_LINE]: { gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto auto auto auto' },
+    // the sortable wrapper of each row passes the columns on
+    '& > *': { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'subgrid' },
+};
+const ROW_GRID_SX = {
+    gridColumn: '1 / -1',
+    display: 'grid',
+    gridTemplateColumns: 'subgrid',
+    alignItems: 'center',
+    // room above a wrapped line for the filters' label, which hangs over its slots
+    rowGap: 3,
+    p: 2,
+    // and above a one-line row's
+    pt: 2.5,
+    bgcolor: 'action.hover',
+    borderRadius: 1,
+};
+/** Under Source, in its column, until md puts the two side by side */
+const DESTINATION_CELL_SX = { gridColumn: { sm: 2, md: 'auto' } };
+/**
+ * Stack Size, the filters, the rule and delete: cells of the rows' grid on one line; below 1600px a line of their own, in
+ * columns of a fixed width (the filters take the rest), so they line up from row to row too
+ */
+const ROW_REST_SX = {
+    display: { xs: 'flex', sm: 'grid' },
+    gridColumn: '1 / -1',
+    gridTemplateColumns: { sm: `${STACK_COLUMN} minmax(0, 1fr) ${RULE_COLUMN} 40px` },
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 2,
+    [ONE_LINE]: { display: 'contents', gridColumn: 'auto' },
+};
+/** At the end of its line */
+const DELETE_SX = { ml: { xs: 'auto', sm: 0 } };
+/** At the top of the line when the row wraps, so Source and Destination stay level when the lane select goes under Source */
+const PICKER_GROUP_SX = { display: 'flex', gap: 1, alignItems: 'center', minWidth: 0, alignSelf: 'start', [ONE_LINE]: { alignSelf: 'center' } };
+/** The source's lane select goes under it when the cell is narrow */
+const SOURCE_GROUP_SX = { ...PICKER_GROUP_SX, flexWrap: 'wrap' };
+const PICKER_SX = { flex: '1 1 160px', minWidth: 0 };
 
 interface EntityOption {
     type: SourceSinkType;
@@ -244,6 +304,7 @@ function InsertersFormComponent({
             {inserters.some(inserter => !inserter.prototype || !inserter.quality) && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{INSERTER_TIMING_ASSUMPTION}</Typography>
             )}
+            <Box sx={LIST_GRID_SX}>
             <SortableList itemKeys={inserters.map((ins) => ins._uuid)} itemLabels={inserters.map((ins) => entityLabel('inserter', ins.id))} onReorder={onReorder}>
             {inserters.map((inserter, index) => (
                 <SortableItem key={inserter._uuid} stableKey={inserter._uuid} label={entityLabel('inserter', inserter.id)}>
@@ -252,23 +313,14 @@ function InsertersFormComponent({
                     id={`entity-inserter-${inserter.id}`}
                     role="group"
                     aria-label={entityLabel('inserter', inserter.id)}
-                    sx={{
-                        display: 'flex',
-                        gap: 2,
-                        alignItems: 'center',
-                        mb: 2,
-                        p: 2,
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
-                        flexWrap: 'wrap',
-                    }}
+                    sx={ROW_GRID_SX}
                 >
-                    <Typography variant="body2" color="text.secondary" sx={{ flexBasis: '100%' }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ gridColumn: '1 / -1' }}>
                         {inserterMetadataText(inserter)}
                     </Typography>
                     {dragHandle}
                     {/* Source */}
-                    <Box sx={PICKER_GROUP_SX}>
+                    <Box sx={SOURCE_GROUP_SX}>
                         <Autocomplete
                             size="small"
                             sx={PICKER_SX}
@@ -351,7 +403,6 @@ function InsertersFormComponent({
                             autoHighlight
                             disableClearable
                         />
-                    </Box>
 
                     {/* the same select as the diagram's inserter dialog; a new source drops the lane, as there */}
                     <NearLaneSelect
@@ -362,9 +413,11 @@ function InsertersFormComponent({
                         onChange={(source) => onUpdate(index, { source })}
                     />
 
+                    </Box>
+
                     {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
-                    <Box sx={PICKER_GROUP_SX}>
-                        <Typography variant="body2" color="text.secondary">
+                    <Box sx={{ ...PICKER_GROUP_SX, ...DESTINATION_CELL_SX }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
                             →
                         </Typography>
                         <Autocomplete
@@ -451,6 +504,7 @@ function InsertersFormComponent({
                         />
                     </Box>
 
+                    <Box sx={ROW_REST_SX}>
                     <NumberField
                         id={`inserter-stack-size-${inserter.id}`}
                         label="Stack size"
@@ -461,7 +515,7 @@ function InsertersFormComponent({
                             onUpdate(index, { stack_size: val === null ? undefined : Math.trunc(val) })
                         }
                         min={1}
-                        sx={{ width: 180, maxWidth: '100%' }}
+                        sx={{ width: STACK_COLUMN, maxWidth: '100%' }}
                         size="small"
                     />
 
@@ -475,6 +529,7 @@ function InsertersFormComponent({
                         maxSlots={5}
                     />
 
+                    <Box sx={{ display: 'flex', minWidth: 0 }}>
                     <EnableRuleChip
                         override={inserter.overrides?.enable_control}
                         entityLabel={entityLabel('inserter', inserter.id)}
@@ -483,14 +538,18 @@ function InsertersFormComponent({
                         onClick={() => setEnableControlModalInserterIndex(index)}
                     />
 
-                    <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
+                    </Box>
+
+                    <IconButton onClick={() => remove(index)} color="error" sx={DELETE_SX} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
                         <Delete />
                     </IconButton>
+                    </Box>
                 </Box>
                     )}
                 </SortableItem>
             ))}
             </SortableList>
+            </Box>
 
             {inserters.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>

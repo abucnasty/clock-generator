@@ -1420,7 +1420,7 @@ export const ui = {
     compatTypeQualityControls: (p,id) => ui.compatInserterRow(p,id).getByRole('combobox', { name: /type|quality/i }),
     compatFacts: p => p.getByRole('button', { name: /^Machine Facts/ }).first(),
     compatFactsRate: p => ui.compatFacts(p).locator('.MuiChip-root').first(),
-    compatInserterNode: (p, id) => ui.diagram(p).locator('.react-flow__node').filter({ hasText: new RegExp(`^Inserter ${id}\\b`) }),
+    compatInserterNode: (p, id) => ui.diagram(p).getByRole('group', { name: new RegExp(`^Inserter ${id},`) }),
     compatEditor: p => p.getByRole('dialog', { name: /^Inserter 1$/i }),
     compatEditorStack: p => ui.compatEditor(p).locator('#diagram-inserter-stack-size-1'),
     compatEditorAuto: (p, size) => ui.compatEditor(p).getByText(new RegExp(`Automatic.*\\b${size}\\b|\\b${size}\\b.*Automatic`, 'i')).last(),
@@ -1528,7 +1528,7 @@ export const ui = {
     // ---- Diagram
     /** List / Diagram view buttons of the Configure cards (owner: 1.x diagram) */
     listView: (page) => btn(page, /^List view/),
-    diagramView: (page) => btn(page, /^Diagram view/),
+    diagramView: (page) => btn(page, /^Diagram (?:beta )?view/),
     /** The diagram canvas (React Flow); 0 in List view (owner: 1.x diagram) */
     diagram: (page) => page.getByRole('main').locator('.react-flow').first(),
     /** The diagram's Fullscreen button; 0 in List view (owner: 1.x diagram) */
