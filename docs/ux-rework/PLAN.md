@@ -113,8 +113,7 @@ The integration acceptance criteria are in [specs/upstream-0.15-compatibility.md
   omitted values and existing explicit overrides; show the effective value and the full-research assumption.
 - **Do not extend the sidecar to export type/quality in this rework.** Its existing 2.2 scope and 0.8.0 release plan
   stand. Explain the default timing assumption where the UX needs it; no new sidecar in-game checkpoint for metadata.
-- **Repeated identical units:** explain the engine refusal and guide the player to select one unit and set Copies.
-  No conversion, automatic reduction, validation bypass or new engine behavior.
+- **Repeated identical units:** owner feature request2026-10-16 supersedes the earlier manual-only recovery restriction: offer an engine-validated conversion to one complete representative unit, calculate Copies automatically, and let the player enter only the final total production rate. Preserve input until acceptance and offer Undo; unsupported/ambiguous conversions retain manual recovery. No validation bypass or simulation/ranking-policy change. See Phase4D10.
 - **Fractional Copies:** follow the engine’s positive short-decimal rule throughout fields, target limits, examples,
   saved builds and share links. Values below one are supported. Editable invalid drafts remain recoverable.
 - Preserve locale-derived game names when merging the new data pipeline; repair removed example/capture paths,
@@ -492,7 +491,7 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 
 ## Phase 4: approved follow-up work
 
-Owner approvals, 2026-10-16: D1–D9 and first-visit refinement form Phase 4 against `feat/ux-rework`. The proposal approval round is complete; track exact choices and execution order in [Phase 4 decisions](specs/phase4-decisions.md). D8 is investigation only, returning for implementation approval. D9 includes actual cleanup and is mandatory before feature→master regardless of phase label. First finish Phase 3 closeout/owner checkpoint; capture D3's baseline before D1 changes, finalize item specs, then follow actual dependencies. All current verification and the three fresh phase-end reviewers remain required for Phase 4.
+Owner approvals, 2026-10-16: D1–D9, first-visit refinement and the subsequently requestedD10 repeated-unit conversion form Phase4 against `feat/ux-rework`. The proposal approval round is complete; track exact choices and execution order in [Phase 4 decisions](specs/phase4-decisions.md). D8 is investigation only, returning for implementation approval. D9 includes actual cleanup and is mandatory before feature→master regardless of phase label. First finish Phase 3 closeout/owner checkpoint; capture D3's baseline before D1 changes, finalize item specs, then follow actual dependencies. All current verification and the three fresh phase-end reviewers remain required for Phase 4.
 
 ### Approved Phase 4 scope: Compact view (D1)
 
@@ -535,6 +534,11 @@ Owner approval, 2026-10-16: choice B authorizes independent audit AND implemente
 ### Approved Phase 4 scope: First-visit route refinement
 
 Owner approval, 2026-10-16, A / A: short purpose statement and immediate Paste/Example/Build-by-hand choices, Paste primary, full Sidecar guide on demand. Initial hints describe routes; recipe guidance follows choosing Build by hand. Preserve mod link/full instructions/manual-paste recovery/existing intro dismissal. See [first-visit scope](specs/phase4-first-visit.md). No proposal remains pending from this approval round; final specs/reviews and owner phase checkpoints still apply.
+
+
+### Owner-requested Phase4 feature: Repeated-unit conversion (D10)
+
+Owner request,2026-10-16: replace the dead-end identical-unit message with an offer to reduce the selection to one representative modeled unit automatically and set Copies; the player enters only the final TOTAL production rate. Keep existing total rate, multiply existing Copies by detected multiplicity using engine arithmetic, preserve all required entities/references/modeling fields, and provide whole-build Undo. The engine must prove/validate the supported normalization; otherwise retain the original input and manual recovery. This explicitly supersedes the earlier manual-only/no-conversion restriction without relaxing validation or changing clock selection policy. Finalize the detailed spec after upstream compatibility decisions; current verification/reviews and D9 hard cleanup remain. See [D10 scope](specs/D10-repeated-unit-conversion.md).
 
 ## Verification (every phase)
 

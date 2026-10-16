@@ -18,6 +18,8 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D8 Per-machine production rates | Approved — A / A / A, investigation only | Define rate semantics and engine-data feasibility; return for implementation approval. Read-only engine-derived planned demand; each machine in one modeled unit, all-Copies totals separate |
 | D9 Independent audit and cleanup of new UI tests | Approved — B; mandatory before feature→master | Independently audit and implement justified removals/consolidations of UX-rework-added UI tests. Prevent coverage-driven additions now; show actual diff/CI-workload reduction before release, regardless of phase label |
 | First-visit route refinement | Approved — A / A | Purpose + immediate Paste/Example/Manual routes, Paste primary, full Sidecar guide on demand; recipe guidance follows Build by hand; preserve mod link/manual recovery/intro dismissal |
+| D10 Repeated-unit conversion | Owner-requested feature intent | Offer engine-validated extraction of one complete representative unit, automatic Copies, final total rate only; preserve input until acceptance and offer whole-build Undo. Detailed spec follows compatibility decisions. |
+
 
 ## Decisions
 
@@ -132,3 +134,7 @@ Owner: “Approve the first-visit refinement with A / A. Add it to Phase 4, summ
 7. Repeat D3 tasks on the finished Phase 4 state, complete normal full checks and all three fresh phase-end reviewers, reconcile findings/retro, and present the Phase 4 PR into feat/ux-rework for the owner checkpoint. Final master merge remains owner-only after D9 and release closeout.
 
 Order within this outline may follow actual source dependencies and available slots; it does not waive checkpoints or expand approved scope. Phase 4 implementation has not started.
+
+### D10 owner feature request,2026-10-16
+
+Owner requests automatic recovery from “This selection contains8 identical units…”: offer to convert to one modeled unit and compute Copies, leaving only final total-rate entry. This adds D10 to Phase4 and supersedes the old explicit no-conversion restriction. Preserve existing total rate and fractional configured-Copies multiplication, use canonical engine proof/normalization, preserve full units/references/consequential modeling fields, and provide atomic acceptance/Undo. Unsupported or ambiguous cases retain input/manual recovery. No simulator/ranking policy or geometry-authoring work is implied. Final implementation spec/API remains to be finalized; the pending upstream recommendation is not otherwise adopted by this request. See D10-repeated-unit-conversion.md. Current checks/independent reviews/three phase reviewers and D9 actual cleanup before master remain unchanged.
