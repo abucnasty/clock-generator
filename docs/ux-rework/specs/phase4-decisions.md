@@ -2,7 +2,7 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1, D2 and D3 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1–D4 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
@@ -11,7 +11,7 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D1 Compact view and responsive composition | Approved — B / A / A | Results/header first, then compact Configure; explanatory default with remembered opt-in Compact; comparison visible with one contextual Why/Wake/Install detail area and routine helpers collapsed |
 | D2 Light/dark mode | Approved — A / A / B | Include after density work; System / Light / Dark, remembered locally; System default for new installations; complete interface including charts and diagrams |
 | D3 Task-based usability audit | Approved — A / A / A | Integrated bounded exercise: two representative builds, three tasks; baseline before D1 and repeat after Phase 4; agent measurements, owner participation optional |
-| D4 Clock recommendation and tradeoffs | Pending | Eligibility grouping; concise deltas; preserve existing ranking |
+| D4 Clock recommendation and tradeoffs | Approved — A / A / A | Group by belt compatibility; concise selected-clock reason/tradeoff with deeper details on demand; both explanatory and Compact views; existing ranking/selection rules unchanged |
 | D5 Exceptions and assumptions | Pending | Which defaults may be summarized; visible overrides and model assumptions |
 | D6 Display preferences | Pending | One entry; preference placement; persistence separate from build data |
 | D7 Working context | Pending | Specific remaining gaps after Phase 3; reset and persistence rules |
@@ -52,4 +52,14 @@ Owner: “Approve D3 with A / A / A.”
 - Deliver one short before/after scorecard linked to supporting evidence. This is not another broad review cycle or test suite; existing verification and all three phase-end reviewers remain required.
 - Findings outside approved scope return to the owner for a decision instead of automatically extending Phase 4. Select exact builds/tasks and measurement details in the final item spec.
 
-Next discussion: D4 clock recommendation and tradeoffs. D4–D9 and first-visit refinement remain pending.
+### D4 approved, 2026-10-16
+
+Owner: “Approve D4 with A / A / A.”
+
+- Organization A: group comparison clocks by “Matches your belt setting” and “Requires a different belt setting.” Keep alternatives inspectable/selectable under existing rules with conditions visible.
+- Explanation A: show one concise reason or tradeoff beside the selected clock; deeper ranking/metric details are available on demand. Use only facts supported by the actual result. Rate, recovery and belt warnings remain visible where relevant; wake-up differences are not measured UPS savings.
+- Coverage A: apply in both explanatory and Compact views, adapted to each layout and coordinated with D1's contextual detail area.
+- Reuse existing recommendation logic, explanations and metrics. Preserve ranking and selection rules; this is presentation work and does not authorize engine changes or new optimization objectives.
+- Finalize group treatment and conditional/fallback cases in the item spec. Belt compatibility does not imply that target rate/recovery checks passed; preserve those separate statuses and unit scopes.
+
+Next discussion: D5 exceptions and assumptions. D5–D9 and first-visit refinement remain pending.

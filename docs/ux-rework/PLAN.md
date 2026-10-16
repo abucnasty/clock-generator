@@ -508,9 +508,13 @@ Owner approval, 2026-10-16, A / A / B: include D2 after the density work; offer 
 
 Owner approval, 2026-10-16, A / A / A: integrate a bounded exercise using two representative builds and three tasks (import/edit/generate; compare/select/copy; reopen/find installation guidance). Measure a baseline before D1 and repeat the same tasks after Phase 4, comparing scroll distance, interactions and interpretation problems. Agent walkthrough measurements supply a short before/after scorecard; owner participation is optional and the measurements are not proof of human usability. Findings outside approved scope return for owner decision. Existing verification and all three phase-end reviewers remain required. See [D3 scope](specs/D3-task-audit.md).
 
-### Further deferred design proposals (D4–D8)
+### Approved Phase 4 scope: Clock recommendations and tradeoffs (D4)
 
-Owner requested drafts for later discussion: clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
+Owner approval, 2026-10-16, A / A / A: group comparison clocks by belt compatibility (matches current setting versus requires a different setting), preserving inspectable/selectable alternatives and visible conditions. Show one concise selected-clock reason/tradeoff with deeper details on demand, in both explanatory and Compact views. Reuse existing ranking, selection rules and actual result metrics; preserve relevant rate/recovery/belt warnings and unit scopes without claiming measured UPS savings. See [D4 scope](specs/D4-clock-tradeoffs.md).
+
+### Further deferred design proposals (D5–D8)
+
+Owner requested drafts for later discussion: emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
 
 ### Independent audit of new UI tests (D9)
 
