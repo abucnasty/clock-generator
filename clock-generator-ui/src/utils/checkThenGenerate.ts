@@ -1,4 +1,5 @@
 import type { Config, ConfigValidation } from 'clock-generator/browser';
+import type { RepeatedUnitsRecovery } from '../worker/types';
 import type { ValidationState } from '../hooks/useSimulationWorker';
 import type { Problem } from './firstProblem';
 import { configKeyOf } from './resultsStaleness';
@@ -59,7 +60,7 @@ export function checkStatusOf(validation: ValidationState, currentCheckKey: stri
 /** How a check ended; `dropped` when Import, Paste, Reset or a newer check replaced it */
 export type CheckOutcome =
     | { kind: 'valid'; validation: ConfigValidation }
-    | { kind: 'invalid'; message: string }
+    | { kind: 'invalid'; message: string; recovery?: RepeatedUnitsRecovery }
     | { kind: 'dropped' };
 
 type GenerateDecision =

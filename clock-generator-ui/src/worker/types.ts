@@ -28,6 +28,9 @@ import type {
     SerializableTransferHistory,
     SuggestedTarget,
     SwingBackoffReport,
+    RepeatedUnitConversionPlan,
+    RepeatedUnitConversionReason,
+    RepeatedUnitConversionReasonCode,
 } from 'clock-generator/browser';
 import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
@@ -243,6 +246,7 @@ export interface ValidationFailedResponse {
     type: 'validation-failed';
     requestId: number;
     message: string;
+    recovery?: RepeatedUnitsRecovery;
 }
 
 export interface LogResponse {
@@ -291,6 +295,24 @@ export interface ErrorResponse {
     runId?: number;
     message: string;
     stack?: string;
+    recovery?: RepeatedUnitsRecovery;
+}
+
+export type CheckedRepeatedUnitConversion =
+    | { kind: 'available'; plan: RepeatedUnitConversionPlan; validation: ConfigValidation }
+    | { kind: 'unavailable'; stage: 'proof'; reason: RepeatedUnitConversionReason }
+    | { kind: 'unavailable'; stage: 'check'; reason: { code: 'candidate-check-failed'; message: string } };
+
+export interface RepeatedUnitsRecovery {
+    kind: 'repeated-units';
+    sourceConfigKey: string;
+    detectedCopies: number;
+    configuredCopies: number;
+    units: { machine_ids: number[] }[];
+    conversion:
+        | { kind: 'available'; multiplicity: number; copies: number }
+        | { kind: 'unavailable'; stage: 'proof' | 'check';
+            code: RepeatedUnitConversionReasonCode | 'candidate-check-failed'; message: string };
 }
 
 export interface RecipeInfo {
@@ -338,6 +360,7 @@ export type EngineQuery =
     | { kind: 'lookups' }
     | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
     | { kind: 'inserter-coverage'; config: Config }
+    | { kind: 'repeated-unit-conversion'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
     | { kind: 'saved-config'; config: unknown }
     /**
@@ -361,6 +384,7 @@ export interface EngineAnswers {
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;
     'inserter-coverage': InserterCoverageIssue[];
+    'repeated-unit-conversion': CheckedRepeatedUnitConversion;
     /** Why the saved config cannot be used; null when it can */
     'saved-config': string | null;
     'config-file': Config;
