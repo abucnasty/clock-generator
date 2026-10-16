@@ -39,10 +39,13 @@ come from here.
 - **Phase 2 remaining:** only 2.7 B, then the phase-end captures, reviews and owner checkpoints. 3.3 is in fix round 1 on p3.
 - **Phase 2:** started early in idle slots on [`feat/ux-rework-p2`](https://github.com/abucnasty/clock-generator/tree/feat/ux-rework-p2) (cut from `feat/ux-rework-p1`; merges p1 in after each p1 merge)
 
-- **Upstream compatibility:** 0.15.1 downmerged into feature (`e54a973`), p2 (`724b500`) and p3 (`e55bd2f`).
-  The implementer’s full gates passed; root inspected conflict resolutions and test logs. Independent reruns remain
-  part of the reviewed compatibility child’s evidence gate. New master 0.15.2 (#193) is being integrated separately.
-  Compatibility changes precede final 2.7 B and 3.3 evidence.
+- **Upstream compatibility:** 0.15.1 and 0.15.2 (#193) downmerged and pushed through feature (`41eb648`),
+  p2 (`9e2646c`) and p3 (`df21248`). Root checked the recorded test result lines; these historical integration gates
+  do not replace the reviewed compatibility child's independent evidence. #194 at master `1d27cde` is frozen for
+  the current integration cycle; fresh full gates passed and feature `cdf2425`, p2 `cf7a8c7` and p3 `66dc5c9` are pushed.
+  The compatibility child at `fe18341` incorporates the preserved WIP and #194 p2, with final evidence underway
+  and no completed code/UX review. Its p3 adjunct and final
+  2.7 B / 3.3 evidence follow the reviewed child.
 - **Worker checkpoints:** 2.7 B pushed `ce131ae` with three repaired capture scripts; 3.3 pushed `38a7b25` with the
   corrected non-recommended-pick capture. Both wait for compatibility before final gates and re-reviews.
 
@@ -87,9 +90,9 @@ come from here.
 
 | Chain | Length | Next unblocked |
 |---|---|---|
-| 2.7 B → 3.2 A → 3.2 B | 3 | 2.7 B minors; 3.2 A after its integration into p3; 3.2 B is two units |
-| 3.3 | 1 | Fix round 1 remainder |
-| master → feat/ux-rework → p2 → p3 | 1 | After p2 → p3 bookkeeping merge and checks |
+| Compatibility p2 child → 2.7 B → 3.2 A → 3.2 B | 4 | Compatibility implementation (two units); 2.7 B retains its review/minors history; 3.2 A after 2.7 B reaches p3; 3.2 B is two units |
+| Compatibility p2 child → p3 adjunct → 3.3 | 3 | p3 adjunct follows the reviewed p2 child; 3.3 retains fix round 1 |
+| Frozen master #194 → feat/ux-rework → p2 → p3 | complete | All three full gates and pushes done; in-flight merged-tree type-check sweep underway |
 | Phase 2 end | | After 2.7 B; install check holds the phase PR, owner approval holds phase merge |
 
 ## Phase 3: expert depth
@@ -104,6 +107,23 @@ come from here.
 ## Decisions log
 
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
+
+- 2026-10-16: Fresh session resumed from the owner's handover after the previous session stopped. The owner confirmed
+  parent Astra / High / fast off in the client; tools could not independently verify or change the parent setting.
+  Fresh worker assignments explicitly set: compatibility implementation `gpt-6-astra/high` (two units), #194 mechanical
+  gates/merges `gpt-6-luna/high`, capture authoring `gpt-6.1-sol/high`. Every review and coach remains Astra/high.
+  Preserve the dirty compatibility worktree; backups are recovery-only. No new scope decisions were reopened.
+- 2026-10-16: Reconciled the completed #193 chain from fetched refs and durable logs: feature `41eb648`
+  (943 engine unit / 142 generation / 349 UI), p2 `9e2646c` (1004 / 142 / 885), p3 `df21248`
+  (1004 / 142 / 1010). The #194 local merge `cdf2425` had no completed gate before the stop and was not pushed.
+  Freeze master `1d27cde` while gathering fresh integration/compatibility evidence. No game harness result is claimed.
+- 2026-10-16: Fresh Luna integration gates completed and root inspected durable result lines for #194:
+  feature `cdf2425` (946 engine unit / 142 generation / 349 UI) and p2 `cf7a8c7` (1007 / 142 / 885),
+  with engine/UI build, lint, knip, UI tsc and icons passing. Both were text-clean and fast-forward pushed;
+  main p2 fast-forwarded with its documentation edit preserved. P3 `66dc5c9` then passed the same full gate
+  (1007 / 142 / 1010) and was fast-forward pushed. No conflict resolution, game harness run or new version bump.
+  The compatibility implementer preserved/completed WIP in `100b704`, added capture tooling in `a0a6084`, and
+  merged the tested p2 base at `fe18341`; final child evidence/reviews remain pending.
 
 - 2026-10-16: Upstream 0.15.1 integration completed through feature → p2 → p3. Reported gates, checked against logs:
   feature 943 engine unit / 142 generation / 349 UI tests; p2 1004 / 142 / 885; p3 1004 / 142 / 1010.
