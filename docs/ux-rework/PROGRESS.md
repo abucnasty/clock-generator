@@ -120,6 +120,8 @@ come from here.
 
 ## Decisions log
 
+- 2026-10-16: Owner confirmed that all game instances use the shared `~/Library/Application Support/factorio/mods` and deleted the extra Beta folder. Installed the same verified UX development ZIP there (still version0.7.1); all12 source files/archive hashes pass, older matching archives backed up, existing enabled setting preserved. Restarted an actual Vite dev server at `http://127.0.0.1:5280/` on reviewed combined88eab3a source with its own engine and11 exact JSON resources; root HTML/main/App modules return200. Server proof `/tmp/ux-owner-preview-fab7ef4/DEV-SERVER.json`; pending3.F remains excluded. Actual in-game check remains pending.
+
 - 2026-10-16: Owner confirmed `~/Library/Application Support/factorio_beta` as the destination. Created its missing `mods` directory and installed `clock-generator-sidecar_0.7.1.zip`; archive integrity/version,12 entries and exact previously verified SHA256 all pass. No Beta mod-list existed and none was created or edited. Regular Factorio remains restored to its previous three archives. Receipt `/Users/abucnasty/.codex/artifacts/factorio-sidecar-install-20261016T134618Z/RECEIPT.json` now records the corrected installation. Actual in-game installation check still awaits the owner.
 
 - 2026-10-16: Owner corrected the mod destination to `factorio_beta`. Root restored the regular Factorio mods folder exactly (three previous archives, our matching0.7.1 ZIP removed). The verified build remains ready; installation into Beta is pending the owner’s full folder path because no existing Beta folder was found in the searched locations. Receipt above now records the correction. This is still preparation for the pending in-game check.
