@@ -18,6 +18,7 @@ import { pastePreview, type ImportSelections, type PasteReferenceWarning } from 
 import { entityLabel } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
+import { nameWithId } from '../utils/gameNames';
 import {
     canShare,
     encodeShareLink,
@@ -146,7 +147,7 @@ export function ConfigImportExport({
     // below 600px the app bar's Paste button says only "Paste", so the title keeps its room
     const narrow = useMediaQuery(useTheme().breakpoints.down('sm'));
     const notify = useNotify();
-    const { recipeLabel } = useGameNames();
+    const { recipeLabel, itemLabel } = useGameNames();
     const dismiss = useDismissMessage();
     // the last error of opening a build file or loading an example, which goes as soon as the player tries again
     const errorIdRef = useRef<number | null>(null);
@@ -653,7 +654,7 @@ export function ConfigImportExport({
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {pendingImport.inserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
                                 ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
-                            {pendingImport.machines.filter(machine => machine.fuel !== undefined).map(machine => <Typography key={`fuel-${machine.id}`} variant="body2">Machine {machine.id}: imported fuel {machine.fuel} (read-only).</Typography>)}
+                            {pendingImport.machines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
                             {preview?.geometryProblem && <Alert severity="error">{preview.geometryProblem}</Alert>}
                             {pendingImport.fill ? (
                                 <Box>

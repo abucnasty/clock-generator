@@ -1,5 +1,6 @@
 import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
+import { beltGeometryEditProblem, endpointEditProblem } from '../inserterMetadata';
 import {
     BELT_FORM_DEFAULT_STACK_SIZE,
     BELT_FORM_DEFAULT_TYPE,
@@ -184,16 +185,16 @@ export function addInserter(prev: ConfigFormData): ConfigFormData {
 
 /** Keep no-op endpoint metadata and refuse moving a physical drop position onto another route. */
 function withPreservedEndpoints(ins: InserterFormData, updates: Partial<InserterFormData>): InserterFormData {
-    const endpoint = <E extends { type: string; id: number }>(before: E, after: E | undefined): E => {
+    const endpoint = <E extends { type: InserterFormData['source']['type']; id: number }>(before: E, after: E | undefined, side: 'source' | 'sink'): E => {
         if (after === undefined) return before;
         // Source updates are complete endpoints: withNearLane deliberately removes the optional key for Not set.
         // No-op pickers/connections use endpointUpdate and send no replacement at all.
         if (before.type === after.type && before.id === after.id) return after;
-        return ins.sink.drop === undefined ? after : before;
+        return endpointEditProblem(ins, side, after) === null ? after : before;
     };
-    return { ...ins, ...updates, source: endpoint(ins.source, updates.source),
+    return { ...ins, ...updates, source: endpoint(ins.source, updates.source, 'source'),
         // Imported drop geometry is read-only, including attempts to clear it on the same route.
-        sink: ins.sink.drop !== undefined ? ins.sink : endpoint(ins.sink, updates.sink) };
+        sink: ins.sink.drop !== undefined ? ins.sink : endpoint(ins.sink, updates.sink, 'sink') };
 }
 
 /** An update with `overrides` replaces the rule, so it is no longer one forced by Exclude from LCM. */
@@ -260,10 +261,7 @@ export function addBelt(prev: ConfigFormData): ConfigFormData {
 
 export function updateBelt(prev: ConfigFormData, index: number, updates: Partial<BeltFormData>): ConfigFormData {
     const belt = prev.belts[index];
-    const hasDrops = belt && prev.inserters.some(ins => ins.sink.type === 'belt' && ins.sink.id === belt.id && ins.sink.drop !== undefined);
-    if (hasDrops && ((updates.type !== undefined && updates.type !== belt.type)
-        || (updates.lanes !== undefined && (updates.lanes.length !== belt.lanes.length
-            || updates.lanes.some((lane, i) => lane.ingredient !== belt.lanes[i]?.ingredient || lane.stack_size !== belt.lanes[i]?.stack_size))))) return prev;
+    if (belt && beltGeometryEditProblem(prev.inserters, belt, updates)) return prev;
     return {
         ...prev,
         belts: prev.belts.map((b, i) =>

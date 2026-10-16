@@ -23,9 +23,8 @@ import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
-import { lossesOf } from '../utils/rateWarning';
 import { BELT_COPY } from '../utils/beltQuestion';
-import { beltCellText, clockTechnicalName, foldedMakes, isStartDependent, plainClockName, recoversOf, worksOf } from '../utils/clockSummary';
+import { SUMMARY_COPY, beltCellText, clockTechnicalName, foldedMakes, isStartDependent, plainClockName, recoversOf, worksOf } from '../utils/clockSummary';
 import { PROVISIONAL_WAKE_UP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { ScrollX } from './ScrollX';
@@ -87,11 +86,6 @@ function statusDetail(alternative: ClockAlternativeView): string {
     const check = alternative.asBuilt;
     if (!check) {
         return `${startup}Clock-phase check unavailable. ${recovery}`;
-    }
-    if (alternative.verdict === 'no recovery') {
-        const losses = lossesOf(alternative);
-        return startup + 'Holds the target rate from the modeled start for as long as nothing runs out and nothing backs up. '
-            + (losses ? `Does not get back to it after ${losses} for a while.` : 'It was off its rate in the run that starves and jams the build.');
     }
     const phases = `${startup}${recovery} Checked from ${check.start_phases_checked} clock phase${check.start_phases_checked === 1 ? '' : 's'}`;
     if (check.repeat_periods === undefined || check.repeat_output_items === undefined) {
@@ -199,6 +193,7 @@ export function ClockAlternativesPanel({
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
     const renderRow = ({ alternative, index }: { alternative: ClockAlternativeView; index: number }) => {
         const works = worksOf(alternative);
+        const recovery = recoversOf(alternative);
         return (
             <TableRow
                 key={alternative.id}
@@ -266,8 +261,10 @@ export function ClockAlternativesPanel({
                                 <Chip
                                     tabIndex={0}
                                     size="small"
-                                    label={isStartDependent(alternative) ? 'Start-dependent' : alternative.verdict === 'stable' ? `Recovery: ${recoversOf(alternative).value}` : VERDICT_LABEL[alternative.verdict]}
-                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recoversOf(alternative).kind === 'not-tested') ? 'warning' : VERDICT_COLOR[alternative.verdict]}
+                                    label={isStartDependent(alternative) ? 'Start-dependent'
+                                        : alternative.verdict === 'no recovery' && recovery.kind !== 'no' ? SUMMARY_COPY.recoveryUnavailable
+                                            : alternative.verdict === 'stable' ? `Recovery: ${recovery.value}` : VERDICT_LABEL[alternative.verdict]}
+                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recovery.kind === 'not-tested') ? 'warning' : VERDICT_COLOR[alternative.verdict]}
                                     variant="outlined"
                                     // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
                                     // words under 4.5:1

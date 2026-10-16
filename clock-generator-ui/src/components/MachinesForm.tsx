@@ -25,6 +25,8 @@ import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useAnnounce } from '../hooks/useMessages';
+import { useGameNames } from '../hooks/useGameNames';
+import { nameWithId } from '../utils/gameNames';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
 import { BUTTON_NAMES, SELECT_NAMES, recipeName } from '../utils/a11yLabels';
@@ -129,6 +131,7 @@ interface MachineRowProps {
 }
 
 function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: MachineRowProps) {
+    const { itemLabel } = useGameNames();
     const { facts, error } = useMachineFacts({
         recipe: machine.recipe,
         productivity: machine.productivity,
@@ -253,7 +256,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
             {machine.recipe && (
                 <MachineFactsAccordion facts={facts} error={error} />
             )}
-            {machine.fuel !== undefined && <Typography variant="body2">Imported fuel (read-only): {machine.fuel}.</Typography>}
+            {machine.fuel !== undefined && <Typography variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
         </Box>
     );
 }

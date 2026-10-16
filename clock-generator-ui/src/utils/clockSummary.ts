@@ -17,6 +17,7 @@ export const SUMMARY_COPY = {
     // plain names: what a clock is for, against the others of the same generation
     offTarget: (rate: string, target: string) => `Runs at ${rate}/s, not ${target}/s`,
     noRecovery: 'Does not recover when jammed or starved',
+    recoveryUnavailable: 'Recovery unavailable',
     unstable: 'Does not hold its rate',
     startDependent: 'Depends on how it is started',
     stillBelts: 'For belts that stand still',
@@ -38,6 +39,7 @@ export const SUMMARY_COPY = {
         ? `In the simulator, after ${losses} for a while, it does not get back to its rate by itself.`
         : 'In the simulator, after it is starved or jammed, it does not get back to its rate by itself.',
     recoversNotTestedDetail: 'No usable recovery result is available for this clock.',
+    recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
     beltMoving: 'Moving',
     beltStill: 'Standing still',
     beltNone: 'No belt',
@@ -101,7 +103,7 @@ export function plainClockName(clocks: SummaryClock[], index: number): string {
     // on a build with a deadlock risk the recovery trials do not decide, so a clock that holds the rate is named by its trade-off
     const verdictDecides = clock.deadlockRisk === null || !clock.ranking.meets_target_rate;
     if (verdictDecides && clock.verdict === 'no recovery') {
-        return SUMMARY_COPY.noRecovery;
+        return recoversOf(clock).kind === 'no' ? SUMMARY_COPY.noRecovery : SUMMARY_COPY.recoveryUnavailable;
     }
     if (clock.verdict === 'unstable') {
         return SUMMARY_COPY.unstable;
@@ -137,6 +139,7 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
     const loss = clock.assessment.backpressure_loss;
     if (loss?.survives === true) return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
     if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock)) };
+    if (loss?.survives === false) return { kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail };
     return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,
         detail: SUMMARY_COPY.recoversNotTestedDetail };
 }
@@ -211,8 +214,12 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
     if (!selected.ranking.matches_belt_choice && recommended.ranking.matches_belt_choice) {
         sentences.push(SUMMARY_COPY.differsBelt);
     }
-    if (selected.verdict === 'no recovery' && recommended.verdict !== 'no recovery') {
+    const selectedRecovery = recoversOf(selected);
+    const recommendedRecovery = recoversOf(recommended);
+    if (selectedRecovery.kind === 'no' && recommendedRecovery.kind !== 'no') {
         sentences.push(SUMMARY_COPY.differsNoRecovery);
+    } else if (selectedRecovery.kind === 'not-tested' && selected.assessment.holds && recommendedRecovery.kind !== 'not-tested') {
+        sentences.push('Recovery results are unavailable for this clock.');
     } else if (!selected.assessment.holds && recommended.assessment.holds) {
         sentences.push(SUMMARY_COPY.differsUnstable);
     }
@@ -249,12 +256,12 @@ export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'asses
         return { kind: 'no', text: SUMMARY_COPY.worksOffTarget(rateText(clock.assessment.items_per_second)) };
     }
     if (clock.verdict === 'no recovery') {
-        return { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery };
+        return { kind: 'caution', text: recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable };
     }
     if (!clock.ranking.matches_belt_choice) {
         return { kind: 'caution', text: SUMMARY_COPY.worksStillBelts };
     }
-    return clock.assessment.backpressure_loss === null
-        ? { kind: 'caution', text: 'Recovery unavailable' }
+    return recoversOf(clock).kind === 'not-tested'
+        ? { kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable }
         : { kind: 'yes', text: SUMMARY_COPY.worksYes };
 }

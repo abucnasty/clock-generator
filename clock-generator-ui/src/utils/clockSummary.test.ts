@@ -81,6 +81,13 @@ describe('sampled starts remain separate from rate and recovery', () => {
         expect(startCheckSummary([], { startDependenceRequested: true, complete: true })).toBe('No clocks were available to check.');
         unavailable.assessment.backpressure_loss = null;
         expect(recoversOf(unavailable)).toMatchObject({ kind: 'not-tested', value: 'Unavailable' });
+        unavailable.verdict = 'no recovery';
+        unavailable.ranking.meets_target_rate = false;
+        unavailable.assessment.backpressure_loss = { survives: false, broken_by: [], recovered_after_periods: null };
+        expect(recoversOf(unavailable)).toMatchObject({ value: 'Unavailable', detail: expect.stringContaining('undisturbed baseline') });
+        expect(plainClockName([unavailable], 0)).toBe('Recovery unavailable');
+        expect(worksOf(unavailable)).toEqual({ kind: 'caution', text: 'Recovery unavailable' });
+        expect(differenceFromRecommended(unavailable, clock('recommended'))).toBe('Recovery results are unavailable for this clock.');
     });
 });
 

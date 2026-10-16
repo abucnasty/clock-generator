@@ -9,7 +9,6 @@ import { configToFormData, formDataToConfig } from '../utils/configForm/configMa
 import * as edits from '../utils/configForm/edits';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { parseFormConfig } from './formConfig';
-import { endpointUpdate } from '../utils/inserterMetadata';
 
 /** A form whose inserter took from a machine that was then removed, set to make 0 items per second */
 function formWithUnsetEnd() {
@@ -47,7 +46,6 @@ describe('parseFormConfig', () => {
         form = configToFormData(imported.data!);
         const unchanged = edits.updateInserter(form, 0, { sink: { type: 'belt', id: 1 } });
         expect(formDataToConfig(unchanged)).toEqual(original);
-        expect(endpointUpdate(form.inserters[0], 'sink', { type: 'belt', id: 2 })).toEqual({});
         expect(formDataToConfig(edits.updateInserter(form, 0, { sink: { type: 'belt', id: 2 } }))).toEqual(original);
         expect(edits.duplicateEntity(form, 'inserters', 0)).toBe(form);
         expect(edits.updateBelt(form, 0, { type: 'fast-transport-belt' })).toBe(form);
