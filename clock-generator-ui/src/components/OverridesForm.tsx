@@ -115,7 +115,7 @@ export function OverridesForm({
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <FormControlLabel
                                 control={<Switch id={fractionalId} checked={useFractionalSwings ?? false} color="primary"
-                                    slotProps={{ input: { 'aria-describedby': `${fractionalId}-help` } }}
+                                    slotProps={{ input: { role: 'switch', 'aria-describedby': `${fractionalId}-help` } }}
                                     onChange={e => onUpdate('use_fractional_swings', e.target.checked ? true : undefined)} />}
                                 label="Enable Fractional Swings"
                                 sx={{ mr: 0 }}
@@ -135,7 +135,7 @@ export function OverridesForm({
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <FormControlLabel
                                 control={<Switch id={searchId} checked={searchForFewerWakeUps ?? false} color="primary"
-                                    slotProps={{ input: { 'aria-describedby': `${searchId}-help` } }}
+                                    slotProps={{ input: { role: 'switch', 'aria-describedby': `${searchId}-help` } }}
                                     onChange={e => onUpdate('search_for_fewer_wake_ups', e.target.checked ? true : undefined)} />}
                                 label="Search for fewer wake-ups"
                                 sx={{ mr: 0 }}
