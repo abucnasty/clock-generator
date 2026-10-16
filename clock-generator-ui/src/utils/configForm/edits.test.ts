@@ -617,6 +617,16 @@ describe('updateInserters', () => {
         expect(after.inserters[0]).not.toHaveProperty('_forced_always');
         expect(before.inserters[0]._forced_always).toBe(true);
     });
+    it('applies Auto to mixed rules and clears only selected forced flags', () => {
+        const before = form();
+        before.inserters[0] = { ...before.inserters[0], overrides: { animation: { pickup_duration_ticks: 4 }, enable_control: { mode: 'ALWAYS' } }, _forced_always: true };
+        before.inserters[1] = { ...before.inserters[1], overrides: { enable_control: { mode: 'NEVER' } } };
+        before.inserters[2] = { ...before.inserters[2], overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true };
+        const after = edits.updateInserters(before, before.inserters.slice(0, 2).map(row => row._uuid), { overrides: { enable_control: undefined } });
+        expect(after.inserters.slice(0, 2).every(row => row.overrides?.enable_control === undefined && row._forced_always === undefined)).toBe(true);
+        expect(after.inserters[0].overrides?.animation).toEqual({ pickup_duration_ticks: 4 });
+        expect(after.inserters[2]).toBe(before.inserters[2]);
+    });
     it('removes filter and stack keys for Automatic only on selected UUIDs', () => {
         const before = form();
         before.inserters[0].filters = ['iron-plate'];

@@ -139,7 +139,6 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
 
     return (
         <Box
-            data-row-first=""
             id={`entity-machine-${machine.id}`}
             role="group"
             aria-label={entityLabel('machine', machine.id)}
@@ -158,6 +157,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                 }}
             >
                 {dragHandle}
+                <Box data-row-first="" sx={{ display: 'contents' }}>
                 <ItemSelector
                     kind="recipe"
                     inputId={machineRecipeElementId(machine.id)}
@@ -172,6 +172,7 @@ function MachineRow({ machine, index, recipeNames, canDelete, dragHandle, onUpda
                     inputAriaLabel={recipeName(entityLabel('machine', machine.id))}
                     freeSolo
                 />
+                </Box>
                 <NumberField
                     label="Productivity (%)"
                     value={machine.productivity}

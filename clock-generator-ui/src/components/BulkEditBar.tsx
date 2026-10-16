@@ -33,6 +33,7 @@ export function BulkEditBar({ selected, total, priorityIds, availableItems, item
     const filtersId = useId();
     const titleId = useId();
     const label = selectionLabel(selected.map(row => row.id));
+    const sharedRule = commonValue(selected, row => row.overrides?.enable_control);
     const validStack = stack === null || (Number.isInteger(stack) && stack >= 1);
 
     useLayoutEffect(() => {
@@ -73,7 +74,7 @@ export function BulkEditBar({ selected, total, priorityIds, availableItems, item
         <Button color="inherit" size="small" onClick={onClear}>Clear selection</Button>
         <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
             <NumberField label="Stack size" value={stack} onValueChange={value => setStack(value)} placeholder="Automatic"
-                min={1} step={1} size="small" problem={!validStack ? 'Enter a whole number of at least 1, or clear for Automatic.' : undefined} sx={{ width: 130 }} />
+                step={1} size="small" preserveInputOnBlur problem={!validStack ? 'Enter a whole number of at least 1, or clear for Automatic.' : undefined} sx={{ width: 130 }} />
             <Button variant="outlined" color="inherit" size="small" onClick={() => onApply({ stack_size: stackSizeFrom(stack) }, 'stack')} disabled={!validStack}>Set</Button>
         </Box>
         <Button variant="outlined" color="inherit" size="small" onClick={event => {
@@ -97,7 +98,7 @@ export function BulkEditBar({ selected, total, priorityIds, availableItems, item
             </Box>
         </Popover>
         <EnableControlModal open={ruleOpen} onClose={() => setRuleOpen(false)} entityType="inserter" entityId={0} entityLabel={label}
-            currentOverride={commonValue(selected, row => row.overrides?.enable_control) ?? undefined}
+            currentOverride={sharedRule ?? undefined} applyUnchanged={sharedRule === null}
             sourceType={commonValue(selected, row => row.source.type) ?? undefined} sinkType={commonValue(selected, row => row.sink.type) ?? undefined}
             stackSize={commonValue(selected, effectiveInserterStackSize) ?? undefined}
             availableItems={availableItems} movedItems={priorityIds}

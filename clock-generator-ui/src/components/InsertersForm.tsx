@@ -183,7 +183,7 @@ function InsertersFormComponent({
             title={`Inserters (${inserters.length})`}
             actions={(
                 <>
-                    <Button ref={selectRef} aria-pressed={selecting} color="inherit" variant={selecting ? 'outlined' : 'text'} size="small"
+                    <Button ref={selectRef} aria-pressed={selecting} color={selecting ? 'primary' : 'inherit'} variant={selecting ? 'outlined' : 'text'} size="small"
                         onClick={() => { if (selecting) clearSelection(); setSelecting(!selecting); }}>Select</Button>
                     <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">Add Inserter</Button>
                 </>
