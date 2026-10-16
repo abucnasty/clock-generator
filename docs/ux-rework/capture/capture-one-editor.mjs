@@ -66,7 +66,7 @@ const norm = (t) => (t ?? '').replace(/[’]/g, "'").replace(/\s+/g, ' ').trim()
 const handAnnounce = (label) => `${label}'s filters are now set by hand.`;
 const autoAnnounce = (label) => `${label}'s filters follow its source and destination again.`;
 const discardTitle = (label) => `Discard changes to ${label}?`;
-const CHEST_SWITCH_MSG = 'Chest 1 changed to Infinity Chest.';
+const CHEST_SWITCH_MSG = 'Chest 1 changed to Infinity chest.';
 const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // ------------------------------------------------------------------------------------------------ locators (ui map first)
@@ -277,6 +277,14 @@ async function openPicker(page, scope, n) {
     await combo.click();
     await wait(page, 400);
     return { pop, combo };
+}
+async function optionSearchText(page) {
+    // ItemSelector renders GameName as its direct child span; its title is the name plus internal id.
+    return ui.oneEditorOptions(page).evaluateAll(options => options.map(option => {
+        const gameName = option.querySelector(':scope > span[title]');
+        const title = gameName?.getAttribute('title') ?? '';
+        return { label: gameName?.textContent ?? '', id: title.match(/\(([^)]+)\)$/)?.[1] ?? title };
+    }));
 }
 async function readGroups(page) {
     const lb = ui.oneEditorListbox(page);
@@ -604,7 +612,7 @@ const run = await forWidths(
                 const sawMsg = await announcedOnce(rec, page, new RegExp(esc(CHEST_SWITCH_MSG)), 'N5 chest switch message, read through the polite region');
                 await wait(page, 500);
                 const shown = norm(await ui.message(page).first().innerText().catch(() => ''));
-                rec.check('N5 one message "Chest 1 changed to Infinity Chest." is on screen with Undo', shown.includes(CHEST_SWITCH_MSG) && (await ui.messageUndo(page).count()) === 1, `message "${shown}"`);
+                rec.check('N5 one message "Chest 1 changed to Infinity chest." is on screen with Undo', shown.includes(CHEST_SWITCH_MSG) && (await ui.messageUndo(page).count()) === 1, `message "${shown}"`);
                 await auditedShot(rec, page, 'chest-saved-message', { aria: true, desc: 'After Save: the chest is an Infinity Chest; the message with Undo' });
                 const form1 = JSON.parse(await stored(page));
                 const c1 = form1.chests?.[0];
@@ -708,15 +716,19 @@ const run = await forWidths(
                 await c.fill('i'); await wait(page, 350);
                 const both = await readGroups(page);
                 const bothLabels = both?.groups.map(g=>g.label) ?? [];
+                const bothSearchText = (await optionSearchText(page)).map(option => ({ ...option, match: /i/i.test(`${option.label} ${option.id}`) }));
+                rec.info('search i actual option labels/internal ids/matches', JSON.stringify(bothSearchText));
                 rec.check('B26 search retains source and All items matches as contiguous groups',
-                    JSON.stringify(bothLabels) === JSON.stringify(['From Belt 1','All items']) && both.groups.every(g=>g.options.length>0) && both.all.every(o=>/i/i.test(o)) && JSON.stringify(both.groups.flatMap(g=>g.options)) === JSON.stringify(both.all), JSON.stringify(both?.groups));
+                    JSON.stringify(bothLabels) === JSON.stringify(['From Belt 1','All items']) && both.groups.every(g=>g.options.length>0) && bothSearchText.length === both.all.length && bothSearchText.every(o=>o.id && o.match) && JSON.stringify(both.groups.flatMap(g=>g.options)) === JSON.stringify(both.all), JSON.stringify(both?.groups));
                 await auditedShot(rec,page,'picker-search-both-groups',{aria:true});
                 await c.fill('plate');
                 await wait(page, 350);
                 await auditedShot(rec, page, 'picker-search-plate', { aria: true });
                 const g2 = await readGroups(page);
                 const labels2 = g2?.groups.map((x) => x.label) ?? [];
-                const allMatch = (g2?.all ?? []).length > 0 && (g2?.all ?? []).every((o) => /plate/i.test(o));
+                const plateSearchText = (await optionSearchText(page)).map(option => ({ ...option, match: /plate/i.test(`${option.label} ${option.id}`) }));
+                rec.info('search plate actual option labels/internal ids/matches', JSON.stringify(plateSearchText));
+                const allMatch = (g2?.all ?? []).length > 0 && plateSearchText.length === g2.all.length && plateSearchText.every(o => o.id && o.match);
                 const grouped = JSON.stringify((g2?.groups ?? []).flatMap(x => x.options)) === JSON.stringify(g2?.all ?? []) && new Set(labels2).size === labels2.length;
                 rec.check('B26 typing "plate" keeps each group\'s matches together (every option matches, groups in order, none split)', allMatch && grouped && (labels2.length === 0 || (labels2[0] !== 'All items' || labels2.length === 1)), `groups ${JSON.stringify(g2?.groups.map((x) => `${x.label}: ${x.options.length}`))}`);
                 await page.keyboard.press('Escape');
@@ -780,6 +792,7 @@ const run = await forWidths(
                     rec.check('B26 the dialog shows "Set by hand" and "Use automatic filters" after a removal', (await U.handNote(dlg).count()) > 0 && (await U.autoBtn(dlg).count()) > 0);
                     await announcedOnce(rec, page, new RegExp(esc(handAnnounce('Inserter 1'))), 'B26 set-by-hand while the dialog remains open');
                     await lin(rec, page, U.autoBtn(dlg), 'Use automatic filters');
+                    await textContrast(rec, page, 'dialog Set by hand', U.handNote(dlg));
                     rec.check('B26 the dialog change is a draft (stored form unchanged)', (await stored(page)) === form0);
                     await auditedShot(rec, page, 'dialog-set-by-hand', { aria: true, desc: "Inserter 1's dialog after removing an automatic filter" });
                     await checkMouseActivationVisible(rec, page, U.autoBtn(dlg), 'dialog Use automatic filters');
