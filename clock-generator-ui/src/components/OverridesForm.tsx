@@ -11,6 +11,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useId, type ReactNode } from 'react';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 
 interface OverridesFormProps {
     lcm?: number;
@@ -20,6 +21,11 @@ interface OverridesFormProps {
     onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'use_fractional_swings' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
     /** The swing plan of the last check, under the fields */
     planSlot?: ReactNode;
+    /** Closed on a first visit, and again when the build is replaced (Import, Paste, Reset) */
+    expanded: boolean;
+    onExpandedChange: (expanded: boolean) => void;
+    /** How many of its settings the build uses (`advancedSetCount`), shown in the title */
+    setCount: number;
 }
 
 export function OverridesForm({
@@ -29,13 +35,29 @@ export function OverridesForm({
     searchForFewerWakeUps,
     onUpdate,
     planSlot,
+    expanded,
+    onExpandedChange,
+    setCount,
 }: OverridesFormProps) {
     const summaryId = useId();
     return (
-        <Accordion slotProps={{ heading: { component: 'h2' }, region: { 'aria-labelledby': summaryId } }}>
+        <Accordion
+            expanded={expanded}
+            onChange={(_, open) => onExpandedChange(open)}
+            slotProps={{ heading: { component: 'h2' }, region: { 'aria-labelledby': summaryId } }}
+        >
             <AccordionSummary id={summaryId} expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
-                    Advanced Overrides (Optional)
+                    Advanced
+                    {/* it folds after Import, Paste and Reset: says that a build sets some all the same */}
+                    {setCount > 0 && (
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                            {/* read "Advanced, 1 set": a comma for the pause, the dot for the eye */}
+                            <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>
+                            <span aria-hidden="true">· </span>
+                            {setCount} set
+                        </Typography>
+                    )}
                 </Typography>
             </AccordionSummary>
             <AccordionDetails>

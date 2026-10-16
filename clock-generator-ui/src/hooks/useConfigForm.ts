@@ -90,8 +90,6 @@ interface UseConfigFormResult {
     replaceChests: (chests: ChestFormData[]) => void;
     
     // Drills
-    enableDrills: () => void;
-    disableDrills: () => void;
     updateDrillsConfig: (field: 'mining_productivity_level', value: number) => void;
     addDrill: () => void;
     updateDrill: (index: number, updates: Partial<DrillFormData>) => void;
@@ -149,8 +147,6 @@ export function useConfigForm(): UseConfigFormResult {
             removeChest: edit(formEdits.removeChest),
             reorderChests: edit(formEdits.reorderChests),
             replaceChests: edit(formEdits.replaceChests),
-            enableDrills: edit(formEdits.enableDrills),
-            disableDrills: edit(formEdits.disableDrills),
             updateDrillsConfig: edit(formEdits.updateDrillsConfig),
             addDrill: edit(formEdits.addDrill),
             updateDrill: edit(formEdits.updateDrill),

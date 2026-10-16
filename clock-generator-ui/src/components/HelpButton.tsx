@@ -1,7 +1,7 @@
 import { Close, HelpOutline } from '@mui/icons-material';
-import { Box, IconButton, Popover } from '@mui/material';
+import { Box, Button, IconButton, Popover, Typography } from '@mui/material';
 import { useState, type ReactNode } from 'react';
-import { POPOVER_MS } from '../theme/tokens';
+import { POPOVER_MS, SURFACE } from '../theme/tokens';
 
 /** The name of the button that closes the popover */
 const HELP_CLOSE = 'Close';
@@ -61,5 +61,31 @@ export function HelpButton({ label, children }: HelpButtonProps) {
                 {children}
             </Popover>
         </>
+    );
+}
+
+/**
+ * A console command in a help popover, in a code box with its Copy button. The popover's content goes when it closes,
+ * so "Copied" is back to "Copy" the next time it opens.
+ */
+export function HelpCommand({ command }: { command: string }) {
+    const [copied, setCopied] = useState(false);
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: SURFACE.inset, p: 1 }}>
+            <Typography component="code" sx={{ flex: 1, wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                {command}
+            </Typography>
+            <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                onClick={async () => {
+                    await navigator.clipboard.writeText(command);
+                    setCopied(true);
+                }}
+            >
+                {copied ? 'Copied!' : 'Copy'}
+            </Button>
+        </Box>
     );
 }

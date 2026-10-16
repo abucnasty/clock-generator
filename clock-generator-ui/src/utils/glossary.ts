@@ -3,7 +3,7 @@
  * Terms, and the (i) by the clock table's headers) lists these, so this file is the one source; new copy uses these
  * terms, and `insteadOf` lists the words they replace.
  *
- * Kept as they are: tick, UPS, combinator, insertion limit, Sidecar mod, Configure and Results, Generate, Stack Size and
+ * Kept as they are: tick, UPS, combinator, insertion limit, Sidecar mod, Configure and Results, Generate, Stack size and
  * "Copy old clock…". The engine's own text (the clocks' names and descriptions, the Insights prose) is shown as it comes
  * and is not covered yet.
  */
@@ -129,7 +129,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         term: 'enable rule ("rule" for short)',
         definition: 'The rule that says when an inserter or drill is switched on. Modes: Auto, Always on, Never on, '
             + 'Clocked, Conditional.',
-        insteadOf: 'enable control, override (only Advanced Overrides keeps "override"), AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
+        insteadOf: 'enable control, override (only the Advanced section keeps "override"), AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
     },
     {
         id: 'assembling-machine',
@@ -184,7 +184,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'lcm',
         term: 'LCM',
-        // only in the Swing Plan and Advanced Overrides, glossed where it first appears
+        // only in the Swing Plan and Advanced, glossed where it first appears
         definition: 'The number of crafting cycles in one clock period.',
         insteadOf: 'LCM cycles, LCM period',
         expert: true,

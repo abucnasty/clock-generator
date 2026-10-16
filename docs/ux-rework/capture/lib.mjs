@@ -1485,14 +1485,31 @@ export const ui = {
     introCard: (page) => page.getByRole('region', { name: 'Make a clock for your build' }),
 
     // ---- Configure
-    /** The Advanced Overrides (Optional) accordion button (owner: 1.x Advanced) */
-    advancedOverrides: (page) => btn(page, /^Advanced Overrides/),
-    /** A Configure card by key: 'target' | 'machines' | 'inserters' | 'belts' | 'chests' | 'drills' (owner: 1.x Configure cards) */
-    card: (page, key) => card(page, { target: /^Target Output/, machines: /^Machines/, inserters: /^Inserters/, belts: /^Belts/, chests: /^Chests/, drills: /^Mining Drills/ }[key] ?? new RegExp(`^${key}`, 'i')),
-    /** The Add button of a card by key: 'machines' | 'inserters' | 'belts' | 'drills'. Target Output has none (0). Chests have two (see addChest) (owner: 1.x Configure cards) */
-    add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add Drill' }[key] ?? `Add ${key}`),
-    /** Chests are added by type: 'buffer' (default) or 'infinity' (owner: 1.x Configure cards) */
-    addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity Chest' : 'Buffer Chest'),
+    /** The Advanced accordion button (was "Advanced Overrides (Optional)"); collapsed on a first visit and after Import, Paste, Reset (owner: 2.7 B) */
+    advancedOverrides: (page) => btn(page, /^Advanced\b/),
+    /** The Build card (an h2 "Build" Panel; its title bar holds the List/Diagram toggle) (owner: 2.7 B) */
+    buildCard: (page) => page.getByRole('main').getByRole('region', { name: 'Build', exact: true }),
+    /**
+     * A Configure card or section by key: 'target' (the Target Output card), 'build' (the Build card), or a section of the
+     * Build card: 'machines' | 'inserters' | 'belts' (Belts (n)) | 'chests' (Chests (n), 0 while there are none: see
+     * addChestRow) | 'drills' (Mining drills, which holds the addDrillRow while there are none) (owner: 2.7 B)
+     */
+    card: (page, key) => {
+        if (key === 'target') return card(page, /^Target Output/);
+        if (key === 'build') return ui.buildCard(page);
+        const name = { machines: /^Machines \(/, inserters: /^Inserters \(/, belts: /^Belts \(/, chests: /^Chests \(/, drills: /^Mining drills/ }[key] ?? new RegExp(`^${key}`, 'i');
+        return page.getByRole('main').getByRole('region', { name });
+    },
+    /** The Add button of a section by key: 'machines' | 'inserters' | 'belts' | 'drills' ("Add mining drill": the header button while drills are listed, else the Add row, addDrillRow). Target Output has none (0). Chests: see addChest (owner: 2.7 B) */
+    add: (page, key) => btn(page, { machines: 'Add Machine', inserters: 'Add Inserter', belts: 'Add Belt', drills: 'Add mining drill' }[key] ?? `Add ${key}`),
+    /** While there are chests: the Chests section's add buttons, by type 'buffer' (default) or 'infinity'; 0 with none (see addChestRow) (owner: 2.7 B) */
+    addChest: (page, kind = 'buffer') => btn(page, kind === 'infinity' ? 'Infinity chest' : 'Buffer chest'),
+    /** With no chests: the dashed "Add chest" row, which opens a menu (see addChestMenuItem); 0 once there is a chest (owner: 2.7 B) */
+    addChestRow: (page) => btn(page, 'Add chest'),
+    /** An item of the "Add chest" row's menu: 'buffer' (default) or 'infinity'; 0 while the menu is closed (owner: 2.7 B) */
+    addChestMenuItem: (page, kind = 'buffer') => page.getByRole('menuitem', { name: kind === 'infinity' ? 'Infinity chest' : 'Buffer chest', exact: true }),
+    /** With no drills (and productivity level 0): the dashed "Add mining drill" row; 0 once there is a drill (owner: 2.7 B) */
+    addDrillRow: (page) => btn(page, 'Add mining drill'),
     /** Target Output's Items per Second input (ELEMENT_IDS.targetRate) (owner: 1.10 numbers) */
     targetRate: (page) => page.locator('#target-items-per-second'),
     /** Target Output's Copies input (ELEMENT_IDS.targetCopies) (owner: 1.10 numbers) */

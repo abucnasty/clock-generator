@@ -576,7 +576,7 @@ async function run() {
     };
     const storedInserter = async () => (await storedConfig()).inserters.find((ins) => ins.id === target);
     const setStackSize = async (value) => {
-        await inserterDialog().getByLabel('Stack Size').click();
+        await inserterDialog().getByLabel('Stack size').click();
         await page.keyboard.press('ControlOrMeta+A');
         await page.keyboard.type(value);
         await page.keyboard.press('Tab');
@@ -596,7 +596,7 @@ async function run() {
         await shot('b6-dialog-overrides-always', 'Overrides tab: ALWAYS picked');
         await dlg.getByRole('tab', { name: /Config/ }).click();
         await page.waitForTimeout(400);
-        const stack = await dlg.getByLabel('Stack Size').inputValue();
+        const stack = await dlg.getByLabel('Stack size').inputValue();
         const unsaved = await dlg.getByText('Unsaved changes', { exact: true }).isVisible().catch(() => false);
         const save = dlg.getByRole('button', { name: 'Save', exact: true });
         const saveEnabled = (await save.count()) > 0 && await save.isEnabled();

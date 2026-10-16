@@ -5,7 +5,6 @@ import {
     Box,
     Button,
     IconButton,
-    Paper,
     TextField,
     Typography,
 } from '@mui/material';
@@ -14,6 +13,8 @@ import { useMemo, useState, memo } from 'react';
 import type { BeltFormData, ChestFormData, EnableControlOverride, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
+import { SURFACE } from '../theme/tokens';
+import { PanelSection } from './Panel';
 import { EnableControlModal } from './EnableControlModal';
 import { EnableRuleChip } from './EnableRuleChip';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
@@ -24,9 +25,12 @@ import { NearLaneSelect } from './NearLaneSelect';
 import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
+import { filtersWithSlotRemoved, filtersWithSlotSet } from '../utils/filterSlots';
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
+/** An inserter's filter slots in the game */
+const MAX_FILTERS = 5;
 /** The enable rule's column when the row wraps: "Enable: Clocked" and the like; a longer rule ends in "…" (its full words in the tooltip and name) */
 const RULE_COLUMN = '8.5rem';
 /** Stack Size's field, and its column when the row wraps */
@@ -65,8 +69,7 @@ const ROW_GRID_SX = {
     p: 2,
     // and above a one-line row's
     pt: 2.5,
-    bgcolor: 'action.hover',
-    borderRadius: 1,
+    bgcolor: SURFACE.row,
 };
 /** Under Source, in its column, until md puts the two side by side */
 const DESTINATION_CELL_SX = { gridColumn: { sm: 2, md: 'auto' } };
@@ -257,49 +260,28 @@ function InsertersFormComponent({
 
     const handleFilterChange = (inserterIndex: number, slotIndex: number, item: string) => {
         const inserter = inserters[inserterIndex];
-        const filters = [...(inserter.filters || [])];
-        filters[slotIndex] = item;
-        // Remove empty trailing slots
-        while (filters.length > 0 && !filters[filters.length - 1]) {
-            filters.pop();
-        }
-        onUpdate(inserterIndex, { filters: filters.length > 0 ? filters : undefined });
+        onUpdate(inserterIndex, { filters: filtersWithSlotSet(inserter.filters, getInferredFilters(inserter), slotIndex, item, MAX_FILTERS) });
     };
 
     const handleRemoveFilter = (inserterIndex: number, slotIndex: number) => {
         const inserter = inserters[inserterIndex];
-        let filters = [...(inserter.filters || [])];
-        
-        // If removing an auto-assigned filter (no explicit filters exist), convert all to explicit first
-        if (filters.length === 0) {
-            const inferredFilters = getInferredFilters(inserter);
-            filters = [...inferredFilters];
-        }
-        
-        // Remove the specified slot
-        filters.splice(slotIndex, 1);
-        
-        // Clean up empty trailing slots
-        while (filters.length > 0 && !filters[filters.length - 1]) {
-            filters.pop();
-        }
-        
-        onUpdate(inserterIndex, { filters: filters.length > 0 ? filters : undefined });
+        onUpdate(inserterIndex, { filters: filtersWithSlotRemoved(inserter.filters, getInferredFilters(inserter), slotIndex) });
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
     const { cardRef, remove } = useFocusAfterRemove(inserters.length, onRemove);
 
     return (
-        <Paper ref={cardRef} sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" component="h2">
-                    Inserters ({inserters.length})
-                </Typography>
+        <PanelSection
+            ref={cardRef}
+            level={3}
+            title={`Inserters (${inserters.length})`}
+            actions={(
                 <Button startIcon={<Add />} onClick={onAdd} variant="text" size="small" data-row-add="">
                     Add Inserter
                 </Button>
-            </Box>
+            )}
+        >
 
             {inserters.some(inserter => !inserter.prototype || !inserter.quality) && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{INSERTER_TIMING_ASSUMPTION}</Typography>
@@ -319,7 +301,7 @@ function InsertersFormComponent({
                         {inserterMetadataText(inserter)}
                     </Typography>
                     {dragHandle}
-                    {/* Source */}
+                    {/* Source, and the lane of its belt */}
                     <Box sx={SOURCE_GROUP_SX}>
                         <Autocomplete
                             size="small"
@@ -403,20 +385,19 @@ function InsertersFormComponent({
                             autoHighlight
                             disableClearable
                         />
-
-                    {/* the same select as the diagram's inserter dialog; a new source drops the lane, as there */}
-                    <NearLaneSelect
-                        compact
-                        source={inserter.source}
-                        belts={belts}
-                        entityLabel={entityLabel('inserter', inserter.id)}
-                        onChange={(source) => onUpdate(index, { source })}
-                    />
-
+                        {/* the same select as the diagram's inserter dialog; a new source drops the lane, as there */}
+                        <NearLaneSelect
+                            compact
+                            source={inserter.source}
+                            belts={belts}
+                            entityLabel={entityLabel('inserter', inserter.id)}
+                            onChange={(source) => onUpdate(index, { source })}
+                        />
                     </Box>
 
                     {/* Sink, with the arrow before it so that a wrap never leaves the arrow at the end of a line */}
                     <Box sx={{ ...PICKER_GROUP_SX, ...DESTINATION_CELL_SX }}>
+                        {/* between the two when they share a line; under Source the line itself says it, and the fields line up */}
                         <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
                             →
                         </Typography>
@@ -526,18 +507,18 @@ function InsertersFormComponent({
                         itemNames={itemNames}
                         onFilterChange={(slotIndex, item) => handleFilterChange(index, slotIndex, item)}
                         onRemoveFilter={(slotIndex) => handleRemoveFilter(index, slotIndex)}
-                        maxSlots={5}
+                        maxSlots={MAX_FILTERS}
                     />
 
+                    {/* a cell of its own, so the chip keeps its width in the rule's column */}
                     <Box sx={{ display: 'flex', minWidth: 0 }}>
-                    <EnableRuleChip
-                        override={inserter.overrides?.enable_control}
-                        entityLabel={entityLabel('inserter', inserter.id)}
-                        entityType="inserter"
-                        forcedAlways={inserter._forced_always}
-                        onClick={() => setEnableControlModalInserterIndex(index)}
-                    />
-
+                        <EnableRuleChip
+                            override={inserter.overrides?.enable_control}
+                            entityLabel={entityLabel('inserter', inserter.id)}
+                            entityType="inserter"
+                            forcedAlways={inserter._forced_always}
+                            onClick={() => setEnableControlModalInserterIndex(index)}
+                        />
                     </Box>
 
                     <IconButton onClick={() => remove(index)} color="error" sx={DELETE_SX} aria-label={deleteButtonLabel('inserter', inserter.id)} data-row-delete="">
@@ -658,7 +639,7 @@ function InsertersFormComponent({
                     setEnableControlModalInserterIndex(null);
                 }}
             />
-        </Paper>
+        </PanelSection>
     );
 }
 

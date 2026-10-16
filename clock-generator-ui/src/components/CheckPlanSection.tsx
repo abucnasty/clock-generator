@@ -21,7 +21,7 @@ interface CheckPlanSectionProps {
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
 /**
- * The swing plan of the last check, in Advanced Overrides: how many swings each inserter makes per crafting cycle, and
+ * The swing plan of the last check, in Advanced: how many swings each inserter makes per crafting cycle, and
  * which ingredients are left out of the LCM. Any check makes it, Generate's or Check only's; an edit since dims it.
  */
 export function CheckPlanSection({

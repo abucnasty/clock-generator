@@ -86,6 +86,8 @@ function grammarComponents(theme: Theme): ThemeOptions['components'] {
                     border: edge,
                     '&::before': { display: 'none' },
                 },
+                // the heading that holds the summary is the band too, so the title bar is the heading's own
+                heading: { backgroundColor: SURFACE.titleBar },
             },
         },
         MuiAccordionSummary: {

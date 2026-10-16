@@ -127,11 +127,11 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
                     // a target of at least 24px, so a finger or a pointer can find it (WCAG 2.5.8)
                     width: 28,
                     height: 28,
-                    color: 'text.disabled',
+                    color: 'text.secondary',
                     cursor: 'grab',
                     touchAction: 'none',
                     '&:active': { cursor: 'grabbing' },
-                    '&:hover': { color: 'text.secondary' },
+                    '&:hover': { color: 'text.primary' },
                 }}
             >
                 <DragIndicator fontSize="small" />
@@ -140,7 +140,7 @@ export function SortableItem({ stableKey, label, children }: SortableItemProps) 
             <Chip
                 label={label}
                 size="small"
-                sx={{ minWidth: 72, fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
+                sx={{ minWidth: 72, fontSize: '0.7rem', pointerEvents: 'none' }}
             />
         </Box>
     );

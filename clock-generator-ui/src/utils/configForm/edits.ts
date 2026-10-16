@@ -307,22 +307,6 @@ export function replaceChests(prev: ConfigFormData, newChests: ChestFormData[]):
 }
 
 // Drills
-export function enableDrills(prev: ConfigFormData): ConfigFormData {
-    return {
-        ...prev,
-        drills: {
-            mining_productivity_level: 0,
-            configs: [],
-        },
-    };
-}
-
-export function disableDrills(prev: ConfigFormData): ConfigFormData {
-    const { drills: _drills, ...rest } = prev;
-    void _drills;
-    return rest as ConfigFormData;
-}
-
 export function updateDrillsConfig(prev: ConfigFormData, field: 'mining_productivity_level', value: number): ConfigFormData {
     if (!prev.drills) return prev;
     return {

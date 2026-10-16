@@ -144,12 +144,12 @@ describe('after a deeper search', () => {
                 + 'swings: 2 output swings per cycle.');
         expect(deeperSearchDoneKept('Shifted swings: 2 output swings per cycle'))
             .toBe('Deeper search is on for this build. Recommended is now Shifted swings: 2 output swings per cycle. To '
-                + 'stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.');
+                + 'stop it, turn off "Search for fewer wake-ups" under Advanced.');
     });
 
     it('leaves the pick out when there is none', () => {
         expect(deeperSearchDoneOnce(null)).toBe('We searched deeper for this run. These clocks include the slower searches.');
         expect(deeperSearchDoneKept(null))
-            .toBe('Deeper search is on for this build. To stop it, turn off "Search for fewer wake-ups" under Advanced Overrides.');
+            .toBe('Deeper search is on for this build. To stop it, turn off "Search for fewer wake-ups" under Advanced.');
     });
 });

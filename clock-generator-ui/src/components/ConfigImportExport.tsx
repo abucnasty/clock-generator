@@ -1,4 +1,4 @@
-import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, HelpOutline } from '@mui/icons-material';
+import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, useMediaQuery, useTheme } from '@mui/material';
 import { useRef, useState, useCallback, useImperativeHandle, type ReactNode, type Ref } from 'react';
 import type { Config, SuggestedTarget } from 'clock-generator/browser';
@@ -490,7 +490,7 @@ export function ConfigImportExport({
                     </MenuItem>
                     <MenuItem onClick={handleMenuGettingStarted}>
                         <ListItemIcon>
-                            <HelpOutline fontSize="small" />
+                            <MenuBook fontSize="small" />
                         </ListItemIcon>
                         <ListItemText>Getting started</ListItemText>
                     </MenuItem>
