@@ -46,3 +46,17 @@ This compatibility step must be accepted/merged BEFORE D3 baseline. Then cut/reu
 - Focused additions to existing UI suites protect one equal-rate dependent/recovery case and status counts, one hook generation/Cancel/Undo ownership lifecycle, one imported geometry/fuel/override roundtrip with bounded refusal and draft correction, and one selective-Paste spatial-rebinding refusal. Existing cache/store cases carry the new provenance; shared fixtures and behavior-sensitive prose expectations are repaired. One existing engine unit case protects factual sampled-summary/insight wording. These are source changes awaiting root verification, not test-pass or capture claims; all eligible UX additions remain subject to D9.
 
 - Presentation uses existing useGameNames().itemLabel and entityLabel for new model/seed/fuel/drop facts; saved raw IDs are unchanged. `modeledDetails(clock, itemLabel)` receives the lightweight existing display callback. Unknown IDs retain the established fallback. Root independently reconciled accepted UX data names: only an additional names dictionary differs from frozen master; all mechanical values match.
+
+## Formal round1 design and shared consumer closure
+
+Approved design is preserved unchanged in `review/upstream-016/DESIGN-round1.md`. Product is frozen at930feb7; C1–C4 and UX01 form one fix batch. Shared geometry predicates in configForm/edits protect lower-level mutations and all List/Diagram consumers.
+
+| Policy | Required consumers and proof |
+|---|---|
+| Protected belt layout | `hasImportedBeltDrops` and `beltGeometryEditProblem`; List and Diagram read-only geometry, allowed Strategy/consumption Save/reopen, Cancel/restoration; defensive mixed-draft preSave is source-only. |
+| Protected endpoints | `endpointEditProblem`; List/shared editor, native Diagram connection and reconnection, same-endpoint silent no-op; one alert inside actual fullscreen subtree, exact unchanged raw config. |
+| Coverage quickfix | `inserterFixProblem` plus underlying apply guard; all App alert owners receive current-config availability; focusable described aria-disabled choice inert for pointer/Enter/Space, new belt/chest remain usable. |
+| Unavailable recovery baseline | Existing recoversOf facts feed card/name/difference/compact/full table/tooltips; false-survives/empty-loss remains unavailable, known failed losses still no recovery. Honest source-only boundary. |
+| Fuel names | Existing game-name callback in Configure/import, serialized raw IDs unchanged. |
+
+Only this pinned-upstream compatibility PR uses a merge commit into feat/ux-rework: squashing would lose the c396ecd ancestry and cause future upstream integrations to replay inherited changes. Verify exact product tree outside docs and pinned-master ancestry after merge. Ordinary Phase4 children squash; Phase4→feature owner checkpoint and owner-only final master merge remain.
