@@ -392,17 +392,16 @@ const STEP_LIST = [
             rec.check(`filter slots are at least ${MIN_TARGET}x${MIN_TARGET}px`, data.slots.length + data.empties.length > 0 && smallSlot.length === 0, smallSlot.length ? `${smallSlot.length} smaller: ${brief(smallSlot.map((s) => `${s.label} ${s.w}x${s.h}`))}` : `${data.slots.length + data.empties.length} slots`);
             rec.check('a remove button does not overlap the neighbouring slot', data.removes.length > 0 && data.overlaps.length === 0, data.overlaps.length ? brief(data.overlaps, 3) : 'clear');
 
-            // Tab reaches the remove button as a stop of its own, and the slot shows a ring
+            // The pointer's remove action is out of the Tab order; Delete on the slot is its keyboard path.
             const remove = page.locator(removes).first();
-            if ((await remove.count()) > 0) {
-                await startAtTop(page);
-                await checkTabTo(rec, page, remove, 'the first filter remove button', { max: WALK_MAX });
-                const stop = await readStop(page, 0);
-                if (!stop.body) rec.check('the focused remove button shows a ring', ringShown(stop), `${stop.ring.kind} ${stop.ring.width}px ${stop.ring.style}${stop.ringContrast ? `, ${stop.ringContrast.ratio}:1` : ''}`);
-                await rec.shot(page, 'focus-remove', { desc: 'The first filter slot\'s remove button, reached by Tab' });
-            }
+            if (await remove.count()) rec.check('filter remove button is outside the Tab order', await remove.evaluate(el => el.tabIndex) === -1);
             const slot = page.locator(slots).first();
             if ((await slot.count()) > 0) {
+                await startAtTop(page);
+                await checkTabTo(rec, page, slot, 'the first filter slot', { max: WALK_MAX });
+                const stop = await readStop(page, 0);
+                rec.check('the focused slot shows a ring', ringShown(stop));
+                rec.check('the slot advertises its Delete shortcut', await slot.getAttribute('aria-keyshortcuts') === 'Delete');
                 await slot.scrollIntoViewIfNeeded();
                 await rec.shot(page, 'slots', { locator: slot.locator('xpath=ancestor::*[contains(@class,"MuiPaper-root")][1]'), desc: 'The Inserters card with its filter slots (clipped corners and overlap show here)' });
             }

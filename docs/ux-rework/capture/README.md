@@ -212,3 +212,6 @@ now own those two things. **Scripts find controls only through `ui` and `itemLab
 - `selftest.mjs` resolves every `ui` entry at 1440, 720 and 390 against a running build and exercises the tooltip and menu helpers
   (`BASE_URL=http://localhost:5239 UI_DIR=<checkout>/clock-generator-ui node selftest.mjs`). Run it after editing `ui`; it expects the
   documented 0 counts, so update its expectations in the same commit when an item adds a control (for example `resultsCard` after 2.6).
+
+- `selftest-one-editor-ui.mjs`: additive three-width selector matrix for the shared fields, filters, draft footer and discard prompt; no generation.
+- `capture-one-editor.mjs`: 3.2 A shared inserter fields, all five Diagram drafts, source-first filters, keyboard and geometry evidence.

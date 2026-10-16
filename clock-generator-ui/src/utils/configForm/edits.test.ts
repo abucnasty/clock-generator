@@ -549,3 +549,16 @@ describe('overrides', () => {
         ]);
     });
 });
+
+
+describe('switchedChest draft parity', () => {
+    it('uses the same conversion as the saved form in both directions, keeping identity', async () => {
+        const { switchedChest, switchChestType } = await import('./edits');
+        const buffer = { type: 'buffer-chest' as const, id: 7, _uuid: 'chest-7', item_filter: 'coal', storage_size: 3 };
+        const infinity = switchedChest(buffer, 'infinity-chest');
+        const config = { target_output: { recipe: '', items_per_second: 1, copies: 1 }, machines: [], inserters: [], belts: [], chests: [buffer] };
+        expect(switchChestType(config, 0, 'infinity-chest').chests[0]).toEqual(infinity);
+        expect(infinity).toMatchObject({ id: 7, _uuid: 'chest-7', type: 'infinity-chest' });
+        expect(switchedChest(infinity, 'buffer-chest')).toEqual(switchChestType({ ...config, chests: [infinity] }, 0, 'buffer-chest').chests[0]);
+    });
+});

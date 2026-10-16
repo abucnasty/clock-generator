@@ -49,7 +49,10 @@ export async function selftestP3CompatibilityPopulated(page,E,log) {
     await ui.compatRuleEditorTab(page,1,'Enable rule').click();
     await ui.ruleMode(scope,'Conditional').check(); await ui.ruleTemplates(scope).click(); await ui.compatRuleTemplateOption(page).click();
     await E('P3 actual Diagram Enable rule tab','compatRuleTemplateAmount',ui.compatRuleTemplateAmount(scope));
-    await ui.compatRuleEditorCancel(page,1).click(); await scope.waitFor({ state:'hidden' });
+    await ui.compatRuleEditorCancel(page,1).click();
+    await ui.oneEditorDiscardDialog(page,'Inserter 1').waitFor({state:'visible'});
+    await ui.oneEditorDiscard(page).click();
+    await scope.waitFor({ state:'hidden' });
     // Shared helpers own menu opening; no local fallback for the library.
     const { openBuildSwitcher } = await import('./lib.mjs');
     await openBuildSwitcher(page); await ui.buildsAction(page,'Rename build…').click();

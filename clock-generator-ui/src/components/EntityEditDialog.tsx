@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useGameNames } from '../hooks/useGameNames';
 import { useMachineFacts } from '../hooks/useMachineFacts';
 import { ChestType } from 'clock-generator/light';
@@ -42,6 +43,9 @@ import { SELECT_NAMES } from '../utils/a11yLabels';
 import type { EntityClickType } from './ConfigFlowDiagram';
 import { ChestFilterSlotSelector, type ChestFilterSlot } from './ChestFilterSlotSelector';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
+import { DraftFooter } from './DraftFooter';
+import { switchedChest } from '../utils/configForm/edits';
+import { changedFields, MACHINE_FIELDS, BELT_FIELDS, CHEST_FIELDS, DRILL_FIELDS } from '../utils/inserterDraft';
 import { FactorioIcon } from './FactorioIcon';
 import { ItemSelector } from './ItemSelector';
 import { NumberField } from './NumberField';
@@ -549,27 +553,70 @@ export function EntityEditDialog({
         (entityType === 'drill' && !!onDeleteDrill)
     );
 
-    // the inserter panel holds its edits until Save, so closing it with unsaved changes asks first
+    // Each opening starts from the current saved entity.
     const [inserterDirty, setInserterDirty] = useState(false);
+    const [draft, setDraft] = useState(entity);
     const [confirmOpen, setConfirmOpen] = useState(false);
     // each opening gets a fresh panel: one reopened while the last closing fades out must not keep that draft
     const [openCount, setOpenCount] = useState(0);
     const [wasOpen, setWasOpen] = useState(open);
     if (open !== wasOpen) {
         setWasOpen(open);
-        if (open) setOpenCount((count) => count + 1);
+        if (open) {
+            setOpenCount((count) => count + 1);
+            setDraft(entity);
+            setInserterDirty(false);
+            setConfirmOpen(false);
+        }
     }
     const requestClose = () => {
         // a closing dialog (its fade-out) has nothing left to ask about
         if (!open) return;
-        if (entityType === 'inserter' && inserterDirty) {
+        if (dirty) {
             setConfirmOpen(true);
         } else {
             onClose();
         }
     };
 
-    const machineEntity = entity && entityType === 'machine' ? entity as MachineFormData : null;
+    const edits = useMemo(() => {
+        if (!entity || !draft) return {};
+        switch (entityType) {
+            case 'machine': return changedFields(draft as MachineFormData, entity as MachineFormData, MACHINE_FIELDS);
+            case 'belt': return changedFields(draft as BeltFormData, entity as BeltFormData, BELT_FIELDS);
+            case 'drill': return changedFields(draft as DrillFormData, entity as DrillFormData, DRILL_FIELDS);
+            case 'chest': {
+                const chest = (value: ChestFormData) => ({ ...value, storage_size: isBufferChest(value) ? value.storage_size : undefined });
+                return changedFields(chest(draft as ChestFormData), chest(entity as ChestFormData), CHEST_FIELDS);
+            }
+            default: return {};
+        }
+    }, [draft, entity, entityType]);
+    const dirty = entityType === 'inserter' ? inserterDirty : Object.keys(edits).length > 0;
+    const updateDraft = (_index: number, updates: object) => setDraft(d => d ? { ...d, ...updates } : d);
+    const saveDraft = () => {
+        if (!draft || !entity) return;
+        switch (entityType) {
+            case 'machine':
+                for (const field of MACHINE_FIELDS) {
+                    if (field in edits) onUpdateMachine(entityIndex, field, (draft as MachineFormData)[field] ?? 'machine');
+                }
+                break;
+            case 'belt': onUpdateBelt(entityIndex, edits as Partial<BeltFormData>); break;
+            case 'drill': onUpdateDrill?.(entityIndex, edits as Partial<DrillFormData>); break;
+            case 'chest': {
+                const chest = draft as ChestFormData;
+                if (chest.type !== (entity as ChestFormData).type) onSwitchChestType(entityIndex, chest.type);
+                const rest = { ...edits } as Partial<ChestFormData>;
+                delete rest.type;
+                onUpdateChest(entityIndex, rest);
+                break;
+            }
+        }
+        onClose();
+    };
+
+    const machineEntity = draft && entityType === 'machine' ? draft as MachineFormData : null;
     const { facts: machineFacts, error: machineFactsError } = useMachineFacts({
         recipe: machineEntity?.recipe ?? '',
         productivity: machineEntity?.productivity ?? 0,
@@ -606,36 +653,36 @@ export function EntityEditDialog({
 
                 {/* the inserter editor keeps Cancel and Save in a bar stuck to the bottom: a field reached with Tab stops
                     above it instead of under it (WCAG 2.4.11) */}
-                <DialogContent sx={entityType === 'inserter' ? { p: 0, scrollPaddingBottom: 72 } : { pt: '16px !important' }}>
-                    {entity && entityType === 'machine' && (
-                        <>
+                <DialogContent sx={{ p: 0, scrollPaddingBottom: 72 }}>
+                    {draft && entityType === 'machine' && (
+                        <Box sx={{ p: 2 }}>
                             <MachineEditSection
-                                machine={entity as MachineFormData}
+                                machine={draft as MachineFormData}
                                 entityIndex={entityIndex}
                                 recipeNames={recipeNames}
-                                onUpdate={onUpdateMachine}
+                                onUpdate={(index, field, value) => updateDraft(index, { [field]: value })}
                             />
                             {machineEntity?.recipe && (
-                                <MachineFactsAccordion facts={machineFacts} error={machineFactsError} />
+                                <MachineFactsAccordion facts={machineFacts} error={machineFactsError} headingLevel={3} />
                             )}
-                        </>
+                        </Box>
                     )}
-                    {entity && entityType === 'belt' && (
-                        <BeltEditSection
-                            belt={entity as BeltFormData}
+                    {draft && entityType === 'belt' && (
+                        <Box sx={{ p: 2 }}><BeltEditSection
+                            belt={draft as BeltFormData}
                             entityIndex={entityIndex}
                             itemNames={itemNames}
-                            onUpdate={onUpdateBelt}
-                        />
+                            onUpdate={updateDraft}
+                        /></Box>
                     )}
-                    {entity && entityType === 'chest' && (
-                        <ChestEditSection
-                            chest={entity as ChestFormData}
+                    {draft && entityType === 'chest' && (
+                        <Box sx={{ p: 2 }}><ChestEditSection
+                            chest={draft as ChestFormData}
                             entityIndex={entityIndex}
                             itemNames={itemNames}
-                            onUpdate={onUpdateChest}
-                            onSwitchType={onSwitchChestType}
-                        />
+                            onUpdate={updateDraft}
+                            onSwitchType={(_index, type) => setDraft(d => switchedChest(d as ChestFormData, type))}
+                        /></Box>
                     )}
                     {entity && entityType === 'inserter' && (
                         <InserterConfigPanel
@@ -651,17 +698,19 @@ export function EntityEditDialog({
                             onUpdate={onUpdateInserter}
                             onClose={onClose}
                             onDirtyChange={setInserterDirty}
+                            onCancel={requestClose}
                         />
                     )}
-                    {entity && entityType === 'drill' && onUpdateDrill && (
-                        <DrillEditSection
-                            drill={entity as DrillFormData}
+                    {draft && entityType === 'drill' && onUpdateDrill && (
+                        <Box sx={{ p: 2 }}><DrillEditSection
+                            drill={draft as DrillFormData}
                             entityIndex={entityIndex}
                             machines={machines}
                             itemNames={itemNames}
-                            onUpdate={onUpdateDrill}
-                        />
+                            onUpdate={updateDraft}
+                        /></Box>
                     )}
+                    {entity && entityType !== 'inserter' && <DraftFooter dirty={dirty} onCancel={requestClose} onSave={saveDraft} />}
                     {!entity && (
                         <Typography color="text.secondary" variant="body2">Entity not found.</Typography>
                     )}
@@ -672,7 +721,8 @@ export function EntityEditDialog({
                 title={`Discard changes to ${title}?`}
                 onKeepEditing={() => setConfirmOpen(false)}
                 onDiscard={() => {
-                    setConfirmOpen(false);
+                    // Restore the nested prompt into the still-open editor before its own trap returns to the node.
+                    flushSync(() => setConfirmOpen(false));
                     onClose();
                 }}
             />

@@ -5,12 +5,10 @@ import {
     BELT_FORM_DEFAULT_TYPE,
     type BeltFormData,
     type BeltLaneFormData,
-    type BufferChestFormData,
     type ChestFormData,
     type ConfigFormData,
     type DrillFormData,
     type EntityKind,
-    type InfinityChestFormData,
     type InserterFormData,
     type MachineFormData,
 } from './formData';
@@ -267,30 +265,15 @@ export function updateChest(prev: ConfigFormData, index: number, updates: Partia
     };
 }
 
+/** The same chest conversion for a dialog draft and the committed form. */
+export function switchedChest(chest: ChestFormData, newType: ChestType): ChestFormData {
+    return newType === ChestType.BUFFER_CHEST
+        ? { type: ChestType.BUFFER_CHEST, id: chest.id, _uuid: chest._uuid, storage_size: 1, item_filter: '' }
+        : { type: ChestType.INFINITY_CHEST, id: chest.id, _uuid: chest._uuid, item_filter: [{ item_name: '', request_count: 1 }] };
+}
+
 export function switchChestType(prev: ConfigFormData, index: number, newType: ChestType): ConfigFormData {
-    return {
-        ...prev,
-        chests: prev.chests.map((c, i) => {
-            if (i !== index) return c;
-            // Preserve the ID when switching types
-            if (newType === ChestType.BUFFER_CHEST) {
-                return {
-                    type: ChestType.BUFFER_CHEST,
-                    id: c.id,
-                    _uuid: c._uuid,
-                    storage_size: 1,
-                    item_filter: '',
-                } as BufferChestFormData;
-            } else {
-                return {
-                    type: ChestType.INFINITY_CHEST,
-                    id: c.id,
-                    _uuid: c._uuid,
-                    item_filter: [{ item_name: '', request_count: 1 }],
-                } as InfinityChestFormData;
-            }
-        }),
-    };
+    return { ...prev, chests: prev.chests.map((chest, i) => i === index ? switchedChest(chest, newType) : chest) };
 }
 
 export function removeChest(prev: ConfigFormData, index: number): ConfigFormData {

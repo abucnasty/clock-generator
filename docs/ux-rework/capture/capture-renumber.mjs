@@ -443,13 +443,13 @@ async function runSteps(page, width) {
         await page.waitForTimeout(800);
         const dialog = page.getByRole('dialog').first();
         const title = (await dialog.getByRole('heading', { level: 2 }).first().innerText()).split('\n')[0].trim();
-        const header = await dialog.getByText(/^Inserter #?\d+ — /).first().innerText().catch(() => ''); // the "Inserter 3 — Tile 2" line
+        const header = await dialog.innerText(); // the shared editor no longer adds Tile labels
         const dialogEnds = await dialog.locator('input[role=combobox]').evaluateAll((els) => els.map((e) => e.value.split(' - ')[0].trim()));
         await rec.shot(page, 'diagram-dialog-after', { desc: 'Diagram edit dialog of the third inserter node (spec state 8)' });
         table('diagram-dialog-after', { node: nodeTitle, 'dialog title': title, 'dialog header line': header, 'dialog ends': dialogEnds });
         rec.check('the clicked node and the list chip agree: both Inserter 3', nodeTitle === 'Inserter 3' && listChip3 === 'Inserter 3', `node "${nodeTitle}", list chip "${listChip3}"`);
         rec.check('the dialog title reads Inserter 3', title === 'Inserter 3', title);
-        rec.check('the dialog header line reads "Inserter 3 — Tile 2" (no "#")', /^Inserter 3 — Tile \d$/.test(header), header);
+        rec.check('the shared dialog has no Tile strip', !/\bTile\b/.test(header), header);
         rec.check('the dialog shows the ends of the same inserter (Machine 3 to Machine 2)', same(dialogEnds.slice(0, 2), ['Machine 3', 'Machine 2']), show(dialogEnds));
         await closeDialogs(page);
         const selectedEdges = await page.locator('.react-flow__edge.selected').count();

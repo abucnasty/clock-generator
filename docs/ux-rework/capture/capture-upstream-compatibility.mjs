@@ -516,6 +516,9 @@ try {
             await checkFocusNotObscuredAtHeight(rec,p,{height:width >=960 ?640:560,walk:ui.compatEditor(p)});
             const beforeCancel=JSON.stringify(await stored(p));
             await checkMouseActivationVisible(rec,p,ui.compatCancel(p),'Cancel unsaved Automatic stack size');
+            await ui.oneEditorDiscardDialog(p,'Inserter 1').waitFor({state:'visible'});
+            rec.check('M2 Cancel asks before discarding the unsaved Automatic draft',await ui.oneEditorDiscard(p).isVisible());
+            await checkMouseActivationVisible(rec,p,ui.oneEditorDiscard(p),'Discard unsaved Automatic stack size');
             await ui.compatEditor(p).waitFor({state:'hidden'});
             rec.check('M2 Cancel leaves the entire stored explicit build unchanged',JSON.stringify(await stored(p))===beforeCancel);
             rec.check('M2 Cancel keeps explicit7 and bulk/normal metadata in the file',((await saveFile(p)).inserters[0].stack_size===7) && (await stored(p)).inserters[0].prototype==='bulk-inserter' && (await stored(p)).inserters[0].quality==='normal');

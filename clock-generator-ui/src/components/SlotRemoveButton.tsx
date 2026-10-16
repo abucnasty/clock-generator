@@ -9,16 +9,18 @@ interface SlotRemoveButtonProps {
     /** The game's name of the item in the slot */
     itemName: string;
     onClick: () => void;
+    tabIndex?: number;
 }
 
 /**
  * The × at a filled slot's corner: 24px to hit, grey like the row's other furniture, red only under the pointer or the
  * keyboard, when it is about to remove something. Delete or Backspace on the slot does the same.
  */
-export function SlotRemoveButton({ slotNumber, itemName, onClick }: SlotRemoveButtonProps) {
+export function SlotRemoveButton({ slotNumber, itemName, onClick, tabIndex }: SlotRemoveButtonProps) {
     return (
         <IconButton
             size="small"
+            tabIndex={tabIndex}
             aria-label={removeFilterName(slotNumber, itemName)}
             onClick={onClick}
             sx={{
