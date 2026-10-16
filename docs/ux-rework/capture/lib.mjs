@@ -1462,6 +1462,35 @@ const btn = (page, name, exact = true) => page.getByRole('button', { name, exact
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
 
 export const ui = {
+    endInstall: p => p.locator('[data-install-steps]'),
+    endInstallToggle: p => ui.endInstall(p).getByRole('button', { name: 'Put it in your game', exact: true }),
+    endWakeTableSwitch: p => ui.copyWakeView(p).getByRole('switch', { name: 'Show as table', exact: true }),
+    endClockRadios: p => ui.clockTable(p).getByRole('radio'),
+    endSharedCancel: p => ui.compatShareConfirm(p).getByRole('button', { name: 'Cancel', exact: true }),
+    // 0.16 compatibility; additive. Read-only observations and actions use these aliases only.
+    // Geometry observation only: modal aria-hiding must not remove the physical header from readback. Never use for actions/focus gates.
+    c016HeaderGeometry: p => p.locator('header').first(),
+    c016AssumptionLine: p => ui.resultsCard(p).locator('[data-start-assumption]'),
+    c016Details: p => ui.resultsCard(p).locator('[data-model-assumptions]'),
+    c016Summary: p => ui.c016Details(p).locator('summary'),
+    c016Name: p => ui.resultsCard(p).locator('[data-clock-name]'),
+    c016EngineName: p => ui.resultsCard(p).locator('[data-engine-name]'),
+    c016Warnings: p => ui.resultsCard(p).getByRole('alert'),
+    c016CheckedRadio: p => ui.clockTable(p).locator('input[type=radio]:checked'),
+    c016Radio: (p,index) => ui.clockTable(p).locator('input[type=radio][value="'+index+'"]'),
+    c016ClockRow: (p,label) => ui.clockRows(p).filter({has: p.getByText(label,{exact:true})}),
+    c016ClockHelp: (p,label) => ui.c016ClockRow(p,label).getByRole('button',{name:/^About /}),
+    c016ClockHelpDialog: p => ui.followDialogs(p).filter({hasText:'How it is made'}),
+    c016RouteReason: (p,id) => ui.compatInserterRow(p,id).getByText(/Imported geometry: route read-only\. Edit and reopen the build file to change it\./),
+    c016BeltType: (p,id) => ui.editingRow(p,'belts',id).getByRole('combobox',{name:'Belt type',exact:true}),
+    c016BeltReason: (p,id) => ui.editingRow(p,'belts',id).getByText(/Imported drop positions: belt type and lane layout are read-only\. Edit and reopen the build file to change them\./),
+    c016AddLane: (p,id) => ui.editingRow(p,'belts',id).getByRole('button',{name:'Add Lane',exact:true}),
+    c016RemoveLanes: (p,id) => ui.editingRow(p,'belts',id).getByRole('button',{name:/^Remove lane/}),
+    c016NonGeometryDestination: (p,id) => ui.compatDestination(p,id),
+    c016RecoveryText: p => ui.copyTile(p,'Recovers'),
+    c016NoClockText: p => ui.followMain(p).getByText(/No clocks were available to check/),
+    c016PasteGeometryProblem: p => ui.followPasteConfirm(p).getByRole('alert').filter({hasText:'has an imported drop position tied to its route'}),
+
     // 3.F additive bindings. Existing aliases and all helper defaults are preserved.
     followBeltExportOption: p => p.getByRole('option', { name: /^Export\b/ }),
     followBeltConsumed: scope => scope.getByLabel('Consumed /s', { exact: true }),
