@@ -1,0 +1,66 @@
+{
+  "target_output": {
+    "recipe": "logistic-science-pack",
+    "items_per_second": 240,
+    "copies": 11
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "logistic-science-pack",
+      "productivity": 100,
+      "crafting_speed": 68.906247615814
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 4,
+      "filters": [
+        "transport-belt",
+        "inserter"
+      ],
+      "prototype": "fast-inserter",
+      "quality": "normal"
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 4,
+      "filters": [
+        "logistic-science-pack"
+      ],
+      "prototype": "fast-inserter",
+      "quality": "normal"
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "transport-belt",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "inserter",
+          "stack_size": 4
+        }
+      ]
+    }
+  ]
+}

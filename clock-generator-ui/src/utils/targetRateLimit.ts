@@ -1,3 +1,5 @@
+import { fraction } from 'clock-generator/light';
+import { copiesProblem } from './copiesProblem';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
 import { entityLabel } from './entityLabel';
 import { formatNumberText } from './numberText';
@@ -7,10 +9,12 @@ export interface MachinesMax {
     machineIds: number[];
     /** The sum of their Machine Facts' max rates, in items per second */
     perCopy: number;
+    /** Present when every machine supplied its exact capacity. */
+    perCopyRatio?: { numerator: number; denominator: number };
 }
 
 /** What a machine's facts say of its output; null when they could not be worked out, undefined until they are */
-type OutputFacts = Pick<SerializableMachineFacts, 'output_item' | 'output_rate_per_second'> | null | undefined;
+type OutputFacts = Pick<SerializableMachineFacts, 'output_item' | 'output_rate_per_second' | 'output_rate_ratio'> | null | undefined;
 
 /**
  * The most the machines making the target can make together, from each one's max rate. They are picked as the engine's
@@ -26,25 +30,54 @@ export function machinesMaxOf(targetRecipe: string, machines: { id: number; fact
     if (making.length === 0 || making.some((machine) => !Number.isFinite(machine.facts?.output_rate_per_second))) {
         return null;
     }
-    return {
-        machineIds: making.map((machine) => machine.id),
-        perCopy: making.reduce((sum, machine) => sum + (machine.facts?.output_rate_per_second ?? 0), 0),
-    };
+    const perCopy = making.reduce((sum, machine) => sum + (machine.facts?.output_rate_per_second ?? 0), 0);
+    if (!Number.isFinite(perCopy)) return null;
+    try {
+        const exact = making.every(machine => machine.facts?.output_rate_ratio)
+            ? making.reduce((sum, machine) => {
+                const ratio = machine.facts!.output_rate_ratio!;
+                return sum.add(fraction(ratio.numerator, ratio.denominator));
+            }, fraction(0)) : null;
+        if (exact && !Number.isFinite(exact.toDecimal())) return null;
+        return {
+            ...(exact && { perCopyRatio: { numerator: exact.getNumerator, denominator: exact.getDenominator } }),
+            machineIds: making.map((machine) => machine.id),
+            perCopy,
+        };
+    } catch {
+        // Unsupported precision/overflow leaves capacity unknown. The worker still validates the retained build.
+        return null;
+    }
 }
 
-/**
- * How far above the most the target may be and still count as at it: only the floating point error of the sum. The
- * engine's check compares exactly, so a target a hundredth above the most is refused, however it prints.
- */
-const EPSILON = 1e-9;
+/** Exact current-worker capacity; legacy numeric-only facts use their approximate sum/product. Null defers unsupported arithmetic to worker validation. */
+export function totalMachineCapacity(max: MachinesMax, copies: number): number | null {
+    try {
+        const capacity = max.perCopyRatio
+            ? fraction(max.perCopyRatio.numerator, max.perCopyRatio.denominator).multiply(copies).toDecimal()
+            : max.perCopy * copies;
+        return Number.isFinite(capacity) ? capacity : null;
+    } catch {
+        return null;
+    }
+}
 
-/** Whether Items per Second (the total for every copy) is more than all the copies' machines can make, as the engine's check finds */
+/** Same comparison as planCraftingCycle for supported values; unsupported arithmetic must not crash the editable form. */
 export function isTargetAboveMax(itemsPerSecond: number, copies: number, max: MachinesMax | null): boolean {
-    if (!max || !(itemsPerSecond > 0) || !(copies >= 1) || !Number.isFinite(itemsPerSecond)) {
+    if (!max || !(itemsPerSecond > 0) || copiesProblem(copies) || !Number.isFinite(itemsPerSecond)) return false;
+    const capacity = totalMachineCapacity(max, copies);
+    if (capacity === null) return false;
+    try {
+        const target = fraction(itemsPerSecond).divide(60).multiply(60).toDecimal();
+        return Number.isFinite(target) && target > capacity;
+    } catch {
+        // The existing Check/Generate worker reports its validation error without losing the imported or saved form.
         return false;
     }
-    return itemsPerSecond > max.perCopy * copies + EPSILON;
 }
+
+/** Display-only nudge prevents a binary representation of 0.29 rounding down to 0.28. */
+const EPSILON = 1e-9;
 
 /** `rate` rounded down: to 2 decimals, or under 0.01 to 2 significant digits */
 function roundedDown(rate: number): number {
@@ -86,10 +119,12 @@ export function targetRateLineOf(
     if (!max || !isTargetAboveMax(itemsPerSecond, copies, max)) {
         return null;
     }
+    const capacity = totalMachineCapacity(max, copies);
+    if (capacity === null) return null;
     const one = max.machineIds.length === 1;
     const machines = `${machinesText(max.machineIds)} ${one ? 'makes' : 'make'} ${maxRateText(max.perCopy, locale)}${one ? '' : ' together'}`;
-    const total = maxRateText(max.perCopy * copies, locale);
-    return copies > 1
-        ? `At most ${total}: ${machines}, times ${copies} copies. Lower the rate, or raise Copies or add machines.`
-        : `At most ${total}: ${machines}. Lower the rate or add machines.`;
+    const total = maxRateText(capacity, locale);
+    return copies !== 1
+        ? `At most ${total}: ${machines}, times ${copies} copies. Lower the rate or raise Copies. Describe one unit in the build.`
+        : `At most ${total}: ${machines}. Lower the rate or raise Copies. Describe one unit in the build.`;
 }

@@ -8,7 +8,7 @@ describe('the words of the way in', () => {
 
     it('gives the four copy steps of the mod', () => {
         const steps = SIDECAR_COPY_STEPS.join(' ');
-        for (const word of ['Alt+E', 'Copy JSON', 'Ctrl+C']) {
+        for (const word of ['Alt+E', 'Copy JSON', 'Ctrl+C', 'one unit', 'set Copies']) {
             expect(steps).toContain(word);
         }
     });

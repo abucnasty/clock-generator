@@ -1,0 +1,12 @@
+{
+  "target_output": { "recipe": "iron-gear-wheel", "copies": 2.25, "items_per_second": 1.35 },
+  "machines": [{ "id": 1, "recipe": "iron-gear-wheel", "productivity": 0, "crafting_speed": 0.3 }],
+  "inserters": [
+    { "source": { "type": "belt", "id": 1 }, "sink": { "type": "machine", "id": 1 }, "stack_size": 1, "filters": ["iron-plate"] },
+    { "source": { "type": "machine", "id": 1 }, "sink": { "type": "belt", "id": 2 }, "stack_size": 1, "filters": ["iron-gear-wheel"] }
+  ],
+  "belts": [
+    { "id": 1, "type": "transport-belt", "lanes": [{ "ingredient": "iron-plate", "stack_size": 1 }] },
+    { "id": 2, "type": "transport-belt", "lanes": [{ "ingredient": "iron-gear-wheel", "stack_size": 1 }] }
+  ]
+}

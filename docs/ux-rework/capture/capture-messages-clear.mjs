@@ -1,3 +1,4 @@
+import { BELOW_TARGET_SAMPLE } from './lib.mjs';
 // Page checks and screenshots for item 1.5 F, "Messages that don't cover the page" of the UX rework. Written from
 // docs/ux-rework/specs/1.5F-messages-clear.md ("Acceptance"), not from the new code. Every check prints PASS or FAIL; INFO lines record
 // a value without a verdict. Against today's build (Phase 2, messages drawn over the page) most of the new checks FAIL by design.
@@ -48,7 +49,7 @@ const WIDTHS = (process.env.WIDTHS ?? '1440,720,390').split(',').map(Number);
 
 const PROD = sample('science/production-science/production-science.json'); // 4 machines, 6 inserters, 2 belts, 1 drill
 const PU = sample('intermediates/processing-units/processing-units.json'); // 2 chests
-const BELOW_TARGET = sample('science/utility-science/utility-science-direct-insert-lds.json');
+const BELOW_TARGET = BELOW_TARGET_SAMPLE;
 
 const TMP = join(tmpdir(), 'ux-messages-clear');
 mkdirSync(TMP, { recursive: true });

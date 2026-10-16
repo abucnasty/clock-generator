@@ -49,7 +49,7 @@ itself, except when only the ledger moved (`git diff --quiet HEAD...origin/<phas
 export into both specs at once, and the provider commits it (a stub is fine) first. **Post-merge conflict check:** after every merge into the phase branch (including each merge of the previous phase
 branch into the next), run
 `git merge-tree --write-tree origin/<phase branch> <branch>` for every in-flight branch (a stacked one against its
-predecessor), and have a background `gpt-6-luna` runner type-check each clean result (`git commit-tree` the merged tree,
+predecessor), and run a background command to type-check each clean result (`git commit-tree` the merged tree,
 add it as a scratch worktree, link `clock-generator-ui/node_modules` from the main checkout, `npx tsc -b`, remove it).
 Tell any branch with a text or type conflict to merge now, while its implementer still has the context (coach run 6).
 Remove an item's worktree only after its agent's final report says it is done. **Stacking:** whenever the next item on a chain is held only by its predecessor's review, fix round, minors round or
@@ -159,14 +159,16 @@ items are implemented and merged (the owner, 2026-10-14), following the dependen
 ## Staying responsive
 
 The owner must be able to ask a question at any time. So the orchestrator never blocks on long work. It keeps the
-judgement (verdicts, fix batches, specs, the merge decision) and hands the mechanical steps to background agents:
+judgement (verdicts, fix batches, specs, the merge decision) and runs mechanical steps as background commands.
+Do not create an agent solely to launch commands or wait for completion (owner, 2026-10-16).
+Independent verification remains required: execute fresh checks and inspect their actual results and screenshots.
 
 | Step | Who does it | What the orchestrator keeps |
 |---|---|---|
-| Re-running the checks for the evidence gate | `gpt-6-luna` runner | It opens two or three screenshots, and reads the runner's result lines |
-| Opening the PR, waiting for CI, squash-merging (`gh pr merge <n> --squash`, then `git push origin --delete <branch>`: `--delete-branch` fails while the base is checked out in the main checkout), deleting the worktree and local branches | `gpt-6-luna` merge runner, given the PR body the orchestrator wrote | The decision to merge; one `gh pr view` to confirm the merge, and the branch sweep below |
+| Re-running the checks for the evidence gate | Orchestrator-launched background command | It opens two or three screenshots, and reads the actual result lines |
+| Opening the PR, waiting for CI, squash-merging (`gh pr merge <n> --squash`, then `git push origin --delete <branch>`: `--delete-branch` fails while the base is checked out in the main checkout), deleting the worktree and local branches | Orchestrator commands; CI waits in the background | The decision to merge; one `gh pr view` to confirm the merge, and the branch sweep below |
 | Rebasing a child branch on the moved phase branch, and resolving conflicts | The item's implementer (`SendMessage`), or a `gpt-6.1-sol` agent if it has finished | Which side wins when a conflict changes behaviour |
-| Anything that waits, such as `gh pr checks --watch` | A background agent or a background command | Nothing waits in the foreground |
+| Anything that waits, such as `gh pr checks --watch` | A background command | Nothing waits in the foreground |
 
 **Branch sweep.** Every merge removes the item's remote branch (`--delete-branch`), its worktree, its local branch and
 the worktree's placeholder branch (`worktree-agent-*`). After each merge the orchestrator runs
@@ -174,8 +176,11 @@ the worktree's placeholder branch (`worktree-agent-*`). After each merge the orc
 `worktree-agent-*` branch that is merged and has no live worktree. A dropped or carried item's branches go too, once
 the ledger says so.
 
-**Reports and the handoff note.** Every agent's final report is about 30 lines: the verdict or result lines, counts and
-paths; the full notes go in the item's `EVIDENCE.md`. The orchestrator keeps a handoff note in its scratchpad
+**Reports and the handoff note.** Keep detailed evidence once, in the item's `EVIDENCE.md`.
+Agent reports contain only the verdict, material findings, result counts and evidence paths (normally 10 lines or fewer).
+Link the evidence instead of repeating its narrative in reports, the ledger or handoff. Update only changed handoff
+fields; preserve decisions, recovery details and next actions. Batch intermediate ledger statuses at the next merge.
+These reporting reductions do not remove any required evidence or verification (owner, 2026-10-16). The orchestrator keeps a handoff note in its scratchpad
 (`HANDOFF.md`: each running agent's name, id, branch, port, what it waits on and the next action) current on every
 step, so a context compaction costs minutes, not a pause. For each agent it keeps a ready-to-send resume line (id,
 branch, worktree, last pushed sha, the step it was on, and the fallback: a fresh same-role agent on the pushed branch).
@@ -244,7 +249,8 @@ Meanwhile, work on another item if one is unblocked.
 A read-only `gpt-6-astra` agent whose only job is to find ways to finish the roadmap sooner without lowering the bar (every
 item still gets its spec, evidence, a `gpt-6-astra` code review and a UX audit, and the owner's decisions stand).
 
-- **When:** after every third merged item or bundle, at each phase end (before the retro), and when the owner asks.
+- **When:** at each phase end (before the retro), and when the owner asks. Routine coaching after every third
+  merged item is removed (owner, 2026-10-16); all three phase-end reviewers remain required.
 - **Inputs the orchestrator gives it:** the ledger, this file, `PLAN.md`, the merged PRs with their open and merge
   times (`gh pr list --state merged`), the branch's commit times, and a table of each agent run's role, item, model and
   duration (the orchestrator has these from the task notifications).
