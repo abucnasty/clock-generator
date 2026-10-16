@@ -385,7 +385,7 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
     );
 });
 
-export interface WakeWindowsChartProps {
+interface WakeWindowsChartProps {
     rows: WakeWindowRow[];
     periodTicks: number;
     selected: Selection | null;

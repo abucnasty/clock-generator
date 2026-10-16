@@ -3,7 +3,7 @@
 Author status: HOLD for root verification/reviews. This is actual test cleanup, not report-only delivery. Final D9 release status remains OPEN.
 
 - Before source `68998602a74b7c8bad7801d5401ec7236da71aae`; after is the root-created cleanup commit.
-- Scope: 23 existing UI test files plus the three D9 evidence files. No product/engine/capture/helper/framework/config changes.
+- Scope: 23 existing UI test files plus the three D9 evidence files, followed by the two internal declaration visibility changes described below. No runtime value/behavior, engine, capture, helper, framework or configuration change.
 - Current UI test files: 81 → 81; total physical test lines 10145 → 9957 (-188).
 - Files absent at attributed pre-rework baseline: 75 → 75; their complete UX-added source lines 8922 → 8749. These exclude every pre-existing file.
 - Eligible test declaration lines within the four mixed files, counted with TypeScript AST whole call expressions, excluding all 51 protected declarations: 411 → 399. This measure excludes shared helpers/imports and is not total mixed-file diff size.
@@ -20,4 +20,14 @@ Root records immutable before/after source/engine/dependency/runner/cache identi
 Product captures can be reused only if root verifies production source identity apart from tests/evidence; final fresh phase captures and all three phase-end personas remain required. Any failure retains diagnostics and routes back to this author for bounded fixes.
 
 Final reconciliation remains open for theme/D10/D7, first-visit and any subsequent UX-added tests, then the implemented reviewed cleanup must land in feature before the owner performs feature→master.
+
+## Initial root checks and visibility-only follow-up
+
+Initial cleanup commit `4704b61`: root reports UI 1248 tests / 81 files, test/lint/icons/build and independent test/build repeat PASS. Before count 1305 is root's matching product report: 57 fewer executed cases, consistent with the source proxy. Comparable timing receipts remain root-owned and pending incorporation; no speed claim is made.
+
+Default knip FAILED on two exports whose only external consumers were removed by C05/C20: `SURFACE_HOVER` at `src/theme/tokens.ts:27` and `WakeWindowsChartProps` at `src/components/WakeWindowsChart.tsx:388`. Preserve the initial failure diagnostics; the failure is not waived.
+
+Root explicitly adopted the D9 spec's two-line internal visibility allowance (canonical spec commit `07bcd85`). Repository-wide identifier inspection found only same-file uses: SURFACE_HOVER remains used by the measured TOKEN_PAIRS, and WakeWindowsChartProps remains the chart function's parameter interface. Removed exactly the `export` keyword from those two declarations. Their values, types, local references and runtime behavior remain unchanged. No dummy consumer, test exclusion or knip setting was added.
+
+Author status: HOLD for root commit and all required gates/reruns. This follow-up changes no test counts or physical test-line proxies. Separate source-bound later-provider KEEP decisions are retained in [LATER-PROVIDERS.md](/tmp/ux-p4-d9-attribution/LATER-PROVIDERS.md); final merged-head reconciliation remains open.
 
