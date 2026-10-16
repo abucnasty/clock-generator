@@ -569,6 +569,30 @@ describe("inserters waiting for the product of one machine", () => {
         expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 12, 13)).toBe(true)
     })
 
+    test("a turn granted in a tick holds for a second ask in the same tick", () => {
+        const machine_state = createState()
+        MachineState.waitsForOutput(machine_state, "iron-gear-wheel", "inserter:2", 10)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 11, 16)).toBe(true)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 11, 16)).toBe(true)
+        // and not for the next tick, while the other waits
+        MachineState.waitsForOutput(machine_state, "iron-gear-wheel", "inserter:2", 11)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 12, 16)).toBe(false)
+    })
+
+    test("an ask with nothing to take leaves the one that took last as it was", () => {
+        const machine_state = createState()
+        machine_state.inventoryState.setQuantity("iron-gear-wheel", 0)
+        MachineState.waitsForOutput(machine_state, "iron-gear-wheel", "inserter:2", 10)
+        // two inserters waiting on an empty machine do not take turns at nothing
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 10, 16)).toBe(true)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 11, 16)).toBe(true)
+        expect(machine_state.lastOutputTaker.has("iron-gear-wheel")).toBe(false)
+        // so the first to find something takes it, whichever asked last
+        machine_state.inventoryState.setQuantity("iron-gear-wheel", 3)
+        expect(MachineState.takesTurnForOutput(machine_state, "iron-gear-wheel", "inserter:1", 12, 16)).toBe(true)
+        expect(machine_state.lastOutputTaker.get("iron-gear-wheel")).toBe("inserter:1")
+    })
+
     test("do not wait for one that stopped asking", () => {
         const machine_state = createState()
         MachineState.waitsForOutput(machine_state, "iron-gear-wheel", "inserter:2", 10)
