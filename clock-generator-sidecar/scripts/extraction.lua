@@ -357,9 +357,10 @@ function extraction.extract_all_entities(entities, force)
     -- Second pass: belts. Pieces joined to each other, through undergrounds and splitters as well, are one belt
     -- whatever lies on each piece at this instant: a lane that has run dry under one inserter still belongs to the
     -- belt it is part of, and a piece that is empty is still the belt its inserter drops on. Belts that carry the
-    -- same items are then treated as one, as before.
+    -- same items on the same lanes are then treated as one, as before. Two that carry them on opposite lanes are two
+    -- belts: near_lane (1 left, 2 right) is read off the lanes of the belt an inserter stands by.
     local belt_id = 0
-    local ingredient_signature_to_belt = {} -- Maps "ingredient1|ingredient2" to {belt_id, data}
+    local ingredient_signature_to_belt = {} -- Maps "ingredient1|ingredient2#lane 1 item|lane 2 item" to {belt_id, data}
 
     local pieces = {} -- unit_number -> belt piece
     local parent = {} -- union-find over unit numbers
@@ -497,7 +498,7 @@ function extraction.extract_all_entities(entities, force)
                 table.insert(lanes, { ingredient = lane_ingredient[1], stack_size = lane_stack_size[1] })
                 table.insert(lanes, { ingredient = lane_ingredient[2], stack_size = lane_stack_size[2] })
             end
-            local signature = table.concat(ingredients, "|")
+            local signature = table.concat(ingredients, "|") .. "#" .. (lane_ingredient[1] or "") .. "|" .. (lane_ingredient[2] or "")
             local existing = ingredient_signature_to_belt[signature]
             local id
             if existing then
