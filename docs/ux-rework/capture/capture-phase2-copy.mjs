@@ -6,6 +6,7 @@
 // BASELINE_ONLY=1: only generate Copies0.5 and record the existing missing caption before product edits.
 // WIDTHS defaults1440,720,390. COPY_LIB may point at the candidate library for adoption/static checks.
 // STATIC_ONLY=1 checks imports/bindings/fixtures without starting any browser or preview.
+// HELP_ONLY=1 rechecks the affected Terms/help keyboard path using one real0.5 generation per width.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
@@ -20,7 +21,8 @@ const { ui, itemLabel, SMALL_SAMPLE, forWidths, noSideScroll, contrast, accessib
 const OUT = resolve(process.argv[2] ?? '/tmp/ux-phase2-copy-capture/out');
 const WIDTHS = (process.env.WIDTHS ?? '1440,720,390').split(',').map(Number);
 const BASELINE = process.env.BASELINE_ONLY === '1';
-const COPIES = BASELINE ? [0.5] : [0.5, 1, 2.25];
+const HELP_ONLY = process.env.HELP_ONLY === '1';
+const COPIES = BASELINE || HELP_ONLY ? [0.5] : [0.5, 1, 2.25];
 const START = new Date().toISOString();
 const norm = s => String(s ?? '').replace(/\s+/g, ' ').trim();
 const text = async l => norm(await l.textContent());
@@ -28,7 +30,7 @@ const hash = b => createHash('sha256').update(b).digest('hex');
 const requiredUi = ['introCard', 'copyIntroSentence', 'copyIntroAction', 'compatFile', 'targetCopies',
     'targetRate', 'viewToggle', 'generate', 'checkOnly', 'compatError', 'compatCheckChip', 'resultsCard', 'copyTile', 'copyTileValue',
     'copyTileSub', 'copyFinishedRecommendation', 'copyWakeView', 'copyWakeDefinition', 'copyWakeSummary',
-    'menuButton', 'menuItem', 'termsItem', 'termsPopover', 'copyTermsEntry', 'copyTermsTerm', 'copyTermsClose',
+    'menuButton', 'menu', 'menuItem', 'termsItem', 'termsPopover', 'copyTermsEntry', 'copyTermsTerm', 'copyTermsClose',
     'showAllColumns', 'copyWakeHeaderHelp', 'copyWakeHelpDialog', 'copyWakeHelpText', 'copyWakeHelpClose'];
 for (const key of requiredUi) if (typeof ui[key] !== 'function') throw new Error(`Missing shared ui binding: ${key}`);
 for (const key of ['itemLabel', 'forWidths', 'noSideScroll', 'contrast', 'accessibleName', 'checkLabelInName',
@@ -176,7 +178,7 @@ try {
     run = await forWidths(WIDTHS, async ({ page: p, rec, width }) => {
         p.setDefaultTimeout(8000);
         const results = [];
-        if (!BASELINE) await rec.step('first visit qualified wake-up goal', async () => {
+        if (!BASELINE && !HELP_ONLY) await rec.step('first visit qualified wake-up goal', async () => {
             const sentence = await text(ui.copyIntroSentence(p));
             rec.check('Intro describes fewer inserter wake-ups', /fewer inserter wake-ups/i.test(sentence), sentence);
             rec.check('Intro removes unconditional net UPS guarantee', !/costs less UPS|saves UPS|improves UPS|increases UPS/i.test(sentence), sentence);
@@ -203,8 +205,25 @@ try {
             await contrastText(p, rec, ui.copyWakeDefinition(p, 'Wake-up'), 'Wake windows definition');
             await ui.copyWakeView(p).scrollIntoViewIfNeeded();
             await capture(p, rec, 'wake-windows-definition');
+            await keyControl(p, rec, ui.menuButton(p), 'More options');
             await openMoreMenu(p);
-            await keyControl(p, rec, ui.termsItem(p), 'Terms menu item');
+            await paint(p);
+            // MUI Menu uses roving focus: Tab exits, ArrowDown visits its menu items.
+            const termsItem = ui.termsItem(p);
+            await checkLabelInName(rec, p, termsItem);
+            rec.check('Terms menu item: accessible name', await accessibleName(p, termsItem) === 'Terms', await accessibleName(p, termsItem));
+            let arrows = 0;
+            while (arrows < 20 && !(await termsItem.evaluate(el => el === document.activeElement))) {
+                if (!(await ui.menu(p).isVisible())) throw new Error('Menu closed during keyboard navigation');
+                await p.keyboard.press('ArrowDown');
+                arrows++;
+            }
+            rec.check('ArrowDown reaches Terms menu item', await termsItem.evaluate(el => el === document.activeElement), `${arrows} presses`);
+            rec.check('Focused Terms menu item is visible in viewport', await termsItem.evaluate(el => {
+                const r = el.getBoundingClientRect();
+                return el === document.activeElement && r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth;
+            }));
+            await checkFocusNotObscured(rec, p, 'Terms menu item');
             await chooseMenuItem(p, 'Terms');
             await ui.termsPopover(p).waitFor({ state: 'visible' });
             rec.check('Mouse Terms menu opens a visible dialog', await ui.termsPopover(p).isVisible());
@@ -234,7 +253,7 @@ try {
             await shortDialog(p, rec, width, ui.copyWakeHelpDialog(p), 'expanded-help-short');
             await close(p, rec, ui.copyWakeHelpClose(p), ui.copyWakeHelpDialog(p), 'Close wake-ups help');
         }, p);
-        if (!BASELINE) {
+        if (!BASELINE && !HELP_ONLY) {
             rec.check('All requested Copies controls produced real results', results.length === COPIES.length, JSON.stringify(results));
             const perCopy = results.map(r => Number(r.value.replace(/\/s$/, '').replaceAll(',', '')) / r.copies);
             rec.check('Same one-unit build retains proportional total Makes across Copies', perCopy.length === 3 && Math.max(...perCopy) - Math.min(...perCopy) <= 0.05, JSON.stringify(perCopy));
@@ -249,6 +268,6 @@ try {
     process.exitCode = run.finish({ title: `2.F ${BASELINE ? 'BEFORE baseline only' : 'factual copy and fractional scope'}` });
 } finally {
     writeFileSync(join(OUT, 'RUN.json'), JSON.stringify({ startUTC: START, endUTC: new Date().toISOString(), base,
-        baselineOnly: BASELINE, widths: WIDTHS, lib: libURL, scriptSha256: hash(readFileSync(new URL(import.meta.url))),
+        baselineOnly: BASELINE, helpOnly: HELP_ONLY, widths: WIDTHS, lib: libURL, scriptSha256: hash(readFileSync(new URL(import.meta.url))),
         sourceSampleSha256: hash(sampleBytes), runCompleted: Boolean(run), exitCode: process.exitCode ?? 1 }, null, 2) + '\n');
 }
