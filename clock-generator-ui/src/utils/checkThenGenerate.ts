@@ -17,6 +17,13 @@ export const CHECK_TEXT = {
     planEmpty: 'Check your build to see its swing plan. Generate does this too.',
     planFailed: 'The last check failed, so there is no swing plan. The reason is at the top of Configure.',
     planOutOfDate: 'You changed the build since this plan was made. Check only (or Generate) makes a new one.',
+    cancel: 'Cancel',
+    cancelTooltip: 'Stops at once. No clocks you already have are lost.',
+    cancelCheckTooltip: 'Stops the check.',
+    checkingProgress: 'Checking your build…',
+    crashTitle: 'The check stopped unexpectedly',
+    crashText: 'This was not caused by your build. Press Generate or Check only to try again.',
+    generationCrashed: 'Making clocks stopped unexpectedly. This was not caused by your build. Press Generate to try again.',
 } as const;
 
 /** Where the check stands for the build as it is now */
@@ -68,10 +75,12 @@ interface DecisionInput {
     generating: boolean;
     checkStatus: CheckStatus;
     problems: Problem[];
+    /** The last check ended because its worker crashed, not because of the build: Generate checks again */
+    lastCheckCrashed?: boolean;
 }
 
 /** What pressing Generate does. First match wins */
-export function decideGenerate({ initialized, generating, checkStatus, problems }: DecisionInput): GenerateDecision {
+export function decideGenerate({ initialized, generating, checkStatus, problems, lastCheckCrashed = false }: DecisionInput): GenerateDecision {
     if (!initialized || generating || checkStatus === 'running') {
         return { kind: 'wait' };
     }
@@ -80,7 +89,7 @@ export function decideGenerate({ initialized, generating, checkStatus, problems 
     }
     switch (checkStatus) {
         case 'invalid':
-            return { kind: 'go-to-check-error' };
+            return lastCheckCrashed ? { kind: 'check-first' } : { kind: 'go-to-check-error' };
         case 'valid':
             return { kind: 'generate' };
         case 'none':

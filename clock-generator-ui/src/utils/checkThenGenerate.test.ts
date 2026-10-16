@@ -52,6 +52,14 @@ describe('decideGenerate', () => {
         expect(decideGenerate({ ...idle, checkStatus: 'invalid' })).toEqual({ kind: 'go-to-check-error' });
     });
 
+    it('checks again after a check whose worker crashed, instead of going to its error', () => {
+        expect(decideGenerate({ ...idle, checkStatus: 'invalid', lastCheckCrashed: true })).toEqual({ kind: 'check-first' });
+        expect(decideGenerate({ ...idle, checkStatus: 'invalid', lastCheckCrashed: false })).toEqual({ kind: 'go-to-check-error' });
+        // Check only is the same either way
+        expect(decideCheckOnly({ ...idle, checkStatus: 'invalid', lastCheckCrashed: true })).toEqual({ kind: 'check' });
+        expect(decideCheckOnly({ ...idle, checkStatus: 'invalid' })).toEqual({ kind: 'check' });
+    });
+
     it('generates at once after a passed check for this build', () => {
         expect(decideGenerate({ ...idle, checkStatus: 'valid' })).toEqual({ kind: 'generate' });
     });
@@ -227,6 +235,15 @@ describe('PendingChecks', () => {
         await expect(check).resolves.toEqual(passed);
     });
 
+    it('resolves a cancelled check as dropped, and ignores its late answer', async () => {
+        const pending = new PendingChecks();
+        const check = pending.begin(1);
+        pending.dropAll();
+        pending.settle(1, passed);
+        await expect(check).resolves.toEqual({ kind: 'dropped' });
+        expect(afterCheck(await check)).toBe('stop');
+    });
+
     it('drops every pending check, and never rejects', async () => {
         const pending = new PendingChecks();
         const first = pending.begin(1);
@@ -248,6 +265,7 @@ describe('CHECK_TEXT', () => {
         }
         expect(CHECK_TEXT.checking).toBe('Checking...');
         expect(CHECK_TEXT.generating).toBe('Generating...');
+        expect(CHECK_TEXT.cancel).toBe('Cancel');
         expect(PROBLEM_TEXT.validationFailed).not.toMatch(/valid/i);
     });
 });

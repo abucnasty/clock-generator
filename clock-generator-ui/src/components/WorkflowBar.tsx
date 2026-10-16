@@ -1,11 +1,13 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
-import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, LinearProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useRef } from 'react';
 import { useAnnounce, useMessageState } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
 import { STALE_COPY_TOOLTIP, type GeneratedFor } from '../utils/resultsStaleness';
+import { COPY_CURRENT_BEST_TOOLTIP } from '../utils/rateWarning';
+import type { RunStop } from '../utils/resultsCache';
 import { workflowAnnouncement, type WorkflowSnapshot } from '../utils/workflowAnnouncement';
 import type { NextStep } from '../utils/nextStep';
 import { GenerationProgressStatus } from './BlueprintOutput';
@@ -68,6 +70,16 @@ interface WorkflowBarProps {
     startHere: boolean;
     /** Shows and focuses where a problem is fixed */
     onGoToProblem: (problem: Problem) => void;
+    /** A generation, or the check Generate starts first, is running: the progress row shows Cancel */
+    running: boolean;
+    /** Stops the generation, or Generate's check, at once */
+    onCancel: () => void;
+    /** The last Cancel, announced once */
+    lastStop: RunStop | null;
+    /** Bumped when kept clocks come back on an empty Results, announced */
+    restoredId: number;
+    /** The name of the picked clock the last run did not make; null when it did, or there was no pick */
+    pickGone: string | null;
 }
 
 /**
@@ -119,6 +131,11 @@ export function WorkflowBar({
     note,
     startHere,
     onGoToProblem,
+    running,
+    onCancel,
+    lastStop,
+    restoredId,
+    pickGone,
 }: WorkflowBarProps) {
     const announce = useAnnounce();
     // Check only is off while its check runs, which takes the keyboard focus from it: it gets the focus back after
@@ -144,6 +161,29 @@ export function WorkflowBar({
             startedHereRef.current = false;
         }
     }, [checking]);
+    // A run turns Generate off, which drops the keyboard focus to the page: it goes to Cancel. After Cancel it goes to
+    // Generate; when a run ends with it on Cancel (which goes), to the bar's Copy, or Generate when there is none
+    const cancelRef = useRef<HTMLButtonElement>(null);
+    const generateRef = useRef<HTMLButtonElement>(null);
+    const copyRef = useRef<HTMLButtonElement>(null);
+    const cancelledRef = useRef(false);
+    const wasRunningRef = useRef(running);
+    useEffect(() => {
+        const was = wasRunningRef.current;
+        wasRunningRef.current = running;
+        const focused = document.activeElement;
+        const fell = focused === null || focused === document.body || (focused instanceof HTMLButtonElement && focused.disabled);
+        if (!was && running) {
+            if (fell) {
+                cancelRef.current?.focus({ preventScroll: true });
+            }
+        } else if (was && !running) {
+            const target = cancelledRef.current ? generateRef.current : fell ? copyRef.current ?? generateRef.current : null;
+            cancelledRef.current = false;
+            target?.focus({ preventScroll: true });
+        }
+    }, [running]);
+
     // any warning colours the button and gives it the warning icon. Filled when it is the next step: yellow when the
     // clock warns, green when not; the copy of an old clock is the one to think twice about, never filled
     const warns = rateWarning !== null || staleFor !== null;
@@ -155,14 +195,22 @@ export function WorkflowBar({
     const hasBlueprint = blueprintString !== null;
     const lastSnapshot = useRef<WorkflowSnapshot | null>(null);
     useEffect(() => {
-        const snapshot: WorkflowSnapshot = { checkStatus, checkedForGenerate, isLoading, failed: generationFailed, hasBlueprint, selectedLabel, selectedId, selectionQuiet };
+        const snapshot: WorkflowSnapshot = {
+            checkStatus, checkedForGenerate, isLoading, failed: generationFailed, hasBlueprint, selectedLabel, selectedId, selectionQuiet,
+            stop: lastStop, restoredId, pickGone,
+        };
         const previous = lastSnapshot.current;
         lastSnapshot.current = snapshot;
         const text = previous && workflowAnnouncement(previous, snapshot);
         if (text) {
             announce(text);
         }
-    }, [checkStatus, checkedForGenerate, isLoading, generationFailed, hasBlueprint, selectedLabel, selectedId, selectionQuiet, announce]);
+    }, [checkStatus, checkedForGenerate, isLoading, generationFailed, hasBlueprint, selectedLabel, selectedId, selectionQuiet, lastStop, restoredId, pickGone, announce]);
+
+    // while a run makes clocks, Copy takes the best so far
+    const copyTooltip = staleFor ? STALE_COPY_TOOLTIP
+        : isLoading ? [COPY_CURRENT_BEST_TOOLTIP, rateWarning].filter(Boolean).join(' ')
+        : rateWarning ?? '';
 
     // from md up the note is in the bar's row, left of the chips, cut with an ellipsis (its words are also the Check only and
     // Generate tooltips and their description); below md it has the line under the bar
@@ -208,6 +256,39 @@ export function WorkflowBar({
                     )
     );
 
+    const progressNode = (isLoading || checking === 'generate') ? (
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, flex: 1, minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+                {isLoading ? (
+                    <GenerationProgressStatus store={progressStore} />
+                ) : (
+                    <>
+                        <LinearProgress aria-label={CHECK_TEXT.checkingProgress} />
+                        <Typography variant="body2" sx={{ mt: 1 }}>{CHECK_TEXT.checkingProgress}</Typography>
+                    </>
+                )}
+            </Box>
+            {/* described by its tooltip (describeChild); the progress beside it has a name of its own */}
+            <Tooltip title={isLoading ? CHECK_TEXT.cancelTooltip : CHECK_TEXT.cancelCheckTooltip} arrow describeChild placement="bottom" slotProps={{ popper: { disablePortal: true } }}>
+                <Button
+                    ref={cancelRef}
+                    variant="text"
+                    color="inherit"
+                    size="small"
+                    // named in its own case: the button's capitals are only CSS, which Chrome reads into the name
+                    aria-label={CHECK_TEXT.cancel}
+                    sx={{ flexShrink: 0, mt: -0.5 }}
+                    onClick={() => {
+                        cancelledRef.current = true;
+                        onCancel();
+                    }}
+                >
+                    {CHECK_TEXT.cancel}
+                </Button>
+            </Tooltip>
+        </Box>
+    ) : null;
+
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
             <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: { xs: 1, sm: 2 }, py: 1 }}>
@@ -246,8 +327,9 @@ export function WorkflowBar({
                                 it, as the others, since under the bar are the messages; it stays open while the pointer
                                 is on it (WCAG 1.4.13). Kept in the header (disablePortal), so its text is inside the
                                 banner landmark */}
-                            <Tooltip title={staleFor ? STALE_COPY_TOOLTIP : rateWarning ?? ''} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
+                            <Tooltip title={copyTooltip} arrow describeChild placement="top" slotProps={{ popper: { disablePortal: true } }}>
                                 <Button
+                                    ref={copyRef}
                                     variant={copyFilled ? 'contained' : 'outlined'}
                                     size="small"
                                     onClick={onCopy}
@@ -311,6 +393,7 @@ export function WorkflowBar({
                             {/* filled only when it is the next step (generateFilled); a blank build has problems, so there
                                 the next step is the recipe (or the intro card's Paste) and Generate is outlined */}
                             <Button
+                                ref={generateRef}
                                 variant={generateFilled ? 'contained' : 'outlined'}
                                 size="small"
                                 onClick={onGenerate}
@@ -328,7 +411,7 @@ export function WorkflowBar({
             {/* Below md the reason has a line of its own under the bar, reserved even when empty, so that the pinned header keeps its
                 height as the note comes and goes, on every edit and check; the generation's progress takes the line when there
                 is no note. A message row under the bar takes the line's place, so that no empty band sits above it. */}
-            {!wide && (note || isLoading || !messageShown) && (
+            {!wide && (note || progressNode || !messageShown) && (
                 <Box
                     sx={{
                         px: { xs: 2, sm: 3 },
@@ -342,12 +425,12 @@ export function WorkflowBar({
                         textAlign: 'left',
                     }}
                 >
-                    {note ? noteNode(false) : isLoading ? <GenerationProgressStatus store={progressStore} /> : null}
+                    {note ? noteNode(false) : progressNode}
                 </Box>
             )}
-            {isLoading && (wide || note) && (
+            {progressNode && (wide || note) && (
                 <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1 }}>
-                    <GenerationProgressStatus store={progressStore} />
+                    {progressNode}
                 </Box>
             )}
         </Box>

@@ -12,6 +12,12 @@ const MIN_SHORTFALL = 0.005;
 
 const COPY_BLUEPRINT_LABEL = 'Copy blueprint';
 
+/** Label of every Copy button while a generation is still making clocks */
+const COPY_CURRENT_BEST_LABEL = 'Copy current best';
+
+/** Tooltip of the Copy buttons while a generation is still making clocks */
+export const COPY_CURRENT_BEST_TOOLTIP = 'More clocks are still being made. This copies the best one so far.';
+
 /** The causes a clock does not recover from, in a sentence part: "coal stops arriving, or after iron-plate is not taken away" */
 export function lossesOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
     return alternative.assessment.backpressure_loss?.broken_by.join(', or after ') ?? '';
@@ -59,18 +65,21 @@ export function isBelowTarget(alternative: Pick<ClockAlternativeView, 'ranking'>
 
 /**
  * What the workflow bar's Copy button says when it has not just been used: "Copy old clock…" while the clocks are for
- * an earlier build, "Copy blueprint (192/s, below target)" with the clock's own rate when it runs short of the target,
- * and "Copy blueprint" otherwise. The other warnings are shown by the button's colour, its icon and its tooltip.
+ * an earlier build; "Copy current best" while a generation is still making clocks; with the clock's own rate when it
+ * runs short of the target ("Copy blueprint (192/s, below target)", "Copy current best (192/s, below target)"); and
+ * "Copy blueprint" otherwise. The other warnings are shown by the button's colour, its icon and its tooltip.
  */
 export function copyBlueprintLabelOf(
     alternative: Pick<ClockAlternativeView, 'assessment' | 'ranking'> | undefined,
     stale: boolean,
+    running = false,
 ): string {
     if (stale) {
         return STALE_COPY_LABEL;
     }
+    const label = running ? COPY_CURRENT_BEST_LABEL : COPY_BLUEPRINT_LABEL;
     if (alternative && isBelowTarget(alternative)) {
-        return `${COPY_BLUEPRINT_LABEL} (${figure(alternative.assessment.items_per_second)}/s, below target)`;
+        return `${label} (${figure(alternative.assessment.items_per_second)}/s, below target)`;
     }
-    return COPY_BLUEPRINT_LABEL;
+    return label;
 }

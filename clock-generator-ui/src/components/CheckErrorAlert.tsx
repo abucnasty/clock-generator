@@ -10,7 +10,7 @@ import { ELEMENT_IDS } from '../utils/firstProblem';
  * read once, not once as an alert and again as the focus; a check from Check only says its result through the page's
  * announcer instead.
  */
-export function CheckErrorAlert({ message }: { message: string | null }) {
+export function CheckErrorAlert({ message, crashed = false }: { message: string | null; crashed?: boolean }) {
     const titleId = useId();
     const messageId = useId();
     if (message === null) {
@@ -28,8 +28,9 @@ export function CheckErrorAlert({ message }: { message: string | null }) {
             // a visible outline when Generate or the note in the workflow bar moves the focus here
             sx={{ mb: 2, '&:focus': { outline: '2px solid', outlineColor: 'error.main', outlineOffset: 2 } }}
         >
-            <AlertTitle id={titleId}>{CHECK_TEXT.errorTitle}</AlertTitle>
-            <span id={messageId}>{checkErrorText(message)}</span>
+            {/* a check whose worker stopped says it was not the build; the browser's words are in the Log */}
+            <AlertTitle id={titleId}>{crashed ? CHECK_TEXT.crashTitle : CHECK_TEXT.errorTitle}</AlertTitle>
+            <span id={messageId}>{crashed ? CHECK_TEXT.crashText : checkErrorText(message)}</span>
         </Alert>
     );
 }
