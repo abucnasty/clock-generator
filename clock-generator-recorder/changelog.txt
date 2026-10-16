@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.7.1
+Date: 2026-10-16
+  Bugfixes:
+    - Two belts that carry the same items on opposite lanes are described as two belts, so near_lane of an inserter names the item that is nearest to it (needs the sidecar 0.7.1)
+---------------------------------------------------------------------------------------------------
 Version: 0.7.0
 Date: 2026-10-16
   Bugfixes:
