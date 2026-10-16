@@ -419,7 +419,7 @@ async function cardChecks({ page, rec, tag = 'card', path = LOGISTIC }) {
         return { pass: Boolean(t && t.hasIcon) && Boolean(words) && (want === null || words === want), detail: `value ${show(t && t.value)}, icon ${t && t.hasIcon}, row status ${show(status)} (want ${want})` };
     });
     // when the run asked the belt question, 2.4's line (in the card's beltAction slot) says it in place of the card's own
-    await chk(rec, `${p} the card says the belt in a line ("Made for moving belts." / "Made for belts that stand still.", or 2.4's "These clocks assume your input belts are …")`, async () => ({ pass: /Made for (moving belts|belts that stand still)\.|These clocks assume your input belts are/.test(card.text), detail: show(card.tiles.Belt && card.tiles.Belt.lines) }));
+    await chk(rec, `${p} the card says the belt in a line ("Made for moving belts." / "Made for belts that stand still.", or the saved run's belt setting)`, async () => ({ pass: /Made for (moving belts|belts that stand still)\.|This run used your (Moving|Backed up and standing still) belt setting\./.test(card.text), detail: show(card.tiles.Belt && card.tiles.Belt.lines) }));
 
     // Copy and the colour grammar
     await chk(rec, `${p} Copy blueprint is in the card`, async () => ({ pass: Boolean(card.copy), detail: show(card.copy && card.copy.text) }));
