@@ -407,7 +407,7 @@ try {
             await page.keyboard.press('Escape');
             // Escape can first dismiss the focused button's tooltip; close the actual menu before the next action.
             if (await lib.ui.menu(page).isVisible()) await page.keyboard.press('Escape');
-            await lib.ui.menu(page).waitFor({state: 'hidden'});
+            await lib.waitForMoreMenuClosed(page);
 
             // the mod link
             const link = modLinks(c);

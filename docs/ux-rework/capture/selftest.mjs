@@ -3,7 +3,7 @@ import { setDeveloperTools } from './lib.mjs';
 // Self-test of the `ui` map and the tooltip/menu helpers against a running build (BASE_URL, default http://localhost:5239).
 //   BASE_URL=http://localhost:5239 UI_DIR=<worktree>/clock-generator-ui node selftest.mjs
 // Resolves every ui entry at 1440, 720 and 390 in four states and checks the count (1, or a documented 0).
-import { openSession, importFile, generate, goConfigure, goResults, SMALL_SAMPLE, ui, itemLabel, openTooltip, openMoreMenu, chooseMenuItem } from './lib.mjs';
+import { openSession, importFile, generate, goConfigure, goResults, SMALL_SAMPLE, ui, itemLabel, openTooltip, openMoreMenu, waitForMoreMenuClosed, chooseMenuItem } from './lib.mjs';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:5239';
 let fails = 0;
@@ -26,6 +26,7 @@ for (const w of [1440, 720, 390]) {
     await E(s, 'viewToggle(Results)', ui.viewToggle(page, 'Results'));
     await E(s, 'menuButton', ui.menuButton(page));
     await E(s, 'menu (closed)', ui.menu(page), 0);
+    await E(s, 'menuLayer (closed)', ui.menuLayer(page), 0);
     await E(s, 'importConfig', ui.importConfig(page), 0);
     await E(s, 'exportConfig', ui.exportConfig(page), 0);
     await E(s, 'pasteFromFactorio', ui.pasteFromFactorio(page));
@@ -51,12 +52,14 @@ for (const w of [1440, 720, 390]) {
     s = 'menu';
     const menu = await openMoreMenu(page);
     await E(s, 'menu (open)', ui.menu(page));
+    await E(s, 'menuLayer (open)', ui.menuLayer(page));
     await E(s, 'reset', ui.reset(page));
     await E(s, 'importConfig', ui.importConfig(page));
     await E(s, 'exportConfig', ui.exportConfig(page));
     log((await openMoreMenu(page)) !== null, `${w} openMoreMenu twice is harmless`);
     await page.keyboard.press('Escape');
-    await menu.waitFor({ state: 'hidden' });
+    await waitForMoreMenuClosed(page);
+    await E(s, 'menuLayer (exited)', ui.menuLayer(page), 0);
     await ui.pasteFromFactorio(page).click();
     await page.waitForTimeout(500);
     const pasteDialog = page.getByRole('dialog', { name: 'Paste from Factorio' });

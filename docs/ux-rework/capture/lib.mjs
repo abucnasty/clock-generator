@@ -69,6 +69,14 @@ export const SLOW_SAMPLE = sample('science/military-science/military-science-1-i
 /** The viewport height used with a width: 844 at 390 (a phone), 900 otherwise */
 export const heightFor = (width) => (width === 390 ? 844 : 900);
 
+// Width contexts share one system clipboard. Hold the complete write/action/read sequence, including resets.
+let clipboardTail = Promise.resolve();
+export function withClipboard(fn) {
+    const run = clipboardTail.then(fn, fn);
+    clipboardTail = run.catch(() => {});
+    return run;
+}
+
 const pad = (i) => String(i).padStart(2, '0');
 const firstLine = (e) => String(e?.message ?? e).split('\n')[0];
 
@@ -1457,6 +1465,8 @@ export const ui = {
     menuButton: (page) => btn(page, 'More options'),
     /** The open ⋮ menu; 0 while it is closed (owner: 1.7 header) */
     menu: (page) => page.getByRole('menu', { name: 'More options' }),
+    /** Includes the exiting menu's modal layer after its contents leave the accessibility tree (owner: capture tooling). */
+    menuLayer: (page) => page.locator('.MuiPopover-root').filter({ has: page.getByRole('menu', { name: 'More options', includeHidden: true }) }),
     /** An item of the open ⋮ menu by name (string = exact); 0 while it is closed. At every width, in order: Open build file…, Save build file, Try an example…, Getting started, Terms, Developer tools (a menuitemcheckbox: use developerToolsItem), Reset build (owner: 2.1 first visit, 2.5 B) */
     menuItem: (page, name) => page.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name }),
     /** Paste from Factorio: the filled button in the header at every width; it reads "Paste" below 600 px, with the same name (owner: 2.1 first visit) */
@@ -1600,6 +1610,12 @@ export async function openMoreMenu(page, { timeout = 5000 } = {}) {
         }
     }
     return menu;
+}
+
+/** Waits until a closed More options menu has also removed its pointer-intercepting transition layer. */
+export async function waitForMoreMenuClosed(page, { timeout = 5000 } = {}) {
+    await ui.menu(page).waitFor({ state: 'hidden', timeout });
+    await ui.menuLayer(page).waitFor({ state: 'detached', timeout });
 }
 
 /**

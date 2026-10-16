@@ -31,7 +31,7 @@ import { join } from 'node:path';
 import { inflateSync } from 'node:zlib';
 import {
     forWidths, previewServer, sample, LOGISTIC, SMALL_SAMPLE, SLOW_SAMPLE, importFile, goConfigure, goResults, validate, generate,
-    waitReady, noSideScroll, isClickable, contrastPairs, checkLabelInName, checkTabTo, checkFocusNotObscured, checkAnnounced,
+    waitReady, noSideScroll, isClickable, contrastPairs, checkLabelInName, checkTabTo, checkFocusNotObscured, checkAnnounced, withClipboard,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -630,7 +630,11 @@ async function a11yChecks({ page, rec }) {
  * descriptions' inserter numbers, "Copied" on both, and "Blueprint copied." announced once per click.
  * `expect.book` / `expect.fuel` / `expect.longList` add checks for the build.
  */
-async function copyChecks({ page, rec, tag, path, expect = {}, withTab = false }) {
+function copyChecks(options) {
+    return withClipboard(() => copyChecksSerial(options));
+}
+
+async function copyChecksSerial({ page, rec, tag, path, expect = {}, withTab = false }) {
     const p = `${tag}:`;
     const card = await cardOf(page);
     const noCard = !card.present || (await count(mainCopy(page))) === 0;
