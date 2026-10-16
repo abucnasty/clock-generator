@@ -451,8 +451,19 @@ async function accordionBandChecks(page, rec, label) {
 }
 
 /** What every state gets (axe, focus at a short window, one mouse activation); `dialog` is the open dialog's locator, if any */
-async function finalChecks(page, rec, width, view, { dialog = null, mouse = null, mouseLabel = '' } = {}) {
-    await rec.step(`axe ${view}`, () => checkAxe(rec, page, view), page);
+async function finalChecks(page, rec, width, view, { dialog = null, mouse = null, mouseLabel = '', auditFromTop = false } = {}) {
+    await rec.step(`axe ${view}`, async () => {
+        if (auditFromTop) {
+            // Preserve the raw action state before sampling full-page axe away from incidental sticky-header clipping.
+            await rec.shot(page, `${view.replaceAll(' ', '-')}-raw-before-axe`, { aria: true, desc: `Raw ${view} action viewport before canonical axe positioning` });
+            const active = await page.evaluateHandle(() => document.activeElement);
+            await page.evaluate(() => window.scrollTo(0, 0));
+            await page.waitForFunction(() => window.scrollY === 0);
+            rec.check(`${view}: canonical axe positioning preserves the original action focus`, await active.evaluate((el) => el === document.activeElement));
+            await active.dispose();
+        }
+        await checkAxe(rec, page, view);
+    }, page);
     await rec.step(`focus at a short window ${view}`, async () => {
         const height = width >= 1440 ? 640 : width >= 720 ? 560 : 480;
         await checkFocusNotObscuredAtHeight(rec, page, { height, width, walk: dialog ?? undefined, max: 40 });
@@ -1196,7 +1207,7 @@ async function stepAddchest({ page, rec, width }) {
         const h = await page.locator('main h4').allTextContents();
         return { pass: h.some((t) => /^Chests \(\d+\)/.test(norm(t))) && (await count(sel.addChestRow(page))) === 0, detail: `h4: ${show(h.map(norm))}; AddRow left ${await count(sel.addChestRow(page))}` };
     });
-    await finalChecks(page, rec, width, 'add chest');
+    await finalChecks(page, rec, width, 'add chest', { auditFromTop: width === 390 });
 }
 
 async function stepDelchest({ page, rec, width }) {
@@ -1227,7 +1238,7 @@ async function stepDelchest({ page, rec, width }) {
         const n = await count(sel.group(page, 'Chest'));
         return { pass: n === 1, detail: `${n} chest rows after Undo` };
     });
-    await finalChecks(page, rec, width, 'delete chest');
+    await finalChecks(page, rec, width, 'delete chest', { auditFromTop: width === 720 || width === 800 });
 }
 
 async function stepDrill({ page, rec, width }) {
