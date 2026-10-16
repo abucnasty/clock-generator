@@ -39,3 +39,5 @@ Frozen product `e143cca2071b007005f2d231901721203de83f7a`, before `68998602a74b7
 Comparable sequential local `npm test` pair after both own-source installs/builds/gates, no cache flush: before4.612s command wall (Vitest4.15s), after2.672s (Vitest2.25s). One local pair only, without a runtime or CI speed guarantee; CI timing comparison unavailable. Exact runner/cache qualifications and actual logs are in BENCHMARK.json. This directly measures fewer executed cases; product assets match exactly.
 
 Independent CODE/UX reviews and exact-head CI remain pending. Final later-provider integration refresh remains OPEN. No source-only native boundary is promoted to browser PASS.
+
+Initial independent CODE and UX round0 both PASS without blocker/major. Reports are retained beside this note. They assessed all24 decisions and actual survivors; CODE independently confirmed51 protected declarations plus11 untouched baseline declarations. No formal fix round used. Final provider merge/conflict and later-test reconciliation plus exact-head CI remain open, so this does not close D9 release acceptance.
