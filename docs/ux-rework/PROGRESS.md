@@ -117,8 +117,11 @@ come from here.
 |---|---|---|---|
 | [D1](specs/D1-compact-view.md) | Compact view | deferred | Owner requested roadmap scope only: denser Results/forms, fewer redundant labels/helpers, shorter title/workflow header, version visible without scrolling. Preserve essential feedback/accessibility; revisit after broader audit. No implementation or current release-scope expansion. |
 | [D2–D8](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings, working-context preservation and per-machine target/max/achieved rates. Reconcile overlaps with D1/3.3; no current implementation scope added. |
+| [D9](specs/D9-ui-test-audit.md) | Independent audit of new UI tests | deferred | Owner requests fewer unnecessary tests, with independent keep/consolidate/remove recommendations. Scope only tests added by this UX rework inside `clock-generator-ui`, including new cases in existing files; exclude engine/capture/pre-existing UI/upstream tests. No deletions now; current reviews and verification retained. |
 
 ## Decisions log
+
+- 2026-10-16: Owner requested an independent audit of unnecessary tests as deferred roadmap work, then narrowed it specifically to new tests added by this project inside `clock-generator-ui`. Added D9 with baseline attribution, concrete keep/consolidate/remove recommendations and remaining-coverage evidence; engine/capture/pre-existing UI/unrelated upstream tests are excluded. No current deletions or reduction of verification/review requirements.
 
 - 2026-10-16: Owner confirms “All those cases pass” for the requested app → game installation matrix: blueprint and both book variants, combinator output/wiring identification, green wire with Anything >0, automatic startup, lock on/off, long wiring via poles, drills and replacing an older clock. Together with the prior Sidecar → app PASS, the2.5 in-game checkpoint is satisfied. No repeat manual test requested now; phase merge approval remains separate. Fresh independent Sol/high/fast-off3.F whole-item CODE/UX reviews resumed after capacity became available; all existing verification and three phase-end reviewers retained.
 
