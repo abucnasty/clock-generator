@@ -28,6 +28,8 @@ describe('target capacity agrees with actual engine validation', () => {
             expect(facts.output_rate_ratio).toBeDefined();
             const max = machinesMaxOf(config.target_output.recipe, [{ id: 1, facts }])!;
             const capacity = totalMachineCapacity(max, copies);
+            expect(capacity).not.toBeNull();
+            if (capacity === null) throw new Error('Expected supported exact capacity');
             for (const rate of [capacity, capacity + Math.max(Number.EPSILON * capacity, Number.EPSILON), capacity + 0.001]) {
                 const candidate = build(copies, rate, crafting_speed);
                 const above = isTargetAboveMax(rate, copies, max);
@@ -53,6 +55,32 @@ describe('target capacity agrees with actual engine validation', () => {
         expect(isTargetAboveMax(6, 0.5, max)).toBe(true);
         expect(() => validateConfig(config)).not.toThrow();
         expect(() => validateConfig(build(0.5, 6, 5))).toThrow(/target production rate/);
+    });
+
+    it.each([
+        [2.25, 1.35, false],
+        [2.25, 1.3500000000000003, false],
+        [2.25, 1.351, true],
+        [0.5, 0.3, false],
+        [0.5, 0.30000000000000004, false],
+        [0.5, 0.301, true],
+    ] as const)('retains engine normalization at %s Copies, %s/s', (copies, rate, refused) => {
+        const config = build(copies, rate, 0.3);
+        const facts = Machine.computeMachineFacts(config.machines[0]);
+        expect(facts.output_rate_ratio).toEqual({ numerator: 3, denominator: 5 });
+        const max = machinesMaxOf('iron-gear-wheel', [{ id: 1, facts }])!;
+        expect(isTargetAboveMax(rate, copies, max)).toBe(refused);
+        if (refused) expect(() => validateConfig(config)).toThrow(/target production rate/);
+        else expect(() => validateConfig(config)).not.toThrow();
+    });
+
+    it('defers a schema-valid tiny rate to the engine without changing it', () => {
+        const config = build(2.25, 1e-23, 0.3);
+        const facts = Machine.computeMachineFacts(config.machines[0]);
+        const max = machinesMaxOf('iron-gear-wheel', [{ id: 1, facts }])!;
+        expect(isTargetAboveMax(config.target_output.items_per_second, 2.25, max)).toBe(false);
+        expect(() => validateConfig(config)).toThrow(/fraction: too many decimal places/);
+        expect(config.target_output.items_per_second).toBe(1e-23);
     });
 
     it('sums exact ratios before applying Copies and marks mixed legacy facts as approximate', () => {

@@ -12,6 +12,30 @@ export const TICK_DECIMALS = 3;
 /** Decimals a number field shows while it is not focused */
 export const FIELD_DECIMALS = 3;
 
+/** Base UI uses fraction digits for validation and significant digits for lossless controlled-value text. */
+export const NUMBER_FIELD_INPUT_FORMAT: Intl.NumberFormatOptions = {
+    maximumFractionDigits: 20,
+    maximumSignificantDigits: 21,
+    useGrouping: false,
+};
+
+/** Do not commit Base UI's blur-only precision rounding when the player has not edited a controlled value. */
+export function isUneditedPrecisionLoss(args: {
+    value: number | null | undefined;
+    nextValue: number | null;
+    reason: string;
+    edited: boolean;
+    customFormat: boolean;
+    min?: number;
+    max?: number;
+}): boolean {
+    const { value, nextValue, reason, edited, customFormat, min, max } = args;
+    return !customFormat && reason === 'input-blur' && !edited
+        && typeof value === 'number' && Number.isFinite(value)
+        && (min === undefined || value >= min) && (max === undefined || value <= max)
+        && nextValue !== value && nextValue === Number(value.toFixed(20));
+}
+
 interface NumberTextOptions {
     /** At most this many decimals; trailing zeros are dropped. Defaults to the decimals of a rate */
     maxDecimals?: number;
@@ -44,13 +68,14 @@ export function formatNumberText(value: number, options: NumberTextOptions = {})
  */
 export function shownNumberText(args: {
     focused: boolean;
+    preserveInputOnBlur?: boolean;
     value: number | null;
     inputValue: string;
     maxDecimals: number;
     locale?: Intl.LocalesArgument;
 }): string {
-    const { focused, value, inputValue, maxDecimals, locale } = args;
-    if (focused || value === null || !Number.isFinite(value)) {
+    const { focused, preserveInputOnBlur = false, value, inputValue, maxDecimals, locale } = args;
+    if (focused || preserveInputOnBlur || value === null || !Number.isFinite(value)) {
         return inputValue;
     }
     return formatNumberText(value, { maxDecimals, locale });

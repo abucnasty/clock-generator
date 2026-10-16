@@ -1,6 +1,6 @@
 # Upstream 0.15 compatibility evidence
 
-Checkpoint: 2026-10-16. **Evidence gate incomplete: remaining historical captures and selftest are listed below.**
+Checkpoint: 2026-10-16. **Phase 2 compatibility evidence gate complete; independent code/UX reviews pending.**
 No review verdict, PR, Phase 3 PASS, or 2.7B PASS is claimed.
 
 ## Pinned source
@@ -8,6 +8,7 @@ No review verdict, PR, Phase 3 PASS, or 2.7B PASS is claimed.
 - Frozen upstream: `1d27cde` (do not chase master during this evidence cycle).
 - Compatibility implementation and exact-rate tests: `fe18341`, including tested p2 `cf7a8c7`.
 - Latest product fix: `ded521b45bf109ed3d96a27bfbb40cc49634f86e`.
+- Capture-only repairs: `d2d6a44756b917625526c5f080618a03b27bc64f` (menu transition wait and serialized clipboard checks).
 - Current merge checkpoint: `477884a95b485108b65acb92ecaf7cceaa6f492b`, merging p2 `5a5693f` documentation only.
   Its product files are identical to `ded521b`.
 - Worktree `/tmp/ux-upstream-compatibility`; production `vite preview` at `http://127.0.0.1:5272`.
@@ -50,6 +51,13 @@ Use `BASE_URL=http://127.0.0.1:5272` plus the UI_DIR/SAMPLES_DIR above. Default 
 | `node /tmp/ux-upstream-capture/capture-upstream-compatibility.mjs /tmp/ux-upstream-evidence/compat-core-final` | **3088 PASS, 0 FAIL, 0 failed steps** | compat-core-final/INDEX.md; compat-final/core-final-capture.log |
 | `node /tmp/ux-upstream-capture/capture-rate-limit.mjs /tmp/ux-upstream-evidence/compat-rate-final` | **156 PASS, 0 FAIL, 0 failed steps** | compat-rate-final/INDEX.md; compat-final/rate-final-capture.log |
 | `STEPS=G1 node /tmp/ux-upstream-capture/capture-upstream-compatibility.mjs /tmp/ux-upstream-evidence/compat-geometry3` | 513 PASS, 0 FAIL, 0 failed steps; superseded by full core | compat-geometry3/INDEX.md; compat-final/geometry3-capture.log |
+| `node /tmp/ux-upstream-capture/selftest.mjs` | ALL PASSED; includes menu-layer empty/open/exited assertions; p3 explicitly NOT RUN | compat-final/selftest-repaired.log; independent repeat selftest-repaired-final.log exit0 |
+| `node /tmp/ux-upstream-capture/capture-first-visit.mjs /tmp/ux-upstream-evidence/compat-first-visit-repaired-final` | **1090 PASS, 0 FAIL, 0 failed steps; exit0** | compat-first-visit-repaired-final/INDEX.md; compat-final/first-visit-repaired-final-capture.log |
+| `node /tmp/ux-upstream-capture/capture-results-answer.mjs /tmp/ux-upstream-evidence/compat-results-repaired-final` | **790 PASS, 0 FAIL, 0 failed steps; exit0** | compat-results-repaired-final/INDEX.md; compat-final/results-repaired-final-capture.log |
+
+All nine example generations at1440 passed the <=60s requirement: logistic0.5s, automation0.9s,
+utility0.5s, chemical(shared-foundry)2.7s, electromagnetic1.9s, military2.6s, production1.8s,
+metallurgic10.8s, agriculture13.4s. Root inspected all nine result lines and complete firstvisit totals.
 
 Core widths 1440/960/800/720 each: 622 PASS. Width390:600 PASS. At390 only row geometry is observational;
 reachability, keyboard/focus, actions, accessible names and axe remain required. Rate widths1440/720/390:52 PASS each.
@@ -86,7 +94,7 @@ error.light `#ff9493`, retaining measured AA thresholds. Firstvisit expects exis
 menu closure is awaited before the start-note click. Selector selftest waits for asynchronously loaded example rows.
 The infinity-chest fixture explicitly says `type: infinity-chest`, matching current engine schema.
 
-## Remaining evidence — not run to completion on final source
+## Reproduction commands
 
 Run sequentially (clipboard is shared), copying the committed scripts and fixtures into the external runtime first:
 
@@ -94,17 +102,33 @@ Run sequentially (clipboard is shared), copying the committed scripts and fixtur
 export BASE_URL=http://127.0.0.1:5272
 export UI_DIR=/tmp/ux-upstream-compatibility/clock-generator-ui
 export SAMPLES_DIR=/tmp/ux-upstream-compatibility/clock-generator/resources/config-samples
-node /tmp/ux-upstream-capture/selftest.mjs > /tmp/ux-upstream-evidence/compat-final/selftest-final.log 2>&1
-node /tmp/ux-upstream-capture/capture-first-visit.mjs /tmp/ux-upstream-evidence/compat-first-visit-final > /tmp/ux-upstream-evidence/compat-final/first-visit-final-capture.log 2>&1
-node /tmp/ux-upstream-capture/capture-results-answer.mjs /tmp/ux-upstream-evidence/compat-results-final > /tmp/ux-upstream-evidence/compat-final/results-final-capture.log 2>&1
+node /tmp/ux-upstream-capture/selftest.mjs
+node /tmp/ux-upstream-capture/capture-first-visit.mjs /tmp/fresh-first-visit-evidence
+node /tmp/ux-upstream-capture/capture-results-answer.mjs /tmp/fresh-results-evidence
 ```
 
 Leave GEN_EACH unset (or1) for firstvisit: S6 at1440 generates all nine examples, records seconds and requires <=60s.
 The current-tree core Check already accepts the unchanged shared-foundry chemical sample with Copies5.5. Final generation
-timing remains pending. Current results-answer card is the relevant existing card; unmerged2.7B's new build-card script
+timing is now complete in the repaired firstvisit run above; do not repeat passed runs without a change. Current results-answer card is the relevant existing card; unmerged2.7B's new build-card script
 cannot establish PASS here. P3 library/share/rules/cache are separate adjunct evidence, never inferred from these captures.
 
 Prior runs retained honestly: core-capture.log1954PASS24FAIL20failedsteps (superseded); core-debug2 M2/U1 at720113PASS;
 first-visit-capture.log1063PASS16FAIL (stale version/menu expectations and390 open-menu setup); rate-capture.log141PASS15FAIL
 (stale exact copy/palette, superseded); selftest.log5 failures (example row render race, repaired but final rerun pending).
-No historical failure has been relabeled PASS. Review waits for remaining final runs and root evidence decision.
+No historical failure has been relabeled PASS. Root inspected the final result lines, all nine generation timings,
+independent test/build logs and screenshots before declaring this evidence ready for review.
+
+The first final historical runs were interrupted after assertions, exit130. Their later browser-closed errors are
+interruption artifacts. Sol reproduced the firstvisit focus failure at all three widths: an exiting More-options
+backdrop intercepted the click after its menu left the accessibility tree. The shared wait now requires that layer
+to detach, preserving the real mouse/focus assertion (targeted229PASS0FAIL, then full1090PASS above).
+The Results run read the8-character sentinel instead of a1873-character blueprint. The unlocked bounded diagnostic
+did not reproduce that exact nondeterministic failure (536PASS), but traced overlapping cross-width clipboard writes.
+The shared lock now serializes each entire card/bar/tab reset/click/read sequence without relaxing equality/decode
+assertions; targeted copy63PASS0FAIL. Complete repaired Results now790PASS0FAIL, including the previous
+drills/ALWAYS equality assertion at all widths (1873 characters on both card and bar).
+
+Independent final product tests/build: `/tmp/ux-upstream-194-evidence/final-ded521b/RESULTS.md` and logs,
+926UItests/build exit0 with each scratch's own built engine. Root opened final core screenshots
+1440 repeated-unit guide,720 Diagram unsaved draft,390 half-copy target limit, plus1440/720 geometry.
+No Phase3 library/rule/cache evidence, 2.7B final evidence, review verdict or owner checkpoint is implied.
