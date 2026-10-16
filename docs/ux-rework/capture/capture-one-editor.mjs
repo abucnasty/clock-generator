@@ -32,7 +32,7 @@
 //   alignment  Automatic and explicit slot centers ±1px from actual Stack size input box at1440/960/800/720/1600;390 reach
 //   geometry   no sideways scroll on Configure and the dialogs fit at 960, 800 and 720 (runs in the first width's context only)
 //
-// Future product: no capture has been run. See UI-MAP-REQUESTS.md (SELECTOR: confirm) before integration.
+// Adopted against e7830d3; see one-editor-EVIDENCE.md for validated bindings and retained diagnostics.
 // Source baseline: main at29fd922 + /tmp/ux-p3-integration at865f460, 2026-10-16.
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -298,7 +298,7 @@ async function readGroups(page) {
 // The five dialogs: sample, node label, the dialog's own title, one field to change and what to look for in the stored form
 const KINDS = [
     { key: 'machine', file: LDS, node: /^Machine 1$/, title: 'Machine 1', field: 'Productivity (%)', bump: 1 },
-    { key: 'belt', file: LDS, node: /^Belt 1/, title: 'Belt 1', field: 'Stack size', bump: 1 }, // SELECTOR: confirm (first lane's Stack Size)
+    { key: 'belt', file: LDS, node: /^Belt 1/, title: 'Belt 1', field: 'Stack size', bump: 1 }, // The dialog's first lane field.
     { key: 'chest', file: LDS, node: /^Chest 1$/, title: 'Chest 1', field: 'Storage Size', bump: 1 },
     { key: 'drill', file: SHARED, node: /^Drill 1$/, title: 'Drill 1', field: 'Speed Bonus', bump: 1 },
     { key: 'inserter', file: LDS, node: /^Inserter 3$/, title: 'Inserter 3', field: 'Stack size', bump: -1 },
@@ -592,11 +592,11 @@ const run = await forWidths(
                 const dlg = U.dialog(page);
                 const form0 = await stored(page);
                 const chest0 = JSON.parse(form0).chests?.[0];
-                await ui.oneEditorChestType(dlg).click(); // SELECTOR: confirm (SELECT_NAMES.chestType)
+                await ui.oneEditorChestType(dlg).click(); // SELECT_NAMES.chestType
                 await ui.oneEditorOption(page, /^Infinity chest$/i).click();
                 await wait(page, 400);
                 rec.check('N5 the type switch only changes the draft (stored chest unchanged)', (await stored(page)) === form0);
-                // a filter for the infinity chest: "Add new filter" opens a popover with an item picker and Confirm
+                // The empty infinity filter slot (or its Add action) opens an item picker with Confirm.
                 const addNew = ui.oneEditorChestAddFilter(dlg);
                 if (await addNew.count()) await addNew.first().click();
                 else throw new Error('SELECTOR: confirm ui.oneEditorChestAddFilter against implemented chest editor');
@@ -929,7 +929,7 @@ const run = await forWidths(
         // Final carry-forward: multiline Automatic MUST be measured, not replaced by already-aligned explicit rows.
         if (want('alignment') && width === WIDTHS[0])
             await rec.step('Automatic and explicit row input-box alignment', async () => {
-                const oneLine=Number(process.env.ONE_LINE_WIDTH ?? 1600); // current source ONE_LINE: min-width1600px; SELECTOR: confirm if changed.
+                const oneLine=Number(process.env.ONE_LINE_WIDTH ?? 1600); // Preserved source ONE_LINE: min-width1600px.
                 if (!Number.isInteger(oneLine) || oneLine < 1440) throw new Error('ONE_LINE_WIDTH must preserve the existing one-line breakpoint');
                 const widths=[...new Set([1440,960,800,720,oneLine,390])];
                 for (const [prototype,capacity,quality] of TYPES) {
@@ -962,6 +962,6 @@ const run = await forWidths(
     },
     { out: OUT, base: BASE },
 );
-process.exitCode = run.finish({ title: '3.2 A: one inserter editor, drafts, the filter picker', note: `Production preview ${BASE}. STEPS=${process.env.STEPS ?? 'all'}, WIDTHS=${WIDTHS.join(',')}; partial runs are diagnostic only. See CAPTURE-CHANGES.md for baseline and integration assumptions.` });
+process.exitCode = run.finish({ title: '3.2 A: one inserter editor, drafts, the filter picker', note: `Production preview ${BASE}. STEPS=${process.env.STEPS ?? 'all'}, WIDTHS=${WIDTHS.join(',')}; partial runs are diagnostic only. See docs/ux-rework/capture/one-editor-EVIDENCE.md for the baseline, integration and retained diagnostics.` });
 
 await previewStop?.();
