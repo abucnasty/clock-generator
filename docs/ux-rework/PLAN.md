@@ -524,9 +524,9 @@ Owner approval, 2026-10-16, A / A / A: one labeled Display button in the slim he
 
 Owner approval, 2026-10-16, A / A / A: remember selected entity, Configure/Results view, detail tab, expanded sections, existing sort/filter choices and approximate page position locally per build across reloads/switches, outside exports/share links. Extend actual remaining gaps after Phase 3, preserving its chosen-clock/result persistence. Retain Save/Cancel without unsaved-draft recovery; removed entities/layout changes get sensible fallbacks and validation navigation takes precedence. See [D7 scope](specs/D7-working-context.md).
 
-### Further deferred design proposal (D8)
+### Approved Phase 4 investigation: Per-machine production rates (D8)
 
-Owner requested per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 remains unapproved for implementation unless separately promoted into Phase 4.
+Owner approval, 2026-10-16, A / A / A: define rate semantics and investigate authoritative engine data, then return with an implementation proposal for owner approval. The intended target is read-only engine-derived per-machine planned demand, alongside distinct maximum/achieved values, for one modeled unit with all-Copies totals labeled separately. Investigate Check/Generate availability, multiple outputs/by-products, intermediate allocation, fractional Copies and stale/unknown values. This approval does not implement the engine/UI feature or display. See [D8 investigation scope](specs/D8-machine-rate-feasibility.md).
 
 ### Independent audit of new UI tests (D9)
 

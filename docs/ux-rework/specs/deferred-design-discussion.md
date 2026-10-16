@@ -2,7 +2,7 @@
 
 Owner request: 2026-10-16. Record these ideas for later discussion, not implementation now. D1 already covers Compact view and wider-screen composition. These are draft proposals, not finalized implementation specs or additions to the current release scope. Revisit after the owner's broader audit; preserve current reviews and verification.
 
-Current decisions, 2026-10-16: D1–D7 are approved for Phase 4. Original D2–D7 draft rows below are superseded by [D2 approved scope](D2-theme-modes.md), [D3 approved scope](D3-task-audit.md), [D4 approved scope](D4-clock-tradeoffs.md), [D5 approved scope](D5-exceptions-assumptions.md), [D6 approved scope](D6-display-preferences.md), [D7 approved scope](D7-working-context.md) and [the Phase 4 decision register](phase4-decisions.md). D8 remains pending individual approval; all three phase-end reviewers and current verification remain required.
+Current decisions, 2026-10-16: D1–D8 are approved for Phase 4, with D8 limited to investigation and a subsequent implementation proposal. Original drafts below are superseded by [D2 approved scope](D2-theme-modes.md), [D3 approved scope](D3-task-audit.md), [D4 approved scope](D4-clock-tradeoffs.md), [D5 approved scope](D5-exceptions-assumptions.md), [D6 approved scope](D6-display-preferences.md), [D7 approved scope](D7-working-context.md), [D8 investigation scope](D8-machine-rate-feasibility.md) and [the Phase 4 decision register](phase4-decisions.md). All three phase-end reviewers and current verification remain required.
 
 | ID | Proposal | Problem / intended outcome | Decisions for later |
 |---|---|---|---|
@@ -21,7 +21,7 @@ For any proposal selected later, finalize exact behaviour/files, measurable acce
 
 ## D8 — Per-machine target production rate
 
-Owner addition, 2026-10-16: show the target production rate for each machine alongside maximum capacity. Deferred draft; no engine or UI implementation now.
+Historical draft from the owner addition, 2026-10-16: show target production rate for each machine alongside maximum capacity. Superseded by [approved investigation-only scope](D8-machine-rate-feasibility.md); engine/UI implementation still requires owner approval.
 
 - Intended display: required/planned average output for each machine, maximum attainable output, and optionally utilization/headroom. Keep requested target, maximum capacity and selected-clock achieved/simulated output distinct, especially for below-target clocks.
 - Current boundary: `SerializableMachineFacts` exposes intrinsic `output_rate_per_second` and its exact ratio, not a required per-entity target. `TargetProductionRate.fromConfig` represents build-total/per-copy final-output demand; that is not sufficient by itself to assign an intermediate machine's rate. Inspect existing cycle/transfer planning before proposing new calculation logic.

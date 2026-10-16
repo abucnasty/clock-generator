@@ -2,7 +2,7 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1–D7 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1–D8 are approved for Phase 4 with the exact choices below; D8 approves investigation only, not engine/UI implementation. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
@@ -15,7 +15,7 @@ Phase 3 verification and its merge checkpoint remain required. Phase 4 retains i
 | D5 Exceptions and assumptions | Approved — A / A / A | Compact summarizes common defaults per section, differences visible on rows; explanatory view keeps fuller labels; distinguish Automatic/Explicit even when values match; import and result-snapshot assumption summaries |
 | D6 Display preferences | Approved — A / A / A | Labeled Display button in slim header, no extra row; Compact and System/Light/Dark in immediate-apply popover; one browser-wide preference set shared across builds |
 | D7 Working context | Approved — A / A / A | Selected entity/view/detail/sections, existing sort/filter and approximate page position; locally per build across reloads/switches; retain Save/Cancel, no unsaved-draft recovery |
-| D8 Per-machine production rates | Pending | Semantics/feasibility only versus implementation; authoritative source; target/max/achieved and units |
+| D8 Per-machine production rates | Approved — A / A / A, investigation only | Define rate semantics and engine-data feasibility; return for implementation approval. Read-only engine-derived planned demand; each machine in one modeled unit, all-Copies totals separate |
 | D9 Independent audit of new UI tests | Pending | Audit/proposal versus approved cleanup; only UX-rework additions in clock-generator-ui; remaining coverage |
 | First-visit route refinement | Pending | Choices before instructions; guide default; preserve Paste/Example/Manual routes |
 
@@ -92,4 +92,14 @@ Owner: “Approve D7 with A / A / A.”
 - First identify actual context losses after Phase 3 and extend existing behavior; preserve the completed chosen-clock/result persistence rather than replacing it. Do not add new sorting/filter features merely to persist them.
 - Finalize reset/invalidation/cross-tab details in the item spec. Existing checks, independent reviews, accessibility and all three phase-end reviewers remain required.
 
-Next discussion: D8 per-machine production rates. D8–D9 and first-visit refinement remain pending.
+### D8 approved, 2026-10-16
+
+Owner: “Approve D8 with A / A / A.”
+
+- Scope A: Phase 4 includes the rate-semantics definition and investigation of available engine data, followed by a reviewable implementation proposal for owner approval. This approval does not include engine/UI feature implementation or the display itself.
+- Meaning A: the intended target is read-only, engine-derived planned production for each machine based on overall build demand and connected topology. It is not an editable per-machine goal.
+- Units A: each machine's figures describe that machine in one modeled unit, with totals across Copies labeled separately. Keep planned, maximum and selected-clock achieved rates distinct.
+- Investigate Check versus Generate availability, multiple outputs/by-products, intermediate demand allocation, fractional Copies, and stale/unknown values. Use authoritative planning data; do not derive demand by scaling intrinsic maximum in UI code.
+- Deliver a semantic contract, worked fixtures, engine/worker/UI impact and bounded implementation options/effort. Return to the owner before implementing the feature; current reviews/verification remain unchanged.
+
+Next discussion: D9 independent audit of new UI tests. D9 and first-visit refinement remain pending.
