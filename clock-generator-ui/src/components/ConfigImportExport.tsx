@@ -481,9 +481,8 @@ export function ConfigImportExport({
         setMenuAnchorEl(null);
     }, []);
 
-    // the menu is mounted in the header, read once when it opens: it must not move while it closes
+    // Also anchors the help/tool actions opened from More options.
     const menuButtonRef = useRef<HTMLButtonElement>(null);
-    const menuContainer = useCallback(() => menuButtonRef.current?.closest('header') ?? document.body, []);
 
     // the file picker and the download are only allowed from the click itself: no await or timer before them
     const handleMenuImport = useCallback(() => {
@@ -558,11 +557,12 @@ export function ConfigImportExport({
                         vertical: 'top',
                         horizontal: 'right',
                     }}
-                    // mounted in the header, so the menu is inside the banner landmark; the header is sticky, so the
-                    // menu stays by its button and the page needs no scroll lock
-                    container={menuContainer}
+                    // The sticky header keeps the opener in place without locking page scrolling.
                     disableScrollLock
-                    slotProps={{ list: { 'aria-label': BUTTON_NAMES.moreOptions } }}
+                    slotProps={{
+                        paper: { role: 'region', 'aria-label': BUTTON_NAMES.moreOptions },
+                        list: { 'aria-label': BUTTON_NAMES.moreOptions },
+                    }}
                 >
                     <MenuItem onClick={handleMenuImport}>
                         <ListItemIcon>
