@@ -12,6 +12,8 @@ import {
     maxRateLabel,
     rateHeader,
     shownNumberText,
+    NUMBER_FIELD_INPUT_FORMAT,
+    isUneditedPrecisionLoss,
 } from './numberText';
 
 const locale = 'en-US';
@@ -158,5 +160,36 @@ describe('the clocks table headers', () => {
 describe('COPIES_HELPER', () => {
     it('says what a copy is and what the clock is made for', () => {
         expect(COPIES_HELPER).toBe("Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.");
+    });
+});
+
+describe('controlled NumberField precision', () => {
+    it.each([1e-23, Number.MIN_VALUE, 0.3333333333333333, 0.0625, 68.906247615814, Number.MAX_VALUE])(
+        'keeps %s in the default input text while retaining twenty-fraction-digit edit precision', value => {
+            expect(NUMBER_FIELD_INPUT_FORMAT.maximumFractionDigits).toBe(20);
+            expect(Number(new Intl.NumberFormat('en-US', NUMBER_FIELD_INPUT_FORMAT).format(value))).toBe(value);
+        },
+    );
+
+    const blur = { value: 1e-23, nextValue: 0, reason: 'input-blur', edited: false, customFormat: false };
+    it('preserves an unedited tiny controlled value on blur', () => {
+        expect(isUneditedPrecisionLoss(blur)).toBe(true);
+        expect(isUneditedPrecisionLoss({ ...blur, value: Number.MIN_VALUE, min: 0 })).toBe(true);
+    });
+
+    it('leaves actual edits, steppers, clearing, normal numbers and supplied formats unchanged', () => {
+        for (const change of [
+            { edited: true }, { reason: 'input-change' }, { reason: 'increment-press' },
+            { nextValue: null }, { value: 0, nextValue: 0 }, { value: 0.0625, nextValue: 0.0625 },
+            { value: 16, nextValue: 17 }, { customFormat: true },
+            { value: undefined }, { value: null }, { value: Infinity }, { value: NaN },
+        ]) expect(isUneditedPrecisionLoss({ ...blur, ...change })).toBe(false);
+    });
+
+    it('does not mistake min/max clamping for precision rounding', () => {
+        expect(isUneditedPrecisionLoss({ ...blur, value: -1e-23, min: 0 })).toBe(false);
+        expect(isUneditedPrecisionLoss({ ...blur, max: 0 })).toBe(false);
+        expect(isUneditedPrecisionLoss({ ...blur, value: -1, min: 0 })).toBe(false);
+        expect(isUneditedPrecisionLoss({ ...blur, value: 17, nextValue: 16, max: 16 })).toBe(false);
     });
 });
