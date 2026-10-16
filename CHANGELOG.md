@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `clock-generator/package.json` and `clock-generator-ui/package.json` share the same version; the sidecar mod has a version of its own. See Versioning in the README.
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the samples, are in the git history.
 
+## [0.15.1] - 2026-10-16
+
+### Changed
+- A rocket silo is refused with the reason: it is supported as a chest only, at roadmap milestone M2.
+- Five samples from real bases added under `config-samples/real/`.
+- The utility science sample with low density structures inserted directly is removed.
+
 ## [0.15.0] - 2026-10-15
 
 ### Changed
