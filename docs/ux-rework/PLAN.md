@@ -82,10 +82,10 @@ master
 
 ### Releases (only in the final PR)
 
-- Bump `clock-generator` and `clock-generator-ui` together from the then-current master version (currently **0.15.1**)
+- Bump `clock-generator` and `clock-generator-ui` together from the then-current master version (currently **0.15.2**)
   to the next release, with a `CHANGELOG.md` section listing the changes players will notice. Choose the final number
   in the final PR; taking upstream version changes during integration is not a new phase release.
-- Bump `clock-generator-sidecar` from 0.7.0 to **0.8.0**: `info.json`, `changelog.txt`, and `LATEST_SIDECAR_VERSION` in
+- Bump `clock-generator-sidecar` from 0.7.1 to **0.8.0**: `info.json`, `changelog.txt`, and `LATEST_SIDECAR_VERSION` in
   `clock-generator/src/config/sidecar-version.ts`. A test fails if those three drift apart.
 - Merging to `master` releases the site, and publishes the mod because its folder changed (see the root `README.md`).
 - **Do not bump any version in a phase.**
@@ -104,7 +104,8 @@ master
 
 ## Upstream compatibility (owner decisions, 2026-10-16)
 
-Master advanced from 0.11.0 to 0.15.1. Integrate it into `feat/ux-rework`, then p2, then p3, preserving the UX work.
+Master advanced from 0.11.0 to 0.15.1, then 0.15.2 during integration (#193, the near-lane bugfix).
+Integrate it into `feat/ux-rework`, then p2, then p3, preserving the UX work.
 The integration acceptance criteria are in [specs/upstream-0.15-compatibility.md](specs/upstream-0.15-compatibility.md).
 
 - **Keep this a UX rework.** Preserve imported inserter type and quality and show them read-only; no selectors.

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.7.1
+Date: 2026-10-16
+  Bugfixes:
+    - two belts that carry the same items on opposite lanes are exported as two belts, not one. As one, the lanes of the first were listed for both, and the near_lane of an inserter on the other named the wrong item
+---------------------------------------------------------------------------------------------------
 Version: 0.7.0
 Date: 2026-10-14
   Features:
