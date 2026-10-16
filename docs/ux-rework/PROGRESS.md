@@ -110,6 +110,8 @@ come from here.
 
 ## Decisions log
 
+- 2026-10-16: Owner preview correction: remove “Items per swing. Clear for Automatic.” under explicit Stack size fields and reclaim its helper space, in both List and Diagram. Include in the pending P3 compatibility adjunct and carry to2.7B; preserve Automatic explanations, values and clearing semantics. Focused visual/accessibility recheck required; existing review counters retained.
+
 Owner decisions made after the plan was written, and every change to [PLAN.md](PLAN.md), with the date.
 
 - 2026-10-16: Owner requested cleanup of obsolete origin branches. Deleted `feat/goal-2-true-starts` (#185),
