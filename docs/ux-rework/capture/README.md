@@ -25,16 +25,17 @@ preview unless you are debugging.
 - `capture.mjs` runs the four widths of the plan (1440, 960, 720, 390) at once, each in its own browser context, into
   `<out dir>/w<width>/` with a merged `INDEX.md`:
   - **1440** is the full walkthrough: first visit, the ⋮ menu and Paste from Factorio, an imported build in the List and the
-    Diagram, with the editors, Validate and Generate, every Results tab, copy, an edit after generating (the stale
+    Diagram, with the editors, Check only and Generate, every Results tab, copy, an edit after generating (the stale
     banner and "Copy old clock…"), a broken build, a fuel build, and a run in flight.
   - **960, 720 and 390** take the layout states: first visit, Configure (List), Results and every tab, with a
     no-side-scroll check and whether the Configure and Results tabs can be clicked. `WIDTHS=1440,390` picks other widths.
-- `capture-extra.mjs` covers the info tooltip, the narrow window above the fold, a broken build and a fuel build at 1440 and
+- `capture-extra.mjs` covers the clock's click/touch help dialog, the narrow window above the fold, a broken build and a fuel build at 1440 and
   390, into `<out dir>/extra/`.
 - Both use the sample configs in `clock-generator/resources/config-samples/` (`SAMPLES_DIR` for another checkout), and find
-  elements by their current labels ("Validate", "Generate", "Advanced Overrides", "Copy old clock…"…) and, for the enable
-  rule of an inserter, the chip's name (`/, Inserter \d+\. Edit rule$/`). **Update the selectors as the rework changes the
-  UI.** Waits for button text read `textContent`, not `innerText`: MUI upper-cases labels with CSS.
+  controls through the shared `ui` map. **Update the selectors and affected consumers as the rework changes the UI.**
+  The main walkthrough keeps both build-file rejection in Paste and a valid sidecar-format test input derived from
+  the logistic sample; that fixture is not an export captured in game. Dialog screenshots wait for their finite
+  entry animations to finish. Waits for button text read `textContent`, not `innerText`: MUI upper-cases labels with CSS.
 - `capture-enable-chip.mjs <out dir> <before|after> [port]` checks the enable chip (item 1.13) at 1440px and 720px.
   `before` runs against the gear icon of 0.9.0; `after` runs the whole sequence and writes a pass or fail line per check
   into `INDEX.md`.
