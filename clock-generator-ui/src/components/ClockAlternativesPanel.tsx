@@ -386,8 +386,9 @@ export function ClockAlternativesPanel({
                         const stableRows = stableBelts[group];
                         const otherRows = otherBelts[group];
                         if (!stableRows.length && !otherRows.length) return null;
-                        return <TableBody key={group}>
-                            <TableRow><TableCell component="th" scope="rowgroup" colSpan={columnCount}
+                        const headingId = `${tableId}-belt-${group}`;
+                        return <TableBody key={group} aria-labelledby={headingId}>
+                            <TableRow><TableCell id={headingId} component="th" role="rowheader" scope="rowgroup" colSpan={columnCount}
                                 sx={{ fontWeight: 700, bgcolor: 'background.default' }}>
                                 {group === 'matches' ? 'Matches your belt setting' : 'Requires a different belt setting'}
                             </TableCell></TableRow>
