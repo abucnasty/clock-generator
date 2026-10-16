@@ -472,6 +472,12 @@ Each item is one child PR unless noted. The order matters: 1.1 to 1.3 first.
 - the tests pass
 - the fresh UX review is attached to the phase PR.
 
+## Deferred roadmap: Compact view (D1)
+
+Owner feedback, 2026-10-16: scope an optional denser view for experienced users, especially Results. Reduce excessive padding, repeated labels/helpers and the double-header footprint; make the version visible without scrolling. Preserve newcomer defaults, essential feedback and accessibility. See [D1 scope](specs/D1-compact-view.md).
+
+This is planning only, deferred beyond the current implementation queue until the owner's broader audit. It does not extend the current phase completion criteria or release scope; no product implementation now.
+
 ## Verification (every phase)
 
 1. **Tests.** Vitest tests for every piece of logic touched:

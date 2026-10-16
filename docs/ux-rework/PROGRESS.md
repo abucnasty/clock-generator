@@ -29,6 +29,7 @@ come from here.
 | `merged` | merged into the phase branch |
 | `carried` | moved to a later phase |
 | `dropped` | the owner decided against it |
+| `deferred` | scoped for later; excluded from the current implementation queue |
 
 ## Current state
 
@@ -108,7 +109,15 @@ come from here.
 | [3.3](specs/3.3-cancel-keep.md) | Cancel, and keep the results | opus | fix-1 | | 1 | Resumed from e6870af after the owner’s pause. Majors 1 and 3, minors and nits done except accepted install-step wording. Remaining: B11 non-recommended pick capture, build-library capture, full gate, p3 merge and re-checks. One unit (20 existing, 12 new files). After 2.7 A and 1.5 F. `offerUndo` loses `resultsCleared` (also in 3.4) |
 | [3.4](specs/3.4-build-library.md) | Build library and share links | opus | merged (p3) | [#180](https://github.com/abucnasty/clock-generator/pull/180) | 1 | "Your builds" switcher, migration of the single save, other-tab warning, share links (`CompressionStream`, no dependency; owner-approved terms). Round 0 code PASS / UX FIX (a new build showed the previous recipe — `ItemSelector` now controls its input, closing the 1.3 stale-text follow-up); round 1 both PASS; a flaky first-visit check was a script race (menu exit time), fixed in the script. Post-merge type-check caught duplicate hooks with 2.5 A. B20 fixed. Capture 1077/0. CI green |
 
+## Deferred roadmap
+
+| Item | Title | Status | Notes |
+|---|---|---|---|
+| [D1](specs/D1-compact-view.md) | Compact view | deferred | Owner requested roadmap scope only: denser Results/forms, fewer redundant labels/helpers, shorter title/workflow header, version visible without scrolling. Preserve essential feedback/accessibility; revisit after broader audit. No implementation or current release-scope expansion. |
+
 ## Decisions log
+
+- 2026-10-16: Owner requested compact-view planning and explicitly deferred implementation. Added PLAN's deferred D1 section and scoped spec; current roadmap execution and phase criteria remain in place.
 
 - 2026-10-16: Temporary owner model override: every worker, including every reviewer and all three phase-end personas, uses GPT-6.1 Sol / high reasoning / fast off until revoked. Owner handles parent model. Replace Astra workers on next use; preserve role independence, review rounds and all verification/checkpoints.
 
