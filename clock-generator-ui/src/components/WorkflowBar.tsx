@@ -1,7 +1,7 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
-import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useRef } from 'react';
-import { useAnnounce } from '../hooks/useMessages';
+import { useAnnounce, useMessageState } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
 import { ELEMENT_IDS, problemCountLabel, type Problem } from '../utils/firstProblem';
@@ -14,6 +14,8 @@ export type WorkflowView = 'configure' | 'results';
 
 /** Before the selected clock's name in the bar */
 const SELECTED_CLOCK_PREFIX = 'Selected clock: ';
+/** The note's line in the bar: its button (23px) and the 8px under it */
+const NOTE_LINE_HEIGHT = 31;
 
 interface WorkflowBarProps {
     view: WorkflowView;
@@ -162,6 +164,50 @@ export function WorkflowBar({
         }
     }, [checkStatus, checkedForGenerate, isLoading, generationFailed, hasBlueprint, selectedLabel, selectedId, selectionQuiet, announce]);
 
+    // from md up the note is in the bar's row, left of the chips, cut with an ellipsis (its words are also the Check only and
+    // Generate tooltips and their description); below md it has the line under the bar
+    const theme = useTheme();
+    const wide = useMediaQuery(theme.breakpoints.up('md'));
+    const messageShown = useMessageState().current !== null;
+    const noteInBar = wide && note !== null;
+    const noteNode = (inBar: boolean) => note && (
+        note.target ? (
+                        <Button
+                            id={ELEMENT_IDS.blockReason}
+                            variant="text"
+                            size="small"
+                            title={inBar ? note.text : undefined}
+                            color={startHere ? 'inherit' : 'error'}
+                            onClick={() => onGoToProblem(note)}
+                            // the ripple would tint the text's background on focus; an outline marks the focus instead
+                            disableRipple
+                            // the lighter red: the error red is 3.9:1 on the bar, under the 4.5 text needs. A link's
+                            // underline on hover, not a tinted background, which would take the contrast under 4.5 again.
+                            // The first step on a blank build is not a problem: in the bar's own text colour
+                            sx={{
+                                color: startHere ? 'text.primary' : 'error.light',
+                                textTransform: 'none',
+                                textAlign: 'inherit',
+                                py: 0,
+                                px: 0.5,
+                                ml: -0.5,
+                                minWidth: 0,
+                                ...(inBar && { display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }),
+                                '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
+                                // on any focus, not only the keyboard's: Check only moves the focus here when the build has
+                                // a problem, and a mouse click must show where it went
+                                '&:focus, &.Mui-focusVisible': { outline: '2px solid', outlineColor: startHere ? 'primary.main' : 'error.light', outlineOffset: 2 },
+                            }}
+                        >
+                            {note.text}
+                        </Button>
+                    ) : (
+                        <Typography id={ELEMENT_IDS.blockReason} variant="body2" color="text.secondary" noWrap={inBar} title={inBar ? note.text : undefined}>
+                            {note.text}
+                        </Typography>
+                    )
+    );
+
     return (
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
             <Toolbar variant="dense" sx={{ flexWrap: 'wrap', gap: { xs: 1, sm: 2 }, py: 1 }}>
@@ -178,17 +224,19 @@ export function WorkflowBar({
                     <ToggleButton value="results">Results</ToggleButton>
                 </ToggleButtonGroup>
 
+                {noteInBar && <Box sx={{ flex: '1 1 0', minWidth: 0 }}>{noteNode(true)}</Box>}
+
                 {/* the actions wrap together and stay on the right, instead of one dropping to a row of its own */}
                 <Box sx={{ ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 1, sm: 2 } }}>
                     {blueprintString && (
                         <>
-                            {selectedLabel && (
+                            {selectedLabel && !noteInBar && (
                                 <Typography
                                     variant="body2"
                                     color="text.secondary"
                                     noWrap
                                     title={selectedEngineName ?? undefined}
-                                    sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', sm: 'block' } }}
+                                    sx={{ maxWidth: 320, minWidth: 0, flex: '1 1 0', display: { xs: 'none', md: 'block' } }}
                                     data-selected-clock
                                 >
                                     {SELECTED_CLOCK_PREFIX}{selectedLabel}
@@ -277,45 +325,27 @@ export function WorkflowBar({
                     </Tooltip>
                 </Box>
             </Toolbar>
-            {note && (
-                // under the buttons it explains, from md up; under the toggle in a narrow window, where the bar wraps
-                <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1, mt: -0.5, minWidth: 0, display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, textAlign: { xs: 'left', md: 'right' } }}>
-                    {note.target ? (
-                        <Button
-                            id={ELEMENT_IDS.blockReason}
-                            variant="text"
-                            size="small"
-                            color={startHere ? 'inherit' : 'error'}
-                            onClick={() => onGoToProblem(note)}
-                            // the ripple would tint the text's background on focus; an outline marks the focus instead
-                            disableRipple
-                            // the lighter red: the error red is 3.9:1 on the bar, under the 4.5 text needs. A link's
-                            // underline on hover, not a tinted background, which would take the contrast under 4.5 again.
-                            // The first step on a blank build is not a problem: in the bar's own text colour
-                            sx={{
-                                color: startHere ? 'text.primary' : 'error.light',
-                                textTransform: 'none',
-                                textAlign: 'inherit',
-                                py: 0,
-                                px: 0.5,
-                                ml: -0.5,
-                                minWidth: 0,
-                                '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
-                                // on any focus, not only the keyboard's: Check only moves the focus here when the build has
-                                // a problem, and a mouse click must show where it went
-                                '&:focus, &.Mui-focusVisible': { outline: '2px solid', outlineColor: startHere ? 'primary.main' : 'error.light', outlineOffset: 2 },
-                            }}
-                        >
-                            {note.text}
-                        </Button>
-                    ) : (
-                        <Typography id={ELEMENT_IDS.blockReason} variant="body2" color="text.secondary">
-                            {note.text}
-                        </Typography>
-                    )}
+            {/* Below md the reason has a line of its own under the bar, reserved even when empty, so that the pinned header keeps its
+                height as the note comes and goes, on every edit and check; the generation's progress takes the line when there
+                is no note. A message row under the bar takes the line's place, so that no empty band sits above it. */}
+            {!wide && (note || isLoading || !messageShown) && (
+                <Box
+                    sx={{
+                        px: { xs: 2, sm: 3 },
+                        pb: 1,
+                        mt: -0.5,
+                        // one line of the note's button (23px) and the padding under it
+                        minHeight: NOTE_LINE_HEIGHT,
+                        minWidth: 0,
+                        display: 'flex',
+                        justifyContent: 'flex-start',
+                        textAlign: 'left',
+                    }}
+                >
+                    {note ? noteNode(false) : isLoading ? <GenerationProgressStatus store={progressStore} /> : null}
                 </Box>
             )}
-            {isLoading && (
+            {isLoading && (wide || note) && (
                 <Box sx={{ px: { xs: 2, sm: 3 }, pb: 1 }}>
                     <GenerationProgressStatus store={progressStore} />
                 </Box>

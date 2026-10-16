@@ -13,7 +13,6 @@ import {
     Table,
     TableBody,
     TableCell,
-    TableContainer,
     TableHead,
     TableRow,
     Tooltip,
@@ -22,13 +21,14 @@ import {
 import { useId, useState, type ReactNode } from 'react';
 import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
-import { CLOCK_TABLE_NAME, clockHelpName, termsHelpName } from '../utils/a11yLabels';
+import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { lossesOf } from '../utils/rateWarning';
 import { BELT_COPY } from '../utils/beltQuestion';
 import { beltCellText, clockTechnicalName, foldedMakes, plainClockName, worksOf } from '../utils/clockSummary';
 import { TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
+import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
 import { TermsList } from './TermsPopover';
@@ -146,6 +146,17 @@ interface ClockAlternativesPanelProps {
     /** Keeps the panel, and so the notice, on screen while a generation has no clocks yet, so its focus is not lost */
     holdNotice?: boolean;
 }
+
+/**
+ * Half-width, the full table (Show all columns; the compact one fits 720 on its own): the Clock column keeps 200px, so
+ * that its name wraps to a few lines and not one word to a line, and every other cell stays on one line. The table then
+ * scrolls sideways in its box (ScrollX). A header may wrap but is never narrower than 96px.
+ */
+const FULL_CLOCK_TABLE_SX = {
+    '& th': { minWidth: 96 },
+    '& tbody td:nth-of-type(2)': { minWidth: 200 },
+    '& tbody td:not(:nth-of-type(2))': { whiteSpace: 'nowrap' },
+} as const;
 
 /**
  * The other clocks of the generation, to compare with the one at the top: by default a compact table (the plain name,
@@ -302,7 +313,7 @@ export function ClockAlternativesPanel({
             <Accordion
                 disableGutters
                 elevation={0}
-                slotProps={{ heading: { component: 'h3' } }}
+                slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': 'how-clocks-are-chosen-summary' } }}
                 sx={{ mb: 1, maxWidth: '72ch' }}
             >
                 <AccordionSummary
@@ -343,8 +354,8 @@ export function ClockAlternativesPanel({
                     {COMPARE_COPY.showAll}
                 </Button>
             </Box>
-            <TableContainer>
-                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME}>
+            <ScrollX label={CLOCK_TABLE_REGION}>
+                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME} sx={allColumns ? FULL_CLOCK_TABLE_SX : undefined}>
                     <TableHead>
                         <TableRow>
                             <TableCell padding="checkbox">
@@ -400,7 +411,7 @@ export function ClockAlternativesPanel({
                         ))}
                     </TableBody>
                 </Table>
-            </TableContainer>
+            </ScrollX>
             {anyStable && (showUnstable ? unstableCount > 0 : hiddenCount > 0) && (
                 <Box sx={{ mt: 1 }}>
                     <Button

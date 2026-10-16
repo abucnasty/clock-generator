@@ -159,6 +159,7 @@ export function ValueReferenceSelector({
                     onChange={handleEntityChange}
                     size="small"
                     aria-label={GROUP_NAMES.whichEnd}
+                    sx={{ '& .MuiToggleButton-root': { minWidth: 44 } }}
                 >
                     <ToggleButton value={EntityReference.SOURCE} disabled={entityDisabled(EntityReference.SOURCE)}>
                         Source

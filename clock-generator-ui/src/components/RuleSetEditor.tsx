@@ -100,6 +100,7 @@ export function RuleSetEditor({
                     onChange={handleOperatorChange}
                     size="small"
                     aria-label={GROUP_NAMES.joinConditions}
+                    sx={{ '& .MuiToggleButton-root': { minWidth: 44 } }}
                 >
                     <ToggleButton value={RuleOperator.AND}>AND</ToggleButton>
                     <ToggleButton value={RuleOperator.OR}>OR</ToggleButton>

@@ -10,7 +10,7 @@ import {
     Paper,
     Typography,
 } from '@mui/material';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { LogMessage, DebugSteps } from 'clock-generator/browser';
 
 interface DebugPanelProps {
@@ -63,10 +63,11 @@ export function DebugPanel({
         }
     };
 
+    const summaryId = useId();
     return (
         // in Developer tools' Log tab, which is there to be read: open, under the section's h2
-        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' } }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId } }}>
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMore />}>
                 <Typography variant="h6" component="span">
                     Debug Output {logs.length > 0 && `(${logs.length} messages)`}
                 </Typography>

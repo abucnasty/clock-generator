@@ -43,6 +43,7 @@ preview unless you are debugging.
   Facts, the diagram's machine node and the Potential Clocks headers. It writes a pass or fail line per check into
   `INDEX.md`. Set `SAMPLES_DIR` to read the sample configs from another checkout (a worktree's
   `clock-generator/resources/config-samples`).
+- `capture-half-width.mjs <out dir>` (on `lib.mjs`; `BASE_URL`, `WIDTHS` default 960,800,720,390, `STEPS`) checks item 2.9: the header's height and rows (steady through a reason line, a check and Copy), no sideways page scroll, nothing off-screen or clipped, the clock table's decision columns and the scroll boxes (named region, tabindex 0, edge fade), Fuel, Swing Plan and Transfer Plan columns, forms and dialogs (no control under 40px). Any item that adds or rebuilds a view runs it.
 - `capture-header.mjs <out dir> [port]` checks the header (item 1.2) at 1440, 960, 720 and 390px: the Configure and Results
   toggles, Generate and Copy are clickable (`elementFromPoint`), nothing in the header overlaps, the content starts below
   the header, the header stays pinned on scroll, the title, the ⋮ menu, Export, Import and Paste from Factorio from the
