@@ -2,6 +2,8 @@
 
 Owner request: 2026-10-16. Record these ideas for later discussion, not implementation now. D1 already covers Compact view and wider-screen composition. These are draft proposals, not finalized implementation specs or additions to the current release scope. Revisit after the owner's broader audit; preserve current reviews and verification.
 
+Update, 2026-10-16: the owner has promoted D1 and D2 into Phase 4. D2 is approved A / A / B: after density work, System / Light / Dark, System default for new installations, complete interface including charts/diagrams. The original D2 draft row below is superseded by [D2 approved scope](D2-theme-modes.md) and [the Phase 4 decision register](phase4-decisions.md). D3–D8 remain pending individual approval.
+
 | ID | Proposal | Problem / intended outcome | Decisions for later |
 |---|---|---|---|
 | D2 | Light/dark mode | Offer a saved colour-scheme preference independently of density/layout. Shared tokens help; light surfaces, semantic colours, diagrams/charts, focus and contrast all need deliberate palettes and verification. | Light/dark/system options, default, preference placement, migration of static dark tokens and visualization colours. Moderate feature; no implementation estimate committed. |

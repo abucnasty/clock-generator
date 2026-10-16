@@ -2,14 +2,14 @@
 
 Owner direction, 2026-10-16: discuss each proposal critically so the owner can approve, reject or narrow it. Approved scope becomes Phase 4, targeting the main feature branch `feat/ux-rework`. This discussion supersedes the deferred status only for explicitly approved scope.
 
-D1 is approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
+D1 and D2 are approved for Phase 4 with the exact choices below. Other proposals remain pending. Approval of D1 does not approve every illustrative behavior shown in the mock. Record exact decisions and remaining questions below before finalizing item specs.
 
 Phase 3 verification and its merge checkpoint remain required. Phase 4 retains independent code/UX review, current verification requirements and three fresh phase-end reviewers. Final `master` merge remains owner-only. The active worker setting remains GPT-6.1 Sol / high reasoning / fast mode off.
 
 | Proposal | Decision | Scope to resolve |
 |---|---|---|
 | D1 Compact view and responsive composition | Approved — B / A / A | Results/header first, then compact Configure; explanatory default with remembered opt-in Compact; comparison visible with one contextual Why/Wake/Install detail area and routine helpers collapsed |
-| D2 Light/dark mode | Pending | Whether included; system/light/dark choices; default; charts/diagrams |
+| D2 Light/dark mode | Approved — A / A / B | Include after density work; System / Light / Dark, remembered locally; System default for new installations; complete interface including charts and diagrams |
 | D3 Task-based usability audit | Pending | Design input versus standalone audit; representative builds; bounded deliverable |
 | D4 Clock recommendation and tradeoffs | Pending | Eligibility grouping; concise deltas; preserve existing ranking |
 | D5 Exceptions and assumptions | Pending | Which defaults may be summarized; visible overrides and model assumptions |
@@ -32,4 +32,14 @@ Owner: “Approve D1 with B / A / A.”
 - Keep units, assumptions, errors, stale/below-target warnings and belt conditions visible wherever needed to interpret results. Preserve current selection, Generate/Cancel/Copy, full installation guidance, keyboard/focus/contrast and usable touch targets.
 - Approval adds this work to Phase 4 against `feat/ux-rework`; it does not bypass specs, evidence, independent review or Phase 3 closeout. The mock's roughly 432px default height is illustrative evidence, not a fixed-height constraint for all builds.
 
-Next discussion: D2 light/dark mode. No other proposal is approved yet.
+### D2 approved, 2026-10-16
+
+Owner: “Approve D2 with A / A / B.”
+
+- Inclusion A: include light/dark mode in Phase 4 after the density work.
+- Choices A: offer System / Light / Dark. Remember the choice locally, independently of Compact and separately from build exports/share links.
+- Default B: new installations follow System immediately, using the device's light/dark preference. Preserve explicit saved choices; legacy-user migration details remain for the final item spec.
+- Scope covers the complete interface, including dialogs, warnings, item slots, charts, diagrams and focus indicators. Preserve the Factorio visual direction: orange selection, green confirmation, inset controls and panel headers, with readable theme-appropriate colors.
+- Existing contrast/accessibility, independent review, checks and phase-end requirements apply. Coordinate preference placement with D6 if approved; D2 does not itself approve D6 or any new toolbar row.
+
+Next discussion: D3 task-based usability audit. D3–D9 and first-visit refinement remain pending.

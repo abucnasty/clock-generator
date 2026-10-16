@@ -500,9 +500,13 @@ Owner approval, 2026-10-16, B / A / A: include Results/header first, then compac
 
 This approval moves D1 from the deferred backlog into Phase 4. Detailed specs, independent reviews and normal evidence gates precede implementation/merge; Phase 3 completion criteria are unchanged. The proposals below remain deferred unless separately approved.
 
-### Further deferred design proposals (D2–D8)
+### Approved Phase 4 scope: Light/dark mode (D2)
 
-Owner requested drafts for later discussion: light/dark mode; a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals are not finalized specs, implementation authorizations or additions to current phase/release completion criteria.
+Owner approval, 2026-10-16, A / A / B: include D2 after the density work; offer locally remembered System / Light / Dark independently of Compact, with System as the default for new installations. Cover the complete interface including charts/diagrams, preserving the Factorio styling and current contrast/accessibility requirements. Keep preferences outside build exports/share links. See [D2 scope](specs/D2-theme-modes.md) and the [decision register](specs/phase4-decisions.md). Detailed specs/reviews/gates remain required.
+
+### Further deferred design proposals (D3–D8)
+
+Owner requested drafts for later discussion: a task-based audit on real builds; clearer recommendation rationale/tradeoffs; emphasis on exceptions; one display-preferences entry; and preserving working context beyond the existing3.3 scope. See [draft discussion backlog](specs/deferred-design-discussion.md). D8 additionally scopes per-machine target production rate alongside maximum capacity, likely spanning engine planning/worker serialization and UI; target/max/achieved values and per-copy/total units must stay distinct. These proposals remain unapproved for implementation unless separately promoted into Phase 4.
 
 ### Independent audit of new UI tests (D9)
 

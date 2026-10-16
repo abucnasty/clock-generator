@@ -117,10 +117,13 @@ come from here.
 | Item | Title | Status | Notes |
 |---|---|---|---|
 | [D1](specs/D1-compact-view.md) | Compact view | approved for Phase 4 | Owner B / A / A: Results/header first, Configure second; explanatory default with locally remembered opt-in Compact; comparison visible with one contextual Why/Wake/Install area, routine helpers collapsed. Preserve essential information/accessibility. Targets feat/ux-rework after normal specs/reviews/gates; no product implementation yet. |
-| [D2–D8](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Owner requested later discussion of theme switching, task-based audit, recommendation rationale, exception hierarchy, display settings, working-context preservation and per-machine target/max/achieved rates. Reconcile overlaps with D1/3.3; no current implementation scope added. |
+| [D2](specs/D2-theme-modes.md) | Light/dark mode | approved for Phase 4 | Owner A / A / B: include after density work; locally remembered System / Light / Dark; System default for new installations; complete interface including charts/diagrams, with current accessibility requirements. No product implementation yet. |
+| [D3–D8](specs/deferred-design-discussion.md) | Design discussion drafts | deferred | Task-based audit, recommendation rationale, exception hierarchy, display settings, working-context preservation and per-machine target/max/achieved rates await individual decisions. Reconcile overlaps with D1/3.3. |
 | [D9](specs/D9-ui-test-audit.md) | Independent audit of new UI tests | deferred | Owner requests fewer unnecessary tests, with independent keep/consolidate/remove recommendations. Scope only tests added by this UX rework inside `clock-generator-ui`, including new cases in existing files; exclude engine/capture/pre-existing UI/upstream tests. No deletions now; current reviews and verification retained. |
 
 ## Decisions log
+
+- 2026-10-16: Owner explicitly approves D2 A / A / B for Phase 4 after density work: System / Light / Dark, remembered locally and separate from Compact/build data; System default for new installations. Complete interface including charts and diagrams retains Factorio styling and current contrast/accessibility requirements. Added D2 scope and updated PLAN/decision register/backlog/ledger. D3 is next; all remaining proposals pending. Phase 3 closeout and existing verification/reviews remain unchanged.
 
 - 2026-10-16: Owner explicitly approves D1 B / A / A for Phase 4 against feat/ux-rework. Approved scope is Results/header first then compact Configure via existing shared editor; explanatory default and remembered opt-in Compact; visible comparison with one contextual Why/Wake/Install area and routine helpers collapsed. Updated PLAN, D1 scope and Phase 4 decision register. Other proposals remain pending; next discussion D2. Existing Phase 3 closeout, reviews/verification and all three phase-end reviewers remain required.
 
