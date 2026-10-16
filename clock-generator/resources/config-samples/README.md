@@ -46,6 +46,7 @@ Conventions:
 | science/automation-science | yes | selected clock exact | in `test:game` |
 | science/automation-science, belted buffer | yes | selected clock exact | in `test:game` |
 | intermediates/low-density-structure | yes | selected clock exact. Since 2026-10-11 the selected clock is batched swings with 6 output swings per cycle, 703 wake-ups a minute, where full-hand output swings (1,528) was selected while the ranking put it first on a machine with spare speed; recorded exact the same day, 36,000 ticks | in `test:game` |
+| science/chemical-science, shared foundry | yes | selected clock exact: 256 in each of 102 periods of 352 ticks (1 output swing per cycle, 5.5 copies of 240 a second); the runner-up (2 output swings, 122.1 wake-ups) recorded too, 122.7 in the game; the selected clock's wake-ups are not held (see below) | in `test:game`, wake-ups open |
 | science/utility-science | yes | selected clock exact, with "Belts do not move" off and on: 192 in each of 53 periods | in `test:game`, both ways; a build with a deadlock risk, see "Backpressure loss" and below |
 | science/utility-science, belted blue and LDS | yes | selected clock exact, off and on: 96 in each of 107 periods. Since 2026-10-12 the selected clock is the one with 2 output swings per cycle, which is stable without a search, so the searches are left out; uneven output swings was selected while they ran for every build, at the same 10.7 wake-ups a minute with 5 windows against 7. Recorded that day both ways: 96 in each of 107 periods, 10.7 wake-ups a minute in the game as in the simulator | in `test:game`, both ways |
 | science/utility-science, direct-insert LDS | yes | 32 and 160 of 192 in turn, in the game and in the simulator alike | no clock holds the rate: the generator's to solve, see below |
@@ -289,6 +290,10 @@ What is left between the simulator and the game on this build, a tick at a time,
   scaffolds the inserter that took the products had been waiting at the machine, here it was on its way back;
 - a battery plant whose craft ends on a whole tick starts the next one in that tick in the game, with no progress, and
   in the next tick in the simulator: its ingredients go a tick earlier in the game.
+
+## Chemical science with a shared foundry
+
+The owner's block of 2026-10-15: four chemical science assemblers and four engine assemblers sharing one foundry that casts the pipes, 5.5 copies of it making 240 a second. The selected clock counts 82.2 wake-ups a minute in the simulator and 122.7 in the game; the runner-up counts 122.1 and 122.7. The whole difference is 40.9 in four inserters, the belt inserters of the science machines (10.2 each, one wake-up a period in the game, none in the simulator): in the game the machine starts its next craft one tick after the inserter began to wait for space, in the simulator on the same tick, and a wake-up needs the inserter to have waited the tick before. Moving every machine start one tick earlier gives the simulator's figure in the game's recording; one tick later gives 204.8 in the simulator. What the build moves, and what every inserter and machine does, is held; the clock's wake-ups are not, and in the game the two stable clocks tie at 122.7, so no selection is shown to be wrong. Open: which side of the tick is off (the restart of a machine after its short wait for ingredients, or the order of the start and the inserter's state change inside a tick). The recording merges the block's north and south supply belts into one belt each, so a comparison reports the near lane of four inserters (config 6, 8, 14, 16) as wrong although the config matches the scaffold.
 
 ## Advanced circuit
 
