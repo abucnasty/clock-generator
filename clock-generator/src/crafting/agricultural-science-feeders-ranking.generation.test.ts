@@ -14,8 +14,7 @@ describe("generateClockForConfig", () => {
     describe("agricultural science: windows for the inserters feeding the output machine", async () => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE);
 
-        // KNOWN REGRESSION under the staged start: nutrient-loss recovery dips; owner reviewing the recovery rule (see docs/stability.md)
-        it.fails("counts a clock's windows without those of its feeders, where the clock with them has the fewest wake-ups of those that hold", () => {
+        it("counts a clock's windows without those of its feeders, where the clock with them has the fewest wake-ups of those that hold", () => {
             // With hands of 12 on the sample this was 354 windows with the feeders', 324 without: the 3-swing clock has
             // 336 and was selected while the fewest windows were, before the windows of the feeders were left out of the
             // count. Wake-ups decide now, which the windows of the feeders bring down, and the windows only between

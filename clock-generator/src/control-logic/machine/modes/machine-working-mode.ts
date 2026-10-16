@@ -97,6 +97,11 @@ export class MachineWorkingMode implements MachineMode {
             this.state.productsFinished += 1;
             this.state.bonusProgress.progress = Math.max(0, this.state.bonusProgress.progress - 1);
         }
+        this.putHeldProductsInOutput();
+    }
+
+    /** Puts the products the machine holds in the output, one craft's amount at a time, as far as they fit */
+    public putHeldProductsInOutput(): void {
         while (this.state.pendingOutput > 0 && this.hasOutputSpaceFor(this.nextHeldAmount())) {
             const amount = this.nextHeldAmount();
             this.addOutput(amount);

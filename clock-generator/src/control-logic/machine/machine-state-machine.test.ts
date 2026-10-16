@@ -198,6 +198,40 @@ describe("Machine State Machine", () => {
         expect(state_machine.current_mode.status).toBe(MachineStatus.OUTPUT_FULL);
     });
 });
+describe("Machine State Machine holding the products of a finished craft", () => {
+    // 2 plastic bars a craft from 1 coal, one craft a tick, under a stack size of 100
+    const holdingMachine = () => {
+        const machine_state = MachineState.forMachine(createMachine("plastic-bar", { crafting_speed: 60, productivity: 0, type: MachineType.MACHINE }))
+        const state_machine = MachineStateMachine.create({ machine_state, initial_mode_status: MachineStatus.WORKING })
+        // the one coal makes a craft whose 2 bars do not fit next to the 99 in the output
+        machine_state.inventoryState.addQuantity("coal", 1)
+        machine_state.inventoryState.addQuantity("plastic-bar", 99)
+        executeControlLogicForTicks(state_machine, 5)
+        return { machine_state, state_machine }
+    }
+
+    // Inserters update before machines in a tick and the recorder samples after both: an inserter that takes products from
+    // a machine in a tick and the machine putting its held products in are in the same sample, as in the game
+    test("a machine short of ingredients puts held products in its output in the tick there is room for them", () => {
+        const { machine_state, state_machine } = holdingMachine()
+        expect(machine_state.craftCount).toBe(1)
+        expect(machine_state.pendingOutput).toBe(2)
+        expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(99)
+
+        // it waits while there is no room, and has nothing to craft with
+        executeControlLogicForTicks(state_machine, 3)
+        expect(machine_state.pendingOutput).toBe(2)
+        expect(machine_state.inventoryState.getQuantity("coal")).toBe(0)
+
+        // an inserter takes 10 bars earlier in a tick: the machine's update in that same tick puts the 2 in, whatever mode it is in
+        machine_state.inventoryState.setQuantity("plastic-bar", 89)
+        executeControlLogicForTicks(state_machine, 1)
+        expect(machine_state.pendingOutput).toBe(0)
+        expect(machine_state.inventoryState.getQuantity("plastic-bar")).toBe(91)
+        expect(state_machine.current_mode.status).toBe(MachineStatus.INGREDIENT_SHORTAGE)
+    })
+})
+
 /**
  * The output block as recorded in Factorio 2.1: a machine that cannot start a craft shows full output while its
  * output is at overload multiplier x recipe amount (productivity not counted) and ingredient shortage below it,
