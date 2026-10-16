@@ -35,7 +35,7 @@ import { join, relative } from 'node:path';
 import {
     forWidths, previewServer, sample, LOGISTIC, UI_DIR, ui,
     importFile, goConfigure, goResults, validate, generate, openMenu, noSideScroll,
-    contrastPairs, checkLabelInName,
+    contrastPairs, checkLabelInName, chooseMenuItem,
 } from './lib.mjs';
 
 const OUT = process.argv[2];
@@ -1184,16 +1184,13 @@ try {
             await dismissMessage(page);
             await exportConfig(page);
             await none('Export');
-            const handle = section(page, 'Inserters').locator('[aria-roledescription="sortable"]').first();
-            if (await handle.count()) {
-                await handle.focus();
-                await page.keyboard.press('Space');
-                await page.keyboard.press('ArrowDown');
-                await page.keyboard.press('Space');
-                await none('a reorder');
-            } else {
-                rec.info('no false offer: a reorder', 'no sortable handle found');
-            }
+            const beforeReorder = await readState(page);
+            await watchAnnouncements(page);
+            await chooseMenuItem(page, 'Move down', { anchor: ui.editingActions(page, 'Inserter 1'), menu: ui.editingMenu(page), activation: 'Enter', itemActivation: 'Enter' });
+            await checkAnnounced(page, rec, 'announced: a reorder', /^Moved Inserter 1 to 2\./);
+            await undoMessage(page, rec, 'undo-reorder', /^Moved Inserter 1 to 2\./, 'a reorder', { desc: 'A reorder offers Undo in the header' });
+            if (await clickUndo(page, rec, 'a reorder')) await expectRestored(page, rec, 'a reorder', beforeReorder);
+            await dismissMessage(page);
             rec.info('no false offer: an Exclude chip and an inserter fix', 'not driven here (they need a validated build, or a build with a missing inserter); the wrappers do not call offerUndo for them');
         }, page);
 

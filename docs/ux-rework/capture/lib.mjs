@@ -1414,6 +1414,37 @@ const btn = (page, name, exact = true) => page.getByRole('button', { name, exact
 const card = (page, headingRe) => page.getByRole('main').locator('.MuiPaper-root').filter({ has: page.getByRole('heading', { name: headingRe, level: 2 }) }).last();
 
 export const ui = {
+    editingRow: (p, kind, id) => p.getByRole('group', { name: `${({machines:'Machine',inserters:'Inserter',belts:'Belt',chests:'Chest',drills:'Drill'})[kind]} ${id}`, exact: true }),
+    editingKeys: (p, kind) => ui.card(p, kind).locator('[data-row-key]'),
+    editingLane: scope => scope.getByRole('combobox', { name: /^Nearest lane of the belt(?:,|$)/ }),
+    editingFirst: scope => scope.locator('[data-row-first]'),
+    editingDelete: scope => scope.locator('[data-row-delete]'),
+    editingDrag: scope => scope.locator('[data-row-drag]'),
+    editingActions: (p, label) => p.getByRole('button', { name: `More actions for ${label}`, exact: true, includeHidden: true }),
+    editingMenu: p => p.getByRole('menu').filter({ has: p.getByRole('menuitem', { name: 'Duplicate', exact: true }) }),
+    editingMenuItems: p => ui.editingMenu(p).getByRole('menuitem'),
+    editingMenuItem: (p, name) => ui.editingMenu(p).getByRole('menuitem', { name, exact: true }),
+    editingSelect: p => ui.card(p, 'inserters').getByRole('button', { name: 'Select', exact: true }),
+    editingCheckbox: (p, id) => p.getByRole('checkbox', { name: `Select Inserter ${id}`, exact: true }),
+    editingCheckboxBorder: (p, id) => ui.editingCheckbox(p,id).locator('..').locator('svg'),
+    editingBar: p => p.getByRole('region', { name: 'Edit selected inserters', exact: true }),
+    editingSelectedText: p => ui.editingBar(p).getByText(/^\d+ inserters? selected$/),
+    editingSelectAll: p => ui.editingBar(p).getByRole('button', { name: 'Select all', exact: true }),
+    editingClear: p => ui.editingBar(p).getByRole('button', { name: 'Clear selection', exact: true }),
+    editingStack: p => ui.editingBar(p).getByRole('textbox', { name: 'Stack size', exact: true }),
+    editingSet: p => ui.editingBar(p).getByRole('button', { name: 'Set', exact: true }),
+    editingFilters: p => ui.editingBar(p).getByRole('button', { name: 'Filters…', exact: true }),
+    editingRule: p => ui.editingBar(p).getByRole('button', { name: 'Enable rule…', exact: true }),
+    editingFilterDialog: p => p.getByRole('dialog', { name: 'Edit selected inserter filters', exact: true }),
+    editingApplyFilters: p => ui.editingFilterDialog(p).getByRole('button', { name: 'Apply', exact: true }),
+    editingAutoFilters: p => ui.editingFilterDialog(p).getByRole('button', { name: 'Use automatic filters', exact: true }),
+    editingCancelFilters: p => ui.editingFilterDialog(p).getByRole('button', { name: 'Cancel', exact: true }),
+    editingHeader: p => p.getByRole('banner'),
+    editingActive: p => p.locator(':focus'),
+    editingBody: p => p.locator('body'),
+    editingLive: p => p.locator('[aria-live], [role=status], [role=log], [role=alert]'),
+    editingDndLive: p => p.locator('[id^=DndLiveRegion]'),
+    editingExcluded: (p, id) => p.getByRole('button', { name: `Included in LCM: ${itemLabel(id)}`, exact: true }).first(),
     oneEditorDialog: p => p.getByRole('dialog', { name: /^(Machine|Belt|Chest|Drill|Inserter) \d+$/, exact: true }),
     oneEditorDialogs: p => p.getByRole('dialog'),
     oneEditorSave: p => ui.oneEditorDialog(p).getByRole('button', { name: 'Save', exact: true }),
@@ -1773,17 +1804,18 @@ export async function openBuildSwitcher(page, { timeout = 5000 } = {}) {
 }
 
 /** Opens the ⋮ menu if it is not open, waits until it is visible and returns it. Like `openMenu`, but it waits for the menu itself and not a fixed 300 ms */
-export async function openMoreMenu(page, { timeout = 5000 } = {}) {
-    const menu = ui.menu(page);
-    if (!(await menu.isVisible())) {
-        await ui.menuButton(page).click({ timeout });
-        try {
-            await menu.waitFor({ state: 'visible', timeout });
-        } catch {
-            throw new Error(`openMoreMenu: the "More options" menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`);
-        }
+export async function openMoreMenu(page, { timeout = 5000, anchor, menu, activation = 'click' } = {}) {
+    if (Boolean(anchor) !== Boolean(menu)) throw new Error('openMoreMenu: supply anchor and menu together');
+    const target = menu ?? ui.menu(page);
+    const opener = anchor ?? ui.menuButton(page);
+    if (!(await target.isVisible())) {
+        if (activation === 'click') await opener.click({ timeout });
+        else if (activation === 'Enter' || activation === 'Space') await opener.press(activation === 'Space' ? ' ' : activation, { timeout });
+        else throw new Error(`openMoreMenu: unknown activation ${activation}`);
+        try { await target.waitFor({ state: 'visible', timeout }); }
+        catch { throw new Error(`openMoreMenu: requested menu did not open within ${timeout} ms at ${page.viewportSize()?.width}px`); }
     }
-    return menu;
+    return target;
 }
 
 /** Waits until a closed More options menu has also removed its pointer-intercepting transition layer. */
@@ -1796,17 +1828,27 @@ export async function waitForMoreMenuClosed(page, { timeout = 5000 } = {}) {
  * Picks an item of the ⋮ menu by name, at any width (every item is in the menu: Paste from Factorio is a header button,
  * `ui.pasteFromFactorio`). Waits for the menu to close after the item.
  */
-export async function chooseMenuItem(page, name, { timeout = 5000 } = {}) {
-    const menu = await openMoreMenu(page, { timeout });
-    const item = menu.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name });
+export async function chooseMenuItem(page, name, { timeout = 5000, anchor, menu, activation = 'click', itemActivation = 'click' } = {}) {
+    const target = await openMoreMenu(page, { timeout, anchor, menu, activation });
+    const item = target.getByRole('menuitem', typeof name === 'string' ? { name, exact: true } : { name });
+    try { await item.waitFor({ state: 'visible', timeout }); }
+    catch { throw new Error(`chooseMenuItem: no ${String(name)}; have ${JSON.stringify(await target.getByRole('menuitem').allTextContents())}`); }
+    const layer = menu ? await target.locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," MuiModal-root ")][1]').elementHandle() : null;
+    if (menu && !layer) throw new Error('chooseMenuItem: requested row menu has no MUI modal layer');
     try {
-        await item.waitFor({ state: 'visible', timeout });
-    } catch {
-        const have = await menu.getByRole('menuitem').allTextContents();
-        throw new Error(`chooseMenuItem: no menu item ${String(name)} at ${page.viewportSize()?.width}px (the menu has: ${JSON.stringify(have)})`);
+        if (itemActivation === 'click') await item.click({ timeout });
+        else if (itemActivation === 'Enter' || itemActivation === 'Space') await item.press(itemActivation === 'Space' ? ' ' : itemActivation, { timeout });
+        else throw new Error(`chooseMenuItem: unknown itemActivation ${itemActivation}`);
+        if (menu) {
+            await target.waitFor({ state: 'hidden', timeout });
+            await layer.waitForElementState('hidden', { timeout });
+        } else {
+            // Retain the historical header helper's close policy for its existing callers.
+            await target.waitFor({ state: 'hidden', timeout }).catch(() => {});
+        }
+    } finally {
+        await layer?.dispose();
     }
-    await item.click({ timeout });
-    await menu.waitFor({ state: 'hidden', timeout }).catch(() => {});
 }
 
 /**

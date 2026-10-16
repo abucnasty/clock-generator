@@ -417,7 +417,7 @@ const STEP_LIST = [
                     { name: 'focus-workflow', test: (s) => s.tag === 'button' && /^(Configure|Results)$/.test(s.name), desc: 'The Configure / Results toggle focused' },
                     { name: 'focus-toggle-list', test: (s) => s.name === 'List view', desc: 'List view focused (selected): the ring\'s right side lies over Diagram view and must stay whole' },
                     { name: 'focus-toggle-diagram', test: (s) => s.name === 'Diagram view', desc: 'Diagram view focused: the ring\'s left side lies over the selected List view' },
-                    { name: 'focus-row', test: (s) => s.role === 'button' && s.roledescription === 'sortable', desc: 'A row\'s drag handle focused' },
+                    { name: 'focus-row', test: (s) => s.role === 'button' && /^More actions for (Machine|Inserter|Belt|Chest|Drill) \d+$/.test(s.name), desc: 'A row\'s actions menu focused' },
                     { name: 'focus-slot', test: (s) => /^Filter \d+:/.test(s.name), desc: 'A filter slot focused' },
                     { name: 'focus-delete', test: (s) => s.deleteIcon || /^Delete\b/i.test(s.name), desc: 'A row\'s delete button focused' },
                     { name: 'focus-field', test: (s) => s.tag === 'input' && !s.inHeader, desc: 'A number or text field focused' },
