@@ -623,9 +623,10 @@ const run = await forWidths(
                 await goResults(page);
                 rowsBefore = await labelsOf(page);
                 rec.check('LOGISTIC made at least two clocks', rowsBefore.length >= 2, `${rowsBefore.length}`);
-                // a row without the Recommended chip: picking the recommended clock would test nothing
+                // This clock stays non-recommended at both rates. The first non-recommended row (Batched swings: 4)
+                // becomes recommended at 220/s, which would let a reset-to-recommended bug pass unnoticed.
                 const before = await rowsWithRecommended(page);
-                const target = before.labels.findIndex((_, i) => i !== before.recommended);
+                const target = before.labels.findIndex((label, i) => engineOf(label) === '1 output swing per cycle' && i !== before.recommended);
                 rec.check('a row other than the recommended one can be picked', before.recommended >= 0 && target >= 0, JSON.stringify(before));
                 if (target >= 0) await pickRow(page, target);
                 pickedLabel = await selectedLabel(page);
