@@ -1,0 +1,10 @@
+# 3.F stale-plan disclosure capture ordering — independent UX conditions
+
+Verdict: APPROVE WITH CONDITIONS, capture ordering only. No whole-item PASS or formal fix-round charge.
+Reviewer build_card_ux_sol, GPT-6.1 Sol/high/fastoff. Actual UTC2026-10-16 11:33:43–11:34:25.
+
+Opened three actual320PNG views and inspected source/logs in /tmp/ux-phase3-followups-scroll-diagnostic: same260×52 disclosure becomes unobscured after70realTabs; focused/reopened states pass unchanged full axe. Returning to that disclosure before capture is valid reachability framing IF all stale mutation attempts, table keyboard scrolling, readable-data assertions and exactRAW preservation remain strict. Run unchanged full axe after reach AND Enterclose/reopen. No forced focus, injected scrolling/styles, exclusions or rule changes.
+
+Retain original116/3/0 diagnostic and partially obscured state explicitly; never relabel PASS or declare a proven axe false positive. Also retain ordinary POINTER reveal/activation evidence: keyboard success does not establish pointer target-size compliance. [W3C target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) and [focus visibility](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html) are separate. Checking-node defect tracked independently. No verification waiver/phase approval/blanketAA conclusion follows.
+
+Root application of these same conditions, 2026-10-16T11:40:20.996902+00:00: approved identical normal-input framing for the postcheck restored-plan snapshot while preserving all restored/raw/result/validation assertions and original postcheck clipped Help finding. Require actual native wheel events/rect logs as needed to expose the same disclosure for independent pointer close/reopen/hit-testing; never claim a wheel reveal if native page bounds leave the target already exposed. No changed app layout, injected scroll/focus/styles or axe rules. Final formal UX review still evaluates all original failures and closure.
