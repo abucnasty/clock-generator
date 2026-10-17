@@ -1,4 +1,5 @@
-import { FactorioIcon } from './FactorioIcon';
+import { EntityBadge } from './EntityBadge';
+import { InserterIcon } from './InserterIcon';
 import { EntitySettings } from './EntitySettings';
 import { effectiveInserterStackSize, inserterTimingLabels } from '../utils/inserterMetadata';
 import { Add, Delete } from '@mui/icons-material';
@@ -83,29 +84,25 @@ const InserterRow = memo(function InserterRow({ compact, fullMetadata, value, in
     const label = entityLabel('inserter', value.id);
     const { itemLabel } = useGameNames();
     const filterItems = usesAutomaticFilters(value.filters) ? inferInserterItems(value, editor.machines, editor.belts, editor.chests, editor.getRecipeInfo) : value.filters?.filter(Boolean) ?? [];
-    return <SortableItem stableKey={value._uuid} label={label} displayLabel={<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                    <FactorioIcon name={value.prototype ?? 'stack-inserter'} size={20} alt="" />
-                    {value.id}
-                </Box>}>
+    return <SortableItem stableKey={value._uuid} label={label} displayLabel={<EntityBadge id={value.id}><InserterIcon value={value} size={28} /></EntityBadge>}>
         {dragHandle => <Box id={`entity-inserter-${value.id}`} role="group" aria-label={label} sx={compact ? {
             ...ROW_GRID_SX, p: 1.5, pt: 1.5,
         } : ROW_GRID_SX}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center', mb: 1.5 }}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto', gap: compact ? 1 : 1.5, alignItems: 'center',
+                '@container inserter-row (max-width: 650px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', gridColumn: 1, gridRow: 1, '& .MuiChip-root': { height: 40, bgcolor: 'transparent', '& .MuiChip-label': { px: 0 } } }}>
                     {selecting && <Checkbox checked={checked} onClick={event => onSelect(value._uuid, event)}
                         slotProps={{ input: { 'aria-label': selectRowName(label) } }} sx={{ p: 0.5 }} />}
                     {dragHandle}
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gridColumn: 4, gridRow: 1, '@container inserter-row (max-width: 650px)': { gridColumn: 2 } }}>
                     <Box id={`settings-actions-inserter-${value.id}`} sx={{ display: 'flex' }} />
                     <RowActionsMenu label={label} onDuplicate={() => onDuplicate(index, label)}
                         onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
                         onMoveDown={canMoveDown ? () => onReorder(index, index + 1) : undefined} />
                     <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('inserter', value.id)} data-row-delete=""><Delete /></IconButton>
                 </Box>
-            </Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: compact ? 1.5 : 2,
-                '@container inserter-row (max-width: 600px)': { gridTemplateColumns: 'minmax(0, 1fr)' } }}>
+            <Box sx={{ display: 'contents', '@container inserter-row (max-width: 650px)': { '& > div:nth-of-type(-n+2)': { gridColumn: '1 / -1' } } }}>
                 <InserterEditor {...editor} density={compact ? 'compact' : 'explanatory'} value={value} label={label} layout="row" onChange={onChange}
                     rowSettings={fields => <EntitySettings actionContainerId={`settings-actions-inserter-${value.id}`} label={label} tabs={[{ label: 'Enable control', content:
                         <EnableControlFormContent key={ruleRevision + JSON.stringify(value.overrides?.enable_control)} entityType="inserter" entityId={value.id}
@@ -127,6 +124,7 @@ const InserterRow = memo(function InserterRow({ compact, fullMetadata, value, in
                         {fields}
                     </EntitySettings>}
                 />
+            </Box>
             </Box>
         </Box>}
     </SortableItem>;

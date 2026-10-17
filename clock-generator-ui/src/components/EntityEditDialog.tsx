@@ -325,12 +325,6 @@ function ChestEditSection({
         onUpdate(entityIndex, { item_filter: chest.item_filter.filter((_, i) => i !== slotIndex) } as Partial<ChestFormData>);
     };
 
-    const handleInfinityFilterAdd = () => {
-        if (!isInfinityChest(chest)) return;
-        onUpdate(entityIndex, {
-            item_filter: [...chest.item_filter, { item_name: '', request_count: 1 }],
-        } as Partial<ChestFormData>);
-    };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -385,7 +379,6 @@ function ChestEditSection({
                     itemNames={itemNames}
                     onFilterChange={handleInfinityFilterChange}
                     onRemoveFilter={handleInfinityFilterRemove}
-                    onAddFilter={handleInfinityFilterAdd}
                     maxSlots={10}
                     quantityLabel="Request Count"
                     canAddMore={true}

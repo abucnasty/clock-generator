@@ -1,3 +1,4 @@
+import { EntityBadge } from './EntityBadge';
 import { EntitySettings } from './EntitySettings';
 import { memo } from 'react';
 import { Add, Delete } from '@mui/icons-material';
@@ -141,7 +142,7 @@ function BeltsFormComponent({
         >
 
             {beltQuestion.ask && (
-                <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2, mb: 2 }}>
+                <Box sx={{ mb: 1.5 }}>
                     <BeltAssumption answer={beltQuestion.answer} onChange={onBeltAnswer} />
                 </Box>
             )}
@@ -152,10 +153,7 @@ function BeltsFormComponent({
             </Typography>}
             <SortableList itemKeys={belts.map((b) => b._uuid)} onReorder={onReorder}>
             {belts.map((belt, beltIndex) => (
-                <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)} displayLabel={<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                    <FactorioIcon name={belt.type} size={20} alt="" />
-                    {belt.id}
-                </Box>}>
+                <SortableItem key={belt._uuid} stableKey={belt._uuid} label={entityLabel('belt', belt.id)} displayLabel={<EntityBadge id={belt.id}><FactorioIcon name={belt.type} size={28} alt="" /></EntityBadge>}>
                     {(dragHandle) => (
                 <Box
                     id={`entity-belt-${belt.id}`}

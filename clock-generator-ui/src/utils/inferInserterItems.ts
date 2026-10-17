@@ -36,7 +36,12 @@ function getSinkNeeds(
 ): string[] {
     if (sink.type === 'machine') {
         const m = machines.find(m => m.id === sink.id);
-        if (m?.recipe && getRecipeInfo) return getRecipeInfo(m.recipe)?.ingredients ?? [];
+        if (m?.recipe && getRecipeInfo) {
+            const ingredients = getRecipeInfo(m.recipe)?.ingredients ?? [];
+            // Fuel is accepted separately from recipe inputs, including recipes that produce their own nutrients.
+            const fuel = m.fuel ?? (m.type === 'biochamber' ? 'nutrients' : undefined);
+            return [...new Set([...ingredients, ...(fuel ? [fuel] : [])])];
+        }
     } else if (sink.type === 'belt') {
         return sourceItems;
     } else if (sink.type === 'chest') {
@@ -78,6 +83,8 @@ export function itemsAround(inserter: InserterFormData, machines: MachineFormDat
         if (ref.type === 'machine') {
             const machine = machines.find(m => m.id === ref.id);
             if (machine?.recipe) getRecipeInfo?.(machine.recipe)?.ingredients.forEach(item => items.add(item));
+            const fuel = machine?.fuel ?? (machine?.type === 'biochamber' ? 'nutrients' : undefined);
+            if (fuel) items.add(fuel);
         }
     }
     return [...items];

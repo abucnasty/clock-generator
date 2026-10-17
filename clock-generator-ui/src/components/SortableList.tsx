@@ -138,7 +138,7 @@ export function SortableItem({ stableKey, label, displayLabel, children }: Sorta
                 aria-label={label}
                 title={label}
                 size="small"
-                sx={{ minWidth: displayLabel ? 48 : 72, fontSize: '0.7rem', pointerEvents: 'none' }}
+                sx={{ minWidth: displayLabel ? 52 : 72, height: displayLabel ? 40 : undefined, bgcolor: displayLabel ? 'transparent' : undefined, '& .MuiChip-label': displayLabel ? { px: 0 } : undefined, fontSize: '0.7rem', pointerEvents: 'none' }}
             />
         </Box>
     );

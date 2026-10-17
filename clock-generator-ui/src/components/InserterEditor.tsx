@@ -108,8 +108,8 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
                 min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
             <Box ref={filtersRef} sx={row ? { alignSelf: 'start', pt: compact ? 0 : '4px', minWidth: 0, flex: '1 1 180px' } : { mt: 2 }}>
                 <FilterSlotSelector compact={compact} label={compact ? `Filters · ${usesAutomaticFilters(value.filters) ? 'Automatic' : 'Explicit'}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
-                    onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
-                    onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
+                    onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 4), slot, item))}
+                    onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 4), slot))} />
                 <Typography variant="caption" color="text.secondary" sx={{ display: compact ? 'none' : 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : 'Explicit · Set by hand'}</Typography>
                 {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: compact ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Button size="small" color="inherit" onClick={() => {

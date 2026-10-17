@@ -11,13 +11,17 @@ import {
     Typography,
 } from '@mui/material';
 import { useState, memo } from 'react';
-import type { DrillFormData, EnableControlOverride } from '../hooks/useConfigForm';
+import type { DrillFormData } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
 import { AddRow } from './AddRow';
-import { EnableControlModal } from './EnableControlModal';
-import { EnableRuleChip } from './EnableRuleChip';
+import { EnableControlFormContent } from './EnableControlModal';
+import { EntityBadge } from './EntityBadge';
+import { EntitySettings } from './EntitySettings';
+import { useDisplayPreferences } from '../hooks/useDisplayPreferences';
+import { describeEnableRule } from '../utils/enableRuleLabel';
+import { enableControlOverrideChanged } from '../utils/enableControlDraft';
 import { FactorioIcon } from './FactorioIcon';
 import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
@@ -47,6 +51,125 @@ interface DrillsFormProps {
     onDuplicate: (index: number) => void;
 }
 
+
+function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown }: Pick<DrillsFormProps, 'resourceNames' | 'machineIds' | 'onUpdate'> & {
+    drill: DrillFormData;
+    index: number;
+    onRemove: (index: number) => void;
+    onDuplicate: () => void;
+    onMoveUp?: () => void;
+    onMoveDown?: () => void;
+}) {
+    const { itemLabel } = useGameNames();
+    const { density } = useDisplayPreferences();
+    const [ruleRevision, setRuleRevision] = useState(0);
+    const label = entityLabel('drill', drill.id);
+    return <SortableItem stableKey={drill._uuid} label={label} displayLabel={<EntityBadge id={drill.id}><FactorioIcon name={drill.type} size={28} alt="" /></EntityBadge>}>
+        {dragHandle => <Box id={`entity-drill-${drill.id}`} role="group" aria-label={label} sx={{ minWidth: 0, mb: density === 'compact' ? 1 : 2, p: density === 'compact' ? 1.5 : 2, containerType: 'inline-size', containerName: 'drill-row', bgcolor: (theme: Theme) => themeTokens(theme).surface.row }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container drill-row (max-width: 600px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
+                <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
+                <Box data-row-first="" sx={{ minWidth: 0, gridColumn: 2, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 2 } }}>
+                            <ItemSelector
+                                minWidth={0}
+                                dropdownMinWidth={300}
+                                sx={{ minWidth: 0, width: '100%' }}
+                                value={drill.mined_item_name || ''}
+                                onChange={(newValue) => {
+                                    if (newValue) {
+                                        onUpdate(index, { mined_item_name: newValue });
+                                    }
+                                }}
+                                options={resourceNames}
+                                label="Mined Resource"
+                            />
+
+                </Box>
+                <Box sx={{ minWidth: 0, gridColumn: 3, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: '1 / -1', gridRow: 3 } }}>
+                            <FormControl size="small" sx={{ minWidth: 0, width: '100%' }} error={!machineIds.includes(drill.target.id)}>
+                                <InputLabel>Target Machine</InputLabel>
+                                <Select
+                                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
+                                    value={drill.target.id}
+                                    label="Target Machine"
+                                    onChange={(e) =>
+                                        onUpdate(index, {
+                                            target: { type: 'machine', id: e.target.value as number },
+                                        })
+                                    }
+                                >
+                                    {machineIds.map((id) => (
+                                        <MenuItem key={id} value={id}>
+                                            {entityLabel('machine', id)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gridColumn: 4, gridRow: 1, '@container drill-row (max-width: 600px)': { gridColumn: 2 } }}>
+                    <Box id={`settings-actions-drill-${drill.id}`} sx={{ display: 'flex' }} />
+                    <RowActionsMenu label={label} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
+                    <IconButton onClick={() => onRemove(index)} color="error" aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete=""><Delete /></IconButton>
+                </Box>
+                <EntitySettings label={label} actionContainerId={`settings-actions-drill-${drill.id}`} summary={<Typography variant="body2">
+                    {entityTypeLabel(drill.type, itemLabel)} · Speed bonus {Number((drill.speed_bonus * 100).toFixed(2))}% · {describeEnableRule(drill.overrides?.enable_control).chip}
+                </Typography>} tabs={[{ label: 'Enable control', content: <EnableControlFormContent
+                    key={ruleRevision + JSON.stringify(drill.overrides?.enable_control)} entityType="drill" entityId={drill.id}
+                    currentOverride={drill.overrides?.enable_control} sinkType="machine" availableItems={drill.mined_item_name ? [drill.mined_item_name] : []}
+                    onCancel={() => setRuleRevision(previous => previous + 1)}
+                    onSave={override => {
+                        if (enableControlOverrideChanged(override, drill.overrides?.enable_control)) onUpdate(index, { overrides: { ...drill.overrides, enable_control: override } });
+                        setRuleRevision(previous => previous + 1);
+                    }} /> }]}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, minWidth: 0 }}>
+                            <FormControl size="small" sx={{ minWidth: 0, flex: '1 1 200px' }}>
+                                <InputLabel>Drill Type</InputLabel>
+                                <Select
+                                    inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
+                                    value={drill.type}
+                                    label="Drill Type"
+                                    onChange={(e) =>
+                                        onUpdate(index, {
+                                            type: e.target.value as DrillFormData['type'],
+                                        })
+                                    }
+                                    renderValue={(selected) => (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <FactorioIcon name={selected} size={20} alt="" />
+                                            {entityTypeLabel(selected, itemLabel)}
+                                        </Box>
+                                    )}
+                                >
+                                    {DRILL_TYPES.map((dt) => (
+                                        <MenuItem key={dt.value} value={dt.value}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <FactorioIcon name={dt.value} size={20} alt="" />
+                                                {entityTypeLabel(dt.value, itemLabel)}
+                                            </Box>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                label="Speed Bonus"
+                                type="number"
+                                value={drill.speed_bonus}
+                                onChange={(e) =>
+                                    onUpdate(index, {
+                                        speed_bonus: parseFloat(e.target.value) || 0,
+                                    })
+                                }
+                                inputProps={{ step: 0.1 }}
+                                sx={{ minWidth: 0, flex: '1 1 140px' }}
+                                size="small"
+                            />
+                    </Box>
+                </EntitySettings>
+            </Box>
+        </Box>}
+    </SortableItem>;
+}
+
 /**
  * The build's mining drills. With none (and no productivity level to keep), the section is one "Add mining drill" row:
  * a build without drills and one with drills turned off are the same to the generator.
@@ -63,8 +186,6 @@ function DrillsFormComponent({
     onReorder,
     onDuplicate,
 }: DrillsFormProps) {
-    const { itemLabel } = useGameNames();
-    const [enableControlModalDrillIndex, setEnableControlModalDrillIndex] = useState<number | null>(null);
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's, or to the Add row
     const { cardRef, remove, afterAdd } = useFocusAfterRemove(drills.length, onRemove);
@@ -112,167 +233,37 @@ function DrillsFormComponent({
             }}
             // with none, the Add row below is the one add
             actions={listed && (
-                <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
-                    Add mining drill
-                </Button>
-            )}
-        >
-            {!listed ? (
-                <AddRow label="Add mining drill" data-row-add="" onClick={add} />
-            ) : (
                 <>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
                         <TextField
-                            label="Mining Productivity Level"
+                            label="Mining productivity level"
                             type="number"
                             value={miningProductivityLevel}
                             onChange={(e) =>
                                 onUpdateProductivityLevel(parseInt(e.target.value) || 0)
                             }
                             inputProps={{ min: 0 }}
-                            sx={{ width: 200 }}
+                            sx={{ width: 180, my: 0.75 }}
                             size="small"
                         />
-                    </Box>
-
+                <Button startIcon={<Add />} onClick={add} variant="text" size="small" data-row-add="">
+                    Add mining drill
+                </Button>
+                </>
+            )}
+        >
+            {!listed ? (
+                <AddRow label="Add mining drill" data-row-add="" onClick={add} />
+            ) : (
+                <>
                     <SortableList itemKeys={drills.map((d) => d._uuid)} onReorder={onReorder}>
-                    {drills.map((drill, index) => (
-                        <SortableItem key={drill._uuid} stableKey={drill._uuid} label={entityLabel('drill', drill.id)}>
-                            {(dragHandle) => (
-                        <Box
-                            role="group"
-                            aria-label={entityLabel('drill', drill.id)}
-                            sx={{
-                                display: 'flex',
-                                gap: 2,
-                                alignItems: 'center',
-                                mb: 2,
-                                p: 2,
-                                bgcolor: (theme: Theme) => themeTokens(theme).surface.row,
-                                flexWrap: 'wrap',
-                            }}
-                        >
-                            {dragHandle}
-                            <FormControl data-row-first="" size="small" sx={{ minWidth: 180 }}>
-                                <InputLabel>Drill Type</InputLabel>
-                                <Select
-                                    inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
-                                    value={drill.type}
-                                    label="Drill Type"
-                                    onChange={(e) =>
-                                        onUpdate(index, {
-                                            type: e.target.value as DrillFormData['type'],
-                                        })
-                                    }
-                                    renderValue={(selected) => (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={selected} size={20} alt="" />
-                                            {entityTypeLabel(selected, itemLabel)}
-                                        </Box>
-                                    )}
-                                >
-                                    {DRILL_TYPES.map((dt) => (
-                                        <MenuItem key={dt.value} value={dt.value}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <FactorioIcon name={dt.value} size={20} alt="" />
-                                                {entityTypeLabel(dt.value, itemLabel)}
-                                            </Box>
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <ItemSelector
-                                value={drill.mined_item_name || ''}
-                                onChange={(newValue) => {
-                                    if (newValue) {
-                                        onUpdate(index, { mined_item_name: newValue });
-                                    }
-                                }}
-                                options={resourceNames}
-                                label="Mined Resource"
-                            />
-                            <TextField
-                                label="Speed Bonus"
-                                type="number"
-                                value={drill.speed_bonus}
-                                onChange={(e) =>
-                                    onUpdate(index, {
-                                        speed_bonus: parseFloat(e.target.value) || 0,
-                                    })
-                                }
-                                inputProps={{ step: 0.1 }}
-                                sx={{ width: 120 }}
-                                size="small"
-                            />
-                            <FormControl size="small" sx={{ minWidth: 120 }} error={!machineIds.includes(drill.target.id)}>
-                                <InputLabel>Target Machine</InputLabel>
-                                <Select
-                                    inputProps={{ 'aria-label': SELECT_NAMES.targetMachine }}
-                                    value={drill.target.id}
-                                    label="Target Machine"
-                                    onChange={(e) =>
-                                        onUpdate(index, {
-                                            target: { type: 'machine', id: e.target.value as number },
-                                        })
-                                    }
-                                >
-                                    {machineIds.map((id) => (
-                                        <MenuItem key={id} value={id}>
-                                            {entityLabel('machine', id)}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <EnableRuleChip
-                                override={drill.overrides?.enable_control}
-                                entityLabel={entityLabel('drill', drill.id)}
-                                entityType="drill"
-                                onClick={() => setEnableControlModalDrillIndex(index)}
-                            />
-                            <RowActionsMenu label={entityLabel('drill', drill.id)} onDuplicate={() => duplicate(index)}
-                                onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
-                                onMoveDown={index < drills.length - 1 ? () => onReorder(index, index + 1) : undefined} />
-                            <IconButton onClick={() => remove(index)} color="error" sx={{ ml: 'auto' }} aria-label={deleteButtonLabel('drill', drill.id)} data-row-delete="">
-                                <Delete />
-                            </IconButton>
-                        </Box>
-                            )}
-                        </SortableItem>
-                    ))}
+                    {drills.map((drill, index) => <DrillRow key={drill._uuid} drill={drill} index={index} resourceNames={resourceNames} machineIds={machineIds}
+                        onUpdate={onUpdate} onRemove={remove} onDuplicate={() => duplicate(index)}
+                        onMoveUp={index > 0 ? () => onReorder(index, index - 1) : undefined}
+                        onMoveDown={index < drills.length - 1 ? () => onReorder(index, index + 1) : undefined} />)}
                     </SortableList>
                 </>
             )}
 
-            {/* the enable rule modal */}
-            <EnableControlModal
-                open={enableControlModalDrillIndex !== null}
-                onClose={() => setEnableControlModalDrillIndex(null)}
-                entityType="drill"
-                entityId={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.id ?? 0 : 0}
-                entityLabel={enableControlModalDrillIndex !== null && drills[enableControlModalDrillIndex] ? entityLabel('drill', drills[enableControlModalDrillIndex].id) : ''}
-                currentOverride={enableControlModalDrillIndex !== null ? drills[enableControlModalDrillIndex]?.overrides?.enable_control : undefined}
-                sinkType="machine"
-                availableItems={(() => {
-                    if (enableControlModalDrillIndex === null) return [];
-                    const drill = drills[enableControlModalDrillIndex];
-                    if (drill?.mined_item_name) {
-                        return [drill.mined_item_name];
-                    }
-                    return [];
-                })()}
-                onSave={(override: EnableControlOverride | undefined) => {
-                    if (enableControlModalDrillIndex !== null) {
-                        const drill = drills[enableControlModalDrillIndex];
-                        onUpdate(enableControlModalDrillIndex, {
-                            overrides: {
-                                ...drill.overrides,
-                                enable_control: override,
-                            },
-                        });
-                    }
-                    setEnableControlModalDrillIndex(null);
-                }}
-            />
         </PanelSection>
     );
 }

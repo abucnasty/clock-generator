@@ -1,3 +1,4 @@
+import { EntityBadge } from './EntityBadge';
 import { EntitySettings } from './EntitySettings';
 import { Add, Delete } from '@mui/icons-material';
 import {
@@ -111,10 +112,7 @@ function MachinesFormComponent({
             <SortableList itemKeys={machines.map((m) => m._uuid)} onReorder={onReorder}>
                 {machines.map((machine, index) => (
                     <SortableItem key={machine._uuid} stableKey={machine._uuid} label={entityLabel('machine', machine.id)}
-                        displayLabel={<Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                            <FactorioIcon name={machine.type === 'biochamber' ? 'biochamber' : machine.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3'} size={20} alt="" />
-                            {machine.id}
-                        </Box>}>
+                        displayLabel={<EntityBadge id={machine.id}><FactorioIcon name={machine.type === 'biochamber' ? 'biochamber' : machine.type === 'furnace' ? 'electric-furnace' : 'assembling-machine-3'} size={28} alt="" /></EntityBadge>}>
                         {(dragHandle) => (
                             <MachineRow
                                 compact={compact}
