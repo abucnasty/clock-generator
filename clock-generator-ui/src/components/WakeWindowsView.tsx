@@ -37,6 +37,7 @@ import { entityOptionsOf } from '../utils/inserterOptions';
 import { useGameNames } from '../hooks/useGameNames';
 
 interface WakeWindowsViewProps {
+    cycleView?: boolean;
     config?: Config | null;
     inspection?: { range: TimelineRange; tick: number; onInspect(entityId: string, tick: number): void };
     asTable: boolean;
@@ -99,7 +100,7 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
  * When the selected clock switches each inserter and drill on, over one clock period: a chart (or two tables) of
  * every wake window, with the wake-ups the engine counted for each inserter. Assumes no layout around it.
  */
-function WakeWindowsViewComponent({ alternative, config, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
+function WakeWindowsViewComponent({ alternative, config, cycleView = false, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
     const inspectionRef = useRef(inspection); inspectionRef.current = inspection;
     // keyed on the clock object, not its id: a new generation repeats the ids, and its selection must start empty
     const [selection, setSelection] = useState<{ alternative: ClockAlternativeView; rowId: string; windowIndex: number } | null>(null);
@@ -120,10 +121,14 @@ function WakeWindowsViewComponent({ alternative, config, headingLevel = 'h3', as
         // the selected window is read out in the page's one announcements region
         const row = next === null ? undefined : rows.find(it => it.id === next.rowId);
         if (next !== null && row && alternative !== null && next.windowIndex < row.windows.length) {
-            inspectionRef.current?.onInspect(row.id, row.windows[next.windowIndex].start);
+            const window = row.windows[next.windowIndex];
+            const inspection = inspectionRef.current;
+            const visible = inspection && cycleView ? window.segments.find(segment => segment.end >= inspection.range.start && segment.start <= inspection.range.end) : undefined;
+            // A wrapping or long window can start in a different cycle; inspect its visible part.
+            inspection?.onInspect(row.id, visible ? Math.max(visible.start, inspection.range.start) : window.start);
             announce(selectionAnnouncement(row, next.windowIndex, alternative.simulationDurationTicks));
         }
-    }, [alternative, rows, announce]);
+    }, [alternative, rows, announce, cycleView]);
 
     if (alternative === null) {
         return null;
@@ -145,14 +150,14 @@ function WakeWindowsViewComponent({ alternative, config, headingLevel = 'h3', as
     });
 
     return (
-        <BeltChartFrame id={viewId} title={VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
+        <BeltChartFrame id={viewId} title={cycleView ? 'Wake windows in this crafting cycle' : VIEW_HEADING} level={headingLevel} subtitle={summary} data-wake-view="">
             {!counted && (
                 <Typography variant="body2" color="text.secondary" data-wake-not-counted>
                     {`${NOT_COUNTED_NOTE}. ${NOT_COUNTED_REASON}`}
                 </Typography>
             )}
 
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 3, rowGap: 1, mt: 1.5 }}>
+            {!cycleView && <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 3, rowGap: 1, mt: 1.5 }}>
                 <FormControlLabel
                     control={
                         <Switch
@@ -166,6 +171,34 @@ function WakeWindowsViewComponent({ alternative, config, headingLevel = 'h3', as
                     label={SHOW_AS_TABLE}
                     sx={{ mr: 0, minHeight: 32 }}
                 />
+            </Box>}
+
+            <Box sx={{ mt: 1, mb: 1 }}>
+                {!asTable && (
+                    <Box
+                        component="ul"
+                        aria-label={LEGEND_LABEL}
+                        sx={{
+                            listStyle: 'none', m: 0, p: 0, display: 'flex', flexWrap: 'wrap', columnGap: 2.5, rowGap: 0.5,
+                        }}
+                        data-wake-legend
+                    >
+                        {rows.some(row => row.kind === 'drill') && <Typography component="li" variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ChartSwatch color={BELT_CHART.entity.drill} />Drill wake window</Typography>}
+                        {LEGEND.map(item => (
+                            <Typography
+                                key={item.kind}
+                                component="li"
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                            >
+                                <LegendSwatch kind={item.kind} />
+                                {cycleView && item.kind === 'track' ? 'One crafting cycle' : item.text}
+                            </Typography>
+                        ))}
+                    </Box>
+                )}
+
             </Box>
 
             <Box sx={{ mt: 2 }}>
@@ -193,36 +226,9 @@ function WakeWindowsViewComponent({ alternative, config, headingLevel = 'h3', as
                     </>
                 )}
             </Box>
-            <Box sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
-                {!asTable && (
-                    <Box
-                        component="ul"
-                        aria-label={LEGEND_LABEL}
-                        sx={{
-                            listStyle: 'none', m: 0, p: 0, display: 'flex', flexWrap: 'wrap', columnGap: 2.5, rowGap: 0.5,
-                        }}
-                        data-wake-legend
-                    >
-                        {rows.some(row => row.kind === 'drill') && <Typography component="li" variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><ChartSwatch color={BELT_CHART.entity.drill} />Drill wake window</Typography>}
-                        {LEGEND.map(item => (
-                            <Typography
-                                key={item.kind}
-                                component="li"
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                            >
-                                <LegendSwatch kind={item.kind} />
-                                {item.text}
-                            </Typography>
-                        ))}
-                    </Box>
-                )}
-
-            </Box>
             <Box component="details" sx={{ mt: 1.5 }}>
                 <Typography component="summary" variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }}>Reading this chart</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{VIEW_INTRO}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cycleView ? 'The selected crafting cycle is one segment of the clock period. Wake windows are clipped to this segment; row percentages and wake-ups/min describe the whole clock period.' : VIEW_INTRO}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{KEYBOARD_HINT}</Typography>
             <Box
                 component="dl"

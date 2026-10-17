@@ -4,13 +4,14 @@ export interface TimelineRange { start: number; end: number }
 export type TimelineSignalGroup = TimelineSeries['group'] | 'transfers' | 'throughput' | 'buffers';
 export interface TimelineInspection {
     /** 'states' is accepted for older saved contexts and migrates to Activity with a signal preset. */
-    view: 'windows' | 'activity' | 'states' | 'transfers';
+    view: 'windows' | 'activity' | 'states' | 'transfers' | 'cycles';
     run: 'clock' | 'plan';
     entityId: string | null;
     tick: number;
     ranges: Partial<Record<'windows' | 'clock' | 'plan', TimelineRange>>;
     signals: TimelineSignalGroup[];
     showConnections?: boolean;
+    cycleIndex?: number;
 }
 export const DEFAULT_INSPECTION: TimelineInspection = { view: 'windows', run: 'clock', entityId: null, tick: 0, ranges: {}, signals: ['state', 'inventory', 'transfers'] };
 export const SIGNAL_GROUPS: TimelineSignalGroup[] = ['state', 'inventory', 'transfers', 'buffers', 'progress', 'hand', 'fuel', 'production', 'throughput'];
@@ -25,13 +26,14 @@ export function validInspection(value: unknown): TimelineInspection {
         if (range && Number.isFinite(range.start) && Number.isFinite(range.end) && range.start >= 0 && range.end > range.start && range.end <= 500_000) ranges[key] = { start: range.start, end: range.end };
     }
     return {
-        view: input.view === 'states' ? 'activity' : ['windows', 'activity', 'transfers'].includes(input.view ?? '') ? input.view! : 'windows',
+        view: input.view === 'states' ? 'activity' : ['windows', 'activity', 'transfers', 'cycles'].includes(input.view ?? '') ? input.view! : 'windows',
         run: input.run === 'plan' ? 'plan' : 'clock',
         entityId: typeof input.entityId === 'string' && /^(machine|inserter|drill|belt|chest):\d+$/.test(input.entityId) ? input.entityId : null,
         tick: typeof input.tick === 'number' && Number.isFinite(input.tick) ? Math.max(0, Math.min(500_000, Math.round(input.tick))) : 0,
         ranges,
         signals: input.view === 'states' ? ['state'] : Array.isArray(input.signals) ? [...new Set(input.signals.filter(group => SIGNAL_GROUPS.includes(group)))] : DEFAULT_INSPECTION.signals,
         showConnections: input.showConnections === true,
+        ...(typeof input.cycleIndex === 'number' && Number.isSafeInteger(input.cycleIndex) && input.cycleIndex >= 0 ? { cycleIndex: input.cycleIndex } : {}),
     };
 }
 

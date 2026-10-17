@@ -189,6 +189,32 @@ function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = f
 
     const timelineContent = (isFullscreen: boolean) => (
         <>
+            <Box sx={{ mb: 1.5 }}>
+            {/* Legend */}
+            <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {allItems.map(item => (
+                    <Box
+                        key={item}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            px: 1,
+                            py: 0.25,
+                            borderRadius: 0,
+                        }}
+                    >
+                        <ChartSwatch {...colorMap.get(item)!} />
+                        <FactorioIcon name={item} size={14} alt="" />
+                        <Typography variant="caption"><GameName id={item} /></Typography>
+                    </Box>
+                ))}
+            </Box>
+            </Box>
+
+            </Box>
+
             <ScrollX label={SCROLL_REGION_NAMES.transferTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
             <Box sx={{ display: 'flex', mb: 1 }}>
                 <Box sx={{ width: 220, flexShrink: 0 }} />
@@ -231,31 +257,6 @@ function TransferHistoryVisualizationComponent({ transferHistory, fullscreen = f
                 </Box>
             )}
             </ScrollX>
-            <Box sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
-            {/* Legend */}
-            <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {allItems.map(item => (
-                    <Box
-                        key={item}
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            px: 1,
-                            py: 0.25,
-                            borderRadius: 0,
-                        }}
-                    >
-                        <ChartSwatch {...colorMap.get(item)!} />
-                        <FactorioIcon name={item} size={14} alt="" />
-                        <Typography variant="caption"><GameName id={item} /></Typography>
-                    </Box>
-                ))}
-            </Box>
-            </Box>
-
-            </Box>
         </>
     );
 

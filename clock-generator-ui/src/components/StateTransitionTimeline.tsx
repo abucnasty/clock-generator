@@ -950,6 +950,9 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
             {/* Legend */}
 
 
+            <Box sx={{ mb: 1.5 }}>
+            <Legend viewMode={viewMode} filters={{ machine: filters.machine && machines.length > 0, inserter: filters.inserter && inserters.length > 0, drill: filters.drill && drills.length > 0 }} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} factorioStates={factorioStates} />
+            </Box>
             <ScrollX label={SCROLL_REGION_NAMES.stateTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
             <Box sx={{ display: 'flex', mb: 1 }}>
                 <Box sx={{ width: 220, flexShrink: 0 }} />
@@ -1015,9 +1018,7 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                 </Box>
             )}
             </ScrollX>
-            <Box sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
-            <Legend viewMode={viewMode} filters={{ machine: filters.machine && machines.length > 0, inserter: filters.inserter && inserters.length > 0, drill: filters.drill && drills.length > 0 }} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} factorioStates={factorioStates} />
-            </Box>
+
         </>
     );
 

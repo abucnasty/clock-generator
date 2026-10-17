@@ -14,6 +14,8 @@ import { TimelineSignals } from './TimelineSignals';
 import { TimelineTickInspector } from './TimelineTickInspector';
 import { TimelinePauses } from './TimelinePauses';
 import { FactorioIcon } from './FactorioIcon';
+import { craftingCycles, craftingCycleAt, craftingCycleIndex, craftingCycleRange } from '../utils/craftingCycles';
+import { CraftingCycleNavigator } from './CraftingCycleNavigator';
 
 const EvidenceChart = lazy(() => import('./TimelineEvidenceChart').then(module => ({ default: module.TimelineEvidenceChart })));
 const WakeWindows = lazy(() => import('./WakeWindowsView').then(module => ({ default: module.WakeWindowsView })));
@@ -82,40 +84,50 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const { recipeLabel, itemLabel } = useGameNames();
     const [inspection, patch] = useInspection(props);
     const [retry, setRetry] = useState(0);
-    const recordingWanted = inspection.view !== 'windows';
+    const recordingWanted = inspection.view !== 'windows' && inspection.view !== 'cycles';
     const options = useMemo(() => entityOptions(props.config, props.selected), [props.config, props.selected]);
     const request = useMemo(() => recordingWanted ? timelineRequestFor(props.config, props.selected, inspection.run) : null, [props.config, props.selected, inspection.run, recordingWanted, retry]);
     const primary = useTimelineRecording(request, retry);
     const recording = primary.data;
     const selectedId = options.some(entity => entity.id === inspection.entityId) ? inspection.entityId : options.find(entity => entity.type === 'machine')?.id ?? options[0]?.id;
     const selected = recording?.entities.find(entity => entity.id === selectedId) ?? options.find(entity => entity.id === selectedId) ?? recording?.entities[0] ?? null;
-    const duration = inspection.view === 'windows'
+    const duration = !recordingWanted
         ? props.selected.simulationDurationTicks
         : recording?.end_tick ?? props.selected.simulationDurationTicks;
-    const domain = inspection.view === 'windows' ? 'windows' : inspection.run;
+    const domain = !recordingWanted ? 'windows' : inspection.run;
     const savedRange = inspection.ranges[domain];
-    const range = useMemo(() => clampTimelineRange(savedRange, duration), [savedRange, duration]);
     const tick = Math.max(0, Math.min(Math.floor(duration), inspection.tick));
+    const cycles = useMemo(() => craftingCycles(props.selected.cycleTicks, duration), [props.selected.cycleTicks, duration]);
+    const cycleIndex = Math.min((cycles?.count ?? 1) - 1, inspection.cycleIndex ?? craftingCycleIndex(cycles, tick));
+    const range = useMemo(() => {
+        const cycle = inspection.view === 'cycles' ? craftingCycleAt(cycles, cycleIndex) : null;
+        return cycle ? craftingCycleRange(cycle, duration) : clampTimelineRange(savedRange, duration);
+    }, [inspection.view, cycles, cycleIndex, savedRange, duration]);
     const current = useRef({ inspection, duration, domain, range }); current.current = { inspection, duration, domain, range };
     const setRange = useCallback((next: TimelineRange) => {
         const { inspection: previous, duration: end, domain: key } = current.current;
         patch({ ranges: { ...previous.ranges, [key]: clampTimelineRange(next, end) } });
     }, [patch]);
+    const selectCycle = useCallback((index: number) => {
+        const cycle = craftingCycleAt(cycles, index);
+        if (!cycle) return;
+        patch({ cycleIndex: index, tick: Math.ceil(cycle.start) });
+    }, [cycles, patch]);
     const setTick = useCallback((value: number) => {
-        const { duration: end, range: window } = current.current;
+        const { duration: end, range: window, inspection: previous } = current.current;
         const next = Math.max(0, Math.min(Math.floor(end), Math.round(value)));
-        patch({ tick: next });
-        if (next < window.start || next > window.end) {
+        patch({ tick: next, ...(previous.view === 'cycles' ? { cycleIndex: craftingCycleIndex(cycles, next) } : {}) });
+        if (previous.view !== 'cycles' && (next < window.start || next > window.end)) {
             const half = (window.end - window.start) / 2;
             setRange({ start: next - half, end: next + half });
         }
-    }, [patch, setRange]);
+    }, [patch, setRange, cycles]);
     const zoom = useCallback((factor: number, cursor: number) => setRange(zoomTimeline(current.current.range, factor, cursor, current.current.duration)), [setRange]);
     const inspect = useCallback((entityId: string, at: number) => {
-        patch({ entityId, tick: Math.round(at) });
+        patch({ entityId, tick: Math.round(at), ...(current.current.inspection.view === 'cycles' ? { cycleIndex: craftingCycleIndex(cycles, at) } : {}) });
         const { range: window, duration: end } = current.current;
-        if (at < window.start || at > window.end) { const half = (window.end - window.start) / 2; setRange(clampTimelineRange({ start: at - half, end: at + half }, end)); }
-    }, [patch, setRange]);
+        if (current.current.inspection.view !== 'cycles' && (at < window.start || at > window.end)) { const half = (window.end - window.start) / 2; setRange(clampTimelineRange({ start: at - half, end: at + half }, end)); }
+    }, [patch, setRange, cycles]);
     const connected = useMemo(() => recording && selected ? relatedTimelineEntities(recording, selected) : [], [recording, selected]);
     const events = useMemo(() => recording && selected ? relevantTimelineEvents(recording, selected) : [], [recording, selected]);
     const eventTicks = useMemo(() => events.map(event => event.tick), [events]);
@@ -126,31 +138,32 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         if (event.defaultPrevented) return;
         if ((event.target as HTMLElement).closest('input,select,textarea,button,[role="combobox"]')) return;
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); setTick(tick + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 15 : 1)); }
-        if (event.key === '+' || event.key === '=') { event.preventDefault(); zoom(0.5, tick); }
-        if (event.key === '-') { event.preventDefault(); zoom(2, tick); }
+        if (inspection.view !== 'cycles' && (event.key === '+' || event.key === '=')) { event.preventDefault(); zoom(0.5, tick); }
+        if (inspection.view !== 'cycles' && event.key === '-') { event.preventDefault(); zoom(2, tick); }
     };
     return <Box data-clock-inspection onKeyDown={onKeys}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
             <TextField select size="small" label="Timeline view" value={inspection.view} onChange={event => patch({ view: event.target.value as TimelineInspection['view'] })} sx={{ display: { xs: 'block', sm: 'none' }, flex: '1 1 100%' }}>
-                <MenuItem value="windows">Wake windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="transfers">Item transfers</MenuItem>
+                <MenuItem value="windows">Wake windows</MenuItem><MenuItem value="activity">Activity</MenuItem><MenuItem value="cycles">Crafting cycles</MenuItem><MenuItem value="transfers">Item transfers</MenuItem>
             </TextField>
             <ToggleButtonGroup value={inspection.view} exclusive size="small" aria-label="Timeline view" onChange={(_, view: TimelineInspection['view'] | null) => { if (view) patch({ view }); }} sx={{ display: { xs: 'none', sm: 'flex' }, flexWrap: 'wrap' }}>
                 <ToggleButton value="windows">Wake windows</ToggleButton>
                 <ToggleButton value="activity">Activity</ToggleButton>
+                <ToggleButton value="cycles">Crafting cycles</ToggleButton>
                 <ToggleButton value="transfers">Item transfers</ToggleButton>
             </ToggleButtonGroup>
             {recordingWanted && <ToggleButtonGroup value={inspection.run} exclusive size="small" aria-label="Simulation shown in the timelines" onChange={(_, run: 'clock' | 'plan' | null) => { if (run) patch({ run }); }}>
                 <ToggleButton value="clock">Exported clock</ToggleButton><ToggleButton value="plan">Plan</ToggleButton>
             </ToggleButtonGroup>}
         </Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
-            <Autocomplete options={options} value={options.find(option => option.id === selectedId) ?? null} isOptionEqualToValue={(a, b) => a.id === b.id}
+        {inspection.view !== 'cycles' && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
+            {recordingWanted && <Autocomplete options={options} value={options.find(option => option.id === selectedId) ?? null} isOptionEqualToValue={(a, b) => a.id === b.id}
                 getOptionLabel={entity => timelineEntityName(entity, recipeLabel)}
                 filterOptions={(entities, state) => entities.filter(entity => `${timelineEntityName(entity, recipeLabel)} ${entity.items.map(itemLabel).join(' ')}`.toLowerCase().includes(state.inputValue.toLowerCase())).slice(0, 80)}
                 onChange={(_, entity) => { if (entity) { patch({ entityId: entity.id }); setEventPage(0); } }}
                 renderInput={params => <TextField {...params} label="Inspect entity" size="small" />}
                 renderOption={(attributes, entity) => { const { key, ...rest } = attributes; return <li key={key} {...rest}>{entity.items[0] && <FactorioIcon name={entity.items[0]} size={22} alt="" />}<span>{timelineEntityName(entity, recipeLabel)}</span></li>; }}
-                sx={{ width: 330, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }} />
+                sx={{ width: 330, maxWidth: '100%', flexGrow: { xs: 1, sm: 0 } }} />}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.25 }}>
                 <Tooltip title="Pan earlier"><IconButton size="small" aria-label="Pan timeline earlier" onClick={() => setRange(panTimeline(range, -0.5, duration))}><ChevronLeft /></IconButton></Tooltip>
                 <Tooltip title="Zoom out"><IconButton size="small" aria-label="Zoom timeline out" onClick={() => zoom(2, tick)}><ZoomOut /></IconButton></Tooltip>
@@ -159,9 +172,10 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
                 <Button color="inherit" size="small" startIcon={<RestartAlt />} onClick={() => setRange({ start: 0, end: duration })}>Fit run</Button>
                 <Typography variant="caption" color="text.secondary">{number(range.start)}–{number(range.end)} t</Typography>
             </Box>
-        </Box>
+        </Box>}
         {recordingWanted && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
+        {inspection.view === 'cycles' && <CraftingCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
             {props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}
@@ -169,15 +183,15 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: recordingWanted ? 'minmax(0,1fr) 245px' : 'minmax(0,1fr)' }, gap: 1.5, alignItems: 'start' }}>
             <Box sx={{ minWidth: 0 }}>
                 <Suspense fallback={<Typography role="status">Loading chart…</Typography>}>
-                    {inspection.view === 'windows' ? <>
-                        <WakeWindows config={props.config} alternative={props.selected} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} headingLevel="h3" inspection={{ range, tick, onInspect: inspect }} />
+                    {!recordingWanted ? <>
+                        {(inspection.view !== 'cycles' || cycles) && <WakeWindows config={props.config} alternative={props.selected} asTable={inspection.view === 'cycles' ? false : props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} cycleView={inspection.view === 'cycles'} headingLevel="h3" inspection={{ range, tick, onInspect: inspect }} />}
                         {selected && <Button color="inherit" size="small" sx={{ mt: 1 }} onClick={() => patch({ view: 'activity' })}>Inspect {timelineEntityName(selected, recipeLabel)} activity</Button>}
                     </> : <>
                         {primary.status === 'loading' && <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 3 }}><CircularProgress size={20} />Recording this clock’s activity…</Box>}
                         {primary.status === 'idle' && <Alert severity="info">This saved result lacks the build or exact fuel-clock metadata needed for a detailed replay. Generate again to record its activity.</Alert>}
                         {primary.error && <Alert severity="warning" action={<Button color="inherit" onClick={() => setRetry(retry + 1)}>Retry</Button>}>{primary.error}</Alert>}
                         {recording && selected && <Box sx={{ p: { xs: 1, sm: 1.5 } }}>
-                            <EvidenceChart recording={recording} selected={selected} groups={inspection.signals} range={range} tick={tick} view={inspection.view} showConnections={inspection.showConnections} onTick={setTick} onInspect={inspect} onRange={setRange} onZoom={zoom} />
+                            <EvidenceChart recording={recording} selected={selected} groups={inspection.signals} range={range} tick={tick} view={inspection.view === 'transfers' ? 'transfers' : inspection.view === 'states' ? 'states' : 'activity'} showConnections={inspection.showConnections} onTick={setTick} onInspect={inspect} onRange={setRange} onZoom={zoom} />
                         </Box>}
                         {recording?.truncated && <Alert severity="info" sx={{ mt: 1 }}>Detailed recording is limited to the first {number(recording.end_tick)} ticks of {number(recording.requested_ticks)} requested ticks to bound memory. Zoom and inspection use only this excerpt.</Alert>}
                     </>}

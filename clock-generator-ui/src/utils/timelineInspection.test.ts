@@ -72,3 +72,9 @@ it('discards legacy A/B choices while retaining workspace context', () => {
     expect(restored).toEqual({ view: 'activity', run: 'clock', entityId: 'inserter:5', tick: 235, signals: ['state', 'hand'], showConnections: true, ranges: { clock: { start: 220, end: 253 } } });
     expect(restored).not.toHaveProperty('comparisonId');
 });
+
+it('persists planned crafting-cycle navigation without altering normal timeline ranges', () => {
+    const saved = validInspection({ view: 'cycles', cycleIndex: 4, tick: 384, ranges: { windows: { start: 10, end: 60 } } });
+    expect(saved).toMatchObject({ view: 'cycles', cycleIndex: 4, tick: 384, ranges: { windows: { start: 10, end: 60 } } });
+    expect(validInspection({ cycleIndex: -1 })).not.toHaveProperty('cycleIndex');
+});
