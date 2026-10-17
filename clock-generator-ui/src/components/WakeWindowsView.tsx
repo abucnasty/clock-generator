@@ -9,6 +9,7 @@ import type { ClockAlternativeView } from '../worker/types';
 import { buildWakeWindowRows, mostWokenRowId, sumWakeUps, wakeUpsCounted } from '../utils/wakeWindows';
 import {
     KEYBOARD_HINT,
+    BELT_SLACK_EXPLANATION,
     LEGEND_LABEL,
     LEGEND_SELECTED,
     LEGEND_SLACK,
@@ -31,8 +32,13 @@ import {
 import { WakeWindowsTable } from './WakeWindowsTable';
 import { BeltChartFrame, BeltChartSurface, ChartSwatch } from './BeltChart';
 import { BELT_CHART } from '../theme/beltCharts';
+import type { Config } from 'clock-generator/browser';
+import { configToFormData } from '../utils/configForm/configMapping';
+import { entityOptionsOf } from '../utils/inserterOptions';
+import { useGameNames } from '../hooks/useGameNames';
 
 interface WakeWindowsViewProps {
+    config?: Config | null;
     inspection?: { range: TimelineRange; tick: number; onInspect(entityId: string, tick: number): void };
     asTable: boolean;
     onAsTableChange(asTable: boolean): void;
@@ -94,14 +100,20 @@ const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[
  * When the selected clock switches each inserter and drill on, over one clock period: a chart (or two tables) of
  * every wake window, with the wake-ups the engine counted for each inserter. Assumes no layout around it.
  */
-function WakeWindowsViewComponent({ alternative, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
+function WakeWindowsViewComponent({ alternative, config, headingLevel = 'h3', asTable, onAsTableChange: setAsTable, inspection }: WakeWindowsViewProps) {
     const inspectionRef = useRef(inspection); inspectionRef.current = inspection;
     // keyed on the clock object, not its id: a new generation repeats the ids, and its selection must start empty
     const [selection, setSelection] = useState<{ alternative: ClockAlternativeView; rowId: string; windowIndex: number } | null>(null);
     const viewId = useId();
     const headingId = `${viewId}-title`;
     const hintId = useId();
-    const rows = useMemo(() => (alternative ? buildWakeWindowRows(alternative) : []), [alternative]);
+    const { itemLabel, recipeLabel } = useGameNames();
+    const options = useMemo(() => {
+        if (!config) return [];
+        const form = configToFormData(config);
+        return entityOptionsOf(form.machines, form.belts, form.chests, { item: itemLabel, recipe: recipeLabel });
+    }, [config, itemLabel, recipeLabel]);
+    const rows = useMemo(() => (alternative ? buildWakeWindowRows(alternative, options) : []), [alternative, options]);
     const announce = useAnnounce();
     // stable for the clock, so the chart's memoised rows only render again when their own selection changes
     const onSelect = useCallback((next: { rowId: string; windowIndex: number } | null) => {
@@ -165,6 +177,9 @@ function WakeWindowsViewComponent({ alternative, headingLevel = 'h3', asTable, o
                         <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
                             Select a window for details. Use ↑ ↓ to change rows and ← → to step through windows.
                         </Typography>
+                        {rows.some(row => row.windows.some(window => window.slackTicks > 0)) && <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
+                            {BELT_SLACK_EXPLANATION}
+                        </Typography>}
                         <WakeWindowsChart
                             range={inspection?.range}
                             tick={inspection?.tick}

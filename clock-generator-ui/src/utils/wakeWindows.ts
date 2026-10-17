@@ -6,6 +6,7 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { entityLabel, type LabelKind } from './entityLabel';
 import { rowRouteText } from './wakeWindowCopy';
+import type { EntityOption } from './inserterOptions';
 
 /** Inclusive ticks of one clock period */
 export interface TickSpan {
@@ -48,6 +49,8 @@ export interface WakeWindowRow {
     items: string[];
     /** Between what, "Belt 1 to Machine 2"; a drill's "into Machine 1"; empty when the run does not say */
     route: string;
+    source?: EntityOption;
+    sink?: EntityOption;
     windows: WakeWindow[];
     mode: WakeWindowRowMode;
     ownClock?: OwnClock;
@@ -206,7 +209,9 @@ function endLabel(end: { entity_id: string; label: string } | undefined): string
 }
 
 /** One row per inserter, then per drill, in number order, of everything the clock switches or leaves on */
-export function buildWakeWindowRows(alternative: WakeWindowSource): WakeWindowRow[] {
+export function buildWakeWindowRows(alternative: WakeWindowSource, options: readonly EntityOption[] = []): WakeWindowRow[] {
+    const endpoints = new Map(options.map(option => [`${option.type}:${option.id}`, option]));
+    const endpoint = (id?: string) => id ? endpoints.get(id.replace(/^furnace:/, 'machine:')) : undefined;
     const period = alternative.simulationDurationTicks;
     const entities = new Map(
         alternative.stateTransitionHistory.entities
@@ -271,6 +276,8 @@ export function buildWakeWindowRows(alternative: WakeWindowSource): WakeWindowRo
             label: entityLabel(kind, number),
             items: entity ? [...entity.items] : [],
             route,
+            source: endpoint(entity?.source?.entity_id),
+            sink: endpoint(entity?.sink?.entity_id),
             windows,
             mode,
             ...(ownClock ? { ownClock } : {}),

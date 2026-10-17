@@ -187,8 +187,8 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
             <Box sx={{ minWidth: 0 }}>
                 <Suspense fallback={<Typography role="status">Loading chart…</Typography>}>
                     {inspection.view === 'windows' ? <>
-                        <WakeWindows alternative={props.selected} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} headingLevel="h3" inspection={{ range, tick, onInspect: inspect }} />
-                        {comparisonClock && <Box sx={{ mt: 1 }}><Typography variant="body2">B · {comparisonClock.label}</Typography><WakeWindows alternative={comparisonClock} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} inspection={{ range, tick, onInspect: inspect }} /></Box>}
+                        <WakeWindows config={props.config} alternative={props.selected} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} headingLevel="h3" inspection={{ range, tick, onInspect: inspect }} />
+                        {comparisonClock && <Box sx={{ mt: 1 }}><Typography variant="body2">B · {comparisonClock.label}</Typography><WakeWindows config={props.config} alternative={comparisonClock} asTable={props.wakeAsTable} onAsTableChange={props.onWakeAsTableChange} inspection={{ range, tick, onInspect: inspect }} /></Box>}
                         {selected && <Button color="inherit" size="small" sx={{ mt: 1 }} onClick={() => patch({ view: 'activity' })}>Inspect {timelineEntityName(selected, recipeLabel)} activity</Button>}
                     </> : <>
                         {primary.status === 'loading' && <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 3 }}><CircularProgress size={20} />Recording this clock’s activity…</Box>}

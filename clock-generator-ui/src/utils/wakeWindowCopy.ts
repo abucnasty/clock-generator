@@ -47,6 +47,7 @@ export const TERMS = [
 export const LEGEND_LABEL = 'Legend';
 export const LEGEND_WINDOW = 'Wake window';
 export const LEGEND_SLACK = 'Belt slack at the end of a wake window';
+export const BELT_SLACK_EXPLANATION = 'Belt slack: “+N ticks” marks the hatched tail already included in each wake window, allowing a late pickup from a moving belt to finish.';
 export const LEGEND_SELECTED = 'Selected wake window';
 export const LEGEND_TRACK = 'One clock period';
 

@@ -25,6 +25,7 @@ import {
 } from '../utils/wakeWindows';
 import {
     modeText,
+    BELT_SLACK_EXPLANATION,
     onShareText,
     rowSummary,
     wakeUpsRowText,
@@ -183,7 +184,7 @@ const NOTE_ICONS: Record<WatchNoteKind, ComponentType<{ fontSize?: 'inherit'; 'a
 };
 
 function WatchNotes(props: { row: WakeWindowRow; periodTicks: number; mostWakeUpsId: string | null; indent: string | number }) {
-    const notes = watchNotes(props.row, { periodTicks: props.periodTicks, mostWakeUpsId: props.mostWakeUpsId });
+    const notes = watchNotes(props.row, { periodTicks: props.periodTicks, mostWakeUpsId: props.mostWakeUpsId }).filter(note => note.id !== 'slack');
     if (notes.length === 0) {
         return null;
     }
@@ -237,6 +238,7 @@ const gridColumnsOf = (wide: boolean) => (wide ? `${LABEL_COLUMN_PX}px minmax(0,
 /** One inserter or drill: its name, track and numbers, the details of its selected window, its notes */
 const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
     const { row, periodTicks, selectedIndex, onSelect } = props;
+    const slackTicks = row.windows.reduce((max, window) => Math.max(max, window.slackTicks), 0);
     const { itemLabel } = useGameNames();
     const indent = props.wide ? `${LABEL_COLUMN_PX + COLUMN_GAP_PX}px` : 0;
 
@@ -319,7 +321,11 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                 }}
             >
                 <Box sx={{ gridArea: 'label', minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: BELT_CHART.entity[row.kind] }}>{row.label}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: BELT_CHART.entity[row.kind] }}>{row.label}</Typography>
+                        {slackTicks > 0 && <Typography component="span" variant="caption" color="text.secondary" title={BELT_SLACK_EXPLANATION}
+                            aria-label={`${slackTicks} ticks of belt slack`} data-wake-slack>{`+${slackTicks} ${slackTicks === 1 ? 'tick' : 'ticks'}`}</Typography>}
+                    </Box>
                     {(row.items.length > 0 || row.route) && (
                         <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: 'anywhere' }}>
                             <WakeRowMoves row={row} />
