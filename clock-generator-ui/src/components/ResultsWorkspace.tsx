@@ -176,18 +176,18 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 rateWarning={rateWarning}
                 stale={props.staleFor !== null}
                 beltAction={props.beltAction}
+                runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
+                    <Typography variant="body2">
+                        These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.non_moving_belts ? 'standing-still' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
+                        {selected.assumptions?.loopSeeds.length ? ` ${selected.assumptions.loopSeeds.length} modeled loop seed(s).` : ''}
+                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' Supplied output-drop positions model shared-lane spacing.' : ''}
+                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'free-lane') ? ' Output belts without supplied shared-lane positions use free-lane drop timing.' : ''}
+                        {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
+                    </Typography>
+                    {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
+                </Box>}
             />
 
-            {selected && <Box data-result-assumptions sx={{ mb: density === 'compact' ? 1 : 2, overflowWrap: 'anywhere' }}>
-                <Typography variant="body2">
-                    These results assume {saved ? `${saved.target_output.copies} ${saved.target_output.copies === 1 ? 'copy' : 'copies'}; ${saved.overrides?.non_moving_belts ? 'standing-still' : 'moving'} input belts in the saved run` : 'a saved build whose metadata is unavailable'}.
-                    {selected.assumptions?.loopSeeds.length ? ` ${selected.assumptions.loopSeeds.length} modeled loop seed(s).` : ''}
-                    {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' Supplied output-drop positions model shared-lane spacing.' : ''}
-                    {selected.assumptions?.outputDrops.some(drop => drop.mode === 'free-lane') ? ' Output belts without supplied shared-lane positions use free-lane drop timing.' : ''}
-                    {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
-                </Typography>
-                {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
-            </Box>}
             <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }, gap: density === 'compact' ? 1.5 : 2, alignItems: 'start', '& > *': { minWidth: 0 } }}>
                 <ClockAlternativesPanel
                     comparison={props.comparison}

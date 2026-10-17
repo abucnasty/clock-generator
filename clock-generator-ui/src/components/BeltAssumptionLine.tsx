@@ -22,7 +22,7 @@ export function BeltAssumptionLine({ assumption, hint, busy, onSwitch }: BeltAss
     }
     const line = beltResultsLine(assumption.answer);
     return (
-        <Box data-belt-assumption="" sx={{ mt: 2, maxWidth: '72ch' }}>
+        <Box data-belt-assumption="" sx={{ maxWidth: '72ch' }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 1 }}>
                 <Typography variant="body2">{line.text}</Typography>
                 <Button
