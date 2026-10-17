@@ -86,7 +86,7 @@ import type { TargetValues } from './utils/pasteTarget';
 import { configToFormData, formDataToConfig } from './utils/configForm/configMapping';
 import { applyRepeatedUnitConversion } from './utils/configForm/repeatedUnitConversion';
 import { askEngine } from './worker/engineClient';
-import { inserterFixProblem } from './utils/configForm/inserterFix';
+import { applyInserterFix, inserterFixProblem } from './utils/configForm/inserterFix';
 import { hasImportedBeltDrops } from './utils/inserterMetadata';
 import {
     buildTitles,
@@ -224,7 +224,6 @@ function App() {
         exportConfig,
         exportableConfig,
         resetConfig,
-        applyInserterFix,
         reorderMachines,
         reorderInserters,
         reorderBelts,
@@ -316,12 +315,15 @@ function App() {
             setInserterFocusRequest({ id: fix.inserter_id, filters: true });
             return;
         }
-        const id = Math.max(0, ...config.inserters.map(row => row.id)) + 1;
-        offerUndo(fix.type === 'add_lane_to_existing_belt' ? `Added a lane to ${entityLabel('belt', fix.belt_id)}.` : `Added a connection for ${entityLabel('machine', issue.machine_id)}.`);
-        applyInserterFix(issue, fix);
+        const before = captureBuildMutation().form;
+        const next = applyInserterFix(before, issue, fix);
+        if (next === before) return;
+        const id = next.inserters.at(-1)?.id;
+        offerUndo(fix.type === 'add_lane_to_existing_belt' ? `Added a lane to ${entityLabel('belt', fix.belt_id)}.` : `Added a connection for ${entityLabel('machine', issue.machine_id)}.`, { snapshot: before });
+        setConfig(next);
         if (fix.type === 'add_lane_to_existing_belt') setBeltFocusRequest({ id: fix.belt_id });
-        else setInserterFocusRequest({ id, filters: false });
-    }, [fixUnavailable, setConfigView, config.inserters, offerUndo, applyInserterFix]);
+        else if (id !== undefined) setInserterFocusRequest({ id, filters: false });
+    }, [fixUnavailable, setConfigView, captureBuildMutation, offerUndo, setConfig]);
     const [changelogOpen, setChangelogOpen] = useState(false);
 
     // null until the engine has looked for missing inserters; until then the check catches them

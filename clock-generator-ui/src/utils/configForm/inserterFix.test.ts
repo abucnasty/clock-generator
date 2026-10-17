@@ -11,6 +11,7 @@ const issue = (kind: InserterCoverageIssue['kind'], machine_id = 2): InserterCov
 /** Two machines, a fast belt and a turbo belt, and two inserters of stack size 12 */
 function form(): ConfigFormData {
     let config = edits.addMachine(createDefaultConfig());
+    config = edits.updateMachine(config, 1, 'recipe', 'electronic-circuit');
     config = edits.addBelt(edits.addBelt(edits.addBelt(config)));
     config = edits.updateBelt(config, 0, { type: 'fast-transport-belt' });
     config = edits.updateBelt(config, 1, { type: 'fast-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 2 }] });
@@ -20,6 +21,46 @@ function form(): ConfigFormData {
 }
 
 describe('applyInserterFix', () => {
+    it('does not duplicate a machine connection while coverage is catching up', () => {
+        const missing = issue('missing_input_inserter');
+        const fix: InserterFixOption = { type: 'machine_to_machine', source_machine_id: 1, item_name: 'copper-cable' };
+        const once = applyInserterFix(form(), missing, fix);
+        expect(applyInserterFix(once, missing, fix)).toBe(once);
+    });
+
+    it.each(['missing_input_inserter', 'missing_output_inserter'] as const)('does not add redundant belts or chests for a stale %s repair', kind => {
+        const missing = issue(kind);
+        const belt: InserterFixOption = { type: 'new_belt', item_name: 'copper-cable' };
+        const chest: InserterFixOption = { type: 'infinity_chest', item_name: 'copper-cable' };
+        for (const first of [belt, chest]) {
+            const once = applyInserterFix(form(), missing, first);
+            expect(applyInserterFix(once, missing, belt)).toBe(once);
+            expect(applyInserterFix(once, missing, chest)).toBe(once);
+        }
+    });
+
+    it('still repairs an item excluded by an existing connection’s filters', () => {
+        const missing = issue('missing_input_inserter');
+        const fix: InserterFixOption = { type: 'new_belt', item_name: 'copper-cable' };
+        const once = applyInserterFix(form(), missing, fix);
+        const filtered = edits.updateInserter(once, once.inserters.length - 1, { filters: ['iron-plate'] });
+        expect(applyInserterFix(filtered, missing, fix).inserters).toHaveLength(filtered.inserters.length + 1);
+    });
+
+    it('ignores repairs whose machine endpoints have been removed', () => {
+        const before = form();
+        const fix: InserterFixOption = { type: 'machine_to_machine', source_machine_id: 99, item_name: 'copper-cable' };
+        expect(applyInserterFix(before, issue('missing_input_inserter'), fix)).toBe(before);
+        for (const type of ['new_belt', 'infinity_chest'] as const) {
+            expect(applyInserterFix(before, issue('missing_input_inserter', 99), { type, item_name: 'copper-cable' })).toBe(before);
+        }
+    });
+
+    it('ignores a stale repair after the target recipe changes', () => {
+        const before = edits.updateMachine(form(), 1, 'recipe', 'advanced-circuit');
+        expect(applyInserterFix(before, issue('missing_input_inserter'), { type: 'new_belt', item_name: 'copper-cable' })).toBe(before);
+    });
+
     it('adds an inserter between two machines', () => {
         const fix: InserterFixOption = { type: 'machine_to_machine', source_machine_id: 1, item_name: 'copper-cable' };
         const config = applyInserterFix(form(), issue('missing_input_inserter'), fix);
@@ -67,7 +108,8 @@ describe('applyInserterFix', () => {
     });
 
     it('adds a turbo belt and an inserter of stack size 4 to a form without belts or inserters', () => {
-        const config = applyInserterFix(createDefaultConfig(), issue('missing_input_inserter', 1), { type: 'new_belt', item_name: 'iron-plate' });
+        const before = edits.updateMachine(createDefaultConfig(), 0, 'recipe', 'electronic-circuit');
+        const config = applyInserterFix(before, issue('missing_input_inserter', 1), { type: 'new_belt', item_name: 'iron-plate' });
         expect(config.belts[0].type).toBe('turbo-transport-belt');
         expect(config.inserters[0]).toMatchObject({ id: 1, source: { type: 'belt', id: 1 }, stack_size: 4 });
     });

@@ -73,10 +73,10 @@ describe('working-context hydration and pending restoration', () => {
         Render().patch({ view: 'results' });
         expect(complete().context).toMatchObject({ view: 'results', configView: 'diagram', resultDetail: 'timeline' });
         runner.replay(); settle();
-        writeBuildViewContext(localStorage, 'two', { ...saved, configView: 'list', resultDetail: 'wake' });
+        localStorage.setItem(contextKeyOf('two'), JSON.stringify({ ...saved, configView: 'list', resultDetail: 'wake' }));
         options = { ...options, buildId: 'two' }; // The form is intentionally identical.
-        settle(); expect(readBuildViewContext(localStorage, 'two').resultDetail).toBe('wake');
-        expect(complete().context).toMatchObject({ configView: 'list', resultDetail: 'wake' });
+        settle(); expect(readBuildViewContext(localStorage, 'two').resultDetail).toBe('timeline');
+        expect(complete().context).toMatchObject({ configView: 'list', resultDetail: 'timeline' });
     });
 
     it('restores once without focus changes and cancels delayed position for explicit navigation or native input', () => {

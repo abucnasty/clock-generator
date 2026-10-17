@@ -188,6 +188,13 @@ async function resolveFactorioExecutable(factorio: string): Promise<string> {
     throw new Error(`No Factorio executable under ${factorio} (looked for ${candidates.join(", ")})`);
 }
 
+/** Game data sits beside MacOS inside an app bundle, or beside bin in a standalone install. */
+export function factorioDataDir(executable: string): string {
+    const executable_dir = path.dirname(executable);
+    const app_bundle = path.basename(executable_dir) === "MacOS" && path.basename(path.dirname(executable_dir)) === "Contents";
+    return app_bundle ? path.resolve(executable_dir, "..", "data") : path.resolve(executable_dir, "..", "..", "data");
+}
+
 async function freeTcpPort(): Promise<number> {
     return new Promise((resolve, reject) => {
         const server = net.createServer();
@@ -215,7 +222,7 @@ async function freeUdpPort(): Promise<number> {
  * the game. Nothing in the Factorio install or the player's own saves and mods is written to.
  */
 async function prepareWorkDir(work_dir: string, executable: string, save: string): Promise<{ config: string; save: string; settings: string }> {
-    const data_dir = path.resolve(path.dirname(executable), "..", "..", "data");
+    const data_dir = factorioDataDir(executable);
     const mods_dir = path.join(work_dir, "mods");
     await fs.rm(mods_dir, { recursive: true, force: true });
     await fs.rm(path.join(work_dir, "script-output"), { recursive: true, force: true });
@@ -560,7 +567,7 @@ class FactorioServer {
  * a copy of the mods of its own, next to the server's.
  */
 async function startWatcher(executable: string, work_dir: string, game_port: number): Promise<ChildProcess> {
-    const data_dir = path.resolve(path.dirname(executable), "..", "..", "data");
+    const data_dir = factorioDataDir(executable);
     const client_dir = path.join(work_dir, "watcher");
     await fs.rm(client_dir, { recursive: true, force: true });
     await fs.mkdir(client_dir, { recursive: true });

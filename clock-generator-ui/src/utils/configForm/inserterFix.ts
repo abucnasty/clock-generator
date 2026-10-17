@@ -44,6 +44,21 @@ function inferStackSize(prev: ConfigFormData): number {
     return best;
 }
 
+/** A repair may be clicked again while the debounced coverage result still describes the old form. */
+function hasItemConnection(config: ConfigFormData, issue: InserterCoverageIssue, item: string): boolean {
+    return config.inserters.some(inserter => {
+        if (inserter.filters?.length && !inserter.filters.includes(item)) return false;
+        const input = issue.kind === 'missing_input_inserter';
+        const machine = input ? inserter.sink : inserter.source;
+        const endpoint = input ? inserter.source : inserter.sink;
+        if (machine.type !== 'machine' || machine.id !== issue.machine_id) return false;
+        if (endpoint.type === 'belt') return config.belts.some(belt => belt.id === endpoint.id && belt.lanes.some(lane => lane.ingredient === item));
+        if (endpoint.type === 'chest') return config.chests.some(chest => chest.id === endpoint.id && (chest.type === ChestType.BUFFER_CHEST
+            ? chest.item_filter === item : chest.item_filter.some(filter => filter.item_name === item)));
+        return false;
+    });
+}
+
 /** Why an offered repair cannot change this build's imported geometry. */
 export function inserterFixProblem(config: Pick<ConfigFormData, 'inserters' | 'belts'>, fix: InserterFixOption, issue?: InserterCoverageIssue): string | null {
     const beltId = fix.type === 'add_lane_to_existing_belt' ? fix.belt_id
@@ -61,6 +76,7 @@ export function applyInserterFix(
 ): ConfigFormData {
     if (inserterFixProblem(prev, fix, issue)) return prev;
     if (fix.type === 'review_filters') return prev;
+    if (!prev.machines.some(machine => machine.id === issue.machine_id && machine.recipe === issue.recipe)) return prev;
     if (fix.type === 'existing_connection') {
         const entities = fix.endpoint_type === 'machine' ? prev.machines : fix.endpoint_type === 'belt' ? prev.belts : prev.chests;
         if (!entities.some(entity => entity.id === fix.endpoint_id) || !prev.machines.some(machine => machine.id === issue.machine_id)) return prev;
@@ -75,6 +91,9 @@ export function applyInserterFix(
     }
     // ── machine → machine inserter (highest priority, no new belt/chest) ─
     if (fix.type === 'machine_to_machine') {
+        if (!prev.machines.some(machine => machine.id === fix.source_machine_id)
+            || prev.inserters.some(inserter => inserter.source.type === 'machine' && inserter.source.id === fix.source_machine_id
+                && inserter.sink.type === 'machine' && inserter.sink.id === issue.machine_id)) return prev;
         const stackSize = inferStackSize(prev);
         const newInserter: InserterFormData = {
             id: nextId(prev, 'inserters'),
@@ -112,6 +131,7 @@ export function applyInserterFix(
 
     // ── new belt + new inserter ───────────────────────────────────────
     if (fix.type === 'new_belt') {
+        if (hasItemConnection(prev, issue, fix.item_name)) return prev;
         const newBeltId = nextId(prev, 'belts');
         const newBelt: BeltFormData = {
             id: newBeltId,
@@ -131,6 +151,7 @@ export function applyInserterFix(
 
     // ── infinity chest + new inserter ────────────────────────────────
     if (fix.type === 'infinity_chest') {
+        if (hasItemConnection(prev, issue, fix.item_name)) return prev;
         const newChestId = nextId(prev, 'chests');
         const newChest: InfinityChestFormData = {
             type: ChestType.INFINITY_CHEST,

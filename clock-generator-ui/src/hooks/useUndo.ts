@@ -187,14 +187,16 @@ export function useUndo(
         observedRef.current = { config, isLoaded, buildId };
         if (config === previous.config && buildId === previous.buildId) return;
         const current = entryRef.current;
-        const explicitlyOffered = current !== null && current.after === undefined && sameForm(current.before, previous.config);
+        // A guarded replacement may capture edits newer than the last React commit. Its explicit
+        // snapshot is authoritative even when it differs from the previously observed form.
+        const explicitlyOffered = current !== null && current.after === undefined;
         if (undoneFormRef.current === config) {
             undoneFormRef.current = null;
             return;
         }
         undoneFormRef.current = null;
         if (explicitlyOffered) {
-            if (buildId === previous.buildId && sameForm(config, previous.config)) {
+            if (buildId === previous.buildId && sameForm(config, current.before)) {
                 withdrawUndo();
                 return;
             }

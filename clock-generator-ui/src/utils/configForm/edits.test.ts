@@ -226,8 +226,24 @@ describe('chests', () => {
     it('switches the type of a chest, keeping its id and uuid', () => {
         const before = form();
         const config = edits.switchChestType(before, 1, ChestType.BUFFER_CHEST);
-        expect(config.chests[1]).toEqual({ type: ChestType.BUFFER_CHEST, id: 2, _uuid: before.chests[1]._uuid, storage_size: 1, item_filter: '' });
+        expect(config.chests[1]).toEqual({ type: ChestType.BUFFER_CHEST, id: 2, _uuid: before.chests[1]._uuid, storage_size: 1, item_filter: '',
+            _chest_settings: { infinity_filters: [{ item_name: '', request_count: 1 }] } });
         expect(config.chests[0]).toBe(before.chests[0]);
+    });
+
+    it('preserves filter slots and counts through type changes, including edits made as a buffer chest', () => {
+        const filters = [{ item_name: 'iron-plate', request_count: 64 }, { item_name: 'copper-plate', request_count: 32 }];
+        const before = edits.updateChest(form(), 1, { item_filter: filters });
+        const buffer = edits.switchChestType(before, 1, ChestType.BUFFER_CHEST);
+        expect(buffer.chests[1]).toMatchObject({ item_filter: 'iron-plate', _chest_settings: { infinity_filters: filters } });
+        const edited = edits.updateChest(buffer, 1, { storage_size: 24, item_filter: 'steel-plate' });
+        const infinity = edits.switchChestType(edited, 1, ChestType.INFINITY_CHEST);
+        expect(infinity.chests[1]).toMatchObject({ item_filter: [
+            { item_name: 'steel-plate', request_count: 1 }, filters[1],
+        ] });
+        expect(edits.switchChestType(infinity, 1, ChestType.BUFFER_CHEST).chests[1])
+            .toMatchObject({ storage_size: 24, item_filter: 'steel-plate' });
+        expect(before.chests[1]).toMatchObject({ item_filter: filters });
     });
 
     it('removes the chest at an index', () => {

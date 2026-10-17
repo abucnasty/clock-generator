@@ -90,14 +90,15 @@ const DARK_TOKENS: ThemeTokens = { surface: SURFACE, hover: SURFACE_HOVER, role:
 const LIGHT_TOKENS: ThemeTokens = {
     surface: { page: '#d8d5ce', titleBar: '#cfcbc2', bar: '#d7d3ca', row: '#e8e5dd', panel: '#ffffff', inset: '#ffffff' },
     hover: { row: '#c9c3b6', panel: '#e4dfd4' },
+    // Role text must reach 4.5:1 even on the title bar; error text also sits on hovered rows.
     role: {
-        orange: { main: '#914d00', light: '#8a4900', dark: '#713b00', on: '#ffffff' },
-        green: { main: '#256b35', light: '#286f39', dark: '#195226', on: '#ffffff' },
-        yellow: { main: '#6d5b00', light: '#756300', dark: '#574900', on: '#ffffff' },
-        red: { main: '#b32629', light: '#b02026', dark: '#8e181d', on: '#ffffff' },
-        blue: { main: '#00618a', light: '#00678f', dark: '#005271', on: '#ffffff' },
+        orange: { main: '#854600', light: '#8a4900', dark: '#713b00', on: '#ffffff' },
+        green: { main: '#226231', light: '#286f39', dark: '#195226', on: '#ffffff' },
+        yellow: { main: '#665500', light: '#756300', dark: '#574900', on: '#ffffff' },
+        red: { main: '#a52326', light: '#9e1d22', dark: '#8e181d', on: '#ffffff' },
+        blue: { main: '#005c84', light: '#00678f', dark: '#005271', on: '#ffffff' },
     },
-    text: { primary: '#24231f', secondary: '#46443d', disabled: '#706e66', error: '#b02026' },
+    text: { primary: '#24231f', secondary: '#46443d', disabled: '#706e66', error: '#9e1d22' },
     control: { border: '#6c685e', trackOff: '#6c685e', edge: '#9b9588', focus: '#914d00', focusOnFill: '#ffffff' },
     shadow: { inset: 'inset 0 1px 3px rgba(51, 45, 31, 0.22)' },
 };
