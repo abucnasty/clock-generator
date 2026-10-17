@@ -1,0 +1,153 @@
+import { Close, Delete } from '@mui/icons-material';
+import { Box, Button, FormControl, IconButton, InputAdornment, InputLabel, MenuItem, Select, TextField, Tooltip, Typography } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material/styles';
+import type { ReactNode } from 'react';
+import { ChestType } from 'clock-generator/light';
+import { useGameNames } from '../hooks/useGameNames';
+import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, isBufferChest, isInfinityChest,
+    type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue, type ChestFormData, type MachineFormData } from '../hooks/useConfigForm';
+import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
+import { entityLabel } from '../utils/entityLabel';
+import { FactorioIcon } from './FactorioIcon';
+import { ChestFilterSlotSelector } from './ChestFilterSlotSelector';
+import { HelpButton } from './HelpButton';
+import { InfinityChestSettings } from './InfinityChestSettings';
+import { ItemSelector } from './ItemSelector';
+import { NumberField } from './NumberField';
+import { MACHINE_TYPE_LABELS } from './entityTypes';
+
+/** Controlled type fields shared by the list and diagram editors. Draft ownership stays with the caller. */
+export function EntityTypeField<T extends string>({ label, value, options, nameOf, iconOf = value => value, icons = true,
+    onChange, inputAriaLabel = label, readOnly = false, describedBy, first = false, sx,
+}: {
+    label: string; value: T; options: readonly { value: T }[]; nameOf: (value: T) => string;
+    iconOf?: (value: T) => string; icons?: boolean; onChange: (value: T) => void;
+    inputAriaLabel?: string; readOnly?: boolean; describedBy?: string; first?: boolean; sx?: SxProps<Theme>;
+}) {
+    const display = (value: T) => icons ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <FactorioIcon name={iconOf(value)} size={20} alt="" />{nameOf(value)}
+    </Box> : nameOf(value);
+    return <FormControl data-row-first={first ? '' : undefined} size="small" sx={sx}>
+        <InputLabel>{label}</InputLabel>
+        <Select value={value} label={label} readOnly={readOnly} onChange={event => onChange(event.target.value as T)}
+            inputProps={{ 'aria-label': inputAriaLabel, 'aria-describedby': describedBy }} renderValue={display}>
+            {options.map(option => <MenuItem key={option.value} value={option.value}>{display(option.value)}</MenuItem>)}
+        </Select>
+    </FormControl>;
+}
+
+export function MachineSettingsFields({ machine, onChange, dialog = false }: {
+    machine: MachineFormData; onChange: (field: keyof MachineFormData, value: string | number) => void; dialog?: boolean;
+}) {
+    const fieldSx = dialog ? { flex: 1 } : { minWidth: 0, width: '100%' };
+    return <Box sx={dialog ? { display: 'flex', flexWrap: 'wrap', gap: 2 } : {
+        display: 'grid', gap: 1, gridTemplateColumns: `repeat(${machine.type === 'biochamber' ? 4 : 3}, minmax(0, 1fr))`,
+        '@container machine-row (max-width: 680px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+        '@container machine-row (max-width: 360px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
+    }}>
+        <NumberField label="Productivity (%)" value={machine.productivity} onValueChange={value => onChange('productivity', value ?? 0)}
+            min={0} step={1} defaultValue={0} sx={fieldSx} size="small" />
+        <NumberField label="Crafting Speed" value={machine.crafting_speed} onValueChange={value => onChange('crafting_speed', value ?? 1)}
+            min={0.01} step={0.1} defaultValue={1} sx={fieldSx} size="small" />
+        {!dialog && machine.type === 'biochamber' && <NumberField label="Energy Consumption (%)" value={machine.energy_consumption_bonus ?? 0}
+            onValueChange={value => onChange('energy_consumption_bonus', value ?? 0)} min={-80} step={1} defaultValue={0} sx={fieldSx} size="small" />}
+        <EntityTypeField label="Type" value={machine.type || 'machine'} options={[{ value: 'machine' }, { value: 'furnace' }, { value: 'biochamber' }]}
+            nameOf={value => MACHINE_TYPE_LABELS[value]} icons={!dialog}
+            iconOf={value => value === 'furnace' ? 'electric-furnace' : value === 'biochamber' ? 'biochamber' : 'assembling-machine-3'}
+            inputAriaLabel={dialog ? SELECT_NAMES.machineType : `${SELECT_NAMES.machineType}, ${entityLabel('machine', machine.id)}`}
+            sx={dialog ? { flex: 1, minWidth: { xs: '100%', sm: 200 } } : fieldSx} onChange={value => onChange('type', value)} />
+    </Box>;
+}
+
+export function BeltStrategyField({ belt, onChange, dialog = false }: {
+    belt: BeltFormData; onChange: (update: Partial<BeltFormData>) => void; dialog?: boolean;
+}) {
+    return <FormControl size="small" fullWidth sx={dialog ? {
+        '& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' }, '& .MuiTypography-caption': { display: 'block' },
+    } : undefined}>
+        <InputLabel>Strategy</InputLabel>
+        <Select value={belt.strategy ?? 'normal'} label="Strategy" onChange={event => onChange(beltStrategyUpdate(belt, event.target.value as BeltStrategyFormValue))}
+            inputProps={{ 'aria-label': dialog ? SELECT_NAMES.beltStrategy : `${SELECT_NAMES.beltStrategy}, ${entityLabel('belt', belt.id)}` }}>
+            {BELT_STRATEGIES.map(strategy => <MenuItem key={strategy.value} value={strategy.value}>
+                {dialog ? <Box><Typography variant="body2">{strategy.label}</Typography>
+                    <Typography variant="caption" color="text.secondary">{strategy.description}</Typography></Box>
+                    : <Tooltip title={strategy.description} placement="right" describeChild><span>{strategy.label}</span></Tooltip>}
+            </MenuItem>)}
+        </Select>
+    </FormControl>;
+}
+
+export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = false }: {
+    belt: BeltFormData; itemNames: string[]; readOnly: boolean; onChange: (update: Partial<BeltFormData>) => void; dialog?: boolean;
+}) {
+    const { itemLabel } = useGameNames();
+    const updateLane = (index: number, field: keyof BeltLaneFormData, value: string | number | undefined) => {
+        const lanes = [...belt.lanes] as BeltFormData['lanes'];
+        lanes[index] = { ...lanes[index], [field]: value };
+        onChange({ lanes });
+    };
+    const add = () => onChange({ lanes: [belt.lanes[0], { ingredient: '', stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] });
+    const remove = () => onChange({ lanes: [belt.lanes[0]] });
+    const addButton = !readOnly && belt.lanes.length < 2 && <Button size="small" color="inherit" onClick={add}>
+        {dialog ? 'Add Second Lane' : 'Add Lane'}
+    </Button>;
+    return <Box sx={{ minWidth: 0 }}>
+        {!dialog && <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>{addButton}</Box>}
+        {belt.lanes.map((lane, index) => <Box key={index} sx={dialog
+            ? { display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }
+            : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px', gap: 1, alignItems: 'start', mb: 1, minWidth: 0 }}>
+            <Box sx={dialog ? { display: 'contents' } : { display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 0 }}>
+            <Typography variant="body2" sx={{ width: dialog ? 56 : 60, flexShrink: 0 }}>Lane {index + 1}:</Typography>
+            {readOnly ? <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
+                {dialog && <ItemSelector value={lane.ingredient || null} options={itemNames} label="Ingredient" freeSolo
+                    onChange={value => updateLane(index, 'ingredient', value || '')} sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }} />}
+                <NumberField label="Stack size" value={lane.stack_size} min={1} size="small"
+                    onValueChange={value => updateLane(index, 'stack_size', parseInt(value?.toString() || '') || BELT_FORM_DEFAULT_STACK_SIZE)}
+                    sx={{ width: dialog ? 110 : 100, maxWidth: '100%', flexShrink: 0 }} />
+            </>}
+            {belt.strategy === 'export' && <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild><Box sx={{ flexShrink: 0 }}>
+                <NumberField label="Consumed /s" value={lane.consumption_per_second ?? null} min={0} size="small"
+                    onValueChange={value => updateLane(index, 'consumption_per_second', value && value > 0 ? value : undefined)} sx={{ width: 120 }} />
+            </Box></Tooltip>}
+            </Box>
+            {!readOnly && belt.lanes.length > 1 && index === 1 ? <IconButton size="small" onClick={remove} color="error"
+                aria-label={dialog ? 'Remove lane' : deleteLaneName(entityLabel('belt', belt.id), index + 1)}>{dialog ? <Close fontSize="small" /> : <Delete fontSize="small" />}</IconButton>
+                : (dialog || !readOnly && belt.lanes.length > 1) && <Box sx={{ width: 28, flexShrink: 0 }} />}
+        </Box>)}
+        {dialog && addButton}
+    </Box>;
+}
+
+export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog = false, storageHelp }: {
+    chest: ChestFormData; itemNames: string[]; onChange: (update: Partial<ChestFormData>) => void;
+    onSwitchType: (type: ChestType) => void; dialog?: boolean; storageHelp?: ReactNode;
+}) {
+    return <>
+        <EntityTypeField label={dialog ? 'Chest Type' : 'Type'} value={chest.type}
+            options={[{ value: ChestType.BUFFER_CHEST }, { value: ChestType.INFINITY_CHEST }]} first={!dialog}
+            nameOf={type => type === ChestType.BUFFER_CHEST ? 'Buffer chest' : 'Infinity chest'}
+            iconOf={type => type === ChestType.BUFFER_CHEST ? 'steel-chest' : 'infinity-chest'} icons={dialog}
+            inputAriaLabel={SELECT_NAMES.chestType} onChange={onSwitchType} sx={dialog ? { width: '100%' } : { minWidth: 0, flex: '1 1 160px' }} />
+        {isBufferChest(chest) && <Box sx={dialog ? { display: 'flex', flexWrap: 'wrap', gap: 2 } : { display: 'contents' }}>
+            <ChestFilterSlotSelector filters={[{ item_name: chest.item_filter, quantity: 1 }]} itemNames={itemNames}
+                onFilterChange={(_, filter) => onChange({ item_filter: filter.item_name })} onRemoveFilter={() => onChange({ item_filter: '' })}
+                maxSlots={1} canAddMore={false} showQuantity={false} />
+            <TextField label="Storage Size" type="number" value={chest.storage_size} size="small" inputProps={{ min: 1 }}
+                onChange={event => onChange({ storage_size: parseInt(event.target.value) || 1 })}
+                sx={dialog ? { width: 130, maxWidth: '100%', flexShrink: 0 } : { minWidth: 0, flex: '1 1 140px' }}
+                slotProps={storageHelp ? { input: { endAdornment: <InputAdornment position="end" sx={{ mr: -1 }}>
+                    <HelpButton label="About storage size">{storageHelp}</HelpButton>
+                </InputAdornment> } } : undefined} />
+        </Box>}
+        {isInfinityChest(chest) && <Box sx={dialog ? { display: 'contents' } : { minWidth: 0, flex: '2 1 160px' }}><InfinityChestSettings chest={chest} onChange={enabled => onChange({ remove_unfiltered_items: enabled })}>
+            <ChestFilterSlotSelector filters={chest.item_filter.map(filter => ({ item_name: filter.item_name, quantity: filter.request_count }))}
+                itemNames={itemNames} maxSlots={10} quantityLabel="Stock to maintain" canAddMore
+                onFilterChange={(index, filter) => {
+                    const filters = [...chest.item_filter];
+                    filters[index] = { item_name: filter.item_name, request_count: filter.quantity };
+                    onChange({ item_filter: filters });
+                }}
+                onRemoveFilter={index => onChange({ item_filter: chest.item_filter.filter((_, i) => i !== index) })} />
+        </InfinityChestSettings></Box>}
+    </>;
+}

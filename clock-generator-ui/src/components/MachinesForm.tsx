@@ -4,11 +4,7 @@ import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
-    FormControl,
     IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
     ToggleButton,
     ToggleButtonGroup,
     Tooltip,
@@ -22,7 +18,7 @@ import { useMachineTargetRates } from '../hooks/useMachineTargetRates';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
-import { MACHINE_TYPE_LABELS } from './entityTypes';
+import { MachineSettingsFields } from './EntityFields';
 import { FactorioIcon } from './FactorioIcon';
 import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
@@ -30,7 +26,6 @@ import { ItemSelector } from './ItemSelector';
 import { MachineFactsAccordion } from './MachineFactsAccordion';
 import { MachineProductionSummary } from './MachineProductionSummary';
 import { SidecarModLink } from './IntroCard';
-import { NumberField } from './NumberField';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useAnnounce } from '../hooks/useMessages';
@@ -38,7 +33,7 @@ import { useGameNames } from '../hooks/useGameNames';
 import { nameWithId } from '../utils/gameNames';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { ELEMENT_IDS, machineRecipeElementId } from '../utils/firstProblem';
-import { BUTTON_NAMES, SELECT_NAMES, recipeName } from '../utils/a11yLabels';
+import { BUTTON_NAMES, recipeName } from '../utils/a11yLabels';
 
 interface MachinesFormProps {
     engineConfig: Config;
@@ -270,80 +265,7 @@ function MachineRow({ machine, index, recipeNames, atTarget, targetRate, targetU
                     </Typography>
                 </Box>
             }>
-            <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${machine.type === 'biochamber' ? 4 : 3}, minmax(0, 1fr))`,
-                gap: 1,
-                '@container machine-row (max-width: 680px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
-                '@container machine-row (max-width: 360px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
-            }}>
-                <NumberField
-                    label="Productivity (%)"
-                    value={machine.productivity}
-                    onValueChange={(val) => onUpdate(index, 'productivity', val ?? 0)}
-                    min={0}
-                    step={1}
-                    defaultValue={0}
-                    sx={{ minWidth: 0, width: '100%' }}
-                    size="small"
-                />
-                <NumberField
-                    label="Crafting Speed"
-                    value={machine.crafting_speed}
-                    onValueChange={(val) => onUpdate(index, 'crafting_speed', val ?? 1)}
-                    min={0.01}
-                    step={0.1}
-                    defaultValue={1}
-                    sx={{ minWidth: 0, width: '100%' }}
-                    size="small"
-                />
-                {machine.type === 'biochamber' && (
-                    <NumberField
-                        label="Energy Consumption (%)"
-                        value={machine.energy_consumption_bonus ?? 0}
-                        onValueChange={(val) => onUpdate(index, 'energy_consumption_bonus', val ?? 0)}
-                        min={-80}
-                        step={1}
-                        defaultValue={0}
-                        sx={{ minWidth: 0, width: '100%' }}
-                        size="small"
-                    />
-                )}
-                <FormControl size="small" sx={{ minWidth: 0, width: '100%' }}>
-                    <InputLabel>Type</InputLabel>
-                    <Select
-                        inputProps={{ 'aria-label': `${SELECT_NAMES.machineType}, ${entityLabel('machine', machine.id)}` }}
-                        value={machine.type || 'machine'}
-                        label="Type"
-                        onChange={(e) => onUpdate(index, 'type', e.target.value as 'machine' | 'furnace' | 'biochamber')}
-                        renderValue={(selected) => (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={selected === 'furnace' ? 'electric-furnace' : selected === 'biochamber' ? 'biochamber' : 'assembling-machine-3'} size={20} alt="" />
-                                {MACHINE_TYPE_LABELS[selected]}
-                            </Box>
-                        )}
-                    >
-                        <MenuItem value="machine">
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="assembling-machine-3" size={20} alt="" />
-                                {MACHINE_TYPE_LABELS.machine}
-                            </Box>
-                        </MenuItem>
-                        <MenuItem value="furnace">
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="electric-furnace" size={20} alt="" />
-                                {MACHINE_TYPE_LABELS.furnace}
-                            </Box>
-                        </MenuItem>
-                        <MenuItem value="biochamber">
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name="biochamber" size={20} alt="" />
-                                {MACHINE_TYPE_LABELS.biochamber}
-                            </Box>
-                        </MenuItem>
-                    </Select>
-                </FormControl>
-            </Box>
+            <MachineSettingsFields machine={machine} onChange={(field, value) => onUpdate(index, field, value)} />
 
             {machine.fuel !== undefined && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }} title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Imported fuel (read-only): {itemLabel(machine.fuel)}.</Typography>}
             </EntitySettings>

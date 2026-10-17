@@ -6,27 +6,21 @@ import { Add, Delete } from '@mui/icons-material';
 import {
     Box,
     Button,
-    FormControl,
     IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
-    Tooltip,
     Typography,
 } from '@mui/material';
-import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue } from '../hooks/useConfigForm';
+import { BELT_STRATEGIES, type BeltFormData, type BeltLaneFormData } from '../hooks/useConfigForm';
 import { useFocusAfterRemove } from '../hooks/useFocusAfterRemove';
 import { themeTokens } from '../theme/runtimeTokens';
 import type { Theme } from '@mui/material/styles';
-import { FactorioIcon } from './FactorioIcon';
 import { PanelSection } from './Panel';
 import { ItemPickerField } from './ItemPickerField';
-import { NumberField } from './NumberField';
+import { BeltLaneFields, BeltStrategyField, EntityTypeField } from './EntityFields';
 import { SortableItem, SortableList } from './SortableList';
 import { RowActionsMenu } from './RowActionsMenu';
 import { useAnnounce } from '../hooks/useMessages';
 import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
-import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
+import { SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { BELT_TYPES, entityTypeLabel } from './entityTypes';
 import { BeltAssumption } from './BeltAssumption';
@@ -76,25 +70,6 @@ function BeltsFormComponent({
         const newLanes = [...belt.lanes] as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
         newLanes[laneIndex] = { ...newLanes[laneIndex], [field]: value };
         onUpdate(beltIndex, { lanes: newLanes });
-    };
-
-    const addLane = (beltIndex: number) => {
-        const belt = belts[beltIndex];
-        if (belt.lanes.length < 2) {
-            const newLanes: [BeltLaneFormData, BeltLaneFormData] = [
-                belt.lanes[0],
-                { ingredient: '', stack_size: BELT_FORM_DEFAULT_STACK_SIZE },
-            ];
-            onUpdate(beltIndex, { lanes: newLanes });
-        }
-    };
-
-    const removeLane = (beltIndex: number) => {
-        const belt = belts[beltIndex];
-        if (belt.lanes.length > 1) {
-            const newLanes: [BeltLaneFormData] = [belt.lanes[0]];
-            onUpdate(beltIndex, { lanes: newLanes });
-        }
     };
 
     // the row's delete button goes with it: the keyboard moves on to a neighbour's
@@ -169,35 +144,10 @@ function BeltsFormComponent({
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: 1.5, alignItems: 'center', '@container belt-row (max-width: 700px)': { gridTemplateColumns: 'minmax(0, 1fr) auto' } }}>
                         <Box sx={{ gridColumn: 1, gridRow: 1 }}>{dragHandle}</Box>
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: 1.5, minWidth: 0, gridColumn: 2, gridRow: 1, '@container belt-row (max-width: 700px)': { gridColumn: '1 / -1', gridRow: 2 } }}>
-                        <FormControl data-row-first="" size="small" sx={{ minWidth: 0, width: '100%' }}>
-                            <InputLabel>Belt Type</InputLabel>
-                            <Select
-                                readOnly={geometryBeltIds.includes(belt.id)}
-                                inputProps={{ 'aria-label': `${SELECT_NAMES.beltType}, ${entityLabel('belt', belt.id)}` }}
-                                value={belt.type}
-                                label="Belt Type"
-                                onChange={(e) =>
-                                    onUpdate(beltIndex, {
-                                        type: e.target.value as BeltFormData['type'],
-                                    })
-                                }
-                                renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <FactorioIcon name={selected} size={20} alt="" />
-                                        {entityTypeLabel(selected, itemLabel)}
-                                    </Box>
-                                )}
-                            >
-                                {BELT_TYPES.map((bt) => (
-                                    <MenuItem key={bt.value} value={bt.value}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={bt.value} size={20} alt="" />
-                                            {entityTypeLabel(bt.value, itemLabel)}
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                        <EntityTypeField label="Belt Type" value={belt.type} options={BELT_TYPES} first
+                            readOnly={geometryBeltIds.includes(belt.id)} nameOf={value => entityTypeLabel(value, itemLabel)}
+                            inputAriaLabel={`${SELECT_NAMES.beltType}, ${entityLabel('belt', belt.id)}`}
+                            onChange={type => onUpdate(beltIndex, { type: type as BeltFormData['type'] })} sx={{ minWidth: 0, width: '100%' }} />
                             {belt.lanes.map((lane, laneIndex) => <ItemPickerField key={laneIndex} value={lane.ingredient || null} options={itemNames}
                                 onChange={value => handleLaneUpdate(beltIndex, laneIndex, 'ingredient', value || '')}
                                 label={`Lane ${laneIndex + 1}`} inputAriaLabel={`Ingredient, ${entityLabel('belt', belt.id)}, lane ${laneIndex + 1}`}
@@ -213,98 +163,14 @@ function BeltsFormComponent({
                             </IconButton>
                         </Box>
                     <EntitySettings actionContainerId={`settings-actions-belt-${belt.id}`} label={entityLabel('belt', belt.id)} tabs={[{ label: 'Lanes', content: (<>
-                    {/* Lanes */}
-                    <Box sx={{ pl: 0, minWidth: 0 }}>
-                        {!geometryBeltIds.includes(belt.id) && belt.lanes.length < 2 && (
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <Button size="small" color="inherit" onClick={() => addLane(beltIndex)}>Add Lane</Button>
-                            </Box>
-                        )}
-                        {belt.lanes.map((lane, laneIndex) => (
-                            <Box
-                                key={`lane-${laneIndex}`}
-                                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px', gap: 1, alignItems: 'start', mb: 1, minWidth: 0 }}
-                            >
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, rowGap: 1, alignItems: 'center', minWidth: 0 }}>
-                                <Typography variant="body2" sx={{ width: 60, flexShrink: 0 }}>
-                                    Lane {laneIndex + 1}:
-                                </Typography>
-                                {geometryBeltIds.includes(belt.id) ? <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
-                                <NumberField
-                                    label="Stack size"
-                                    value={lane.stack_size}
-                                    onValueChange={(val) => {
-                                        const integer = parseInt(val?.toString() || '');
-                                        handleLaneUpdate(
-                                            beltIndex,
-                                            laneIndex,
-                                            'stack_size',
-                                            integer || BELT_FORM_DEFAULT_STACK_SIZE
-                                        )
-                                    }}
-                                    min={1}
-                                    sx={{ width: 100, minWidth: 100, flexShrink: 0 }}
-                                    size="small"
-                                />
-                                </>}
-                                {belt.strategy === 'export' && (
-                                <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild>
-                                    <Box sx={{ flexShrink: 0 }}>
-                                        <NumberField
-                                            label="Consumed /s"
-                                            value={lane.consumption_per_second ?? null}
-                                            onValueChange={(val) =>
-                                                handleLaneUpdate(beltIndex, laneIndex, 'consumption_per_second', val && val > 0 ? val : undefined)
-                                            }
-                                            min={0}
-                                            sx={{ width: 120, minWidth: 120 }}
-                                            size="small"
-                                        />
-                                    </Box>
-                                </Tooltip>
-                                )}
-                                </Box>
-                                {!geometryBeltIds.includes(belt.id) && belt.lanes.length > 1 ? (
-                                    laneIndex === 1 ? (
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => removeLane(beltIndex)}
-                                            color="error"
-                                            aria-label={deleteLaneName(entityLabel('belt', belt.id), laneIndex + 1)}
-                                        >
-                                            <Delete fontSize="small" />
-                                        </IconButton>
-                                    ) : (
-                                        <Box sx={{ width: 28, flexShrink: 0 }} />
-                                    )
-                                ) : null}
-                            </Box>
-                        ))}
-                    </Box>
+                        <BeltLaneFields belt={belt} itemNames={itemNames} readOnly={geometryBeltIds.includes(belt.id)}
+                            onChange={updates => onUpdate(beltIndex, updates)} />
 </>) }]} summary={<Typography variant="body2">
                         {BELT_STRATEGIES.find(strategy => strategy.value === (belt.strategy ?? 'normal'))?.label} · {belt.lanes.map((lane, laneIndex) => `Lane ${laneIndex + 1} stack ${lane.stack_size}${belt.strategy === 'export' ? ` · Consumed ${lane.consumption_per_second ?? 'Automatic'}/s` : ''}`).join(' · ')}
                     </Typography>}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 1, mb: 1.5 }}>
 
-                        <FormControl size="small" sx={{ minWidth: 0, width: '100%' }}>
-                            <InputLabel>Strategy</InputLabel>
-                            <Select
-                                inputProps={{ 'aria-label': `${SELECT_NAMES.beltStrategy}, ${entityLabel('belt', belt.id)}` }}
-                                value={belt.strategy ?? 'normal'}
-                                label="Strategy"
-                                onChange={(e) =>
-                                    onUpdate(beltIndex, beltStrategyUpdate(belt, e.target.value as BeltStrategyFormValue))
-                                }
-                            >
-                                {BELT_STRATEGIES.map((strategy) => (
-                                    <MenuItem key={strategy.value} value={strategy.value}>
-                                        <Tooltip title={strategy.description} placement="right" describeChild>
-                                            <span>{strategy.label}</span>
-                                        </Tooltip>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                        <BeltStrategyField belt={belt} onChange={updates => onUpdate(beltIndex, updates)} />
                     </Box>
 
                     {geometryBeltIds.includes(belt.id) && <Typography variant="body2" sx={{ mb: 1 }}>{DROP_BELT_READ_ONLY}</Typography>}

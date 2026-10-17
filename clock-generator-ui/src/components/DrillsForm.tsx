@@ -32,6 +32,7 @@ import { deleteButtonLabel, entityLabel } from '../utils/entityLabel';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
+import { EntityTypeField } from './EntityFields';
 import { drillsListed, focusLeaves } from '../utils/drillsSection';
 
 const SPEED_BONUS_COMMAND = '/c game.print(game.player.selected.speed_bonus)';
@@ -120,34 +121,9 @@ function DrillRow({ drill, index, resourceNames, machineIds, onUpdate, onRemove,
                         setRuleRevision(previous => previous + 1);
                     }} /> }]}>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, minWidth: 0 }}>
-                            <FormControl size="small" sx={{ minWidth: 0, flex: '1 1 200px' }}>
-                                <InputLabel>Drill Type</InputLabel>
-                                <Select
-                                    inputProps={{ 'aria-label': SELECT_NAMES.drillType }}
-                                    value={drill.type}
-                                    label="Drill Type"
-                                    onChange={(e) =>
-                                        onUpdate(index, {
-                                            type: e.target.value as DrillFormData['type'],
-                                        })
-                                    }
-                                    renderValue={(selected) => (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <FactorioIcon name={selected} size={20} alt="" />
-                                            {entityTypeLabel(selected, itemLabel)}
-                                        </Box>
-                                    )}
-                                >
-                                    {DRILL_TYPES.map((dt) => (
-                                        <MenuItem key={dt.value} value={dt.value}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <FactorioIcon name={dt.value} size={20} alt="" />
-                                                {entityTypeLabel(dt.value, itemLabel)}
-                                            </Box>
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            <EntityTypeField label="Drill Type" value={drill.type} options={DRILL_TYPES}
+                                inputAriaLabel={SELECT_NAMES.drillType} nameOf={value => entityTypeLabel(value, itemLabel)}
+                                onChange={type => onUpdate(index, { type: type as DrillFormData['type'] })} sx={{ minWidth: 0, flex: '1 1 200px' }} />
                             <TextField
                                 label="Speed Bonus"
                                 type="number"
