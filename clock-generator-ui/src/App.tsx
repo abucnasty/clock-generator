@@ -16,7 +16,7 @@ import {
 import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps, InserterFixOption } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
-import { useConfigForm } from './hooks/useConfigForm';
+import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
 import type { ChestFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
@@ -80,7 +80,9 @@ import type { EntityKind } from './utils/configForm/formData';
 import { describeChestSwitch, removalMessage, removedDeleteLabel, reorderMessage } from './utils/undoSnapshot';
 import { isBlankBuild } from './utils/introCard';
 import type { TargetValues } from './utils/pasteTarget';
-import { configToFormData } from './utils/configForm/configMapping';
+import { configToFormData, formDataToConfig } from './utils/configForm/configMapping';
+import { applyRepeatedUnitConversion } from './utils/configForm/repeatedUnitConversion';
+import { askEngine } from './worker/engineClient';
 import { inserterFixProblem } from './utils/configForm/inserterFix';
 import { hasImportedBeltDrops } from './utils/inserterMetadata';
 import {
@@ -161,6 +163,7 @@ function App() {
         validation,
         validate,
         error,
+        errorRecovery,
         initialize,
         runSimulation,
         generatedFor,
@@ -185,6 +188,8 @@ function App() {
         dismissLoadNotice,
         library,
         setConfig,
+        captureBuildMutation,
+        commitBuildReplacement,
         updateTargetOutput,
         duplicateEntity,
         updateInserters,
@@ -466,10 +471,23 @@ function App() {
 
     // set while a check Generate started runs, which goes on to generate
     const [checkingFor, setCheckingFor] = useState<'generate' | null>(null);
+    const [conversionPending, setConversionPending] = useState(false);
+    const conversionTokenRef = useRef(0);
+    const conversionPendingRef = useRef(false);
+    const conversionRecheckRef = useRef<{
+        token: number; owner: BuildMutationSnapshot; key: string; complete?: (suffix?: string) => void;
+    } | null>(null);
+    const retireConversion = useCallback(() => {
+        conversionTokenRef.current++;
+        conversionPendingRef.current = false;
+        conversionRecheckRef.current = null;
+        setConversionPending(false);
+    }, []);
+    useEffect(() => () => { conversionTokenRef.current++; }, []);
     // both buttons are off while a check or a generation runs
-    const busy = isRunning || validation.status === 'running' || checkingFor !== null;
+    const busy = isRunning || validation.status === 'running' || checkingFor !== null || conversionPending;
     // a check the swing plan's Exclude chips start shows on Check only, as one of its own
-    const checking = validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
+    const checking = conversionPending ? 'generate' : validation.status === 'running' ? (checkingFor ?? 'check-only') : null;
     const note = barNoteOf({ problems, busy, checkStatus, blank: blankBuild, entryRoute: builtByHand ? 'manual' : 'routes' });
     // the one filled button of the bar and the card: Generate, or the Copy of the clocks it made
     const primaryAction = nextStepOf({
@@ -523,7 +541,7 @@ function App() {
         const config = exportConfig();
         // a check whose worker crashed did not judge the build: Generate checks again instead of going to its error
         const lastCheckCrashed = validation.status === 'invalid' && validation.crashed === true;
-        const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems, lastCheckCrashed });
+        const decision = decideGenerate({ initialized: isInitialized, generating: isRunning || checkingFor !== null || conversionPendingRef.current, checkStatus, problems, lastCheckCrashed });
         // running the build accepts it: an Undo offered before this press ends here, once (not when the check's own
         // generation starts later)
         if (startsRun(decision)) withdrawUndo();
@@ -559,13 +577,14 @@ function App() {
 
     // stops the generation, or the check Generate started (whose Generate then does not start)
     const handleCancel = useCallback(() => {
+        retireConversion();
         cancel();
         setCheckingFor(null);
-    }, [cancel, setCheckingFor]);
+    }, [cancel, setCheckingFor, retireConversion]);
 
     // checks without moving the page: the result shows as the chip, the alert and the swing plan
     const handleCheckOnly = useCallback(() => {
-        const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null, checkStatus, problems });
+        const decision = decideCheckOnly({ initialized: isInitialized, generating: isRunning || checkingFor !== null || conversionPendingRef.current, checkStatus, problems });
         if (startsRun(decision)) withdrawUndo();
         if (decision.kind === 'show-problems') {
             focusBarNote();
@@ -578,11 +597,31 @@ function App() {
     // excluding an ingredient from the LCM is done inside the validated plan, so it refreshes that plan itself
     const revalidateOnChangeRef = useRef(false);
     useEffect(() => {
+        const conversion = conversionRecheckRef.current;
+        if (conversion) {
+            conversionRecheckRef.current = null;
+            const current = captureBuildMutation();
+            if (conversion.token !== conversionTokenRef.current || current.buildId !== conversion.owner.buildId
+                || current.revision !== conversion.owner.revision || current.form !== conversion.owner.form
+                || configKeyOf(exportConfig()) !== conversion.key) return;
+            setCheckedForGenerate(true); // D10 owns the single deferred announcement and focus.
+            // The accepted action has disappeared; move focus only while this committed owner is current.
+            focusProblemTarget({ kind: 'target-rate' });
+            // Internal Check intentionally retains whole-build Undo; it never starts Generate.
+            void validate(formDataToConfig(current.form)).then(outcome => {
+                const owner = captureBuildMutation();
+                if (!mountedRef.current || conversion.token !== conversionTokenRef.current || outcome.kind === 'dropped'
+                    || owner.buildId !== current.buildId || owner.revision !== current.revision || owner.form !== current.form) return;
+                conversion.complete?.(outcome.kind === 'valid' ? 'Check passed.' : 'The check failed. Review the reason in Configure.');
+                if (outcome.kind === 'invalid') goToCheckError();
+            });
+            return;
+        }
         if (revalidateOnChangeRef.current) {
             revalidateOnChangeRef.current = false;
             validate(exportConfig());
         }
-    }, [exportConfig, validate]);
+    }, [exportConfig, validate, captureBuildMutation, goToCheckError]);
 
     const handleGenerate = useCallback(() => runChecked((config) => {
         runSimulation(config, runDebugSteps, runStreamLogs);
@@ -656,8 +695,8 @@ function App() {
     // the key of the build an action with Undo is about to replace as a whole (Import, Paste, Reset, an example, Delete
     // build, a share link, another tab's version): its clocks are set aside under it, and its Undo brings them back
     const replacedKeyRef = useRef<string | null>(null);
-    const offerUndoOfBuild = useCallback((message: string, options?: Parameters<typeof offerUndo>[1]) => {
-        replacedKeyRef.current = configKeyRef.current;
+    const offerUndoOfBuild = useCallback((message: string, options?: Parameters<typeof offerUndo>[1], sourceKey?: string) => {
+        replacedKeyRef.current = sourceKey ?? configKeyRef.current;
         return offerUndo(message, options);
     }, [offerUndo]);
     const offerUndoOfReplace = useCallback((message: string) => offerUndoOfBuild(message), [offerUndoOfBuild]);
@@ -712,6 +751,7 @@ function App() {
     // Import, a Paste that replaced something, and Reset land on Configure, where the build's problems are shown. The
     // clocks are set aside for the Undo offered just before, if any
     const handleBuildReplaced = useCallback(() => {
+        retireConversion();
         replacementRevisionRef.current++;
         const formKey = replacedKeyRef.current ?? undefined;
         replacedKeyRef.current = null;
@@ -719,7 +759,59 @@ function App() {
         setReplacedCount((count) => count + 1);
         setView('configure');
         setAdvancedOpen(false);
-    }, [clearResults, setReplacedCount]);
+    }, [clearResults, setReplacedCount, retireConversion]);
+
+    // A conversion capability belongs to the complete current input, including generation-only settings.
+    const checkRecovery = validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
+        && validation.recovery?.sourceConfigKey === configKey ? validation.recovery : undefined;
+    const generationRecovery = errorRecovery?.sourceConfigKey === configKey ? errorRecovery : undefined;
+    const conversionRecovery = checkRecovery ?? generationRecovery;
+    const handleConvertRepeatedUnit = useCallback(async () => {
+        if (!isInitialized || busy || conversionPendingRef.current || conversionRecovery?.conversion.kind !== 'available'
+            || document.querySelector('[data-edits-build]')) return;
+        const snapshot = captureBuildMutation();
+        const capturedConfig = formDataToConfig(snapshot.form), oldKey = configKeyOf(capturedConfig);
+        if (oldKey !== conversionRecovery.sourceConfigKey) return;
+        const token = ++conversionTokenRef.current;
+        conversionPendingRef.current = true;
+        setConversionPending(true);
+        try {
+            const checked = await askEngine({ kind: 'repeated-unit-conversion', config: capturedConfig });
+            if (!mountedRef.current || token !== conversionTokenRef.current) return;
+            const current = captureBuildMutation();
+            if (current.buildId !== snapshot.buildId || current.revision !== snapshot.revision || current.form !== snapshot.form
+                || document.querySelector('[data-edits-build]')) return;
+            if (checked.kind === 'unavailable') {
+                notify({ severity: 'warning', text: checked.stage === 'check'
+                    ? `One complete unit was identified, but its check failed: ${checked.reason.message} Your build has not changed.`
+                    : `${checked.reason.message} Your build has not changed. Select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+                return;
+            }
+            if (checked.plan.sourceConfigKey !== oldKey) throw new Error('The conversion answer does not match this build.');
+            const next = applyRepeatedUnitConversion(snapshot.form, checked.plan);
+            if (!next) throw new Error('The conversion answer could not be applied completely.');
+            let complete: ((suffix?: string) => void) | undefined;
+            const committed = commitBuildReplacement(snapshot, next, () => {
+                complete = offerUndoOfBuild(`Using one complete modeled unit with ${checked.plan.copies} copies. Items per Second is still the total.`,
+                    { deferAnnouncement: true, snapshot: snapshot.form }, oldKey);
+            });
+            if (!committed) return;
+            handleBuildReplaced();
+            const committedToken = conversionTokenRef.current;
+            conversionRecheckRef.current = { token: committedToken, owner: captureBuildMutation(), key: configKeyOf(formDataToConfig(next)), complete };
+        } catch (failure) {
+            const current = captureBuildMutation();
+            if (mountedRef.current && token === conversionTokenRef.current && current.buildId === snapshot.buildId
+                && current.revision === snapshot.revision && current.form === snapshot.form) {
+                notify({ severity: 'error', text: `Could not check the conversion: ${failure instanceof Error ? failure.message : 'The engine did not answer.'} Your build has not changed. Try again, or select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+            }
+        } finally {
+            if (mountedRef.current && token === conversionTokenRef.current) {
+                conversionPendingRef.current = false;
+                setConversionPending(false);
+            }
+        }
+    }, [isInitialized, busy, conversionRecovery, captureBuildMutation, commitBuildReplacement, offerUndoOfBuild, handleBuildReplaced, notify]);
     // the same for a switch to another build, which says `message` once it is known whether its clocks come back
     const handleBuildSwitched = useCallback((message: string | ((restored: boolean) => void)) => {
         switchMessageRef.current = message;
@@ -943,7 +1035,7 @@ function App() {
                             note={note}
                             startHere={blankBuild && problems.length > 0}
                             onGoToProblem={handleGoToProblem}
-                            running={isRunning || checkingFor !== null}
+                            running={isRunning || checkingFor !== null || conversionPending}
                             onCancel={handleCancel}
                             lastStop={lastStop}
                             restoredId={restoredId}
@@ -978,14 +1070,17 @@ function App() {
                                     {loadNotice}
                                 </Alert>
                             )}
-                            {error && (
+                            {error && !generationRecovery && (
                                 <Alert severity="error" sx={{ mb: 2 }}>
                                     {error}
                                 </Alert>
                             )}
                             <CheckErrorAlert
-                                message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : null}
+                                message={validation.status === 'invalid' && checkStatus === 'invalid' ? validation.message : generationRecovery ? error : null}
                                 crashed={validation.status === 'invalid' && validation.crashed === true}
+                                recovery={conversionRecovery}
+                                conversionPending={conversionPending}
+                                onConvert={handleConvertRepeatedUnit}
                             />
 
                             {introVisible && (

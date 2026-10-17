@@ -8,12 +8,12 @@ import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
  */
 
 import type { z } from 'zod';
-import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
+import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
-import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
+import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
@@ -161,6 +161,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
 /** Runs one plan or task with streamed logs and progress; errors are posted instead of thrown */
 function runStreaming(
     runId: number,
+    config: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     work: (options: import('clock-generator/browser').GenerateClockOptions) => WorkerResponse,
@@ -196,12 +197,11 @@ function runStreaming(
         flushLogs();
         postResponse(response);
     } catch (error) {
+        const failure = failureOf(error, config, 'Simulation failed');
         postResponse({
             type: 'error',
             runId,
-            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
-                : error instanceof Error ? error.message : 'Simulation failed',
-            stack: error instanceof Error ? error.stack : undefined,
+            ...failure,
         });
     }
 }
@@ -211,11 +211,12 @@ function handleValidate(requestId: number, config: Config): void {
         requireValidConfig(config);
         postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
     } catch (error) {
+        const { message, recovery } = failureOf(error, config, 'Validation failed');
         postResponse({
             type: 'validation-failed',
             requestId,
-            message: error instanceof clockGenerator.CopiesError ? repeatedUnitsProblem(error)
-                : error instanceof Error ? error.message : 'Validation failed',
+            message,
+            recovery,
         });
     }
 }
@@ -224,6 +225,49 @@ function handleValidate(requestId: number, config: Config): void {
 function requireValidConfig(config: Config): void {
     const parsed = clockGenerator.ConfigSchema.safeParse(config);
     if (!parsed.success) throw new clockGenerator.ConfigValidationError(parsed.error, config);
+}
+
+function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConversion {
+    const plan = clockGenerator.planRepeatedUnitConversion(config);
+    if (plan.kind === 'unavailable') return { kind: 'unavailable', stage: 'proof', reason: plan.reason };
+    try {
+        requireValidConfig(plan.candidate);
+        return { kind: 'available', plan, validation: clockGenerator.validateConfig(plan.candidate) };
+    } catch (error) {
+        // Planning's existing assertion type includes target-capacity/period refusals. Untyped errors
+        // and native programmer failures must remain query-failed, never a structural diagnosis.
+        if (!(error instanceof clockGenerator.ConfigValidationError)
+            && !(error instanceof clockGenerator.InserterCoverageError)
+            && !(error instanceof clockGenerator.CopiesError)
+            && !(error instanceof clockGenerator.AssertionError)) throw error;
+        return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
+            message: error instanceof Error ? error.message : 'The candidate Check failed.' } };
+    }
+}
+
+function repeatedUnitsRecoveryOf(error: CopiesError, config: Config): RepeatedUnitsRecovery {
+    const checked = checkRepeatedUnitConversion(config);
+    return {
+        kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
+        detectedCopies: error.units.length, configuredCopies: config.target_output.copies,
+        units: error.units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
+        conversion: checked.kind === 'available'
+            ? { kind: 'available', multiplicity: checked.plan.multiplicity, copies: checked.plan.copies }
+            : { kind: 'unavailable', stage: checked.stage, code: checked.reason.code, message: checked.reason.message },
+    };
+}
+
+/** A recovery-query failure must still settle the original Check/run, with its real error and no capability. */
+function failureOf(error: unknown, config: Config, fallback: string): { message: string; stack?: string; recovery?: RepeatedUnitsRecovery } {
+    if (error instanceof clockGenerator.CopiesError) {
+        try {
+            return { message: repeatedUnitsProblem(error), stack: error.stack, recovery: repeatedUnitsRecoveryOf(error, config) };
+        } catch (failure) {
+            return { message: failure instanceof Error ? failure.message : 'The engine could not check the repeated-unit conversion.',
+                stack: failure instanceof Error ? failure.stack : undefined };
+        }
+    }
+    return { message: error instanceof Error ? error.message : fallback, stack: error instanceof Error ? error.stack : undefined };
 }
 
 function lookups(): FactorioLookups {
@@ -297,6 +341,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             }
         case 'inserter-coverage':
             return clockGenerator.validateInserterCoverage(query.config);
+        case 'repeated-unit-conversion':
+            return checkRepeatedUnitConversion(query.config);
         case 'saved-config':
             return savedConfigProblem(query.config);
         case 'config-file':
@@ -319,7 +365,7 @@ function handleQuery(requestId: number, query: EngineQuery): void {
 }
 
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
-    runStreaming(runId, debugSteps, streamLogs, (options) => {
+    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
         const plan = clockGenerator.planClockAlternatives(config, options);
         return { type: 'planned', runId, primary: toRunView(plan.primary, config), context: plan.context, tasks: plan.tasks,
@@ -335,7 +381,7 @@ function handleTask(
     context: import('clock-generator/browser').ClockAlternativeContext,
     taskId: string,
 ): void {
-    runStreaming(runId, debugSteps, streamLogs, (options) => {
+    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
         const run = clockGenerator.runClockAlternativeTask(config, context, taskId, options);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config) };
