@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockAlternatives, simulateClockOnly, validateConfig, type ClockAlternative, type SerializableClockWindows } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 
 describe("generateClockForConfig", () => {
 
@@ -163,7 +164,7 @@ describe("generateClockForConfig", () => {
         it("says that the egg recipe loops and that the machines start with eggs inside", () => {
             const insight = one_swing.insights.find(it => it.id === "looping-recipe")!;
             expect(insight.scope).toBe("build");
-            expect(insight.what).toContain("starts each of these machines with 7 pentapod-egg already inside");
+            expect(insight.what).toContain(`starts with ${config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS} pentapod-egg`);
             expect(insight.table?.rows.map(row => row[0])).toHaveLength(2);
         });
     });

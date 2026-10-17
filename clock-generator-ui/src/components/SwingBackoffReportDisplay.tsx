@@ -35,8 +35,8 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
     const allAttempts: SwingAttemptResult[] = [report.initial_attempt, ...report.attempts];
 
     const summaryText = isSuccess
-        ? `Output swings reduced from ${report.initial_terminal_swing_count} → ${report.stable_terminal_swing_count} for stable output`
-        : `No stable swing count found (started at ${report.initial_terminal_swing_count}); original result used`;
+        ? `Output swings reduced from ${report.initial_terminal_swing_count} → ${report.stable_terminal_swing_count} so the clock holds the rate`
+        : `No swing count that holds the rate was found (started at ${report.initial_terminal_swing_count}); original result used`;
 
     return (
         <>
@@ -68,18 +68,18 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                         {isSuccess ? (
                             <>
                                 The initial swing count of{' '}
-                                <strong>{report.initial_terminal_swing_count}</strong> produced unstable
-                                output. A stable result was found at{' '}
+                                <strong>{report.initial_terminal_swing_count}</strong> did not hold the
+                                rate. It held at{' '}
                                 <strong>{report.stable_terminal_swing_count}</strong> swings.
                             </>
                         ) : (
                             <>
                                 The initial swing count of{' '}
-                                <strong>{report.initial_terminal_swing_count}</strong> produced unstable
-                                output, and no stable swing count was found during backoff. The result from{' '}
+                                <strong>{report.initial_terminal_swing_count}</strong> did not hold the
+                                rate, and no swing count that holds it was found during backoff. The result from{' '}
                                 <strong>{report.initial_terminal_swing_count}</strong> swings was used.
-                                Consider adjusting your configuration or disabling swing backoff in
-                                Advanced Overrides.
+                                Consider adjusting your build or disabling swing backoff in
+                                Advanced.
                             </>
                         )}
                     </Typography>
@@ -118,7 +118,7 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                                             <TableCell align="right">{attempt.expected_output_items}</TableCell>
                                             <TableCell align="center">
                                                 <Chip
-                                                    label={attempt.holds ? 'Stable' : 'Unstable'}
+                                                    label={attempt.holds ? 'Holds the rate' : 'Does not hold it'}
                                                     color={attempt.holds ? 'success' : 'error'}
                                                     size="small"
                                                     variant="outlined"

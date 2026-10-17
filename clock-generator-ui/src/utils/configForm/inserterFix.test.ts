@@ -3,7 +3,7 @@ import type { InserterCoverageIssue, InserterFixOption } from 'clock-generator/b
 import { ChestType } from 'clock-generator/light';
 import * as edits from './edits';
 import { createDefaultConfig, type ConfigFormData } from './formData';
-import { applyInserterFix } from './inserterFix';
+import { applyInserterFix, inserterFixProblem } from './inserterFix';
 
 const issue = (kind: InserterCoverageIssue['kind'], machine_id = 2): InserterCoverageIssue =>
     ({ kind, machine_id, recipe: 'electronic-circuit', item_name: 'copper-cable', fix_options: [] });
@@ -11,6 +11,7 @@ const issue = (kind: InserterCoverageIssue['kind'], machine_id = 2): InserterCov
 /** Two machines, a fast belt and a turbo belt, and two inserters of stack size 12 */
 function form(): ConfigFormData {
     let config = edits.addMachine(createDefaultConfig());
+    config = edits.updateMachine(config, 1, 'recipe', 'electronic-circuit');
     config = edits.addBelt(edits.addBelt(edits.addBelt(config)));
     config = edits.updateBelt(config, 0, { type: 'fast-transport-belt' });
     config = edits.updateBelt(config, 1, { type: 'fast-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 2 }] });
@@ -20,6 +21,46 @@ function form(): ConfigFormData {
 }
 
 describe('applyInserterFix', () => {
+    it('does not duplicate a machine connection while coverage is catching up', () => {
+        const missing = issue('missing_input_inserter');
+        const fix: InserterFixOption = { type: 'machine_to_machine', source_machine_id: 1, item_name: 'copper-cable' };
+        const once = applyInserterFix(form(), missing, fix);
+        expect(applyInserterFix(once, missing, fix)).toBe(once);
+    });
+
+    it.each(['missing_input_inserter', 'missing_output_inserter'] as const)('does not add redundant belts or chests for a stale %s repair', kind => {
+        const missing = issue(kind);
+        const belt: InserterFixOption = { type: 'new_belt', item_name: 'copper-cable' };
+        const chest: InserterFixOption = { type: 'infinity_chest', item_name: 'copper-cable' };
+        for (const first of [belt, chest]) {
+            const once = applyInserterFix(form(), missing, first);
+            expect(applyInserterFix(once, missing, belt)).toBe(once);
+            expect(applyInserterFix(once, missing, chest)).toBe(once);
+        }
+    });
+
+    it('still repairs an item excluded by an existing connection’s filters', () => {
+        const missing = issue('missing_input_inserter');
+        const fix: InserterFixOption = { type: 'new_belt', item_name: 'copper-cable' };
+        const once = applyInserterFix(form(), missing, fix);
+        const filtered = edits.updateInserter(once, once.inserters.length - 1, { filters: ['iron-plate'] });
+        expect(applyInserterFix(filtered, missing, fix).inserters).toHaveLength(filtered.inserters.length + 1);
+    });
+
+    it('ignores repairs whose machine endpoints have been removed', () => {
+        const before = form();
+        const fix: InserterFixOption = { type: 'machine_to_machine', source_machine_id: 99, item_name: 'copper-cable' };
+        expect(applyInserterFix(before, issue('missing_input_inserter'), fix)).toBe(before);
+        for (const type of ['new_belt', 'infinity_chest'] as const) {
+            expect(applyInserterFix(before, issue('missing_input_inserter', 99), { type, item_name: 'copper-cable' })).toBe(before);
+        }
+    });
+
+    it('ignores a stale repair after the target recipe changes', () => {
+        const before = edits.updateMachine(form(), 1, 'recipe', 'advanced-circuit');
+        expect(applyInserterFix(before, issue('missing_input_inserter'), { type: 'new_belt', item_name: 'copper-cable' })).toBe(before);
+    });
+
     it('adds an inserter between two machines', () => {
         const fix: InserterFixOption = { type: 'machine_to_machine', source_machine_id: 1, item_name: 'copper-cable' };
         const config = applyInserterFix(form(), issue('missing_input_inserter'), fix);
@@ -40,6 +81,17 @@ describe('applyInserterFix', () => {
         expect(applyInserterFix(before, issue('missing_input_inserter'), { type: 'add_lane_to_existing_belt', belt_id: 9, item_name: 'x' })).toBe(before);
         const full = edits.updateBelt(before, 0, { lanes: [{ ingredient: 'a', stack_size: 4 }, { ingredient: 'b', stack_size: 4 }] });
         expect(applyInserterFix(full, issue('missing_input_inserter'), { type: 'add_lane_to_existing_belt', belt_id: 1, item_name: 'x' })).toBe(full);
+        const protectedForm = form();
+        protectedForm.inserters[0].sink = { type: 'belt', id: 2, drop: { lane: 1, position: 0.5 } };
+        const addLane: InserterFixOption = { type: 'add_lane_to_existing_belt', belt_id: 2, item_name: 'copper-cable' };
+        expect(inserterFixProblem(protectedForm, addLane)).toContain('Belt 2: Imported drop positions');
+        expect(applyInserterFix(protectedForm, issue('missing_input_inserter'), addLane)).toBe(protectedForm);
+        const newBelt = applyInserterFix(protectedForm, issue('missing_input_inserter'), { type: 'new_belt', item_name: 'copper-cable' });
+        const newChest = applyInserterFix(protectedForm, issue('missing_input_inserter'), { type: 'infinity_chest', item_name: 'copper-cable' });
+        expect(newBelt.belts).toHaveLength(protectedForm.belts.length + 1);
+        expect(newChest.chests).toHaveLength(1);
+        expect(newBelt.inserters[0]).toEqual(protectedForm.inserters[0]);
+        expect(newChest.inserters[0]).toEqual(protectedForm.inserters[0]);
     });
 
     it('adds a belt of the most common type and an inserter from it for a missing input', () => {
@@ -56,7 +108,8 @@ describe('applyInserterFix', () => {
     });
 
     it('adds a turbo belt and an inserter of stack size 4 to a form without belts or inserters', () => {
-        const config = applyInserterFix(createDefaultConfig(), issue('missing_input_inserter', 1), { type: 'new_belt', item_name: 'iron-plate' });
+        const before = edits.updateMachine(createDefaultConfig(), 0, 'recipe', 'electronic-circuit');
+        const config = applyInserterFix(before, issue('missing_input_inserter', 1), { type: 'new_belt', item_name: 'iron-plate' });
         expect(config.belts[0].type).toBe('turbo-transport-belt');
         expect(config.inserters[0]).toMatchObject({ id: 1, source: { type: 'belt', id: 1 }, stack_size: 4 });
     });
@@ -72,15 +125,15 @@ describe('applyInserterFix', () => {
         expect(output.inserters[2]).toMatchObject({ source: { type: 'machine', id: 2 }, sink: { type: 'chest', id: 1 } });
     });
 
-    it('does not give out the ids of removed entities again', () => {
+    it('numbers what it adds one past the highest id left after a remove', () => {
         let config = edits.removeChest(edits.addChest(form()), 0);
         config = edits.removeBelt(edits.removeInserter(config, 1), 2);
         const belt = applyInserterFix(config, issue('missing_input_inserter'), { type: 'new_belt', item_name: 'copper-cable' });
-        expect(belt.belts.at(-1)!.id).toBe(4);
-        expect(belt.inserters.at(-1)!.id).toBe(3);
-        expect(applyInserterFix(belt, issue('missing_input_inserter'), { type: 'machine_to_machine', source_machine_id: 1, item_name: 'x' }).inserters.at(-1)!.id).toBe(4);
+        expect(belt.belts.at(-1)!.id).toBe(3);
+        expect(belt.inserters.at(-1)!.id).toBe(2);
+        expect(applyInserterFix(belt, issue('missing_input_inserter'), { type: 'machine_to_machine', source_machine_id: 1, item_name: 'x' }).inserters.at(-1)!.id).toBe(3);
         const chest = applyInserterFix(config, issue('missing_input_inserter'), { type: 'infinity_chest', item_name: 'copper-cable' });
-        expect(chest.chests.at(-1)!.id).toBe(2);
-        expect(chest.inserters.at(-1)!.id).toBe(3);
+        expect(chest.chests.at(-1)!.id).toBe(1);
+        expect(chest.inserters.at(-1)!.id).toBe(2);
     });
 });

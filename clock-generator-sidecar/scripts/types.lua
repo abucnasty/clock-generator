@@ -42,7 +42,8 @@
 ---@class InfinityChestData
 ---@field chest_type "infinity-chest" The chest type discriminator
 ---@field unit_number number The unit number of the chest entity
----@field item_filters InfinityFilterData[] The items and quantities in this chest
+---@field item_filters InfinityFilterData[] The configured infinity filters, not current inventory
+---@field remove_unfiltered_items boolean Whether unfiltered incoming items are removed
 
 ---@alias ChestData BufferChestData|InfinityChestData
 
@@ -54,6 +55,11 @@
 ---@field filters string[] Item filters set on the inserter
 ---@field source InserterTargetRef|nil The pickup target
 ---@field sink InserterTargetRef|nil The drop target
+
+---@class SuggestedTarget
+---@field recipe string The item name of the main product that leaves the selection (not necessarily the recipe's name)
+---@field items_per_second number What the selected machines of that recipe make of it together at their maximum
+---@field copies number Always 1
 
 ---@class PlayerData
 ---@field machines MachineData[] Extracted machine data

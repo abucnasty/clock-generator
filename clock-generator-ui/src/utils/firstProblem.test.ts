@@ -1,0 +1,207 @@
+import type { InserterCoverageIssue } from 'clock-generator/browser';
+import { describe, expect, it } from 'vitest';
+import { createDefaultConfig } from './configForm/formData';
+import { updateTargetOutput } from './configForm/edits';
+import {
+    ELEMENT_IDS,
+    PROBLEM_TEXT,
+    barNoteOf,
+    coverageIssueElementId,
+    focusIdOf,
+    machineRecipeElementId,
+    needsListView,
+    problemCountLabel,
+    problemsOf,
+    type FocusTarget,
+    type Problem,
+} from './firstProblem';
+
+type Input = Parameters<typeof problemsOf>[0];
+
+const filledIn = (overrides: Partial<Input> = {}): Input => ({
+    targetOutput: { recipe: 'logistic-science-pack', items_per_second: 240, copies: 1 },
+    machines: [{ id: 1, recipe: 'logistic-science-pack' }],
+    ...overrides,
+});
+
+const issue = (kind: InserterCoverageIssue['kind'], machine_id: number, item_name: string): InserterCoverageIssue => ({
+    kind,
+    machine_id,
+    recipe: 'some-recipe',
+    item_name,
+    fix_options: [],
+});
+
+describe('problemsOf', () => {
+    it('finds no field problems in a filled-in build', () => {
+        expect(problemsOf(filledIn())).toEqual([]);
+    });
+
+    it('defers unsupported target/capacity arithmetic to worker validation without formatting an unknown limit', () => {
+        const max = { machineIds: [1], perCopy: 2, perCopyRatio: { numerator: 2, denominator: 1 } };
+        for (const [copies, items_per_second] of [[1, 1e-23], [1e308, 1]]) {
+            expect(problemsOf(filledIn({ machinesMax: max,
+                targetOutput: { recipe: 'logistic-science-pack', copies, items_per_second },
+            }))).toEqual([]);
+        }
+    });
+
+    it('finds two problems in the default build: the target recipe, then the machine recipe', () => {
+        const config = createDefaultConfig();
+        const problems = problemsOf({ targetOutput: config.target_output, machines: config.machines });
+        expect(problems.map((p) => p.text)).toEqual(['Set the recipe in Target Output', 'Set the recipe of Machine 1']);
+        expect(problems.map((p) => p.target)).toEqual([{ kind: 'target-recipe' }, { kind: 'machine-recipe', machineId: 1 }]);
+    });
+
+    it('fixing the target recipe of the default build leaves the machine recipe first', () => {
+        const config = updateTargetOutput(createDefaultConfig(), 'recipe', 'logistic-science-pack');
+        const [first] = problemsOf({ targetOutput: config.target_output, machines: config.machines });
+        expect(first).toEqual({ text: 'Set the recipe of Machine 1', target: { kind: 'machine-recipe', machineId: 1 } });
+    });
+
+    it('says what each failing condition is, alone, and where it is fixed', () => {
+        const cases: [Input, Problem][] = [
+            [filledIn({ targetOutput: { recipe: '', items_per_second: 240, copies: 1 } }), { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } }],
+            [filledIn({ targetOutput: { recipe: 'x', items_per_second: 0, copies: 1 } }), { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } }],
+            [filledIn({ targetOutput: { recipe: 'x', items_per_second: -3, copies: 1 } }), { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } }],
+            [filledIn({ targetOutput: { recipe: 'x', items_per_second: 240, copies: 0 } }), { text: PROBLEM_TEXT.noCopies, target: { kind: 'target-copies' } }],
+            [filledIn({ machines: [] }), { text: 'Add a machine', target: { kind: 'add-machine' } }],
+        ];
+        for (const [input, expected] of cases) {
+            expect(problemsOf(input)).toEqual([expected]);
+        }
+        expect(PROBLEM_TEXT.noRate).toBe('Set Items per Second in Target Output to more than 0');
+        expect(PROBLEM_TEXT.noCopies).toBe('Set Copies to more than 0.');
+    });
+
+    it('names each machine without a recipe, in machine order', () => {
+        const second = problemsOf(filledIn({ machines: [{ id: 1, recipe: 'a' }, { id: 2, recipe: '' }] }));
+        expect(second).toEqual([{ text: 'Set the recipe of Machine 2', target: { kind: 'machine-recipe', machineId: 2 } }]);
+        const both = problemsOf(filledIn({ machines: [{ id: 1, recipe: '' }, { id: 2, recipe: '' }] }));
+        expect(both.map((p) => p.text)).toEqual(['Set the recipe of Machine 1', 'Set the recipe of Machine 2']);
+    });
+
+    it('puts the target first, then the machines in their order', () => {
+        const problems = problemsOf({
+            targetOutput: { recipe: '', items_per_second: 0, copies: 1 },
+            machines: [{ id: 1, recipe: 'a' }, { id: 2, recipe: '' }, { id: 3, recipe: '' }],
+        });
+        expect(problems.map((p) => p.target)).toEqual([
+            { kind: 'target-recipe' }, { kind: 'target-rate' },
+            { kind: 'machine-recipe', machineId: 2 }, { kind: 'machine-recipe', machineId: 3 },
+        ]);
+    });
+
+});
+
+describe('a target more than the machines can make', () => {
+    // Machine 1 of the logistic science sample: 11 copies make 252.656…/s, printed rounded down as 252.65
+    const machinesMax = { machineIds: [1], perCopy: 22.96874920527133 };
+    const target = (items_per_second: number) => ({ recipe: 'logistic-science-pack', items_per_second, copies: 11 });
+    const tooHigh = filledIn({ targetOutput: target(240200), machinesMax });
+    const rateProblem: Problem = { text: 'Items per Second is more than the machines can make (at most 252.65/s)', target: { kind: 'target-rate' } };
+
+    it('is a problem that goes to Items per Second', () => {
+        expect(problemsOf(tooHigh)).toEqual([rateProblem]);
+    });
+
+    it('comes after missing machine recipes', () => {
+        const problems = problemsOf({
+            ...tooHigh,
+            machines: [{ id: 1, recipe: 'logistic-science-pack' }, { id: 2, recipe: '' }],
+        });
+        expect(problems.map((p) => p.target?.kind)).toEqual(['machine-recipe', 'target-rate']);
+    });
+
+    it('is not there for a target the copies make (252.65 is, 252.66 is not), or while the most is not known', () => {
+        expect(problemsOf(filledIn({ targetOutput: target(240), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.65), machinesMax }))).toEqual([]);
+        expect(problemsOf(filledIn({ targetOutput: target(252.66), machinesMax }))).toEqual([rateProblem]);
+        expect(problemsOf({ ...tooHigh, machinesMax: null })).toEqual([]);
+        expect(problemsOf({ ...tooHigh, machinesMax: undefined })).toEqual([]);
+    });
+
+    it('is the bar\'s note, ahead of a failed check', () => {
+        expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
+    });
+});
+
+describe('barNoteOf', () => {
+    const recipeProblem: Problem = { text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } };
+    const rateProblem: Problem = { text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } };
+    const failed: Problem = { text: PROBLEM_TEXT.validationFailed, target: { kind: 'validation-error' } };
+
+    it('says nothing while something runs, whatever else is wrong', () => {
+        expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'invalid' })).toBeNull();
+        expect(barNoteOf({ problems: [], busy: true, checkStatus: 'invalid' })).toBeNull();
+    });
+
+    it('gives the first problem with its target, ahead of a failed check', () => {
+        expect(barNoteOf({ problems: [recipeProblem, rateProblem], busy: false, checkStatus: 'none' })).toEqual(recipeProblem);
+        expect(barNoteOf({ problems: [rateProblem], busy: false, checkStatus: 'invalid' })).toEqual(rateProblem);
+    });
+
+    it('describes entry routes until building by hand is chosen, then points to the recipe', () => {
+        const routes = { text: 'Start with Paste from Factorio, try an example, or build by hand.', target: null };
+        const start = { text: 'Start: pick the recipe you want to make', target: { kind: 'target-recipe' } };
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true })).toEqual(routes);
+        expect(barNoteOf({ problems: [rateProblem, recipeProblem], busy: false, checkStatus: 'none', blank: true, entryRoute: 'manual' })).toEqual(start);
+        expect(barNoteOf({ problems: [recipeProblem], busy: true, checkStatus: 'none', blank: true })).toBeNull();
+        expect(barNoteOf({ problems: [], busy: false, checkStatus: 'none', blank: true })).toBeNull();
+    });
+
+    it('points at the reason for a failed check when the build has no problem', () => {
+        expect(barNoteOf({ problems: [], busy: false, checkStatus: 'invalid' })).toEqual(failed);
+        expect(PROBLEM_TEXT.validationFailed).toBe('The last check failed. Show why');
+    });
+
+    it('says nothing for any other check status', () => {
+        for (const checkStatus of ['none', 'valid', 'out-of-date', 'running'] as const) {
+            expect(barNoteOf({ problems: [], busy: false, checkStatus })).toBeNull();
+        }
+    });
+});
+
+describe('focus targets', () => {
+    const coverageKey = { kind: 'missing_output_inserter', machine_id: 4, item_name: 'logistic-science-pack' } as const;
+    const targets: FocusTarget[] = [
+        { kind: 'target-recipe' },
+        { kind: 'target-rate' },
+        { kind: 'target-copies' },
+        { kind: 'add-machine' },
+        { kind: 'machine-recipe', machineId: 3 },
+        { kind: 'coverage-issue', issue: coverageKey },
+        { kind: 'validation-error' },
+    ];
+
+    it('gives every target its own element', () => {
+        const ids = targets.map(focusIdOf);
+        expect(new Set(ids).size).toBe(targets.length);
+    });
+
+    it('uses the ids the forms and the alert set', () => {
+        expect(focusIdOf({ kind: 'target-recipe' })).toBe(ELEMENT_IDS.targetRecipe);
+        expect(focusIdOf({ kind: 'target-rate' })).toBe(ELEMENT_IDS.targetRate);
+        expect(focusIdOf({ kind: 'target-copies' })).toBe(ELEMENT_IDS.targetCopies);
+        expect(focusIdOf({ kind: 'add-machine' })).toBe(ELEMENT_IDS.addMachine);
+        expect(focusIdOf({ kind: 'validation-error' })).toBe(ELEMENT_IDS.validationError);
+        expect(focusIdOf({ kind: 'machine-recipe', machineId: 3 })).toBe(machineRecipeElementId(3));
+        expect(machineRecipeElementId(3)).toBe('machine-recipe-3');
+        // the contract with MissingInserterAlert, which sets the row's id from the whole issue
+        expect(focusIdOf({ kind: 'coverage-issue', issue: coverageKey }))
+            .toBe(coverageIssueElementId(issue('missing_output_inserter', 4, 'logistic-science-pack')));
+        expect(coverageIssueElementId(coverageKey)).toBe('coverage-issue-missing_output_inserter-4-logistic-science-pack');
+    });
+
+    it('needs the List for the machine fields only', () => {
+        expect(targets.filter(needsListView).map((t) => t.kind)).toEqual(['add-machine', 'machine-recipe']);
+    });
+});
+
+describe('problemCountLabel', () => {
+    it('counts in words', () => {
+        expect(problemCountLabel(1)).toBe('1 problem');
+        expect(problemCountLabel(2)).toBe('2 problems');
+        expect(problemCountLabel(10)).toBe('10 problems');
+    });
+});

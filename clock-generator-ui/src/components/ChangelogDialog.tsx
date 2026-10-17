@@ -81,13 +81,13 @@ export function ChangelogDialog({ open, onClose }: ChangelogDialogProps) {
                 {releases.map((release) => (
                     <Box key={release.version} sx={{ mb: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Typography variant="h6">v{release.version}</Typography>
-                            {release.version === __APP_VERSION__ && <Chip label="current" size="small" color="primary" />}
+                            <Typography variant="h6" component="h3">v{release.version}</Typography>
+                            {release.version === __APP_VERSION__ && <Chip label="current" size="small" variant="outlined" />}
                             <Typography variant="body2" color="text.secondary">{release.date}</Typography>
                         </Box>
                         {release.sections.map((section, index) => (
                             <Box key={`${section.title}-${index}`} sx={{ mb: 1.5 }}>
-                                {section.title && <Typography variant="subtitle2" color="primary">{section.title}</Typography>}
+                                {section.title && <Typography variant="subtitle2">{section.title}</Typography>}
                                 <Box component="ul" sx={{ mt: 0.5, mb: 0, pl: 3 }}>
                                     {section.items.map((item, itemIndex) => (
                                         <Typography key={itemIndex} component="li" variant="body2" sx={{ mb: 0.5 }}>

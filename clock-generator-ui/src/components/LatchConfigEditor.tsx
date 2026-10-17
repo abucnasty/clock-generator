@@ -8,6 +8,9 @@ import {
 } from '@mui/material';
 import type { TargetType } from 'clock-generator/browser';
 import type { RuleSet } from '../hooks/useConfigForm';
+import { FIELD_NAMES } from '../utils/a11yLabels';
+import type { RuleProblem } from '../utils/ruleProblems';
+import { entityNoun } from '../utils/ruleSentence';
 import { RuleSetEditor } from './RuleSetEditor';
 import { createDefaultRuleSet } from './ruleSetUtils';
 
@@ -21,6 +24,10 @@ interface LatchConfigEditorProps {
     availableItems: string[];
     sourceType: SourceSinkType;
     sinkType: SourceSinkType;
+    entityType: 'inserter' | 'drill';
+    idPrefix: string;
+    /** The form's problems by field id */
+    problems: ReadonlyMap<string, RuleProblem>;
 }
 
 export function LatchConfigEditor({
@@ -31,6 +38,9 @@ export function LatchConfigEditor({
     availableItems,
     sourceType,
     sinkType,
+    entityType,
+    idPrefix,
+    problems,
 }: LatchConfigEditorProps) {
     const handleToggle = (checked: boolean) => {
         onToggle(checked);
@@ -44,9 +54,9 @@ export function LatchConfigEditor({
         <Paper variant="outlined" sx={{ mt: 2, p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Box>
-                    <Typography variant="subtitle2">Latched Mode</Typography>
+                    <Typography variant="subtitle2">Latched</Typography>
                     <Typography variant="caption" color="text.secondary">
-                        Once enabled, stays on until the release condition is met
+                        Once switched on, it stays on until the release conditions are true.
                     </Typography>
                 </Box>
                 <FormControlLabel
@@ -54,6 +64,8 @@ export function LatchConfigEditor({
                         <Switch
                             checked={enabled}
                             onChange={(e) => handleToggle(e.target.checked)}
+                            // the label is empty: the heading beside the switch is what it is called
+                            slotProps={{ input: { 'aria-label': FIELD_NAMES.latchedMode } }}
                         />
                     }
                     label=""
@@ -64,10 +76,10 @@ export function LatchConfigEditor({
                 <>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        Release Condition
+                        Release conditions
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        When these conditions are met, the inserter resets to disabled.
+                        When these are true, the {entityNoun(entityType)} is switched off again.
                     </Typography>
                     <RuleSetEditor
                         ruleSet={releaseCondition}
@@ -75,6 +87,9 @@ export function LatchConfigEditor({
                         availableItems={availableItems}
                         sourceType={sourceType}
                         sinkType={sinkType}
+                        path="release"
+                        idPrefix={idPrefix}
+                        problems={problems}
                     />
                 </>
             )}

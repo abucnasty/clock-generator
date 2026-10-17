@@ -1,0 +1,133 @@
+import { EnableControlMode } from 'clock-generator/light';
+import { isCondition } from '../components/ruleSetUtils';
+import type { EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
+
+/** The entities that have an enable rule */
+type EnableRuleEntityType = 'inserter' | 'drill';
+
+/** The longest text the chip shows; the tooltip and the accessible name always have the whole rule */
+export const ENABLE_CHIP_MAX_CHARS = 32;
+
+/** The same for a Conditional chip, whose "conditions" and ", latched" need four more than the old "rules" did */
+export const CONDITIONAL_CHIP_MAX_CHARS = 36;
+
+// Every word the chip, its tooltip and its accessible name use is here, so a glossary pass changes them in one place.
+const ENABLE_CHIP_PREFIX = 'Enable: ';
+const MODE_AUTO = 'Auto';
+const MODE_ALWAYS = 'Always on';
+const MODE_NEVER = 'Never on';
+const MODE_CLOCKED = 'Clocked';
+const MODE_CONDITIONAL = 'Conditional';
+
+/** What each mode of an enable rule is called on screen (never the stored AUTO, ALWAYS, ...), for every place that shows one */
+export const ENABLE_MODE_LABELS: Record<EnableControlMode, string> = {
+    [EnableControlMode.AUTO]: MODE_AUTO,
+    [EnableControlMode.ALWAYS]: MODE_ALWAYS,
+    [EnableControlMode.NEVER]: MODE_NEVER,
+    [EnableControlMode.CLOCKED]: MODE_CLOCKED,
+    [EnableControlMode.CONDITIONAL]: MODE_CONDITIONAL,
+};
+const RANGE_DASH = '–';
+const RANGE_SEPARATOR = ', ';
+const PERIOD_JOINER = ' of ';
+const TICKS_SUFFIX = ' ticks';
+const NO_RANGES = ', no wake windows';
+const MORE_RANGES = (count: number) => ` +${count} more`;
+const CONDITION_COUNT_JOINER = ': ';
+const CONDITION_COUNT = (count: number) => (count === 0 ? 'no conditions' : `${count} ${count === 1 ? 'condition' : 'conditions'}`);
+const LATCHED = ', latched';
+const FORCED_ALWAYS_NOTE = ' (set by Exclude from LCM)';
+const ELLIPSIS = '…';
+// The accessible name starts with the visible text (WCAG 2.5.3), then says which entity and what the click does
+const ARIA_LABEL = (chip: string, entityLabel: string) => `${chip}, ${entityLabel}. Edit rule`;
+const AUTO_TOOLTIP = (entityType: EnableRuleEntityType) =>
+    `Auto: the generator decides when this ${entityType} runs. You don't need to change it. Click to set your own rule.`;
+
+interface EnableRuleDescription {
+    /** AUTO when there is no override */
+    mode: EnableControlMode;
+    /** The text on the chip; never longer than ENABLE_CHIP_MAX_CHARS */
+    chip: string;
+    /** The whole rule, never cut; used by the tooltip and the accessible name */
+    summary: string;
+    /** True for AUTO, which the chip shows without the accent colour */
+    quiet: boolean;
+}
+
+interface Range {
+    start: number;
+    end: number;
+}
+
+function cut(text: string, limit = ENABLE_CHIP_MAX_CHARS): string {
+    return text.length <= limit ? text : `${text.slice(0, limit - 1)}${ELLIPSIS}`;
+}
+
+function countConditions(ruleSet: RuleSet): number {
+    return ruleSet.rules.reduce((total, rule) => total + (isCondition(rule) ? 1 : countConditions(rule)), 0);
+}
+
+function rangesText(ranges: Range[]): string {
+    return ranges.map((range) => `${range.start}${RANGE_DASH}${range.end}`).join(RANGE_SEPARATOR);
+}
+
+/** The CLOCKED chip: every range and the period if they fit, else the ranges, else the first ranges and a count of the rest */
+function clockedChip(ranges: Range[], period: string): string {
+    const head = `${MODE_CLOCKED} `;
+    const candidates = [`${head}${rangesText(ranges)}${period}`, `${head}${rangesText(ranges)}`];
+    for (let kept = ranges.length - 1; kept >= 1; kept--) {
+        candidates.push(`${head}${rangesText(ranges.slice(0, kept))}${MORE_RANGES(ranges.length - kept)}`);
+    }
+    return candidates.find((text) => text.length <= ENABLE_CHIP_MAX_CHARS) ?? cut(`${head}${rangesText(ranges.slice(0, 1))}`);
+}
+
+/** What the enable rule of an inserter or a drill is, as the short text for its chip and the whole text for its tooltip */
+export function describeEnableRule(
+    override: EnableControlOverride | undefined,
+    options?: { forcedAlways?: boolean },
+): EnableRuleDescription {
+    const mode = override?.mode ?? EnableControlMode.AUTO;
+    const quiet = mode === EnableControlMode.AUTO;
+    const named = (name: string, summary = name): EnableRuleDescription => ({
+        mode, quiet, chip: cut(`${ENABLE_CHIP_PREFIX}${name}`), summary,
+    });
+    switch (override?.mode) {
+        case EnableControlMode.ALWAYS:
+            return named(MODE_ALWAYS, options?.forcedAlways ? `${MODE_ALWAYS}${FORCED_ALWAYS_NOTE}` : MODE_ALWAYS);
+        case EnableControlMode.NEVER:
+            return named(MODE_NEVER);
+        case EnableControlMode.CLOCKED: {
+            if (override.ranges.length === 0) {
+                const text = `${MODE_CLOCKED}${NO_RANGES}`;
+                return { mode, quiet, chip: cut(text), summary: text };
+            }
+            const period = override.period_duration_ticks && override.period_duration_ticks > 0
+                ? `${PERIOD_JOINER}${override.period_duration_ticks}`
+                : '';
+            return {
+                mode,
+                quiet,
+                chip: clockedChip(override.ranges, period),
+                summary: `${MODE_CLOCKED} ${rangesText(override.ranges)}${period}${TICKS_SUFFIX}`,
+            };
+        }
+        case EnableControlMode.CONDITIONAL: {
+            const counted = `${MODE_CONDITIONAL}${CONDITION_COUNT_JOINER}${CONDITION_COUNT(countConditions(override.rule_set))}`;
+            const text = `${counted}${override.latch ? LATCHED : ''}`;
+            // the latch goes from the chip, not the end of a word, when both do not fit; the summary keeps it
+            return { mode, quiet, chip: text.length <= CONDITIONAL_CHIP_MAX_CHARS ? text : cut(counted, CONDITIONAL_CHIP_MAX_CHARS), summary: text };
+        }
+        default:
+            return named(MODE_AUTO);
+    }
+}
+
+/** "Clocked 0–7, Inserter 3. Edit rule": starts with the chip's text so the visible label is part of the name */
+export function enableChipAriaLabel(entityLabel: string, description: EnableRuleDescription): string {
+    return ARIA_LABEL(description.chip, entityLabel);
+}
+
+/** The whole rule in ticks ("Clocked 0–7 ticks"), or what Auto means for AUTO; the chip's accessible description */
+export function enableChipTooltip(entityType: EnableRuleEntityType, description: EnableRuleDescription): string {
+    return description.quiet ? AUTO_TOOLTIP(entityType) : description.summary;
+}

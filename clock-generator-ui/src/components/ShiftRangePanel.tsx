@@ -1,12 +1,14 @@
-import { Box, Paper, Tooltip, Typography } from '@mui/material';
+import { Box, Tooltip, Typography } from '@mui/material';
 import type { ShiftRangeEdge } from '../worker/types';
 import type { ShiftOptionsView } from '../worker/types';
-import { COLOR_BLIND_PALETTE } from './colors';
+import { useChartColors } from '../hooks/useChartColors';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
+import { Panel } from './Panel';
+import { ScrollX } from './ScrollX';
 
-const WORKS_COLOR = COLOR_BLIND_PALETTE.green;
-const FAILS_COLOR = COLOR_BLIND_PALETTE.vermillion;
-const USED_COLOR = COLOR_BLIND_PALETTE.white;
 const ROW_HEIGHT = 18;
+/** A 150px label column and a 360px plot */
+const SHIFT_CHART_MIN_WIDTH = 510;
 
 const describeShift = (ticks: number) => ticks === 0 ? 'the planned position'
     : `${Math.abs(ticks)} ticks ${ticks < 0 ? 'earlier' : 'later'}`;
@@ -44,7 +46,7 @@ function EdgeReasons({ title, edge }: { title: string; edge: ShiftRangeEdge }) {
             ))}
             {edge.is_search_limit && (
                 <Typography variant="body2" color="text.secondary">
-                    • Nothing further was tried: the moved windows would meet the same inserters' other windows.
+                    • Nothing further was tried: the moved wake windows would meet the same inserters' other wake windows.
                 </Typography>
             )}
             {edge.notes.length === 0 && !edge.is_search_limit && (
@@ -55,10 +57,12 @@ function EdgeReasons({ title, edge }: { title: string; edge: ShiftRangeEdge }) {
 }
 
 /**
- * Every place tried for the swings a potential clock moved, drawn along one axis of ticks from the planned start,
+ * Every place tried for the swings a clock moved, drawn along one axis of ticks from the planned start,
  * so the range the machines accept is visible next to the one place the clock uses.
  */
 export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
+    const { palette, clock: USED_COLOR } = useChartColors();
+    const WORKS_COLOR = palette.green, FAILS_COLOR = palette.vermillion;
     const rowLabel = (index: number) => options.moved === 'output-swing' ? `Output swing ${index}`
         : index === options.chosenIndex && options.plannedTicks ? `Swings from tick ${options.plannedTicks.start}`
         : `Swings, round ${index}`;
@@ -80,10 +84,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     const plannedChecked = options.rows.some(row => row.shifts.some(shift => shift.shift_ticks === 0));
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                {options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'}
-            </Typography>
+        <Panel title={options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'} level={4}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 {options.moved === 'swings' && options.plannedTicks
                     ? <>This clock moves the swings planned in clock ticks {options.plannedTicks.start}–{options.plannedTicks.end} ({options.movedDescription}) together, </>
@@ -93,11 +94,12 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     <> Places from {describeShift(range.from)} to {describeShift(range.to)} work, checked every {cell} ticks.</>
                 )}
                 {options.moved === 'swings' && (
-                    <> A machine takes an input hand once it is below its insertion limit and before it runs out, and gives an output hand once a full one is ready.</>
+                    <> A machine accepts an input swing once it is below its insertion limit and before it runs out, and an output swing can leave once a full hand is ready.</>
                 )}
-                {' '}Each place was checked with the clock-only simulation from 12 clock starts; the one in use was confirmed from 112.
+                {' '}Each place was checked with the clock-only simulation from 12 start points; the one in use was confirmed from 112.
             </Typography>
 
+            <ScrollX label={SCROLL_REGION_NAMES.shiftRange} minWidth={SHIFT_CHART_MIN_WIDTH} tickRoom sx={{ py: '3px' /* room for the planned-start line, which sticks out 3px above and below a row */ }}>
             {options.rows.map(row => (
                 <Box key={row.index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                     <Typography variant="caption" sx={{ width: 150, flexShrink: 0 }}>
@@ -121,7 +123,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                                             left: percent(shift.shift_ticks - cell / 2),
                                             width,
                                             bgcolor: shift.holds ? WORKS_COLOR : FAILS_COLOR,
-                                            opacity: shift.holds ? 1 : 0.55,
+                                            opacity: 1,
                                             boxSizing: 'border-box',
                                             border: used ? `2px solid ${USED_COLOR}` : '1px solid rgba(0, 0, 0, 0.35)',
                                             zIndex: used ? 1 : 0,
@@ -152,6 +154,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     ))}
                 </Box>
             </Box>
+            </ScrollX>
 
             {options.earliest && options.latest && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
@@ -163,7 +166,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
                 {[
                     { label: 'Works', swatch: { bgcolor: WORKS_COLOR } },
-                    { label: 'Does not hold the expected output', swatch: { bgcolor: FAILS_COLOR, opacity: 0.55 } },
+                    { label: 'Does not hold the expected output', swatch: { bgcolor: FAILS_COLOR } },
                     { label: 'Used by this clock', swatch: { bgcolor: WORKS_COLOR, border: `2px solid ${USED_COLOR}` } },
                 ].map(({ label, swatch }) => (
                     <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -174,10 +177,10 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Box sx={{ height: 12, borderLeft: `2px dashed ${USED_COLOR}` }} />
                     <Typography variant="caption">
-                        Planned start{plannedChecked ? '' : ' (offered as its own potential clock, not checked here)'}
+                        Planned start{plannedChecked ? '' : ' (offered as its own clock, not checked here)'}
                     </Typography>
                 </Box>
             </Box>
-        </Paper>
+        </Panel>
     );
 }

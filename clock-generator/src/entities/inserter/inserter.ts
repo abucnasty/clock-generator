@@ -6,6 +6,7 @@ import { InserterMetadata } from "./metadata/inserter-metadata";
 import { InserterAnimation } from "./inserter-animation";
 import assert from "../../common/assert";
 import { assertIsBelt, assertIsChest, assertIsMachine, Entity } from "../entity";
+import { Chest } from "../chest";
 import { EntityId } from "../entity-id";
 import { EntityRegistry } from "../entity-registry";
 import { BeltDropMetadata } from "./metadata/animation";
@@ -138,7 +139,9 @@ export class InserterFactory {
         if (sink.type === EntityType.CHEST) {
             const chest = this.entity_registry.getEntityByIdOrThrow(EntityId.forChest(sink.id))
             assertIsChest(chest)
-            chest.getItemFilters().forEach(item => sink_consumed_items.add(item))
+            assert(!Chest.isInfinityChest(chest) || chest.item_filters.length > 0 || chest.remove_unfiltered_items,
+                `Chest ${sink.id}: enable Remove unfiltered items to use an empty infinity chest as an output, or configure a filter.`);
+            source_provided_items.forEach(item => { if (chest.acceptsItem(item)) sink_consumed_items.add(item); })
         }
 
 
@@ -155,6 +158,12 @@ export class InserterFactory {
                     assert(FactorioDataService.hasItem(it), `Inserter filter ${it} is not an item of the game (sink entity ${sink.id} of type ${sink.type})`);
                 }
             })
+            if (sink.type === EntityType.CHEST) {
+                const chest = this.entity_registry.getEntityByIdOrThrow(EntityId.forChest(sink.id));
+                assertIsChest(chest);
+                if (Chest.isInfinityChest(chest)) config.filters.forEach(item =>
+                    assert(chest.acceptsItem(item), `Chest ${sink.id} does not accept ${item}. Enable Remove unfiltered items or configure that item in the chest.`));
+            }
             filtered_items = new Set(config.filters);
         }
 

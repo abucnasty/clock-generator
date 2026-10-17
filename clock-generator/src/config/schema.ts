@@ -10,7 +10,7 @@ import {
 } from "../common/enable-control-types";
 import { MachineStatus } from "../state/entity-status";
 import { MachineType } from "../entities";
-import { fraction } from "../data-types/fraction";
+import { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./copies-value";
 
 // ============================================================================
 // Machine Configuration
@@ -31,18 +31,6 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 // ============================================================================
 // Target Production Rate Configuration
 // ============================================================================
-
-/** The most the denominator of `copies` may be once it is read as a reduced fraction: 5.5 is 11/2, 2.25 is 9/4 */
-const MAX_COPIES_DENOMINATOR = 1000;
-
-/** Whether a number reads as an exact fraction with a small denominator, as a whole number or a short decimal does */
-function isShortDecimal(value: number): boolean {
-    try {
-        return fraction(value).getDenominator <= MAX_COPIES_DENOMINATOR;
-    } catch {
-        return false;
-    }
-}
 
 /**
  * Schema for target production rate configuration.
@@ -66,8 +54,8 @@ function isShortDecimal(value: number): boolean {
 export const TargetProductionRateConfigSchema = z.object({
     recipe: z.string(),
     items_per_second: z.number().positive(),
-    copies: z.number().positive().refine(isShortDecimal, {
-        message: "copies must be a whole number or a short decimal such as 5.5",
+    copies: z.number().positive().refine(isShortDecimalCopies, {
+        message: COPIES_DECIMAL_ERROR,
     })
 });
 
@@ -461,16 +449,16 @@ export const InfinityFilterConfigSchema = z.object({
     /**
      * The entity name of the item to request
      */
-    item_name: z.string(),
+    item_name: z.string().min(1),
     /**
      * The count of items to request from the infinity chest each time.
      */
-    request_count: z.number().int().positive()
+    request_count: z.number().int().nonnegative()
 });
 
 export type InfinityFilterConfig = z.infer<typeof InfinityFilterConfigSchema>;
 /**
- * This configuration is for chests that have no input inserters.
+ * Constant supplies and optional disposal of unfiltered incoming items.
  * 
  * This can be a requester chest, an infinity chest, a buffer chest, etc.
  * 
@@ -479,7 +467,9 @@ export type InfinityFilterConfig = z.infer<typeof InfinityFilterConfigSchema>;
 export const InfinityChestConfigSchema = z.object({
     type: z.literal(ChestType.INFINITY_CHEST),
     id: z.number().int().positive(),
-    item_filter: z.array(InfinityFilterConfigSchema).min(1)
+    item_filter: z.array(InfinityFilterConfigSchema).default([]),
+    /** Remove incoming items that are not configured supplies. Omitted in legacy builds. */
+    remove_unfiltered_items: z.boolean().optional()
 });
 
 export type InfinityChestConfig = z.infer<typeof InfinityChestConfigSchema>;
@@ -603,6 +593,13 @@ export const ConfigSchema = z.object({
                 path: ["inserters", index, "source", "drop"],
                 message: "`drop` is the spot an inserter drops on a belt: it belongs on the sink, not on the source"
             });
+        }
+    });
+    config.chests?.forEach((chest, index) => {
+        if (chest.type === ChestType.INFINITY_CHEST && !chest.item_filter.length && !chest.remove_unfiltered_items
+            && config.inserters.some(inserter => inserter.sink.type === TargetType.CHEST && inserter.sink.id === chest.id)) {
+            context.addIssue({ code: "custom", path: ["chests", index, "item_filter"], params: { editable_chest_settings: true },
+                message: `Chest ${chest.id}: enable Remove unfiltered items to use an empty infinity chest as an output, or configure a filter.` });
         }
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it

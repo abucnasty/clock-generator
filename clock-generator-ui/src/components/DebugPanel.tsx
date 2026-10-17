@@ -1,3 +1,5 @@
+import { useTheme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
 import { Clear, ExpandMore } from '@mui/icons-material';
 import {
     Accordion,
@@ -10,7 +12,7 @@ import {
     Paper,
     Typography,
 } from '@mui/material';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { LogMessage, DebugSteps } from 'clock-generator/browser';
 
 interface DebugPanelProps {
@@ -36,6 +38,7 @@ export function DebugPanel({
     onStreamLogsChange,
     onClearLogs,
 }: DebugPanelProps) {
+    const tokens = themeTokens(useTheme());
     const logsEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new logs arrive
@@ -53,20 +56,22 @@ export function DebugPanel({
     const getLogColor = (level: LogMessage['level']): string => {
         switch (level) {
             case 'error':
-                return '#f44336';
+                return tokens.text.error;
             case 'warn':
-                return '#ff9800';
+                return tokens.role.yellow.main;
             case 'debug':
-                return '#9e9e9e';
+                return tokens.text.secondary;
             default:
                 return 'inherit';
         }
     };
 
+    const summaryId = useId();
     return (
-        <Accordion defaultExpanded={false}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="h6">
+        // Logging is opt-in through Developer tools; keep its controls open when enabled.
+        <Accordion defaultExpanded slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId } }}>
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMore />}>
+                <Typography variant="h6" component="span">
                     Debug Output {logs.length > 0 && `(${logs.length} messages)`}
                 </Typography>
             </AccordionSummary>
@@ -105,15 +110,15 @@ export function DebugPanel({
                         ))}
                     </Box>
                     <Typography variant="caption" gutterBottom>
-                        The debug messages will appear in the browser console after pressing "Generate Blueprint"
+                        The debug messages will appear in the browser console the next time you press Generate.
                     </Typography>
                 </Box>
 
                 <Paper
                     variant="outlined"
                     sx={{
-                        bgcolor: '#1e1e1e',
-                        color: '#d4d4d4',
+                        bgcolor: tokens.surface.inset,
+                        color: tokens.text.primary,
                         p: 1,
                         maxHeight: 400,
                         overflow: 'auto',
@@ -127,8 +132,8 @@ export function DebugPanel({
                             position: 'absolute',
                             top: 4,
                             right: 4,
-                            color: '#9e9e9e',
-                            '&:hover': { color: '#fff' },
+                            color: tokens.text.secondary,
+                            '&:hover': { color: tokens.text.primary },
                         }}
                         title="Clear logs"
                     >
@@ -138,9 +143,9 @@ export function DebugPanel({
                     {logs.length === 0 ? (
                         <Typography
                             variant="body2"
-                            sx={{ color: '#9e9e9e', fontStyle: 'italic', py: 2, textAlign: 'center' }}
+                            sx={{ color: tokens.text.secondary, fontStyle: 'italic', py: 2, textAlign: 'center' }}
                         >
-                            No logs yet. Turn on the generator log above and run a simulation.
+                            No logs yet. Turn on the generator log above and press Generate.
                         </Typography>
                     ) : (
                         <Box

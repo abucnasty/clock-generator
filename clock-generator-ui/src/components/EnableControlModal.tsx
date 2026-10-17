@@ -1,4 +1,4 @@
-import { Add, Close, ContentCopy, Delete, Fullscreen, FullscreenExit } from '@mui/icons-material';
+import { Add, Close, ContentCopy, Delete, Fullscreen, FullscreenExit, WarningAmber } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -7,6 +7,7 @@ import {
     DialogTitle,
     FormControl,
     FormControlLabel,
+    FormLabel,
     IconButton,
     InputLabel,
     MenuItem,
@@ -18,13 +19,43 @@ import {
     Typography,
 } from '@mui/material';
 import { EnableControlMode, TargetType } from 'clock-generator/light';
-import { useState } from 'react';
-import type { EnableControlOverride, EnableControlRange, RuleSet } from '../hooks/useConfigForm';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { EnableControlOverride, RuleSet } from '../hooks/useConfigForm';
+import { useGameNames } from '../hooks/useGameNames';
+import { useAnnounce } from '../hooks/useMessages';
+import {
+    buildEnableControlOverride,
+    draftWindowsOf,
+    EMPTY_WINDOW,
+    enableControlDraftChanged,
+    enableControlDraftOf,
+    enableControlOverrideChanged,
+    wholeTicksOf,
+    type DraftWindow,
+} from '../utils/enableControlDraft';
+import { BUTTON_NAMES, removeRangeName, windowFieldName } from '../utils/a11yLabels';
+import { describeEnableRule, ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
+import { entityLabel as labelOf } from '../utils/entityLabel';
+import {
+    blockedSummaryOf,
+    modeFieldId,
+    REPEAT_LABEL,
+    ruleFieldId,
+    rulePeriodOf,
+    ruleProblemsOf,
+    ruleWarningsOf,
+    type RuleProblem,
+} from '../utils/ruleProblems';
+import { blueprintNoteOf, periodLineOf, RULE_COPY, ruleSentenceOf } from '../utils/ruleSentence';
+import { entityKey, plannedWindowsOf, ticksText } from '../utils/ruleTiming';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { RuleSetEditor } from './RuleSetEditor';
 import { createDefaultRuleSet } from './ruleSetUtils';
 import { FullscreenProvider } from './FullscreenContext';
 import { LatchConfigEditor } from './LatchConfigEditor';
 import { QuickTemplateSelect } from './QuickTemplateSelect';
+import { RulePeriodStrip } from './RulePeriodStrip';
+import { useRuleTiming } from './RuleTimingContext';
 
 export interface CopyFromOption {
     label: string;
@@ -37,118 +68,239 @@ interface EnableControlModalProps {
     open: boolean;
     onClose: () => void;
     entityType: 'inserter' | 'drill';
+    /** The entity's id, by which the clock on Results keys its wake windows */
+    entityId: number;
     entityLabel: string;
     currentOverride?: EnableControlOverride;
+    /** A mixed bulk selection can apply its initial Auto draft to every selected row. */
+    applyUnchanged?: boolean;
     onSave: (override: EnableControlOverride | undefined) => void;
     sourceType?: SourceSinkType;
     sinkType?: SourceSinkType;
     availableItems?: string[];
+    /** The inserter's stack size, for the latched template's amount */
+    stackSize?: number;
+    /** The items the inserter moves, which a template's item picker starts on */
+    movedItems?: string[];
     /** Other entities with configured overrides that can be copied from */
     copyFromOptions?: CopyFromOption[];
 }
 
 const MODE_DESCRIPTIONS: Record<EnableControlMode, string> = {
-    [EnableControlMode.AUTO]: 'Use automatic control logic (default behavior)',
-    [EnableControlMode.ALWAYS]: 'Entity is always enabled, with no combinator in the blueprint',
-    [EnableControlMode.NEVER]: 'Entity is never enabled',
-    [EnableControlMode.CLOCKED]: 'Entity is enabled during specified tick ranges',
-    [EnableControlMode.CONDITIONAL]: 'Entity is enabled based on custom conditions',
+    [EnableControlMode.AUTO]: 'The generator decides when it is on (default).',
+    [EnableControlMode.ALWAYS]: 'On all the time, with no combinator in the blueprint.',
+    [EnableControlMode.NEVER]: 'Never switched on.',
+    [EnableControlMode.CLOCKED]: 'On only during the wake windows you set.',
+    [EnableControlMode.CONDITIONAL]: 'On only while your conditions are true.',
 };
+
+const MODES: EnableControlMode[] = [
+    EnableControlMode.AUTO,
+    EnableControlMode.ALWAYS,
+    EnableControlMode.NEVER,
+    EnableControlMode.CLOCKED,
+    EnableControlMode.CONDITIONAL,
+];
+
+const DRILL_NO_CONDITIONAL = "Not available for mining drills: conditions read an inserter's source, destination and hand.";
+const REPEAT_HELPER = (cycleTicks: number | null) =>
+    cycleTicks === null
+        ? 'Leave empty to repeat every crafting cycle.'
+        : `Leave empty to repeat every crafting cycle (${ticksText(cycleTicks)} ticks).`;
+const PLANNED_CAPTION = (label: string, ranges: { start: number; end: number }[]) =>
+    `In the clock on Results, ${label} is on at ${ranges.length === 1 && ranges[0].start === ranges[0].end ? 'tick' : 'ticks'} ${joinRanges(ranges)}.`;
+const NO_PLANNED_CAPTION = (label: string) => `The clock on Results has no wake windows for ${label}.`;
+const COPY_FROM_QUESTION = (label: string, summary: string) => `Replace this rule with ${label}'s (${summary})?`;
+const COPIED = (label: string) => `Rule copied from ${label}.`;
+const TEMPLATE_REPLACED = (name: string) => `Conditions replaced with the template ${name}.`;
+const TEMPLATE_APPLIED = (name: string) => `Template ${name} applied.`;
+
+function joinRanges(ranges: { start: number; end: number }[]): string {
+    const parts = ranges.map((r) => (r.start === r.end ? `${r.start}` : `${r.start}–${r.end}`));
+    return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
 
 // ---- Exported standalone form (no Dialog wrapper) ----
 
-export interface EnableControlFormContentProps {
+/** What the rule form would save, whether that differs from what it was opened with, and what stops it saving */
+export interface EnableControlFormState {
+    override: EnableControlOverride | undefined;
+    changed: boolean;
+    /** In reading order; a host's Save refuses while there is one and focuses the first one's field */
+    problems: RuleProblem[];
+}
+
+interface EnableControlFormContentProps {
     entityType: 'inserter' | 'drill';
+    /** The entity's id, by which the clock on Results keys its wake windows */
+    entityId: number;
     currentOverride?: EnableControlOverride;
-    onSave: (override: EnableControlOverride | undefined) => void;
+    /** Not called when `hideActions` is set, as there is no Save button then */
+    onSave?: (override: EnableControlOverride | undefined) => void;
     onCancel?: () => void;
+    /** Told what the form would save, as it changes; pass a stable function (a state setter) */
+    onDraftChange?: (state: EnableControlFormState) => void;
+    /** Hides Clear rule, Cancel and Save, for a host with a Save of its own */
+    hideActions?: boolean;
     isFullscreen?: boolean;
     sourceType?: SourceSinkType;
     sinkType?: SourceSinkType;
     availableItems?: string[];
+    /** The inserter's stack size, for the latched template's amount */
+    stackSize?: number;
+    /** The items the inserter moves, which a template's item picker starts on */
+    movedItems?: string[];
     copyFromOptions?: CopyFromOption[];
+    /** A host with its own Save raises this when that Save is refused, so that every problem shows */
+    revealProblems?: number;
 }
 
 export function EnableControlFormContent({
     entityType,
+    entityId,
     currentOverride,
     onSave,
     onCancel,
+    onDraftChange,
+    hideActions = false,
     isFullscreen = false,
     sourceType = TargetType.MACHINE,
     sinkType = TargetType.MACHINE,
     availableItems = [],
+    stackSize,
+    movedItems = [],
     copyFromOptions = [],
+    revealProblems = 0,
 }: EnableControlFormContentProps) {
-    // Initialize state from currentOverride
-    const initialMode = currentOverride?.mode ?? EnableControlMode.AUTO;
-    const initialRanges = (currentOverride?.mode === EnableControlMode.CLOCKED && currentOverride?.ranges) 
-        ? currentOverride.ranges 
-        : [{ start: 0, end: 100 }];
-    const initialPeriodDuration = 
-        (currentOverride?.mode === EnableControlMode.CLOCKED ? currentOverride?.period_duration_ticks?.toString() : '') ?? '';
-    const initialRuleSet = (currentOverride?.mode === EnableControlMode.CONDITIONAL && currentOverride?.rule_set) 
-        ? currentOverride.rule_set 
-        : createDefaultRuleSet();
-    const initialLatchEnabled = !!(currentOverride?.mode === EnableControlMode.CONDITIONAL && currentOverride?.latch);
-    const initialReleaseCondition = (currentOverride?.mode === EnableControlMode.CONDITIONAL && currentOverride?.latch?.release) 
-        ? currentOverride.latch.release 
-        : undefined;
+    const idPrefix = useId();
+    const timing = useRuleTiming();
+    const { itemLabel } = useGameNames();
+    const announce = useAnnounce();
+    const entityName = labelOf(entityType, entityId);
+    const planned = plannedWindowsOf(timing, entityKey(entityType, entityId));
 
-    const [mode, setMode] = useState<EnableControlMode>(initialMode);
-    const [ranges, setRanges] = useState<EnableControlRange[]>(initialRanges);
-    const [periodDuration, setPeriodDuration] = useState<string>(initialPeriodDuration);
-    const [ruleSet, setRuleSet] = useState<RuleSet>(initialRuleSet);
-    const [latchEnabled, setLatchEnabled] = useState<boolean>(initialLatchEnabled);
-    const [releaseCondition, setReleaseCondition] = useState<RuleSet | undefined>(initialReleaseCondition);
+    // Initialize state from currentOverride, once: what the form was opened with. A rule that is not Clocked starts its
+    // Clocked fields from the clock's wake windows for this entity, when Results are for this build
+    const [initial] = useState(() =>
+        enableControlDraftOf(currentOverride, planned && timing.periodTicks !== null ? { ranges: planned, periodTicks: timing.periodTicks } : null),
+    );
+
+    const [mode, setMode] = useState<EnableControlMode>(initial.mode);
+    const [ranges, setRanges] = useState<DraftWindow[]>(initial.ranges);
+    const [periodDuration, setPeriodDuration] = useState<string>(initial.periodDuration);
+    const [ruleSet, setRuleSet] = useState<RuleSet>(initial.ruleSet);
+    const [latchEnabled, setLatchEnabled] = useState<boolean>(initial.latchEnabled);
+    const [releaseCondition, setReleaseCondition] = useState<RuleSet | undefined>(initial.releaseCondition);
+    // whether Save was pressed while there were problems: the summary shows beside it until they are fixed
+    const [saveRefused, setSaveRefused] = useState(false);
+    // the rule a "Copy from" choice would copy, while its confirm step is open
+    const [copyCandidate, setCopyCandidate] = useState<CopyFromOption | null>(null);
+    // the element to focus after the next render: a new field, a heading, a select
+    const focusAfterRender = useRef<string | null>(null);
+    const copySelectRef = useRef<HTMLInputElement>(null);
+
+    // the rule the form would save, and whether it differs from the one it was opened with
+    const draft = useMemo(
+        () => ({ mode, ranges, periodDuration, ruleSet, latchEnabled, releaseCondition }),
+        [mode, ranges, periodDuration, ruleSet, latchEnabled, releaseCondition],
+    );
+    const override = useMemo(() => buildEnableControlOverride(draft), [draft]);
+    const changed = useMemo(() => enableControlDraftChanged(draft, initial), [draft, initial]);
+    const problems = useMemo(() => ruleProblemsOf(draft, { entityType, timing, idPrefix }), [draft, entityType, timing, idPrefix]);
+    const problemMap = useMemo(() => new Map(problems.map((p) => [p.fieldId, p])), [problems]);
+    const warnings = useMemo(() => ruleWarningsOf(draft, timing), [draft, timing]);
+
+    // A field's problem shows once the field has lost focus, or after a refused Save, not while it is still untouched
+    // (a new empty window, a new condition). Save refuses and focuses the first problem whether it shows or not.
+    const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
+    const touchAll = (ids: readonly string[]) =>
+        setTouched((previous) => (ids.every((id) => previous.has(id)) ? previous : new Set([...previous, ...ids])));
+    // the host's refused Save (the Diagram dialog's) asks for every problem to show: adjusted while rendering, as React
+    // recommends for state that follows a prop
+    const [revealSeen, setRevealSeen] = useState(revealProblems);
+    if (revealProblems !== revealSeen) {
+        setRevealSeen(revealProblems);
+        touchAll(problems.map((p) => p.fieldId));
+    }
+    const modeId = modeFieldId(idPrefix, EnableControlMode.CONDITIONAL);
+    const shownProblems = useMemo(
+        // the drill's problem is the stored rule's, not a field's: it always shows
+        () => new Map(problems.filter((p) => p.fieldId === modeId || touched.has(p.fieldId)).map((p) => [p.fieldId, p])),
+        [problems, touched, modeId],
+    );
+
+    // the rule in words: a wake window with a problem is left out, and the sentence says so; one with nothing typed in it
+    // is just not there yet
+    const sentence = useMemo(() => {
+        if (mode !== EnableControlMode.CLOCKED || override?.mode !== EnableControlMode.CLOCKED) {
+            return ruleSentenceOf(override, { itemLabel, cycleTicks: timing.cycleTicks });
+        }
+        const withProblem = (i: number) => problemMap.has(ruleFieldId(idPrefix, 'start', i)) || problemMap.has(ruleFieldId(idPrefix, 'end', i));
+        const blank = (window: DraftWindow) => window.start.trim() === '' && window.end.trim() === '';
+        const valid = ranges
+            .filter((_, i) => !withProblem(i))
+            .map((window) => ({ start: wholeTicksOf(window.start)!, end: wholeTicksOf(window.end)! }));
+        return ruleSentenceOf({ ...override, ranges: valid }, {
+            itemLabel,
+            cycleTicks: timing.cycleTicks,
+            invalidWindows: ranges.flatMap((window, i) => (withProblem(i) && !blank(window) ? [i + 1] : [])),
+        });
+    }, [mode, override, ranges, problemMap, idPrefix, itemLabel, timing.cycleTicks]);
+
+    // a layout effect, so that the host knows of a change before it handles the next key (an Esc right after a click)
+    useLayoutEffect(() => {
+        onDraftChange?.({ override, changed, problems });
+    }, [override, changed, problems, onDraftChange]);
+
+    useEffect(() => {
+        const target = focusAfterRender.current;
+        if (target === null) return;
+        focusAfterRender.current = null;
+        if (target === 'copy-select') copySelectRef.current?.focus();
+        else document.getElementById(target)?.focus();
+    });
+
+    const conditionsHeadingId = `${idPrefix}-conditions`;
+    const sentenceId = `${idPrefix}-sentence`;
+    const legendId = `${idPrefix}-legend`;
+    const copyQuestionId = `${idPrefix}-copy-question`;
+    const copyReplaceId = `${idPrefix}-copy-replace`;
 
     const handleAddRange = () => {
-        const lastRange = ranges[ranges.length - 1];
-        const newStart = lastRange ? lastRange.end + 50 : 0;
-        setRanges([...ranges, { start: newStart, end: newStart + 100 }]);
+        focusAfterRender.current = ruleFieldId(idPrefix, 'start', ranges.length);
+        setRanges([...ranges, { ...EMPTY_WINDOW }]);
     };
 
     const handleRemoveRange = (index: number) => {
         if (ranges.length > 1) {
+            // the focus goes to the window before, or to the one that takes this one's place
+            focusAfterRender.current = ruleFieldId(idPrefix, 'start', Math.max(0, index - 1));
             setRanges(ranges.filter((_, i) => i !== index));
         }
     };
 
-    const handleUpdateRange = (index: number, field: 'start' | 'end', value: number) => {
-        setRanges(ranges.map((range, i) => 
-            i === index ? { ...range, [field]: value } : range
-        ));
+    const handleUpdateRange = (index: number, field: 'start' | 'end', value: string) => {
+        setRanges(ranges.map((range, i) => (i === index ? { ...range, [field]: value } : range)));
+    };
+
+    const handleUseClockWindows = () => {
+        if (!planned || timing.periodTicks === null) return;
+        setRanges(draftWindowsOf(planned));
+        setPeriodDuration(`${timing.periodTicks}`);
     };
 
     const handleSave = () => {
-        if (mode === EnableControlMode.AUTO) {
-            onSave(undefined);
-        } else if (mode === EnableControlMode.CLOCKED) {
-            const override: EnableControlOverride = {
-                mode: EnableControlMode.CLOCKED,
-                ranges: ranges.filter(r => r.end > r.start),
-            };
-            if (periodDuration && parseInt(periodDuration) > 0) {
-                override.period_duration_ticks = parseInt(periodDuration);
-            }
-            onSave(override);
-        } else if (mode === EnableControlMode.CONDITIONAL) {
-            const override: EnableControlOverride = {
-                mode: EnableControlMode.CONDITIONAL,
-                rule_set: ruleSet,
-                latch: latchEnabled && releaseCondition ? {
-                    release: releaseCondition,
-                } : undefined,
-            };
-            onSave(override);
-        } else if (mode === EnableControlMode.ALWAYS) {
-            onSave({ mode: EnableControlMode.ALWAYS });
-        } else if (mode === EnableControlMode.NEVER) {
-            onSave({ mode: EnableControlMode.NEVER });
+        if (problems.length > 0) {
+            setSaveRefused(true);
+            touchAll(problems.map((p) => p.fieldId));
+            document.getElementById(problems[0].fieldId)?.focus();
+            announce(blockedSummaryOf(problems));
+            return;
         }
+        onSave?.(override);
     };
 
-    const handleApplyTemplate = (templateRuleSet: RuleSet, templateRelease?: RuleSet) => {
+    const handleApplyTemplate = (templateRuleSet: RuleSet, templateRelease: RuleSet | undefined, templateName: string, replaced: boolean) => {
         setRuleSet(templateRuleSet);
         if (templateRelease) {
             setLatchEnabled(true);
@@ -157,41 +309,66 @@ export function EnableControlFormContent({
             setLatchEnabled(false);
             setReleaseCondition(undefined);
         }
+        focusAfterRender.current = conditionsHeadingId;
+        announce(replaced ? TEMPLATE_REPLACED(templateName) : TEMPLATE_APPLIED(templateName));
     };
 
+    const applyCopy = (option: CopyFromOption) => {
+        const copied = option.override;
+        setMode(copied.mode);
+        if (copied.mode === EnableControlMode.CLOCKED) {
+            setRanges(copied.ranges.length > 0 ? draftWindowsOf(copied.ranges) : [{ ...EMPTY_WINDOW }]);
+            setPeriodDuration(copied.period_duration_ticks?.toString() || '');
+        } else if (copied.mode === EnableControlMode.CONDITIONAL) {
+            setRuleSet(copied.rule_set || createDefaultRuleSet());
+            setLatchEnabled(!!copied.latch);
+            setReleaseCondition(copied.latch?.release);
+        }
+        announce(COPIED(option.label));
+    };
+
+    // a rule of the player's own is replaced only after they confirm; Auto has nothing to lose
     const handleCopyFrom = (option: CopyFromOption) => {
-        const override = option.override;
-        setMode(override.mode);
-        
-        if (override.mode === EnableControlMode.CLOCKED) {
-            setRanges(override.ranges || [{ start: 0, end: 100 }]);
-            setPeriodDuration(override.period_duration_ticks?.toString() || '');
-        } else if (override.mode === EnableControlMode.CONDITIONAL) {
-            setRuleSet(override.rule_set || createDefaultRuleSet());
-            setLatchEnabled(!!override.latch);
-            setReleaseCondition(override.latch?.release);
+        if (mode === EnableControlMode.AUTO) {
+            applyCopy(option);
+        } else {
+            focusAfterRender.current = copyReplaceId;
+            setCopyCandidate(option);
         }
     };
 
     const handleClear = () => {
-        onSave(undefined);
+        onSave?.(undefined);
     };
 
     const hasOverride = currentOverride && currentOverride.mode !== EnableControlMode.AUTO;
+    // a drill can't run a Conditional rule (the engine needs an inserter for it); a stored one stays pickable, with its
+    // problem, so that the player sees what it is
+    const conditionalOff = entityType === 'drill' && currentOverride?.mode !== EnableControlMode.CONDITIONAL;
+    const modeProblem = shownProblems.get(modeId);
+
+    const rulePeriod = mode === EnableControlMode.CLOCKED ? rulePeriodOf(draft, timing) : null;
+    const reference = planned && rulePeriod === timing.periodTicks ? planned : null;
+    const stripWindows = override?.mode === EnableControlMode.CLOCKED
+        ? ranges
+            .map((window, i) => ({ window, i }))
+            .filter(({ i }) => !problemMap.has(ruleFieldId(idPrefix, 'start', i)) && !problemMap.has(ruleFieldId(idPrefix, 'end', i)))
+            .map(({ window }) => ({ start: wholeTicksOf(window.start)!, end: wholeTicksOf(window.end)! }))
+        : [];
+    const repeatProblem = shownProblems.get(ruleFieldId(idPrefix, 'repeat'));
 
     return (
         <FullscreenProvider value={isFullscreen}>
-            <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Configure when this {entityType} should be enabled during the crafting cycle.
-                </Typography>
-
+            {/* a field that loses focus shows its problem from then on (focusout bubbles to here) */}
+            <Box onBlur={(e) => { if (e.target.id) touchAll([e.target.id]); }}>
                 {/* Copy From dropdown */}
                 {copyFromOptions.length > 0 && (
                     <Box sx={{ mb: 3 }}>
-                        <FormControl size="small" sx={{ minWidth: 250 }}>
+                        <FormControl size="small" sx={{ minWidth: 250, maxWidth: '100%' }}>
                             <InputLabel shrink>Copy from another {entityType}</InputLabel>
                             <Select
+                                inputRef={copySelectRef}
+                                inputProps={{ 'aria-label': `Copy from another ${entityType}` }}
                                 value=""
                                 label={`Copy from another ${entityType}`}
                                 onChange={(e) => {
@@ -203,7 +380,7 @@ export function EnableControlFormContent({
                                 startAdornment={<ContentCopy sx={{ mr: 1, color: 'action.active' }} fontSize="small" />}
                                 renderValue={() => (
                                     <Typography variant="body2" color="text.secondary">
-                                        Select to copy configuration...
+                                        Select a rule to copy...
                                     </Typography>
                                 )}
                             >
@@ -212,7 +389,7 @@ export function EnableControlFormContent({
                                         <Box>
                                             <Typography variant="body2">{option.label}</Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                {option.override.mode}
+                                                {ENABLE_MODE_LABELS[option.override.mode]}
                                                 {option.override.mode === EnableControlMode.CONDITIONAL && option.override.latch && ' (latched)'}
                                             </Typography>
                                         </Box>
@@ -220,100 +397,230 @@ export function EnableControlFormContent({
                                 ))}
                             </Select>
                         </FormControl>
+                        {copyCandidate && (
+                            <Box
+                                role="group"
+                                aria-labelledby={copyQuestionId}
+                                data-copy-step=""
+                                sx={{ mt: 1.5, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}
+                            >
+                                <Typography id={copyQuestionId} variant="body2">
+                                    {COPY_FROM_QUESTION(copyCandidate.label, describeEnableRule(copyCandidate.override).summary)}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 1.5 }}>
+                                    <Button
+                                        color="inherit"
+                                        onClick={() => {
+                                            focusAfterRender.current = 'copy-select';
+                                            setCopyCandidate(null);
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        id={copyReplaceId}
+                                        variant="contained"
+                                        color="secondary"
+                                        onClick={() => {
+                                            applyCopy(copyCandidate);
+                                            setCopyCandidate(null);
+                                            focusAfterRender.current = sentenceId;
+                                        }}
+                                    >
+                                        {BUTTON_NAMES.replaceRule}
+                                    </Button>
+                                </Box>
+                            </Box>
+                        )}
                     </Box>
                 )}
 
                 <FormControl component="fieldset" fullWidth>
+                    <FormLabel component="legend" id={legendId} sx={{ mb: 1 }}>
+                        {RULE_COPY.legend(entityType)}
+                    </FormLabel>
                     <RadioGroup
+                        aria-labelledby={legendId}
                         value={mode}
                         onChange={(e) => setMode(e.target.value as EnableControlMode)}
                     >
-                        {([EnableControlMode.AUTO, EnableControlMode.ALWAYS, EnableControlMode.NEVER, EnableControlMode.CLOCKED, EnableControlMode.CONDITIONAL] as EnableControlMode[]).map((m) => (
-                            <FormControlLabel
-                                key={m}
-                                value={m}
-                                control={<Radio />}
-                                label={
-                                    <Box>
-                                        <Typography variant="body1">{m}</Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {MODE_DESCRIPTIONS[m]}
-                                        </Typography>
-                                    </Box>
-                                }
-                                sx={{ mb: 1, alignItems: 'flex-start' }}
-                            />
-                        ))}
+                        {MODES.map((m) => {
+                            const off = m === EnableControlMode.CONDITIONAL && conditionalOff;
+                            const problem = m === EnableControlMode.CONDITIONAL ? modeProblem : undefined;
+                            const captionId = `${idPrefix}-mode-${m}-caption`;
+                            return (
+                                <FormControlLabel
+                                    key={m}
+                                    value={m}
+                                    disabled={off}
+                                    control={
+                                        <Radio
+                                            id={modeFieldId(idPrefix, m)}
+                                            slotProps={{ input: { 'aria-describedby': captionId } }}
+                                        />
+                                    }
+                                    label={
+                                        <Box>
+                                            <Typography variant="body1">{ENABLE_MODE_LABELS[m]}</Typography>
+                                            <Typography
+                                                id={captionId}
+                                                variant="caption"
+                                                color={problem ? 'error' : 'text.secondary'}
+                                                sx={{ display: 'block' }}
+                                            >
+                                                {problem ? problem.text : off ? DRILL_NO_CONDITIONAL : MODE_DESCRIPTIONS[m]}
+                                            </Typography>
+                                        </Box>
+                                    }
+                                    sx={{ mb: 1, alignItems: 'flex-start' }}
+                                />
+                            );
+                        })}
                     </RadioGroup>
                 </FormControl>
 
-                {/* CLOCKED mode configuration */}
+                {/* the rule in words, and what of it reaches the blueprint: plain text, read when reached */}
+                <Box sx={{ mt: 2 }} data-rule-preview="">
+                    <Typography variant="caption" color="text.secondary" component="div">{RULE_COPY.sentenceLabel}</Typography>
+                    <Typography variant="body1" id={sentenceId} tabIndex={-1} data-rule-sentence="" sx={{ outline: 'none' }}>
+                        {sentence}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1 }}>{RULE_COPY.blueprintLabel}</Typography>
+                    <Typography variant="body2" color="text.secondary" data-rule-blueprint="">
+                        {blueprintNoteOf(mode, entityType)}
+                    </Typography>
+                </Box>
+
+                {/* CLOCKED mode fields */}
                 {mode === EnableControlMode.CLOCKED && (
-                    <Box sx={{ mt: 3, pl: 4 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                            Enable Ranges
+                    <Box sx={{ mt: 3, pl: { xs: 0, sm: 4 } }}>
+                        <Typography variant="subtitle2" component="h3" sx={{ mb: 1 }}>
+                            Wake windows
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} data-rule-period="">
+                            {periodLineOf(timing)}
                         </Typography>
 
-                        {ranges.map((range, index) => (
-                            <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 1 }}>
-                                <TextField
-                                    label="Start Tick"
-                                    type="number"
-                                    value={range.start}
-                                    onChange={(e) => handleUpdateRange(index, 'start', parseInt(e.target.value) || 0)}
-                                    size="small"
-                                    sx={{ width: 120 }}
-                                    inputProps={{ min: 0 }}
-                                />
-                                <Typography variant="body2" color="text.secondary">to</Typography>
-                                <TextField
-                                    label="End Tick"
-                                    type="number"
-                                    value={range.end}
-                                    onChange={(e) => handleUpdateRange(index, 'end', parseInt(e.target.value) || 0)}
-                                    size="small"
-                                    sx={{ width: 120 }}
-                                    inputProps={{ min: 1 }}
-                                />
-                                <IconButton
-                                    onClick={() => handleRemoveRange(index)}
-                                    disabled={ranges.length <= 1}
-                                    size="small"
-                                    color="error"
-                                >
-                                    <Delete fontSize="small" />
-                                </IconButton>
-                            </Box>
-                        ))}
+                        {ranges.map((range, index) => {
+                            const n = index + 1;
+                            const startId = ruleFieldId(idPrefix, 'start', index);
+                            const endId = ruleFieldId(idPrefix, 'end', index);
+                            const startProblem = shownProblems.get(startId);
+                            const endProblem = shownProblems.get(endId);
+                            // narrower fields at phone width, and the End field keeps its remove button beside it
+                            const fieldSx = { width: { xs: 104, sm: 130 } };
+                            return (
+                                <Box key={index} sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'flex-start', flexWrap: 'wrap', mb: 1.5 }}>
+                                    <TextField
+                                        id={startId}
+                                        label="Start tick"
+                                        type="number"
+                                        value={range.start}
+                                        onChange={(e) => handleUpdateRange(index, 'start', e.target.value)}
+                                        size="small"
+                                        sx={fieldSx}
+                                        error={startProblem !== undefined}
+                                        helperText={startProblem?.text}
+                                        slotProps={{ htmlInput: { min: 0, inputMode: 'numeric', 'aria-label': windowFieldName('start', n) } }}
+                                    />
+                                    <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>to</Typography>
+                                    <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 1.5 }, alignItems: 'flex-start' }}>
+                                        <TextField
+                                            id={endId}
+                                            label="End tick"
+                                            type="number"
+                                            value={range.end}
+                                            onChange={(e) => handleUpdateRange(index, 'end', e.target.value)}
+                                            size="small"
+                                            sx={fieldSx}
+                                            error={endProblem !== undefined}
+                                            helperText={endProblem?.text}
+                                            slotProps={{ htmlInput: { min: 0, inputMode: 'numeric', 'aria-label': windowFieldName('end', n) } }}
+                                        />
+                                        <IconButton
+                                            onClick={() => handleRemoveRange(index)}
+                                            disabled={ranges.length <= 1}
+                                            size="small"
+                                            color="error"
+                                            aria-label={removeRangeName(n)}
+                                            sx={{ mt: 0.5 }}
+                                        >
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+                            );
+                        })}
 
-                        <Button startIcon={<Add />} onClick={handleAddRange} size="small" sx={{ mt: 1 }}>
-                            Add Range
+                        <Button color="inherit" startIcon={<Add />} onClick={handleAddRange} size="small">
+                            Add wake window
                         </Button>
+
+                        {planned ? (
+                            <Box sx={{ mt: 2 }}>
+                                <Button variant="outlined" color="inherit" size="small" onClick={handleUseClockWindows}>
+                                    {BUTTON_NAMES.useClockWindows}
+                                </Button>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }} data-rule-planned="">
+                                    {PLANNED_CAPTION(entityName, planned)}
+                                </Typography>
+                            </Box>
+                        ) : timing.from === 'results' && timing.periodTicks !== null && Number.isInteger(timing.periodTicks) ? (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }} data-rule-planned="">
+                                {NO_PLANNED_CAPTION(entityName)}
+                            </Typography>
+                        ) : null}
+
+                        {rulePeriod !== null && (
+                            <RulePeriodStrip periodTicks={rulePeriod} windows={stripWindows} reference={reference} />
+                        )}
 
                         <Box sx={{ mt: 3 }}>
                             <TextField
-                                label="Period Duration (ticks)"
+                                id={ruleFieldId(idPrefix, 'repeat')}
+                                label={REPEAT_LABEL}
                                 type="number"
                                 value={periodDuration}
                                 onChange={(e) => setPeriodDuration(e.target.value)}
                                 size="small"
-                                sx={{ width: 200 }}
-                                inputProps={{ min: 1 }}
-                                helperText="Optional. Defaults to crafting cycle duration."
+                                sx={{ width: 240, maxWidth: '100%' }}
+                                error={repeatProblem !== undefined}
+                                helperText={repeatProblem?.text ?? REPEAT_HELPER(timing.cycleTicks)}
+                                slotProps={{ htmlInput: { min: 1, inputMode: 'numeric' } }}
                             />
+                            {warnings.map((warning) => (
+                                <Box key={warning} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 1 }} data-rule-warning="">
+                                    <WarningAmber fontSize="small" sx={{ color: 'warning.main' }} aria-hidden />
+                                    <Typography variant="body2" color="warning.main">{warning}</Typography>
+                                </Box>
+                            ))}
                         </Box>
                     </Box>
                 )}
 
-                {/* CONDITIONAL mode configuration */}
+                {/* CONDITIONAL mode fields */}
                 {mode === EnableControlMode.CONDITIONAL && (
-                    <Box sx={{ mt: 3, pl: 2 }}>
-                        <QuickTemplateSelect
+                    <Box sx={{ mt: 3, pl: { xs: 0, sm: 2 } }}>
+                        {/* the templates read an inserter's ends; a drill's stored Conditional rule gets none */}
+                        {entityType === 'inserter' && <QuickTemplateSelect
+                            sourceType={sourceType}
+                            sinkType={sinkType}
+                            movedItems={movedItems}
+                            availableItems={availableItems}
+                            stackSize={stackSize}
+                            ruleSet={ruleSet}
+                            latchEnabled={latchEnabled}
+                            idPrefix={idPrefix}
                             onApply={handleApplyTemplate}
-                            defaultItemName={availableItems[0] || ''}
-                        />
+                        />}
 
-                        <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                        <Typography
+                            variant="subtitle2"
+                            component="h3"
+                            id={conditionsHeadingId}
+                            tabIndex={-1}
+                            sx={{ mb: 2, outline: 'none' }}
+                        >
                             Conditions
                         </Typography>
 
@@ -323,6 +630,9 @@ export function EnableControlFormContent({
                             availableItems={availableItems}
                             sourceType={sourceType}
                             sinkType={sinkType}
+                            path="rule"
+                            idPrefix={idPrefix}
+                            problems={shownProblems}
                         />
 
                         <LatchConfigEditor
@@ -333,26 +643,36 @@ export function EnableControlFormContent({
                             availableItems={availableItems}
                             sourceType={sourceType}
                             sinkType={sinkType}
+                            entityType={entityType}
+                            idPrefix={idPrefix}
+                            problems={shownProblems}
                         />
                     </Box>
                 )}
 
                 {/* Action buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 3, mt: 1 }}>
-                    <Box>
-                        {hasOverride && (
-                            <Button onClick={handleClear} color="error">
-                                Clear Override
+                {!hideActions && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, pt: 3, mt: 1 }}>
+                        <Box>
+                            {hasOverride && (
+                                <Button onClick={handleClear} color="error">
+                                    Clear rule
+                                </Button>
+                            )}
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {saveRefused && problems.length > 0 && (
+                                <Typography variant="body2" color="error" data-rule-blocked="">
+                                    {blockedSummaryOf(problems)}
+                                </Typography>
+                            )}
+                            {onCancel && <Button onClick={onCancel} color="inherit">Cancel</Button>}
+                            <Button onClick={handleSave} variant="contained" color="secondary">
+                                Save
                             </Button>
-                        )}
+                        </Box>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        {onCancel && <Button onClick={onCancel}>Cancel</Button>}
-                        <Button onClick={handleSave} variant="contained" color="primary">
-                            Save
-                        </Button>
-                    </Box>
-                </Box>
+                )}
             </Box>
         </FullscreenProvider>
     );
@@ -363,54 +683,100 @@ export function EnableControlFormContent({
 function EnableControlModalContent({
     onClose,
     entityType,
+    entityId,
     entityLabel,
     currentOverride,
+    applyUnchanged = false,
     onSave,
     sourceType,
     sinkType,
     availableItems,
+    stackSize,
+    movedItems,
     copyFromOptions,
 }: Omit<EnableControlModalProps, 'open'>) {
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [formState, setFormState] = useState<EnableControlFormState | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+
+    // Esc and the X ask first when the rule was changed; Cancel is an explicit discard. A Save that changes nothing
+    // closes like Cancel, so it does not take ownership of a rule Exclude from LCM forced (`_forced_always`). A mixed
+    // bulk selection explicitly applies its initial Auto draft through applyUnchanged.
+    const requestClose = () => {
+        if (formState?.changed) {
+            setConfirmOpen(true);
+        } else {
+            onClose();
+        }
+    };
 
     return (
-        <Dialog
-            open
-            onClose={onClose}
-            maxWidth={isFullscreen ? false : 'md'}
-            fullWidth
-            fullScreen={isFullscreen}
-        >
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                    <Typography variant="h6">Enable Control Override</Typography>
-                    <Typography variant="body2" color="text.secondary">{entityLabel}</Typography>
-                </Box>
-                <Box>
-                    <Tooltip title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
-                        <IconButton onClick={() => setIsFullscreen(!isFullscreen)}>
-                            {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+        <>
+            <Dialog
+                open
+                // it edits an entity by its place in the list, which an Undo could move: it withdraws the offer
+                data-edits-build=""
+                // a click outside does nothing, so a half-built rule is not lost to a stray click
+                onClose={(_event, reason) => {
+                    if (reason === 'backdropClick') return;
+                    requestClose();
+                }}
+                maxWidth={isFullscreen ? false : 'md'}
+                fullWidth
+                fullScreen={isFullscreen}
+                // named by the heading and the entity, not by the title bar with its buttons: "Enable rule Inserter 1"
+                aria-labelledby="enable-control-title enable-control-entity"
+            >
+                <DialogTitle component="div" id="enable-control-bar" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                        <Typography variant="h6" component="h2" id="enable-control-title">Enable rule</Typography>
+                        <Typography variant="body2" color="text.secondary" id="enable-control-entity">{entityLabel}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexShrink: 0 }}>
+                        <Tooltip title={isFullscreen ? BUTTON_NAMES.exitFullscreen : BUTTON_NAMES.fullscreen}>
+                            <IconButton
+                                onClick={() => setIsFullscreen(!isFullscreen)}
+                                aria-label={isFullscreen ? BUTTON_NAMES.exitFullscreen : BUTTON_NAMES.fullscreen}
+                            >
+                                {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                            </IconButton>
+                        </Tooltip>
+                        <IconButton onClick={requestClose} edge="end" aria-label={BUTTON_NAMES.close}>
+                            <Close />
                         </IconButton>
-                    </Tooltip>
-                    <IconButton onClick={onClose} edge="end">
-                        <Close />
-                    </IconButton>
-                </Box>
-            </DialogTitle>
-            <DialogContent dividers>
-                <EnableControlFormContent
-                    entityType={entityType}
-                    currentOverride={currentOverride}
-                    onSave={(override) => { onSave(override); onClose(); }}
-                    onCancel={onClose}
-                    isFullscreen={isFullscreen}
-                    sourceType={sourceType}
-                    sinkType={sinkType}
-                    availableItems={availableItems}
-                    copyFromOptions={copyFromOptions}
-                />
-            </DialogContent>
-        </Dialog>
+                    </Box>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <EnableControlFormContent
+                        entityType={entityType}
+                        entityId={entityId}
+                        currentOverride={currentOverride}
+                        onSave={(override) => {
+                            if (applyUnchanged || enableControlOverrideChanged(override, currentOverride)) onSave(override);
+                            onClose();
+                        }}
+                        onCancel={onClose}
+                        onDraftChange={setFormState}
+                        isFullscreen={isFullscreen}
+                        sourceType={sourceType}
+                        sinkType={sinkType}
+                        availableItems={availableItems}
+                        stackSize={stackSize}
+                        movedItems={movedItems}
+                        copyFromOptions={copyFromOptions}
+                    />
+                </DialogContent>
+            </Dialog>
+            <DiscardChangesDialog
+                open={confirmOpen}
+                title={`Discard changes to ${entityLabel}'s rule?`}
+                onKeepEditing={() => setConfirmOpen(false)}
+                onDiscard={() => {
+                    setConfirmOpen(false);
+                    onClose();
+                }}
+            />
+        </>
     );
 }
 

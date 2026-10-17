@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     DndContext,
     closestCenter,
-    KeyboardSensor,
     PointerSensor,
     useSensor,
     useSensors,
@@ -10,7 +9,6 @@ import {
 } from '@dnd-kit/core';
 import {
     SortableContext,
-    sortableKeyboardCoordinates,
     arrayMove,
     useSortable,
     verticalListSortingStrategy,
@@ -18,6 +16,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { DragIndicator } from '@mui/icons-material';
 import { Box, Chip } from '@mui/material';
+import type { Announcements } from '@dnd-kit/core';
+
+const SILENT: Announcements = {
+    onDragStart: () => undefined, onDragOver: () => undefined, onDragEnd: () => undefined, onDragCancel: () => undefined,
+};
 
 interface SortableListProps {
     /** Stable UUID keys for each item, in current order. */
@@ -31,7 +34,6 @@ interface SortableListProps {
 export function SortableList({ itemKeys, onReorder, children }: SortableListProps) {
     const sensors = useSensors(
         useSensor(PointerSensor),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     );
 
     // Local ordered copy — updated synchronously on drag end so dnd-kit can
@@ -39,15 +41,10 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
     const [localItemKeys, setLocalItemKeys] = useState(itemKeys);
     const [prevItemKeys, setPrevItemKeys] = useState(itemKeys);
 
-    // Sync when items are added or removed (the UUID set changes), while rendering
-    // rather than in an effect, so the stale order is never committed.
-    // After a plain reorder the parent's UUID set is identical to our local
-    // set (stable keys move with their entities), so no spurious sync occurs.
+    // Moves and Undo also change the order from outside. Never commit stale sortable positions.
     if (itemKeys !== prevItemKeys) {
         setPrevItemKeys(itemKeys);
-        const localSet = new Set(localItemKeys);
-        const same = localItemKeys.length === itemKeys.length && itemKeys.every((k) => localSet.has(k));
-        if (!same) setLocalItemKeys(itemKeys);
+        if (itemKeys.length !== localItemKeys.length || itemKeys.some((key, i) => key !== localItemKeys[i])) setLocalItemKeys(itemKeys);
     }
 
     function handleDragEnd(event: DragEndEvent) {
@@ -62,7 +59,12 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
     }
 
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            accessibility={{ announcements: SILENT, restoreFocus: false }}
+        >
             <SortableContext items={localItemKeys} strategy={verticalListSortingStrategy}>
                 {children}
             </SortableContext>
@@ -73,14 +75,15 @@ export function SortableList({ itemKeys, onReorder, children }: SortableListProp
 interface SortableItemProps {
     /** Stable UUID — used as the dnd-kit sortable ID. */
     stableKey: string;
-    /** The 1-based display position shown in the #N chip. */
-    displayId: number;
+    /** The entity's name shown in the row's chip, e.g. "Inserter 3". */
+    label: string;
+    displayLabel?: React.ReactNode;
     /** Render prop: receives the composed drag-handle+ID element to place inside the row. */
     children: (dragHandle: React.ReactNode) => React.ReactNode;
 }
 
 /** Wraps a single row with sortable drag behaviour and injects a drag handle. */
-export function SortableItem({ stableKey, displayId, children }: SortableItemProps) {
+export function SortableItem({ stableKey, label, displayLabel, children }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -98,7 +101,7 @@ export function SortableItem({ stableKey, displayId, children }: SortableItemPro
         zIndex: isDragging ? 1 : undefined,
     };
 
-    const dragHandle = (
+    const dragHandle = useMemo(() => (
         <Box
             sx={{
                 display: 'flex',
@@ -110,29 +113,41 @@ export function SortableItem({ stableKey, displayId, children }: SortableItemPro
             <Box
                 {...attributes}
                 {...listeners}
+                tabIndex={-1}
+                aria-hidden="true"
+                data-row-drag=""
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    color: 'text.disabled',
+                    justifyContent: 'center',
+                    // a target of at least 24px, so a finger or a pointer can find it (WCAG 2.5.8)
+                    width: 28,
+                    height: 28,
+                    color: 'text.secondary',
                     cursor: 'grab',
                     touchAction: 'none',
                     '&:active': { cursor: 'grabbing' },
-                    '&:hover': { color: 'text.secondary' },
+                    '&:hover': { color: 'text.primary' },
                 }}
             >
                 <DragIndicator fontSize="small" />
             </Box>
+            {/* at least as wide as "Inserter 99", so the rows of a card line up */}
             <Chip
-                label={`#${displayId}`}
+                label={displayLabel ?? label}
+                aria-label={label}
+                title={label}
                 size="small"
-                sx={{ minWidth: 38, fontSize: '0.7rem', height: 22, pointerEvents: 'none' }}
+                sx={{ minWidth: displayLabel ? 52 : 72, height: displayLabel ? 40 : undefined, bgcolor: displayLabel ? 'transparent' : undefined, '& .MuiChip-label': displayLabel ? { px: 0 } : undefined, fontSize: '0.7rem', pointerEvents: 'none' }}
             />
         </Box>
-    );
+    ), [attributes, listeners, label, displayLabel]);
+    // Sortable context updates positions for the whole list; unchanged row contents can stay as they are.
+    const content = useMemo(() => children(dragHandle), [children, dragHandle]);
 
     return (
-        <div ref={setNodeRef} style={style}>
-            {children(dragHandle)}
+        <div ref={setNodeRef} style={style} data-row-key={stableKey}>
+            {content}
         </div>
     );
 }

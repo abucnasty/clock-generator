@@ -1,9 +1,22 @@
 import { describe, expect, it } from "vitest";
+import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
     assertRecordableTicks, buildPartsMissingFromConfig, clockOfBlueprintString, clockPeriodTicks, matchBuiltInserters, MAX_RECORDED_TICKS,
-    missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledInserterIds,
+    factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledInserterIds,
 } from "./factorio-harness";
+
+describe("factorioDataDir", () => {
+    it("finds data inside the app bundle for a macOS executable", () => {
+        expect(factorioDataDir(path.resolve("Factorio.app", "Contents", "MacOS", "factorio")))
+            .toBe(path.resolve("Factorio.app", "Contents", "data"));
+    });
+
+    it.each(["factorio", "factorio.exe"])("finds data beside bin for a standalone %s executable", executable => {
+        expect(factorioDataDir(path.resolve("factorio", "bin", "x64", executable)))
+            .toBe(path.resolve("factorio", "data"));
+    });
+});
 
 describe("clockOfBlueprintString", () => {
     const counting = { decider_conditions: { conditions: [{ comparator: "<", constant: 1728 }], else_outputs: [{ constant: 1 }] } };

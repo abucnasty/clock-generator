@@ -1,17 +1,16 @@
-import { Close, Fullscreen, FilterList, Sort, Visibility, Palette } from '@mui/icons-material';
+import { BeltChartFrame, ChartSwatch, TimelineAxis } from './BeltChart';
+import { canvasChartFill, statusPattern, type ChartPattern } from '../theme/beltCharts';
+import { axisTicks } from '../utils/wakeWindows';
+import { FilterList, Sort, Visibility, Palette } from '@mui/icons-material';
 import {
     Box,
     Button,
     Checkbox,
-    Dialog,
-    DialogContent,
-    DialogTitle,
     Divider,
     FormControlLabel,
     IconButton,
     Menu,
     MenuItem,
-    Paper,
     ToggleButton,
     ToggleButtonGroup,
     Tooltip,
@@ -27,30 +26,35 @@ import type {
     StatusCategory,
 } from 'clock-generator/browser';
 import { statusToCategory } from 'clock-generator/light';
-import { FactorioIcon } from './FactorioIcon';
+import { useGameNames } from '../hooks/useGameNames';
+import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
+import { MIN_MARK_PX, markSpan, paintLayer, snapSpan } from '../utils/timelineGeometry';
+import { HistoricalTimelineRow } from './HistoricalTimelineRow';
+import { CHART_MIN_WIDTH, ScrollX } from './ScrollX';
 import {
-    getStatusColor,
-    getCategoryColor,
+    chartColorsFor,
     getStatusLabel,
-    getFactorioStateColor,
     getFactorioStateLabel,
     getCategoryLabel,
     formatTransitionReason,
-    CATEGORY_COLORS,
-    INSERTER_STATUS_COLORS,
-    MACHINE_STATUS_COLORS,
-    DRILL_STATUS_COLORS,
+    factorioStatesIn,
 } from './colors';
 import { sortByRelationship, sortByType } from './topological-sort';
+import type { TimelineViewContext } from '../utils/buildViewContext';
+
+/** Plot hues stay fixed on black, while labels and controls use the app theme. */
+const PLOT_COLORS = chartColorsFor('dark');
 
 interface StateTransitionTimelineProps {
+    options: TimelineViewContext;
+    onOptionsChange(options: TimelineViewContext): void;
     stateTransitionHistory: SerializableStateTransitionHistory;
     /** Decider windows in the blueprint per entity id, drawn as a band along the top of each row */
     clockWindows?: SerializableClockWindows;
+    fullscreen?: boolean;
 }
 
-const CLOCK_WINDOW_COLOR = '#ffffff';
-const CLOCK_WINDOW_LABEL = 'Clock window (decider on; the inserter reacts 2 ticks later)';
+const CLOCK_WINDOW_LABEL = 'Wake window (decider on; the inserter reacts 2 ticks later)';
 
 /** The thin strip under each row that shows the state the entity would show in Factorio */
 const FACTORIO_STATE_STRIP_HEIGHT = 6;
@@ -64,19 +68,19 @@ interface EntityFilters {
     drill: boolean;
 }
 
-// All possible detailed statuses by entity type
-const ALL_INSERTER_STATUSES = Object.keys(INSERTER_STATUS_COLORS);
-const ALL_MACHINE_STATUSES = Object.keys(MACHINE_STATUS_COLORS);
-const ALL_DRILL_STATUSES = Object.keys(DRILL_STATUS_COLORS);
+type EntityKind = SerializableEntityStateTransitions['entity_type'];
+const ENTITY_GROUPS: { kind: EntityKind; name: string; title: string; filterLabel: string; colors: Record<string, string> }[] = [
+    { kind: 'machine', name: 'Machine', title: 'Machines', filterLabel: 'Machines', colors: PLOT_COLORS.machine },
+    { kind: 'inserter', name: 'Inserter', title: 'Inserters', filterLabel: 'Inserters', colors: PLOT_COLORS.inserter },
+    { kind: 'drill', name: 'Drill', title: 'Mining Drills', filterLabel: 'Drills', colors: PLOT_COLORS.drill },
+];
 const ALL_CATEGORIES: StatusCategory[] = ['ACTIVE', 'WAITING', 'BLOCKED', 'DISABLED', 'IDLE'];
+type StatusFilters = Record<EntityKind | 'categories', Set<string>>;
 
-interface StatusFilters {
-    // Detailed mode filters
-    inserterStatuses: Set<string>;
-    machineStatuses: Set<string>;
-    drillStatuses: Set<string>;
-    // Simplified mode filters
-    categories: Set<StatusCategory>;
+function statusVisible(entityType: EntityKind, status: string, viewMode: ViewMode, filters: StatusFilters): boolean {
+    return viewMode === 'simplified'
+        ? filters.categories.has(statusToCategory(entityType, status))
+        : filters[entityType].has(status);
 }
 
 interface TimelineBarProps {
@@ -86,18 +90,31 @@ interface TimelineBarProps {
     entityType: 'inserter' | 'machine' | 'drill';
     viewMode: ViewMode;
     isFiltered: (transition: SerializableStateTransition) => boolean;
+    /** The row's name, for the canvas's accessible name */
+    label: string;
 }
 
 /** Drawn on a canvas: an element per transition does not scale to tens of thousands of transitions */
-function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered }: TimelineBarProps) {
+function TimelineBar({ transitions, totalDuration, height, entityType, viewMode, isFiltered, label }: TimelineBarProps) {
+    const { status: getStatusColor, categoryColor: getCategoryColor, clock: CLOCK_WINDOW_COLOR } = PLOT_COLORS;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableStateTransition | null>(null);
     const sorted = useMemo(() => [...transitions].sort((a, b) => a.tick - b.tick), [transitions]);
 
+    // Wide marks first, then narrow ones, Blocked last so a narrow Blocked mark is never the one covered.
+    // Built once per width, not per hover: a build can have tens of thousands of transitions.
+    const marks = useMemo(() => sorted
+        .map(transition => {
+            const span = markSpan(transition.tick, transition.duration_ticks, totalDuration, width);
+            const layer = paintLayer(span, statusToCategory(entityType, transition.to_status) === 'BLOCKED');
+            return { transition, span, layer };
+        })
+        .sort((a, b) => a.layer - b.layer), [sorted, totalDuration, width, entityType]);
+
     const colorOf = useCallback((transition: SerializableStateTransition) => viewMode === 'detailed'
         ? getStatusColor(entityType, transition.to_status)
-        : getCategoryColor(statusToCategory(entityType, transition.to_status)), [entityType, viewMode]);
+        : getCategoryColor(statusToCategory(entityType, transition.to_status)), [entityType, viewMode, getStatusColor, getCategoryColor]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -120,24 +137,26 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         canvas.height = height * ratio;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
         context.clearRect(0, 0, width, height);
-        for (const transition of sorted) {
-            const x = (transition.tick / totalDuration) * width;
-            const w = Math.max((transition.duration_ticks / totalDuration) * width, 1);
+        const fills = new Map<string, string | CanvasPattern>();
+        for (const { transition, span } of marks) {
             context.globalAlpha = isFiltered(transition) ? 0.15 : 1;
-            context.fillStyle = colorOf(transition);
-            context.fillRect(x, 0, w, height);
+            const color = colorOf(transition);
+            const pattern = statusPattern(statusToCategory(entityType, transition.to_status));
+            const key = `${color}:${pattern}`;
+            if (!fills.has(key)) fills.set(key, canvasChartFill(context, { color, pattern }));
+            context.fillStyle = fills.get(key)!;
+            // whole device pixels, so a 3px mark is three solid pixels and not two solid and two half-covered
+            const snapped = snapSpan(span, ratio);
+            context.fillRect(snapped.x, 0, snapped.width, height);
         }
         if (hovered) {
+            const span = markSpan(hovered.tick, hovered.duration_ticks, totalDuration, width);
             context.globalAlpha = 1;
-            context.strokeStyle = '#ffffff';
-            context.strokeRect(
-                (hovered.tick / totalDuration) * width + 0.5,
-                0.5,
-                Math.max((hovered.duration_ticks / totalDuration) * width, 1) - 1,
-                height - 1,
-            );
+            context.strokeStyle = CLOCK_WINDOW_COLOR;
+            const snapped = snapSpan(span, ratio);
+            context.strokeRect(snapped.x + 0.5, 0.5, snapped.width - 1, height - 1);
         }
-    }, [sorted, totalDuration, width, height, colorOf, isFiltered, hovered]);
+    }, [marks, totalDuration, width, height, colorOf, isFiltered, hovered, CLOCK_WINDOW_COLOR, entityType]);
 
     const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
         const rect = event.currentTarget.getBoundingClientRect();
@@ -154,8 +173,8 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
                 high = mid - 1;
             }
         }
-        // narrow transitions are drawn at least a pixel wide
-        const min_ticks = totalDuration / Math.max(rect.width, 1);
+        // narrow transitions are drawn at least MIN_MARK_PX wide
+        const min_ticks = (MIN_MARK_PX / Math.max(rect.width, 1)) * totalDuration;
         const hit = found && tick <= found.tick + Math.max(found.duration_ticks, min_ticks) ? found : null;
         if (hit !== hovered) {
             setHovered(hit);
@@ -191,6 +210,8 @@ function TimelineBar({ transitions, totalDuration, height, entityType, viewMode,
         >
             <canvas
                 ref={canvasRef}
+                role="img"
+                aria-label={CHART_NAMES.stateTimeline(label, transitions.length)}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setHovered(null)}
                 style={{ position: 'absolute', left: 0, top: 2, width: '100%', height, cursor: 'pointer' }}
@@ -203,14 +224,24 @@ interface FactorioStateStripProps {
     states: SerializableFactorioState[];
     totalDuration: number;
     height: number;
+    /** The row's name, for the canvas's accessible name */
+    label: string;
 }
 
 /** The state the entity would show in Factorio, under the simulator's phases: the shared language with a recording */
-function FactorioStateStrip({ states, totalDuration, height }: FactorioStateStripProps) {
+function FactorioStateStrip({ states, totalDuration, height, label }: FactorioStateStripProps) {
+    const { factorio: getFactorioStateColor } = PLOT_COLORS;
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [width, setWidth] = useState(0);
     const [hovered, setHovered] = useState<SerializableFactorioState | null>(null);
     const sorted = useMemo(() => [...states].sort((a, b) => a.tick - b.tick), [states]);
+    // wide marks first, then the narrow ones, so a narrow mark is not buried under a wide neighbour
+    const marks = useMemo(() => sorted
+        .map(state => {
+            const span = markSpan(state.tick, state.duration_ticks, totalDuration, width);
+            return { state, span, layer: paintLayer(span, false) };
+        })
+        .sort((a, b) => a.layer - b.layer), [sorted, totalDuration, width]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -233,13 +264,12 @@ function FactorioStateStrip({ states, totalDuration, height }: FactorioStateStri
         canvas.height = height * ratio;
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
         context.clearRect(0, 0, width, height);
-        for (const state of sorted) {
-            const x = (state.tick / totalDuration) * width;
-            const w = Math.max((state.duration_ticks / totalDuration) * width, 1);
+        for (const { state, span } of marks) {
             context.fillStyle = getFactorioStateColor(state.state);
-            context.fillRect(x, 0, w, height);
+            const snapped = snapSpan(span, ratio);
+            context.fillRect(snapped.x, 0, snapped.width, height);
         }
-    }, [sorted, totalDuration, width, height]);
+    }, [marks, width, height, getFactorioStateColor]);
 
     const stateAt = useCallback((clientX: number): SerializableFactorioState | null => {
         const canvas = canvasRef.current;
@@ -267,6 +297,8 @@ function FactorioStateStrip({ states, totalDuration, height }: FactorioStateStri
         >
             <canvas
                 ref={canvasRef}
+                role="img"
+                aria-label={CHART_NAMES.factorioStrip(label, states.length)}
                 style={{ width: '100%', height, display: 'block' }}
                 onMouseMove={event => setHovered(stateAt(event.clientX))}
                 onMouseLeave={() => setHovered(null)}
@@ -285,146 +317,51 @@ interface EntityRowProps {
 }
 
 function EntityRow({ entity, totalDuration, rowHeight, viewMode, statusFilters, clockWindows = [] }: EntityRowProps) {
-    // Determine if a transition is filtered out
-    const isTransitionFiltered = (transition: SerializableStateTransition): boolean => {
-        if (viewMode === 'simplified') {
-            const category = statusToCategory(entity.entity_type, transition.to_status);
-            return !statusFilters.categories.has(category);
-        } else {
-            // Detailed mode
-            if (entity.entity_type === 'inserter') {
-                return !statusFilters.inserterStatuses.has(transition.to_status);
-            } else if (entity.entity_type === 'machine') {
-                return !statusFilters.machineStatuses.has(transition.to_status);
-            } else {
-                return !statusFilters.drillStatuses.has(transition.to_status);
-            }
-        }
-    };
+    const { clock: CLOCK_WINDOW_COLOR } = PLOT_COLORS;
+    const { nameIdsIn } = useGameNames();
+    const isTransitionFiltered = (transition: SerializableStateTransition) =>
+        !statusVisible(entity.entity_type, transition.to_status, viewMode, statusFilters);
 
     const totalTransitionCount = entity.transitions.length;
     const visibleTransitionCount = entity.transitions.filter(t => !isTransitionFiltered(t)).length;
 
-    // Get icon name based on entity type
-    const iconName = entity.entity_type === 'inserter' 
-        ? 'stack-inserter' 
-        : entity.entity_type === 'drill'
-        ? 'electric-mining-drill'
-        : 'assembling-machine-3';
-
-    // Get entity type color
-    const entityTypeColor = entity.entity_type === 'machine' 
-        ? 'success.main' 
-        : entity.entity_type === 'drill'
-        ? 'warning.main'
-        : 'info.main';
-
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: rowHeight, mb: 0.5 }}>
-            {/* Entity label */}
-            <Box sx={{ width: 200, flexShrink: 0, pr: 1 }}>
-                <Tooltip
-                    title={
-                        <Box>
-                            <Typography variant="body2">{entity.label}</Typography>
-                            {entity.source && (
-                                <Typography variant="caption" display="block">
-                                    From: {entity.source.label}
-                                </Typography>
-                            )}
-                            {entity.sink && (
-                                <Typography variant="caption" display="block">
-                                    To: {entity.sink.label}
-                                </Typography>
-                            )}
-                            <Typography variant="caption" display="block">
-                                Transitions: {visibleTransitionCount}/{totalTransitionCount}
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                                Initial: {getStatusLabel(entity.initial_status)}
-                            </Typography>
-                        </Box>
-                    }
-                    arrow
-                    placement="left"
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <FactorioIcon name={iconName} size={18} />
-                        <Typography
-                            variant="body2"
-                            noWrap
-                            sx={{
-                                fontSize: '0.75rem',
-                                color: entityTypeColor,
-                            }}
-                        >
-                            {entity.label}
-                        </Typography>
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                fontSize: '0.65rem',
-                                color: 'text.secondary',
-                                bgcolor: 'action.selected',
-                                px: 0.5,
-                                borderRadius: 0.5,
-                            }}
-                        >
-                            {visibleTransitionCount !== totalTransitionCount 
-                                ? `${visibleTransitionCount}/${totalTransitionCount}` 
-                                : totalTransitionCount}
-                        </Typography>
-                        {/* Show item icons for associated items */}
-                        {entity.items.length > 0 && (
-                            <Box sx={{ display: 'flex', gap: 0.25, ml: 0.5 }}>
-                                {entity.items.map(item => (
-                                    <FactorioIcon key={item} name={item} size={14} />
-                                ))}
-                            </Box>
-                        )}
-                    </Box>
-                </Tooltip>
-            </Box>
-
-            {/* Timeline bar */}
-            <Box
-                sx={{
-                    flex: 1,
-                    height: rowHeight,
-                    position: 'relative',
-                    bgcolor: 'action.hover',
-                    borderRadius: 0.5,
-                }}
-            >
-                <TimelineBar
-                    transitions={entity.transitions}
-                    totalDuration={totalDuration}
-                    height={rowHeight - 4 - FACTORIO_STATE_STRIP_HEIGHT}
-                    entityType={entity.entity_type}
-                    viewMode={viewMode}
-                    isFiltered={isTransitionFiltered}
+        <HistoricalTimelineRow variant="state" entity={entity} items={entity.items} duration={totalDuration} height={rowHeight}
+            count={visibleTransitionCount !== totalTransitionCount ? `${visibleTransitionCount}/${totalTransitionCount}` : totalTransitionCount}
+            details={<>
+                <Typography variant="caption" display="block">Transitions: {visibleTransitionCount}/{totalTransitionCount}</Typography>
+                <Typography variant="caption" display="block">Initial: {getStatusLabel(entity.initial_status)}</Typography>
+            </>}>
+            <TimelineBar
+                transitions={entity.transitions}
+                totalDuration={totalDuration}
+                height={rowHeight - 4 - FACTORIO_STATE_STRIP_HEIGHT}
+                entityType={entity.entity_type}
+                viewMode={viewMode}
+                isFiltered={isTransitionFiltered}
+                label={nameIdsIn(entity.label)}
+            />
+            <FactorioStateStrip
+                label={nameIdsIn(entity.label)}
+                states={entity.factorio_states ?? []}
+                totalDuration={totalDuration}
+                height={FACTORIO_STATE_STRIP_HEIGHT}
+            />
+            {clockWindows.map(window => (
+                <Box
+                    key={`${window.start}-${window.end}`}
+                    sx={{
+                        position: 'absolute',
+                        top: 0,
+                        height: 3,
+                        left: `${(window.start / totalDuration) * 100}%`,
+                        width: `${((window.end - window.start + 1) / totalDuration) * 100}%`,
+                        bgcolor: CLOCK_WINDOW_COLOR,
+                        pointerEvents: 'none',
+                    }}
                 />
-                <FactorioStateStrip
-                    states={entity.factorio_states ?? []}
-                    totalDuration={totalDuration}
-                    height={FACTORIO_STATE_STRIP_HEIGHT}
-                />
-                {clockWindows.map(window => (
-                    <Box
-                        key={`${window.start}-${window.end}`}
-                        sx={{
-                            position: 'absolute',
-                            top: 0,
-                            height: 3,
-                            left: `${(window.start / totalDuration) * 100}%`,
-                            width: `${((window.end - window.start + 1) / totalDuration) * 100}%`,
-                            bgcolor: CLOCK_WINDOW_COLOR,
-                            pointerEvents: 'none',
-                        }}
-                    />
-                ))}
-            </Box>
-        </Box>
+            ))}
+        </HistoricalTimelineRow>
     );
 }
 
@@ -469,13 +406,42 @@ function EntitySection({ title, entities, counts, mb, totalDuration, rowHeight, 
 
 interface LegendProps {
     viewMode: ViewMode;
-    filters: EntityFilters;
+    entities: SerializableEntityStateTransitions[];
     statusFilters: StatusFilters;
     showClockWindows: boolean;
+    /** The Factorio states in the data, for the legend of the strip under each row */
+    factorioStates: string[];
 }
 
-function Legend({ viewMode, filters, statusFilters, showClockWindows }: LegendProps) {
-    const items: { label: string; color: string; active: boolean }[] = [];
+/** A swatch and its label, the swatch on the same surface as the marks it names */
+function LegendChip({ label, color, pattern = 'solid', active = true, swatch = { width: 12, height: 12 } }: {
+    label: string;
+    color: string;
+    active?: boolean;
+    pattern?: ChartPattern;
+    swatch?: { width: number; height: number };
+}) {
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1,
+                py: 0.25,
+                borderRadius: 0,
+                color: active ? 'text.primary' : 'text.secondary',
+            }}
+        >
+            <ChartSwatch color={color} pattern={pattern} sx={{ width: swatch.width < 12 ? swatch.width : 22, height: swatch.height }} />
+            <Typography variant="caption">{label}{!active && ' (hidden)'}</Typography>
+        </Box>
+    );
+}
+
+function Legend({ viewMode, entities, statusFilters, showClockWindows, factorioStates }: LegendProps) {
+    const { category: CATEGORY_COLORS, factorio: getFactorioStateColor, clock: CLOCK_WINDOW_COLOR } = PLOT_COLORS;
+    const items: { label: string; color: string; active: boolean; pattern: ChartPattern }[] = [];
 
     if (viewMode === 'simplified') {
         // Category legend
@@ -484,106 +450,67 @@ function Legend({ viewMode, filters, statusFilters, showClockWindows }: LegendPr
                 label: getCategoryLabel(category as StatusCategory), 
                 color,
                 active: statusFilters.categories.has(category as StatusCategory),
+                pattern: statusPattern(category),
             });
         });
     } else {
-        // Detailed status legend - show relevant statuses based on filters
-        if (filters.machine) {
-            Object.entries(MACHINE_STATUS_COLORS).forEach(([status, color]) => {
-                items.push({ 
-                    label: `Machine: ${getStatusLabel(status)}`, 
-                    color,
-                    active: statusFilters.machineStatuses.has(status),
-                });
-            });
-        }
-        if (filters.inserter) {
-            Object.entries(INSERTER_STATUS_COLORS).forEach(([status, color]) => {
-                items.push({ 
-                    label: `Inserter: ${getStatusLabel(status)}`, 
-                    color,
-                    active: statusFilters.inserterStatuses.has(status),
-                });
-            });
-        }
-        if (filters.drill) {
-            Object.entries(DRILL_STATUS_COLORS).forEach(([status, color]) => {
-                items.push({ 
-                    label: `Drill: ${getStatusLabel(status)}`, 
-                    color,
-                    active: statusFilters.drillStatuses.has(status),
-                });
-            });
+        for (const { kind, name, colors } of ENTITY_GROUPS) {
+            if (!entities.some(entity => entity.entity_type === kind)) continue;
+            for (const [status, color] of Object.entries(colors)) {
+                items.push({ label: `${name}: ${getStatusLabel(status)}`, color,
+                    active: statusFilters[kind].has(status), pattern: statusPattern(statusToCategory(kind, status)) });
+            }
         }
     }
 
     return (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-            {items.map(({ label, color, active }) => (
-                <Box
-                    key={label}
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        px: 1,
-                        py: 0.25,
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
-                        opacity: active ? 1 : 0.4,
-                    }}
-                >
-                    <Box
-                        sx={{
-                            width: 12,
-                            height: 12,
-                            bgcolor: color,
-                            borderRadius: 0.25,
-                        }}
-                    />
-                    <Typography variant="caption">{label}</Typography>
-                </Box>
-            ))}
-            {showClockWindows && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.25, bgcolor: 'action.hover', borderRadius: 1 }}>
-                    <Box sx={{ width: 12, height: 3, bgcolor: CLOCK_WINDOW_COLOR }} />
-                    <Typography variant="caption">{CLOCK_WINDOW_LABEL}</Typography>
+        <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {items.map(({ label, color, active, pattern }) => (
+                    <LegendChip key={label} label={label} color={color} active={active} pattern={pattern} />
+                ))}
+                {showClockWindows && (
+                    <LegendChip label={CLOCK_WINDOW_LABEL} color={CLOCK_WINDOW_COLOR} swatch={{ width: 12, height: 3 }} />
+                )}
+            </Box>
+            {factorioStates.length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary">Bottom strip: the state the game shows</Typography>
+                    {factorioStates.map(state => (
+                        <LegendChip key={state} label={getFactorioStateLabel(state)} color={getFactorioStateColor(state)} />
+                    ))}
                 </Box>
             )}
         </Box>
     );
 }
 
-function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows }: StateTransitionTimelineProps) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<ViewMode>('simplified');
-    const [sortMode, setSortMode] = useState<SortMode>('byType');
-    const [filters, setFilters] = useState<EntityFilters>({
-        inserter: true,
-        machine: true,
-        drill: true,
-    });
-    const [statusFilters, setStatusFilters] = useState<StatusFilters>({
-        inserterStatuses: new Set(ALL_INSERTER_STATUSES),
-        machineStatuses: new Set(ALL_MACHINE_STATUSES),
-        drillStatuses: new Set(ALL_DRILL_STATUSES),
-        categories: new Set(ALL_CATEGORIES),
-    });
+function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows, options, onOptionsChange, fullscreen = false }: StateTransitionTimelineProps) {
+    const { categoryColor: getCategoryColor, status: getStatusColor } = PLOT_COLORS;
+    const factorioStates = useMemo(
+        () => factorioStatesIn(stateTransitionHistory.entities.flatMap(entity => (entity.factorio_states ?? []).map(state => state.state))),
+        [stateTransitionHistory.entities],
+    );
+    const { viewMode, sortMode, filters } = options;
+    const setViewMode = (viewMode: ViewMode) => onOptionsChange({ ...options, viewMode });
+    const setSortMode = (sortMode: SortMode) => onOptionsChange({ ...options, sortMode });
+    const setFilters = (update: (filters: EntityFilters) => EntityFilters) => onOptionsChange({ ...options, filters: update(filters) });
+    const statusFilters = useMemo<StatusFilters>(() => ({
+        machine: new Set(options.statuses.machine), inserter: new Set(options.statuses.inserter),
+        drill: new Set(options.statuses.drill), categories: new Set(options.statuses.categories),
+    }), [options.statuses]);
+    const setStatusFilters = (update: StatusFilters | ((filters: StatusFilters) => StatusFilters)) => {
+        const value = typeof update === 'function' ? update(statusFilters) : update;
+        onOptionsChange({ ...options, statuses: { machine: [...value.machine], inserter: [...value.inserter], drill: [...value.drill], categories: [...value.categories] } });
+    };
     const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
     const [statusFilterAnchorEl, setStatusFilterAnchorEl] = useState<null | HTMLElement>(null);
 
     const rowHeight = 30;
     const totalDuration = stateTransitionHistory.total_duration_ticks;
 
-    // Filter entities
-    const filteredEntities = useMemo(() => {
-        return stateTransitionHistory.entities.filter(entity => {
-            if (entity.entity_type === 'inserter' && !filters.inserter) return false;
-            if (entity.entity_type === 'machine' && !filters.machine) return false;
-            if (entity.entity_type === 'drill' && !filters.drill) return false;
-            return true;
-        });
-    }, [stateTransitionHistory.entities, filters]);
+    const filteredEntities = useMemo(() => stateTransitionHistory.entities.filter(entity => filters[entity.entity_type]),
+        [stateTransitionHistory.entities, filters]);
 
     // Sort entities
     const sortedEntities = useMemo(() => {
@@ -592,57 +519,16 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
             : sortByType(filteredEntities);
     }, [filteredEntities, sortMode]);
 
-    // Group entities by type for "by type" view
-    const { machines, inserters, drills } = useMemo(() => {
-        const machines = sortedEntities.filter(e => e.entity_type === 'machine');
-        const inserters = sortedEntities.filter(e => e.entity_type === 'inserter');
-        const drills = sortedEntities.filter(e => e.entity_type === 'drill');
-        return { machines, inserters, drills };
-    }, [sortedEntities]);
+    const groups = useMemo(() => ENTITY_GROUPS.map(group => {
+        const entities = sortedEntities.filter(entity => entity.entity_type === group.kind);
+        const counts = entities.reduce((counts, entity) => ({
+            visible: counts.visible + entity.transitions.filter(transition => statusVisible(group.kind, transition.to_status, viewMode, statusFilters)).length,
+            total: counts.total + entity.transitions.length,
+        }), { visible: 0, total: 0 });
+        return { ...group, entities, counts };
+    }), [sortedEntities, viewMode, statusFilters]);
 
-    // Helper to check if a transition is filtered for a given entity type
-    const isTransitionVisible = useCallback((entityType: 'inserter' | 'machine' | 'drill', status: string): boolean => {
-        if (viewMode === 'simplified') {
-            const category = statusToCategory(entityType, status);
-            return statusFilters.categories.has(category);
-        } else {
-            if (entityType === 'inserter') {
-                return statusFilters.inserterStatuses.has(status);
-            } else if (entityType === 'machine') {
-                return statusFilters.machineStatuses.has(status);
-            } else {
-                return statusFilters.drillStatuses.has(status);
-            }
-        }
-    }, [viewMode, statusFilters]);
-
-    // Calculate visible transition counts for section headers
-    const transitionCounts = useMemo(() => {
-        const countForEntities = (entities: SerializableEntityStateTransitions[]) => {
-            let visible = 0;
-            let total = 0;
-            for (const entity of entities) {
-                total += entity.transitions.length;
-                visible += entity.transitions.filter(t => 
-                    isTransitionVisible(entity.entity_type, t.to_status)
-                ).length;
-            }
-            return { visible, total };
-        };
-
-        return {
-            machines: countForEntities(machines),
-            inserters: countForEntities(inserters),
-            drills: countForEntities(drills),
-        };
-    }, [machines, inserters, drills, isTransitionVisible]);
-
-    // Calculate tick markers
-    const tickMarkers: number[] = [];
-    const markerInterval = Math.ceil(totalDuration / 10 / 100) * 100;
-    for (let tick = 0; tick <= totalDuration; tick += markerInterval) {
-        tickMarkers.push(tick);
-    }
+    const tickMarkers = axisTicks(totalDuration, 7);
 
     const handleViewModeChange = (_: React.MouseEvent, newMode: ViewMode | null) => {
         if (newMode) setViewMode(newMode);
@@ -672,48 +558,21 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
         setStatusFilterAnchorEl(null);
     };
 
-    const handleStatusFilterChange = (entityType: 'inserter' | 'machine' | 'drill', status: string) => {
+    const toggleStatus = (key: keyof StatusFilters, status: string) => {
         setStatusFilters(prev => {
-            const key = `${entityType}Statuses` as 'inserterStatuses' | 'machineStatuses' | 'drillStatuses';
-            const newSet = new Set(prev[key]);
-            if (newSet.has(status)) {
-                newSet.delete(status);
-            } else {
-                newSet.add(status);
-            }
-            return { ...prev, [key]: newSet };
+            const selected = new Set(prev[key]);
+            if (selected.has(status)) selected.delete(status);
+            else selected.add(status);
+            return { ...prev, [key]: selected };
         });
     };
 
-    const handleCategoryFilterChange = (category: StatusCategory) => {
-        setStatusFilters(prev => {
-            const newSet = new Set(prev.categories);
-            if (newSet.has(category)) {
-                newSet.delete(category);
-            } else {
-                newSet.add(category);
-            }
-            return { ...prev, categories: newSet };
-        });
-    };
-
-    const handleSelectAllStatuses = () => {
-        setStatusFilters({
-            inserterStatuses: new Set(ALL_INSERTER_STATUSES),
-            machineStatuses: new Set(ALL_MACHINE_STATUSES),
-            drillStatuses: new Set(ALL_DRILL_STATUSES),
-            categories: new Set(ALL_CATEGORIES),
-        });
-    };
-
-    const handleClearAllStatuses = () => {
-        setStatusFilters({
-            inserterStatuses: new Set(),
-            machineStatuses: new Set(),
-            drillStatuses: new Set(),
-            categories: new Set(),
-        });
-    };
+    const selectAllStatuses = (all: boolean) => setStatusFilters({
+        machine: new Set(all ? Object.keys(PLOT_COLORS.machine) : []),
+        inserter: new Set(all ? Object.keys(PLOT_COLORS.inserter) : []),
+        drill: new Set(all ? Object.keys(PLOT_COLORS.drill) : []),
+        categories: new Set(all ? ALL_CATEGORIES : []),
+    });
 
     const timelineContent = (isFullscreen: boolean) => (
         <>
@@ -759,24 +618,11 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                         open={Boolean(filterAnchorEl)}
                         onClose={handleFilterClose}
                     >
-                        <MenuItem onClick={() => handleFilterChange('machine')}>
-                            <FormControlLabel
-                                control={<Checkbox checked={filters.machine} />}
-                                label="Machines"
-                            />
-                        </MenuItem>
-                        <MenuItem onClick={() => handleFilterChange('inserter')}>
-                            <FormControlLabel
-                                control={<Checkbox checked={filters.inserter} />}
-                                label="Inserters"
-                            />
-                        </MenuItem>
-                        <MenuItem onClick={() => handleFilterChange('drill')}>
-                            <FormControlLabel
-                                control={<Checkbox checked={filters.drill} />}
-                                label="Drills"
-                            />
-                        </MenuItem>
+                        {ENTITY_GROUPS.map(({ kind, filterLabel }) => (
+                            <MenuItem key={kind} onClick={() => handleFilterChange(kind)}>
+                                <FormControlLabel control={<Checkbox checked={filters[kind]} />} label={filterLabel} />
+                            </MenuItem>
+                        ))}
                     </Menu>
                 </Box>
 
@@ -795,15 +641,15 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                     >
                         {/* Select All / Clear All */}
                         <Box sx={{ px: 2, py: 1, display: 'flex', gap: 1 }}>
-                            <Button size="small" onClick={handleSelectAllStatuses}>All</Button>
-                            <Button size="small" onClick={handleClearAllStatuses}>None</Button>
+                            <Button size="small" onClick={() => selectAllStatuses(true)}>All</Button>
+                            <Button size="small" onClick={() => selectAllStatuses(false)}>None</Button>
                         </Box>
                         <Divider />
 
                         {viewMode === 'simplified' ? (
                             // Category filters
                             ALL_CATEGORIES.map(category => (
-                                <MenuItem key={category} onClick={() => handleCategoryFilterChange(category)}>
+                                <MenuItem key={category} onClick={() => toggleStatus('categories', category)}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Checkbox checked={statusFilters.categories.has(category)} size="small" />
                                         <Box
@@ -819,150 +665,45 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                                 </MenuItem>
                             ))
                         ) : (
-                            // Detailed status filters
-                            <>
-                                {filters.machine && (
-                                    <>
-                                        <Typography variant="caption" sx={{ px: 2, py: 0.5, color: 'text.secondary', display: 'block' }}>
-                                            Machine Statuses
-                                        </Typography>
-                                        {ALL_MACHINE_STATUSES.map(status => (
-                                            <MenuItem key={`machine-${status}`} onClick={() => handleStatusFilterChange('machine', status)}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Checkbox checked={statusFilters.machineStatuses.has(status)} size="small" />
-                                                    <Box
-                                                        sx={{
-                                                            width: 12,
-                                                            height: 12,
-                                                            bgcolor: getStatusColor('machine', status),
-                                                            borderRadius: 0.25,
-                                                        }}
-                                                    />
-                                                    <Typography variant="body2">{getStatusLabel(status)}</Typography>
-                                                </Box>
-                                            </MenuItem>
-                                        ))}
-                                    </>
-                                )}
-                                {filters.inserter && (
-                                    <>
-                                        <Typography variant="caption" sx={{ px: 2, py: 0.5, color: 'text.secondary', display: 'block' }}>
-                                            Inserter Statuses
-                                        </Typography>
-                                        {ALL_INSERTER_STATUSES.map(status => (
-                                            <MenuItem key={`inserter-${status}`} onClick={() => handleStatusFilterChange('inserter', status)}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Checkbox checked={statusFilters.inserterStatuses.has(status)} size="small" />
-                                                    <Box
-                                                        sx={{
-                                                            width: 12,
-                                                            height: 12,
-                                                            bgcolor: getStatusColor('inserter', status),
-                                                            borderRadius: 0.25,
-                                                        }}
-                                                    />
-                                                    <Typography variant="body2">{getStatusLabel(status)}</Typography>
-                                                </Box>
-                                            </MenuItem>
-                                        ))}
-                                    </>
-                                )}
-                                {filters.drill && (
-                                    <>
-                                        <Typography variant="caption" sx={{ px: 2, py: 0.5, color: 'text.secondary', display: 'block' }}>
-                                            Drill Statuses
-                                        </Typography>
-                                        {ALL_DRILL_STATUSES.map(status => (
-                                            <MenuItem key={`drill-${status}`} onClick={() => handleStatusFilterChange('drill', status)}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Checkbox checked={statusFilters.drillStatuses.has(status)} size="small" />
-                                                    <Box
-                                                        sx={{
-                                                            width: 12,
-                                                            height: 12,
-                                                            bgcolor: getStatusColor('drill', status),
-                                                            borderRadius: 0.25,
-                                                        }}
-                                                    />
-                                                    <Typography variant="body2">{getStatusLabel(status)}</Typography>
-                                                </Box>
-                                            </MenuItem>
-                                        ))}
-                                    </>
-                                )}
-                            </>
+                            ENTITY_GROUPS.filter(group => filters[group.kind]).flatMap(({ kind, name, colors }) => [
+                                <Typography key={`${kind}-heading`} variant="caption" sx={{ px: 2, py: 0.5, color: 'text.secondary', display: 'block' }}>
+                                    {name} Statuses
+                                </Typography>,
+                                ...Object.keys(colors).map(status => (
+                                    <MenuItem key={`${kind}-${status}`} onClick={() => toggleStatus(kind, status)}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Checkbox checked={statusFilters[kind].has(status)} size="small" />
+                                            <Box sx={{ width: 12, height: 12, bgcolor: getStatusColor(kind, status), borderRadius: 0.25 }} />
+                                            <Typography variant="body2">{getStatusLabel(status)}</Typography>
+                                        </Box>
+                                    </MenuItem>
+                                )),
+                            ])
                         )}
                     </Menu>
                 </Box>
             </Box>
 
             {/* Legend */}
-            <Legend viewMode={viewMode} filters={filters} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} />
 
-            {/* Tick markers */}
-            <Box sx={{ display: 'flex', mb: 0.5 }}>
-                <Box sx={{ width: 200, flexShrink: 0 }} />
-                <Box sx={{ flex: 1, position: 'relative', height: 20 }}>
-                    {tickMarkers.map(tick => (
-                        <Typography
-                            key={tick}
-                            variant="caption"
-                            sx={{
-                                position: 'absolute',
-                                left: `${(tick / totalDuration) * 100}%`,
-                                transform: 'translateX(-50%)',
-                                color: 'text.secondary',
-                                fontSize: '0.65rem',
-                            }}
-                        >
-                            {tick}
-                        </Typography>
-                    ))}
-                </Box>
+
+            <Box sx={{ mb: 1.5 }}>
+            <Legend viewMode={viewMode} entities={filteredEntities} statusFilters={statusFilters} showClockWindows={clockWindows !== undefined} factorioStates={factorioStates} />
+            </Box>
+            <ScrollX label={SCROLL_REGION_NAMES.stateTimeline} minWidth={CHART_MIN_WIDTH} tickRoom>
+            <Box sx={{ display: 'flex', mb: 1 }}>
+                <Box sx={{ width: 220, flexShrink: 0 }} />
+                <Box sx={{ flex: 1 }}><TimelineAxis duration={totalDuration} marks={tickMarkers} /></Box>
             </Box>
 
             {/* Timeline content */}
             {sortMode === 'byType' ? (
-                <>
-                    {filters.machine && (
-                        <EntitySection
-                            title="Machines"
-                            entities={machines}
-                            counts={transitionCounts.machines}
-                            mb={2}
-                            totalDuration={totalDuration}
-                            rowHeight={isFullscreen ? 32 : rowHeight}
-                            viewMode={viewMode}
-                            statusFilters={statusFilters}
-                            clockWindows={clockWindows}
-                        />
-                    )}
-                    {filters.inserter && (
-                        <EntitySection
-                            title="Inserters"
-                            entities={inserters}
-                            counts={transitionCounts.inserters}
-                            mb={2}
-                            totalDuration={totalDuration}
-                            rowHeight={isFullscreen ? 32 : rowHeight}
-                            viewMode={viewMode}
-                            statusFilters={statusFilters}
-                            clockWindows={clockWindows}
-                        />
-                    )}
-                    {filters.drill && (
-                        <EntitySection
-                            title="Mining Drills"
-                            entities={drills}
-                            counts={transitionCounts.drills}
-                            totalDuration={totalDuration}
-                            rowHeight={isFullscreen ? 32 : rowHeight}
-                            viewMode={viewMode}
-                            statusFilters={statusFilters}
-                            clockWindows={clockWindows}
-                        />
-                    )}
-                </>
+                groups.filter(group => filters[group.kind]).map(({ kind, title, entities, counts }) => (
+                    <EntitySection key={kind} title={title} entities={entities} counts={counts}
+                        mb={kind === 'drill' ? undefined : 2} totalDuration={totalDuration}
+                        rowHeight={isFullscreen ? 32 : rowHeight} viewMode={viewMode}
+                        statusFilters={statusFilters} clockWindows={clockWindows} />
+                ))
             ) : (
                 // By relationship - show all sorted entities together
                 <Box>
@@ -979,62 +720,16 @@ function StateTransitionTimelineComponent({ stateTransitionHistory, clockWindows
                     ))}
                 </Box>
             )}
+            </ScrollX>
+
         </>
     );
 
-    return (
-        <>
-            <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6">
-                        State Transition Timeline
-                    </Typography>
-                    <Tooltip title="Open fullscreen">
-                        <IconButton onClick={() => setIsModalOpen(true)} size="small">
-                            <Fullscreen />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Total simulation duration: {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
-                </Typography>
-
-                {timelineContent(false)}
-            </Paper>
-
-            {/* Fullscreen Modal */}
-            <Dialog
-                open={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                maxWidth={false}
-                fullScreen
-                slotProps={{
-                    paper: {
-                        sx: {
-                            bgcolor: 'common.black',
-                        },
-                    }
-                }}
-            >
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Typography variant="h5" component="span">
-                            State Transition Timeline
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }} component="span">
-                            {totalDuration} ticks ({(totalDuration / 60).toFixed(1)} seconds)
-                        </Typography>
-                    </Box>
-                    <IconButton onClick={() => setIsModalOpen(false)} edge="end">
-                        <Close />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ overflow: 'auto' }}>
-                    {timelineContent(true)}
-                </DialogContent>
-            </Dialog>
-        </>
-    );
+    return <BeltChartFrame title="Entity states" subtitle={`${totalDuration.toLocaleString()} ticks · ${(totalDuration / 60).toFixed(1)} s · ${filteredEntities.length} entities`}>
+        {timelineContent(fullscreen)}
+    </BeltChartFrame>;
 }
 
-export const StateTransitionTimeline = memo(StateTransitionTimelineComponent);
+export const StateTransitionTimeline = memo(function StateTransitionTimeline(props: StateTransitionTimelineProps) {
+    return <StateTransitionTimelineComponent {...props} />;
+});

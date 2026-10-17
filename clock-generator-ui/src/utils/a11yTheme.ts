@@ -1,0 +1,65 @@
+import type { Theme, ThemeOptions } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
+
+/**
+ * The theme's accessibility rules, added to the base theme in `App.tsx`: a visible 2px focus ring in the brand colour
+ * on every control reached with the keyboard (WCAG 2.4.7). The ring is drawn 2px outside the control, so it sits on the
+ * dark surface around it and never on a filled button's own colour. Keeping the sticky header off the focused control
+ * (2.4.11) is `useStickyHeaderHeight`'s job, which sets the page's `scroll-padding-top`.
+ */
+export function a11yThemeComponents(theme: Theme): ThemeOptions['components'] {
+    const CONTROL = themeTokens(theme).control;
+    const ring = { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 };
+    // inside the item, so a scroll container or a full-width row does not clip the ring
+    const insetRing = { '&.Mui-focusVisible': { outlineOffset: -2 } };
+    return {
+        MuiCssBaseline: {
+            styleOverrides: {
+                // what MUI does not draw itself: role="button" boxes such as the filter slots, the drag handle
+                ':focus-visible': ring,
+                ':root': { colorScheme: theme.palette.mode },
+                '@media (forced-colors: active)': { ':focus-visible, .MuiButtonBase-root.Mui-focusVisible': { outline: '2px solid Highlight' } },
+            },
+        },
+        MuiButtonBase: {
+            styleOverrides: {
+                // ButtonBase sets `outline: 0`, so it needs its own rule; this reaches Button, IconButton,
+                // ToggleButton, a clickable Chip, Radio, Checkbox and Switch
+                root: { '&.Mui-focusVisible': ring },
+            },
+        },
+        // a Chip that takes Tab but is not clickable (the Status and swing plan chips) is not a ButtonBase,
+        // and MUI sets `outline: 0` on it
+        MuiChip: { styleOverrides: { root: { '&:focus-visible': ring } } },
+        // an accordion's title keeps the ring outside: some have no side padding, where a ring inside would touch the text
+        // the ring marks a tab moved to with the arrow keys; its focus ripple on top would be a second marker
+        MuiTab: { defaultProps: { disableFocusRipple: true }, styleOverrides: { root: insetRing } },
+        MuiMenuItem: { styleOverrides: { root: insetRing } },
+        // a Switch clips what is drawn outside its thumb's box (overflow: hidden on its root): the ring goes inside it
+        MuiSwitch: { styleOverrides: { switchBase: insetRing } },
+        // in a group the next button, drawn after it, would cover the side of the ring that overlaps it
+        MuiToggleButton: { styleOverrides: { root: { '&.Mui-focusVisible': { zIndex: 1 } } } },
+        MuiTypography: {
+            defaultProps: {
+                // MUI makes a subtitle an h6, which would put every small label ("Latched Mode") in the page's outline.
+                // The two that are headings of a card say so themselves. The other variants keep MUI's mapping
+                variantMapping: { subtitle1: 'p', subtitle2: 'p' },
+            },
+        },
+        MuiAlert: {
+            styleOverrides: {
+                root: {
+                    variants: [{
+                        // the orange is too close to a filled alert's colour (1.55:1 on the yellow warning); a control
+                        // in one gets a black ring, 4.7:1 or more on every fill (the roles' dark shades). One class more
+                        // than the rules above, so it wins whichever is inserted first
+                        props: { variant: 'filled' },
+                        style: {
+                            '& .MuiButtonBase-root.Mui-focusVisible, & :focus-visible': { outlineColor: CONTROL.focusOnFill },
+                        },
+                    }],
+                },
+            },
+        },
+    };
+}

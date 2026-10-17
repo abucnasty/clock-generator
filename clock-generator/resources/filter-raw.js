@@ -14,6 +14,13 @@
 const fs = require("fs/promises");
 const path = require("path");
 
+const { parseLocale, buildNames } = require("./locale-names");
+
+// The game's data folder, for the English locale files; FACTORIO_DATA_DIR names another install
+const FACTORIO_DATA_DIR = process.env.FACTORIO_DATA_DIR ?? "/Applications/factorio.app/Contents/data";
+// later mods win, as in the game
+const LOCALE_MODS = ["core", "base", "elevated-rails", "quality", "space-age"];
+
 const raw_list = new Set([
     "recipe",
     "mining-drill",
@@ -41,6 +48,14 @@ async function main() {
     }
     const rawData = JSON.parse(await fs.readFile(dump, "utf-8"));
     const filtered = mapRawDataToFilteredFactorioData(rawData);
+    const table = await readLocale(FACTORIO_DATA_DIR);
+    const { names, fallbackIds, fallbackCount } = buildNames(rawData, filtered, table);
+    filtered["names"] = names;
+    for (const kind of ["item", "recipe"]) {
+        const count = Object.keys(names[kind]).length;
+        console.log(`${kind} names: ${count - fallbackCount[kind]} from the locale in ${FACTORIO_DATA_DIR}, ${fallbackCount[kind]} sentence-case fallbacks, ${count} in all`);
+    }
+    console.log(`The ${fallbackIds.length} ids with a fallback name: ${fallbackIds.join(", ")}`);
     await fs.writeFile(path.join(__dirname, "data-filtered.json"), JSON.stringify(filtered, null, 2));
     await fs.writeFile(path.join(__dirname, "data-version.json"), JSON.stringify(dataVersion(version_line, rawData), null, 2) + "\n");
     console.log(`Done: ${Object.keys(filtered.recipe).length} recipes, ${Object.keys(filtered.item).length} items, from ${version_line}`);
@@ -61,6 +76,24 @@ function dataVersion(version_line, rawData) {
         dumped_on: new Date().toISOString().slice(0, 10),
         recipes: Object.keys(rawData.recipe).length,
     };
+}
+
+/** The English locale of the game's mods, as `section.key` → text */
+async function readLocale(dataDir) {
+    try {
+        await fs.access(path.join(dataDir, "base", "locale", "en"))
+    } catch {
+        throw new Error(`No Factorio data folder at ${dataDir}: set FACTORIO_DATA_DIR to the game's data folder (the one holding base/locale/en)`)
+    }
+    const table = {}
+    for (const mod of LOCALE_MODS) {
+        const dir = path.join(dataDir, mod, "locale", "en")
+        const files = await fs.readdir(dir).catch(() => [])
+        for (const file of files.filter(f => f.endsWith(".cfg")).sort()) {
+            Object.assign(table, parseLocale(await fs.readFile(path.join(dir, file), "utf-8")))
+        }
+    }
+    return table
 }
 
 function mapRawDataToFilteredFactorioData(rawData) {

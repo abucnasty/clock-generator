@@ -1,14 +1,15 @@
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { useTheme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
+import { flowNodeTitleColor } from '../theme/flowDiagram';
+import type { NodeProps, Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
-import type { EntityNodeData, MachineNodeParams } from '../utils/buildFlowGraph';
+import { FlowNodeHandles } from './FlowNodeHandles';
+import { GameName } from './GameName';
+import { ENTITY_NODE_WIDTH, type EntityNodeData, type MachineNodeParams } from '../utils/buildFlowGraph';
 import { useMachineFacts } from '../hooks/useMachineFacts';
-
-const BORDER_COLORS: Record<EntityNodeData['entityType'], string> = {
-    machine: '#fca300',
-    belt: '#4fc3f7',
-    chest: '#81c784',
-};
+import { formatNumberText, machineNodeCraftLine } from '../utils/numberText';
+import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
 const TYPE_LABELS: Record<EntityNodeData['entityType'], string> = {
     machine: 'M',
@@ -17,26 +18,30 @@ const TYPE_LABELS: Record<EntityNodeData['entityType'], string> = {
 };
 
 function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
+    const tokens = themeTokens(useTheme());
     const { facts } = useMachineFacts(params);
     if (!facts) return null;
     return (
-        <Box sx={{ mt: 0.75, pt: 0.75, borderTop: '1px solid #444', width: '100%' }}>
+        <Box className="flow-node-rates" sx={{ mt: 0.75, pt: 0.75, borderTop: `1px solid ${tokens.control.edge}`, width: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                <FactorioIcon name={facts.output_item} size={14} />
-                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: '#fca300', lineHeight: 1 }}>
-                    {facts.output_rate_per_second.toFixed(2)}/s out
+                <FactorioIcon name={facts.output_item} size={14} titled />
+                <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: tokens.role.orange.main, lineHeight: 1.2 }}>
+                    {formatNumberText(facts.output_rate_per_second)}/s out
                 </Typography>
             </Box>
             {facts.inputs.map(inp => (
                 <Box key={inp.item_name} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                    <FactorioIcon name={inp.item_name} size={14} />
-                    <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
-                        {inp.consumption_rate_per_second.toFixed(2)}/s in
+                    <FactorioIcon name={inp.item_name} size={14} titled />
+                    <Typography variant="caption" sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2 }}>
+                        {formatNumberText(inp.consumption_rate_per_second)}/s in
                     </Typography>
                 </Box>
             ))}
-            <Typography variant="caption" sx={{ fontSize: '0.55rem', color: '#666', lineHeight: 1, display: 'block', mt: 0.5 }}>
-                {facts.ticks_per_craft.toFixed(1)}t craft · ×{facts.overload_multiplier} overload
+            <Typography
+                variant="caption"
+                sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2, display: 'block', mt: 0.5, whiteSpace: 'normal' }}
+            >
+                {machineNodeCraftLine(facts.ticks_per_craft, facts.overload_multiplier)}
             </Typography>
         </Box>
     );
@@ -45,37 +50,41 @@ function MachineDetailsSection({ params }: { params: MachineNodeParams }) {
 type EntityFlowNodeType = Node<EntityNodeData, 'entityNode'>;
 
 export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
-    const borderColor = BORDER_COLORS[data.entityType];
-
+    const tokens = themeTokens(useTheme());
+    const role = data.entityType === 'machine' ? 'orange' : data.entityType === 'belt' ? 'blue' : 'green';
+    const borderRole = tokens.role[role];
+    const borderColor = borderRole.main;
     return (
         <>
-            <Handle type="target" position={Position.Left} />
             <Box
+                className={FLOW_NODE_BOX_CLASS}
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: '#232323',
+                    bgcolor: tokens.surface.page,
                     border: `2px solid ${borderColor}`,
                     borderRadius: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     cursor: 'pointer',
-                    width: 176,
+                    width: ENTITY_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: '#2d2d2d' },
+                    '&:hover': { bgcolor: tokens.surface.page },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FactorioIcon name={data.iconName} size={32} />
+                    <FactorioIcon name={data.iconName} size={32} titled />
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography
                             variant="caption"
+                            className="flow-node-title"
+                            title={data.halfTitle}
                             sx={{
                                 fontWeight: 700,
                                 lineHeight: 1.2,
                                 display: 'block',
-                                color: borderColor,
-                                fontSize: '0.7rem',
+                                color: flowNodeTitleColor(tokens, role),
+                                fontSize: FLOW_NODE_FONT_SIZE,
                             }}
                         >
                             {data.label}
@@ -83,23 +92,27 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         {data.sublabel && (
                             <Typography
                                 variant="caption"
+                                className="flow-node-detail"
+                                title={data.entityType === 'machine' ? undefined : data.sublabel}
                                 sx={{
                                     color: 'text.secondary',
                                     display: 'block',
-                                    fontSize: '0.6rem',
+                                    fontSize: FLOW_NODE_FONT_SIZE,
                                     lineHeight: 1.2,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
                                 }}
                             >
-                                {data.sublabel}
+                                {data.entityType === 'machine' && data.machineParams?.recipe
+                                    ? <GameName id={data.machineParams.recipe} kind="recipe" />
+                                    : data.sublabel}
                             </Typography>
                         )}
                         {data.filterIcons && data.filterIcons.length > 0 && (
                             <Box sx={{ display: 'flex', gap: 0.25, mt: 0.25, flexWrap: 'wrap' }}>
                                 {data.filterIcons.slice(0, 4).map(icon => (
-                                    <FactorioIcon key={icon} name={icon} size={14} />
+                                    <FactorioIcon key={icon} name={icon} size={14} titled />
                                 ))}
                             </Box>
                         )}
@@ -108,13 +121,13 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                         label={TYPE_LABELS[data.entityType]}
                         size="small"
                         sx={{
-                            height: 16,
-                            fontSize: '0.6rem',
+                            height: 20,
+                            fontSize: FLOW_NODE_FONT_SIZE,
                             bgcolor: borderColor,
-                            color: '#000',
+                            color: borderRole.on,
                             fontWeight: 700,
                             flexShrink: 0,
-                            '& .MuiChip-label': { px: 0.5 },
+                            '& .MuiChip-label': { px: 0.75 },
                         }}
                     />
                 </Box>
@@ -122,15 +135,7 @@ export function EntityFlowNode({ data }: NodeProps<EntityFlowNodeType>) {
                     <MachineDetailsSection params={data.machineParams} />
                 )}
             </Box>
-            <Handle type="source" position={Position.Right} />
-            {data.verticalHandles && (
-                <>
-                    <Handle type="target" id="top-in" position={Position.Top} style={{ left: '35%' }} />
-                    <Handle type="source" id="top-out" position={Position.Top} style={{ left: '65%' }} />
-                    <Handle type="source" id="bottom-out" position={Position.Bottom} style={{ left: '35%' }} />
-                    <Handle type="target" id="bottom-in" position={Position.Bottom} style={{ left: '65%' }} />
-                </>
-            )}
+            <FlowNodeHandles data={data} />
         </>
     );
 }

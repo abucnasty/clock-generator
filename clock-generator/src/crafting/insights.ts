@@ -4,6 +4,9 @@ import type { BackpressureLossVerdict } from "./backpressure-loss";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { SerializableEntityStateTransitions, SerializableStateTransitionHistory } from "./sequence/state-transition-serializer";
+import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
+import type { StartDependence } from "./start-dependence";
+import { FactorioDataService } from "../data";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -147,16 +150,15 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Ser
 }
 
 /** Machines whose recipe makes one of its own ingredients, which the simulation starts already holding that ingredient */
-function loopingRecipeInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[]): ClockInsight | null {
+function loopingRecipeInsight(result: BlueprintGenerationResult, entities: SerializableEntityStateTransitions[], loop_seed_items: number): ClockInsight | null {
     const rows = result.machine_facts.flatMap(machine => machine.facts.inputs
-        .filter(input => input.item_name === machine.facts.output_item)
+        .filter(input => FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
         .map(input => ({
             machine: entities.find(it => it.entity_id === machine.entity_id)?.label ?? machine.entity_id,
             recipe: machine.facts.recipe,
             item: input.item_name,
             per_craft: input.amount_per_craft,
-            made: machine.facts.output_per_craft,
-            started_with: input.automated_insertion_limit,
+            started_with: loop_seed_items,
         })));
     if (rows.length === 0) {
         return null;
@@ -166,16 +168,15 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Seria
         id: "looping-recipe",
         scope: "build",
         title: `The ${example.recipe} recipe needs ${example.item} to make ${example.item}`,
-        what: `${rows.map(it => it.machine).join(", ")} craft${rows.length === 1 ? "s" : ""} ${example.item} from ${example.item}: `
-            + `${round(example.per_craft, 2)} in, ${round(example.made, 2)} out per craft (productivity included). The simulation `
-            + `starts each of these machines with ${example.started_with} ${example.item} already inside.`,
+        what: "The modeled cold trial gives a one-time seed: "
+            + rows.map(it => `${it.machine} starts with ${it.started_with} ${it.item}`).join("; ") + ". These recipes consume an item they also produce.",
         why: "A machine does not craft from what it has just made: its products go to the output, and the ingredient has to be "
             + "brought to it by an inserter. With none inside, the recipe never starts, and nothing is made to bring.",
-        explanation: `The clock only holds for a build that is already running. Put ${example.item} in these machines by hand `
-            + "before turning the clock on, and again if the machines ever run empty: the clock cannot restart them.",
+        explanation: `Each modeled self-feeding machine is given this seed once at the cold trial start. Planning uses a separate `
+            + `prepared state. A real build needs its own initial ${example.item}; this seed assumption does not establish recovery after it is lost.`,
         table: {
-            columns: ["Machine", "Recipe", "Item", "In per craft", "Out per craft", "Starts with"],
-            rows: rows.map(it => [it.machine, it.recipe, it.item, `${round(it.per_craft, 2)}`, `${round(it.made, 2)}`, `${it.started_with}`]),
+            columns: ["Machine", "Recipe", "Item", "In per craft", "Cold trial seed"],
+            rows: rows.map(it => [it.machine, it.recipe, it.item, `${round(it.per_craft, 2)}`, `${it.started_with}`]),
         },
     };
 }
@@ -332,18 +333,18 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
 }
 
 /** Why a clock that reaches its target from some starts only is listed as unstable, with where it settles elsewhere */
-export function startDependenceInsight(note: string): ClockInsight {
+export function startDependenceInsight(note: string, dependence: StartDependence): ClockInsight {
     return {
         id: "start-dependence",
         scope: "clock",
-        title: "This clock depends on how it is started",
+        title: dependence.verdict === "start-dependent" ? "This clock depends on how it is started"
+            : dependence.verdict === "stable" ? "This clock reaches the target from every sampled start"
+                : "This clock does not reach the target from any sampled start",
         what: note,
-        why: "A build that has run on its own before its clock is wired holds what that run left in its machines, hands and "
-            + "swings. Some clocks bring every such start to the same steady state, and some settle in another one from another start. "
-            + "The starts tried are the cold start of the scaffold, the same with the clock wired later, the start the generator had "
-            + "before the scaffold's and a free run from the filled build.",
-        explanation: "The clock reaches its target when it is started as the first start says, and not from the others. Use a "
-            + "clock that is Stable, or start this one as the first start does (a scaffold that has run free before the clock is wired).",
+        why: "The simulator tried empty machines with initial clock phases and competing-taker orders: "
+            + dependence.starts.map(start => start.label).join("; ") + ". These are cold starts, not filled or free-running builds.",
+        explanation: "The sampled outcomes above show which starts reached the target. These samples do not cover every possible "
+            + "state of a running build or every build order; inspect them before choosing the clock.",
     };
 }
 
@@ -391,13 +392,13 @@ export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): C
     };
 }
 
-export function clockInsights(result: BlueprintGenerationResult, holds: boolean): ClockInsight[] {
+export function clockInsights(result: BlueprintGenerationResult, holds: boolean, loop_seed_items = DEFAULT_LOOP_SEED_ITEMS): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     // an inserter that never moved in one run is only listed in the other
     const entities = [...run.entities, ...result.serializable_state_transition_history.entities];
     const insights: (ClockInsight | null)[] = [
-        loopingRecipeInsight(result, entities),
+        loopingRecipeInsight(result, entities, loop_seed_items),
         holds ? spareTimeInsight(result, run) : null,
         insertionLimitsInsight(result, entities),
         outputHandInsight(result, entities),

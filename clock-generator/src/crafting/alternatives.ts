@@ -16,8 +16,9 @@ import { generateClockForConfig, generateClockWithSwingBackoff } from "./generat
 import { BlueprintGenerationResult, GenerateClockOptions } from "./plan/plan-run";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, searchesAreNeeded } from "./rank";
 import { AsBuiltStabilityCheck, backpressureLossVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, startDependenceVerdictOf } from "./trial";
-import { CLOCK_STARTS, START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
+import { START_DEPENDENCE_NOT_CHECKED, startDependenceNote } from "./start-dependence";
 import { LeanPeriodItem, leanPeriodItems } from "./lean-period";
+import { DEFAULT_LOOP_SEED_ITEMS } from "./runner/cold-start";
 
 
 export interface ClockAlternative {
@@ -60,8 +61,8 @@ export interface ClockAlternativesResult {
      */
     skipped_searches: string[];
     /**
-     * Whether the clocks were tried from other starts than the cold start (`overrides.check_start_dependence`).
-     * When not, `start_dependence_note` says so plainly.
+     * At least one clock was returned and all returned clocks have actual sampled-start outcomes.
+     * `start_dependence_note` distinguishes not requested, unavailable and actual sample counts.
      */
     start_dependence_checked: boolean;
     /** What the generator says of start dependence for the build: that it was not checked, or how many clocks depend on the start */
@@ -538,10 +539,10 @@ function runAlternative(definition: AlternativeDefinition, config: Config, logge
         + backpressureLossNote(backpressure_loss) + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`);
     // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
     const insights = [
-        ...clockInsights(result, held),
+        ...clockInsights(result, held, config.overrides?.loop_seed_items ?? DEFAULT_LOOP_SEED_ITEMS),
         ...(backpressure_loss !== null && !backpressure_loss.survives ? [backpressureLossInsight(backpressure_loss, expected_output_items)] : []),
         ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
-        ...(start_dependence_note !== null ? [startDependenceInsight(start_dependence_note)] : []),
+        ...(start_dependence_note !== null && start_dependence !== null ? [startDependenceInsight(start_dependence_note, start_dependence)] : []),
     ];
     const period = result.simulation_duration.ticks;
     // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
@@ -631,15 +632,23 @@ export function runClockAlternativeTask(
 }
 
 /** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */
-export function startDependenceSummary(config: Config, alternatives: readonly ClockAlternative[]): Pick<ClockAlternativesResult, "start_dependence_checked" | "start_dependence_note"> {
+export function startDependenceSummary(config: Config, alternatives: readonly Pick<ClockAlternative, "id" | "assessment">[]): Pick<ClockAlternativesResult, "start_dependence_checked" | "start_dependence_note"> {
     if (config.overrides?.check_start_dependence !== true) {
         return { start_dependence_checked: false, start_dependence_note: START_DEPENDENCE_NOT_CHECKED };
     }
     const dependent = alternatives.filter(it => it.assessment.start_dependence?.verdict === "start-dependent").map(it => it.id);
+    const counts = alternatives.flatMap(it => it.assessment.start_dependence?.starts.length ? [it.assessment.start_dependence.starts.length] : []);
+    const unavailable = alternatives.length - counts.length;
+    const minimum = counts.length > 0 ? Math.min(...counts) : 0;
+    const maximum = counts.length > 0 ? Math.max(...counts) : 0;
+    const samples = minimum === maximum ? `${minimum} starts` : `${minimum}–${maximum} starts`;
     return {
-        start_dependence_checked: true,
-        start_dependence_note: `Start dependence was checked from ${CLOCK_STARTS.length} starts: `
-            + (dependent.length === 0 ? "no clock is start-dependent." : `start-dependent: ${dependent.join(", ")}.`),
+        start_dependence_checked: counts.length > 0 && unavailable === 0,
+        start_dependence_note: alternatives.length === 0 ? "No clocks were available to check for start dependence."
+            : counts.length === 0 ? "Start dependence was requested but no sampled-start results are available."
+                : `Start dependence was checked from ${samples} per clock for ${counts.length} of ${alternatives.length} clocks: `
+                    + (dependent.length === 0 ? "no evaluated clock is start-dependent." : `start-dependent: ${dependent.join(", ")}.`)
+                    + (unavailable > 0 ? ` Results are unavailable for ${unavailable} clock${unavailable === 1 ? "" : "s"}.` : ""),
     };
 }
 

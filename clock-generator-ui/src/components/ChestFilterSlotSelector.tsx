@@ -1,289 +1,79 @@
-import { Add, Close } from '@mui/icons-material';
-import { Box, IconButton, Typography, Popover, TextField, Button } from '@mui/material';
-import { useState } from 'react';
+import { Box, Typography, ButtonBase, Tooltip } from '@mui/material';
+import { useRef, useState } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
-import { ItemSelector } from './ItemSelector';
+import { FilterItemPicker } from './FilterItemPicker';
+import { insetSlotSx } from './insetSlot';
 
-export interface ChestFilterSlot {
+interface ChestFilterSlot {
     item_name: string;
     quantity: number;
 }
 
+const slotStyles = (open: boolean, width: number | string = 36) => {
+    const base = insetSlotSx({ open });
+    return [...(Array.isArray(base) ? base : [base]), { width, height: 36 }];
+};
+
 interface ChestFilterSlotSelectorProps {
     filters: ChestFilterSlot[];
     itemNames: string[];
+    /** Replaces a slot, or appends when slotIndex is filters.length. */
     onFilterChange: (slotIndex: number, filter: ChestFilterSlot) => void;
     onRemoveFilter: (slotIndex: number) => void;
-    onAddFilter: () => void;
     maxSlots?: number;
     quantityLabel?: string;
     canAddMore?: boolean;
+    showQuantity?: boolean;
 }
 
-export function ChestFilterSlotSelector({
-    filters,
-    itemNames,
-    onFilterChange,
-    onRemoveFilter,
-    onAddFilter,
-    maxSlots = 10,
-    quantityLabel = 'Count',
-    canAddMore = true,
+export function ChestFilterSlotSelector({ filters, itemNames, onFilterChange, onRemoveFilter,
+    maxSlots = 10, quantityLabel = 'Count', canAddMore = true, showQuantity = true,
 }: ChestFilterSlotSelectorProps) {
-    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-    const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
-    const [pendingItem, setPendingItem] = useState<string | null>(null);
-    const [pendingQuantity, setPendingQuantity] = useState<number>(1);
-
-    const handleSlotClick = (slotIndex: number, element: HTMLElement) => {
-        const filter = filters[slotIndex];
-        setPendingItem(filter?.item_name || null);
-        setPendingQuantity(filter?.quantity || 1);
-        setAnchorEl(element);
-        setActiveSlotIndex(slotIndex);
+    const { itemLabel } = useGameNames();
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+    const [active, setActive] = useState<number | null>(null);
+    const slotRefs = useRef<(HTMLButtonElement | null)[]>([]);
+    // An existing empty filter already offers the next choice; otherwise reveal one new slot.
+    const hasEmptySlot = filters.some(filter => !filter.item_name);
+    const slots = Math.min(maxSlots, filters.length + (canAddMore && !hasEmptySlot ? 1 : 0));
+    const openSlot = (index: number, element: HTMLElement) => {
+        // Empty placeholders all append to the next real slot, so saved filters never contain holes.
+        const slot = Math.min(index, filters.length);
+        setActive(slot);
+        setAnchor(element);
     };
-
-    const handleAddClick = (element: HTMLElement) => {
-        setPendingItem(null);
-        setPendingQuantity(1);
-        setAnchorEl(element);
-        setActiveSlotIndex(filters.length); // New slot index
+    const close = () => { setAnchor(null); setActive(null); };
+    const clear = (index: number) => {
+        onRemoveFilter(index);
+        close();
+        requestAnimationFrame(() => slotRefs.current[Math.min(index, Math.max(0, filters.length - 2))]?.focus());
     };
-
-    const handleClose = () => {
-        setAnchorEl(null);
-        setActiveSlotIndex(null);
-        setPendingItem(null);
-        setPendingQuantity(1);
-    };
-
-    const handleItemSelect = (item: string | null) => {
-        setPendingItem(item);
-    };
-
-    const handleQuantityChange = (value: number) => {
-        setPendingQuantity(Math.max(1, value));
-    };
-
-    const handleConfirm = () => {
-        if (activeSlotIndex !== null && pendingItem) {
-            const isNewSlot = activeSlotIndex >= filters.length;
-            if (isNewSlot) {
-                onAddFilter();
-                // Wait for the filter to be added, then update it
-                setTimeout(() => {
-                    onFilterChange(activeSlotIndex, {
-                        item_name: pendingItem,
-                        quantity: pendingQuantity,
-                    });
-                }, 0);
-            } else {
-                onFilterChange(activeSlotIndex, {
-                    item_name: pendingItem,
-                    quantity: pendingQuantity,
-                });
-            }
-        }
-        handleClose();
-    };
-
-    const displayedFilters = filters.slice(0, maxSlots);
-    const showAddButton = canAddMore && filters.length < maxSlots;
-
-    return (
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Render existing filter slots */}
-            {displayedFilters.map((filter, slotIndex) => (
-                <Box
-                    key={slotIndex}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={
-                        filter.item_name
-                            ? `Filter ${slotIndex + 1}: ${filter.item_name} (${filter.quantity})`
-                            : `Configure filter ${slotIndex + 1}`
-                    }
-                    onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleSlotClick(slotIndex, e.currentTarget);
-                        }
-                    }}
-                    sx={{
-                        width: 44,
-                        height: 44,
-                        border: '2px solid',
-                        borderColor: filter.item_name ? 'primary.main' : 'divider',
-                        borderRadius: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        bgcolor: 'background.paper',
-                        position: 'relative',
-                        transition: 'all 0.2s',
-                        m: 0.5,
-                        '&:hover, &:focus': {
-                            borderColor: 'primary.light',
-                            bgcolor: 'action.hover',
-                            outline: 'none',
-                            transform: 'scale(1.05)',
-                        },
-                        '&:focus-visible': {
-                            boxShadow: '0 0 0 2px',
-                            boxShadowColor: 'primary.main',
-                        },
-                    }}
-                >
-                    {filter.item_name ? (
-                        <>
-                            <FactorioIcon name={filter.item_name} size={32} />
-                            {/* Quantity badge */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    bottom: -6,
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    bgcolor: 'primary.main',
-                                    color: 'primary.contrastText',
-                                    fontSize: '10px',
-                                    fontWeight: 'bold',
-                                    px: 0.5,
-                                    py: 0.25,
-                                    borderRadius: 0.5,
-                                    lineHeight: 1,
-                                    minWidth: 16,
-                                    textAlign: 'center',
-                                }}
-                            >
-                                {filter.quantity}
-                            </Box>
-                            {/* Remove button */}
-                            <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRemoveFilter(slotIndex);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        onRemoveFilter(slotIndex);
-                                    }
-                                }}
-                                sx={{
-                                    position: 'absolute',
-                                    top: -8,
-                                    right: -8,
-                                    width: 16,
-                                    height: 16,
-                                    bgcolor: 'error.main',
-                                    '&:hover': { bgcolor: 'error.dark' },
-                                }}
-                            >
-                                <Close sx={{ fontSize: 12, color: 'white' }} />
-                            </IconButton>
-                        </>
-                    ) : (
-                        <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
-                    )}
-                </Box>
-            ))}
-
-            {/* Add new filter button */}
-            {showAddButton && (
-                <Box
-                    tabIndex={0}
-                    role="button"
-                    aria-label="Add new filter"
-                    onClick={(e) => handleAddClick(e.currentTarget)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleAddClick(e.currentTarget);
-                        }
-                    }}
-                    sx={{
-                        width: 44,
-                        height: 44,
-                        border: '2px dashed',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        bgcolor: 'transparent',
-                        transition: 'all 0.2s',
-                        m: 0.5,
-                        '&:hover, &:focus': {
-                            borderColor: 'primary.light',
-                            bgcolor: 'action.hover',
-                            outline: 'none',
-                        },
-                    }}
-                >
-                    <Add sx={{ fontSize: 20, color: 'text.disabled' }} />
-                </Box>
-            )}
-
-            {/* Show count if there are more filters than slots */}
-            {filters.length > maxSlots && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                    +{filters.length - maxSlots} more
-                </Typography>
-            )}
-
-            {/* Item selector popover */}
-            <Popover
-                open={Boolean(anchorEl)}
-                anchorEl={anchorEl}
-                onClose={handleClose}
-                anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'left',
-                }}
-            >
-                <Box sx={{ p: 2, width: 300 }}>
-                    <ItemSelector
-                        value={pendingItem}
-                        options={itemNames}
-                        onChange={handleItemSelect}
-                        label="Select Item"
-                        minWidth={268}
-                    />
-                    <TextField
-                        label={quantityLabel}
-                        type="number"
-                        value={pendingQuantity}
-                        onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-                        inputProps={{ min: 1 }}
-                        size="small"
-                        fullWidth
-                        sx={{ mt: 2 }}
-                    />
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 1 }}>
-                        <Button onClick={handleClose} color='inherit'>
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="contained"
-                            onClick={handleConfirm}
-                            disabled={!pendingItem}
-                            color='secondary'
-                        >
-                            Confirm
-                        </Button>
-                    </Box>
-                </Box>
-            </Popover>
+    return <>
+        <Box role="group" aria-label="Chest filters" sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
+            {Array.from({ length: slots }, (_, index) => {
+                const filter = filters[index];
+                const label = filter?.item_name ? `Filter ${index + 1}: ${itemLabel(filter.item_name)}${showQuantity ? ` (${filter.quantity})` : ''}` : `Configure filter ${index + 1}`;
+                return <Tooltip key={index} title={filter?.item_name ? `${itemLabel(filter.item_name)}${showQuantity ? ` × ${filter.quantity}` : ''}. Right-click to clear.` : 'Choose an item'}>
+                    <ButtonBase ref={element => { slotRefs.current[index] = element; }} aria-label={label} aria-haspopup="dialog"
+                        onClick={event => openSlot(index, event.currentTarget)}
+                        onContextMenu={event => { event.preventDefault(); if (filter?.item_name) clear(index); }}
+                        onKeyDown={event => { if ((event.key === 'Delete' || event.key === 'Backspace') && filter?.item_name) { event.preventDefault(); clear(index); } }}
+                        sx={slotStyles(Boolean(anchor) && active === index)}>
+                        {filter?.item_name && <>
+                            <FactorioIcon name={filter.item_name} size={26} alt="" />
+                            {showQuantity && <Box component="span" aria-hidden sx={{ position: 'absolute', bottom: 0, right: 2, fontSize: 11, fontWeight: 700, lineHeight: 1.1, color: '#fff', textShadow: '0 1px 2px #000, 1px 0 2px #000, -1px 0 2px #000' }}>{filter.quantity}</Box>}
+                        </>}
+                    </ButtonBase>
+                </Tooltip>;
+            })}
         </Box>
-    );
+        {filters.length > maxSlots && <Typography variant="caption" color="text.secondary">+{filters.length - maxSlots} more</Typography>}
+        {anchor && active !== null && <FilterItemPicker anchor={anchor} label="Choose a chest filter"
+            initialItem={filters[active]?.item_name} initialQuantity={filters[active]?.quantity ?? 1}
+            quantityLabel={showQuantity ? quantityLabel : undefined} minQuantity={0} itemNames={itemNames} onClose={close}
+            onClear={filters[active]?.item_name ? () => clear(active) : undefined}
+            onApply={(item, quantity) => { onFilterChange(active, { item_name: item, quantity }); close(); }} />}
+
+    </>;
 }

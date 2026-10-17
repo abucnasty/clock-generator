@@ -3,6 +3,7 @@
  * Uses a colorblind-friendly palette based on Wong (2011).
  */
 
+import type { ResolvedColorScheme } from '../theme/tokens';
 import { StatusCategory, InserterStatus, MachineStatus, DrillStatus, EntityType } from 'clock-generator/light';
 
 // Colorblind-friendly palette (Wong, 2011)
@@ -19,14 +20,39 @@ export const COLOR_BLIND_PALETTE = {
     white: "#FFFFFF",
 } as const;
 
-export const COLOR_BLIND_PALETTE_ALL: string[] = Object.values(COLOR_BLIND_PALETTE);
+/**
+ * The track under the marks of both timelines. Every colour drawn on it needs 3:1 (WCAG 1.4.11);
+ * colors.test.ts checks it.
+ */
+export const TIMELINE_TRACK_COLOR = '#1b1b1b';
+
+/** Disabled grey: darkGrey (#585858) was 1.5:1 on the old track; this is 3.48:1 on TIMELINE_TRACK_COLOR */
+const DISABLED_GREY = '#707070';
+
+/**
+ * Item colours of the Transfer chart. Kept apart from the state colours (no green, yellow or grey), each at least 3:1
+ * on the track and distinct for colour-blind viewers. colors.test.ts checks the palette against the track.
+ */
+const ITEM_COLORS = ['#E0298B', '#8BE3F9', '#E9C9C4', '#873DF5', '#8B92F9', '#BC884E'] as const;
+
+/** Items beyond this many share a colour with an earlier one */
+export const ITEM_COLOR_COUNT = ITEM_COLORS.length;
+
+/** One colour per distinct item, in alphabetical order, repeating after ITEM_COLORS.length items */
+export function itemColorMap(itemNames: Iterable<string>): Map<string, string> {
+    const colorMap = new Map<string, string>();
+    [...new Set(itemNames)].sort().forEach((item, index) => {
+        colorMap.set(item, ITEM_COLORS[index % ITEM_COLORS.length]);
+    });
+    return colorMap;
+}
 
 // Status category colors (colorblind-friendly)
 export const CATEGORY_COLORS: Record<StatusCategory, string> = {
     [StatusCategory.ACTIVE]: COLOR_BLIND_PALETTE.green,       // actively working
     [StatusCategory.WAITING]: COLOR_BLIND_PALETTE.yellow,     // waiting for something
     [StatusCategory.BLOCKED]: COLOR_BLIND_PALETTE.reddishPurple,     // blocked/cannot proceed
-    [StatusCategory.DISABLED]: COLOR_BLIND_PALETTE.darkGrey,  // disabled by control
+    [StatusCategory.DISABLED]: DISABLED_GREY,  // disabled by control
     [StatusCategory.IDLE]: COLOR_BLIND_PALETTE.lightGrey,     // nothing to do
 };
 
@@ -36,29 +62,29 @@ export const INSERTER_STATUS_COLORS: Record<InserterStatus, string> = {
     [InserterStatus.DROP_OFF]: COLOR_BLIND_PALETTE.skyBlue,       // dropping items
     [InserterStatus.SWING]: COLOR_BLIND_PALETTE.blue,        // in motion
     [InserterStatus.IDLE]: COLOR_BLIND_PALETTE.lightGrey,     // waiting
-    [InserterStatus.DISABLED]: COLOR_BLIND_PALETTE.darkGrey,  // disabled
+    [InserterStatus.DISABLED]: DISABLED_GREY,  // disabled
     [InserterStatus.TARGET_FULL]: COLOR_BLIND_PALETTE.reddishPurple, // waiting for sink (chest) to have space
-    [InserterStatus.WAITING_FOR_SINK]: COLOR_BLIND_PALETTE.reddishPurple, // a partly filled hand waits for the machine to take its item again
+    [InserterStatus.WAITING_FOR_SINK]: COLOR_BLIND_PALETTE.vermillion, // a partly filled hand waits for the machine to take its item again
 };
 
 // Detailed status colors for machines
 export const MACHINE_STATUS_COLORS: Record<MachineStatus, string> = {
     [MachineStatus.WORKING]: COLOR_BLIND_PALETTE.green,      // actively crafting
     [MachineStatus.INGREDIENT_SHORTAGE]: COLOR_BLIND_PALETTE.yellow, // waiting for ingredients
-    [MachineStatus.NO_FUEL]: COLOR_BLIND_PALETTE.yellow, // waiting for fuel
+    [MachineStatus.NO_FUEL]: COLOR_BLIND_PALETTE.orange, // waiting for fuel
     [MachineStatus.OUTPUT_FULL]: COLOR_BLIND_PALETTE.reddishPurple, // output blocked
 };
 
 // Detailed status colors for drills
 export const DRILL_STATUS_COLORS: Record<DrillStatus, string> = {
     [DrillStatus.WORKING]: COLOR_BLIND_PALETTE.green,      // actively mining
-    [DrillStatus.DISABLED]: COLOR_BLIND_PALETTE.darkGrey,  // disabled
+    [DrillStatus.DISABLED]: DISABLED_GREY,  // disabled
 };
 
 /**
  * Get color for a specific status based on entity type (detailed view)
  */
-export function getStatusColor(
+function getStatusColor(
     entityType: EntityType,
     status: string
 ): string {
@@ -77,7 +103,7 @@ export function getStatusColor(
 /**
  * Get color for a status category (simplified view)
  */
-export function getCategoryColor(category: StatusCategory): string {
+function getCategoryColor(category: StatusCategory): string {
     return CATEGORY_COLORS[category] ?? CATEGORY_COLORS.IDLE;
 }
 
@@ -138,18 +164,62 @@ const FACTORIO_STATE_COLORS: Record<string, string> = {
     waiting_for_source_items: COLOR_BLIND_PALETTE.lightGrey,
     waiting_for_more_items: COLOR_BLIND_PALETTE.skyBlue,
     waiting_for_space_in_destination: COLOR_BLIND_PALETTE.reddishPurple,
-    disabled_by_control_behavior: COLOR_BLIND_PALETTE.darkGrey,
+    disabled_by_control_behavior: DISABLED_GREY,
     item_ingredient_shortage: COLOR_BLIND_PALETTE.yellow,
     full_output: COLOR_BLIND_PALETTE.vermillion,
     no_fuel: COLOR_BLIND_PALETTE.orange,
 };
 
+/** The distinct states, in the legend order of the table above, then any state it does not know, first seen first */
+export function factorioStatesIn(states: Iterable<string>): string[] {
+    const seen = new Set(states);
+    const known = Object.keys(FACTORIO_STATE_COLORS).filter(state => seen.has(state));
+    return [...known, ...[...seen].filter(state => !Object.hasOwn(FACTORIO_STATE_COLORS, state))];
+}
+
 export function getFactorioStateColor(state: string): string {
-    return FACTORIO_STATE_COLORS[state] ?? COLOR_BLIND_PALETTE.white;
+    return Object.hasOwn(FACTORIO_STATE_COLORS, state) ? FACTORIO_STATE_COLORS[state] : COLOR_BLIND_PALETTE.white;
 }
 
 /** "waiting_for_space_in_destination" as the game's tooltip shows it: "Waiting for space in destination" */
 export function getFactorioStateLabel(state: string): string {
     const words = state.replace(/_/g, " ");
     return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** Same semantic hues on a light plotting surface, with solid, contrasting marks. */
+const LIGHT_PALETTE: Record<keyof typeof COLOR_BLIND_PALETTE, string> = {
+    blue: '#006da8', orange: '#8d5900', yellow: '#786b00', green: '#007653',
+    skyBlue: '#006f99', vermillion: '#a84400', reddishPurple: '#984078',
+    darkGrey: '#585858', lightGrey: '#74716a', white: '#24231f',
+};
+const LIGHT_ITEMS = ['#b31b6b', '#006b85', '#8c4c43', '#7130cc', '#4d56b5', '#805321'];
+
+/** Pure palette input for both SVG and canvas renderers; item/status meaning never changes with mode. */
+export function chartColorsFor(mode: ResolvedColorScheme) {
+    const palette = mode === 'dark' ? COLOR_BLIND_PALETTE : LIGHT_PALETTE;
+    const colors = new Map<string, string>(Object.keys(COLOR_BLIND_PALETTE).map(key => [
+        COLOR_BLIND_PALETTE[key as keyof typeof COLOR_BLIND_PALETTE], palette[key as keyof typeof COLOR_BLIND_PALETTE],
+    ]));
+    colors.set(DISABLED_GREY, mode === 'dark' ? DISABLED_GREY : '#706d66');
+    const adapt = (color: string) => colors.get(color) ?? color;
+    const adaptMap = <T extends string>(values: Record<T, string>): Record<T, string> =>
+        Object.fromEntries(Object.entries<string>(values).map(([key, color]) => [key, adapt(color)])) as Record<T, string>;
+    return {
+        palette,
+        track: mode === 'dark' ? TIMELINE_TRACK_COLOR : '#ffffff',
+        clock: palette.white,
+        category: adaptMap(CATEGORY_COLORS),
+        inserter: adaptMap(INSERTER_STATUS_COLORS),
+        machine: adaptMap(MACHINE_STATUS_COLORS),
+        drill: adaptMap(DRILL_STATUS_COLORS),
+        status: (entity: EntityType, status: string) => adapt(getStatusColor(entity, status)),
+        categoryColor: (category: StatusCategory) => adapt(getCategoryColor(category)),
+        factorio: (state: string) => adapt(getFactorioStateColor(state)),
+        itemMap: (items: Iterable<string>) => {
+            const result = itemColorMap(items);
+            if (mode === 'light') [...result.keys()].forEach((item, index) => result.set(item, LIGHT_ITEMS[index % LIGHT_ITEMS.length]));
+            return result;
+        },
+    };
 }

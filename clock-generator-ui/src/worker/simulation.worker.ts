@@ -1,3 +1,4 @@
+import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 /**
  * Web Worker for running clock-generator simulation.
  *
@@ -7,18 +8,29 @@
  */
 
 import type { z } from 'zod';
-import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
+import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
-import type { CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
+import { installFactsOf } from './installFacts';
+import { createReadyGate } from './requestGate';
+import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
+import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
 
 // imported dynamically in the worker context
 let clockGenerator: ClockGenerator;
+let liveCoverage: ReturnType<ClockGenerator['createInserterCoverageValidator']>;
+/** The data's in-game names, kept here so that the main thread does not parse the whole data for them */
+let gameNames: GameNames = NO_NAMES;
+/** The recipes the data marks hidden, which the pickers leave out */
+let hiddenRecipes: string[] = [];
 
 const LOG_FLUSH_INTERVAL_MS = 100;
 
 const ctx: Worker = self as unknown as Worker;
+
+// a worker started in place of a cancelled or crashed one gets its requests before it has loaded the data
+const gate = createReadyGate();
 
 function postResponse(response: WorkerResponse): void {
     ctx.postMessage(response);
@@ -29,10 +41,16 @@ async function handleInitialize(factorioData: string): Promise<void> {
         // Dynamically import the clock-generator browser module
         clockGenerator = await import('clock-generator/browser');
 
-        clockGenerator.FactorioDataService.initialize(JSON.parse(factorioData));
+        const parsed = JSON.parse(factorioData);
+        clockGenerator.FactorioDataService.initialize(parsed);
+        liveCoverage = clockGenerator.createInserterCoverageValidator();
+        gameNames = parsed.names ?? NO_NAMES;
+        hiddenRecipes = hiddenRecipeIds(parsed.recipe);
 
+        gate.open();
         postResponse({ type: 'initialized' });
     } catch (error) {
+        gate.fail(error instanceof Error ? error : new Error('Failed to initialize worker'));
         postResponse({
             type: 'error',
             message: error instanceof Error ? error.message : 'Failed to initialize worker',
@@ -91,7 +109,7 @@ function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result'
     };
 }
 
-function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | null {
+function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAlternativeRunView | null {
     if (!run) {
         return null;
     }
@@ -102,6 +120,21 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         inserterWindowCount: alternative.inserter_window_count,
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
+        assumptions: {
+            loopSeeds: result.machine_facts.flatMap(machine => machine.facts.inputs
+                .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
+                .map(input => ({ machineId: machine.entity_id, item: input.item_name,
+                    items: config.overrides?.loop_seed_items ?? clockGenerator.DEFAULT_LOOP_SEED_ITEMS }))),
+            outputDrops: [...new Set(config.inserters.filter(ins => ins.sink.type === 'belt').map(ins => ins.sink.id))]
+                .map(beltId => {
+                    const inserters = config.inserters.filter(ins => ins.sink.type === 'belt' && ins.sink.id === beltId);
+                    return { beltId, inserterIds: inserters.map(ins => ins.id ?? config.inserters.indexOf(ins) + 1),
+                        mode: inserters.every(ins => ins.sink.type === 'belt' && ins.sink.drop !== undefined) ? 'shared-lanes' as const : 'free-lane' as const };
+                }),
+            overrides: config.overrides,
+            machineFuel: config.machines.flatMap(machine => machine.fuel === undefined ? [] : [{ machineId: machine.id, fuel: machine.fuel }]),
+        },
+        copies: result.crafting_cycle_plan.production_rate.copies,
         verdict: alternative.verdict,
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
@@ -111,16 +144,20 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
         terminalSwingCount: result.used_terminal_swing_count,
         cycleTicks: result.crafting_cycle_plan.total_duration.ticks,
         blueprintString: clockGenerator.encodeBlueprintFileBrowser(clockGenerator.blueprintFileFor(result)),
+        install: installFactsOf(result),
         transferHistory: result.serializable_transfer_history,
         stateTransitionHistory: result.serializable_state_transition_history,
         clockOnlyTransferHistory: result.clock_only_run?.transfer_history ?? null,
         clockOnlyStateTransitionHistory: result.clock_only_run?.state_transition_history ?? null,
         fuelView: fuelViewOf(result),
         clockWindows: result.clock_windows,
+        beltPickupSlackTicks: result.belt_pickup_slack_ticks,
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
         swingBackoffReport: result.swing_backoff_report ?? null,
+        inserterClocks: result.unplanned_inserter_clocks ?? {},
+        nonMovingBelts: alternative.belt?.kind === 'non_moving' || (alternative.belt === null && config.overrides?.non_moving_belts === true),
     }));
     return { signature: run.signature, alternatives };
 }
@@ -128,6 +165,7 @@ function toRunView(run: ClockAlternativeRun | null): ClockAlternativeRunView | n
 /** Runs one plan or task with streamed logs and progress; errors are posted instead of thrown */
 function runStreaming(
     runId: number,
+    config: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     work: (options: import('clock-generator/browser').GenerateClockOptions) => WorkerResponse,
@@ -163,25 +201,84 @@ function runStreaming(
         flushLogs();
         postResponse(response);
     } catch (error) {
+        const failure = failureOf(error, config, 'Simulation failed');
         postResponse({
             type: 'error',
             runId,
-            message: error instanceof Error ? error.message : 'Simulation failed',
-            stack: error instanceof Error ? error.stack : undefined,
+            ...failure,
         });
     }
 }
 
 function handleValidate(requestId: number, config: Config): void {
     try {
+        requireValidConfig(config);
         postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
     } catch (error) {
+        const { message, recovery } = failureOf(error, config, 'Validation failed');
         postResponse({
             type: 'validation-failed',
             requestId,
-            message: error instanceof Error ? error.message : 'Validation failed',
+            message,
+            recovery,
+            diagnostics: error instanceof clockGenerator.InserterCoverageError
+                ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
+                : error instanceof clockGenerator.ConfigValidationError
+                    ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message }))
+                    : error instanceof Error && error.message.startsWith('The current configuration cannot meet the target production rate.')
+                        ? [{ kind: 'field', path: ['target_output', 'items_per_second'], message: error.message }]
+                        : undefined,
         });
     }
+}
+
+/** Planning and Check share the strict schema; editable persisted drafts do not bypass spatial constraints. */
+function requireValidConfig(config: Config): void {
+    const parsed = clockGenerator.ConfigSchema.safeParse(config);
+    if (!parsed.success) throw new clockGenerator.ConfigValidationError(parsed.error, config);
+}
+
+function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConversion {
+    const plan = clockGenerator.planRepeatedUnitConversion(config);
+    if (plan.kind === 'unavailable') return { kind: 'unavailable', stage: 'proof', reason: plan.reason };
+    try {
+        requireValidConfig(plan.candidate);
+        return { kind: 'available', plan, validation: clockGenerator.validateConfig(plan.candidate) };
+    } catch (error) {
+        // Planning's existing assertion type includes target-capacity/period refusals. Untyped errors
+        // and native programmer failures must remain query-failed, never a structural diagnosis.
+        if (!(error instanceof clockGenerator.ConfigValidationError)
+            && !(error instanceof clockGenerator.InserterCoverageError)
+            && !(error instanceof clockGenerator.CopiesError)
+            && !(error instanceof clockGenerator.AssertionError)) throw error;
+        return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
+            message: error instanceof Error ? error.message : 'The candidate Check failed.' } };
+    }
+}
+
+function repeatedUnitsRecoveryOf(error: CopiesError, config: Config): RepeatedUnitsRecovery {
+    const checked = checkRepeatedUnitConversion(config);
+    return {
+        kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
+        detectedCopies: error.units.length, configuredCopies: config.target_output.copies,
+        units: error.units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
+        conversion: checked.kind === 'available'
+            ? { kind: 'available', multiplicity: checked.plan.multiplicity, copies: checked.plan.copies }
+            : { kind: 'unavailable', stage: checked.stage, code: checked.reason.code, message: checked.reason.message },
+    };
+}
+
+/** A recovery-query failure must still settle the original Check/run, with its real error and no capability. */
+function failureOf(error: unknown, config: Config, fallback: string): { message: string; stack?: string; recovery?: RepeatedUnitsRecovery } {
+    if (error instanceof clockGenerator.CopiesError) {
+        try {
+            return { message: repeatedUnitsProblem(error), stack: error.stack, recovery: repeatedUnitsRecoveryOf(error, config) };
+        } catch (failure) {
+            return { message: failure instanceof Error ? failure.message : 'The engine could not check the repeated-unit conversion.',
+                stack: failure instanceof Error ? failure.stack : undefined };
+        }
+    }
+    return { message: error instanceof Error ? error.message : fallback, stack: error instanceof Error ? error.stack : undefined };
 }
 
 function lookups(): FactorioLookups {
@@ -199,7 +296,7 @@ function lookups(): FactorioLookups {
             // a recipe the generator cannot use has no info
         }
     }
-    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes };
+    return { recipeNames, itemNames: data.getAllItemNames(), resourceNames: data.getAllResourceNames(), recipes, names: gameNames, hiddenRecipes };
 }
 
 /** Validate each entry of a pasted list, throwing on the first one the schema rejects */
@@ -223,7 +320,8 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         inserters: validateEntries(clockGenerator.InserterConfigSchema, pasted.inserters, 'inserter'),
         belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
-        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines),
+        guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined, Array.isArray(pasted.chests) ? pasted.chests : []),
+        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
     };
 }
 
@@ -244,6 +342,8 @@ function configFile(config: unknown): Config {
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
     switch (query.kind) {
+        case 'timeline-recording':
+            return clockGenerator.recordSimulationTimeline(query.request);
         case 'lookups':
             return lookups();
         case 'machine-facts':
@@ -253,7 +353,11 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
                 return null;
             }
         case 'inserter-coverage':
-            return clockGenerator.validateInserterCoverage(query.config);
+            return liveCoverage(query.config);
+        case 'machine-target-rates':
+            return clockGenerator.computeMachineTargetRates(query.config);
+        case 'repeated-unit-conversion':
+            return checkRepeatedUnitConversion(query.config);
         case 'saved-config':
             return savedConfigProblem(query.config);
         case 'config-file':
@@ -276,9 +380,11 @@ function handleQuery(requestId: number, query: EngineQuery): void {
 }
 
 function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
-    runStreaming(runId, debugSteps, streamLogs, (options) => {
+    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
+        requireValidConfig(config);
         const plan = clockGenerator.planClockAlternatives(config, options);
-        return { type: 'planned', runId, primary: toRunView(plan.primary), context: plan.context, tasks: plan.tasks };
+        return { type: 'planned', runId, primary: toRunView(plan.primary, config), context: plan.context, tasks: plan.tasks,
+            assumptions: { startDependenceRequested: config.overrides?.check_start_dependence === true } };
     });
 }
 
@@ -290,19 +396,40 @@ function handleTask(
     context: import('clock-generator/browser').ClockAlternativeContext,
     taskId: string,
 ): void {
-    runStreaming(runId, debugSteps, streamLogs, (options) => {
+    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
+        requireValidConfig(config);
         const run = clockGenerator.runClockAlternativeTask(config, context, taskId, options);
-        return { type: 'task-completed', runId, taskId, run: toRunView(run) };
+        return { type: 'task-completed', runId, taskId, run: toRunView(run, config) };
     });
+}
+
+/** The answer to a request that could not run because the worker never loaded the data */
+function failedRequest(request: Exclude<WorkerRequest, { type: 'initialize' }>, message: string): WorkerResponse {
+    switch (request.type) {
+        case 'validate':
+            return { type: 'validation-failed', requestId: request.requestId, message };
+        case 'query':
+            return { type: 'query-failed', requestId: request.requestId, message };
+        case 'plan':
+        case 'task':
+            return { type: 'error', runId: request.runId, message };
+    }
 }
 
 ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const request = event.data;
+    if (request.type === 'initialize') {
+        await handleInitialize(request.factorioData);
+        return;
+    }
+    try {
+        await gate.whenOpen();
+    } catch (error) {
+        postResponse(failedRequest(request, error instanceof Error ? error.message : 'Failed to initialize worker'));
+        return;
+    }
 
     switch (request.type) {
-        case 'initialize':
-            await handleInitialize(request.factorioData);
-            break;
         case 'validate':
             handleValidate(request.requestId, request.config);
             break;

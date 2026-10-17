@@ -1,3 +1,4 @@
+import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
 import type {
     AsBuiltStabilityCheck,
@@ -24,10 +25,19 @@ import type {
     LogMessage,
     SerializableClockWindows,
     SerializableMachineFacts,
+    MachineTargetRate,
     SerializableStateTransitionHistory,
     SerializableTransferHistory,
+    SuggestedTarget,
     SwingBackoffReport,
+    RepeatedUnitConversionPlan,
+    RepeatedUnitConversionReason,
+    RepeatedUnitConversionReasonCode,
+    RecordTimelineRequest,
+    TimelineRecording,
 } from 'clock-generator/browser';
+import type { ClockInstallFacts } from './installFacts';
+import type { GameNames } from '../utils/gameNames';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -79,7 +89,7 @@ export interface ShiftRangeEdge {
     notes: string[];
 }
 
-/** Every place tried for the swings a potential clock moved off their planned start */
+/** Every place tried for the swings a clock moved off their planned start */
 
 export interface ShiftOptionsView {
     moved: 'swings' | 'output-swing';
@@ -108,6 +118,10 @@ export interface ClockAlternativeView {
     rankingWindowCount: number;
     /** What the trial of the clock found: holds, survives backpressure loss, rate, wake-ups */
     assessment: ClockAssessment;
+    /** Facts captured by the worker for this candidate, never read from a later edited form. */
+    assumptions: ClockModelAssumptions;
+    /** Copies of the build the target rate is shared over; the rate in the assessment is the total for all of them */
+    copies: number;
     /** The one word for the clock: stable, no recovery, or unstable */
     verdict: ClockVerdict;
     /** How the clock ranks against the others; the selection compares these, in order */
@@ -125,6 +139,8 @@ export interface ClockAlternativeView {
     /** Length of one crafting cycle; the clock period is a whole number of them */
     cycleTicks: number;
     blueprintString: string;
+    /** What installing the blueprint takes: whether it is a book, and which inserters each combinator is wired to */
+    install: ClockInstallFacts;
     transferHistory: SerializableTransferHistory;
     stateTransitionHistory: SerializableStateTransitionHistory;
     /**
@@ -137,12 +153,31 @@ export interface ClockAlternativeView {
     fuelView: FuelViewData | null;
     /** Decider windows in the blueprint, per entity id */
     clockWindows: SerializableClockWindows;
+    /** Ticks of belt pickup slack at the end of each window, by inserter id */
+    beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
     /** Null unless this clock moved a crafting cycle or an output swing */
     shiftOptions: ShiftOptionsView | null;
     simulationDurationTicks: number;
     swingBackoffReport: SwingBackoffReport | null;
+    /** Exact independent inserter clocks exported with this alternative, including measured fuel clocks. */
+    inserterClocks?: RecordTimelineRequest['inserter_clocks'];
+    /** The belt timing actually used by this alternative, including clocks for the other belt setting. */
+    nonMovingBelts?: boolean;
+}
+
+export interface ClockModelAssumptions {
+    loopSeeds: { machineId: string; item: string; items: number }[];
+    outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
+    overrides: Config['overrides'];
+    machineFuel: { machineId: number; fuel: string }[];
+}
+
+/** Requested checks and completion belong to the generation; actual outcomes remain on each assessment. */
+export interface GenerationAssumptions {
+    startDependenceRequested: boolean;
+    complete: boolean;
 }
 
 export type ClockAlternativeRunView = ClockAlternativeRun<ClockAlternativeView>;
@@ -219,6 +254,8 @@ export interface ValidationFailedResponse {
     type: 'validation-failed';
     requestId: number;
     message: string;
+    recovery?: RepeatedUnitsRecovery;
+    diagnostics?: ValidationDiagnostic[];
 }
 
 export interface LogResponse {
@@ -240,6 +277,7 @@ export interface PlannedResponse {
     primary: ClockAlternativeRunView | null;
     context: ClockAlternativeContext;
     tasks: ClockAlternativeTask[];
+    assumptions: Pick<GenerationAssumptions, 'startDependenceRequested'>;
 }
 
 export interface TaskCompletedResponse {
@@ -266,6 +304,24 @@ export interface ErrorResponse {
     runId?: number;
     message: string;
     stack?: string;
+    recovery?: RepeatedUnitsRecovery;
+}
+
+export type CheckedRepeatedUnitConversion =
+    | { kind: 'available'; plan: RepeatedUnitConversionPlan; validation: ConfigValidation }
+    | { kind: 'unavailable'; stage: 'proof'; reason: RepeatedUnitConversionReason }
+    | { kind: 'unavailable'; stage: 'check'; reason: { code: 'candidate-check-failed'; message: string } };
+
+export interface RepeatedUnitsRecovery {
+    kind: 'repeated-units';
+    sourceConfigKey: string;
+    detectedCopies: number;
+    configuredCopies: number;
+    units: { machine_ids: number[] }[];
+    conversion:
+        | { kind: 'available'; multiplicity: number; copies: number }
+        | { kind: 'unavailable'; stage: 'proof' | 'check';
+            code: RepeatedUnitConversionReasonCode | 'candidate-check-failed'; message: string };
 }
 
 export interface RecipeInfo {
@@ -280,6 +336,10 @@ export interface FactorioLookups {
     resourceNames: string[];
     /** By recipe name; a recipe the generator cannot use is left out */
     recipes: Map<string, RecipeInfo>;
+    /** The in-game names of the ids, from the data's `names` key (none when the data has no such key) */
+    names: GameNames;
+    /** The recipes the data marks hidden (recycling, parameters, mod and unused recipes) */
+    hiddenRecipes: string[];
 }
 
 export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
@@ -297,6 +357,8 @@ export interface PastedEntities {
     chests: ChestConfiguration[];
     /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
     guidance: Option<string>;
+    /** The target output the paste suggests: the mod's own, else worked out from the machines */
+    suggested_target: Option<SuggestedTarget>;
 }
 
 /**
@@ -304,9 +366,12 @@ export interface PastedEntities {
  * up by a generation running on the others.
  */
 export type EngineQuery =
+    | { kind: 'timeline-recording'; request: RecordTimelineRequest }
     | { kind: 'lookups' }
     | { kind: 'machine-facts'; params: ComputeMachineFactsParams }
+    | { kind: 'machine-target-rates'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
+    | { kind: 'repeated-unit-conversion'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
     | { kind: 'saved-config'; config: unknown }
     /**
@@ -322,13 +387,17 @@ export type EngineQuery =
         belts: unknown;
         chests: unknown;
         sidecar_version: unknown;
+        suggested_target: unknown;
     };
 
 export interface EngineAnswers {
+    'timeline-recording': TimelineRecording;
     'lookups': FactorioLookups;
     /** Null when they cannot be worked out, e.g. for an unknown recipe */
     'machine-facts': SerializableMachineFacts | null;
+    'machine-target-rates': MachineTargetRate[];
     'inserter-coverage': InserterCoverageIssue[];
+    'repeated-unit-conversion': CheckedRepeatedUnitConversion;
     /** Why the saved config cannot be used; null when it can */
     'saved-config': string | null;
     'config-file': Config;

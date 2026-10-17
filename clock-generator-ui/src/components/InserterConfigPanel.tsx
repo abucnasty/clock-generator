@@ -1,241 +1,31 @@
+import { effectiveInserterStackSize } from '../utils/inserterMetadata';
 import {
-    Autocomplete,
     Box,
     Chip,
-    MenuItem,
     Tab,
     Tabs,
-    TextField,
     Typography,
 } from '@mui/material';
-import { EnableControlMode, TargetType } from 'clock-generator/light';
-import { useMemo, useState } from 'react';
+import { EnableControlMode } from 'clock-generator/light';
+import { useId, useLayoutEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { useAnnounce } from '../hooks/useMessages';
+import { blockedSummaryOf } from '../utils/ruleProblems';
 import type {
     BeltFormData,
     ChestFormData,
     InserterFormData,
     MachineFormData,
 } from '../hooks/useConfigForm';
-import { isBufferChest, isInfinityChest } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
-import { inferInserterItems } from '../utils/inferInserterItems';
-import type { EnableControlFormContentProps } from './EnableControlModal';
-import { EnableControlFormContent, type CopyFromOption } from './EnableControlModal';
-import { FactorioIcon } from './FactorioIcon';
-import { FilterSlotSelector } from './FilterSlotSelector';
-import { NumberField } from './NumberField';
-
-// ---- Local types ----
-
-type SourceSinkType = typeof TargetType[keyof typeof TargetType];
-
-interface EntityOption {
-    type: SourceSinkType;
-    id: number;
-    label: string;
-    icon: string;
-    sublabel?: string;
-    ingredientIcons?: string[];
-}
-
-// ---- Inserter config form (source / sink / filters) ----
-
-function InserterEditSection({
-    inserter,
-    entityIndex,
-    machines,
-    belts,
-    chests,
-    itemNames,
-    getRecipeInfo,
-    onUpdate,
-}: {
-    inserter: InserterFormData;
-    entityIndex: number;
-    machines: MachineFormData[];
-    belts: BeltFormData[];
-    chests: ChestFormData[];
-    itemNames: string[];
-    getRecipeInfo: (name: string) => RecipeInfo | null;
-    onUpdate: (index: number, updates: Partial<InserterFormData>) => void;
-}) {
-    const entityOptions = useMemo<EntityOption[]>(() => {
-        const options: EntityOption[] = [];
-        machines.forEach(m => options.push({
-            type: TargetType.MACHINE, id: m.id,
-            label: `Machine ${m.id}`,
-            icon: m.recipe || 'assembling-machine-3',
-            sublabel: m.recipe || 'No recipe',
-        }));
-        belts.forEach(b => {
-            const ingredientIcons = b.lanes.map(l => l.ingredient).filter(Boolean);
-            options.push({
-                type: TargetType.BELT, id: b.id,
-                label: `Belt ${b.id}`, icon: b.type,
-                ingredientIcons: ingredientIcons.length > 0 ? ingredientIcons : undefined,
-            });
-        });
-        chests.forEach(c => options.push({
-            type: TargetType.CHEST, id: c.id,
-            label: `Chest ${c.id}`,
-            icon: isInfinityChest(c) ? 'infinity-chest' : 'iron-chest',
-            sublabel: isBufferChest(c) ? (c.item_filter || 'No filter') : undefined,
-        }));
-        return options;
-    }, [machines, belts, chests]);
-
-    const findOption = (type: SourceSinkType, id: number) =>
-        entityOptions.find(o => o.type === type && o.id === id);
-
-    const inferredFilters = useMemo<string[]>(
-        () => inferInserterItems(inserter, machines, belts, chests, getRecipeInfo),
-        [inserter, machines, belts, chests, getRecipeInfo],
-    );
-
-    // the two lanes of the belt this inserter picks up from, when they carry different items it could choose between
-    const sourceLanes = useMemo<string[] | null>(() => {
-        if (inserter.source.type !== TargetType.BELT) return null;
-        const lanes = belts.find(b => b.id === inserter.source.id)?.lanes.map(l => l.ingredient) ?? [];
-        return lanes.length === 2 && lanes[0] && lanes[1] && lanes[0] !== lanes[1] ? lanes : null;
-    }, [inserter.source, belts]);
-
-    const handleFilterChange = (slotIndex: number, item: string) => {
-        const filters = [...(inserter.filters || [])];
-        filters[slotIndex] = item;
-        while (filters.length > 0 && !filters[filters.length - 1]) filters.pop();
-        onUpdate(entityIndex, { filters: filters.length > 0 ? filters : undefined });
-    };
-
-    const handleRemoveFilter = (slotIndex: number) => {
-        let filters = [...(inserter.filters || [])];
-        if (filters.length === 0) filters = [...inferredFilters];
-        filters.splice(slotIndex, 1);
-        while (filters.length > 0 && !filters[filters.length - 1]) filters.pop();
-        onUpdate(entityIndex, { filters: filters.length > 0 ? filters : undefined });
-    };
-
-    const renderAdornment = (opt: EntityOption | undefined) =>
-        opt ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
-                <FactorioIcon name={opt.icon} size={20} />
-                {opt.ingredientIcons?.map((ing, i) => <FactorioIcon key={i} name={ing} size={16} />)}
-            </Box>
-        ) : null;
-
-    const renderOption = (props: React.HTMLAttributes<HTMLLIElement> & { key?: string }, option: EntityOption) => {
-        const { key, ...rest } = props;
-        return (
-            <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FactorioIcon name={option.icon} size={24} />
-                <Box>
-                    <Typography variant="body2">{option.label}</Typography>
-                    {option.sublabel ? (
-                        <Typography variant="caption" color="text.secondary">{option.sublabel}</Typography>
-                    ) : option.ingredientIcons ? (
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                            {option.ingredientIcons.map((ing, i) => <FactorioIcon key={i} name={ing} size={14} />)}
-                        </Box>
-                    ) : null}
-                </Box>
-            </Box>
-        );
-    };
-
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Autocomplete
-                size="small"
-                fullWidth
-                options={entityOptions}
-                value={findOption(inserter.source.type, inserter.source.id) ?? undefined}
-                onChange={(_, v) => v && onUpdate(entityIndex, { source: { type: v.type, id: v.id } })}
-                getOptionLabel={(o) => o.sublabel ? `${o.label} - ${o.sublabel}` : o.label}
-                isOptionEqualToValue={(o, v) => o.type === v.type && o.id === v.id}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Source — Tile 1"
-                        slotProps={{ input: { ...params.InputProps, startAdornment: renderAdornment(findOption(inserter.source.type, inserter.source.id)) } }}
-                    />
-                )}
-                renderOption={renderOption}
-                autoHighlight
-                disableClearable
-            />
-
-            {sourceLanes && (
-                <TextField
-                    select
-                    size="small"
-                    fullWidth
-                    label="Nearest lane of the belt"
-                    helperText="An inserter takes from the lane nearest to it first when its machine takes both items. The sidecar mod exports it; not set, the order of the filters is used."
-                    value={inserter.source.near_lane ?? 0}
-                    onChange={(e) => {
-                        const lane = Number(e.target.value);
-                        const source = { ...inserter.source };
-                        delete source.near_lane;
-                        onUpdate(entityIndex, { source: lane === 1 || lane === 2 ? { ...source, near_lane: lane } : source });
-                    }}
-                >
-                    <MenuItem value={0}>Not set</MenuItem>
-                    {sourceLanes.map((item, i) => (
-                        <MenuItem key={i} value={i + 1}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FactorioIcon name={item} size={18} />
-                                Lane {i + 1}: {item}
-                            </Box>
-                        </MenuItem>
-                    ))}
-                </TextField>
-            )}
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <FactorioIcon name="stack-inserter" size={22} />
-                <Typography variant="body2" color="text.secondary">
-                    Inserter #{inserter.id} — Tile 2
-                </Typography>
-                <Box sx={{ flex: 1 }} />
-                <NumberField
-                    label="Stack Size"
-                    value={inserter.stack_size}
-                    onValueChange={(val) => onUpdate(entityIndex, { stack_size: parseInt(val?.toString() || '') || 1 })}
-                    min={1}
-                    sx={{ width: 130 }}
-                    size="small"
-                />
-            </Box>
-
-            <Autocomplete
-                size="small"
-                fullWidth
-                options={entityOptions}
-                value={findOption(inserter.sink.type, inserter.sink.id) ?? undefined}
-                onChange={(_, v) => v && onUpdate(entityIndex, { sink: { type: v.type, id: v.id } })}
-                getOptionLabel={(o) => o.sublabel ? `${o.label} - ${o.sublabel}` : o.label}
-                isOptionEqualToValue={(o, v) => o.type === v.type && o.id === v.id}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Destination — Tile 3"
-                        slotProps={{ input: { ...params.InputProps, startAdornment: renderAdornment(findOption(inserter.sink.type, inserter.sink.id)) } }}
-                    />
-                )}
-                renderOption={renderOption}
-                autoHighlight
-                disableClearable
-            />
-
-            <FilterSlotSelector
-                filters={inserter.filters}
-                inferredFilters={inferredFilters}
-                itemNames={itemNames}
-                onFilterChange={handleFilterChange}
-                onRemoveFilter={handleRemoveFilter}
-            />
-        </Box>
-    );
-}
+import { describeEnableRule } from '../utils/enableRuleLabel';
+import { entityLabel } from '../utils/entityLabel';
+import { inferInserterItems, itemsAround } from '../utils/inferInserterItems';
+import { InserterEditor } from './InserterEditor';
+import { DraftFooter } from './DraftFooter';
+import { changedConfigFields } from '../utils/inserterDraft';
+import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { EnableControlFormContent, type CopyFromOption, type EnableControlFormState } from './EnableControlModal';
 
 // ---- Panel props ----
 
@@ -248,11 +38,39 @@ interface InserterConfigPanelProps {
     chests: ChestFormData[];
     itemNames: string[];
     getRecipeInfo: (name: string) => RecipeInfo | null;
+    /** Called once, on Save, with the changed fields */
     onUpdate: (index: number, updates: Partial<InserterFormData>) => void;
+    /** Closes the dialog the panel is in: after Save, and on Cancel */
+    onClose: () => void;
+    /** Cancel asks the parent to discard a dirty draft. */
+    onCancel?: () => void;
+    /** Told whether either tab has unsaved changes; pass a stable function (a state setter) */
+    onDirtyChange?: (dirty: boolean) => void;
+}
+
+// ---- Tab label with the unsaved mark ----
+
+/** The tab's text, then "•" when it holds unsaved edits; the tab's name says so in words ("Overrides, unsaved changes") */
+function TabLabel({ text, unsaved }: { text: string; unsaved: boolean }) {
+    if (!unsaved) return <span>{text}</span>;
+    // the whole name in one hidden span: next to the visible text, Chrome would put a space before its comma
+    return (
+        <span>
+            <span aria-hidden>
+                {text}
+                <Box component="span" sx={{ ml: 0.5 }}>•</Box>
+            </span>
+            <Box component="span" sx={VISUALLY_HIDDEN}>{text}, unsaved changes</Box>
+        </span>
+    );
 }
 
 // ---- Exported panel ----
 
+/**
+ * The diagram's inserter editor: a Config tab and an Overrides (rule) tab that make one form. Both edit a draft, which
+ * reaches the config only on Save; Cancel drops it. Both tabs stay mounted, so switching between them loses nothing.
+ */
 export function InserterConfigPanel({
     inserter,
     entityIndex,
@@ -263,39 +81,31 @@ export function InserterConfigPanel({
     itemNames,
     getRecipeInfo,
     onUpdate,
+    onClose,
+    onCancel,
+    onDirtyChange,
 }: InserterConfigPanelProps) {
+    const id = useId();
     const [activeTab, setActiveTab] = useState(0);
-    const [overrideFormKey, setOverrideFormKey] = useState(0);
+    const [draft, setDraft] = useState(inserter);
+    const announce = useAnnounce();
+    // whether Save was pressed while the rule had problems: the bar says why until they are fixed
+    const [saveRefused, setSaveRefused] = useState(false);
+    // raised on each refused Save, so that the rule form shows every problem
+    const [revealProblems, setRevealProblems] = useState(0);
+    const [rule, setRule] = useState<EnableControlFormState>({ override: inserter.overrides?.enable_control, changed: false, problems: [] });
 
+    // the tab's chip shows the saved rule, in the words of the List row's chip
     const currentOverride = inserter.overrides?.enable_control;
-    const overrideMode = currentOverride?.mode ?? EnableControlMode.AUTO;
-    const hasNonDefaultOverride = overrideMode !== EnableControlMode.AUTO;
+    const savedRule = describeEnableRule(currentOverride, { forcedAlways: inserter._forced_always });
 
-    const availableItems = useMemo<string[]>(() => {
-        const items = new Set<string>();
-        const addFromEntity = (type: SourceSinkType, id: number) => {
-            if (type === TargetType.MACHINE) {
-                const m = machines.find(m => m.id === id);
-                if (m?.recipe) {
-                    const info = getRecipeInfo(m.recipe);
-                    info?.results.forEach(r => items.add(r));
-                    info?.ingredients.forEach(i => items.add(i));
-                }
-            } else if (type === TargetType.BELT) {
-                const b = belts.find(b => b.id === id);
-                b?.lanes.forEach(l => { if (l.ingredient) items.add(l.ingredient); });
-            } else if (type === TargetType.CHEST) {
-                const c = chests.find(c => c.id === id);
-                if (c) {
-                    if (isBufferChest(c) && c.item_filter) items.add(c.item_filter);
-                    else if (isInfinityChest(c)) c.item_filter.forEach(f => { if (f.item_name) items.add(f.item_name); });
-                }
-            }
-        };
-        addFromEntity(inserter.source.type, inserter.source.id);
-        addFromEntity(inserter.sink.type, inserter.sink.id);
-        return [...items];
-    }, [inserter, machines, belts, chests, getRecipeInfo]);
+    const availableItems = useMemo(() => itemsAround(draft, machines, belts, chests, getRecipeInfo), [draft, machines, belts, chests, getRecipeInfo]);
+
+    // the items the inserter moves: its filters, else what the game would pick; a template's item picker starts on them
+    const movedItems = useMemo<string[]>(() => {
+        const filters = draft.filters?.filter(Boolean) ?? [];
+        return filters.length > 0 ? filters : inferInserterItems(draft, machines, belts, chests, getRecipeInfo);
+    }, [draft, machines, belts, chests, getRecipeInfo]);
 
     const copyFromOptions = useMemo<CopyFromOption[]>(() => {
         return inserters
@@ -305,20 +115,46 @@ export function InserterConfigPanel({
                 ins.overrides.enable_control.mode !== EnableControlMode.AUTO,
             )
             .map(ins => ({
-                label: `Inserter ${ins.id}`,
+                label: entityLabel('inserter', ins.id),
                 override: ins.overrides!.enable_control!,
             }));
     }, [inserter.id, inserters]);
 
-    const handleSaveOverride: EnableControlFormContentProps['onSave'] = (override) => {
-        onUpdate(entityIndex, {
-            overrides: { ...inserter.overrides, enable_control: override },
-        });
-        setOverrideFormKey(k => k + 1);
+    const changedFields = useMemo(() => changedConfigFields(draft, inserter), [draft, inserter]);
+    const configDirty = Object.keys(changedFields).length > 0;
+    const dirty = rule.changed || configDirty;
+
+    // a layout effect, like the rule form's, so that an Esc right after an edit already asks
+    useLayoutEffect(() => {
+        onDirtyChange?.(dirty);
+        return () => onDirtyChange?.(false);
+    }, [dirty, onDirtyChange]);
+
+    const handleDraftUpdate = (updates: Partial<InserterFormData>) => {
+        setDraft(d => ({ ...d, ...updates }));
     };
 
-    const handleCancelOverride = () => {
-        setOverrideFormKey(k => k + 1);
+    // one update with what changed; the overrides only when the rule did, so an untouched rule (a forced ALWAYS
+    // included) stays as it is
+    const handleSave = () => {
+        // a rule with problems is not saved: the Enable rule tab shows, its first problem takes the focus, and the bar
+        // and the polite region say why
+        if (rule.problems.length > 0) {
+            flushSync(() => {
+                setActiveTab(1);
+                setSaveRefused(true);
+                setRevealProblems((n) => n + 1);
+            });
+            document.getElementById(rule.problems[0].fieldId)?.focus();
+            announce(blockedSummaryOf(rule.problems));
+            return;
+        }
+        const updates: Partial<InserterFormData> = { ...changedFields };
+        if (rule.changed) {
+            updates.overrides = { ...inserter.overrides, enable_control: rule.override };
+        }
+        onUpdate(entityIndex, updates);
+        onClose();
     };
 
     return (
@@ -328,45 +164,63 @@ export function InserterConfigPanel({
                 onChange={(_, v) => setActiveTab(v)}
                 sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
             >
-                <Tab label="Config" />
+                {/* a tab with unsaved edits is marked "•" (its chip still shows the saved rule) */}
                 <Tab
-                    label="Overrides"
+                    label={<TabLabel text="Config" unsaved={configDirty} />}
+                    id={`${id}-tab-0`}
+                    aria-controls={`${id}-tabpanel-0`}
+                />
+                <Tab
+                    label={<TabLabel text="Enable rule" unsaved={rule.changed} />}
+                    id={`${id}-tab-1`}
+                    aria-controls={`${id}-tabpanel-1`}
                     iconPosition="end"
                     icon={
-                        hasNonDefaultOverride
-                            ? <Chip label={overrideMode} size="small" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
-                            : undefined
+                        savedRule.quiet
+                            ? undefined
+                            : <Chip label={savedRule.chip} title={savedRule.summary} size="small" color="primary" sx={{ fontSize: '0.7rem' }} />
                     }
                 />
             </Tabs>
 
-            <Box sx={{ p: 2 }}>
-                {activeTab === 0 && (
-                    <InserterEditSection
-                        inserter={inserter}
-                        entityIndex={entityIndex}
-                        machines={machines}
-                        belts={belts}
-                        chests={chests}
-                        itemNames={itemNames}
-                        getRecipeInfo={getRecipeInfo}
-                        onUpdate={onUpdate}
-                    />
-                )}
-                {activeTab === 1 && (
-                    <EnableControlFormContent
-                        key={overrideFormKey}
-                        entityType="inserter"
-                        currentOverride={currentOverride}
-                        onSave={handleSaveOverride}
-                        onCancel={handleCancelOverride}
-                        sourceType={inserter.source.type}
-                        sinkType={inserter.sink.type}
-                        availableItems={availableItems}
-                        copyFromOptions={copyFromOptions}
-                    />
-                )}
+            {/* both tabs stay mounted, so a draft on one survives a visit to the other */}
+            <Box role="tabpanel" id={`${id}-tabpanel-0`} aria-labelledby={`${id}-tab-0`} hidden={activeTab !== 0} sx={{ p: 2 }}>
+                <InserterEditor
+                    value={draft}
+                    label={entityLabel('inserter', inserter.id)}
+                    layout="stacked"
+                    machines={machines}
+                    belts={belts}
+                    chests={chests}
+                    itemNames={itemNames}
+                    getRecipeInfo={getRecipeInfo}
+                    onChange={handleDraftUpdate}
+                />
             </Box>
+            <Box role="tabpanel" id={`${id}-tabpanel-1`} aria-labelledby={`${id}-tab-1`} hidden={activeTab !== 1} sx={{ p: 2 }}>
+                <EnableControlFormContent
+                    entityType="inserter"
+                    entityId={inserter.id}
+                    stackSize={effectiveInserterStackSize(draft)}
+                    movedItems={movedItems}
+                    currentOverride={currentOverride}
+                    onDraftChange={setRule}
+                    hideActions
+                    sourceType={draft.source.type}
+                    sinkType={draft.sink.type}
+                    availableItems={availableItems}
+                    copyFromOptions={copyFromOptions}
+                    revealProblems={revealProblems}
+                />
+            </Box>
+
+            <DraftFooter dirty={dirty} onCancel={onCancel ?? onClose} onSave={handleSave}>
+                {saveRefused && rule.problems.length > 0 && (
+                    <Typography variant="body2" color="error" sx={{ mr: 1 }} data-rule-blocked="">
+                        {blockedSummaryOf(rule.problems)}
+                    </Typography>
+                )}
+            </DraftFooter>
         </Box>
     );
 }

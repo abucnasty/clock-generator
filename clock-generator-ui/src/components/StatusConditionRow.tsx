@@ -16,14 +16,11 @@ import {
     ValueReferenceType 
 } from 'clock-generator/light';
 import type { Condition } from '../hooks/useConfigForm';
+import { BUTTON_NAMES, GROUP_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
+import { STATUS_LABELS } from '../utils/ruleSentence';
 import { useFullscreen } from './FullscreenContext';
 
-const MACHINE_STATUSES = [
-    { value: MachineStatus.INGREDIENT_SHORTAGE, label: 'Ingredient Shortage' },
-    { value: MachineStatus.WORKING, label: 'Working' },
-    { value: MachineStatus.OUTPUT_FULL, label: 'Output Full' },
-    { value: MachineStatus.NO_FUEL, label: 'No Fuel' },
-] as const;
+const MACHINE_STATUSES = Object.entries(STATUS_LABELS).map(([value, label]) => ({ value: value as MachineStatus, label }));
 
 type SourceSinkType = typeof TargetType[keyof typeof TargetType];
 
@@ -102,17 +99,19 @@ export function StatusConditionRow({
                 exclusive
                 onChange={handleEntityChange}
                 size="small"
+                aria-label={GROUP_NAMES.whichMachine}
             >
                 <ToggleButton value={EntityReference.SOURCE} disabled={entityDisabled(EntityReference.SOURCE)}>
                     Source
                 </ToggleButton>
                 <ToggleButton value={EntityReference.SINK} disabled={entityDisabled(EntityReference.SINK)}>
-                    Sink
+                    Destination
                 </ToggleButton>
             </ToggleButtonGroup>
 
             <FormControl size="small" sx={{ minWidth: isNotSelectWidth }}>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.isOrIsNot }}
                     value={isNegated ? 'is-not' : 'is'}
                     onChange={(e) => handleNegationChange(e.target.value === 'is-not')}
                 >
@@ -123,6 +122,7 @@ export function StatusConditionRow({
 
             <FormControl size="small" sx={{ minWidth: statusSelectWidth }}>
                 <Select
+                    inputProps={{ 'aria-label': SELECT_NAMES.machineStatus }}
                     value={currentStatus}
                     onChange={(e) => handleStatusChange(e.target.value as MachineStatus)}
                 >
@@ -139,6 +139,7 @@ export function StatusConditionRow({
                 disabled={!canDelete}
                 size="small"
                 color="error"
+                aria-label={BUTTON_NAMES.removeStatusCheck}
             >
                 <Delete fontSize="small" />
             </IconButton>

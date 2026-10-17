@@ -8,7 +8,7 @@ import type {
     LatchConfig,
 } from './formData';
 
-// Helper to convert imported enable control override to form data
+// Helper to convert imported enable rule to form data
 function mapEnableControlOverride(ec: {
     mode: string;
     ranges?: { start: number; end: number }[];
@@ -52,15 +52,16 @@ export function configToFormData(imported: Config): ConfigFormData {
             crafting_speed: m.crafting_speed,
             type: m.type,
             energy_consumption_bonus: m.energy_consumption_bonus,
+            ...(m.fuel !== undefined && { fuel: m.fuel }),
         })),
         inserters: imported.inserters.map((ins, index) => ({
             id: ins.id ?? (index + 1),
             _uuid: crypto.randomUUID(),
             source: ins.source,
             sink: ins.sink,
-            // a config may leave the hand to the inserter's prototype since 0.14.0; the form has no prototype field yet,
-            // so it shows the default prototype's full-research hand, the stack inserter's 16
-            stack_size: ins.stack_size ?? 16,
+            prototype: ins.prototype,
+            quality: ins.quality,
+            stack_size: ins.stack_size,
             filters: ins.filters,
             overrides: ins.overrides ? {
                 animation: ins.overrides.animation,
@@ -73,16 +74,17 @@ export function configToFormData(imported: Config): ConfigFormData {
             id: b.id,
             _uuid: crypto.randomUUID(),
             type: b.type,
-            ...(b.strategy === 'export' && { strategy: b.strategy }),
+            ...(b.strategy !== undefined && { strategy: b.strategy }),
             lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
         })),
-        chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {
+        chests: (imported.chests ?? []).map((c: { type?: string; id: number; storage_size?: number; remove_unfiltered_items?: boolean; item_filter: string | { item_name: string; request_count: number }[] }): ChestFormData => {
             // Handle infinity chest
             if (c.type === ChestType.INFINITY_CHEST) {
                 return {
                     type: ChestType.INFINITY_CHEST,
                     id: c.id,
                     _uuid: crypto.randomUUID(),
+                    ...(c.remove_unfiltered_items !== undefined && { remove_unfiltered_items: c.remove_unfiltered_items }),
                     item_filter: (c.item_filter as { item_name: string; request_count: number }[]).map(f => ({
                         item_name: f.item_name,
                         request_count: f.request_count,
@@ -122,15 +124,19 @@ export function configToFormData(imported: Config): ConfigFormData {
 function toConfig<T extends { _uuid: string }>({ _uuid: _, ...rest }: T) { void _; return rest; }
 
 /** The config of the form state, for export, validation and generation */
-export function formDataToConfig({ next_ids: _, ...config }: ConfigFormData): Config {
-    void _;
-    // Strip internal _uuid fields before handing the config to any external consumer.
+export function formDataToConfig(config: ConfigFormData): Config {
+    // Strip the UI-only fields (every entity's _uuid, an inserter's _forced_always) before handing the config to any
+    // external consumer.
     return {
         ...config,
         machines: config.machines.map(toConfig),
-        inserters: config.inserters.map(toConfig),
+        inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => { void _f; return toConfig(ins); }),
         belts: config.belts.map(toConfig),
-        chests: config.chests.map(toConfig),
+        chests: config.chests.map(({ _chest_settings: memory, ...chest }) => {
+            void memory;
+            return toConfig(chest.type === ChestType.INFINITY_CHEST
+                ? { ...chest, item_filter: chest.item_filter.filter(filter => filter.item_name.trim() !== '') } : chest);
+        }),
         ...(config.drills && {
             drills: { ...config.drills, configs: config.drills.configs.map(toConfig) },
         }),

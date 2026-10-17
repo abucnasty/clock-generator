@@ -5,6 +5,8 @@ import {
     TargetType 
 } from 'clock-generator/light';
 import type { Condition, RuleSet } from '../hooks/useConfigForm';
+import { GROUP_NAMES, removeGroupName } from '../utils/a11yLabels';
+import type { RuleProblem } from '../utils/ruleProblems';
 import { ConditionRow } from './ConditionRow';
 import { 
     isCondition, 
@@ -23,6 +25,11 @@ interface RuleSetEditorProps {
     sinkType: SourceSinkType;
     depth?: number;
     label?: string;
+    /** The set's place in the rule: "rule" or "release" at the top, then the index of each group ("rule.2") */
+    path: string;
+    idPrefix: string;
+    /** The form's problems by field id */
+    problems: ReadonlyMap<string, RuleProblem>;
 }
 
 export function RuleSetEditor({
@@ -33,6 +40,9 @@ export function RuleSetEditor({
     sinkType,
     depth = 0,
     label,
+    path,
+    idPrefix,
+    problems,
 }: RuleSetEditorProps) {
     const handleOperatorChange = (_: React.MouseEvent<HTMLElement>, newOperator: RuleOperator | null) => {
         if (newOperator) {
@@ -89,6 +99,8 @@ export function RuleSetEditor({
                     exclusive
                     onChange={handleOperatorChange}
                     size="small"
+                    aria-label={GROUP_NAMES.joinConditions}
+                    sx={{ '& .MuiToggleButton-root': { minWidth: 44 } }}
                 >
                     <ToggleButton value={RuleOperator.AND}>AND</ToggleButton>
                     <ToggleButton value={RuleOperator.OR}>OR</ToggleButton>
@@ -110,6 +122,9 @@ export function RuleSetEditor({
                                 sourceType={sourceType}
                                 sinkType={sinkType}
                                 canDelete={ruleSet.rules.length > 1}
+                                path={`${path}.${index}`}
+                                idPrefix={idPrefix}
+                                problems={problems}
                             />
                         ) : (
                             <Box sx={{ position: 'relative' }}>
@@ -120,15 +135,19 @@ export function RuleSetEditor({
                                     sourceType={sourceType}
                                     sinkType={sinkType}
                                     depth={depth + 1}
+                                    path={`${path}.${index}`}
+                                    idPrefix={idPrefix}
+                                    problems={problems}
                                 />
                                 {ruleSet.rules.length > 1 && (
                                     <Button
                                         size="small"
                                         color="error"
                                         onClick={() => handleDeleteRule(index)}
+                                        aria-label={removeGroupName(index + 1)}
                                         sx={{ position: 'absolute', top: 4, right: 4 }}
                                     >
-                                        Remove Group
+                                        Remove group
                                     </Button>
                                 )}
                             </Box>
@@ -140,27 +159,27 @@ export function RuleSetEditor({
             <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                 <Button
                     size="small"
-                    startIcon={<Add />}
+                    color="inherit" startIcon={<Add />}
                     onClick={handleAddCondition}
                 >
-                    Add Condition
+                    Add condition
                 </Button>
                 {canAddStatusCondition && (
                     <Button
                         size="small"
-                        startIcon={<Add />}
+                        color="inherit" startIcon={<Add />}
                         onClick={handleAddStatusCondition}
                     >
-                        Add Status Check
+                        Add status condition
                     </Button>
                 )}
                 <Button
                     size="small"
-                    startIcon={<AddCircleOutline />}
+                    color="inherit" startIcon={<AddCircleOutline />}
                     onClick={handleAddGroup}
                     variant="outlined"
                 >
-                    Add Group
+                    Add group
                 </Button>
             </Box>
         </Paper>

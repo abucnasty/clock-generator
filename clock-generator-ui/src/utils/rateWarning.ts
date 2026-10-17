@@ -1,14 +1,32 @@
 import type { ClockAlternativeView } from '../worker/types';
+import { STALE_COPY_LABEL } from './resultsStaleness';
 
-/** The losses a clock does not get back from, in a sentence part: "coal stops arriving, or after iron-plate is not taken away" */
+/** A rate as the sentences about it print it: at most two decimals, no trailing zeros ("192", "12.5", "0.33") */
+const figure = (rate: number) => Number(rate.toFixed(2)).toString();
+
+/**
+ * The smallest shortfall a Copy button names. A clock less than this under the target prints as the target itself at
+ * two decimals, and "240/s, below target" would read as nonsense.
+ */
+const MIN_SHORTFALL = 0.005;
+
+const COPY_BLUEPRINT_LABEL = 'Copy blueprint';
+
+/** Label of every Copy button while a generation is still making clocks */
+const COPY_CURRENT_BEST_LABEL = 'Copy current best';
+
+/** Tooltip of the Copy buttons while a generation is still making clocks */
+export const COPY_CURRENT_BEST_TOOLTIP = 'More clocks are still being made. This copies the best one so far.';
+
+/** The causes a clock does not recover from, in a sentence part: "coal stops arriving, or after iron-plate is not taken away" */
 export function lossesOf(alternative: Pick<ClockAlternativeView, 'assessment'>): string {
     return alternative.assessment.backpressure_loss?.broken_by.join(', or after ') ?? '';
 }
 
 /**
  * What to tell whoever copies the blueprint of a clock: that it does not hold the target rate, as happens when no
- * potential clock does and the one nearest to it is selected; that it holds it and does not survive backpressure
- * loss; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
+ * clock does and the one nearest to it is selected; that it holds it and does not recover after the build is
+ * starved or jammed; and that its build has a deadlock risk, with the two inserters that share an item. Null for a stable clock
  * at the target rate on a build without the risk.
  */
 export function rateWarningOf(
@@ -24,17 +42,55 @@ export function rateWarningOf(
 function clockWarningOf(
     alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking'>,
 ): string | null {
-    if (alternative.verdict === 'no recovery') {
+    const warnings: string[] = [];
+    if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
+        warnings.push('This clock depends on how it is started: it reaches the target from some sampled starts and settles differently from others. See Model and tested starts.');
+    } else if (alternative.assessment.start_dependence?.verdict === 'unstable') {
+        warnings.push('This clock did not reach the target from any sampled start.');
+    }
+    if (alternative.assessment.backpressure_loss?.survives === false || alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
-        return 'This clock does not survive backpressure loss: '
-            + (losses ? `after ${losses} for a while, the build does not get back to its rate by itself` : 'it was off its rate in the run the losses are tried on')
-            + ' in the simulator, and has to be restarted.';
+        warnings.push(losses
+            ? `This clock does not recover: after ${losses} for a while, the build does not get back to its rate by itself in the simulator.`
+            : alternative.assessment.backpressure_loss === null
+                ? 'No usable recovery result is available for this clock.'
+                : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');
     }
-    if (alternative.ranking.meets_target_rate) {
-        return null;
-    }
-    const figure = (rate: number) => Number(rate.toFixed(2)).toString();
     const { items_per_second } = alternative.assessment;
-    return `This clock does not hold the target rate: it runs at ${figure(items_per_second)} of `
-        + `${figure(items_per_second - alternative.ranking.rate_off_target)} a second in the simulator.`;
+    if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
+        warnings.push(`This clock’s output rate differs from the target: it runs at ${figure(items_per_second)}/s; requested `
+            + `${figure(items_per_second - alternative.ranking.rate_off_target)}/s in the simulator.`);
+    }
+    if (alternative.assessment.holds === false) {
+        warnings.push('This clock does not hold its expected output in the modeled clock checks.');
+    }
+    return warnings.join(' ') || null;
+}
+
+/** Whether a clock runs short of the target rate by enough to say so on the Copy button */
+export function isBelowTarget(alternative: Pick<ClockAlternativeView, 'ranking'> | undefined): boolean {
+    return alternative !== undefined
+        && !alternative.ranking.meets_target_rate
+        && alternative.ranking.rate_off_target <= -MIN_SHORTFALL;
+}
+
+/**
+ * What the workflow bar's Copy button says when it has not just been used: "Copy old clock…" while the clocks are for
+ * an earlier build; "Copy current best" while a generation is still making clocks; with the clock's own rate when it
+ * runs short of the target ("Copy blueprint (192/s, below target)", "Copy current best (192/s, below target)"); and
+ * "Copy blueprint" otherwise. The other warnings are shown by the button's colour, its icon and its tooltip.
+ */
+export function copyBlueprintLabelOf(
+    alternative: Pick<ClockAlternativeView, 'assessment' | 'ranking'> | undefined,
+    stale: boolean,
+    running = false,
+): string {
+    if (stale) {
+        return STALE_COPY_LABEL;
+    }
+    const label = running ? COPY_CURRENT_BEST_LABEL : COPY_BLUEPRINT_LABEL;
+    if (alternative && isBelowTarget(alternative)) {
+        return `${label} (${figure(alternative.assessment.items_per_second)}/s, below target)`;
+    }
+    return label;
 }

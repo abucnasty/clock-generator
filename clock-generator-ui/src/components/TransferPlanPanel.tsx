@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useId, useRef } from 'react';
 import {
     Accordion,
     AccordionDetails,
@@ -15,8 +15,16 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BlockIcon from '@mui/icons-material/Block';
-import type { SerializableEntityTransferCount, SerializableTransferPlan } from 'clock-generator/browser';
+import type { SerializableTransferPlan } from 'clock-generator/browser';
+import { EnableControlMode } from 'clock-generator/light';
+import { ENABLE_MODE_LABELS } from '../utils/enableRuleLabel';
+import { entityLabel } from '../utils/entityLabel';
+import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
+import { ScrollX } from './ScrollX';
+import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
+import { useBuildSection } from '../hooks/useBuildViewContext';
 
 interface TransferPlanPanelProps {
     transferPlan: SerializableTransferPlan;
@@ -24,16 +32,19 @@ interface TransferPlanPanelProps {
     usedLcm: number;
     excludedIngredients: string[];
     onExcludeChange: (items: string[]) => void;
+    interaction?: 'editable' | 'checking' | 'read-only';
 }
+
+/** "inserter" as "Inserter" */
+function sentenceCase(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+const ALWAYS_ON = ENABLE_MODE_LABELS[EnableControlMode.ALWAYS];
 
 function formatFraction(numerator: number, denominator: number): string {
     if (denominator === 1) return String(numerator);
     return `${numerator}/${denominator}`;
-}
-
-function formatEntityLabel(entity: SerializableEntityTransferCount): string {
-    const capitalised = entity.entity_type.charAt(0).toUpperCase() + entity.entity_type.slice(1);
-    return `${capitalised} #${entity.entity_number}`;
 }
 
 function TransferPlanPanelComponent({
@@ -41,10 +52,14 @@ function TransferPlanPanelComponent({
     usedLcm,
     excludedIngredients,
     onExcludeChange,
+    interaction = 'editable',
 }: TransferPlanPanelProps) {
+    const [expanded, setExpanded] = useBuildSection('transfer-plan', true);
     const { entities, computed_lcm } = transferPlan;
+    const { itemLabel } = useGameNames();
 
     const toggleExclude = (itemName: string) => {
+        if (interaction !== 'editable') return;
         if (excludedIngredients.includes(itemName)) {
             onExcludeChange(excludedIngredients.filter((i) => i !== itemName));
         } else {
@@ -53,15 +68,22 @@ function TransferPlanPanelComponent({
     };
     const isLcmOverridden = usedLcm !== computed_lcm;
 
+    const summaryId = useId();
+    const regionRef = useRef<HTMLDivElement>(null);
+    const tooltipSlots = { popper: { container: () => regionRef.current } };
     return (
-        <Accordion defaultExpanded sx={{ mt: 1 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                    Transfer Plan
+        <Accordion expanded={expanded} onChange={(_, open) => setExpanded(open)} slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': summaryId, ref: regionRef } }} sx={{ mt: 1 }}>
+            <AccordionSummary id={summaryId} expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
+                    Swing Plan
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-                    <Tooltip title={`The least common multiple (LCM) that is computed based on the transfer fractions of all inserters. The clock will repeat every LCM cycles.`}>
+            </AccordionSummary>
+            <AccordionDetails sx={{ p: 0 }}>
+                {/* here, not in the title: the title is a button, and a focusable chip in a button cannot be reached or named */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1 }}>
+                    <Tooltip title="LCM: the number of crafting cycles in one clock period (the least common multiple of every inserter's swings per cycle)." describeChild slotProps={tooltipSlots}>
                         <Chip
+                            tabIndex={0}
                             label={`LCM: ${computed_lcm}`}
                             size="small"
                             color="default"
@@ -70,8 +92,9 @@ function TransferPlanPanelComponent({
                     </Tooltip>
 
                     {isLcmOverridden && (
-                        <Tooltip title={`Manual LCM override active: ${usedLcm} (computed: ${computed_lcm})`}>
+                        <Tooltip title={`Manual LCM override active: ${usedLcm} (calculated: ${computed_lcm})`} describeChild slotProps={tooltipSlots}>
                             <Chip
+                                tabIndex={0}
                                 label={`Used: ${usedLcm}`}
                                 size="small"
                                 color="warning"
@@ -84,20 +107,20 @@ function TransferPlanPanelComponent({
                             icon={<BlockIcon />}
                             label={`${excludedIngredients.length} excluded`}
                             size="small"
-                            color="secondary"
                             variant="outlined"
                         />
                     )}
                 </Box>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 0 }}>
-                <Table size="small">
+                <ScrollX label={SCROLL_REGION_NAMES.swingPlan}>
+                {/* from 600px up the columns keep their widths; below it they shrink to their content, with less padding, so that the
+                    Exclude from LCM column stays on screen on a phone (the box scrolls, with an edge fade, only when it still cannot fit) */}
+                <Table size="small" sx={{ '& th, & td': { px: { xs: 0.75, sm: 2 } } }}>
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{ width: '30%' }}>Entity</TableCell>
+                            <TableCell sx={{ width: { sm: '30%' } }}>Entity</TableCell>
                             <TableCell>Item</TableCell>
-                            <TableCell align="right" sx={{ width: '120px' }}>Transfers / cycle</TableCell>
-                            <TableCell align="center" sx={{ width: '110px' }}>Exclude from LCM</TableCell>
+                            <TableCell align="right" sx={{ width: { sm: '120px' } }}>Swings / cycle</TableCell>
+                            <TableCell align="center" sx={{ width: { sm: '110px' } }}>Exclude from LCM</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -110,36 +133,35 @@ function TransferPlanPanelComponent({
                                     <TableRow
                                         key={`${entity.entity_id}-${transfer.item_name}`}
                                         sx={{
-                                            opacity: isExcluded ? 0.5 : 1,
                                             '& td': { borderBottom: isFirstRow || transferIdx > 0 ? undefined : 'none' },
                                         }}
                                     >
                                         <TableCell>
                                             {isFirstRow ? (
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
                                                     <Chip
-                                                        label={entity.entity_type}
+                                                        label={sentenceCase(entity.entity_type)}
                                                         size="small"
                                                         variant="outlined"
-                                                        sx={{ fontSize: '0.65rem', height: 18 }}
+                                                        sx={{ fontSize: '0.7rem' }}
                                                     />
                                                     <Typography variant="body2">
-                                                        {formatEntityLabel(entity)}
+                                                        {entityLabel(entity.entity_type, entity.entity_number)}
                                                     </Typography>
                                                 </Box>
                                             ) : null}
                                         </TableCell>
                                         <TableCell>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                <FactorioIcon name={transfer.item_name} size={18} />
+                                                <FactorioIcon name={transfer.item_name} size={18} alt="" />
                                                 <Typography
                                                     variant="body2"
                                                     sx={{
                                                         textDecoration: isExcluded ? 'line-through' : 'none',
-                                                        color: isExcluded ? 'text.disabled' : 'text.primary',
+                                                        color: isExcluded ? 'text.secondary' : 'text.primary',
                                                     }}
                                                 >
-                                                    {transfer.item_name}
+                                                    <GameName id={transfer.item_name} />
                                                 </Typography>
                                             </Box>
                                         </TableCell>
@@ -148,7 +170,7 @@ function TransferPlanPanelComponent({
                                                 variant="body2"
                                                 sx={{
                                                     fontFamily: 'monospace',
-                                                    color: isExcluded ? 'text.disabled' : 'text.primary',
+                                                    color: isExcluded ? 'text.secondary' : 'text.primary',
                                                 }}
                                             >
                                                 {formatFraction(transfer.numerator, transfer.denominator)}
@@ -157,19 +179,26 @@ function TransferPlanPanelComponent({
                                         <TableCell align="center">
                                             <Tooltip
                                                 title={
-                                                    isExcluded
+                                                    interaction !== 'editable' ? (interaction === 'checking' ? 'Checking the build. Changes are unavailable.' : 'This plan is out of date. Check the build before changing it.') : isExcluded
                                                         ? 'Click to include in LCM'
-                                                        : 'Click to exclude from LCM (inserter will be set to ALWAYS)'
+                                                        : `Click to exclude from LCM. An inserter whose items are all excluded is set to ${ALWAYS_ON} unless it already has an enable rule of your own.`
                                                 }
+                                                describeChild
+                                                slotProps={tooltipSlots}
                                             >
                                                 <Chip
+                                                    // starts with the word on the chip, and says what it is about
+                                                    aria-label={`${isExcluded ? 'Excluded from' : 'Included in'} LCM: ${itemLabel(transfer.item_name)}`}
                                                     icon={isExcluded ? <BlockIcon /> : undefined}
                                                     label={isExcluded ? 'Excluded' : 'Included'}
                                                     size="small"
-                                                    color={isExcluded ? 'secondary' : 'default'}
                                                     variant={isExcluded ? 'filled' : 'outlined'}
-                                                    onClick={() => toggleExclude(transfer.item_name)}
-                                                    sx={{ cursor: 'pointer' }}
+                                                    onClick={interaction === 'read-only' ? undefined : () => toggleExclude(transfer.item_name)}
+                                                    aria-disabled={interaction === 'checking' || undefined}
+                                                    onKeyDown={interaction === 'checking' ? event => {
+                                                        if (event.key === 'Enter' || event.key === ' ') event.preventDefault();
+                                                    } : undefined}
+                                                    sx={{ minWidth: 84, cursor: interaction === 'editable' ? 'pointer' : 'default' }}
                                                 />
                                             </Tooltip>
                                         </TableCell>
@@ -179,11 +208,14 @@ function TransferPlanPanelComponent({
                         )}
                     </TableBody>
                 </Table>
+                </ScrollX>
                 <Box sx={{ px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="caption" color="text.secondary">
-                        Transfers per cycle are fractions of the LCM period. Excluded ingredients are omitted from the
-                        LCM calculation — their inserters will be forced to{' '}
-                        <strong>ALWAYS</strong> enabled. Re-run the simulation after making changes.
+                        Swings per cycle can be fractions. The clock period is the number of crafting cycles (the LCM)
+                        after which they all come out whole. Excluded ingredients are left out of that calculation, and an
+                        inserter whose items are all excluded is forced to <strong>{ALWAYS_ON}</strong>, unless you gave
+                        it an enable rule of your own, which stays.
+                        Generate again after making changes.
                     </Typography>
                 </Box>
             </AccordionDetails>

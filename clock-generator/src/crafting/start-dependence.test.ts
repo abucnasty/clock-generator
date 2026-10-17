@@ -4,11 +4,34 @@ import {
     type StartDependence, type StartOutcome,
 } from "./start-dependence";
 import { clockVerdictOf, type ClockAssessment } from "./trial";
+import { startDependenceSummary } from "./alternatives";
+import { startDependenceInsight } from "./insights";
+import type { Config } from "../config";
 
 const outcome = (id: string, reaches_target: boolean, output_items_per_period: number | null = null, cycle: number[] | null = null, off_bins: StartOutcome["off_bins"] = null, span_items: number | null = null, long_run_keeps_up: boolean | null = null): StartOutcome =>
     ({ id, label: id, reaches_target, output_items_per_period, cycle, off_bins, span_items, long_run_keeps_up });
 
 describe("the starts a clock is tried from", () => {
+    it("describes actual samples and unavailable checks without prescribing a filled or free-running start", () => {
+        const starts = [outcome("cold", true), outcome("ascending", false)];
+        const dependence: StartDependence = { verdict: "start-dependent", starts, expected_output_items: 240 };
+        const assessment: ClockAssessment = { holds: true, backpressure_loss: null, items_per_second: 240, wake_ups_per_minute: 1, start_dependence: dependence };
+        const config = { overrides: { check_start_dependence: true } } as Config;
+        const sampled = { id: "sampled", assessment };
+        const summary = startDependenceSummary(config, [sampled]);
+        expect(summary.start_dependence_checked).toBe(true);
+        expect(summary.start_dependence_note).toContain("2 starts per clock");
+        const unavailable = { id: "missing", assessment: { ...assessment, start_dependence: null } };
+        const partial = startDependenceSummary(config, [sampled, unavailable]);
+        expect(partial.start_dependence_checked).toBe(false);
+        expect(partial.start_dependence_note).toContain("Results are unavailable for 1 clock");
+        expect(startDependenceSummary(config, []).start_dependence_checked).toBe(false);
+        const insight = startDependenceInsight("actual outcomes", dependence);
+        expect(insight.why).toContain("cold; ascending");
+        expect(insight.explanation).toContain("do not cover every possible");
+        expect(insight.explanation).not.toContain("start this one as the first start");
+        expect(startDependenceInsight("all reached", { ...dependence, verdict: "stable" }).title).toContain("every sampled start");
+    });
     it("are the cold start with the clock at five places of its period, then ascending and two random orders, the cold start first", () => {
         expect(CLOCK_STARTS.map(it => it.id)).toEqual(["cold", "cold+30", "cold+300", "cold+700", "cold+1000", "ascending", "random-1", "random-2"]);
         expect(COLD_START_SHIFTS).toEqual([0, 30, 300, 700, 1000]);

@@ -1,10 +1,16 @@
-import { Add, Close } from '@mui/icons-material';
-import { Box, IconButton, Typography, Popover } from '@mui/material';
-import { useState } from 'react';
+import { Box, ButtonBase, Tooltip, Typography } from '@mui/material';
+import { useRef, useState } from 'react';
+import { useGameNames } from '../hooks/useGameNames';
+import { usesAutomaticFilters } from '../utils/inserterFilters';
 import { FactorioIcon } from './FactorioIcon';
-import { ItemSelector } from './ItemSelector';
+import { FilterItemPicker } from './FilterItemPicker';
+import { AUTO_BADGE_SX, insetSlotSx } from './insetSlot';
 
 interface FilterSlotSelectorProps {
+    label?: string;
+    /** Keep the label in normal flow in tightly wrapped rows. */
+    compact?: boolean;
+    priority?: { label: string; ids: string[] };
     /** Explicit filters set by the user */
     filters?: string[];
     /** Inferred/auto-populated filters from source/sink analysis */
@@ -15,202 +21,52 @@ interface FilterSlotSelectorProps {
     onFilterChange: (slotIndex: number, item: string) => void;
     /** Callback when a filter is removed */
     onRemoveFilter: (slotIndex: number) => void;
-    /** Number of filter slots to display */
+    /** The most filters an inserter takes */
     maxSlots?: number;
 }
 
-export function FilterSlotSelector({
-    filters = [],
-    inferredFilters = [],
-    itemNames,
-    onFilterChange,
-    onRemoveFilter,
-    maxSlots = 5,
+
+export function FilterSlotSelector({ priority, filters,
+    inferredFilters = [], itemNames, onFilterChange, onRemoveFilter, maxSlots = 5,
 }: FilterSlotSelectorProps) {
-    const hasExplicitFilters = filters.length > 0;
-    const shouldShowInferred = !hasExplicitFilters && inferredFilters.length > 0;
-    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-    const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
-
-    const handleSlotClick = (slotIndex: number, element: HTMLElement) => {
-        setAnchorEl(element);
-        setActiveSlotIndex(slotIndex);
+    const { itemLabel } = useGameNames();
+    const automatic = usesAutomaticFilters(filters);
+    const displayed = automatic ? inferredFilters.slice(0, maxSlots) : filters!;
+    // Older imported configurations remain editable, without offering additional slots beyond the new limit.
+    const slotCount = Math.max(maxSlots, displayed.length);
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+    const [active, setActive] = useState<number | null>(null);
+    const slotRefs = useRef<(HTMLButtonElement | null)[]>([]);
+    const close = () => { setAnchor(null); setActive(null); };
+    const clear = (index: number) => {
+        onRemoveFilter(index);
+        close();
+        requestAnimationFrame(() => slotRefs.current[Math.min(index, Math.max(0, displayed.length - 1))]?.focus());
     };
-
-    const handleClose = () => {
-        setAnchorEl(null);
-        setActiveSlotIndex(null);
-    };
-
-    const handleItemSelect = (item: string | null) => {
-        if (activeSlotIndex !== null && item) {
-            onFilterChange(activeSlotIndex, item);
-        }
-        handleClose();
-    };
-
-    const getCurrentValue = () => {
-        if (activeSlotIndex === null) return null;
-        return filters[activeSlotIndex] || inferredFilters[activeSlotIndex] || null;
-    };
-
-    return (
-        <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-                Filters:
-            </Typography>
-
-            {/* Render filter slots */}
-            {Array.from({ length: maxSlots }).map((_, slotIndex) => {
-                // Determine what to display in this slot
-                const explicitFilter = filters[slotIndex];
-                const inferredFilter = shouldShowInferred ? inferredFilters[slotIndex] : undefined;
-                const displayFilter = explicitFilter || inferredFilter;
-                const isAutoAssigned = !explicitFilter && !!inferredFilter;
-
-                return (
-                    <Box
-                        key={slotIndex}
-                        tabIndex={0}
-                        role="button"
-                        margin={0.3}
-                        aria-label={
-                            displayFilter
-                                ? `Filter ${slotIndex + 1}: ${displayFilter}${isAutoAssigned ? ' (auto)' : ''}`
-                                : `Add filter ${slotIndex + 1}`
-                        }
-                        onClick={(e) => handleSlotClick(slotIndex, e.currentTarget)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleSlotClick(slotIndex, e.currentTarget);
-                            }
-                        }}
-                        sx={{
-                            width: 30,
-                            height: 30,
-                            border: '2px solid',
-                            borderStyle: isAutoAssigned ? 'hidden' : 'solid',
-                            borderColor: displayFilter
-                                ? isAutoAssigned
-                                    ? 'secondary.main'
-                                    : 'primary.main'
-                                : 'divider',
-                            borderRadius: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            bgcolor: 'background.paper',
-                            position: 'relative',
-                            opacity: isAutoAssigned ? 0.85 : 1,
-                            transition: 'all 0.2s',
-                            '&:hover, &:focus': {
-                                borderColor: displayFilter
-                                    ? isAutoAssigned
-                                        ? 'secondary.dark'
-                                        : 'primary.light'
-                                    : 'primary.light',
-                                bgcolor: 'action.hover',
-                                opacity: 1,
-                                outline: 'none',
-                                transform: 'scale(1.05)',
-                            },
-                            '&:focus-visible': {
-                                boxShadow: '0 0 0 2px',
-                                boxShadowColor: 'primary.main',
-                            },
-                        }}
-                    >
-                        {displayFilter ? (
-                            <>
-                                <FactorioIcon name={displayFilter} size={22} />
-                                {/* Show auto badge for inferred filters */}
-                                {isAutoAssigned && (
-                                    <Box
-                                        sx={{
-                                            position: 'absolute',
-                                            bottom: -8,
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            bgcolor: 'common.black',
-                                            color: 'secondary.light',
-                                            fontSize: '8px',
-                                            fontWeight: 'bold',
-                                            px: 0.5,
-                                            py: 0.25,
-                                            borderRadius: 0.5,
-                                            lineHeight: 1,
-                                        }}
-                                    >
-                                        AUTO
-                                    </Box>
-                                )}
-                                {/* Show remove button for all filters (explicit and auto-assigned) */}
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onRemoveFilter(slotIndex);
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            onRemoveFilter(slotIndex);
-                                        }
-                                    }}
-                                    sx={{
-                                        position: 'absolute',
-                                        top: -8,
-                                        right: -8,
-                                        width: 16,
-                                        height: 16,
-                                        bgcolor: 'error.main',
-                                        '&:hover': { bgcolor: 'error.dark' },
-                                    }}
-                                >
-                                    <Close sx={{ fontSize: 12, color: 'white' }} />
-                                </IconButton>
-                            </>
-                        ) : (
-                            <Add sx={{ fontSize: 16, color: 'text.disabled' }} />
-                        )}
-                    </Box>
-                );
+    return <Box>
+        <Box role="group" aria-label="Inserter filter slots" sx={{ display: 'flex', gap: 0.5, p: 0.5, pb: automatic && displayed.length ? 1.5 : 0.5, width: 'fit-content', bgcolor: 'action.hover', border: 1, borderColor: 'divider', borderRadius: 0.5, boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.25)' }}>
+            {Array.from({ length: slotCount }, (_, index) => {
+                const item = displayed[index];
+                const auto = automatic && Boolean(item);
+                const base = insetSlotSx({ auto, open: Boolean(anchor) && active === index });
+                return <Tooltip key={index} title={item ? `${itemLabel(item)}${auto ? ' (automatic)' : ''}. Right-click to clear.${displayed.length === 1 ? ' Clearing the last filter returns to Automatic.' : ''}` : 'Choose an item'}>
+                    <ButtonBase ref={element => { slotRefs.current[index] = element; }}
+                        aria-label={item ? `Filter ${index + 1}: ${itemLabel(item)}${auto ? ' (auto)' : ''}` : `Add filter ${index + 1}`} aria-haspopup="dialog"
+                        aria-keyshortcuts={item ? 'Delete' : undefined}
+                        onClick={event => { setActive(index); setAnchor(event.currentTarget); }}
+                        onContextMenu={event => { event.preventDefault(); if (item) clear(index); }}
+                        onKeyDown={event => { if ((event.key === 'Delete' || event.key === 'Backspace') && item) { event.preventDefault(); clear(index); } }}
+                        sx={[...(Array.isArray(base) ? base : [base]), { width: 36, height: 36 }]}>
+                        {item && <FactorioIcon name={item} size={26} alt="" fallback={<Typography variant="caption">{itemLabel(item).slice(0, 2)}</Typography>} />}
+                        {auto && <Box aria-hidden sx={AUTO_BADGE_SX}>AUTO</Box>}
+                    </ButtonBase>
+                </Tooltip>;
             })}
-
-            {/* Show count if there are more inferred items than slots */}
-            {shouldShowInferred && inferredFilters.length > maxSlots && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                    +{inferredFilters.length - maxSlots} more
-                </Typography>
-            )}
-
-            {/* Item selector popover */}
-            <Popover
-                open={Boolean(anchorEl)}
-                anchorEl={anchorEl}
-                onClose={handleClose}
-                anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'left',
-                }}
-            >
-                <Box sx={{ p: 2, width: 300 }}>
-                    <ItemSelector
-                        value={getCurrentValue()}
-                        options={itemNames}
-                        onChange={handleItemSelect}
-                        label="Select Item"
-                        minWidth={268}
-                    />
-                </Box>
-            </Popover>
         </Box>
-    );
+        {automatic && inferredFilters.length > maxSlots && <Typography variant="caption" color="text.secondary">+{inferredFilters.length - maxSlots} inferred items</Typography>}
+        {anchor && active !== null && <FilterItemPicker anchor={anchor} label="Choose an inserter filter" initialItem={displayed[active]}
+            itemNames={itemNames} priority={priority} onClose={close}
+            onClear={displayed[active] ? () => clear(active) : undefined}
+            onApply={item => { onFilterChange(active, item); close(); }} />}
+    </Box>;
 }

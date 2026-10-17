@@ -1,31 +1,35 @@
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { useTheme } from '@mui/material/styles';
+import { themeTokens } from '../theme/runtimeTokens';
+import type { NodeProps, Node } from '@xyflow/react';
 import { Box, Chip, Typography } from '@mui/material';
 import { FactorioIcon } from './FactorioIcon';
-import type { InserterNodeData } from '../utils/buildFlowGraph';
+import { FlowNodeHandles } from './FlowNodeHandles';
+import { INSERTER_NODE_CHIP_WIDTH, INSERTER_NODE_WIDTH, type InserterNodeData } from '../utils/buildFlowGraph';
+import { entityLabel } from '../utils/entityLabel';
+import { FLOW_NODE_BOX_CLASS, FLOW_NODE_FONT_SIZE } from './flowNodeStyle';
 
 type InserterFlowNodeType = Node<InserterNodeData, 'inserterNode'>;
 
 export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
+    const tokens = themeTokens(useTheme());
     return (
         <>
-            {data.vertical
-                ? <Handle type="target" id="in" position={data.vertical === 'down' ? Position.Top : Position.Bottom} />
-                : <Handle type="target" position={Position.Left} />}
             <Box
+                className={FLOW_NODE_BOX_CLASS}
                 sx={{
                     px: 1.5,
                     py: 1,
-                    bgcolor: '#1e1e1e',
-                    border: '2px solid #666',
+                    bgcolor: tokens.surface.page,
+                    border: `2px solid ${tokens.control.border}`,
                     borderRadius: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 0.5,
                     cursor: 'pointer',
-                    width: 136,
+                    width: data.enableChip ? INSERTER_NODE_CHIP_WIDTH : INSERTER_NODE_WIDTH,
                     boxSizing: 'border-box',
-                    '&:hover': { bgcolor: '#2a2a2a', borderColor: '#999' },
+                    '&:hover': { bgcolor: tokens.surface.page, borderColor: tokens.control.border },
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -33,45 +37,50 @@ export function InserterFlowNode({ data }: NodeProps<InserterFlowNodeType>) {
                     <Box>
                         <Typography
                             variant="caption"
-                            sx={{ fontWeight: 700, fontSize: '0.68rem', display: 'block', lineHeight: 1.2, color: '#ccc' }}
+                            className="flow-node-title"
+                            sx={{ fontWeight: 700, fontSize: FLOW_NODE_FONT_SIZE, display: 'block', lineHeight: 1.2, color: tokens.text.primary }}
                         >
-                            Inserter #{data.inserterId}
+                            {entityLabel('inserter', data.inserterId)}
                         </Typography>
                         <Typography
                             variant="caption"
-                            sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1.2, display: 'block' }}
+                            className="flow-node-detail"
+                            sx={{ fontSize: FLOW_NODE_FONT_SIZE, color: 'text.secondary', lineHeight: 1.2, display: 'block' }}
                         >
-                            Stack: {data.stackSize}
+                            Stack: {Number.isFinite(data.stackSize) ? data.stackSize : 'Automatic'}
                         </Typography>
                     </Box>
                 </Box>
                 {data.filterIcons && data.filterIcons.length > 0 && (
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                         {data.filterIcons.map(icon => (
-                            <FactorioIcon key={icon} name={icon} size={14} />
+                            <FactorioIcon key={icon} name={icon} size={14} titled />
                         ))}
                     </Box>
                 )}
-                {data.overrideMode && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25 }}>
+                {data.enableChip && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25, maxWidth: '100%' }}>
+                        {/* the List row's chip text; a long rule wraps onto a second line rather than widen the node */}
                         <Chip
-                            label={data.overrideMode}
+                            className="flow-node-detail"
+                            label={data.enableChip}
+                            title={data.enableSummary}
                             size="small"
                             sx={{
-                                height: 14,
-                                fontSize: '0.55rem',
+                                height: 'auto',
+                                minHeight: 20,
+                                maxWidth: '100%',
+                                fontSize: FLOW_NODE_FONT_SIZE,
                                 fontWeight: 700,
-                                bgcolor: '#fca300',
-                                color: '#000',
-                                '& .MuiChip-label': { px: 0.75 },
+                                bgcolor: tokens.role.orange.main,
+                                color: tokens.role.orange.on,
+                                '& .MuiChip-label': { px: 0.75, py: 0.25, whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.2 },
                             }}
                         />
                     </Box>
                 )}
             </Box>
-            {data.vertical
-                ? <Handle type="source" id="out" position={data.vertical === 'down' ? Position.Bottom : Position.Top} />
-                : <Handle type="source" position={Position.Right} />}
+            <FlowNodeHandles data={data} />
         </>
     );
 }

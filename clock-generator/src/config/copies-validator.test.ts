@@ -184,3 +184,15 @@ describe('validateCopies on the config samples', () => {
         expect(found.gcd).toBe(1);
     });
 });
+
+it('distinguishes repeated units whose infinity chests have different removal settings', () => {
+    const c = config({
+        machines: [machine(1, 'iron-gear-wheel'), machine(2, 'iron-gear-wheel')],
+        belts: [belt(1, 'iron-plate')],
+        chests: [1, 2].map(id => ({ id, type: 'infinity-chest', item_filter: [{ item_name: 'iron-gear-wheel', request_count: 1 }], remove_unfiltered_items: id === 1 })),
+        inserters: [intoMachine(1, 1), intoMachine(1, 2), ...[1, 2].map(id => inserter({ type: 'machine', id }, { type: 'chest', id }))],
+    });
+    expect(findRepeatedUnits(c).gcd).toBe(1);
+    c.chests![1] = { ...c.chests![0], id: 2 };
+    expect(findRepeatedUnits(c).gcd).toBe(2);
+});

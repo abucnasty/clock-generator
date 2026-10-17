@@ -1,4 +1,5 @@
 import type {
+    Config,
     Condition,
     EnableControlOverrideConfig,
     EnableControlRange,
@@ -18,9 +19,10 @@ export interface MachineFormData {
     type?: 'machine' | 'furnace' | 'biochamber';
     /** Energy consumption effect in percent; only used by biochambers. */
     energy_consumption_bonus?: number;
+    fuel?: Config['machines'][number]['fuel'];
 }
 
-// Enable control override types come from the engine's config schema
+// Enable rule types come from the engine's config schema
 export type { Condition, EnableControlRange, RuleSet, ValueReference };
 export type EnableControlOverride = EnableControlOverrideConfig;
 export type LatchConfig = NonNullable<Extract<EnableControlOverride, { mode: 'CONDITIONAL' }>['latch']>;
@@ -37,11 +39,21 @@ export interface InserterFormData {
     /** Internal UUID — see MachineFormData._uuid. */
     _uuid: string;
     /** `near_lane`: of a belt, the lane nearest to the inserter (1 or 2, by its place in the belt's lanes), which it takes from first */
-    source: { type: 'machine' | 'belt' | 'chest'; id: number; near_lane?: 1 | 2 };
-    sink: { type: 'machine' | 'belt' | 'chest'; id: number };
-    stack_size: number;
+    source: { type: 'machine' | 'belt' | 'chest'; id: number;
+        near_lane?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['near_lane'];
+        drop?: Extract<Config['inserters'][number]['source'], { type: 'belt' }>['drop'] };
+    sink: { type: 'machine' | 'belt' | 'chest'; id: number;
+        drop?: Extract<Config['inserters'][number]['sink'], { type: 'belt' }>['drop'] };
+    prototype?: string;
+    quality?: Config['inserters'][number]['quality'];
+    /** Omitted means the prototype's fully researched capacity (Automatic). */
+    stack_size?: number;
     filters?: string[];
     overrides?: InserterOverrides;
+    /** UI-only, never part of the exported config: set when Exclude from LCM forced this inserter's rule to ALWAYS
+     *  (its items are all excluded), so that including one of them again may take that ALWAYS away. Replacing the
+     *  rule clears it. */
+    _forced_always?: true;
 }
 
 export interface BeltLaneFormData {
@@ -103,8 +115,13 @@ export interface InfinityFilterFormData {
     request_count: number;
 }
 
+/** Form-only settings retained while switching chest types; never sent to the backend. */
+interface ChestSettingsMemory {
+    _chest_settings?: { infinity_filters?: InfinityFilterFormData[]; remove_unfiltered_items?: boolean; buffer_filter?: string; storage_size?: number };
+}
+
 // Buffer chest form data
-export interface BufferChestFormData {
+export interface BufferChestFormData extends ChestSettingsMemory {
     type: typeof ChestType.BUFFER_CHEST;
     id: number;
     /** Internal UUID — see MachineFormData._uuid. */
@@ -114,12 +131,13 @@ export interface BufferChestFormData {
 }
 
 // Infinity chest form data
-export interface InfinityChestFormData {
+export interface InfinityChestFormData extends ChestSettingsMemory {
     type: typeof ChestType.INFINITY_CHEST;
     id: number;
     /** Internal UUID — see MachineFormData._uuid. */
     _uuid: string;
     item_filter: InfinityFilterFormData[];
+    remove_unfiltered_items?: boolean;
 }
 
 // Discriminated union for chest types
@@ -152,17 +170,7 @@ export interface ConfigFormData {
         mining_productivity_level: number;
         configs: DrillFormData[];
     };
-    overrides?: {
-        lcm?: number;
-        terminal_swing_count?: number;
-        use_fractional_swings?: boolean;
-        non_moving_belts?: boolean;
-        search_for_fewer_wake_ups?: boolean;
-        ignored_lcm_ingredients?: string[];
-    };
-    /** UI-only: of each kind, an id past those of the entities removed from it, so that a new entity does not get one
-     *  of them, which references to the removed entity may still hold. Missing in forms saved before it. */
-    next_ids?: Partial<Record<EntityKind, number>>;
+    overrides?: Config['overrides'];
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({

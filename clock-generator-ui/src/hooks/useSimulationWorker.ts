@@ -1,30 +1,48 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { ValidationDiagnostic } from '../utils/buildValidation';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, SerializableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, searchesAreNeeded } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
+import type { GeneratedFor } from '../utils/resultsStaleness';
+import { CHECK_TEXT, PendingChecks, type CheckOutcome } from '../utils/checkThenGenerate';
+import { pickRuleOf, recommendedIndexOf, type PickRule } from '../utils/recommendedClock';
+import { planGenerationRun } from '../utils/deeperSearch';
+import { NO_NAMES, pickerIds, type GameNames } from '../utils/gameNames';
+import { plainClockName } from '../utils/clockSummary';
+import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
+import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
+import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
+import type { GenerationAssumptions, RepeatedUnitsRecovery } from '../worker/types';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 
 /**
- * Where the Validate step stands. `config` is the config the result or error is for, so the page can tell when
+ * Where the check stands. `config` is the config the result or error is for, so the page can tell when
  * the user has changed something since.
  */
 export type ValidationState =
     | { status: 'none' }
     | { status: 'running'; config: Config }
     | { status: 'valid'; config: Config; validation: ConfigValidation }
-    | { status: 'invalid'; config: Config; message: string };
+    /** `crashed`: the check's worker stopped, so the build was not judged; Generate checks again */
+    | { status: 'invalid'; config: Config; message: string; crashed?: boolean; recovery?: RepeatedUnitsRecovery;
+        diagnostics?: ValidationDiagnostic[] };
 
 interface UseSimulationWorkerResult {
+    generationAssumptions: GenerationAssumptions | null;
     isInitialized: boolean;
     isRunning: boolean;
     /** Progress lives outside React state so its frequent updates only re-render what reads it */
     progressStore: GenerationProgressStore;
     recipeNames: string[];
+    /** Recipes the open list leaves out and a typed search finds */
+    searchOnlyRecipes: string[];
     itemNames: string[];
     resourceNames: string[];
+    /** The in-game names of the ids above */
+    gameNames: GameNames;
     logs: LogMessage[];
     blueprintString: string | null;
     transferHistory: SerializableTransferHistory | null;
@@ -42,16 +60,61 @@ interface UseSimulationWorkerResult {
     alternatives: ClockAlternativeView[];
     selectedAlternativeIndex: number;
     selectAlternative: (index: number) => void;
+    /** Index of the clock the selection rule picks, whichever is selected; null while there are no clocks */
+    recommendedIndex: number | null;
+    /** Selects the recommended clock and lets the selection follow it again */
+    selectRecommended: () => void;
+    /** What the selection rule was given by the config of the latest generation; null before one */
+    pickRule: PickRule | null;
     /** Labels of alternatives still being generated; the finished ones are already in `alternatives` */
     pendingAlternatives: string[];
     /** Labels of the searches that were not run, because a clock made without one can be selected as stable */
     skippedSearches: string[];
+    /**
+     * True when the searches ran because the run asked for them, by the switch or by Search deeper, not because they
+     * were needed
+     */
+    searchedDeeper: boolean;
     validation: ValidationState;
-    /** Checks the config and plans its transfers in a worker, without generating a clock */
-    validate: (config: Config) => void;
+    /**
+     * Checks the config and plans its transfers in a worker, without generating a clock. Resolves when the check ends;
+     * `dropped` when Import, Paste, Reset or a newer check replaced it. Never rejects
+     */
+    validate: (config: Config) => Promise<CheckOutcome>;
     error: string | null;
+    errorRecovery: RepeatedUnitsRecovery | null;
     initialize: () => void;
-    runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean) => void;
+    /** Generates clocks for `config`; `searchDeeper` runs the slower searches this once, without changing what is recorded */
+    runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper?: boolean) => void;
+    /** What the last Generate was for; null when nothing is generated */
+    generatedFor: GeneratedFor | null;
+    /**
+     * Drops the clocks, the log, the check's result and any generation still running (its workers are stopped), for
+     * when the build is replaced as a whole (Import, Paste, Reset). The clocks on screen are set aside for the build
+     * with `formKey`, so that an Undo, which puts that build back, brings them back too.
+     */
+    clearResults: (options?: { formKey?: string }) => void;
+    /**
+     * Stops the generation or the check that is running, at once: the workers doing it are replaced. What shows after
+     * it is `afterCancel`'s; nothing happens when nothing runs.
+     */
+    cancel: () => void;
+    /** The last Cancel and what it left on screen; null before one */
+    lastStop: RunStop | null;
+    /** The results on screen are of a run the player stopped */
+    stoppedEarly: boolean;
+    /** The clock the player picked, which the last run did not make; null when it did, or there was no pick */
+    pickGone: { label: string } | null;
+    /** Bumped each time kept results come back on an empty Results (not on load) */
+    restoredId: number;
+    /**
+     * Shows the results kept for the build with `key` (`keyToShow`): on load, or, `replace`, when Results is empty.
+     * Resolves whether something was shown; a restore overtaken by a run, a clear or another restore shows nothing.
+     * `announce: false` keeps a `replace` from bumping `restoredId`, for a switch of build that announces itself.
+     */
+    restoreResultsFor: (key: string, mode: 'load' | 'replace', options?: { announce?: boolean }) => Promise<boolean>;
+    /** The kept results can be looked up (IndexedDB is open, or memory is used instead) */
+    resultsStoreReady: boolean;
     clearLogs: () => void;
     getRecipeInfo: (recipeName: string) => RecipeInfo | null;
 }
@@ -97,6 +160,7 @@ function workerPoolSize(): number {
  * wait for the other tasks, and are then queued or left out.
  */
 interface Generation {
+    assumptions: GenerationAssumptions | null;
     runId: number;
     config: Config;
     debugSteps: DebugSteps;
@@ -115,37 +179,134 @@ interface Generation {
     idle: Worker[];
     completed: number;
     detail?: string;
+    /** What was on screen when it started, for a Cancel to bring back */
+    previous: ShownResults | null;
+    generatedFor: GeneratedFor;
+    pickRule: PickRule;
+    searchedDeeper: boolean;
 }
+
+/** The result fields published together, including the clocks of an in-progress run. */
+type ResultsView = Pick<UseSimulationWorkerResult,
+    'generationAssumptions' | 'alternatives' | 'selectedAlternativeIndex' | 'pendingAlternatives' |
+    'skippedSearches' | 'searchedDeeper' | 'pickRule' | 'generatedFor' | 'stoppedEarly' | 'pickGone'>;
+
+const emptyResults = (): ResultsView => ({
+    generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
+    skippedSearches: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
+});
+
+/** The kept results, opened once for the page (StrictMode mounts the hook twice) */
+let sharedResultsStore: Promise<ResultsStore> | null = null;
+const resultsStore = () => (sharedResultsStore ??= openResultsStore());
 
 export function useSimulationWorker(): UseSimulationWorkerResult {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
     const [progressStore] = useState(createProgressStore);
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
+    const [searchOnlyRecipes, setSearchOnlyRecipes] = useState<string[]>([]);
     const [itemNames, setItemNames] = useState<string[]>([]);
     const [resourceNames, setResourceNames] = useState<string[]>([]);
+    const [gameNames, setGameNames] = useState<GameNames>(NO_NAMES);
     const [recipes, setRecipes] = useState<Map<string, RecipeInfo>>(() => new Map());
     const [logs, setLogs] = useState<LogMessage[]>([]);
-    const [alternatives, setAlternatives] = useState<ClockAlternativeView[]>([]);
-    const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState(0);
-    const [pendingAlternatives, setPendingAlternatives] = useState<string[]>([]);
-    const [skippedSearches, setSkippedSearches] = useState<string[]>([]);
-    // set once the user picks an alternative, so results arriving later do not move the selection
-    const userSelectionRef = useRef<string | null>(null);
+    const [resultsView, setResultsView] = useState(emptyResults);
+    // Worker messages and selection clicks can arrive before React renders the last publication.
+    const resultsViewRef = useRef(resultsView);
+    const updateResults = useCallback((patch: Partial<ResultsView>) => {
+        const next = { ...resultsViewRef.current, ...patch };
+        resultsViewRef.current = next;
+        setResultsView(next);
+    }, []);
+    const {
+        generationAssumptions, alternatives, selectedAlternativeIndex, pendingAlternatives, skippedSearches,
+        searchedDeeper, pickRule, generatedFor, stoppedEarly, pickGone,
+    } = resultsView;
+    const [lastStop, setLastStop] = useState<RunStop | null>(null);
+    const [restoredId, setRestoredId] = useState(0);
+    const [resultsStoreReady, setResultsStoreReady] = useState(false);
+    // The explicit pick survives streaming updates; a new generation follows its recommendation again.
+    const userSelectionRef = useRef<KeptPick>(null);
     const [error, setError] = useState<string | null>(null);
+    const [errorRecovery, setErrorRecovery] = useState<RepeatedUnitsRecovery | null>(null);
     const workersRef = useRef<Worker[]>([]);
+    // startup failures stay in their slots until an explicit Check only or Generate retries them
+    const unusableWorkersRef = useRef(new Set<Worker>());
     const generationRef = useRef<Generation | null>(null);
     const runIdRef = useRef(0);
     const [validation, setValidation] = useState<ValidationState>({ status: 'none' });
+    // the check state as rendered, and as it was before the running check, which a Cancel puts back
+    const validationStateRef = useRef(validation);
+    const validationBeforeRef = useRef<ValidationState>({ status: 'none' });
     // the latest validate request; answers to earlier ones are dropped
     const validationRef = useRef<{ requestId: number; config: Config } | null>(null);
+    // the promises of the checks still waiting for an answer
+    const [pendingChecks] = useState(() => new PendingChecks());
+    // whether a check is waiting for its answer, for a worker crash or a Cancel to end it
+    const checkRunningRef = useRef(false);
+    // the complete (or stopped) results on screen with their pick; a run's clocks while it goes are not in it
+    const shownRef = useRef<ShownResults | null>(null);
+    // the results set aside by the last Import, Paste or Reset, for its Undo
+    const droppedRef = useRef<DroppedResults | null>(null);
+    const storeRef = useRef<ResultsStore | null>(null);
+    // bumped by every restore, run and clear: a restore that resolves after a newer one of these shows nothing
+    const restoreTokenRef = useRef(0);
+    const stopIdRef = useRef(0);
+    // starts a worker in place of one that is replaced; set once the handlers it needs exist
+    const startWorkerRef = useRef<() => Worker>(() => {
+        throw new Error('Not initialized');
+    });
+
+    useEffect(() => {
+        validationStateRef.current = validation;
+    }, [validation]);
+
+    useEffect(() => {
+        let mounted = true;
+        void resultsStore().then((store) => {
+            storeRef.current = store;
+            if (mounted) setResultsStoreReady(true);
+        });
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const terminateWorkers = useCallback(() => {
         workersRef.current.forEach(worker => worker.terminate());
         workersRef.current = [];
+        unusableWorkersRef.current.clear();
     }, []);
 
     useEffect(() => terminateWorkers, [terminateWorkers]);
+
+    /**
+     * Terminates `busy` and starts a worker in each of their places. A check still waiting for its answer on the first
+     * worker is sent again to the one that takes its place (which holds it until it has loaded the data)
+     */
+    const replace = useCallback((busy: Worker[]) => {
+        const before = workersRef.current;
+        workersRef.current = replaceWorkers(before, busy, () => startWorkerRef.current());
+        busy.forEach(worker => unusableWorkersRef.current.delete(worker));
+        const resend = checkToResend(before, workersRef.current, checkRunningRef.current ? validationRef.current : null);
+        if (resend) {
+            workersRef.current[0].postMessage({ type: 'validate', requestId: resend.requestId, config: resend.config } satisfies WorkerRequest);
+        }
+    }, []);
+
+    /** What is on screen, kept for a Cancel and, by its key, for a reload of this tab */
+    const setShown = useCallback((shown: ShownResults | null) => {
+        shownRef.current = shown;
+        writeShownMarker(shown?.results.generatedFor.key ?? null);
+    }, []);
+
+    /** The workers the generation keeps busy: every one running a task, and the first one while it plans */
+    const busyWorkersFor = useCallback((generation: Generation) => busyWorkersOf(workersRef.current, {
+        running: generation.running.keys(),
+        planning: generation.context === null,
+        checking: false,
+    }), []);
 
     const reportProgress = useCallback((generation: Generation) => {
         const running = Array.from(generation.running.values(), task => task.label);
@@ -160,13 +321,106 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
 
     const publishAlternatives = useCallback((generation: Generation) => {
         const combined = combineClockAlternativeRuns(generation.runs, it => it.ranking);
-        const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current);
-        setAlternatives(combined.alternatives);
-        setSelectedAlternativeIndex(user_index >= 0 ? user_index : combined.selected_index);
+        const user_index = combined.alternatives.findIndex(it => it.id === userSelectionRef.current?.id);
         const not_started = [...generation.waiting, ...generation.skipped];
-        setPendingAlternatives(generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label));
-        setSkippedSearches(generation.skipped.map(task => task.label));
-    }, []);
+        updateResults({
+            generationAssumptions: generation.assumptions,
+            alternatives: combined.alternatives,
+            selectedAlternativeIndex: user_index >= 0 ? user_index : combined.selected_index,
+            pendingAlternatives: generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(task => task.label),
+            skippedSearches: generation.skipped.map(task => task.label),
+        });
+    }, [updateResults]);
+
+    /** The generation's clocks so far, as they are kept */
+    const keptResultsOf = useCallback((generation: Generation, stopped: boolean): KeptResults => ({
+        generatedFor: generation.generatedFor,
+        generationAssumptions: generation.assumptions === null ? null : { ...generation.assumptions, complete: !stopped },
+        alternatives: resultsViewRef.current.alternatives,
+        pickRule: generation.pickRule,
+        skippedSearches: generation.skipped.map(task => task.label),
+        searchedDeeper: generation.searchedDeeper,
+        stopped,
+        lean: false,
+    }), []);
+
+    /** Keeps results that are on screen now, for a reload and a Cancel to bring back */
+    const keepShown = useCallback((shown: ShownResults) => {
+        setShown(shown);
+        if (shown.results.alternatives.length > 0) {
+            void storeRef.current?.put(shown.results, shown.pick, Date.now());
+        }
+    }, [setShown]);
+
+    /** Puts results on screen as a run would leave them, the pick selected when they have it */
+    const showResults = useCallback((shown: ShownResults) => {
+        const { results } = shown;
+        const { index, pickGone: lost } = selectionAfterRun(results.alternatives, shown.pick, recommendedIndexOf(results.alternatives));
+        const pick = lost ? null : shown.pick;
+        userSelectionRef.current = pick;
+        setShown({ results, pick });
+        updateResults({
+            generationAssumptions: results.generationAssumptions,
+            alternatives: results.alternatives,
+            selectedAlternativeIndex: index,
+            pendingAlternatives: [],
+            skippedSearches: results.skippedSearches,
+            searchedDeeper: results.searchedDeeper,
+            pickRule: results.pickRule,
+            generatedFor: results.generatedFor,
+            stoppedEarly: results.stopped,
+            pickGone: null,
+        });
+        setLogs([]);
+        setError(null);
+        setErrorRecovery(null);
+    }, [setShown, updateResults]);
+
+    /** Empties Results */
+    const showNothing = useCallback(() => {
+        setShown(null);
+        updateResults(emptyResults());
+    }, [setShown, updateResults]);
+
+    /** Ends the generation where it stands: its workers are replaced, and the screen is what `afterCancel` says */
+    const stopGeneration = useCallback((generation: Generation): RunStop['kept'] => {
+        replace(busyWorkersFor(generation));
+        generationRef.current = null;
+        progressStore.set(null);
+        updateResults({ pendingAlternatives: [] });
+        setIsRunning(false);
+        const outcome = afterCancel({ runKey: generation.generatedFor.key, clocksMade: resultsViewRef.current.alternatives.length, previous: generation.previous });
+        switch (outcome.kind) {
+            case 'previous':
+                showResults(outcome.shown);
+                break;
+            case 'partial':
+                updateResults({ stoppedEarly: true });
+                keepShown({ results: keptResultsOf(generation, true), pick: userSelectionRef.current });
+                break;
+            case 'none':
+                showNothing();
+                break;
+        }
+        return outcome.kind;
+    }, [busyWorkersFor, keepShown, keptResultsOf, progressStore, replace, showNothing, showResults, updateResults]);
+
+    /** A generation that failed or lost a worker ends with its error; its other busy workers are replaced */
+    const endRunWithError = useCallback((message: string, except?: Worker, recovery?: RepeatedUnitsRecovery) => {
+        const generation = generationRef.current;
+        if (!generation) {
+            return;
+        }
+        replace(busyWorkersFor(generation).filter(worker => worker !== except));
+        generationRef.current = null;
+        // the clocks on screen are part of a failed run: a pick among them is not kept for the build shown before it
+        setShown(null);
+        setError(message);
+        setErrorRecovery(recovery ?? null);
+        progressStore.set(null);
+        updateResults({ pendingAlternatives: [] });
+        setIsRunning(false);
+    }, [busyWorkersFor, progressStore, replace, setShown, updateResults]);
 
     const dispatchTasks = useCallback((generation: Generation) => {
         if (generation.waiting.length > 0 && generation.queue.length === 0 && generation.running.size === 0) {
@@ -201,15 +455,28 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         generationRef.current = null;
         progressStore.set(null);
         setIsRunning(false);
-    }, [progressStore, publishAlternatives, reportProgress]);
+        if (generation.assumptions) {
+            generation.assumptions = { ...generation.assumptions, complete: true };
+            updateResults({ generationAssumptions: generation.assumptions });
+        }
+        // A completed generation always opens its new recommendation, including after inspecting a clock mid-run.
+        const made = resultsViewRef.current.alternatives;
+        userSelectionRef.current = null;
+        updateResults({ pickGone: null, selectedAlternativeIndex: recommendedIndexOf(made) ?? 0 });
+        keepShown({ results: keptResultsOf(generation, false), pick: null });
+    }, [keepShown, keptResultsOf, progressStore, publishAlternatives, reportProgress, updateResults]);
 
     const handleResponse = useCallback((worker: Worker, response: WorkerResponse) => {
         if (response.type === 'validated' || response.type === 'validation-failed') {
             const requested = validationRef.current;
             if (requested && requested.requestId === response.requestId) {
+                checkRunningRef.current = false;
                 setValidation(response.type === 'validated'
                     ? { status: 'valid', config: requested.config, validation: response.validation }
-                    : { status: 'invalid', config: requested.config, message: response.message });
+                    : { status: 'invalid', config: requested.config, message: response.message, recovery: response.recovery, diagnostics: response.diagnostics });
+                pendingChecks.settle(response.requestId, response.type === 'validated'
+                    ? { kind: 'valid', validation: response.validation }
+                    : { kind: 'invalid', message: response.message, recovery: response.recovery });
             }
             return;
         }
@@ -221,6 +488,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         if (response.type === 'initialized' || !generation || response.runId !== generation.runId) {
             if (response.type === 'error' && response.runId === undefined) {
                 setError(response.message);
+                setErrorRecovery(null);
             }
             return;
         }
@@ -235,6 +503,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 break;
             }
             case 'planned':
+                generation.assumptions = { ...response.assumptions, complete: false };
                 generation.context = response.context;
                 generation.tasks = response.tasks;
                 generation.runs = [response.primary, ...response.tasks.map(() => null)];
@@ -257,98 +526,283 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             }
             case 'error':
                 console.error('Simulation error:', response.message, response.stack);
-                generationRef.current = null;
-                setError(response.message);
-                progressStore.set(null);
-                setPendingAlternatives([]);
-                setIsRunning(false);
+                // the other tasks of the run are thrown away: their workers stop now, not when they are done
+                endRunWithError(response.message, worker, response.recovery);
                 break;
         }
-    }, [dispatchTasks, progressStore, publishAlternatives, reportProgress]);
+    }, [dispatchTasks, endRunWithError, pendingChecks, publishAlternatives, reportProgress]);
+
+    /**
+     * A worker that stopped unexpectedly: a check it was running ends as failed (and Generate checks again), a
+     * generation running ends with an error, and the worker is replaced once it had started (one that never loaded the
+     * data waits for the next explicit Check only or Generate, so a failed startup cannot keep trying). The player is
+     * told it was not their build; the browser's own words go to the Log.
+     */
+    const handleCrash = useCallback((worker: Worker, detail: string, started: boolean) => {
+        if (!workersRef.current.includes(worker) || unusableWorkersRef.current.has(worker)) {
+            return;
+        }
+        if (!started) {
+            unusableWorkersRef.current.add(worker);
+            worker.terminate();
+        }
+        setLogs(previous => [...previous, { level: 'error', message: `A simulation worker stopped: ${detail}`, timestamp: Date.now() }]);
+        console.error('Simulation worker stopped:', detail);
+        const check = validationRef.current;
+        const outcome = crashOutcome({
+            started,
+            isCheckWorker: worker === workersRef.current[0],
+            checkRunning: checkRunningRef.current && check !== null,
+            runOnScreen: generationRef.current !== null,
+        });
+        if (outcome.settleCheck && check) {
+            checkRunningRef.current = false;
+            setValidation({ status: 'invalid', config: check.config, message: CHECK_TEXT.crashText, crashed: true });
+            pendingChecks.settle(check.requestId, { kind: 'invalid', message: CHECK_TEXT.crashText });
+        }
+        // any crash ends a generation on screen (one dropped by Import, Paste or Reset is not on screen)
+        if (outcome.endRun) {
+            endRunWithError(CHECK_TEXT.generationCrashed, worker);
+        }
+        if (outcome.replace) {
+            replace([worker]);
+        }
+    }, [endRunWithError, pendingChecks, replace]);
+
+    /**
+     * Starts a worker and hands it the game data; `ready` resolves once it has loaded it. A worker started in place of
+     * another is used at once: it holds its requests until it is ready.
+     */
+    const startWorker = useCallback((replacement: boolean): { worker: Worker; ready: Promise<void> } => {
+        const worker = createSimulationWorker();
+        let started = false;
+        const current = () => workersRef.current.includes(worker) && !unusableWorkersRef.current.has(worker);
+        const ready = new Promise<void>((resolve, reject) => {
+            worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+                if (!current()) return;
+                const response = event.data;
+                if (response.type === 'initialized') {
+                    started = true;
+                    resolve();
+                } else if (!started && response.type === 'error' && response.runId === undefined) {
+                    reject(new Error(response.message));
+                    return;
+                }
+                handleResponse(worker, response);
+            };
+            worker.onerror = (event) => {
+                if (!current()) return;
+                const message = event.message || 'The simulation worker stopped unexpectedly';
+                if (!started) {
+                    reject(new Error(message));
+                    return;
+                }
+                handleCrash(worker, message, started);
+            };
+            loadFactorioData().then(
+                data => {
+                    if (current()) worker.postMessage({ type: 'initialize', factorioData: data } satisfies WorkerRequest);
+                },
+                reject,
+            );
+        });
+        // all startup failures end what a replacement was given, without starting an automatic retry loop
+        ready.catch((error: Error) => {
+            if (replacement && current()) handleCrash(worker, error.message, false);
+        });
+        return { worker, ready };
+    }, [handleCrash, handleResponse]);
+
+    useEffect(() => {
+        startWorkerRef.current = () => startWorker(true).worker;
+    }, [startWorker]);
 
     const initialize = useCallback(async () => {
         try {
             // Generation runs in a pool of workers; the names and recipes for the forms come from the query worker
             terminateWorkers();
-            const workersReady = Promise.all(Array.from({ length: workerPoolSize() }, () => new Promise<void>((resolve, reject) => {
-                const worker = createSimulationWorker();
-                workersRef.current.push(worker);
-                worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-                    const response = event.data;
-                    if (response.type === 'initialized') {
-                        resolve();
-                    } else if (response.type === 'error' && response.runId === undefined) {
-                        reject(new Error(response.message));
-                    }
-                    handleResponse(worker, response);
-                };
-                worker.onerror = (event) => {
-                    generationRef.current = null;
-                    setError(event.message || 'Simulation worker failed');
-                    progressStore.set(null);
-                    setIsRunning(false);
-                    reject(new Error(event.message));
-                };
-                loadFactorioData().then(
-                    data => worker.postMessage({ type: 'initialize', factorioData: data } satisfies WorkerRequest),
-                    reject,
-                );
-            })));
+            const pool = Array.from({ length: workerPoolSize() }, () => startWorker(false));
+            workersRef.current = pool.map(it => it.worker);
+            const workersReady = Promise.all(pool.map(it => it.ready));
 
             const lookups = await askEngine({ kind: 'lookups' });
-            setRecipeNames(lookups.recipeNames);
-            setItemNames(lookups.itemNames);
-            setResourceNames(lookups.resourceNames);
+            // the pickers offer no mod, internal or hidden entry; a build that holds one still shows it
+            setRecipeNames(pickerIds(lookups.recipeNames, new Set(lookups.hiddenRecipes)));
+            // recycling recipes stay out of the open list, and a typed search finds them
+            setSearchOnlyRecipes(pickerIds(lookups.hiddenRecipes.filter(name => name.endsWith('-recycling'))));
+            setItemNames(pickerIds(lookups.itemNames));
+            setResourceNames(pickerIds(lookups.resourceNames));
+            setGameNames(lookups.names);
             setRecipes(lookups.recipes);
             await workersReady;
-            
+
             setIsInitialized(true);
         } catch (err) {
             console.error('Failed to initialize:', err);
             setError(err instanceof Error ? err.message : 'Failed to initialize');
+            setErrorRecovery(null);
         }
-    }, [handleResponse, progressStore, terminateWorkers]);
+    }, [startWorker, terminateWorkers]);
 
-    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean) => {
+    const runSimulation = useCallback((config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper = false) => {
+        replace(workersRef.current.filter(worker => unusableWorkersRef.current.has(worker)));
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
+            setErrorRecovery(null);
             return;
         }
 
+        // the engine may get the deeper search for this run; the results are recorded as made for the form's config
+        const run = planGenerationRun(config, searchDeeper);
+        const engineConfig = run.engineConfig;
+        const rule = pickRuleOf(engineConfig);
+        restoreTokenRef.current++;
+        // the build is accepted: an Undo of a replace is not offered any more, so what it set aside goes
+        droppedRef.current = null;
+        updateResults({ ...emptyResults(), generatedFor: run.generatedFor, searchedDeeper: run.searchedDeeper, pickRule: rule });
         setIsRunning(true);
         progressStore.set(null);
-        setAlternatives([]);
-        setSelectedAlternativeIndex(0);
-        setPendingAlternatives([]);
-        setSkippedSearches([]);
+        // The previous ShownResults still owns its pick, so Cancel can restore it.
         userSelectionRef.current = null;
         setError(null);
+        setErrorRecovery(null);
         setLogs([]);
         const runId = ++runIdRef.current;
         generationRef.current = {
-            runId, config, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [],
+            runId, config: engineConfig, debugSteps, streamLogs, context: null, tasks: [], queue: [], waiting: [], skipped: [], runs: [], assumptions: null,
             running: new Map(), done: new Set(), idle: [], completed: 0,
+            previous: shownRef.current, generatedFor: run.generatedFor, pickRule: rule, searchedDeeper: run.searchedDeeper,
         };
-        worker.postMessage({ type: 'plan', runId, config, debugSteps, streamLogs } satisfies WorkerRequest);
-    }, [progressStore]);
+        worker.postMessage({ type: 'plan', runId, config: engineConfig, debugSteps, streamLogs } satisfies WorkerRequest);
+    }, [progressStore, replace, updateResults]);
 
-    const validate = useCallback((config: Config) => {
+    const validate = useCallback((config: Config): Promise<CheckOutcome> => {
+        setErrorRecovery(null);
+        replace(workersRef.current.slice(0, 1).filter(worker => unusableWorkersRef.current.has(worker)));
         const worker = workersRef.current[0];
         if (!worker) {
             setError('Not initialized');
-            return;
+            setErrorRecovery(null);
+            return Promise.resolve({ kind: 'dropped' });
         }
         const requestId = (validationRef.current?.requestId ?? 0) + 1;
         validationRef.current = { requestId, config };
+        // what a Cancel puts back: the state before the first of checks that follow each other
+        if (!checkRunningRef.current) {
+            validationBeforeRef.current = validationStateRef.current;
+        }
+        checkRunningRef.current = true;
+        const outcome = pendingChecks.begin(requestId);
         setValidation({ status: 'running', config });
         worker.postMessage({ type: 'validate', requestId, config } satisfies WorkerRequest);
-    }, []);
+        return outcome;
+    }, [pendingChecks, replace]);
+
+    /** The check waiting for its answer is dropped: its promise resolves `dropped`, and a late answer matches nothing */
+    const dropCheck = useCallback(() => {
+        validationRef.current = validationRef.current && { ...validationRef.current, requestId: validationRef.current.requestId + 1 };
+        checkRunningRef.current = false;
+        pendingChecks.dropAll();
+    }, [pendingChecks]);
+
+    const cancel = useCallback(() => {
+        setErrorRecovery(null);
+        const generation = generationRef.current;
+        if (generation) {
+            const kept = stopGeneration(generation);
+            setLastStop({ id: ++stopIdRef.current, kept });
+            return;
+        }
+        if (checkRunningRef.current) {
+            dropCheck();
+            // a passed check for this build stays passed, its swing plan in Advanced
+            setValidation(validationBeforeRef.current);
+            replace(workersRef.current.slice(0, 1));
+            setLastStop({ id: ++stopIdRef.current, kept: 'check' });
+        }
+    }, [dropCheck, replace, stopGeneration]);
+
+    const clearResults = useCallback((options?: { formKey?: string }) => {
+        setErrorRecovery(null);
+        restoreTokenRef.current++;
+        // a run still going stops now, and what it leaves is what is set aside
+        const generation = generationRef.current;
+        if (generation) {
+            stopGeneration(generation);
+        }
+        const shown = shownRef.current;
+        droppedRef.current = options?.formKey !== undefined && shown ? { formKey: options.formKey, shown } : null;
+        progressStore.set(null);
+        setIsRunning(false);
+        showNothing();
+        userSelectionRef.current = null;
+        setLogs([]);
+        setValidation({ status: 'none' });
+        // a check answer still on its way matches no request, and a Generate waiting on a check does not start after the
+        // build was replaced
+        dropCheck();
+        // until the workers are ready, the error is one that stopped them starting, and stays
+        if (isInitialized) {
+            setError(null);
+        }
+    }, [dropCheck, progressStore, isInitialized, showNothing, stopGeneration]);
+
+    /** The pick changed: kept with the results on screen, unless a run is going (it keeps it when it ends) */
+    const keepPick = useCallback((pick: KeptPick) => {
+        userSelectionRef.current = pick;
+        const shown = shownRef.current;
+        if (!generationRef.current && shown) {
+            setShown({ ...shown, pick });
+            void storeRef.current?.setPick(shown.results.generatedFor.key, pick);
+        }
+    }, [setShown]);
 
     const selectAlternative = useCallback((index: number) => {
-        userSelectionRef.current = alternatives[index]?.id ?? null;
-        setSelectedAlternativeIndex(index);
-    }, [alternatives]);
+        const clock = alternatives[index];
+        keepPick(clock ? { id: clock.id, label: plainClockName(alternatives, index) } : null);
+        updateResults({ selectedAlternativeIndex: index });
+    }, [alternatives, keepPick, updateResults]);
+
+    const recommendedIndex = useMemo(() => recommendedIndexOf(alternatives), [alternatives]);
+
+    const selectRecommended = useCallback(() => {
+        keepPick(null);
+        // from the latest list, not the rendered one: a clock that arrived just before the click can move the pick
+        updateResults({ selectedAlternativeIndex: recommendedIndexOf(resultsViewRef.current.alternatives) ?? 0 });
+    }, [keepPick, updateResults]);
+
+    const restoreResultsFor = useCallback(async (key: string, mode: 'load' | 'replace', options?: { announce?: boolean }): Promise<boolean> => {
+        const token = ++restoreTokenRef.current;
+        const store = storeRef.current;
+        const entries = store?.entries() ?? [];
+        const dropped = droppedRef.current;
+        const choice = keyToShow({ currentKey: key, mode, entries, dropped, shownKey: mode === 'load' ? readShownMarker() : null });
+        if (choice === null) {
+            return false;
+        }
+        let shown: ShownResults | null = null;
+        if (choice.from === 'kept' && store) {
+            const results = await store.get(choice.key);
+            const pick = entries.find(entry => entry.key === choice.key)?.pick ?? null;
+            shown = results && { results, pick };
+        }
+        // set aside by Import, Paste or Reset: also when the kept copy could not be read (or is not written yet)
+        if (!shown && dropped !== null && dropped.formKey === key) {
+            shown = dropped.shown;
+        }
+        if (!shown || token !== restoreTokenRef.current || generationRef.current) {
+            return false;
+        }
+        showResults(shown);
+        if (choice.from === 'kept' && store?.has(choice.key)) {
+            void store.touch(choice.key, Date.now());
+        }
+        if (mode === 'replace' && options?.announce !== false) {
+            setRestoredId(id => id + 1);
+        }
+        return true;
+    }, [showResults]);
 
     const clearLogs = useCallback(() => {
         setLogs([]);
@@ -359,12 +813,15 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     const selected: ClockAlternativeView | undefined = alternatives[selectedAlternativeIndex];
 
     return {
+        generationAssumptions,
         isInitialized,
         isRunning,
         progressStore,
         recipeNames,
+        searchOnlyRecipes,
         resourceNames,
         itemNames,
+        gameNames,
         logs,
         blueprintString: selected?.blueprintString ?? null,
         transferHistory: selected?.transferHistory ?? null,
@@ -379,13 +836,27 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         alternatives,
         selectedAlternativeIndex,
         selectAlternative,
+        recommendedIndex,
+        selectRecommended,
+        pickRule,
         pendingAlternatives,
         skippedSearches,
+        searchedDeeper,
         validation,
         validate,
         error,
+        errorRecovery,
         initialize,
         runSimulation,
+        generatedFor,
+        clearResults,
+        cancel,
+        lastStop,
+        stoppedEarly,
+        pickGone,
+        restoredId,
+        restoreResultsFor,
+        resultsStoreReady,
         clearLogs,
         getRecipeInfo,
     };

@@ -55,6 +55,8 @@ export {
     sidecarFeatureStep,
 } from './config/sidecar-version';
 export type { SidecarFeature } from './config/sidecar-version';
+export { suggestedTargetOf } from './config/suggested-target';
+export type { SuggestedTarget } from './config/suggested-target';
 export { ImportPipeline } from './config/import-pipeline';
 export type { ImportInput, ImportStep, ImportedMachine } from './config/import-pipeline';
 export { Option } from './data-types/option';
@@ -72,9 +74,17 @@ export {
 
 export { validateCopies, findRepeatedUnits } from './config/copies-validator';
 export type { RepeatedUnits } from './config/copies-validator';
+export { planRepeatedUnitConversion } from './config/repeated-unit-conversion';
+export { AssertionError } from './common/assert';
+export type {
+    ConversionEntityKind, RetainedConversionEntity, RetainedConversionEntities,
+    RepeatedUnitConversionReasonCode, RepeatedUnitConversionReason,
+    RepeatedUnitConversionPlan, RepeatedUnitConversionResult,
+} from './config/repeated-unit-conversion';
 
 export {
     validateInserterCoverage,
+    createInserterCoverageValidator,
     assertInserterCoverage,
 } from './config/inserter-coverage-validator';
 
@@ -214,6 +224,10 @@ export {
 // Transfer History (for visualization)
 // ============================================================================
 
+export { recordSimulationTimeline } from './crafting/record-timeline';
+export type { RecordTimelineRequest } from './crafting/record-timeline';
+export type { TimelineRecording, TimelineEntity, TimelineEvent, TimelineSeries, TimelineValue } from './crafting/timeline-recording';
+
 export {
     SerializableTransferHistory,
     SerializableTransferEntry,
@@ -275,7 +289,10 @@ export {
     Machine,
     ComputeMachineFactsParams,
 } from './entities/machine';
+export { computeMachineTargetRates } from './crafting/machine-target-rates';
+export type { MachineTargetRate } from './crafting/machine-target-rates';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
 export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
 export { deadlockRiskNote } from './crafting/deadlock-risk';
 export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
+export { DEFAULT_LOOP_SEED_ITEMS } from './crafting/runner/cold-start';
