@@ -8,6 +8,9 @@ import { AUTO_BADGE_SX, insetSlotSx } from './insetSlot';
 import { SlotRemoveButton } from './SlotRemoveButton';
 
 interface FilterSlotSelectorProps {
+    label?: string;
+    /** Keep the label in normal flow in tightly wrapped rows. */
+    compact?: boolean;
     priority?: { label: string; ids: string[] };
     /** Explicit filters set by the user */
     filters?: string[];
@@ -25,6 +28,8 @@ interface FilterSlotSelectorProps {
 
 export function FilterSlotSelector({
     priority,
+    label = 'Filters',
+    compact = false,
     filters = [],
     inferredFilters = [],
     itemNames,
@@ -80,9 +85,9 @@ export function FilterSlotSelector({
             <Typography
                 variant="caption"
                 color="text.secondary"
-                sx={{ position: 'absolute', bottom: '100%', left: 0, mb: 1.25, lineHeight: 1, whiteSpace: 'nowrap' }}
+                sx={compact ? { display: 'block', mb: 0.5 } : { position: 'absolute', bottom: '100%', left: 0, mb: 1.25, lineHeight: 1, whiteSpace: 'nowrap' }}
             >
-                Filters
+                {label}
             </Typography>
         {/* the gap leaves room for a remove button between two slots, clear of the next one */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2.5, rowGap: 1.5, alignItems: 'center' }}>

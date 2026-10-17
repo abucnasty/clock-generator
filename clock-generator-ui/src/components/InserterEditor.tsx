@@ -1,13 +1,14 @@
 import { Autocomplete, Box, Button, TextField, Typography, type AutocompleteRenderInputParams } from '@mui/material';
 import { memo, useMemo, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import type { BeltFormData, ChestFormData, InserterFormData, MachineFormData } from '../hooks/useConfigForm';
+import type { DisplayDensity } from '../utils/displayPreferences';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
 import { entityOptionsOf, findOption, stackSizeFrom, type EntityOption } from '../utils/inserterOptions';
 import { inferInserterItems, sourceItemsOf } from '../utils/inferInserterItems';
 import { removeFilterSlot, setFilterSlot, usesAutomaticFilters } from '../utils/inserterFilters';
-import { DROP_ROUTE_READ_ONLY, endpointUpdate, INSERTER_TIMING_ASSUMPTION, inserterMetadataText, inserterStackSizeHelp } from '../utils/inserterMetadata';
+import { DROP_ROUTE_READ_ONLY, endpointUpdate, effectiveInserterStackSize, INSERTER_TIMING_ASSUMPTION, inserterTimingLabels, inserterStackSizeHelp } from '../utils/inserterMetadata';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterSlotSelector } from './FilterSlotSelector';
 import { NearLaneSelect } from './NearLaneSelect';
@@ -26,6 +27,8 @@ export interface InserterEditorProps {
     value: InserterFormData;
     label: string;
     layout: 'row' | 'stacked';
+    /** Presentation only: form ownership and controlled values stay with the caller. */
+    density?: DisplayDensity;
     machines: MachineFormData[];
     belts: BeltFormData[];
     chests: ChestFormData[];
@@ -43,7 +46,7 @@ function renderOption(props: HTMLAttributes<HTMLLIElement> & { key?: string }, o
     return (
         <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <FactorioIcon name={option.icon} size={24} alt="" />
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflowWrap: 'anywhere' }}>
                 <Typography variant="body2">{option.label}</Typography>
                 {option.sublabel ? <Typography variant="caption" color="text.secondary">{option.sublabel}</Typography> : option.ingredientIcons?.length ? (
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
@@ -56,8 +59,13 @@ function renderOption(props: HTMLAttributes<HTMLLIElement> & { key?: string }, o
 }
 
 /** Stateless shared fields: the row commits changes live; the dialog passes a draft setter. */
-export const InserterEditor = memo(function InserterEditor({ value, label, layout, machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, options }: InserterEditorProps) {
+export const InserterEditor = memo(function InserterEditor({ value, label, layout, density = 'explanatory', machines, belts, chests, itemNames, getRecipeInfo, onChange, rowActions, options }: InserterEditorProps) {
     const row = layout === 'row';
+    const compact = row && density === 'compact';
+    const capacity = effectiveInserterStackSize(value);
+    const timing = inserterTimingLabels(value);
+    const stackHelp = value.stack_size !== undefined ? `Explicit: ${value.stack_size} items.`
+        : compact && Number.isFinite(capacity) ? `Automatic: ${capacity} items.` : inserterStackSizeHelp(value);
     const { itemLabel, recipeLabel } = useGameNames();
     const announce = useAnnounce();
     const filtersRef = useRef<HTMLDivElement>(null);
@@ -70,14 +78,14 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     };
     const input = (params: AutocompleteRenderInputParams, name: string, selected: EntityOption | undefined) => (
         <TextField {...params} label={name} error={!selected} helperText={value.sink.drop && name === 'Destination'
-            ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined} slotProps={{ input: {
+            ? `Drop: lane ${value.sink.drop.lane}, position ${value.sink.drop.position}. ${DROP_ROUTE_READ_ONLY}` : undefined} slotProps={{ htmlInput: { ...params.inputProps, 'aria-label': `${name}, ${label}` }, input: {
             ...params.InputProps,
             startAdornment: selected ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
                 <FactorioIcon name={selected.icon} size={20} alt="" />
-                {selected.ingredientIcons?.length ? <>
+                {selected.ingredientIcons?.length ? <Box sx={{ display: compact ? 'none' : 'contents' }}>
                     <Typography variant="body2" sx={{ mx: 0.5 }}>:</Typography>
                     {selected.ingredientIcons.map((item, i) => <FactorioIcon key={i} name={item} size={18} alt="" />)}
-                </> : null}
+                </Box> : null}
             </Box> : null,
         } }} />
     );
@@ -96,27 +104,27 @@ export const InserterEditor = memo(function InserterEditor({ value, label, layou
     );
     const fields = <>
         {!row && <>
-            <Typography variant="body2" color="text.secondary">{inserterMetadataText(value)}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>Type: {value.prototype === undefined ? 'Automatic' : 'Explicit'} {timing.type} · Quality: {value.quality === undefined ? 'Automatic' : 'Explicit'} {timing.quality}</Typography>
             {(!value.prototype || !value.quality) && <Typography variant="body2" color="text.secondary">{INSERTER_TIMING_ASSUMPTION}</Typography>}
         </>}
-        <Box sx={row ? { ...PICKER_GROUP_SX, flexWrap: 'wrap' } : { display: 'contents' }}>
+        <Box sx={row ? { ...PICKER_GROUP_SX, flexWrap: 'wrap', ...(compact && { [ONE_LINE]: { alignSelf: 'start' } }) } : { display: 'contents' }}>
             {picker('source', 'Source')}
             <NearLaneSelect compact={row} source={value.source} belts={belts} entityLabel={label} onChange={source => onChange({ source })} />
         </Box>
-        <Box sx={row ? { ...PICKER_GROUP_SX, gridColumn: { sm: 2, md: 'auto' } } : { display: 'contents' }}>
+        <Box sx={row ? { ...PICKER_GROUP_SX, gridColumn: compact ? 'auto' : { sm: 2, md: 'auto' }, ...(compact && { [ONE_LINE]: { alignSelf: 'start' } }) } : { display: 'contents' }}>
             {row && <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>→</Typography>}
             {picker('sink', 'Destination')}
         </Box>
-        <Box sx={row ? ROW_REST_SX : { display: 'contents' }}>
+        <Box sx={row ? compact ? { display: 'flex', gridColumn: '1 / -1', flexWrap: 'wrap', alignItems: 'start', gap: 1.5, minWidth: 0 } : ROW_REST_SX : { display: 'contents' }}>
             <NumberField id={`${row ? '' : 'diagram-'}inserter-stack-size-${value.id}`} label="Stack size" value={value.stack_size ?? null}
-                placeholder="Automatic" helperText={inserterStackSizeHelp(value)} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
+                placeholder="Automatic" helperText={stackHelp} onValueChange={n => onChange({ stack_size: stackSizeFrom(n) })}
                 min={1} step={1} sx={{ width: row ? 130 : '100%', maxWidth: '100%', alignSelf: 'start' }} size="small" />
-            <Box ref={filtersRef} sx={row ? { alignSelf: 'start', pt: '4px', minWidth: 0 } : { mt: 2 }}>
-                <FilterSlotSelector filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
+            <Box ref={filtersRef} sx={row ? { alignSelf: 'start', pt: compact ? 0 : '4px', minWidth: 0, flex: compact ? '1 1 180px' : undefined } : { mt: 2 }}>
+                <FilterSlotSelector compact={compact} label={compact ? `Filters · ${usesAutomaticFilters(value.filters) ? 'Automatic' : 'Explicit'}` : 'Filters'} filters={value.filters} inferredFilters={inferred} itemNames={itemNames} priority={priority}
                     onFilterChange={(slot, item) => filterChange(setFilterSlot(value.filters, inferred.slice(0, 5), slot, item))}
                     onRemoveFilter={slot => filterChange(removeFilterSlot(value.filters, inferred.slice(0, 5), slot))} />
-                {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">Set by hand</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: compact ? 'none' : 'block', mt: 1 }}>{usesAutomaticFilters(value.filters) ? 'Automatic filters' : 'Explicit · Set by hand'}</Typography>
+                {!usesAutomaticFilters(value.filters) && inferred.length > 0 && <Box sx={{ mt: compact ? 0 : 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                     <Button size="small" color="inherit" onClick={() => {
                         // The return action disappears; slot zero survives the switch back to Automatic.
                         filtersRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();

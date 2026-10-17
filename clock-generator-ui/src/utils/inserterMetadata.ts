@@ -16,9 +16,15 @@ export function effectiveInserterStackSize(inserter: Pick<InserterFormData, 'pro
 
 const title = (value: string) => value.charAt(0).toUpperCase() + value.slice(1).replaceAll('-', ' ');
 
+/** Read-only timing labels; omission uses the engine's Stack/Legendary fallbacks. */
+export function inserterTimingLabels(inserter: Pick<InserterFormData, 'prototype' | 'quality'>): { type: string; quality: string } {
+    return { type: title(inserter.prototype ?? 'stack-inserter'), quality: `${title(inserter.quality ?? 'legendary')} quality` };
+}
+
 /** Read-only type and quality, with the engine's defaults when the import did not supply them. */
 export function inserterMetadataText(inserter: Pick<InserterFormData, 'prototype' | 'quality'>): string {
-    return `${title(inserter.prototype ?? 'stack-inserter')} · ${title(inserter.quality ?? 'legendary')} quality`;
+    const labels = inserterTimingLabels(inserter);
+    return `${labels.type} · ${labels.quality}`;
 }
 
 export function inserterStackSizeHelp(inserter: Pick<InserterFormData, 'prototype' | 'stack_size'>): string | undefined {
